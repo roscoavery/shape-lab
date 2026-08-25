@@ -21,11 +21,10 @@ export function SequencePanel({ currentShapeId, overallScore, onJumpToShape }: P
   const step = sequence?.steps[stepIndex]
 
   useEffect(() => {
-    if (!active || !step) return
+    if (!active || !step || !sequence) return
     const shape = getShape(step.shapeId)
     if (!shape) return
 
-    // Keep the live coach on the current sequence shape
     if (currentShapeId !== step.shapeId) {
       onJumpToShape(step.shapeId)
     }
@@ -40,14 +39,13 @@ export function SequencePanel({ currentShapeId, overallScore, onJumpToShape }: P
           if (holdAccumRef.current >= step.holdSeconds) {
             holdAccumRef.current = 0
             setStepProgress(0)
-            setStepIndex((i) => {
-              if (!sequence) return i
-              if (i + 1 >= sequence.steps.length) {
-                setActive(false)
-                return i
-              }
-              return i + 1
-            })
+            lastRef.current = null
+            if (stepIndex + 1 >= sequence.steps.length) {
+              setActive(false)
+            } else {
+              setStepIndex((i) => i + 1)
+            }
+            return
           }
         }
       }
@@ -56,7 +54,7 @@ export function SequencePanel({ currentShapeId, overallScore, onJumpToShape }: P
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [active, step, overallScore, currentShapeId, onJumpToShape, sequence])
+  }, [active, step, stepIndex, overallScore, currentShapeId, onJumpToShape, sequence])
 
   const start = () => {
     holdAccumRef.current = 0
