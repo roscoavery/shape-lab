@@ -71,7 +71,7 @@ export function TaskTrainer({
   const [stepIndex, setStepIndex] = useState(0)
   const [stepProgress, setStepProgress] = useState(0)
   const [flash, setFlash] = useState<string | null>(null)
-  const [refBroken, setRefBroken] = useState(false)
+  const [refFailedId, setRefFailedId] = useState<string | null>(null)
   const holdAccumRef = useRef(0)
   const lastRef = useRef<number | null>(null)
   const completingRef = useRef(false)
@@ -106,10 +106,7 @@ export function TaskTrainer({
     step?.shapeId ?? task?.steps[0]?.shapeId ?? '',
     athleteId,
   )
-
-  useEffect(() => {
-    setRefBroken(false)
-  }, [activeRef?.id, activeRef?.dataUrl])
+  const showRef = Boolean(activeRef?.dataUrl) && refFailedId !== activeRef?.id
 
   const selectTask = (taskId: string) => {
     if (!athleteId || !progress) return
@@ -234,7 +231,12 @@ export function TaskTrainer({
         createdAt: new Date().toISOString(),
       }
       await saveReferencePhoto(photo)
-      onReferencesChange([photo, ...referencePhotos.filter((p) => p.id !== photo.id)])
+      onReferencesChange([
+        photo,
+        ...referencePhotos.filter(
+          (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
+        ),
+      ])
       setFlash('Reference photo saved')
       setTimeout(() => setFlash(null), 2000)
     } catch {
@@ -255,7 +257,12 @@ export function TaskTrainer({
         createdAt: new Date().toISOString(),
       }
       await saveReferencePhoto(photo)
-      onReferencesChange([photo, ...referencePhotos.filter((p) => p.id !== photo.id)])
+      onReferencesChange([
+        photo,
+        ...referencePhotos.filter(
+          (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
+        ),
+      ])
       setFlash('Shared reference saved')
       setTimeout(() => setFlash(null), 2000)
     } catch {
@@ -429,15 +436,14 @@ export function TaskTrainer({
           Reference photo
           {stepShape ? ` · ${stepShape.name}` : ''}
         </p>
-        {activeRef?.dataUrl && !refBroken ? (
+        {showRef && activeRef ? (
           <div className="mb-2">
             <img
               key={activeRef.id}
               src={activeRef.dataUrl}
               alt={activeRef.label ?? 'Reference'}
               className="max-h-48 w-full rounded-md object-contain bg-[#0d1218]"
-              onError={() => setRefBroken(true)}
-              onLoad={() => setRefBroken(false)}
+              onError={() => setRefFailedId(activeRef.id)}
             />
             <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
               <span>
@@ -473,7 +479,7 @@ export function TaskTrainer({
               className="hidden"
               disabled={!stepShape || !athleteId}
               onChange={(e) => {
-                setRefBroken(false)
+                setRefFailedId(null)
                 void onUploadRef(e.target.files?.[0] ?? null)
                 e.target.value = ''
               }}
@@ -487,7 +493,7 @@ export function TaskTrainer({
               className="hidden"
               disabled={!stepShape}
               onChange={(e) => {
-                setRefBroken(false)
+                setRefFailedId(null)
                 void onUploadSharedRef(e.target.files?.[0] ?? null)
                 e.target.value = ''
               }}

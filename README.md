@@ -6,9 +6,10 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Calculate live joint angles
 - Grade gymnastics shapes from **0–100** with per-criterion scores
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
-- Run a **12-task athlete curriculum** (Tasks tab) with adaptive 5s→3s holds, voice coaching, and reference photos
-- Save attempts, athlete profiles, and task progress in the browser (`localStorage` / IndexedDB)
-- Run simple multi-shape **sequences** (Coach tab)
+- Run an ordered **athlete Tasks curriculum** (5s holds → 3s after mastery)
+- Speak live corrections (toggleable voice coaching)
+- Save attempts, progress, and reference photos in the browser (`localStorage`)
+- Run simple multi-shape **sequences**
 
 ## Quick start
 
@@ -33,21 +34,30 @@ Allow camera permission when the browser asks. Click **Start camera**.
 - Tunnel with something like [ngrok](https://ngrok.com/) / Cloudflare Tunnel for HTTPS on your phone.
 - Or serve with HTTPS locally (advanced).
 
-## Athlete tasks (primary mode)
+## Athlete Tasks pathway
 
-1. Open the **Tasks** tab (default).
+1. Open the **Tasks** tab (primary).
 2. Create / select an athlete.
-3. Work through the locked pathway — each task unlocks after the previous is completed once.
-4. First clears use **5s** quality holds; after ~2 completions, holds drop to **3s**.
-5. Toggle **Voice coaching** for spoken corrections (throttled ~4s), especially on lunges.
-6. Upload a **reference photo** (per athlete or shared per shape) for athletes to match.
+3. Work through the ordered curriculum — later tasks stay locked until the previous one is completed at least once.
+4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**.
+5. Toggle **Voice** to hear spoken corrections (~every 4s) on steps marked `speakCorrections`.
+6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
 
-Curriculum order lives in `src/config/curriculum.ts` (stand clean → FTOS → passé → starting lunge → lever → handstand → landing lunge → sequences → C shape → mountain climber → final MC sequence with pass-through lever).
+Optional default images (if you drop files into the repo):
 
-## First test: Handstand (Coach tab)
+```text
+public/references/feet_together_open_shoulders.jpg
+public/references/lunge_start.jpg
+public/references/lever.jpg
+public/references/lunge_land.jpg
+```
+
+Curriculum order is edited in `src/config/curriculum.ts`.
+
+## First test: Handstand
 
 1. Create an athlete under **Athlete profile**.
-2. Open **Coach**, leave **Shape** on **Handstand**.
+2. Open **Coach**, leave **Shape** on **Handstand** (default), or jump there from Tasks.
 3. Click **Demo: good HS** to see scoring without a camera, or **Start camera** and film from the **side**.
 4. Watch Overall + Shoulders / Elbows / Hips / Knees / Body line / Head / Feet.
 5. Hold above the quality threshold (default 70) to grow **Quality hold**.
@@ -75,31 +85,32 @@ Each shape has reusable criteria (`elbows straight`, `shoulders open`, `body ver
 
 **Handstand** is the most complete example (left/right helpers + composites). Copy it when adding shapes.
 
-- Sequences: `src/config/sequences.ts`
-- Curriculum pathway: `src/config/curriculum.ts`
+- Curriculum: `src/config/curriculum.ts`
+- Sequences: `src/config/sequences.ts` (legacy `lunge` id still works alongside `lunge_start` / `lunge_land`)
 
 ## Project layout
 
 ```text
 src/
-  config/shapes.ts      ← edit scoring standards here
-  config/sequences.ts   ← edit drill sequences here
-  config/curriculum.ts  ← athlete task pathway (12 tasks)
-  lib/scoring.ts        scoring engine
-  lib/angles.ts         joint / segment math
-  lib/pose.ts           MediaPipe setup
-  lib/storage.ts        localStorage athletes, progress, refs
-  hooks/useSpeechCoach.ts  throttled voice cues
-  components/           camera, scores, TaskTrainer, …
-  App.tsx               main UI (Tasks / Coach / Athletes)
+  config/shapes.ts       ← edit scoring standards here
+  config/curriculum.ts   ← athlete task pathway
+  config/sequences.ts    ← edit drill sequences here
+  lib/scoring.ts         scoring engine
+  lib/angles.ts          joint / segment math
+  lib/pose.ts            MediaPipe setup
+  lib/storage.ts         localStorage (athletes, progress, refs)
+  hooks/useSpeechCoach.ts
+  components/TaskTrainer.tsx
+  App.tsx                main UI (Tasks | Coach | Athletes | About)
+public/references/       optional default coach photos
 ```
 
 ## Tech stack
 
 - Vite + React + TypeScript
 - Tailwind CSS v4
-- `@mediapipe/tasks-vision` Pose Landmarker (lite model; prefer `/public/models/pose_landmarker_lite.task`)
+- `@mediapipe/tasks-vision` Pose Landmarker (lite model)
 
 ## Roadmap (architecture hooks)
 
-Cartwheel gaze/hands, roundoff segmentation, rolls, V-ups, drills library, progression roadmaps, education pages, athlete folders/groups, parent sharing — shape/sequence/curriculum config is designed so new shapes drop in without rewriting the app.
+Cartwheel gaze/hands, roundoff segmentation, rolls, V-ups, drills library, progression roadmaps, education pages, athlete folders/groups, parent sharing — not built yet; shape/sequence/curriculum config is designed so new shapes drop in without rewriting the app.
