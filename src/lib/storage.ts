@@ -155,6 +155,7 @@ export function recordTaskCompletion(
 /** Default static files under public/references/ (used when present). */
 export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   feet_together_open_shoulders: '/references/feet_together_open_shoulders.jpg',
+  passe: '/references/passe.png',
   lunge_start: '/references/lunge_start.jpg',
   lever: '/references/lever.jpg',
   lunge_land: '/references/lunge_land.jpg',

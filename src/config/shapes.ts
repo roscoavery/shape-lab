@@ -1385,7 +1385,11 @@ export const SHAPES: ShapeDef[] = [
       'Keep feet-together open-shoulders lines, then pull one knee up into passé. Open shoulders, arms by ears.',
     category: 'static',
     qualityThreshold: 65,
-    tips: ['Stance leg stays straight.', 'Arms cover the ears like FTOS.'],
+    tips: [
+      'Match the reference: stance leg straight, passé foot at the knee, arms reaching to the ceiling.',
+      'Keep FTOS lines — open shoulders, arms by ears, elbows straight.',
+      'Hips square and torso tall; don’t lean into the passé hip.',
+    ],
     criteria: [
       {
         id: 'stance_knee',
