@@ -835,7 +835,9 @@ export const SHAPES: ShapeDef[] = [
     qualityThreshold: 65,
     tips: [
       'Film from the side.',
+      'Best reference: support leg vertical, torso + back leg + arms one horizontal line (T-scale / lever).',
       'Load the bent front leg; tilt until the chest is parallel to the floor.',
+      'Open shoulders fully — arms by ears. Slightly closed shoulders is common; push them more open.',
       'Keep one long line from the back foot through the body to the hands.',
     ],
     criteria: [
