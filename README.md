@@ -7,6 +7,7 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Grade gymnastics shapes from **0–100** with per-criterion scores
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
 - Run an ordered **athlete Tasks curriculum** (5s holds → 3s after mastery)
+- **Learn** shapes and pathways without a camera (Education tab)
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -53,6 +54,16 @@ public/references/lunge_land.jpg
 ```
 
 Curriculum order is edited in `src/config/curriculum.ts`.
+
+## Education (Learn tab)
+
+Athletes and parents can study body positions **without setting up a camera**:
+
+1. Open the **Learn** tab.
+2. **Shape library** — browse all shapes (filter to pathway-only). Each shape shows description, tips, key criteria with coach-friendly targets/cues, quality threshold, and a reference photo when available (uploaded shared ref or `public/references/…`).
+3. **Task pathways** — walk the 12 curriculum tasks in order, see unlock story (what comes next), step-by-step shapes with beginner/mastered hold times, pass-through notes, and voice-correction flags. Tap a step to open that shape’s education page.
+
+“How to hit this shape” copy is derived from `tips` and criterion `feedbackLow` / `feedbackHigh` in `src/config/shapes.ts` — coaches still edit scoring there.
 
 ## First test: Handstand
 
@@ -101,7 +112,9 @@ src/
   lib/storage.ts         localStorage (athletes, progress, refs)
   hooks/useSpeechCoach.ts
   components/TaskTrainer.tsx
-  App.tsx                main UI (Tasks | Coach | Athletes | About)
+  components/EducationPanel.tsx  Learn tab (shapes + pathways)
+  lib/educationCopy.ts   readable cues from criteria
+  App.tsx                main UI (Tasks | Learn | Coach | Athletes | About)
 public/references/       optional default coach photos
 ```
 
@@ -113,4 +126,4 @@ public/references/       optional default coach photos
 
 ## Roadmap (architecture hooks)
 
-Cartwheel gaze/hands, roundoff segmentation, rolls, V-ups, drills library, progression roadmaps, education pages, athlete folders/groups, parent sharing — not built yet; shape/sequence/curriculum config is designed so new shapes drop in without rewriting the app.
+Cartwheel gaze/hands, roundoff segmentation, rolls, V-ups, drills library, richer education media, athlete folders/groups, parent sharing — not built yet; shape/sequence/curriculum config is designed so new shapes drop in without rewriting the app.

@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks (curriculum) | Coach | Athletes | About
+ * Tabs: Tasks (curriculum) | Learn | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Sequences: src/config/sequences.ts
@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
+import { EducationPanel } from './components/EducationPanel'
 import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
@@ -46,7 +47,7 @@ import type {
   ShapeDef,
 } from './types'
 
-type Tab = 'tasks' | 'coach' | 'history' | 'about'
+type Tab = 'tasks' | 'learn' | 'coach' | 'history' | 'about'
 
 export default function App() {
   const camera = usePoseCamera()
@@ -260,6 +261,7 @@ export default function App() {
           {(
             [
               ['tasks', 'Tasks'],
+              ['learn', 'Learn'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
               ['about', 'About'],
@@ -339,6 +341,10 @@ export default function App() {
         </div>
       )}
 
+      {tab === 'learn' && (
+        <EducationPanel referencePhotos={referencePhotos} />
+      )}
+
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col gap-3">
@@ -416,6 +422,16 @@ export default function App() {
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
+              Learn without a camera
+            </h2>
+            <p className="mb-2">
+              Open the <strong className="text-[var(--text)]">Learn</strong> tab to study shapes
+              (cues, criteria, reference photos) and the full task pathway before practicing.
+              No camera required — useful for gymnasts and parents reviewing positions at home.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
               Athlete Tasks pathway
             </h2>
             <p className="mb-2">
@@ -457,7 +473,7 @@ export default function App() {
               <li>Handstand forward roll &amp; back extension roll grading</li>
               <li>V-ups and more dynamic skills</li>
               <li>Drills mastered library &amp; skill progression roadmaps</li>
-              <li>Educational pages per shape / drill / skill</li>
+              <li>Richer education media (video demos, drill libraries)</li>
               <li>Folders &amp; groups for athletes</li>
               <li>Progress sharing with parents or athletes</li>
             </ul>
