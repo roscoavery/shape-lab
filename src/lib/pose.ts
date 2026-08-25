@@ -16,13 +16,13 @@ import type { Landmark } from '../types'
 let landmarkerPromise: Promise<PoseLandmarker> | null = null
 
 async function createLandmarker(delegate: 'GPU' | 'CPU'): Promise<PoseLandmarker> {
+  // WASM from jsDelivr; pose model is shipped in /public/models (correct .task bundle)
   const vision = await FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm',
   )
   return PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath:
-        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.tflite',
+      modelAssetPath: '/models/pose_landmarker_lite.task',
       delegate,
     },
     runningMode: 'VIDEO',
