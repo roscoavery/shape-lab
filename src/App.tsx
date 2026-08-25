@@ -1,9 +1,10 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Coach (live scoring) | Athletes & History | About / roadmap
- * Shape standards live in src/config/shapes.ts
- * Sequences live in src/config/sequences.ts
+ * Tabs: Tasks (curriculum) | Coach | Athletes | About
+ * Shape standards: src/config/shapes.ts
+ * Curriculum: src/config/curriculum.ts
+ * Sequences: src/config/sequences.ts
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -13,6 +14,7 @@ import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
 import { ShapeSelector } from './components/ShapeSelector'
+import { TaskTrainer } from './components/TaskTrainer'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
@@ -27,18 +29,28 @@ import {
   loadActiveAthleteId,
   loadAthletes,
   loadAttempts,
+  loadReferencePhotos,
   loadSettings,
+  loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
   saveSettings,
 } from './lib/storage'
-import type { AppSettings, Athlete, AttemptRecord, Landmark, ShapeDef } from './types'
+import type {
+  AppSettings,
+  Athlete,
+  AthleteTaskProgress,
+  AttemptRecord,
+  Landmark,
+  ReferencePhoto,
+  ShapeDef,
+} from './types'
 
-type Tab = 'coach' | 'history' | 'about'
+type Tab = 'tasks' | 'coach' | 'history' | 'about'
 
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<Tab>('coach')
+  const [tab, setTab] = useState<Tab>('tasks')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
@@ -48,11 +60,14 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
   const [demoLandmarks, setDemoLandmarks] = useState<Landmark[] | null>(null)
+  const [taskProgress, setTaskProgress] = useState<AthleteTaskProgress | null>(null)
+  const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>(() =>
+    loadReferencePhotos(),
+  )
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
 
-  // Live camera wins over demo poses when the camera is running
   const activeLandmarks = camera.running ? camera.landmarks : demoLandmarks
 
   const score = useMemo(
@@ -75,7 +90,14 @@ export default function App() {
     saveSettings(settings)
   }, [settings])
 
-  // Reset hold timers when shape changes
+  useEffect(() => {
+    if (!activeAthleteId) {
+      setTaskProgress(null)
+      return
+    }
+    setTaskProgress(loadTaskProgress(activeAthleteId))
+  }, [activeAthleteId])
+
   useEffect(() => {
     hold.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,6 +139,112 @@ export default function App() {
     setTimeout(() => setSaveFlash(null), 2500)
   }
 
+  const cameraControls = (
+    <div className="flex flex-wrap items-center gap-2">
+      {!camera.running ? (
+        <button
+          type="button"
+          onClick={() => {
+            setDemoLandmarks(null)
+            void camera.start()
+          }}
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
+        >
+          Start camera
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={camera.stop}
+          className="rounded-lg border border-[var(--panel-border)] px-4 py-2"
+        >
+          Stop camera
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          camera.stop()
+          setDemoLandmarks(sampleGoodHandstand())
+          setShape(SHAPES[0])
+        }}
+        className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
+        title="Inject a synthetic good handstand to test scoring without a camera"
+      >
+        Demo: good HS
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          camera.stop()
+          setDemoLandmarks(sampleNeedsWorkHandstand())
+          setShape(SHAPES[0])
+        }}
+        className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
+        title="Inject a broken handstand to see corrections"
+      >
+        Demo: needs work
+      </button>
+      {demoLandmarks && !camera.running && (
+        <button
+          type="button"
+          onClick={() => setDemoLandmarks(null)}
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted)]"
+        >
+          Clear demo
+        </button>
+      )}
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        <input
+          type="checkbox"
+          checked={settings.mirrorVideo}
+          onChange={(e) =>
+            setSettings((s) => ({ ...s, mirrorVideo: e.target.checked }))
+          }
+        />
+        Mirror
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        <input
+          type="checkbox"
+          checked={settings.showAngles}
+          onChange={(e) =>
+            setSettings((s) => ({ ...s, showAngles: e.target.checked }))
+          }
+        />
+        Show joint angles
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        <input
+          type="checkbox"
+          checked={settings.voiceEnabled}
+          onChange={(e) =>
+            setSettings((s) => ({ ...s, voiceEnabled: e.target.checked }))
+          }
+        />
+        Voice
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        Quality threshold
+        <input
+          type="number"
+          min={0}
+          max={100}
+          className="w-16 rounded border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1"
+          value={qualityThreshold}
+          onChange={(e) => {
+            const v = Number(e.target.value)
+            setSettings((s) => ({
+              ...s,
+              qualityThresholdOverride: Number.isFinite(v) ? v : null,
+            }))
+          }}
+        />
+      </label>
+      <span className="text-xs text-[var(--muted)]">{camera.fps} fps</span>
+    </div>
+  )
+
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -131,6 +259,7 @@ export default function App() {
         <nav className="flex gap-1 rounded-lg border border-[var(--panel-border)] bg-[var(--panel)] p-1">
           {(
             [
+              ['tasks', 'Tasks'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
               ['about', 'About'],
@@ -152,6 +281,64 @@ export default function App() {
         </nav>
       </header>
 
+      {tab === 'tasks' && (
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <div className="flex flex-col gap-3">
+            <CameraStage
+              videoRef={camera.videoRef}
+              canvasRef={camera.canvasRef}
+              landmarks={activeLandmarks}
+              mirror={settings.mirrorVideo}
+              showAngles={settings.showAngles}
+              running={camera.running}
+              demoMode={!camera.running && demoLandmarks !== null}
+            />
+            {cameraControls}
+            {camera.error && (
+              <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
+                {camera.error}
+              </p>
+            )}
+            <ScorePanel
+              shape={shape}
+              score={score}
+              qualityThreshold={qualityThreshold}
+              totalHoldSeconds={hold.totalHoldSeconds}
+              qualityHoldSeconds={hold.qualityHoldSeconds}
+              onResetTimer={hold.reset}
+              onSave={saveAttempt}
+              canSave={Boolean(activeAthleteId)}
+            />
+          </div>
+
+          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+            <AthletePanel
+              athletes={athletes}
+              activeId={activeAthleteId}
+              onChangeAthletes={setAthletes}
+              onSelect={setActiveAthleteId}
+            />
+            <TaskTrainer
+              athleteId={activeAthleteId}
+              progress={taskProgress}
+              onProgressChange={setTaskProgress}
+              overallScore={score.overall}
+              qualityThreshold={qualityThreshold}
+              mainCorrection={score.mainCorrection}
+              score={score}
+              onRequestShape={onJumpToShape}
+              referencePhotos={referencePhotos}
+              onReferencesChange={setReferencePhotos}
+              voiceEnabled={settings.voiceEnabled}
+              onVoiceEnabledChange={(on) =>
+                setSettings((s) => ({ ...s, voiceEnabled: on }))
+              }
+              timingActive={timingActive}
+            />
+          </div>
+        </div>
+      )}
+
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col gap-3">
@@ -164,101 +351,7 @@ export default function App() {
               running={camera.running}
               demoMode={!camera.running && demoLandmarks !== null}
             />
-
-            <div className="flex flex-wrap items-center gap-2">
-              {!camera.running ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDemoLandmarks(null)
-                    void camera.start()
-                  }}
-                  className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
-                >
-                  Start camera
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={camera.stop}
-                  className="rounded-lg border border-[var(--panel-border)] px-4 py-2"
-                >
-                  Stop camera
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  camera.stop()
-                  setDemoLandmarks(sampleGoodHandstand())
-                  setShape(SHAPES[0])
-                }}
-                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
-                title="Inject a synthetic good handstand to test scoring without a camera"
-              >
-                Demo: good HS
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  camera.stop()
-                  setDemoLandmarks(sampleNeedsWorkHandstand())
-                  setShape(SHAPES[0])
-                }}
-                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
-                title="Inject a broken handstand to see corrections"
-              >
-                Demo: needs work
-              </button>
-              {demoLandmarks && !camera.running && (
-                <button
-                  type="button"
-                  onClick={() => setDemoLandmarks(null)}
-                  className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted)]"
-                >
-                  Clear demo
-                </button>
-              )}
-              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                <input
-                  type="checkbox"
-                  checked={settings.mirrorVideo}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, mirrorVideo: e.target.checked }))
-                  }
-                />
-                Mirror
-              </label>
-              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                <input
-                  type="checkbox"
-                  checked={settings.showAngles}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, showAngles: e.target.checked }))
-                  }
-                />
-                Show joint angles
-              </label>
-              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                Quality threshold
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="w-16 rounded border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1"
-                  value={qualityThreshold}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    setSettings((s) => ({
-                      ...s,
-                      qualityThresholdOverride: Number.isFinite(v) ? v : null,
-                    }))
-                  }}
-                />
-              </label>
-              <span className="text-xs text-[var(--muted)]">{camera.fps} fps</span>
-            </div>
-
+            {cameraControls}
             {camera.error && (
               <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
                 {camera.error}
@@ -316,8 +409,21 @@ export default function App() {
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">What this is</h2>
             <p>
               Shape Lab is a free, local-first prototype for gymnastics shape coaching. It uses
-              MediaPipe Pose in your browser — no paid APIs, no account required. Attempts and
-              athlete profiles stay on this device via localStorage.
+              MediaPipe Pose in your browser — no paid APIs, no account required. Attempts,
+              athlete profiles, curriculum progress, and reference photos stay on this device via
+              localStorage.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
+              Athlete Tasks pathway
+            </h2>
+            <p className="mb-2">
+              Open the <strong className="text-[var(--text)]">Tasks</strong> tab, pick an athlete,
+              and work through the ordered curriculum (stand clean → FTOS → passé → lunges →
+              lever → handstand → sequences → C shape → mountain climber). Holds start at 5s and
+              drop to 3s after mastery. Upload reference photos per shape (shared or
+              athlete-specific) so athletes can match the picture beside the camera.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -334,7 +440,8 @@ export default function App() {
                 strings.
               </li>
               <li>
-                Add new shapes by copying a block — the selector picks them up automatically.
+                Curriculum order:{' '}
+                <code className="text-[var(--accent)]">src/config/curriculum.ts</code>
               </li>
               <li>
                 Sequences: edit <code className="text-[var(--accent)]">src/config/sequences.ts</code>

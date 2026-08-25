@@ -177,4 +177,40 @@ export type AppSettings = {
   qualityThresholdOverride: number | null
   mirrorVideo: boolean
   showAngles: boolean
+  /** Speak live corrections during Tasks mode (throttled ~4s). */
+  voiceEnabled: boolean
+}
+
+/**
+ * Per-athlete curriculum progress.
+ * completions[taskId] = how many times the athlete finished that task.
+ */
+export type AthleteTaskProgress = {
+  athleteId: string
+  /** Successful finishes per curriculum task id */
+  completions: Record<string, number>
+  /** Currently selected / suggested task id */
+  currentTaskId: string | null
+  /**
+   * Optional coach-assigned subset of task ids.
+   * Empty / missing = full curriculum is available (subject to unlock order).
+   */
+  assignedTaskIds: string[] | null
+  updatedAt: string
+}
+
+/**
+ * Coach-uploaded reference photo for athletes to match.
+ * Stored as a data URL (base64) in localStorage / IndexedDB.
+ */
+export type ReferencePhoto = {
+  id: string
+  /** Shape this photo demonstrates */
+  shapeId: string
+  /** If set, photo is for this athlete only; null = shared for the shape */
+  athleteId: string | null
+  /** data:image/...;base64,... */
+  dataUrl: string
+  label?: string
+  createdAt: string
 }
