@@ -18,6 +18,10 @@ import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
 import { scoreShape } from './lib/scoring'
 import {
+  sampleGoodHandstand,
+  sampleNeedsWorkHandstand,
+} from './lib/samplePoses'
+import {
   addAttempt,
   createId,
   loadActiveAthleteId,
@@ -28,7 +32,7 @@ import {
   saveAthletes,
   saveSettings,
 } from './lib/storage'
-import type { AppSettings, Athlete, AttemptRecord, ShapeDef } from './types'
+import type { AppSettings, Athlete, AttemptRecord, Landmark, ShapeDef } from './types'
 
 type Tab = 'coach' | 'history' | 'about'
 
@@ -43,16 +47,21 @@ export default function App() {
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
+  const [demoLandmarks, setDemoLandmarks] = useState<Landmark[] | null>(null)
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
 
+  // Live camera wins over demo poses when the camera is running
+  const activeLandmarks = camera.running ? camera.landmarks : demoLandmarks
+
   const score = useMemo(
-    () => scoreShape(camera.landmarks, shape, qualityThreshold),
-    [camera.landmarks, shape, qualityThreshold],
+    () => scoreShape(activeLandmarks, shape, qualityThreshold),
+    [activeLandmarks, shape, qualityThreshold],
   )
 
-  const hold = useHoldTimer(camera.running, score.overall, qualityThreshold)
+  const timingActive = camera.running || demoLandmarks !== null
+  const hold = useHoldTimer(timingActive, score.overall, qualityThreshold)
 
   useEffect(() => {
     saveAthletes(athletes)
@@ -149,17 +158,21 @@ export default function App() {
             <CameraStage
               videoRef={camera.videoRef}
               canvasRef={camera.canvasRef}
-              landmarks={camera.landmarks}
+              landmarks={activeLandmarks}
               mirror={settings.mirrorVideo}
               showAngles={settings.showAngles}
               running={camera.running}
+              demoMode={!camera.running && demoLandmarks !== null}
             />
 
             <div className="flex flex-wrap items-center gap-2">
               {!camera.running ? (
                 <button
                   type="button"
-                  onClick={() => void camera.start()}
+                  onClick={() => {
+                    setDemoLandmarks(null)
+                    void camera.start()
+                  }}
                   className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
                 >
                   Start camera
@@ -171,6 +184,39 @@ export default function App() {
                   className="rounded-lg border border-[var(--panel-border)] px-4 py-2"
                 >
                   Stop camera
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  camera.stop()
+                  setDemoLandmarks(sampleGoodHandstand())
+                  setShape(SHAPES[0])
+                }}
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
+                title="Inject a synthetic good handstand to test scoring without a camera"
+              >
+                Demo: good HS
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  camera.stop()
+                  setDemoLandmarks(sampleNeedsWorkHandstand())
+                  setShape(SHAPES[0])
+                }}
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
+                title="Inject a broken handstand to see corrections"
+              >
+                Demo: needs work
+              </button>
+              {demoLandmarks && !camera.running && (
+                <button
+                  type="button"
+                  onClick={() => setDemoLandmarks(null)}
+                  className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted)]"
+                >
+                  Clear demo
                 </button>
               )}
               <label className="flex items-center gap-2 text-sm text-[var(--muted)]">

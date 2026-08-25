@@ -15,24 +15,33 @@ import type { Landmark } from '../types'
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null
 
+async function createLandmarker(delegate: 'GPU' | 'CPU'): Promise<PoseLandmarker> {
+  const vision = await FilesetResolver.forVisionTasks(
+    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm',
+  )
+  return PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.tflite',
+      delegate,
+    },
+    runningMode: 'VIDEO',
+    numPoses: 1,
+    minPoseDetectionConfidence: 0.5,
+    minPosePresenceConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  })
+}
+
 export async function getPoseLandmarker(): Promise<PoseLandmarker> {
   if (!landmarkerPromise) {
     landmarkerPromise = (async () => {
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm',
-      )
-      return PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.tflite',
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.5,
-        minPosePresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      })
+      try {
+        return await createLandmarker('GPU')
+      } catch (err) {
+        console.warn('GPU pose landmarker failed, falling back to CPU', err)
+        return createLandmarker('CPU')
+      }
     })()
   }
   return landmarkerPromise

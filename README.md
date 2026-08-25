@@ -36,10 +36,12 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 1. Create an athlete under **Athlete profile**.
 2. Leave **Shape** on **Handstand** (default).
-3. Film from the **side** so the body line is visible.
+3. Click **Demo: good HS** to see scoring without a camera, or **Start camera** and film from the **side**.
 4. Watch Overall + Shoulders / Elbows / Hips / Knees / Body line / Head / Feet.
 5. Hold above the quality threshold (default 70) to grow **Quality hold**.
 6. Click **Save attempt**, then open the **Athletes** tab for progress history.
+
+**Demo: needs work** injects a broken handstand so you can see main corrections fire.
 
 ## Edit scoring (for coaches)
 
