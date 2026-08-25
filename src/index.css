@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0f1419;
+  --panel: #1a222c;
+  --panel-border: #2a3544;
+  --text: #e8eef4;
+  --muted: #8b9aab;
+  --accent: #2dd4a8;
+  --accent-dim: #1a8f72;
+  --warn: #f0b429;
+  --bad: #f07178;
+  --good: #2dd4a8;
+  font-family: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at top left, #1a2a32 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, #1a2430 0%, transparent 45%),
+    var(--bg);
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Scrollbars for side panels */
+.panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3a4a5c transparent;
+}
