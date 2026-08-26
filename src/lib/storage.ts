@@ -12,6 +12,8 @@ import type {
   Athlete,
   AthleteTaskProgress,
   AttemptRecord,
+  HomeworkItem,
+  HomeworkLog,
   ReferencePhoto,
 } from '../types'
 
@@ -21,6 +23,8 @@ const SETTINGS_KEY = 'shape-lab.settings.v1'
 const ACTIVE_ATHLETE_KEY = 'shape-lab.activeAthlete.v1'
 const PROGRESS_KEY = 'shape-lab.athleteProgress.v1'
 const REFS_KEY = 'shape-lab.referencePhotos.v1'
+const HOMEWORK_KEY = 'shape-lab.homework.v1'
+const HOMEWORK_LOGS_KEY = 'shape-lab.homeworkLogs.v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -146,6 +150,143 @@ export function recordTaskCompletion(
   }
   saveTaskProgress(next)
   return next
+}
+
+// ---------------------------------------------------------------------------
+// Homework (per-athlete drill library + session logs)
+// ---------------------------------------------------------------------------
+
+/** Quality-hold seconds on hollow (arms down) that unlock the arms-up level. */
+export const HOLLOW_PROGRESS_TARGET_SECONDS = 60
+
+/**
+ * The 4 automatic homework drills EVERY athlete always has.
+ * Order here = display order. `autoKey` is stable; the hollow item's shapeId
+ * switches from hollow_arms_down → hollow when the athlete levels up.
+ */
+export const AUTO_HOMEWORK_DEFS: {
+  autoKey: string
+  shapeId: string
+  targetSeconds: number
+  notes: string
+}[] = [
+  {
+    autoKey: 'hollow',
+    shapeId: 'hollow_arms_down',
+    targetSeconds: HOLLOW_PROGRESS_TARGET_SECONDS,
+    notes:
+      'Lower back pressed to the floor, arms by sides, legs tight. At 60s quality hold, level up to arms up.',
+  },
+  {
+    autoKey: 'superman',
+    shapeId: 'superman',
+    targetSeconds: 30,
+    notes:
+      'Straight arms behind ears, chin off chest, straight knees off the floor, feet & ankles together, toes pointed.',
+  },
+  {
+    autoKey: 'side_plank',
+    shapeId: 'side_plank',
+    targetSeconds: 30,
+    notes: 'Train BOTH sides — log left and right separately.',
+  },
+  {
+    autoKey: 'wall_handstand',
+    shapeId: 'wall_handstand',
+    targetSeconds: 30,
+    notes: 'Stomach-to-wall preferred. Same body standards as freestanding.',
+  },
+]
+
+export function loadAllHomework(): HomeworkItem[] {
+  return readJson<HomeworkItem[]>(HOMEWORK_KEY, [])
+}
+
+export function saveAllHomework(items: HomeworkItem[]) {
+  writeJson(HOMEWORK_KEY, items)
+}
+
+/** Auto items first (in AUTO_HOMEWORK_DEFS order), then added items by date. */
+function sortHomework(items: HomeworkItem[]): HomeworkItem[] {
+  const autoOrder = new Map(AUTO_HOMEWORK_DEFS.map((d, i) => [d.autoKey, i]))
+  return [...items].sort((a, b) => {
+    const ai = a.source === 'auto' ? (autoOrder.get(a.autoKey ?? '') ?? 99) : 100
+    const bi = b.source === 'auto' ? (autoOrder.get(b.autoKey ?? '') ?? 99) : 100
+    if (ai !== bi) return ai - bi
+    return a.createdAt.localeCompare(b.createdAt)
+  })
+}
+
+/**
+ * Make sure the athlete has all 4 automatic drills, then return their full
+ * homework list (auto drills first). Called on load and on athlete creation.
+ */
+export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
+  const all = loadAllHomework()
+  const mine = all.filter((h) => h.athleteId === athleteId)
+  const missing = AUTO_HOMEWORK_DEFS.filter(
+    (d) => !mine.some((h) => h.source === 'auto' && h.autoKey === d.autoKey),
+  )
+  if (missing.length > 0) {
+    const now = new Date().toISOString()
+    const seeded: HomeworkItem[] = missing.map((d) => ({
+      id: createId('hw'),
+      athleteId,
+      shapeId: d.shapeId,
+      source: 'auto',
+      autoKey: d.autoKey,
+      targetSeconds: d.targetSeconds,
+      notes: d.notes,
+      createdAt: now,
+    }))
+    all.push(...seeded)
+    saveAllHomework(all)
+    return sortHomework([...mine, ...seeded])
+  }
+  return sortHomework(mine)
+}
+
+/** Add a coach- or athlete-selected homework item; returns the athlete's list. */
+export function addHomeworkItem(item: HomeworkItem): HomeworkItem[] {
+  const all = loadAllHomework()
+  all.push(item)
+  saveAllHomework(all)
+  return sortHomework(all.filter((h) => h.athleteId === item.athleteId))
+}
+
+/** Remove a homework item. Auto items are protected and cannot be removed. */
+export function removeHomeworkItem(id: string): void {
+  const all = loadAllHomework()
+  const target = all.find((h) => h.id === id)
+  if (!target || target.source === 'auto') return
+  saveAllHomework(all.filter((h) => h.id !== id))
+}
+
+/**
+ * Level up the hollow auto item: switch its shape from hollow_arms_down to
+ * hollow (arms up). Same item id → all history is kept.
+ */
+export function progressHollowHomework(homeworkId: string): HomeworkItem | null {
+  const all = loadAllHomework()
+  const item = all.find((h) => h.id === homeworkId)
+  if (!item || item.shapeId !== 'hollow_arms_down') return null
+  item.shapeId = 'hollow'
+  item.progressedAt = new Date().toISOString()
+  item.notes = 'Leveled up! Arms by ears now — same hollow standards.'
+  saveAllHomework(all)
+  return { ...item }
+}
+
+export function loadHomeworkLogs(athleteId?: string): HomeworkLog[] {
+  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  return athleteId ? all.filter((l) => l.athleteId === athleteId) : all
+}
+
+/** Newest first; capped at 1000 entries across all athletes. */
+export function addHomeworkLog(log: HomeworkLog): void {
+  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  all.unshift(log)
+  writeJson(HOMEWORK_LOGS_KEY, all.slice(0, 1000))
 }
 
 // ---------------------------------------------------------------------------

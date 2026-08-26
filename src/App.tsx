@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks (curriculum) | Learn | Coach | Athletes | About
+ * Tabs: Tasks (curriculum) | Homework | Learn | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Sequences: src/config/sequences.ts
@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
 import { EducationPanel } from './components/EducationPanel'
+import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
@@ -27,6 +28,7 @@ import {
 import {
   addAttempt,
   createId,
+  ensureAutoHomework,
   loadActiveAthleteId,
   loadAthletes,
   loadAttempts,
@@ -47,7 +49,7 @@ import type {
   ShapeDef,
 } from './types'
 
-type Tab = 'tasks' | 'learn' | 'coach' | 'history' | 'about'
+type Tab = 'tasks' | 'homework' | 'learn' | 'coach' | 'history' | 'about'
 
 export default function App() {
   const camera = usePoseCamera()
@@ -81,6 +83,8 @@ export default function App() {
 
   useEffect(() => {
     saveAthletes(athletes)
+    // Every athlete always has the 4 automatic homework drills
+    for (const a of athletes) ensureAutoHomework(a.id)
   }, [athletes])
 
   useEffect(() => {
@@ -261,6 +265,7 @@ export default function App() {
           {(
             [
               ['tasks', 'Tasks'],
+              ['homework', 'Homework'],
               ['learn', 'Learn'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
@@ -341,9 +346,62 @@ export default function App() {
         </div>
       )}
 
+      {tab === 'homework' && (
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <div className="flex flex-col gap-3">
+            <CameraStage
+              videoRef={camera.videoRef}
+              canvasRef={camera.canvasRef}
+              landmarks={activeLandmarks}
+              mirror={settings.mirrorVideo}
+              showAngles={settings.showAngles}
+              running={camera.running}
+              demoMode={!camera.running && demoLandmarks !== null}
+            />
+            {cameraControls}
+            {camera.error && (
+              <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
+                {camera.error}
+              </p>
+            )}
+            <ScorePanel
+              shape={shape}
+              score={score}
+              qualityThreshold={qualityThreshold}
+              totalHoldSeconds={hold.totalHoldSeconds}
+              qualityHoldSeconds={hold.qualityHoldSeconds}
+              onResetTimer={hold.reset}
+              onSave={saveAttempt}
+              canSave={Boolean(activeAthleteId)}
+            />
+          </div>
+
+          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+            <AthletePanel
+              athletes={athletes}
+              activeId={activeAthleteId}
+              onChangeAthletes={setAthletes}
+              onSelect={setActiveAthleteId}
+            />
+            <HomeworkPanel
+              athleteId={activeAthleteId}
+              score={score}
+              qualityThreshold={qualityThreshold}
+              currentShapeId={shape.id}
+              totalHoldSeconds={hold.totalHoldSeconds}
+              qualityHoldSeconds={hold.qualityHoldSeconds}
+              onResetTimer={hold.reset}
+              onRequestShape={onJumpToShape}
+              timingActive={timingActive}
+            />
+          </div>
+        </div>
+      )}
+
       {tab === 'learn' && (
         <EducationPanel referencePhotos={referencePhotos} />
       )}
+
 
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">

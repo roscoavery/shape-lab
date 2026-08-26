@@ -1146,6 +1146,111 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // HOLLOW (ARMS DOWN) — beginner hollow, homework auto-drill stage 1
+  // Film from the side while lying on the back. Lower-back compression is
+  // proxied by: hollow hip band + legs slightly off floor + shoulders slightly
+  // off floor. When quality hold reaches 60s the app prompts to level up to
+  // the arms-up "hollow" shape above.
+  // ===========================================================================
+  {
+    id: 'hollow_arms_down',
+    name: 'Hollow (arms down)',
+    description:
+      'Beginner hollow body hold: lower back pressed into the floor, arms glued by the sides, legs tight and straight, shoulders and legs just off the floor.',
+    category: 'hold',
+    qualityThreshold: 65,
+    tips: [
+      'Film from the side while lying on your back.',
+      'Press the lower back into the floor — no gap under it.',
+      'Arms stay down along your sides (do NOT reach overhead yet).',
+      'Squeeze legs tight and straight, point toes.',
+      'Lift legs and shoulders just off the floor — small curl, not a sit-up.',
+      'Reach 60s of quality hold to level up to Hollow with arms up.',
+    ],
+    criteria: [
+      {
+        // Arms DOWN by the sides → SMALL hip–shoulder–elbow angle
+        // (the arms-up hollow wants this LARGE instead).
+        id: 'arms_down',
+        label: 'Arms by sides',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 0,
+        targetMax: 35,
+        tolerance: 10,
+        falloff: 45,
+        weight: 20,
+        feedbackHigh: 'Keep arms down by your sides ({delta}° too high).',
+      },
+      {
+        // Lower-back compression proxy 1: hollow hip band
+        // (same band as the arms-up hollow).
+        id: 'hips',
+        label: 'Hollow hip angle',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 120,
+        targetMax: 155,
+        tolerance: 12,
+        falloff: 40,
+        weight: 26,
+        feedbackLow: 'Hollow more — press the lower back into the floor.',
+        feedbackHigh: 'Reduce pike — lengthen the hollow.',
+      },
+      {
+        id: 'knees',
+        label: 'Knees straight',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 160,
+        targetMax: 180,
+        tolerance: 8,
+        weight: 18,
+        feedbackLow: 'Straighten knees {delta}°.',
+      },
+      {
+        // Lower-back compression proxy 2: legs slightly off the floor.
+        id: 'legs_lifted',
+        label: 'Legs just off floor',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HIP, LM.LEFT_ANKLE],
+        targetMin: 5,
+        targetMax: 40,
+        tolerance: 8,
+        falloff: 40,
+        weight: 12,
+        feedbackLow: 'Lift the legs slightly off the floor.',
+        feedbackHigh: 'Lower the legs — keep the lower back pressed down.',
+      },
+      {
+        // Lower-back compression proxy 3: shoulders slightly off the floor.
+        id: 'upper_lift',
+        label: 'Shoulders off floor',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HIP, LM.LEFT_SHOULDER],
+        targetMin: 5,
+        targetMax: 45,
+        tolerance: 10,
+        falloff: 45,
+        weight: 10,
+        feedbackLow: 'Curl the shoulders slightly off the floor.',
+        feedbackHigh: 'Lower the chest — small curl, not a sit-up.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Feet together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.07,
+        falloff: 0.2,
+        weight: 14,
+        feedbackHigh: 'Squeeze heels together.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // ARCH
   // ===========================================================================
   {
@@ -1204,58 +1309,98 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // SUPERMAN
+  // SUPERMAN — homework auto-drill
+  // Prone hold: STRAIGHT arms behind the ears, chin OFF the chest (head
+  // neutral / slightly lifted), straight knees lifted off the ground,
+  // pointed toes, feet and ankles squeezed together. Film from the side.
   // ===========================================================================
   {
     id: 'superman',
     name: 'Superman',
-    description: 'Prone Superman hold: arms and legs lifted, tight body.',
+    description:
+      'Prone Superman hold: straight arms behind the ears, chin off the chest (head neutral), straight knees lifted off the floor, feet and ankles together, toes pointed.',
     category: 'hold',
     qualityThreshold: 60,
+    tips: [
+      'Film from the side while lying on your stomach.',
+      'Arms straight and squeezed behind the ears.',
+      'Chin OFF the chest — head neutral or slightly lifted.',
+      'Lift straight knees off the ground.',
+      'Squeeze feet and ankles together and point the toes hard.',
+    ],
     criteria: [
       {
-        id: 'arm_lift',
-        label: 'Arm lift',
+        // Arms behind ears → LARGE hip–shoulder–elbow angle.
+        id: 'arms_behind_ears',
+        label: 'Arms behind ears',
         kind: 'joint_angle',
         points: L_SHOULDER,
-        targetMin: 120,
-        targetMax: 180,
-        tolerance: 15,
-        weight: 30,
-        feedbackLow: 'Lift arms higher.',
-      },
-      {
-        id: 'leg_lift',
-        label: 'Leg lift',
-        kind: 'joint_angle',
-        points: L_HIP,
         targetMin: 150,
-        targetMax: 200,
-        tolerance: 15,
-        weight: 30,
-        feedbackLow: 'Lift legs higher from the floor.',
-      },
-      {
-        id: 'knees',
-        label: 'Knees straight',
-        kind: 'joint_angle',
-        points: L_KNEE,
-        targetMin: 155,
         targetMax: 180,
-        tolerance: 10,
+        tolerance: 12,
         weight: 20,
-        feedbackLow: 'Straighten knees.',
+        feedbackLow: 'Squeeze straight arms behind the ears ({delta}° more).',
       },
       {
         id: 'elbows',
         label: 'Elbows straight',
         kind: 'joint_angle',
         points: L_ELBOW,
-        targetMin: 150,
+        targetMin: 155,
         targetMax: 180,
-        tolerance: 12,
+        tolerance: 10,
+        weight: 12,
+        feedbackLow: 'Straighten elbows — long arms.',
+      },
+      {
+        // Head neutral proxy: shoulder→nose segment lifted slightly
+        // above the (horizontal) prone torso line.
+        id: 'chin_off_chest',
+        label: 'Chin off chest',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_SHOULDER, LM.NOSE],
+        targetMin: 5,
+        targetMax: 50,
+        tolerance: 10,
+        falloff: 40,
+        weight: 14,
+        feedbackLow: 'Lift the chin off the chest — head neutral.',
+        feedbackHigh: 'Relax the neck — head neutral, not cranked up.',
+      },
+      {
+        // Straight knees lifted off the ground → open (even hyper-extended)
+        // shoulder–hip–knee angle.
+        id: 'legs_lifted',
+        label: 'Knees off floor',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 150,
+        targetMax: 200,
+        tolerance: 15,
         weight: 20,
-        feedbackLow: 'Straighten elbows.',
+        feedbackLow: 'Lift straight knees off the floor.',
+      },
+      {
+        id: 'knees',
+        label: 'Knees straight',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 160,
+        targetMax: 180,
+        tolerance: 8,
+        weight: 16,
+        feedbackLow: 'Straighten knees {delta}° — pointed toes.',
+      },
+      {
+        id: 'feet_ankles_together',
+        label: 'Feet & ankles together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.06,
+        falloff: 0.2,
+        weight: 18,
+        feedbackHigh: 'Squeeze feet and ankles together.',
       },
     ],
   },

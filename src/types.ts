@@ -199,6 +199,50 @@ export type AthleteTaskProgress = {
   updatedAt: string
 }
 
+/** Who put a homework item on the athlete's list. */
+export type HomeworkSource = 'auto' | 'coach' | 'athlete'
+
+/**
+ * One homework drill on an athlete's list.
+ * `auto` items are seeded for EVERY athlete and cannot be removed —
+ * they track progress over the whole tumbling journey.
+ */
+export type HomeworkItem = {
+  id: string
+  athleteId: string
+  /** Shape being trained (from src/config/shapes.ts) */
+  shapeId: string
+  source: HomeworkSource
+  /**
+   * Stable key for auto items ('hollow' | 'superman' | 'side_plank' |
+   * 'wall_handstand') so the hollow item can switch shape (arms down →
+   * arms up) while keeping its identity and history.
+   */
+  autoKey?: string
+  /** Quality-hold goal in seconds (shown as a progress bar) */
+  targetSeconds?: number
+  notes?: string
+  createdAt: string
+  /** Set when the hollow auto item was leveled up arms-down → arms-up */
+  progressedAt?: string
+}
+
+/** One logged homework session (a completed timed hold). */
+export type HomeworkLog = {
+  id: string
+  athleteId: string
+  homeworkId: string
+  shapeId: string
+  /** ISO date-time of the session */
+  date: string
+  totalHoldSeconds: number
+  qualityHoldSeconds: number
+  /** Overall shape score (0–100) at log time */
+  score: number
+  /** For side plank: which side was trained */
+  side?: 'left' | 'right'
+}
+
 /**
  * Coach-uploaded reference photo for athletes to match.
  * Stored as a data URL (base64) in localStorage / IndexedDB.

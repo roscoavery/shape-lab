@@ -8,6 +8,7 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
 - Run an ordered **athlete Tasks curriculum** (5s holds → 3s after mastery)
 - **Learn** shapes and pathways without a camera (Education tab)
+- **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -55,6 +56,26 @@ public/references/lunge_land.jpg
 
 Curriculum order is edited in `src/config/curriculum.ts`.
 
+## Homework (per-athlete drill library)
+
+Every athlete automatically has **4 lifetime drills** (they can never be removed):
+
+1. **Hollow body hold — arms down** (`hollow_arms_down`) — lower back pressed down, arms by sides. When the best **quality hold reaches 60s**, the app prompts to **level up to Hollow with arms up** (`hollow`, arms by ears) — one click switches the drill and keeps all history.
+2. **Superman** — straight arms behind ears, chin off chest (head neutral), straight knees off the floor, feet & ankles together, toes pointed.
+3. **Side plank** — log left / right / both sides; per-side bests are tracked.
+4. **Wall handstand** — time + quality, same standards as freestanding.
+
+On top of that, the **coach can assign** any shape from the library as homework, and the **athlete can self-select** drills too ("Coach assigns" / "Athlete picks" when adding).
+
+How it works:
+
+1. Open the **Homework** tab, pick an athlete.
+2. Press **Train** on a drill — the camera scores that shape live with total / quality hold timers (same engine as Coach mode).
+3. Press **Log session** — the session (date, total hold, quality hold, score, side) is saved to `localStorage`.
+4. Each drill card shows **best quality hold**, session count, a quality-hold **trend sparkline**, and the last 5 sessions.
+
+Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog`); the auto drills are defined in `AUTO_HOMEWORK_DEFS` and the 60s hollow level-up gate in `HOLLOW_PROGRESS_TARGET_SECONDS`.
+
 ## Education (Learn tab)
 
 Athletes and parents can study body positions **without setting up a camera**:
@@ -64,6 +85,33 @@ Athletes and parents can study body positions **without setting up a camera**:
 3. **Task pathways** — walk the 12 curriculum tasks in order, see unlock story (what comes next), step-by-step shapes with beginner/mastered hold times, pass-through notes, and voice-correction flags. Tap a step to open that shape’s education page.
 
 “How to hit this shape” copy is derived from `tips` and criterion `feedbackLow` / `feedbackHigh` in `src/config/shapes.ts` — coaches still edit scoring there.
+
+## Compare (video study tab)
+
+Side-by-side technique study: a **reference video** (the technique to copy) next to the **athlete camera** (live view, delay cam, or recorded replay). Stacks vertically on phones. Everything is stored on this device (IndexedDB — video blobs are too big for localStorage).
+
+### The Instagram constraint (honest version)
+
+Instagram does **not** offer a free public API to log in and read your saved collections — the Basic Display API was shut down, oEmbed requires app review, and scraping violates their Terms of Service. So Compare implements the closest free, legal workflow:
+
+1. **Paste an Instagram post/reel URL** — shown via Instagram's public embed. View-only: embeds can't be frame-scrubbed, slow-mo'd, or reliably auto-looped, and private posts won't render.
+2. **Upload a video file** (mp4/mov/webm) or **paste a direct video URL** — full control: loop, frame-by-frame scrub, 0.25x/0.5x/1x speed, A/B loop region. **Recommended:** screen-record or download your own IG videos and upload them here.
+3. Organize references into named **collections** (stored locally in IndexedDB).
+
+### Athlete camera side
+
+- **Live** — plain camera view (no pose detection needed here), mirror toggle.
+- **Delay cam** — adjustable 2–10s delay (MediaRecorder timeslice chunks fed into a MediaSource buffer playing behind live). The athlete performs, then watches themselves N seconds later without touching the device. Needs a browser where MediaRecorder and MediaSource share a codec (Chrome / Edge / Firefox).
+- **Record** — capture attempts with MediaRecorder; the last 12 clips are kept in IndexedDB (oldest pruned automatically).
+- **Replay** — pick a recorded attempt and scrub frame-by-frame (slider + step buttons) at 0.25x/0.5x/1x, next to the looping reference.
+
+### Recommended coach workflow
+
+1. Screen-record (or download) the IG technique video you want athletes to copy.
+2. Upload it into a Compare collection (e.g. "Back handspring refs").
+3. Set an A/B loop around the key phase; slow to 0.5x.
+4. Athlete performs in front of the camera with **Delay cam** at ~5s — they walk over and watch themselves hands-free.
+5. For detailed review, **Record** the attempt and scrub the replay frame-by-frame beside the reference.
 
 ## First test: Handstand
 
@@ -110,11 +158,13 @@ src/
   lib/angles.ts          joint / segment math
   lib/pose.ts            MediaPipe setup
   lib/storage.ts         localStorage (athletes, progress, refs)
+  lib/clipStore.ts       IndexedDB (Compare collections + recorded clips)
+  components/compare/    Compare tab (reference player, delay cam, replay)
   hooks/useSpeechCoach.ts
   components/TaskTrainer.tsx
   components/EducationPanel.tsx  Learn tab (shapes + pathways)
   lib/educationCopy.ts   readable cues from criteria
-  App.tsx                main UI (Tasks | Learn | Coach | Athletes | About)
+  App.tsx                main UI (Tasks | Homework | Learn | Compare | Coach | Athletes | About)
 public/references/       optional default coach photos
 ```
 
