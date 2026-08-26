@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks (curriculum) | Homework | Learn | Coach | Athletes | About
+ * Tabs: Tasks (curriculum) | Homework | Learn | Compare | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Sequences: src/config/sequences.ts
@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
+import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
@@ -49,7 +50,7 @@ import type {
   ShapeDef,
 } from './types'
 
-type Tab = 'tasks' | 'homework' | 'learn' | 'coach' | 'history' | 'about'
+type Tab = 'tasks' | 'homework' | 'learn' | 'compare' | 'coach' | 'history' | 'about'
 
 export default function App() {
   const camera = usePoseCamera()
@@ -267,6 +268,7 @@ export default function App() {
               ['tasks', 'Tasks'],
               ['homework', 'Homework'],
               ['learn', 'Learn'],
+              ['compare', 'Compare'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
               ['about', 'About'],
@@ -402,6 +404,7 @@ export default function App() {
         <EducationPanel referencePhotos={referencePhotos} />
       )}
 
+      {tab === 'compare' && <ComparePanel />}
 
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
