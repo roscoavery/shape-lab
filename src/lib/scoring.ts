@@ -21,8 +21,9 @@
  * - Cues come from the written criterion, never a coverage slogan.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
- * - Leniency is only on lunge open shoulders (85% is a pass). Other
- *   important parts stay strict so a mountain-climber cannot sneak through.
+ * - Starting lunge, landing lunge, and lever: open shoulders pass at 75%.
+ *   Legs and the back-foot → shoulders line must be 85%+ to move on.
+ *   Shoulder notes go in the written analysis — they are not a voice loop.
  */
 
 import {
@@ -62,6 +63,49 @@ const ARM_VERTICES = new Set<number>([
 function isArmJointAngle(c: CriterionDef): boolean {
   const vertex = c.points?.[1]
   return c.kind === 'joint_angle' && vertex !== undefined && ARM_VERTICES.has(vertex)
+}
+
+/** 75% open-shoulder pass — starting lunge, landing lunge, lever only. */
+const SOFT_SHOULDER_SHAPES = new Set(['lunge_start', 'lunge_land', 'lever'])
+
+/** Legs + back-foot → shoulders line: 85% required to move on. */
+const LEG_LINE_IDS = new Set([
+  'front_knee',
+  'back_leg',
+  'heel_up',
+  'heel_flat',
+  'longer_step',
+  'closer_step',
+  'line_foot_hands',
+  'line_foot_shoulders',
+  'straight_back',
+  'chest_parallel',
+])
+
+export function isSoftShoulderShape(shapeId: string): boolean {
+  return SOFT_SHOULDER_SHAPES.has(shapeId)
+}
+
+export function isShoulderCriterionId(id: string): boolean {
+  return id === 'shoulders' || id === 'shoulders_open'
+}
+
+/** Voice must not loop these — they belong in the written analysis. */
+export function isOpenShoulderCue(text: string | null | undefined): boolean {
+  if (!text) return false
+  const t = text.toLowerCase()
+  return t.includes('open shoulder') || t.includes('arms by ears')
+}
+
+function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: number }): boolean {
+  if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) {
+    return r.score < 75
+  }
+  if (LEG_LINE_IDS.has(r.id) && isSoftShoulderShape(shape.id)) {
+    return r.score < 85
+  }
+  if (r.weight < 10) return false
+  return r.score < 65
 }
 
 export function scoreAgainstTarget(
@@ -306,14 +350,10 @@ function scoreOnce(
         }
       }
       score = s
-      // Lunge open-shoulders: 85% is a pass — do not wait for a perfect 180°.
-      // This is the only lunge check that gets this leniency.
-      if (c.id === 'shoulders' && shape.id.includes('lunge') && score >= 85) {
-        score = 100
-        feedback = null
-      } else {
-        feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
-      }
+      feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
+      // Keep the real shoulder grade for the snapshot / written analysis.
+      // 75% is enough to *pass* on starting/landing lunge and lever — do not
+      // rewrite it to 100.
     }
 
     const skipFromOverall = allowOccludedSide && c.kind === 'symmetry'
@@ -347,7 +387,12 @@ function scoreOnce(
   }
 
   for (const r of sorted) {
-    if (r.feedback && r.score < 85) {
+    if (!r.feedback) continue
+    // Open shoulders on these shapes are written, not spoken — skip them
+    // once they are at the 75% pass, and always skip them as the live nag
+    // when legs/line are already in.
+    if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) continue
+    if (r.score < 85) {
       mainCorrection = r.feedback
       break
     }
@@ -365,21 +410,20 @@ function scoreOnce(
   }
 
   const important = results.filter((r) => r.weight >= 10)
-  const keyMisses = important.filter((r) => {
-    // Open shoulders on a lunge: 85% is enough. Everything else stays strict.
-    if (r.id === 'shoulders' && shape.id.includes('lunge')) return r.score < 85
-    return r.score < 65
-  })
-  const strong = important.filter((r) => r.score >= 70)
+  const keyMisses = results.filter((r) => isKeyMiss(shape, r))
+  const blockingMisses = keyMisses.filter((r) => !isShoulderCriterionId(r.id))
+  const linePieces = important.filter((r) => !isShoulderCriterionId(r.id))
+  const strongLine = linePieces.filter((r) => r.score >= 85)
   const holdReady =
     overall >= threshold &&
     keyMisses.length === 0 &&
     !(shape.cameraView === 'front' && detected === 'side')
+  // “Close” is for a leftover leg/line piece, never for open shoulders.
   const nearHit =
     !holdReady &&
-    important.length >= 2 &&
-    strong.length >= important.length - 1 &&
-    keyMisses.length <= 1 &&
+    blockingMisses.length === 1 &&
+    linePieces.length >= 2 &&
+    strongLine.length >= linePieces.length - 1 &&
     overall >= Math.max(52, threshold - 16)
 
   return {

@@ -206,7 +206,8 @@ export type ScoreResult = {
   holdReady?: boolean
   /**
    * True when the athlete is actually in the shape except one piece
-   * (e.g. everything but open shoulders). Casual standing is not “close”.
+   * (a leftover leg or line check). Open shoulders on lunges/lever do
+   * not count as “close”. Casual standing is not “close”.
    */
   nearHit?: boolean
 }

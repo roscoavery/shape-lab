@@ -45,12 +45,20 @@ export function TaskAnalysisPanel({
               </span>
             </div>
             <p className="mt-1 text-sm leading-snug text-[var(--text)]">{s.notes}</p>
-            {s.criteria.filter((c) => c.score < 75 && c.feedback).length > 0 && (
+            {s.criteria.filter((c) => {
+              if (!c.feedback) return false
+              if (c.id === 'shoulders' || c.id === 'shoulders_open') return c.score < 90
+              return c.score < 85
+            }).length > 0 && (
               <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] text-[var(--muted)]">
                 {s.criteria
-                  .filter((c) => c.score < 75 && c.feedback)
+                  .filter((c) => {
+                    if (!c.feedback) return false
+                    if (c.id === 'shoulders' || c.id === 'shoulders_open') return c.score < 90
+                    return c.score < 85
+                  })
                   .sort((a, b) => a.score - b.score)
-                  .slice(0, 4)
+                  .slice(0, 5)
                   .map((c) => (
                     <li key={c.id}>
                       {c.label} ({c.score}): {c.feedback}

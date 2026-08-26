@@ -40,6 +40,7 @@ import {
   saveTaskProgress,
 } from '../lib/storage'
 import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
+import { isOpenShoulderCue, isSoftShoulderShape } from '../lib/scoring'
 import type {
   AthleteTaskProgress,
   ReferencePhoto,
@@ -600,7 +601,8 @@ export function TaskTrainer({
             !scripted &&
             step.speakCorrections !== false &&
             mainCorrection &&
-            !mainCorrection.toLowerCase().startsWith('excellent')
+            !mainCorrection.toLowerCase().startsWith('excellent') &&
+            !(isSoftShoulderShape(stepShape.id) && isOpenShoulderCue(mainCorrection))
           ) {
             speakCue(mainCorrection)
           }
@@ -629,12 +631,18 @@ export function TaskTrainer({
             holdAccumRef.current = 0
             setStepProgress(0)
             spokenBeatsRef.current = new Set()
-            if (!scripted) speakLost(mainCorrection)
+            if (!scripted && !isOpenShoulderCue(mainCorrection)) speakLost(mainCorrection)
             setLiveKind(close ? 'close' : 'looking')
             setBanner(close ? `Almost — ${mainCorrection ?? 'find it again'}` : 'Find the shape again')
           } else if (close) {
             setLiveKind((k) => (k === 'close' ? k : 'close'))
-            if (!scripted && step.speakCorrections !== false) speakClose(mainCorrection)
+            if (
+              !scripted &&
+              step.speakCorrections !== false &&
+              !(isSoftShoulderShape(stepShape.id) && isOpenShoulderCue(mainCorrection))
+            ) {
+              speakClose(mainCorrection)
+            }
           } else {
             setLiveKind((k) => (k === 'holding' || k === 'gotit' ? k : 'looking'))
           }

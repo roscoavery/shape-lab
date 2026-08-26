@@ -3,6 +3,7 @@
  */
 
 import { getShape } from '../config/shapes'
+import { isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import type { ScoreResult, TaskRunReport, TaskStepReport } from '../types'
 
 export type LiveStepSample = {
@@ -14,13 +15,27 @@ export type LiveStepSample = {
   qualityHit: boolean
 }
 
-function weakCues(score: ScoreResult, limit = 3): string[] {
+function weakCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
   return [...score.criteria]
-    .filter((c) => c.score < 75)
+    .filter((c) => {
+      if (isShoulderCriterionId(c.id) && isSoftShoulderShape(shapeId)) return false
+      return c.score < 85 && c.weight >= 10
+    })
     .sort((a, b) => a.score - b.score)
     .slice(0, limit)
     .map((c) => c.feedback || c.label)
     .filter((t) => t && !t.toLowerCase().startsWith('excellent'))
+}
+
+function openShoulderWritten(score: ScoreResult, shapeId: string): string | null {
+  if (!isSoftShoulderShape(shapeId)) return null
+  const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
+  if (!sh) return null
+  if (sh.score >= 90) return `Open shoulders ${sh.score}/100.`
+  if (sh.score >= 75) {
+    return `Open shoulders ${sh.score}/100 — passed (75% is enough). Keep reaching arms by the ears.`
+  }
+  return `Open shoulders ${sh.score}/100 — ${sh.feedback || 'arms by ears'}. Written correction only; this did not have to be perfect to move on once it hit 75%.`
 }
 
 export function notesForStep(sample: LiveStepSample): string {
@@ -35,16 +50,18 @@ export function notesForStep(sample: LiveStepSample): string {
       : `${name}${tag}: no clear hit this time. Kick up to the best line you can — ribs in, butt in, ears covered.`
   }
 
-  const cues = weakCues(best)
+  const cues = weakCues(best, sample.shapeId)
   const score = `${best.overall}/100`
+  const shoulders = openShoulderWritten(best, sample.shapeId)
+  const extra = shoulders ? ` ${shoulders}` : ''
 
-  if (best.overall >= 85) {
-    return `${name}${tag}: ${score}. Solid. Keep that line.`
+  if (cues.length === 0 && best.overall >= 85) {
+    return `${name}${tag}: ${score}. Legs and line are in.${extra}`
   }
   if (cues.length === 0) {
-    return `${name}${tag}: ${score}. ${best.mainCorrection ?? 'Keep working the body position.'}`
+    return `${name}${tag}: ${score}. ${best.mainCorrection ?? 'Keep working the body position.'}${extra}`
   }
-  return `${name}${tag}: ${score}. ${cues.join(' ')}`
+  return `${name}${tag}: ${score}. ${cues.join(' ')}${extra}`
 }
 
 export function buildTaskReport(args: {

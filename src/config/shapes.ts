@@ -95,37 +95,37 @@ const LANDING_CLOSER_STEP: CriterionDef = {
   feedbackHigh: 'Bring the feet closer — shorter than the starting lunge.',
 }
 
-/** Lunges: a long DIAGONAL, not a lever (lever is the line parallel to the floor). */
+/** Lunges/lever: a long line from the BACK FOOT to the SHOULDERS (not the still). */
 const LUNGE_DIAGONAL: CriterionDef = {
   id: 'line_foot_hands',
-  label: 'Long line foot → hands',
+  label: 'Long line back foot → shoulders',
   kind: 'segment_vs_horizontal',
-  segment: [LM.RIGHT_ANKLE, LM.LEFT_WRIST],
+  segment: [LM.RIGHT_ANKLE, LM.LEFT_SHOULDER],
   targetMin: 8,
   targetMax: 50,
   tolerance: 14,
   falloff: 40,
-  weight: 10,
+  weight: 14,
   needsView: 'side',
-  feedbackLow: 'Tilt the chest a bit — long line from back foot to hands.',
-  feedbackHigh: 'Keep a long diagonal from back foot to hands — this is not a lever yet.',
+  feedbackLow: 'Tilt the chest a bit — long line from back foot to shoulders.',
+  feedbackHigh: 'Keep a long diagonal from back foot to shoulders — this is not a lever yet.',
 }
 
 /**
- * Open shoulders on a lunge (side view). THIS is the only lenient lunge
- * check: 85% is a pass. Side-on MediaPipe often reads a real “arms by
- * ears” as ~120–150°. Do not require a match to the coach still.
+ * Open shoulders on starting lunge, landing lunge, and lever.
+ * 75% is a pass — not a perfect 180°. Graded in writing after the snapshot.
+ * Side-on MediaPipe often under-reads arms-by-ears.
  */
 const LUNGE_OPEN_SHOULDERS: CriterionDef = {
   id: 'shoulders',
   label: 'Open shoulders',
   kind: 'joint_angle',
   points: L_SHOULDER,
-  targetMin: 128,
+  targetMin: 110,
   targetMax: 180,
-  tolerance: 26,
-  falloff: 52,
-  weight: 20,
+  tolerance: 32,
+  falloff: 55,
+  weight: 16,
   feedbackLow: 'Open shoulders — arms by ears.',
 }
 const LUNGE_STRAIGHT_BACK: CriterionDef = {
@@ -785,7 +785,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Fall forward from passé into this lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Back stays STRAIGHT (not a C). Shoulders OPEN, arms by the ears, one diagonal from the back foot through the body to the hands. Longer stance than a landing lunge. This is not a mountain climber.',
     category: 'static',
-    qualityThreshold: 65,
+    qualityThreshold: 75,
     cameraView: 'side',
     stanceAware: true,
     tips: [
@@ -868,7 +868,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side.',
     category: 'static',
-    qualityThreshold: 65,
+    qualityThreshold: 75,
     cameraView: 'side',
     stanceAware: true,
     tips: [
@@ -923,7 +923,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Weight on the front/support foot with a SLIGHT bend in that knee (not locked, not a deep squat). Chest tilts forward until it is parallel with the ground. Back leg lifts and stays long so one straight line runs from the back foot through the body to the hands — that whole line parallel with the floor. Shoulders OPEN, arms by the ears. Either leg can be the support leg.',
     category: 'hold',
-    qualityThreshold: 65,
+    qualityThreshold: 75,
     cameraView: 'side',
     stanceAware: true,
     tips: [
@@ -963,28 +963,19 @@ export const SHAPES: ShapeDef[] = [
       },
       {
         id: 'line_foot_hands',
-        label: 'Line foot → hands',
+        label: 'Line back foot → shoulders',
         kind: 'segment_vs_horizontal',
-        segment: [LM.RIGHT_ANKLE, LM.LEFT_WRIST],
+        segment: [LM.RIGHT_ANKLE, LM.LEFT_SHOULDER],
         target: 0,
         tolerance: 18,
         falloff: 45,
         weight: 22,
         needsView: 'side',
-        feedbackHigh: 'Lift the back leg — one line back foot to hands, parallel to the ground ({delta}°).',
+        feedbackHigh: 'Lift the back leg — one line from back foot to shoulders, parallel to the ground.',
       },
       {
-        id: 'shoulders',
-        label: 'Open shoulders',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        // Lever shoulders stay strict — leniency is only on lunge open shoulders.
-        targetMin: 155,
-        targetMax: 180,
-        tolerance: 8,
-        falloff: 40,
-        weight: 20,
-        feedbackLow: 'Open shoulders more — arms by ears',
+        ...LUNGE_OPEN_SHOULDERS,
+        feedbackLow: 'Open shoulders — arms by ears.',
       },
       {
         id: 'elbows',
@@ -1002,10 +993,10 @@ export const SHAPES: ShapeDef[] = [
         label: 'Back leg long',
         kind: 'joint_angle',
         points: R_KNEE,
-        targetMin: 150,
+        targetMin: 155,
         targetMax: 180,
-        tolerance: 12,
-        weight: 8,
+        tolerance: 10,
+        weight: 14,
         feedbackLow: 'Lengthen / straighten the back leg.',
       },
     ],

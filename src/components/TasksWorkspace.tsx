@@ -68,6 +68,9 @@ export function TasksWorkspace({
         <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
           Pass when this body position is true. The still is a picture of the
           idea — you do not have to match the photo.
+          {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
+            ? ' Open shoulders pass at 75% and are graded in writing. Legs and the line from back foot to shoulders need 85% to move on.'
+            : ''}
         </p>
         {holding && (
           <p className="mt-2 text-base font-semibold text-[var(--good)]">Hold it.</p>
