@@ -363,12 +363,15 @@ function ExtraFolder({
                     className="mt-2 max-h-40 w-full rounded-md object-contain bg-[#0d1218]"
                   />
                 )}
-                {ref?.notes && (
+                {s.coachNotes && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{s.coachNotes}</p>
+                )}
+                {ref?.notes && ref.notes !== s.coachNotes && (
                   <p className="mt-2 whitespace-pre-wrap text-sm">{ref.notes}</p>
                 )}
                 <UploadFields
                   key={s.id}
-                  existingNotes={ref?.notes ?? ''}
+                  existingNotes={ref?.notes && ref.notes !== s.coachNotes ? ref.notes : ''}
                   replace={Boolean(ref)}
                   onSave={(file, notes) => onUploadBuiltin(s.id, file, notes)}
                 />

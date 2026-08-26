@@ -1579,14 +1579,25 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // CANDLESTICK
+  // CANDLESTICK — shoulder stand; open hips + ribs in (handstand forward roll / BER)
   // ===========================================================================
   {
     id: 'candlestick',
     name: 'Candlestick',
-    description: 'Shoulder stand candlestick: hips stacked over shoulders, legs vertical.',
+    description:
+      'Shoulder-stand candlestick: open hips, ribs in, straight vertical line from shoulders to pointed toes. Staple for tumbling and straight-arm handstand forward rolls.',
+    bodyPosition:
+      'SIDE or 3/4. Weight on the shoulders and upper back. Hips OPEN and stacked over the shoulders. Ribs in — no banana. Knees straight, feet together, toes pointed to the ceiling. One straight vertical line. Arms can rest on the floor by the ears / reaching past the head.',
     category: 'hold',
     qualityThreshold: 65,
+    cameraView: 'side',
+    tips: [
+      'SIDE or 3/4 so the vertical line is obvious.',
+      'Open hips, ribs in — same stacked body as a good handstand, just on the shoulders.',
+      'Straight knees, pointed toes.',
+    ],
+    coachNotes:
+      'A staple in gymnastics and tumbling. This still is the middle of a handstand forward roll. Useful for learning open hips with ribs in, entering the back extension roll, and exiting the handstand into a forward roll. Good handstand forward rolls with straight arms require this shape. Also useful for drills that apply to handsprings, tucks, layouts, and fulls.',
     criteria: [
       {
         id: 'legs_vertical',
@@ -1596,19 +1607,21 @@ export const SHAPES: ShapeDef[] = [
         target: 0,
         tolerance: 15,
         falloff: 40,
-        weight: 35,
+        weight: 30,
+        needsView: 'side',
         feedbackHigh: 'Stack legs vertical — {delta}° off.',
       },
       {
         id: 'hips',
-        label: 'Hips open',
+        label: 'Open hips / ribs in',
         kind: 'joint_angle',
         points: L_HIP,
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 25,
-        feedbackLow: 'Open hips / reduce pike.',
+        weight: 24,
+        feedbackLow: 'Open the hips — ribs in, no pike.',
+        feedbackHigh: 'Ribs in — don’t arch.',
       },
       {
         id: 'knees',
@@ -1618,7 +1631,7 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 160,
         targetMax: 180,
         tolerance: 8,
-        weight: 25,
+        weight: 20,
         feedbackLow: 'Straighten knees.',
       },
       {
@@ -1629,8 +1642,20 @@ export const SHAPES: ShapeDef[] = [
         target: 0,
         tolerance: 0.07,
         falloff: 0.2,
-        weight: 15,
+        weight: 12,
         feedbackHigh: 'Squeeze feet together.',
+      },
+      {
+        id: 'toes',
+        label: 'Toes pointed',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 22,
+        falloff: 50,
+        weight: 14,
+        needsView: 'side',
+        feedbackHigh: 'Point the toes ({delta}°).',
       },
     ],
   },

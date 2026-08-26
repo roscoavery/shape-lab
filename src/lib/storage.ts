@@ -333,6 +333,7 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   lunge_land: '/references/lunge_land.jpg',
   c_shape: '/references/c_shape.jpg',
   handstand: '/references/handstand.jpg',
+  candlestick: '/references/candlestick.jpg',
 }
 
 /** Files that actually ship in public/references/ (not just hoped-for names). */
@@ -344,6 +345,7 @@ export const SHIPPED_REFERENCE_IDS = new Set([
   'feet_together_open_shoulders',
   'lever',
   'handstand',
+  'candlestick',
 ])
 
 export function loadReferencePhotos(): ReferencePhoto[] {

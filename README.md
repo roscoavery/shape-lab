@@ -64,6 +64,7 @@ public/references/lunge_start.jpg — starting lunge (heel up, straight back, op
 public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
 public/references/lever.jpg       — lever (slight front-knee bend, chest parallel)
 public/references/handstand.jpg   — stacked freestanding HS (ribs in, ears covered)
+public/references/candlestick.jpg — candlestick (open hips, ribs in; HS forward roll)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or
