@@ -54,25 +54,24 @@ You do **not** need to film from the same angle as a reference photo. Joint angl
 
 The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge → lever → HS → lunge sequences are **required on both sides**. Before those, athletes complete an **arm positions lesson** (low V back, front middle, open shoulders, T, high V chest out) and **lunge holds** in those same arm positions.
 
-Shipped coach stills live in `public/references/`. Included so far:
+Shipped coach stills live in `src/assets/references/` (and `public/references/`) so they
+show on every Preview or tunnel link. Hit snapshots go in the Tasks hit folder and
+never replace these pictures.
 
 ```text
-public/references/c_shape.jpg     — tumbling C (back handspring / round-off connection)
-public/references/passe.png       — passé with FTOS arms
-public/references/feet_together_open_shoulders.jpg — FTOS (feet glued, hands to the ceiling)
-public/references/lunge_start.jpg — starting lunge (heel up, straight back, open shoulders)
-public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
-public/references/lever.jpg       — lever (slight front-knee bend, chest parallel)
-public/references/handstand.jpg   — stacked freestanding HS (ribs in, ears covered)
-public/references/candlestick.jpg — candlestick (open hips, ribs in; HS forward roll)
-public/references/hollow_arms_down.jpg — hollow hold, arms down (pike in, low back flat)
-public/references/hollow_arms_up.jpg   — hollow hold, arms by ears (after 1-minute arms-down)
-public/references/zombie.jpg           — standing hollow, arms in front, ears covered (RO / BHS landing)
-public/references/mountain_climber.jpg — C plus a medium step, both knees bent (pass-through only)
+c_shape.jpg
+passe.jpg
+feet_together_open_shoulders.jpg
+lunge_start.jpg
+lunge_land.jpg
+lever.jpg
+handstand.jpg
+candlestick.jpg
+hollow_arms_down.jpg
+hollow_arms_up.jpg
+zombie.jpg
+mountain_climber.jpg
 ```
-
-Other pathway stills can be dropped here (see `public/references/README.md`) or
-uploaded in **Learn → Glossary**.
 
 Curriculum order is edited in `src/config/curriculum.ts`.
 

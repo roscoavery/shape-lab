@@ -22,6 +22,7 @@ import {
   type ExtraShape,
 } from '../lib/glossaryStore'
 import { createId, saveReferencePhoto } from '../lib/storage'
+import { ReferenceStill } from './ReferenceStill'
 import type { ReferencePhoto } from '../types'
 
 type Folder = 'needed' | 'practice' | 'extra'
@@ -32,7 +33,7 @@ type Props = {
 }
 
 export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
-  const [folder, setFolder] = useState<Folder>('needed')
+  const [folder, setFolder] = useState<Folder>('practice')
   const [flash, setFlash] = useState<string | null>(null)
   const [extras, setExtras] = useState<ExtraShape[]>([])
   const [extraUrls, setExtraUrls] = useState<Record<string, string>>({})
@@ -242,7 +243,12 @@ function PracticeGrid({
             >
               <div className="h-24 w-20 shrink-0 overflow-hidden rounded-md bg-[#0d1218]">
                 {have && ref ? (
-                  <img src={ref.dataUrl} alt="" className="h-full w-full object-cover" />
+                  <ReferenceStill
+                    shapeId={s.shapeId}
+                    photos={photos}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-[var(--warn)]">
                     Need photo

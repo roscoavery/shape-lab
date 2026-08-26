@@ -14,7 +14,7 @@ import {
   howToHitShape,
   visibleCriteria,
 } from '../lib/educationCopy'
-import { pickReferencePhoto } from '../lib/storage'
+import { ReferenceStill } from './ReferenceStill'
 import { listCaptures, type TaskCapture } from '../lib/captureStore'
 import type { ReferencePhoto, ShapeDef } from '../types'
 import { ViewCallout } from './ViewCallout'
@@ -50,7 +50,6 @@ export function EducationPanel({
   const [view, setView] = useState<EduView>({ kind: 'home' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
-  const [refFailed, setRefFailed] = useState<Record<string, boolean>>({})
   const [hits, setHits] = useState<TaskCapture[]>([])
 
   useEffect(() => {
@@ -160,8 +159,6 @@ export function EducationPanel({
           onFilter={setFilter}
           onOpen={openShape}
           referencePhotos={referencePhotos}
-          refFailed={refFailed}
-          onRefError={(id) => setRefFailed((m) => ({ ...m, [id]: true }))}
         />
       )}
 
@@ -170,8 +167,6 @@ export function EducationPanel({
           shapeId={view.shapeId}
           pathwayIds={pathwayIds}
           referencePhotos={referencePhotos}
-          refFailed={refFailed}
-          onRefError={(id) => setRefFailed((m) => ({ ...m, [id]: true }))}
           onBack={goShapes}
           onOpenTask={openTask}
         />
@@ -349,8 +344,6 @@ function ShapeLibrary({
   onFilter,
   onOpen,
   referencePhotos,
-  refFailed,
-  onRefError,
 }: {
   shapes: ShapeDef[]
   pathwayIds: Set<string>
@@ -360,8 +353,6 @@ function ShapeLibrary({
   onFilter: (f: ShapeFilter) => void
   onOpen: (id: string) => void
   referencePhotos: ReferencePhoto[]
-  refFailed: Record<string, boolean>
-  onRefError: (id: string) => void
 }) {
   return (
     <section className="space-y-3">
@@ -408,8 +399,6 @@ function ShapeLibrary({
 
       <ul className="grid gap-3 sm:grid-cols-2">
         {shapes.map((shape) => {
-          const ref = pickReferencePhoto(referencePhotos, shape.id, null)
-          const showThumb = ref && !refFailed[ref.id]
           const onPath = pathwayIds.has(shape.id)
           return (
             <li key={shape.id}>
@@ -419,18 +408,12 @@ function ShapeLibrary({
                 className="flex h-full w-full gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 text-left transition hover:border-[var(--accent-dim)]"
               >
                 <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#0d1218]">
-                  {showThumb ? (
-                    <img
-                      src={ref.dataUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      onError={() => onRefError(ref.id)}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center px-1 text-center text-[10px] leading-tight text-[var(--muted)]">
-                      No photo
-                    </div>
-                  )}
+                  <ReferenceStill
+                    shapeId={shape.id}
+                    photos={referencePhotos}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -467,16 +450,12 @@ function ShapeDetail({
   shapeId,
   pathwayIds,
   referencePhotos,
-  refFailed,
-  onRefError,
   onBack,
   onOpenTask,
 }: {
   shapeId: string
   pathwayIds: Set<string>
   referencePhotos: ReferencePhoto[]
-  refFailed: Record<string, boolean>
-  onRefError: (id: string) => void
   onBack: () => void
   onOpenTask: (taskId: string) => void
 }) {
@@ -492,8 +471,6 @@ function ShapeDetail({
     )
   }
 
-  const ref = pickReferencePhoto(referencePhotos, shape.id, null)
-  const showRef = ref && !refFailed[ref.id]
   const criteria = visibleCriteria(shape)
   const howTo = howToHitShape(shape)
   const onPath = pathwayIds.has(shape.id)
@@ -551,29 +528,17 @@ function ShapeDetail({
 
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Reference photo
+          Coach still
         </h4>
-        {showRef ? (
-          <>
-            <img
-              src={ref.dataUrl}
-              alt={`${shape.name} reference`}
-              className="max-h-80 w-full rounded-md object-contain bg-[#0d1218]"
-              onError={() => onRefError(ref.id)}
-            />
-            {ref.notes && ref.notes !== shape.coachNotes && (
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{ref.notes}</p>
-            )}
-          </>
-        ) : (
-          <div className="rounded-lg border border-dashed border-[var(--panel-border)] bg-[#121820] px-4 py-8 text-center text-sm text-[var(--muted)]">
-            <p className="font-medium text-[var(--text)]">No reference photo yet</p>
-            <p className="mt-2">
-              Open <strong className="text-[var(--text)]">Learn → Glossary</strong> to upload
-              one clear still and any extra notes for this shape.
-            </p>
-          </div>
-        )}
+        <div className="max-h-80 overflow-hidden rounded-md bg-[#0d1218]">
+          <ReferenceStill
+            shapeId={shape.id}
+            photos={referencePhotos}
+            alt={`${shape.name} reference`}
+            className="max-h-80 w-full object-contain"
+            emptyLabel="No coach still for this shape yet"
+          />
+        </div>
       </div>
 
       {shape.coachNotes && (

@@ -6,7 +6,10 @@
 import { CURRICULUM_TASKS } from '../config/curriculum'
 import { SHAPES, getShape } from '../config/shapes'
 import { curriculumShapeIds } from './educationCopy'
-import { DEFAULT_REFERENCE_PATHS, SHIPPED_REFERENCE_IDS } from './storage'
+import {
+  pickCoachStill,
+  SHIPPED_REFERENCE_IDS,
+} from './shippedRefs'
 import type { ReferencePhoto, ShapeDef } from '../types'
 
 /** Homework drills that are practiced on camera but not on the task pathway. */
@@ -143,22 +146,8 @@ export function pickCoachReference(
   photos: ReferencePhoto[],
   shapeId: string,
 ): ReferencePhoto | null {
-  const uploaded = photos.find(
-    (p) => p.shapeId === shapeId && p.athleteId == null && p.dataUrl?.startsWith('data:image'),
-  )
-  if (uploaded) return uploaded
-  const path = DEFAULT_REFERENCE_PATHS[shapeId]
-  if (path && SHIPPED_REFERENCE_IDS.has(shapeId)) {
-    const shape = getShape(shapeId)
-    return {
-      id: `default_${shapeId}`,
-      shapeId,
-      athleteId: null,
-      dataUrl: path,
-      label: 'Coach reference',
-      notes: shape?.coachNotes,
-      createdAt: '',
-    }
-  }
-  return null
+  const still = pickCoachStill(photos, shapeId)
+  if (!still) return null
+  const shape = getShape(shapeId)
+  return { ...still, notes: still.notes ?? shape?.coachNotes }
 }

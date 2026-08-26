@@ -1,27 +1,28 @@
-# Coach reference photos (optional defaults for Tasks UI)
+# Coach stills (shipped in the app)
 
-Drop files with these names (jpg or png — update `DEFAULT_REFERENCE_PATHS`
-in `src/lib/storage.ts` if you change extensions). Add the shape id to
-`SHIPPED_REFERENCE_IDS` once the file is actually in this folder.
+The pictures Ryan provided live in **two places so every link shows them**:
+
+- `src/assets/references/` — bundled into the app (this is the source of truth)
+- `public/references/` — same files served at `/references/...`
+
+Written body-position copy lives in `src/config/shapes.ts` (`bodyPosition`, `coachNotes`).
+
+Hit snapshots from the camera go in the athlete **hit folder**, not here.
 
 Included:
 
-- `c_shape.jpg` — tumbling C (squat, hollow chest, hips under, arms forward)
-- `passe.png` — passé with FTOS arms
-- `feet_together_open_shoulders.jpg` — FTOS, feet glued, arms to the ceiling
-- `lunge_start.jpg` — starting lunge, back heel UP, straight back, open shoulders
-- `lunge_land.jpg` — landing lunge, back heel FLAT, shorter stance
-- `lever.jpg` — lever: slight front-knee bend, chest parallel, line back foot → hands
-- `handstand.jpg` — stacked freestanding HS, ribs in, ears covered
-- `candlestick.jpg` — shoulder-stand candlestick (open hips, ribs in)
-- `hollow_arms_down.jpg` — hollow body hold, arms by the sides
-- `hollow_arms_up.jpg` — hollow body hold, arms by the ears (after 1-minute arms-down)
-- `zombie.jpg` — standing hollow, arms in front, shoulders shrugged to cover ears
-- `mountain_climber.jpg` — C plus one medium step, both knees bent, reach from the middle out
+- `c_shape.jpg`
+- `passe.jpg`
+- `feet_together_open_shoulders.jpg`
+- `lunge_start.jpg`
+- `lunge_land.jpg`
+- `lever.jpg`
+- `handstand.jpg`
+- `candlestick.jpg`
+- `hollow_arms_down.jpg`
+- `hollow_arms_up.jpg`
+- `zombie.jpg`
+- `mountain_climber.jpg`
 
-Still needed (shot list is also in Learn → Glossary → Need photos):
-
-Pathway and homework stills that are not listed above.
-
-Coaches can also upload photos in Tasks or Learn → Glossary (saved in
-localStorage). Uploads replace the shipped file for that shape.
+To add another still: drop a JPG in both folders, add the shape id in
+`src/lib/shippedRefs.ts` (`SHIPPED_FILES`).

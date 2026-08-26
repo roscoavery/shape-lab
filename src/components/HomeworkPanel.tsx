@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
+import { ReferenceStill } from './ReferenceStill'
 import {
   DEFAULT_FORM_STANDARD,
   HOLLOW_PROGRESS_TARGET_SECONDS,
@@ -32,7 +33,6 @@ import {
   progressHollowHomework,
   removeHomeworkItem,
   updateHomeworkItem,
-  pickReferencePhoto,
 } from '../lib/storage'
 import type {
   HomeworkBreakdown,
@@ -132,31 +132,30 @@ function HollowPairRefs({
   photos: ReferencePhoto[]
   unlockedUp: boolean
 }) {
-  const down = pickReferencePhoto(photos, 'hollow_arms_down', null)
-  const up = pickReferencePhoto(photos, 'hollow_arms_up', null)
-  if (!down && !up) return null
   return (
     <div className="mt-2 grid grid-cols-2 gap-2">
       <figure>
-        {down && (
-          <img
-            src={down.dataUrl}
+        <div className="max-h-36 overflow-hidden rounded-md bg-[#0d1218]">
+          <ReferenceStill
+            shapeId="hollow_arms_down"
+            photos={photos}
             alt="Hollow arms down"
-            className="max-h-36 w-full rounded-md object-contain bg-[#0d1218]"
+            className="max-h-36 w-full object-contain"
           />
-        )}
+        </div>
         <figcaption className="mt-1 text-[11px] leading-snug text-[var(--text)]">
           Arms down — do this first. Lower back flat, then feet lift.
         </figcaption>
       </figure>
       <figure className={unlockedUp ? '' : 'opacity-75'}>
-        {up && (
-          <img
-            src={up.dataUrl}
+        <div className="max-h-36 overflow-hidden rounded-md bg-[#0d1218]">
+          <ReferenceStill
+            shapeId="hollow_arms_up"
+            photos={photos}
             alt="Hollow arms up"
-            className="max-h-36 w-full rounded-md object-contain bg-[#0d1218]"
+            className="max-h-36 w-full object-contain"
           />
-        )}
+        </div>
         <figcaption className="mt-1 text-[11px] leading-snug text-[var(--warn)]">
           {unlockedUp
             ? 'Arms up — unlocked after a proper 1-minute arms-down hold.'

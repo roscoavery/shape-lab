@@ -21,7 +21,6 @@ import { TaskAnalysisPanel } from './TaskAnalysisPanel'
 import { ViewCallout } from './ViewCallout'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
-  blobToDataUrl,
   deleteCapture,
   listCaptures,
   saveCapture,
@@ -29,14 +28,13 @@ import {
   type TaskCapture,
 } from '../lib/captureStore'
 import { HitFolder } from './HitFolder'
+import { ReferenceStill } from './ReferenceStill'
 import { useRollingCapture } from '../hooks/useRollingCapture'
 import { useSpeechCoach, holdPrompt } from '../hooks/useSpeechCoach'
 import {
   createId,
-  deleteReferencePhoto,
   fileToDataUrl,
   latestTaskAnalysis,
-  pickReferencePhoto,
   recordTaskCompletion,
   recordTaskSkip,
   saveReferencePhoto,
@@ -95,7 +93,6 @@ export function TaskTrainer({
   const [stepIndex, setStepIndex] = useState(0)
   const [stepProgress, setStepProgress] = useState(0)
   const [flash, setFlash] = useState<string | null>(null)
-  const [refFailedId, setRefFailedId] = useState<string | null>(null)
   const [captures, setCaptures] = useState<TaskCapture[]>([])
   const [liveKind, setLiveKind] = useState<'looking' | 'close' | 'holding' | 'gotit'>('looking')
   const [banner, setBanner] = useState('Start the pathway — keep listening and hit each shape.')
@@ -152,13 +149,6 @@ export function TaskTrainer({
   const stepHold =
     task && step ? holdSecondsForStep(task, step, taskCompletions) : 0
   const stepShape = step ? getShape(step.shapeId) : undefined
-
-  const activeRef = pickReferencePhoto(
-    referencePhotos,
-    step?.shapeId ?? task?.steps[0]?.shapeId ?? '',
-    athleteId,
-  )
-  const showRef = Boolean(activeRef?.dataUrl) && refFailedId !== activeRef?.id
 
   const selectTask = (taskId: string) => {
     if (!athleteId || !progress) return
@@ -359,41 +349,12 @@ export function TaskTrainer({
     void (async () => {
       try {
         await saveCapture(meta, blob)
-        const existing = referencePhotos.find(
-          (p) => p.shapeId === stepShape.id && p.athleteId === athleteId,
-        )
-        if (!existing || existing.id.startsWith('hitref_')) {
-          const dataUrl = await blobToDataUrl(blob)
-          const photo: ReferencePhoto = {
-            id: `hitref_${athleteId}_${stepShape.id}`,
-            shapeId: stepShape.id,
-            athleteId,
-            dataUrl,
-            label: `${stepShape.name} (your hit)`,
-            createdAt: new Date().toISOString(),
-          }
-          await saveReferencePhoto(photo)
-          onReferencesChange([
-            photo,
-            ...referencePhotos.filter(
-              (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
-            ),
-          ])
-        }
         await refreshCaptures()
       } catch {
         /* capture optional */
       }
     })()
-  }, [
-    athleteId,
-    task,
-    stepShape,
-    canvasRef,
-    referencePhotos,
-    onReferencesChange,
-    refreshCaptures,
-  ])
+  }, [athleteId, task, stepShape, canvasRef, refreshCaptures])
 
   // Hold quality, talk through hits / close / lost, advance the pathway
   useEffect(() => {
@@ -608,32 +569,6 @@ export function TaskTrainer({
     mainCorrection,
   ])
 
-  const onUploadRef = async (file: File | null) => {
-    if (!file || !stepShape) return
-    try {
-      const dataUrl = await fileToDataUrl(file)
-      const photo: ReferencePhoto = {
-        id: createId('ref'),
-        shapeId: stepShape.id,
-        athleteId: athleteId,
-        dataUrl,
-        label: stepShape.name,
-        createdAt: new Date().toISOString(),
-      }
-      await saveReferencePhoto(photo)
-      onReferencesChange([
-        photo,
-        ...referencePhotos.filter(
-          (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
-        ),
-      ])
-      setFlash('Reference photo saved')
-      setTimeout(() => setFlash(null), 2000)
-    } catch {
-      setFlash('Could not save reference photo')
-    }
-  }
-
   const onUploadSharedRef = async (file: File | null) => {
     if (!file || !stepShape) return
     try {
@@ -658,11 +593,6 @@ export function TaskTrainer({
     } catch {
       setFlash('Could not save reference photo')
     }
-  }
-
-  const removeRef = async (id: string) => {
-    await deleteReferencePhoto(id)
-    onReferencesChange(referencePhotos.filter((p) => p.id !== id))
   }
 
   if (!athleteId) {
@@ -947,67 +877,34 @@ export function TaskTrainer({
           </div>
         )}
         <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
-          Reference photo
+          Coach still
           {stepShape ? ` · ${stepShape.name}` : ''}
         </p>
-        {showRef && activeRef ? (
-          <div className="mb-2">
-            <img
-              key={activeRef.id}
-              src={activeRef.dataUrl}
-              alt={activeRef.label ?? 'Reference'}
-              className="max-h-48 w-full rounded-md object-contain bg-[#0d1218]"
-              onError={() => setRefFailedId(activeRef.id)}
+        {stepShape ? (
+          <div className="mb-2 max-h-48 overflow-hidden rounded-md bg-[#0d1218]">
+            <ReferenceStill
+              shapeId={stepShape.id}
+              photos={referencePhotos}
+              alt={stepShape.name}
+              className="max-h-48 w-full object-contain"
+              emptyLabel="No coach still for this shape yet"
             />
-            <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-              <span>
-                {activeRef.id.startsWith('default_')
-                  ? 'Default file'
-                  : activeRef.athleteId
-                    ? 'Athlete-specific'
-                    : 'Shared for shape'}
-              </span>
-              {!activeRef.id.startsWith('default_') && (
-                <button
-                  type="button"
-                  className="text-[var(--bad)] underline"
-                  onClick={() => void removeRef(activeRef.id)}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
           </div>
         ) : (
-          <p className="mb-2 text-xs text-[var(--muted)]">
-            No reference yet — upload a coach photo, or place a JPG in{' '}
-            <code className="text-[var(--accent)]">public/references/</code>.
-          </p>
+          <p className="mb-2 text-xs text-[var(--muted)]">Pick a task to see the coach still.</p>
         )}
+        <p className="mb-2 text-[11px] text-[var(--muted)]">
+          Your hits are saved in the folder below — they never replace this picture.
+        </p>
         <div className="flex flex-wrap gap-2 text-sm">
           <label className="cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 hover:bg-[#243040]">
-            Upload for athlete
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={!stepShape || !athleteId}
-              onChange={(e) => {
-                setRefFailedId(null)
-                void onUploadRef(e.target.files?.[0] ?? null)
-                e.target.value = ''
-              }}
-            />
-          </label>
-          <label className="cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 hover:bg-[#243040]">
-            Upload shared
+            Replace coach still
             <input
               type="file"
               accept="image/*"
               className="hidden"
               disabled={!stepShape}
               onChange={(e) => {
-                setRefFailedId(null)
                 void onUploadSharedRef(e.target.files?.[0] ?? null)
                 e.target.value = ''
               }}

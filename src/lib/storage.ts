@@ -375,37 +375,11 @@ export function addHomeworkLog(log: HomeworkLog): void {
 // Reference photos (base64 data URLs in localStorage)
 // ---------------------------------------------------------------------------
 
-/** Default static files under public/references/ (used when present). */
-export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
-  feet_together_open_shoulders: '/references/feet_together_open_shoulders.jpg',
-  passe: '/references/passe.png',
-  lunge_start: '/references/lunge_start.jpg',
-  lever: '/references/lever.jpg',
-  lunge_land: '/references/lunge_land.jpg',
-  c_shape: '/references/c_shape.jpg',
-  handstand: '/references/handstand.jpg',
-  candlestick: '/references/candlestick.jpg',
-  hollow_arms_down: '/references/hollow_arms_down.jpg',
-  hollow_arms_up: '/references/hollow_arms_up.jpg',
-  zombie: '/references/zombie.jpg',
-  mountain_climber: '/references/mountain_climber.jpg',
-}
-
-/** Files that actually ship in public/references/ (not just hoped-for names). */
-export const SHIPPED_REFERENCE_IDS = new Set([
-  'c_shape',
-  'passe',
-  'lunge_land',
-  'lunge_start',
-  'feet_together_open_shoulders',
-  'lever',
-  'handstand',
-  'candlestick',
-  'hollow_arms_down',
-  'hollow_arms_up',
-  'zombie',
-  'mountain_climber',
-])
+export {
+  DEFAULT_REFERENCE_PATHS,
+  SHIPPED_REFERENCE_IDS,
+  pickReferencePhoto,
+} from './shippedRefs'
 
 export function loadReferencePhotos(): ReferencePhoto[] {
   return readJson<ReferencePhoto[]>(REFS_KEY, [])
@@ -427,39 +401,6 @@ export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
 
 export async function deleteReferencePhoto(id: string): Promise<void> {
   saveReferencePhotos(loadReferencePhotos().filter((p) => p.id !== id))
-}
-
-/**
- * Prefer athlete-specific upload → shared coach upload → shipped public file.
- * Default paths that are not in SHIPPED_REFERENCE_IDS are ignored (hoped-for names).
- */
-export function pickReferencePhoto(
-  photos: ReferencePhoto[],
-  shapeId: string,
-  athleteId: string | null,
-): ReferencePhoto | null {
-  if (!shapeId) return null
-  if (athleteId) {
-    const forAthlete = photos.find(
-      (p) => p.shapeId === shapeId && p.athleteId === athleteId,
-    )
-    if (forAthlete) return forAthlete
-  }
-  const shared = photos.find((p) => p.shapeId === shapeId && p.athleteId == null)
-  if (shared) return shared
-
-  const defaultPath = DEFAULT_REFERENCE_PATHS[shapeId]
-  if (defaultPath && SHIPPED_REFERENCE_IDS.has(shapeId)) {
-    return {
-      id: `default_${shapeId}`,
-      shapeId,
-      athleteId: null,
-      dataUrl: defaultPath,
-      label: 'Coach reference',
-      createdAt: '',
-    }
-  }
-  return null
 }
 
 /** Read a File as a data URL (for localStorage). */
