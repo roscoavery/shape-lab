@@ -25,25 +25,17 @@ const HS_SEQ: TaskGuide = {
   steps: {
     feet_together_open_shoulders: {
       intro:
-        'Feet together, open shoulders. Stay in profile — you do not need to face the camera. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up. Hold 3.',
+        'Feet together, open shoulders. Stay in profile — you do not need to face the camera. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up. I will count 3, 2, 1.',
     },
     passe: {
-      intro: 'Pull one leg to passé and hold.',
-      beats: [
-        { at: 3, text: '3' },
-        { at: 2, text: '2' },
-      ],
+      intro: 'Pull one leg to passé and hold. I will count 3, 2, 1 and snapshot your best.',
     },
     lunge_start: {
       intro:
-        'Fall to a starting lunge. When I see the lunge, open your shoulders as far as you can and count 3 in your head. I will snapshot your best open.',
+        'Fall to a starting lunge. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1 and snapshot your best open.',
     },
     lever: {
-      intro: 'Lever. Hold 3.',
-      beats: [
-        { at: 3, text: '3' },
-        { at: 2, text: '2' },
-      ],
+      intro: 'Lever. I will count 3, 2, 1.',
     },
     handstand: {
       intro:
@@ -51,7 +43,7 @@ const HS_SEQ: TaskGuide = {
     },
     lunge_land: {
       intro:
-        'Landing lunge — back heel flat. When I see the lunge, open your shoulders as far as you can and count 3 in your head. I will snapshot your best open.',
+        'Landing lunge — back heel flat. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1 and snapshot your best open.',
       outro: 'And clean.',
     },
   },
@@ -78,7 +70,7 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
     steps: {
       lunge_start: {
         intro:
-          'Show me a starting lunge. Side view. Back heel up, back leg straight, back straight. When I see the lunge, open your shoulders as far as you can and count 3 in your head.',
+          'Show me a starting lunge. Side view. Back heel up, back leg straight, back straight. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1.',
       },
     },
   },
@@ -86,7 +78,7 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
     steps: {
       lunge_land: {
         intro:
-          'Show me a landing lunge. Side view. Back heel flat, shorter stance. When I see the lunge, open your shoulders as far as you can and count 3 in your head.',
+          'Show me a landing lunge. Side view. Back heel flat, shorter stance. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1.',
       },
     },
   },

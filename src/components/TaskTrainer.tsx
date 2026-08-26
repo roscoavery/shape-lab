@@ -5,7 +5,7 @@
  * pathway so the athlete does not retap Start. Snapshots go in the hit folder.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import {
   CURRICULUM_TASKS,
   getTask,
@@ -18,6 +18,7 @@ import {
 import { getStepGuide } from '../config/walkthrough'
 import { getShape } from '../config/shapes'
 import { TaskAnalysisPanel } from './TaskAnalysisPanel'
+import type { TaskLiveUi } from './TasksWorkspace'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
   deleteCapture,
@@ -40,7 +41,7 @@ import {
   saveTaskProgress,
 } from '../lib/storage'
 import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
-import { isLungeShoulderWindow, isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
+import { isCountdownHold, isLungeShoulderWindow, isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
 import type {
   AthleteTaskProgress,
   ReferencePhoto,
@@ -78,6 +79,10 @@ type Props = {
   onEnsureCamera?: () => void
   /** Latest hit still for the PiP (parent holds the object URL). */
   onHitPreview?: (blob: Blob) => void
+  /** Parent camera overlay: holding / countdown / got-it. */
+  onLiveUi?: (ui: TaskLiveUi | null) => void
+  /** Fullscreen next-task arrow calls this. */
+  skipNextRef?: MutableRefObject<(() => void) | null>
 }
 
 export function TaskTrainer({
@@ -99,6 +104,8 @@ export function TaskTrainer({
   cameraRunning,
   onEnsureCamera,
   onHitPreview,
+  onLiveUi,
+  skipNextRef,
 }: Props) {
   const [active, setActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
@@ -120,6 +127,7 @@ export function TaskTrainer({
   const skipIntroRef = useRef(false)
   const hadHitThisStepRef = useRef(false)
   const bestShoulderRef = useRef(-1)
+  const bestScoreRef = useRef(-1)
   const samplesRef = useRef<LiveStepSample[]>([])
   const spokenBeatsRef = useRef<Set<number>>(new Set())
   const tryCountRef = useRef(0)
@@ -319,6 +327,24 @@ export function TaskTrainer({
     window.setTimeout(() => setFlash(null), 4000)
   }
 
+  useEffect(() => {
+    if (!skipNextRef) return
+    skipNextRef.current = skipToNextTask
+  })
+
+  useEffect(() => {
+    if (!onLiveUi) return
+    if (!active) {
+      onLiveUi(null)
+      return
+    }
+    onLiveUi({
+      liveKind,
+      holdProgress: stepProgress,
+      holdRequired: stepHold,
+    })
+  }, [active, liveKind, stepProgress, stepHold, onLiveUi])
+
   const finishTask = useCallback((prefix?: string) => {
     if (!athleteId || !task || completingRef.current) return
     completingRef.current = true
@@ -401,6 +427,7 @@ export function TaskTrainer({
     hitAtRef.current = null
     hadHitThisStepRef.current = false
     bestShoulderRef.current = -1
+    bestScoreRef.current = -1
     spokenBeatsRef.current = new Set()
     tryCountRef.current = 0
     tryAccumRef.current = 0
@@ -484,6 +511,37 @@ export function TaskTrainer({
       if (gradeOnly) slot.tries = tryCountRef.current
     }
 
+    const speakCountdown = (remaining: number) => {
+      for (const beat of [
+        { at: 3, text: '3' },
+        { at: 2, text: '2' },
+        { at: 1, text: '1' },
+      ]) {
+        if (
+          remaining <= beat.at &&
+          remaining > beat.at - 0.85 &&
+          !spokenBeatsRef.current.has(beat.at)
+        ) {
+          spokenBeatsRef.current.add(beat.at)
+          speakEvent(beat.text)
+        }
+      }
+    }
+
+    const snapshotIfBest = () => {
+      const result = scoreRef.current
+      if (isLungeShoulderWindow(stepShape.id)) {
+        const sh = openShoulderScore(result)
+        if (sh && sh.score > bestShoulderRef.current) {
+          bestShoulderRef.current = sh.score
+          saveHitSnapshot()
+        }
+      } else if (result.overall > bestScoreRef.current) {
+        bestScoreRef.current = result.overall
+        saveHitSnapshot()
+      }
+    }
+
     const completeStep = () => {
       holdAccumRef.current = 0
       setStepProgress(0)
@@ -551,14 +609,17 @@ export function TaskTrainer({
         const dt = (now - lastRef.current) / 1000
         const scoringThisStep = scoredShapeId === step.shapeId
         const shoulderWindow = isLungeShoulderWindow(stepShape.id)
+        const countdownHold = isCountdownHold(stepHold)
+        const snapshotWindow = shoulderWindow || countdownHold
         if (scoringThisStep) noteBest(scoreRef.current)
         if (scoringThisStep && scoreRef.current.holdReady) {
           readyAccumRef.current += dt
-        } else if (!(shoulderWindow && inQualityRef.current)) {
+        } else if (!(snapshotWindow && inQualityRef.current)) {
           readyAccumRef.current = 0
         }
         const inQ = scoringThisStep && readyAccumRef.current >= 0.2
         const close = !inQ && Boolean(scoreRef.current.nearHit) && scoringThisStep
+        const inSnapshot = snapshotWindow && inQualityRef.current
 
         if (gradeOnly) {
           tryAccumRef.current += dt
@@ -594,41 +655,27 @@ export function TaskTrainer({
             setLiveKind('looking')
             speakEvent(again)
           }
-        } else if (shoulderWindow && inQualityRef.current) {
-          holdAccumRef.current += dt
-          setStepProgress(holdAccumRef.current)
-          if (scoringThisStep && scoreRef.current.holdReady) {
-            const sh = openShoulderScore(scoreRef.current)
-            if (sh && sh.score > bestShoulderRef.current) {
-              bestShoulderRef.current = sh.score
-              saveHitSnapshot()
-            }
-          }
-          setBanner(
-            `Open as far as you can — count 3. ${Math.max(0, 3 - holdAccumRef.current).toFixed(1)}s`,
-          )
-          if (holdAccumRef.current >= 3) {
-            completeStep()
-            return
-          }
-        } else if (inQ) {
+        } else if (inSnapshot || inQ) {
           if (!inQualityRef.current) {
             inQualityRef.current = true
             hitAtRef.current = now
             playHitTick()
             hadHitThisStepRef.current = true
             saveHitSnapshot()
+            bestScoreRef.current = scoreRef.current.overall
             setLiveKind('holding')
             if (shoulderWindow) {
               const sh = openShoulderScore(scoreRef.current)
               bestShoulderRef.current = sh?.score ?? 0
-              const line =
-                "That's the lunge. Open your shoulders as far as you can. Count 3 in your head."
+              const line = "That's the lunge. Open your shoulders as far as you can."
               setBanner(line)
               speakEvent(line, true)
             } else if (stepShape.id === 'stand_clean') {
               setBanner('Stand clean — that’s it.')
               speakEvent('Stand clean.')
+            } else if (countdownHold) {
+              setBanner(`HOLDING — that's a ${stepShape.name}`)
+              speakEvent('Hold it.', true)
             } else {
               setBanner(`HOLDING — that's a ${stepShape.name}`)
               speakEvent('Hold it.')
@@ -636,30 +683,40 @@ export function TaskTrainer({
           }
           holdAccumRef.current += dt
           setStepProgress(holdAccumRef.current)
-          if (
-            !shoulderWindow &&
-            !scripted &&
-            step.speakCorrections !== false &&
-            mainCorrection &&
-            !mainCorrection.toLowerCase().startsWith('excellent') &&
-            !(isSoftShoulderShape(stepShape.id) && isOpenShoulderCue(mainCorrection))
-          ) {
-            speakCue(mainCorrection)
-          }
-          if (!shoulderWindow && guide?.beats) {
-            const remaining = stepHold - holdAccumRef.current
-            for (const beat of guide.beats) {
-              if (
-                remaining <= beat.at &&
-                remaining > beat.at - 0.85 &&
-                !spokenBeatsRef.current.has(beat.at)
-              ) {
-                spokenBeatsRef.current.add(beat.at)
-                speakEvent(beat.text)
+          if (snapshotWindow) snapshotIfBest()
+          const remaining = stepHold - holdAccumRef.current
+          if (snapshotWindow) {
+            const n = Math.max(0, Math.ceil(remaining))
+            setBanner(
+              shoulderWindow
+                ? `Open as far as you can. ${n}`
+                : `HOLDING — that's a ${stepShape.name}  ${n}`,
+            )
+            speakCountdown(remaining)
+          } else {
+            if (
+              !scripted &&
+              step.speakCorrections !== false &&
+              mainCorrection &&
+              !mainCorrection.toLowerCase().startsWith('excellent') &&
+              !(isSoftShoulderShape(stepShape.id) && isOpenShoulderCue(mainCorrection))
+            ) {
+              speakCue(mainCorrection)
+            }
+            if (guide?.beats) {
+              for (const beat of guide.beats) {
+                if (
+                  remaining <= beat.at &&
+                  remaining > beat.at - 0.85 &&
+                  !spokenBeatsRef.current.has(beat.at)
+                ) {
+                  spokenBeatsRef.current.add(beat.at)
+                  speakEvent(beat.text)
+                }
               }
             }
           }
-          if (!shoulderWindow && holdAccumRef.current >= stepHold) {
+          if (holdAccumRef.current >= stepHold) {
             completeStep()
             return
           }
@@ -1005,9 +1062,11 @@ export function TaskTrainer({
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through each shape and starts the next task on its
-            own — no extra Start tap. We grade the written body position, not a
-            match to the coach still. Body position, still, live feed, score, and
-            delay cam sit together on the left.
+            own — no extra Start tap. On 3-second holds we count 3, 2, 1 and
+            snapshot your best. A green check flashes when you hit the shape.
+            Full screen on the camera puts delay cam bottom-right and the
+            reference bottom-left. The arrow on the camera skips to the next
+            task if scoring is stuck.
           </p>
         </div>
       )}

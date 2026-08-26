@@ -45,6 +45,58 @@ button {
   cursor: pointer;
 }
 
+@keyframes hit-check-pop {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+
+@keyframes hit-check-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+.hit-check {
+  position: relative;
+  width: min(42vw, 220px);
+  height: min(42vw, 220px);
+  animation: hit-check-pop 1.1s ease-out forwards;
+  filter: drop-shadow(0 0 28px rgba(45, 212, 168, 0.7));
+}
+
+.hit-check-gotit {
+  width: min(48vw, 260px);
+  height: min(48vw, 260px);
+  animation-duration: 1.55s;
+}
+
+.hit-check-ring {
+  fill: none;
+  stroke: #2dd4a8;
+  stroke-width: 4;
+  transform-origin: 48px 48px;
+  animation: hit-check-ring 0.9s ease-out forwards;
+}
+
 /* Scrollbars for side panels */
 .panel-scroll {
   scrollbar-width: thin;

@@ -7,7 +7,7 @@
  * Sequences: src/config/sequences.ts
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
@@ -19,7 +19,7 @@ import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
 import { ShapeSelector } from './components/ShapeSelector'
 import { TaskTrainer } from './components/TaskTrainer'
-import { TasksWorkspace } from './components/TasksWorkspace'
+import { TasksWorkspace, type TaskLiveUi } from './components/TasksWorkspace'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
@@ -76,6 +76,8 @@ export default function App() {
     loadReferencePhotos(),
   )
   const [hitPreviewUrl, setHitPreviewUrl] = useState<string | null>(null)
+  const [taskLiveUi, setTaskLiveUi] = useState<TaskLiveUi | null>(null)
+  const skipNextRef = useRef<(() => void) | null>(null)
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
@@ -358,6 +360,8 @@ export default function App() {
             cameraControls={cameraControls}
             cameraError={camera.error}
             hitPreviewUrl={hitPreviewUrl}
+            liveUi={taskLiveUi}
+            onSkipNextTask={() => skipNextRef.current?.()}
           />
 
           <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
@@ -396,6 +400,8 @@ export default function App() {
                   return URL.createObjectURL(blob)
                 })
               }}
+              onLiveUi={setTaskLiveUi}
+              skipNextRef={skipNextRef}
             />
           </div>
         </div>

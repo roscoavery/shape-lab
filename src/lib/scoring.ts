@@ -65,9 +65,9 @@ function isArmJointAngle(c: CriterionDef): boolean {
   return c.kind === 'joint_angle' && vertex !== undefined && ARM_VERTICES.has(vertex)
 }
 
-/** Open shoulders are graded, not required — any lunge plus lever. */
+/** Open shoulders are graded, not required — lunges, lever, and passé. */
 export function isSoftShoulderShape(shapeId: string): boolean {
-  return shapeId === 'lever' || shapeId.includes('lunge')
+  return shapeId === 'lever' || shapeId === 'passe' || shapeId.includes('lunge')
 }
 
 /** Starting / landing lunge: find the lunge, then a 3s open-shoulder snapshot window. */
@@ -75,8 +75,18 @@ export function isLungeShoulderWindow(shapeId: string): boolean {
   return shapeId === 'lunge_start' || shapeId === 'lunge_land'
 }
 
+/** 3-second asks: spoken 3-2-1 countdown and a best-effort snapshot in that window. */
+export function isCountdownHold(seconds: number): boolean {
+  return seconds >= 2.5 && seconds <= 3.05
+}
+
 export function isShoulderCriterionId(id: string): boolean {
-  return id === 'shoulders' || id === 'shoulders_open'
+  return id === 'shoulders' || id === 'shoulders_open' || id === 'hands_up'
+}
+
+/** Shorts often fake a bent back knee on landing-lunge arm holds. */
+export function isLungeArmHold(shapeId: string): boolean {
+  return shapeId.startsWith('lunge_arms_')
 }
 
 /** Legs / stance that must be 85% to move on. Not open-shoulder angle, not the arm line. */
@@ -116,9 +126,19 @@ function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: numb
     if (r.id === 'feet_together' || r.id === 'arms_down') return r.score < 40
     return false
   }
-  // Open-shoulder *angle* never blocks a lunge or lever.
+  // Passé: knee up + stance leg. Open shoulders / arms do not block moving on.
+  if (shape.id === 'passe') {
+    if (r.id === 'stance_knee' || r.id === 'passe_height') return r.score < 55
+    return false
+  }
+  // Open-shoulder *angle* never blocks a lunge, lever, or passé.
   if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) return false
   if (r.id === 'elbows' && isSoftShoulderShape(shape.id)) return false
+  // Shorts hide the back knee — do not require 85% on that joint for arm holds.
+  if (isLungeArmHold(shape.id) && r.id === 'back_leg') return false
+  if (shape.id === 'lunge_arms_low_v' && (r.id === 'line_foot_hands' || r.id === 'low_v')) {
+    return r.score < 62
+  }
   if (shape.id === 'lever' && LEVER_BODY_IDS.has(r.id)) return r.score < 85
   if (shape.id.includes('lunge') && LUNGE_LEG_IDS.has(r.id)) return r.score < 85
   if (r.weight < 10) return false
@@ -373,6 +393,10 @@ function scoreOnce(
     const hideSymmetry = allowOccludedSide && c.kind === 'symmetry'
     const skipShoulderPass =
       isSoftShoulderShape(shape.id) && isShoulderCriterionId(c.id)
+    const skipElbowsPass = isSoftShoulderShape(shape.id) && c.id === 'elbows'
+    const skipShortsKnee = isLungeArmHold(shape.id) && c.id === 'back_leg'
+    const skipPasseStyle =
+      shape.id === 'passe' && c.id !== 'stance_knee' && c.id !== 'passe_height'
 
     results.push({
       id: c.id,
@@ -383,7 +407,7 @@ function scoreOnce(
       feedback: hideSymmetry ? null : feedback,
     })
 
-    if (!hideSymmetry && !skipShoulderPass) {
+    if (!hideSymmetry && !skipShoulderPass && !skipElbowsPass && !skipShortsKnee && !skipPasseStyle) {
       weightedSum += score * c.weight
       weightTotal += c.weight
     }

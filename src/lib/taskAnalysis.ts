@@ -3,7 +3,7 @@
  */
 
 import { getShape } from '../config/shapes'
-import { isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
+import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import type { ScoreResult, TaskRunReport, TaskStepReport } from '../types'
 
 export type LiveStepSample = {
@@ -19,6 +19,9 @@ function weakCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
   return [...score.criteria]
     .filter((c) => {
       if (isShoulderCriterionId(c.id) && isSoftShoulderShape(shapeId)) return false
+      if (c.id === 'elbows' && isSoftShoulderShape(shapeId)) return false
+      if (isLungeArmHold(shapeId) && c.id === 'back_leg') return false
+      if (shapeId === 'passe' && c.id !== 'stance_knee' && c.id !== 'passe_height') return false
       return c.score < 85 && c.weight >= 10
     })
     .sort((a, b) => a.score - b.score)

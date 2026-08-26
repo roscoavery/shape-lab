@@ -13,9 +13,17 @@ type Props = {
   cameraOn: boolean
   mirror: boolean
   compact?: boolean
+  /** Tiny overlay: video + delay label, no panel chrome. */
+  pip?: boolean
 }
 
-export function TaskDelayCam({ stream, cameraOn, mirror, compact = false }: Props) {
+export function TaskDelayCam({
+  stream,
+  cameraOn,
+  mirror,
+  compact = false,
+  pip = false,
+}: Props) {
   const [delaySec, setDelaySec] = useState(6)
   const [mode, setMode] = useState<Mode>('delay')
   const [replaySrc, setReplaySrc] = useState<string | null>(null)
@@ -70,6 +78,64 @@ export function TaskDelayCam({ stream, cameraOn, mirror, compact = false }: Prop
   }
 
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
+  const videoMax = pip ? 'max-h-36 sm:max-h-44' : compact ? 'max-h-36' : 'max-h-48'
+
+  const videoBlock = (
+    <div className="relative overflow-hidden rounded-lg bg-black">
+      {mode === 'replay' && replaySrc ? (
+        <video
+          ref={replayVideoRef}
+          src={replaySrc}
+          className={`block w-full bg-black ${videoMax} ${mirrorCls}`}
+          controls={!pip}
+          playsInline
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget
+            const tail = replayTail
+            if (tail && v.duration && Number.isFinite(v.duration)) {
+              v.currentTime = Math.max(0, v.duration - tail)
+            }
+          }}
+        />
+      ) : (
+        <video
+          ref={delay.delayVideoRef}
+          className={`block w-full bg-black ${videoMax} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
+          playsInline
+          muted
+        />
+      )}
+      {mode === 'live' && !pip && (
+        <p className="px-3 py-8 text-center text-xs text-[var(--muted)]">
+          Live view is the pose camera above. Switch to Delay to watch yourself{' '}
+          {delaySec}s behind, or replay the last few seconds.
+        </p>
+      )}
+      {mode === 'delay' && delay.buffering && cameraOn && (
+        <p className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1 text-center text-[11px] text-[var(--warn)]">
+          Buffering delay cam… {delaySec}s
+        </p>
+      )}
+      {!cameraOn && mode !== 'replay' && (
+        <p className={`px-3 ${pip ? 'py-4' : 'py-8'} text-center text-xs text-[var(--muted)]`}>
+          {pip ? 'Camera off' : 'Start the pathway to turn the camera on — delay cam uses the same feed.'}
+        </p>
+      )}
+      {pip && (
+        <p className="absolute left-1.5 top-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+          Delay {delaySec}s
+        </p>
+      )}
+    </div>
+  )
+
+  if (pip) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-white/25 bg-black/70 shadow-2xl">
+        {videoBlock}
+      </div>
+    )
+  }
 
   return (
     <section className={`rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] ${compact ? 'p-2' : 'p-3'}`}>
@@ -101,47 +167,7 @@ export function TaskDelayCam({ stream, cameraOn, mirror, compact = false }: Prop
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-lg bg-black">
-        {mode === 'replay' && replaySrc ? (
-          <video
-            ref={replayVideoRef}
-            src={replaySrc}
-            className={`block w-full bg-black ${compact ? 'max-h-36' : 'max-h-48'} ${mirrorCls}`}
-            controls
-            playsInline
-            onLoadedMetadata={(e) => {
-              const v = e.currentTarget
-              const tail = replayTail
-              if (tail && v.duration && Number.isFinite(v.duration)) {
-                v.currentTime = Math.max(0, v.duration - tail)
-              }
-            }}
-          />
-        ) : (
-          <video
-            ref={delay.delayVideoRef}
-            className={`block w-full bg-black ${compact ? 'max-h-36' : 'max-h-48'} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
-            playsInline
-            muted
-          />
-        )}
-        {mode === 'live' && (
-          <p className="px-3 py-8 text-center text-xs text-[var(--muted)]">
-            Live view is the pose camera above. Switch to Delay to watch yourself{' '}
-            {delaySec}s behind, or replay the last few seconds.
-          </p>
-        )}
-        {mode === 'delay' && delay.buffering && cameraOn && (
-          <p className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1 text-center text-[11px] text-[var(--warn)]">
-            Buffering delay cam… {delaySec}s
-          </p>
-        )}
-        {!cameraOn && mode !== 'replay' && (
-          <p className="px-3 py-8 text-center text-xs text-[var(--muted)]">
-            Start the pathway to turn the camera on — delay cam uses the same feed.
-          </p>
-        )}
-      </div>
+      {videoBlock}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-xs text-[var(--muted)]">

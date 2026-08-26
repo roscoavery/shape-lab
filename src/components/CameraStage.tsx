@@ -5,7 +5,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
-import { isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
+import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
 
 type Props = {
@@ -22,6 +22,9 @@ type Props = {
   /** Color the skeleton from the live score (green = that line is in). */
   shape?: ShapeDef
   score?: ScoreResult | null
+  className?: string
+  /** Fill the parent instead of sizing to the video aspect. */
+  fill?: boolean
 }
 
 function criterionLandmarks(c: CriterionDef, all: CriterionDef[]): number[] {
@@ -51,6 +54,7 @@ function edgeTint(
   for (const c of shape.criteria) {
     if (c.id.startsWith('_')) continue
     if (isShoulderCriterionId(c.id) && isSoftShoulderShape(shape.id)) continue
+    if (isLungeArmHold(shape.id) && c.id === 'back_leg') continue
     const pts = criterionLandmarks(c, shape.criteria)
     if (!pts.includes(a) && !pts.includes(b)) continue
     const row = score.criteria.find((r) => r.id === c.id)
@@ -86,6 +90,8 @@ export function CameraStage({
   overlay,
   shape,
   score,
+  className = '',
+  fill = false,
 }: Props) {
   useEffect(() => {
     let raf = 0
@@ -199,9 +205,18 @@ export function CameraStage({
   }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score])
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-[var(--panel-border)] bg-black shadow-lg">
+    <div
+      className={`relative w-full overflow-hidden bg-black shadow-lg ${
+        fill
+          ? 'h-full rounded-none border-0'
+          : 'rounded-xl border border-[var(--panel-border)]'
+      } ${className}`}
+    >
       <video ref={videoRef} className="hidden" playsInline muted />
-      <canvas ref={canvasRef} className="block h-auto w-full bg-[#0a0e12]" />
+      <canvas
+        ref={canvasRef}
+        className={`block bg-[#0a0e12] ${fill ? 'h-full w-full object-contain' : 'h-auto w-full'}`}
+      />
       {!running && !demoMode && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0a0e12]/90 p-6 text-center">
           <p className="text-lg font-semibold text-[var(--text)]">Camera is off</p>

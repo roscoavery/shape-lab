@@ -84,6 +84,7 @@ const LOST_PREFIX = ['You lost it.', 'Almost had it.', 'It slipped.']
 
 export function holdPrompt(seconds: number): string {
   if (seconds <= 1.05) return 'Hit it and keep it for a beat.'
+  if (seconds <= 3.05) return "I'll count 3, 2, 1."
   const n = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1)
   return `Hold ${n} seconds.`
 }
