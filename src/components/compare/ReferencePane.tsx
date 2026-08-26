@@ -291,9 +291,9 @@ export function ReferencePane() {
         />
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
-        Paste one Instagram link or a list (spaces or new lines). IG clips replay
-        in this tab (Play again / Loop) so you do not have to jump out to
-        Instagram. Upload a file for scrub, slow-mo, and A/B loop.
+        Paste one Instagram link or a list (spaces or new lines). Public reels
+        play and loop in this tab — pause, scrub, slow-mo. No screen-recording
+        needed. Upload a file only if you already have one.
       </p>
 
       {error && (

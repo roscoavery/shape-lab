@@ -187,11 +187,13 @@ function safeHost(url: string): string {
   }
 }
 
-/** Extract shortcode + path type from an Instagram post/reel/tv URL. */
+/** Extract shortcode + path type from an Instagram post/reel/tv/share URL. */
 export function parseInstagramUrl(
   url: string,
 ): { type: 'p' | 'reel' | 'tv'; code: string } | null {
-  const m = url.match(/instagr(?:am\.com|\.am)\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i)
+  const m = url.match(
+    /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
+  )
   if (!m) return null
   const type = m[1].toLowerCase() === 'reels' ? 'reel' : (m[1].toLowerCase() as 'p' | 'reel' | 'tv')
   return { type, code: m[2] }

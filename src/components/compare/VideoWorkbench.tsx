@@ -14,6 +14,10 @@ type Props = {
   src: string
   mirror?: boolean
   allowAbLoop?: boolean
+  /** Start playback as soon as duration is known. */
+  autoPlay?: boolean
+  /** Loop/scrub only the last N seconds of the file (delay-cam buffer). */
+  tailSeconds?: number
 }
 
 function fmt(t: number): string {
@@ -26,7 +30,13 @@ export function VideoWorkbench(props: Props) {
   return <VideoWorkbenchInner key={props.src} {...props} />
 }
 
-function VideoWorkbenchInner({ src, mirror = false, allowAbLoop = false }: Props) {
+function VideoWorkbenchInner({
+  src,
+  mirror = false,
+  allowAbLoop = false,
+  autoPlay = false,
+  tailSeconds,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
   const [duration, setDuration] = useState(0)
@@ -77,9 +87,28 @@ function VideoWorkbenchInner({ src, mirror = false, allowAbLoop = false }: Props
     setDuration(v.duration)
     if (fixingDurationRef.current) {
       fixingDurationRef.current = false
-      v.currentTime = 0
+      const start =
+        tailSeconds && v.duration > tailSeconds ? v.duration - tailSeconds : 0
+      v.currentTime = start
     }
   }
+
+  // Jump to the last N seconds once we know duration (MediaRecorder webm).
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || duration <= 0) return
+    const start =
+      tailSeconds && duration > tailSeconds + 0.05 ? duration - tailSeconds : 0
+    if (tailSeconds && duration > tailSeconds + 0.05) {
+      setPointA(start)
+      setPointB(duration)
+    }
+    v.currentTime = start
+    setTime(start)
+    if (autoPlay) {
+      void v.play().catch(() => {})
+    }
+  }, [duration, tailSeconds, autoPlay])
 
   const seek = (t: number) => {
     const v = videoRef.current

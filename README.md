@@ -115,25 +115,22 @@ Side-by-side technique study: a **reference video** (the technique to copy) next
 
 ### The Instagram constraint (honest version)
 
-Instagram does **not** offer a free public API to log in and read your saved collections — the Basic Display API was shut down, oEmbed requires app review, and scraping violates their Terms of Service. So Compare implements the closest free, legal workflow:
+Instagram does **not** offer a free public API to log in and pull your saved collections. Compare still lets you **paste public post/reel URLs**. The local app resolves those to a playable video and **loops them in the tab** (pause, scrub, slow-mo). Private posts will not load. Optional: `pip install yt-dlp` gives a local fallback if the built-in resolver misses a clip.
 
-1. **Paste Instagram post/reel URL(s)** — shown via Instagram's public embed. **Play again** and **Loop in this app** restart the embed in Compare so you are not sent out to Instagram to watch a second time. Still no frame-scrub or slow-mo. Private posts and some copyrighted-audio reels will not play outside Instagram.
-2. **Upload a video file** (mp4/mov/webm) or **paste a direct video URL** — full control: loop, frame-by-frame scrub, 0.25x/0.5x/1x speed, A/B loop region. **Recommended:** screen-record or download your own IG videos and upload them here.
-3. Organize references into named **collections** (stored locally in IndexedDB).
+You do **not** need to screen-record every reference. Upload a file only when you already have one.
 
 ### Athlete camera side
 
 - **Live** — plain camera view (no pose detection needed here), mirror toggle.
 - **Delay cam** — adjustable **6–20s** delay (MediaRecorder timeslice chunks fed into a MediaSource buffer playing behind live). The athlete performs, then watches themselves N seconds later without touching the device. Needs a browser where MediaRecorder and MediaSource share a codec (Chrome / Edge / Firefox).
-- **Replay** — tap Replay to open a **pause / play / scrub** viewer of the last N seconds of that buffer (the same 6–20s setting). **Save in app** keeps it in Recorded attempts (IndexedDB). **Save to device** downloads the file.
+- **Replay last Ns** — tap **Replay last 6s** (or whatever the buffer slider is set to) to open a real player of that stretch: pause, play, scrub, slow-mo. **Save in app** keeps it in Recorded attempts (IndexedDB). **Save to device** downloads the file.
 - **Record** — optional longer attempt capture; the last 12 clips are kept in the app (oldest pruned).
 
 ### Recommended coach workflow
 
-1. Screen-record (or download) the IG technique video you want athletes to copy.
-2. Upload it into a Compare collection (e.g. "Back handspring refs").
-3. Set an A/B loop around the key phase; slow to 0.5x.
-4. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
+1. Paste the public Instagram reel URL into a Compare collection (e.g. "Back handspring refs").
+2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
+3. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay last Ns** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
 
 ## First test: Handstand
 

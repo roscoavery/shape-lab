@@ -61,15 +61,12 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
-type RollingChunk = { t: number; blob: Blob }
-
 export function CameraPane() {
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
   // Delay engine refs
-  const delayRecorderRef = useRef<MediaRecorder | null>(null)
   const delaySourceBufferRef = useRef<SourceBuffer | null>(null)
   const delayMediaSourceRef = useRef<MediaSource | null>(null)
   const delayQueueRef = useRef<ArrayBuffer[]>([])
@@ -77,11 +74,16 @@ export function CameraPane() {
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
 
-  // Rolling buffer (last DELAY_MAX seconds) for Replay
+  // One MediaRecorder while the camera is on. Its complete file (header +
+  // clusters) is what Replay plays. Slicing timeslices by time drops the
+  // WebM header and will not play — we never do that.
   const rollingRecorderRef = useRef<MediaRecorder | null>(null)
-  const rollingChunksRef = useRef<RollingChunk[]>([])
+  const rollingChunksRef = useRef<Blob[]>([])
+  const rollingStartRef = useRef(0)
   const rollingMimeRef = useRef('video/webm')
+  const rollingGenRef = useRef(0)
   const replayBlobRef = useRef<Blob | null>(null)
+  const flushWaiterRef = useRef<((blob: Blob | null) => void) | null>(null)
 
   // Attempt recorder refs
   const attemptRecorderRef = useRef<MediaRecorder | null>(null)
@@ -103,59 +105,12 @@ export function CameraPane() {
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
   const [clipSrc, setClipSrc] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
+  const [replayBuilding, setReplayBuilding] = useState(false)
+  const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
 
   useEffect(() => {
     delaySecRef.current = delaySec
   }, [delaySec])
-
-  const trimRollingChunks = useCallback(() => {
-    const cutoff = performance.now() - (DELAY_MAX + 2) * 1000
-    const chunks = rollingChunksRef.current
-    const firstKeep = chunks.findIndex((c) => c.t >= cutoff)
-    if (firstKeep > 0) rollingChunksRef.current = chunks.slice(firstKeep)
-  }, [])
-
-  const blobFromBuffer = useCallback((seconds: number): Blob | null => {
-    const now = performance.now()
-    const chunks = rollingChunksRef.current.filter((c) => c.t >= now - seconds * 1000)
-    if (chunks.length === 0) return null
-    return new Blob(
-      chunks.map((c) => c.blob),
-      { type: rollingMimeRef.current || 'video/webm' },
-    )
-  }, [])
-
-  const stopRolling = useCallback(() => {
-    const rec = rollingRecorderRef.current
-    if (rec && rec.state !== 'inactive') rec.stop()
-    rollingRecorderRef.current = null
-    rollingChunksRef.current = []
-  }, [])
-
-  const startRolling = useCallback(() => {
-    const stream = streamRef.current
-    if (!stream) return
-    const mime = pickRecorderMime()
-    if (!mime) return
-    rollingMimeRef.current = mime
-    rollingChunksRef.current = []
-    const rec = new MediaRecorder(stream, { mimeType: mime })
-    rollingRecorderRef.current = rec
-    rec.ondataavailable = (e) => {
-      if (e.data.size === 0) return
-      rollingChunksRef.current.push({ t: performance.now(), blob: e.data })
-      trimRollingChunks()
-    }
-    rec.start(250)
-  }, [trimRollingChunks])
-
-  useEffect(() => {
-    void getClips().then(setClips).catch(() => {})
-  }, [])
-
-  // -------------------------------------------------------------------------
-  // Delay cam engine
-  // -------------------------------------------------------------------------
 
   const pumpDelayQueue = useCallback(() => {
     const sb = delaySourceBufferRef.current
@@ -170,12 +125,101 @@ export function CameraPane() {
     }
   }, [])
 
+  const startRolling = useCallback(() => {
+    const stream = streamRef.current
+    if (!stream) return
+    const mime = pickDelayMime() ?? pickRecorderMime()
+    if (!mime) return
+    const existing = rollingRecorderRef.current
+    if (existing && existing.state !== 'inactive') return
+    rollingMimeRef.current = mime
+    rollingChunksRef.current = []
+    rollingStartRef.current = performance.now()
+    rollingGenRef.current += 1
+    const gen = rollingGenRef.current
+    const rec = new MediaRecorder(stream, { mimeType: mime })
+    rollingRecorderRef.current = rec
+    rec.ondataavailable = (e) => {
+      if (gen !== rollingGenRef.current) return
+      if (!e.data || e.data.size === 0) return
+      rollingChunksRef.current.push(e.data)
+      if (delayMediaSourceRef.current) {
+        void e.data.arrayBuffer().then((buf) => {
+          delayQueueRef.current.push(buf)
+          pumpDelayQueue()
+        })
+      }
+    }
+    rec.onstop = () => {
+      const waiter = flushWaiterRef.current
+      flushWaiterRef.current = null
+      const parts = rollingChunksRef.current
+      const blob =
+        parts.length > 0
+          ? new Blob(parts, { type: rec.mimeType || rollingMimeRef.current })
+          : null
+      if (waiter) waiter(blob && blob.size > 500 ? blob : null)
+    }
+    rec.start(200)
+  }, [pumpDelayQueue])
+
+  const stopRolling = useCallback(() => {
+    flushWaiterRef.current = null
+    const rec = rollingRecorderRef.current
+    rollingRecorderRef.current = null
+    if (rec && rec.state !== 'inactive') {
+      rec.onstop = null
+      rec.stop()
+    }
+  }, [])
+
+  const flushRollingBlob = useCallback((): Promise<Blob | null> => {
+    const rec = rollingRecorderRef.current
+    if (!rec || rec.state === 'inactive') {
+      const parts = rollingChunksRef.current
+      if (parts.length === 0) return Promise.resolve(null)
+      return Promise.resolve(
+        new Blob(parts, { type: rollingMimeRef.current || 'video/webm' }),
+      )
+    }
+    return new Promise((resolve) => {
+      let settled = false
+      const done = (blob: Blob | null) => {
+        if (settled) return
+        settled = true
+        flushWaiterRef.current = null
+        resolve(blob)
+      }
+      flushWaiterRef.current = done
+      window.setTimeout(() => {
+        const parts = rollingChunksRef.current
+        done(
+          parts.length > 0
+            ? new Blob(parts, { type: rollingMimeRef.current || 'video/webm' })
+            : null,
+        )
+      }, 1800)
+      try {
+        rec.requestData()
+      } catch {
+        // stop() still flushes
+      }
+      rec.stop()
+      rollingRecorderRef.current = null
+    })
+  }, [])
+
+  useEffect(() => {
+    void getClips().then(setClips).catch(() => {})
+  }, [])
+
+  // -------------------------------------------------------------------------
+  // Delay cam engine (plays the shared recorder N seconds behind live)
+  // -------------------------------------------------------------------------
+
   const stopDelay = useCallback(() => {
     window.clearInterval(delayTimerRef.current)
     setDelayBuffering(false)
-    const rec = delayRecorderRef.current
-    if (rec && rec.state !== 'inactive') rec.stop()
-    delayRecorderRef.current = null
     delaySourceBufferRef.current = null
     const ms = delayMediaSourceRef.current
     if (ms && ms.readyState === 'open') {
@@ -200,11 +244,10 @@ export function CameraPane() {
   }, [])
 
   const startDelay = useCallback(() => {
-    const stream = streamRef.current
     const video = delayVideoRef.current
-    if (!stream || !video) return
-    const mime = pickDelayMime()
-    if (!mime) {
+    if (!video) return
+    const mime = rollingMimeRef.current || pickDelayMime()
+    if (!mime || typeof MediaSource === 'undefined' || !MediaSource.isTypeSupported(mime)) {
       setError(
         'Delay cam is not supported in this browser (needs MediaRecorder + MediaSource with a shared codec — use Chrome, Edge, or Firefox).',
       )
@@ -224,17 +267,12 @@ export function CameraPane() {
       const sb = ms.addSourceBuffer(mime)
       delaySourceBufferRef.current = sb
       sb.addEventListener('updateend', pumpDelayQueue)
-
-      const rec = new MediaRecorder(stream, { mimeType: mime })
-      delayRecorderRef.current = rec
-      rec.ondataavailable = (e) => {
-        if (e.data.size === 0) return
-        void e.data.arrayBuffer().then((buf) => {
-          delayQueueRef.current.push(buf)
-          pumpDelayQueue()
-        })
-      }
-      rec.start(250)
+      // Replay already-captured clusters so delay can start as soon as we have N seconds.
+      void Promise.all(rollingChunksRef.current.map((b) => b.arrayBuffer())).then((bufs) => {
+        if (delayMediaSourceRef.current !== ms) return
+        for (const buf of bufs) delayQueueRef.current.push(buf)
+        pumpDelayQueue()
+      })
     })
 
     // Keep the delayed playhead (buffered end − delay) and trim old data
@@ -395,30 +433,42 @@ export function CameraPane() {
     clipUrlRef.current = url
     setClipSrc(url)
     setActiveClipId(clip.id)
+    setReplayTailSec(null)
     setMode('replay')
   }
 
-  const openBufferReplay = () => {
-    const blob = blobFromBuffer(delaySec)
-    if (!blob || blob.size < 800) {
-      setError(
-        running
-          ? `Need about ${delaySec}s of camera first — keep the camera on, then tap Replay.`
-          : 'Start the camera, wait a few seconds, then tap Replay to scrub the buffer.',
-      )
+  const openBufferReplay = async () => {
+    if (!running) {
       setMode('replay')
       return
     }
+    if (replayBuilding) return
     setError(null)
-    replayBlobRef.current = blob
-    if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
-    const url = URL.createObjectURL(blob)
-    clipUrlRef.current = url
-    setClipSrc(url)
-    setActiveClipId(null)
-    setMode('replay')
-    setFlash(`Replay: last ${delaySec}s of buffer`)
-    window.setTimeout(() => setFlash(null), 2000)
+    setReplayBuilding(true)
+    const capturedFor = (performance.now() - rollingStartRef.current) / 1000
+    try {
+      const blob = await flushRollingBlob()
+      if (streamRef.current) startRolling()
+      if (!blob || blob.size < 1500 || capturedFor < 1.2) {
+        setError(
+          `Keep the camera on for a couple of seconds, then tap Replay last ${delaySec}s. That opens a player of what just happened.`,
+        )
+        return
+      }
+      replayBlobRef.current = blob
+      if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
+      const url = URL.createObjectURL(blob)
+      clipUrlRef.current = url
+      setClipSrc(url)
+      setActiveClipId(null)
+      setReplayTailSec(Math.min(delaySec, capturedFor))
+      setMode('replay')
+      const shown = Math.max(1, Math.round(Math.min(delaySec, capturedFor)))
+      setFlash(`Last ${shown}s of buffer — pause, scrub, or save`)
+      window.setTimeout(() => setFlash(null), 2500)
+    } finally {
+      setReplayBuilding(false)
+    }
   }
 
   const saveReplayToApp = () => {
@@ -477,7 +527,7 @@ export function CameraPane() {
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <section className="relative flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Athlete camera</h2>
         <span className="text-xs text-[var(--muted)]">live · delay cam · replay</span>
@@ -503,19 +553,13 @@ export function CameraPane() {
             [
               ['live', 'Live'],
               ['delay', 'Delay cam'],
-              ['replay', 'Replay'],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
-              onClick={() => {
-                if (id === 'replay') {
-                  if (running) openBufferReplay()
-                  else setMode('replay')
-                } else setMode(id)
-              }}
-              disabled={(id === 'live' || id === 'delay') && !running}
+              onClick={() => setMode(id)}
+              disabled={!running}
               className={`rounded-md px-2.5 py-1 text-sm disabled:opacity-40 ${
                 mode === id
                   ? 'bg-[var(--accent-dim)] font-semibold text-white'
@@ -526,6 +570,14 @@ export function CameraPane() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          disabled={!running || replayBuilding}
+          onClick={() => void openBufferReplay()}
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+        >
+          {replayBuilding ? 'Opening replay…' : `Replay last ${delaySec}s`}
+        </button>
         <label className="flex items-center gap-1.5 text-sm text-[var(--muted)]">
           <input
             type="checkbox"
@@ -553,8 +605,14 @@ export function CameraPane() {
         </label>
       )}
 
-      {/* Video area — live video element stays mounted so the stream survives mode switches */}
-      <div className={mode === 'replay' ? 'hidden' : 'relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black'}>
+      {/* Video area — live video stays mounted (even during replay) so the stream keeps running */}
+      <div
+        className={
+          mode === 'replay' && clipSrc
+            ? 'pointer-events-none absolute h-px w-px overflow-hidden opacity-0'
+            : 'relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black'
+        }
+      >
         <video
           ref={liveVideoRef}
           muted
@@ -594,11 +652,30 @@ export function CameraPane() {
         )}
       </div>
 
-      {/* Replay area */}
+      {/* Replay of the last N seconds (or a saved attempt) */}
       {mode === 'replay' &&
         (clipSrc ? (
           <div className="flex flex-col gap-2">
-            <VideoWorkbench src={clipSrc} mirror={mirror} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-[var(--text)]">
+                {replayTailSec
+                  ? `Last ${Math.round(replayTailSec)}s — this is the buffer you just recorded`
+                  : 'Saved attempt'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setMode(running ? 'live' : 'replay')}
+                className={btnCls}
+              >
+                Back to live
+              </button>
+            </div>
+            <VideoWorkbench
+              src={clipSrc}
+              mirror={mirror}
+              autoPlay
+              tailSeconds={replayTailSec ?? undefined}
+            />
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -611,18 +688,15 @@ export function CameraPane() {
                 Save to device
               </button>
               <span className="text-xs text-[var(--muted)]">
-                Pause, play, and scrub this {delaySec}s buffer. Saving keeps it in Recorded
-                attempts below.
+                Pause, play, and scrub. Saving keeps it in Recorded attempts below.
               </span>
             </div>
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
-            {running
-              ? `Wait ~${delaySec}s with the camera on, then tap Replay`
-              : clips.length
-                ? 'Pick a saved clip below, or start the camera to replay the live buffer'
-                : 'Start the camera, wait a few seconds, then tap Replay'}
+            {clips.length
+              ? 'Pick a saved clip below, or start the camera and tap Replay last Ns'
+              : 'Start the camera, wait a couple of seconds, then tap Replay last Ns'}
           </div>
         ))}
 
@@ -647,7 +721,7 @@ export function CameraPane() {
           </button>
         )}
         <span className="text-xs text-[var(--muted)]">
-          Replay scrubs the last {delaySec}s of buffer (6–20s) · last {MAX_CLIPS} saved clips kept
+          Replay last {delaySec}s of buffer (6–20s) · last {MAX_CLIPS} saved clips kept
           in the app
         </span>
       </div>
