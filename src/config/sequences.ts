@@ -75,7 +75,7 @@ export const SEQUENCES: SequenceDef[] = [
     description: 'Core shape chain on the floor.',
     steps: [
       { shapeId: 'seated_pike', holdSeconds: 2 },
-      { shapeId: 'hollow', holdSeconds: 2 },
+      { shapeId: 'hollow_arms_up', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
     ],
   },
@@ -86,7 +86,7 @@ export const SEQUENCES: SequenceDef[] = [
     steps: [
       { shapeId: 'seated_pike', holdSeconds: 1.5 },
       { shapeId: 'tucked_handstand', holdSeconds: 1.5 },
-      { shapeId: 'hollow', holdSeconds: 2 },
+      { shapeId: 'hollow_arms_up', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
     ],
   },

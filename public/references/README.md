@@ -15,6 +15,7 @@ Included:
 - `handstand.jpg` — stacked freestanding HS, ribs in, ears covered
 - `candlestick.jpg` — shoulder-stand candlestick (open hips, ribs in)
 - `hollow_arms_down.jpg` — hollow body hold, arms by the sides
+- `hollow_arms_up.jpg` — hollow body hold, arms by the ears (after 1-minute arms-down)
 
 Still needed (shot list is also in Learn → Glossary → Need photos):
 

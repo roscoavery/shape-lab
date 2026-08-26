@@ -12,7 +12,7 @@ import type { ReferencePhoto, ShapeDef } from '../types'
 /** Homework drills that are practiced on camera but not on the task pathway. */
 export const HOMEWORK_SHAPE_IDS = [
   'hollow_arms_down',
-  'hollow',
+  'hollow_arms_up',
   'superman',
   'side_plank',
   'wall_handstand',
@@ -55,7 +55,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. Not a lunge. Smaller step, back knee BENT, tumbling-C upper body (rounded, not straight-back open shoulders).',
   hollow_arms_down:
     'SIDE. On the back. Start from a pike, inch back until the lower back is FLAT, arms by the sides, feet off the floor.',
-  hollow: 'SIDE. Same hollow, arms glued by the ears. Only after a solid arms-down minute.',
+  hollow_arms_up:
+    'SIDE. Same hollow, arms glued by the ears. Only after a proper 1-minute arms-down hold.',
   superman: 'SIDE. Prone, straight arms behind ears, chin off chest, knees off the floor.',
   side_plank: 'SIDE. Body in one line, hips up. One photo (either side is fine).',
   wall_handstand: 'SIDE. Stomach-to-wall preferred. Same stacked body as freestanding.',

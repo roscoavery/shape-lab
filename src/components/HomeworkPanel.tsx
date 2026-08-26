@@ -32,12 +32,14 @@ import {
   progressHollowHomework,
   removeHomeworkItem,
   updateHomeworkItem,
+  pickReferencePhoto,
 } from '../lib/storage'
 import type {
   HomeworkBreakdown,
   HomeworkItem,
   HomeworkLog,
   HomeworkSource,
+  ReferencePhoto,
   ScoreResult,
 } from '../types'
 
@@ -54,6 +56,7 @@ type Props = {
   timingActive: boolean
   /** Speak form tips during camera sessions */
   voiceEnabled: boolean
+  referencePhotos: ReferencePhoto[]
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -121,6 +124,49 @@ function Sparkline({ values, target }: { values: number[]; target?: number }) {
   )
 }
 
+/** Both hollow stills on the homework card — arms-up is labeled as gated. */
+function HollowPairRefs({
+  photos,
+  unlockedUp,
+}: {
+  photos: ReferencePhoto[]
+  unlockedUp: boolean
+}) {
+  const down = pickReferencePhoto(photos, 'hollow_arms_down', null)
+  const up = pickReferencePhoto(photos, 'hollow_arms_up', null)
+  if (!down && !up) return null
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <figure>
+        {down && (
+          <img
+            src={down.dataUrl}
+            alt="Hollow arms down"
+            className="max-h-36 w-full rounded-md object-contain bg-[#0d1218]"
+          />
+        )}
+        <figcaption className="mt-1 text-[11px] leading-snug text-[var(--text)]">
+          Arms down — do this first. Lower back flat, then feet lift.
+        </figcaption>
+      </figure>
+      <figure className={unlockedUp ? '' : 'opacity-75'}>
+        {up && (
+          <img
+            src={up.dataUrl}
+            alt="Hollow arms up"
+            className="max-h-36 w-full rounded-md object-contain bg-[#0d1218]"
+          />
+        )}
+        <figcaption className="mt-1 text-[11px] leading-snug text-[var(--warn)]">
+          {unlockedUp
+            ? 'Arms up — unlocked after a proper 1-minute arms-down hold.'
+            : 'Arms up — do not use until you can hold arms-down properly for 1 minute.'}
+        </figcaption>
+      </figure>
+    </div>
+  )
+}
+
 export function HomeworkPanel({
   athleteId,
   score,
@@ -128,6 +174,7 @@ export function HomeworkPanel({
   onRequestShape,
   timingActive,
   voiceEnabled,
+  referencePhotos,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -488,6 +535,12 @@ export function HomeworkPanel({
               </span>
             </p>
           )}
+          {activeItem.source === 'auto' && activeItem.autoKey === 'hollow' && (
+            <HollowPairRefs
+              photos={referencePhotos}
+              unlockedUp={activeItem.shapeId === 'hollow_arms_up'}
+            />
+          )}
           {activeItem.shapeId === 'side_plank' && (
             <div className="mb-2 flex items-center gap-1 text-xs">
               <span className="mr-1 text-[var(--muted)]">Side:</span>
@@ -691,6 +744,7 @@ export function HomeworkPanel({
               {/* Hollow progression state */}
               {isHollowAuto && (
                 <div className="mt-2">
+                  <HollowPairRefs photos={referencePhotos} unlockedUp={!hollowStage1} />
                   {hollowStage1 ? (
                     <>
                       <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
@@ -718,13 +772,13 @@ export function HomeworkPanel({
                       {readyToLevelUp && (
                         <div className="mt-2 rounded-lg border border-[var(--warn)]/60 bg-[#2a2312] p-2">
                           <p className="text-sm font-semibold text-[var(--warn)]">
-                            🎉 Level up: train Hollow with arms up!
+                            🎉 Level up: Hollow (arms up)
                           </p>
                           <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                             Best proper hold hit{' '}
                             {HOLLOW_PROGRESS_TARGET_SECONDS}s with arms down.
-                            Switch this drill to the arms-up hollow (arms by
-                            ears) — history is kept.
+                            Switch this drill to Hollow (arms up). Do not skip
+                            the arms-down minute. History is kept.
                           </p>
                           <button
                             type="button"

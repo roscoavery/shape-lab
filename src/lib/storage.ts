@@ -180,7 +180,7 @@ export function logProperHoldSeconds(log: HomeworkLog): number | null {
 /**
  * The 4 automatic homework drills EVERY athlete always has.
  * Order here = display order. `autoKey` is stable; the hollow item's shapeId
- * switches from hollow_arms_down → hollow when the athlete levels up.
+ * switches from hollow_arms_down → hollow_arms_up when the athlete levels up.
  */
 export const AUTO_HOMEWORK_DEFS: {
   autoKey: string
@@ -217,7 +217,16 @@ export const AUTO_HOMEWORK_DEFS: {
 ]
 
 export function loadAllHomework(): HomeworkItem[] {
-  return readJson<HomeworkItem[]>(HOMEWORK_KEY, [])
+  const items = readJson<HomeworkItem[]>(HOMEWORK_KEY, [])
+  let changed = false
+  for (const item of items) {
+    if (item.shapeId === 'hollow') {
+      item.shapeId = 'hollow_arms_up'
+      changed = true
+    }
+  }
+  if (changed) saveAllHomework(items)
+  return items
 }
 
 export function saveAllHomework(items: HomeworkItem[]) {
@@ -295,15 +304,16 @@ export function removeHomeworkItem(id: string): void {
 
 /**
  * Level up the hollow auto item: switch its shape from hollow_arms_down to
- * hollow (arms up). Same item id → all history is kept.
+ * hollow_arms_up. Same item id → all history is kept.
  */
 export function progressHollowHomework(homeworkId: string): HomeworkItem | null {
   const all = loadAllHomework()
   const item = all.find((h) => h.id === homeworkId)
   if (!item || item.shapeId !== 'hollow_arms_down') return null
-  item.shapeId = 'hollow'
+  item.shapeId = 'hollow_arms_up'
   item.progressedAt = new Date().toISOString()
-  item.notes = 'Leveled up! Arms by ears now — same hollow standards.'
+  item.notes =
+    'Leveled up to arms up. Same hollow — lower back flat, arms by the ears. Do not skip the arms-down minute.'
   saveAllHomework(all)
   return { ...item }
 }
@@ -335,6 +345,7 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   handstand: '/references/handstand.jpg',
   candlestick: '/references/candlestick.jpg',
   hollow_arms_down: '/references/hollow_arms_down.jpg',
+  hollow_arms_up: '/references/hollow_arms_up.jpg',
 }
 
 /** Files that actually ship in public/references/ (not just hoped-for names). */
@@ -348,6 +359,7 @@ export const SHIPPED_REFERENCE_IDS = new Set([
   'handstand',
   'candlestick',
   'hollow_arms_down',
+  'hollow_arms_up',
 ])
 
 export function loadReferencePhotos(): ReferencePhoto[] {

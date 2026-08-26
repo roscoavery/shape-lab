@@ -66,6 +66,7 @@ public/references/lever.jpg       — lever (slight front-knee bend, chest paral
 public/references/handstand.jpg   — stacked freestanding HS (ribs in, ears covered)
 public/references/candlestick.jpg — candlestick (open hips, ribs in; HS forward roll)
 public/references/hollow_arms_down.jpg — hollow hold, arms down (pike in, low back flat)
+public/references/hollow_arms_up.jpg   — hollow hold, arms by ears (after 1-minute arms-down)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or
@@ -77,7 +78,7 @@ Curriculum order is edited in `src/config/curriculum.ts`.
 
 Every athlete automatically has **4 lifetime drills** (they can never be removed):
 
-1. **Hollow body hold — arms down** (`hollow_arms_down`) — start in a pike and inch back until the lower back is flat; arms by sides. When the best **quality hold reaches 60s**, the app prompts to **level up to Hollow with arms up** (`hollow`, arms by ears) — one click switches the drill and keeps all history.
+1. **Hollow body hold — arms down** (`hollow_arms_down`) — start in a pike and inch back until the lower back is flat; arms by sides. When the best **quality hold reaches 60s**, the app prompts to **level up to Hollow (arms up)** (`hollow_arms_up`, arms by ears). Do not train arms-up until that minute is camera-verified. One click switches the drill and keeps all history. Both stills are shown on the homework card.
 2. **Superman** — straight arms behind ears, chin off chest (head neutral), straight knees off the floor, feet & ankles together, toes pointed.
 3. **Side plank** — log left / right / both sides; per-side bests are tracked.
 4. **Wall handstand** — time + quality, same standards as freestanding.

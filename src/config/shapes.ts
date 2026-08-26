@@ -1191,24 +1191,25 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // HOLLOW
+  // HOLLOW (ARMS UP) — progression after a proper 1-minute arms-down hold
   // ===========================================================================
   {
-    id: 'hollow',
-    name: 'Hollow',
+    id: 'hollow_arms_up',
+    name: 'Hollow (arms up)',
     description:
-      'Hollow body hold with arms by the ears: same lower-back compression as arms-down, harder lever. Tumbling staple for layouts and fulls.',
+      'Hollow body hold with arms glued to the ears. Same lower-back compression as arms-down, longer lever. Only after a proper 1-minute arms-down hold.',
     bodyPosition:
-      'SIDE VIEW, on the back. Same hollow as arms-down: lower back pressed into the floor, ribs in, legs together and off the floor, toes pointed. Arms glued by the ears, elbows straight. Do this after a solid minute of the arms-down hollow.',
+      'SIDE VIEW, on the back. Same hollow as arms-down: lower back pressed into the floor, ribs in, legs together and off the floor, toes pointed. Arms glued by the ears, elbows straight. Do not use this yet unless you can hold hollow arms-down properly for a minute.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     tips: [
-      'Same lower-back rule as arms-down — no gap.',
+      'Only after a proper 1-minute hollow with arms down.',
+      'Same lower-back rule — no gap.',
       'Arms by the ears, not a sit-up.',
     ],
     coachNotes:
-      'Progression after a proper minute of hollow with arms down. Same body as the round-off / back handspring / whip / layout / full shape, with a longer lever. Training this poorly still leads to piking out of those skills.',
+      'Only do this if you can already hold hollow arms-down for a minute properly. Same body as the round-off / back handspring / whip / layout / full shape, with a longer lever. Training this poorly still leads to piking out of those skills.',
     criteria: [
       {
         id: 'shoulder_open',
@@ -1266,6 +1267,44 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.2,
         weight: 15,
         feedbackHigh: 'Squeeze heels together.',
+      },
+      {
+        id: 'legs_lifted',
+        label: 'Legs just off floor',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HIP, LM.LEFT_ANKLE],
+        targetMin: 5,
+        targetMax: 40,
+        tolerance: 8,
+        falloff: 40,
+        weight: 10,
+        feedbackLow: 'Lift the legs slightly off the floor.',
+        feedbackHigh: 'Lower the legs — keep the lower back pressed down.',
+      },
+      {
+        id: 'upper_lift',
+        label: 'Shoulders off floor',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HIP, LM.LEFT_SHOULDER],
+        targetMin: 5,
+        targetMax: 45,
+        tolerance: 10,
+        falloff: 45,
+        weight: 8,
+        feedbackLow: 'Curl the shoulders slightly off the floor.',
+        feedbackHigh: 'Lower the chest — small curl, not a sit-up.',
+      },
+      {
+        id: 'toes',
+        label: 'Toes pointed',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 25,
+        falloff: 50,
+        weight: 6,
+        needsView: 'side',
+        feedbackHigh: 'Point the toes ({delta}°).',
       },
     ],
   },
@@ -2913,5 +2952,6 @@ export const SHAPES_BY_ID: Record<string, ShapeDef> = Object.fromEntries(
 )
 
 export function getShape(id: string): ShapeDef | undefined {
+  if (id === 'hollow') return SHAPES_BY_ID.hollow_arms_up
   return SHAPES_BY_ID[id]
 }

@@ -398,6 +398,7 @@ export default function App() {
               onRequestShape={onJumpToShape}
               timingActive={timingActive}
               voiceEnabled={settings.voiceEnabled}
+              referencePhotos={referencePhotos}
             />
           </div>
         </div>
