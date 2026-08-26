@@ -42,7 +42,7 @@ Allow camera permission when the browser asks. Click **Start camera**.
 2. Create / select an athlete.
 3. Work through the ordered curriculum — later tasks stay locked until the previous one is completed at least once.
 4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**. **Freestanding handstand is not a gate** — you get **3 kick-up tries**, we grade the best line in the task analysis, and you move on. Wall handstand stays on Homework.
-5. Press **Start pathway** once (Voice on). On the FTOS → passé → lunge → lever → handstand → landing lunge sequences, the coach talks you through the holds (including 5-4-3-2 counts and “kick up to the best handstand you can hit”). After the task you get a **written analysis** of every shape — including the handstand — with corrections to read.
+5. Press **Start pathway** once (Voice on). On the FTOS → passé → lunge → lever → handstand → landing lunge sequences, the coach talks you through the holds (including 5-4-3-2 counts and “kick up to the best handstand you can hit”). After the task you get a **written analysis** of every shape — including the handstand — with corrections to read. If scoring gets stuck, **App not working right? Try the next task** skips ahead without counting a pass.
 6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
 7. Every quality hit is **snapshotted** into that athlete’s **shape folder** (Tasks + Learn → My shapes), grouped by position. Hold-complete also saves a **trimmed clip**. A hit still also becomes their personal reference photo for that shape.
 
@@ -123,17 +123,16 @@ Instagram does **not** offer a free public API to log in and read your saved col
 ### Athlete camera side
 
 - **Live** — plain camera view (no pose detection needed here), mirror toggle.
-- **Delay cam** — adjustable 2–10s delay (MediaRecorder timeslice chunks fed into a MediaSource buffer playing behind live). The athlete performs, then watches themselves N seconds later without touching the device. Needs a browser where MediaRecorder and MediaSource share a codec (Chrome / Edge / Firefox).
-- **Record** — capture attempts with MediaRecorder; the last 12 clips are kept in IndexedDB (oldest pruned automatically).
-- **Replay** — pick a recorded attempt and scrub frame-by-frame (slider + step buttons) at 0.25x/0.5x/1x, next to the looping reference.
+- **Delay cam** — adjustable **6–20s** delay (MediaRecorder timeslice chunks fed into a MediaSource buffer playing behind live). The athlete performs, then watches themselves N seconds later without touching the device. Needs a browser where MediaRecorder and MediaSource share a codec (Chrome / Edge / Firefox).
+- **Replay** — tap Replay to open a **pause / play / scrub** viewer of the last N seconds of that buffer (the same 6–20s setting). **Save in app** keeps it in Recorded attempts (IndexedDB). **Save to device** downloads the file.
+- **Record** — optional longer attempt capture; the last 12 clips are kept in the app (oldest pruned).
 
 ### Recommended coach workflow
 
 1. Screen-record (or download) the IG technique video you want athletes to copy.
 2. Upload it into a Compare collection (e.g. "Back handspring refs").
 3. Set an A/B loop around the key phase; slow to 0.5x.
-4. Athlete performs in front of the camera with **Delay cam** at ~5s — they walk over and watch themselves hands-free.
-5. For detailed review, **Record** the attempt and scrub the replay frame-by-frame beside the reference.
+4. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
 
 ## First test: Handstand
 

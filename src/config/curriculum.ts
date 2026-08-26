@@ -329,28 +329,34 @@ export type TaskLockStatus = 'locked' | 'unlocked' | 'mastered'
 export function taskStatus(
   task: TaskDef,
   completionsByTask: Record<string, number>,
+  skippedTaskIds: string[] = [],
 ): TaskLockStatus {
   const completions = completionsByTask[task.id] ?? 0
   if (completions >= task.masterAfterCompletions) return 'mastered'
   if (task.requiresTaskId == null) return 'unlocked'
-  const prereqDone = (completionsByTask[task.requiresTaskId] ?? 0) >= 1
+  const prereqId = task.requiresTaskId
+  const prereqDone =
+    (completionsByTask[prereqId] ?? 0) >= 1 || skippedTaskIds.includes(prereqId)
   return prereqDone ? 'unlocked' : 'locked'
 }
 
 export function isTaskUnlocked(
   task: TaskDef,
   completionsByTask: Record<string, number>,
+  skippedTaskIds: string[] = [],
 ): boolean {
-  return taskStatus(task, completionsByTask) !== 'locked'
+  return taskStatus(task, completionsByTask, skippedTaskIds) !== 'locked'
 }
 
-/** First unlocked incomplete task, or last mastered if all done. */
+/** First unlocked incomplete task (skipped tasks are not re-suggested). */
 export function suggestCurrentTaskId(
   completionsByTask: Record<string, number>,
+  skippedTaskIds: string[] = [],
 ): string {
   for (const task of CURRICULUM_TASKS) {
-    const status = taskStatus(task, completionsByTask)
-    if (status === 'unlocked') return task.id
+    const status = taskStatus(task, completionsByTask, skippedTaskIds)
+    if (status === 'unlocked' && !skippedTaskIds.includes(task.id)) return task.id
+    if (status === 'unlocked' && (completionsByTask[task.id] ?? 0) > 0) return task.id
   }
   return CURRICULUM_TASKS[CURRICULUM_TASKS.length - 1]?.id ?? ''
 }

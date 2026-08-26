@@ -110,6 +110,7 @@ export function defaultTaskProgress(athleteId: string): AthleteTaskProgress {
     completions: {},
     currentTaskId: CURRICULUM_TASKS[0]?.id ?? null,
     assignedTaskIds: null,
+    skippedTaskIds: [],
     updatedAt: new Date().toISOString(),
   }
 }
@@ -124,7 +125,8 @@ export function saveAllTaskProgress(map: Record<string, AthleteTaskProgress>) {
 
 export function loadTaskProgress(athleteId: string): AthleteTaskProgress {
   const all = loadAllTaskProgress()
-  return all[athleteId] ?? defaultTaskProgress(athleteId)
+  const p = all[athleteId] ?? defaultTaskProgress(athleteId)
+  return { ...p, skippedTaskIds: p.skippedTaskIds ?? [] }
 }
 
 export function saveTaskProgress(progress: AthleteTaskProgress) {
@@ -147,6 +149,21 @@ export function recordTaskCompletion(
       ...progress.completions,
       [taskId]: (progress.completions[taskId] ?? 0) + 1,
     },
+    currentTaskId: taskId,
+    updatedAt: new Date().toISOString(),
+  }
+  saveTaskProgress(next)
+  return next
+}
+
+/** Unlock the next task without counting a successful finish (escape hatch). */
+export function recordTaskSkip(athleteId: string, taskId: string): AthleteTaskProgress {
+  const progress = loadTaskProgress(athleteId)
+  const skipped = new Set(progress.skippedTaskIds ?? [])
+  skipped.add(taskId)
+  const next: AthleteTaskProgress = {
+    ...progress,
+    skippedTaskIds: [...skipped],
     currentTaskId: taskId,
     updatedAt: new Date().toISOString(),
   }

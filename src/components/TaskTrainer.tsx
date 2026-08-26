@@ -38,6 +38,7 @@ import {
   latestTaskAnalysis,
   pickReferencePhoto,
   recordTaskCompletion,
+  recordTaskSkip,
   saveReferencePhoto,
   saveTaskAnalysis,
   saveTaskProgress,
@@ -131,6 +132,7 @@ export function TaskTrainer({
   const { trimClip } = useRollingCapture(videoRef, canvasRef, active)
 
   const completions = progress?.completions ?? {}
+  const skipped = progress?.skippedTaskIds ?? []
   const assigned = progress?.assignedTaskIds
 
   const visibleTasks = useMemo(() => {
@@ -142,7 +144,7 @@ export function TaskTrainer({
   const selectedTaskId =
     progress?.currentTaskId && getTask(progress.currentTaskId)
       ? progress.currentTaskId
-      : suggestCurrentTaskId(completions)
+      : suggestCurrentTaskId(completions, skipped)
 
   const task: TaskDef | undefined = getTask(selectedTaskId)
   const taskCompletions = task ? (completions[task.id] ?? 0) : 0
@@ -161,7 +163,7 @@ export function TaskTrainer({
   const selectTask = (taskId: string) => {
     if (!athleteId || !progress) return
     const t = getTask(taskId)
-    if (!t || !isTaskUnlocked(t, completions)) return
+    if (!t || !isTaskUnlocked(t, completions, skipped)) return
     const next = { ...progress, currentTaskId: taskId }
     saveTaskProgress(next)
     onProgressChange(next)
@@ -175,7 +177,7 @@ export function TaskTrainer({
 
   const start = () => {
     if (!task || !athleteId) return
-    if (!isTaskUnlocked(task, completions)) {
+    if (!isTaskUnlocked(task, completions, skipped)) {
       setFlash('Complete the previous task first.')
       return
     }
@@ -227,6 +229,37 @@ export function TaskTrainer({
     resetSpeech()
   }
 
+  const skipToNextTask = () => {
+    if (!athleteId || !task || !progress) return
+    sessionRef.current = false
+    setActive(false)
+    lastRef.current = null
+    resetSpeech()
+    const updated = recordTaskSkip(athleteId, task.id)
+    const idx = CURRICULUM_TASKS.findIndex((t) => t.id === task.id)
+    const skippedIds = updated.skippedTaskIds ?? []
+    const nextTask = CURRICULUM_TASKS.slice(idx + 1).find((t) =>
+      isTaskUnlocked(t, updated.completions, skippedIds),
+    )
+    const withCurrent = {
+      ...updated,
+      currentTaskId: nextTask?.id ?? updated.currentTaskId,
+    }
+    saveTaskProgress(withCurrent)
+    onProgressChange(withCurrent)
+    setStepIndex(0)
+    setStepProgress(0)
+    holdAccumRef.current = 0
+    setAnalysis(null)
+    const line = nextTask
+      ? `Skipping ahead. Next task: ${nextTask.name.replace(/^\d+\.\s*/, '')}.`
+      : 'Skipped this task.'
+    setFlash(line)
+    setBanner(line)
+    speakEvent(line)
+    window.setTimeout(() => setFlash(null), 4000)
+  }
+
   const finishTask = useCallback((prefix?: string) => {
     if (!athleteId || !task || completingRef.current) return
     completingRef.current = true
@@ -246,9 +279,9 @@ export function TaskTrainer({
     sessionRef.current = false
     setActive(false)
     const nextId =
-      nextTask && isTaskUnlocked(nextTask, updated.completions)
+      nextTask && isTaskUnlocked(nextTask, updated.completions, updated.skippedTaskIds ?? [])
         ? nextTask.id
-        : suggestCurrentTaskId(updated.completions)
+        : suggestCurrentTaskId(updated.completions, updated.skippedTaskIds ?? [])
     const withCurrent = { ...updated, currentTaskId: nextId }
     saveTaskProgress(withCurrent)
     onProgressChange(withCurrent)
@@ -664,8 +697,9 @@ export function TaskTrainer({
 
       <ol className="max-h-56 space-y-1 overflow-y-auto text-sm">
         {visibleTasks.map((t) => {
-          const status = taskStatus(t, completions)
+          const status = taskStatus(t, completions, skipped)
           const count = completions[t.id] ?? 0
+          const wasSkipped = skipped.includes(t.id) && count === 0
           const selected = t.id === selectedTaskId
           const locked = status === 'locked'
           const holdLabel = t.steps.some((s) => s.gradeOnly)
@@ -694,9 +728,11 @@ export function TaskTrainer({
                     ? 'Mastered'
                     : status === 'locked'
                       ? 'Locked'
-                      : count > 0
-                        ? `${count}× done`
-                        : 'Open'}
+                      : wasSkipped
+                        ? 'Skipped'
+                        : count > 0
+                          ? `${count}× done`
+                          : 'Open'}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{t.name}</span>
@@ -821,7 +857,7 @@ export function TaskTrainer({
               <button
                 type="button"
                 onClick={start}
-                disabled={!isTaskUnlocked(task, completions)}
+                disabled={!isTaskUnlocked(task, completions, skipped)}
                 className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
               >
                 Start pathway
@@ -844,6 +880,16 @@ export function TaskTrainer({
                 View last analysis
               </button>
             )}
+            {isTaskUnlocked(task, completions, skipped) && (
+              <button
+                type="button"
+                onClick={skipToNextTask}
+                className="rounded-lg border border-[var(--warn)]/50 px-3 py-2 text-sm text-[var(--warn)] hover:bg-[#2a2410]"
+                title="Unlock the next task if scoring is stuck"
+              >
+                App not working right? Try the next task
+              </button>
+            )}
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through the shapes. After you finish, read the written
@@ -860,7 +906,7 @@ export function TaskTrainer({
             const idx = CURRICULUM_TASKS.findIndex((t) => t.id === analysis.taskId)
             const next = CURRICULUM_TASKS[idx + 1]
             setAnalysis(null)
-            if (next && isTaskUnlocked(next, completions)) selectTask(next.id)
+            if (next && isTaskUnlocked(next, completions, skipped)) selectTask(next.id)
           }}
           continueLabel={
             (() => {

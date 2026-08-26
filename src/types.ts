@@ -238,6 +238,11 @@ export type AthleteTaskProgress = {
    * Empty / missing = full curriculum is available (subject to unlock order).
    */
   assignedTaskIds: string[] | null
+  /**
+   * Tasks the athlete skipped (app glitch / stuck). Unlocks the next task
+   * without counting as a successful completion.
+   */
+  skippedTaskIds?: string[]
   updatedAt: string
 }
 
