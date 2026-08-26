@@ -471,3 +471,33 @@ export function fileToDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
+
+const TAB_KEY = 'shape-lab.tab.v1'
+export const APP_TABS = [
+  'tasks',
+  'homework',
+  'learn',
+  'compare',
+  'coach',
+  'history',
+  'about',
+] as const
+export type AppTab = (typeof APP_TABS)[number]
+
+export function loadTab(): AppTab {
+  try {
+    const v = localStorage.getItem(TAB_KEY)
+    if (v && (APP_TABS as readonly string[]).includes(v)) return v as AppTab
+  } catch {
+    /* private mode */
+  }
+  return 'tasks'
+}
+
+export function saveTab(tab: AppTab) {
+  try {
+    localStorage.setItem(TAB_KEY, tab)
+  } catch {
+    /* quota */
+  }
+}

@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
+import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
@@ -35,10 +36,12 @@ import {
   loadAttempts,
   loadReferencePhotos,
   loadSettings,
+  loadTab,
   loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
   saveSettings,
+  saveTab,
 } from './lib/storage'
 import type {
   AppSettings,
@@ -54,7 +57,7 @@ type Tab = 'tasks' | 'homework' | 'learn' | 'compare' | 'coach' | 'history' | 'a
 
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<Tab>('tasks')
+  const [tab, setTab] = useState<Tab>(() => loadTab())
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
@@ -96,6 +99,10 @@ export default function App() {
   useEffect(() => {
     saveSettings(settings)
   }, [settings])
+
+  useEffect(() => {
+    saveTab(tab)
+  }, [tab])
 
   useEffect(() => {
     if (!activeAthleteId) {
@@ -413,7 +420,11 @@ export default function App() {
         />
       )}
 
-      {tab === 'compare' && <ComparePanel />}
+      {tab === 'compare' && (
+        <CompareErrorBoundary>
+          <ComparePanel />
+        </CompareErrorBoundary>
+      )}
 
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
