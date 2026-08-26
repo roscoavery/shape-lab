@@ -14,6 +14,7 @@ Included:
 - `lever.jpg` — lever: slight front-knee bend, chest parallel, line back foot → hands
 - `handstand.jpg` — stacked freestanding HS, ribs in, ears covered
 - `candlestick.jpg` — shoulder-stand candlestick (open hips, ribs in)
+- `hollow_arms_down.jpg` — hollow body hold, arms by the sides
 
 Still needed (shot list is also in Learn → Glossary → Need photos):
 

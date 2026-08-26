@@ -193,7 +193,7 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'hollow_arms_down',
     targetSeconds: HOLLOW_PROGRESS_TARGET_SECONDS,
     notes:
-      'Lower back pressed to the floor, arms by sides, legs tight. At 60s quality hold, level up to arms up.',
+      'Start in a pike and inch back until the lower back is flat. Compress the low back, then let the feet lift. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears.',
   },
   {
     autoKey: 'superman',
@@ -334,6 +334,7 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   c_shape: '/references/c_shape.jpg',
   handstand: '/references/handstand.jpg',
   candlestick: '/references/candlestick.jpg',
+  hollow_arms_down: '/references/hollow_arms_down.jpg',
 }
 
 /** Files that actually ship in public/references/ (not just hoped-for names). */
@@ -346,6 +347,7 @@ export const SHIPPED_REFERENCE_IDS = new Set([
   'lever',
   'handstand',
   'candlestick',
+  'hollow_arms_down',
 ])
 
 export function loadReferencePhotos(): ReferencePhoto[] {

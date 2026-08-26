@@ -1196,9 +1196,19 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'hollow',
     name: 'Hollow',
-    description: 'Hollow body hold: lower back pressed down, arms by ears, legs tight.',
+    description:
+      'Hollow body hold with arms by the ears: same lower-back compression as arms-down, harder lever. Tumbling staple for layouts and fulls.',
+    bodyPosition:
+      'SIDE VIEW, on the back. Same hollow as arms-down: lower back pressed into the floor, ribs in, legs together and off the floor, toes pointed. Arms glued by the ears, elbows straight. Do this after a solid minute of the arms-down hollow.',
     category: 'hold',
     qualityThreshold: 65,
+    cameraView: 'side',
+    tips: [
+      'Same lower-back rule as arms-down — no gap.',
+      'Arms by the ears, not a sit-up.',
+    ],
+    coachNotes:
+      'Progression after a proper minute of hollow with arms down. Same body as the round-off / back handspring / whip / layout / full shape, with a longer lever. Training this poorly still leads to piking out of those skills.',
     criteria: [
       {
         id: 'shoulder_open',
@@ -1262,26 +1272,29 @@ export const SHAPES: ShapeDef[] = [
 
   // ===========================================================================
   // HOLLOW (ARMS DOWN) — beginner hollow, homework auto-drill stage 1
-  // Film from the side while lying on the back. Lower-back compression is
-  // proxied by: hollow hip band + legs slightly off floor + shoulders slightly
-  // off floor. When quality hold reaches 60s the app prompts to level up to
-  // the arms-up "hollow" shape above.
+  // Side view, on the back. Start from a pike and inch back until the lower
+  // back is flat. Level up to arms-by-ears hollow after 60s quality hold.
   // ===========================================================================
   {
     id: 'hollow_arms_down',
     name: 'Hollow (arms down)',
     description:
-      'Beginner hollow body hold: lower back pressed into the floor, arms glued by the sides, legs tight and straight, shoulders and legs just off the floor.',
+      'Hollow body hold with arms down: lower back compressed to the floor, arms by the sides, feet off the ground. Tumbling staple — round-off, back handspring, whip, layouts, fulls.',
+    bodyPosition:
+      'SIDE VIEW, on the back. Start in a pike and inch back until the lower back is flat — do not sit up from a lying position. Compress the lower back into the floor and let the feet lift. Arms stay down by the sides (reaching toward the knees). Shoulders and head just off the floor. Legs together, knees straight, toes pointed. If the lower back will not go down, bend the knees.',
     category: 'hold',
     qualityThreshold: 65,
+    cameraView: 'side',
     tips: [
-      'Film from the side while lying on your back.',
-      'Press the lower back into the floor — no gap under it.',
-      'Arms stay down along your sides (do NOT reach overhead yet).',
-      'Squeeze legs tight and straight, point toes.',
-      'Lift legs and shoulders just off the floor — small curl, not a sit-up.',
-      'Reach 60s of quality hold to level up to Hollow with arms up.',
+      'SIDE VIEW while lying on your back.',
+      'Start in a pike and inch back until the lower back is flat.',
+      'Press the lower back down first — then let the feet lift.',
+      'Arms by the sides, not overhead.',
+      'If the lower back will not go down, bend the knees.',
+      'Hold this properly for a minute, then try arms glued to the ears.',
     ],
+    coachNotes:
+      'Another tumbling staple. It helps to start in a pike and inch back until the lower back is flat rather than trying to lift up into this from a supine position. Get the lower back compressed to the floor and let the feet lift off the ground. If the athlete cannot get the lower back to the ground, try bending the knees. If they can easily hold this properly for a minute, try it with arms glued to the ears. This body position happens exiting a round-off, back handspring, and whip, and is often the main shape held on layouts and fulls. Athletes who train this improperly have a higher likelihood of piking out of round-offs, handsprings, and layouts, and may struggle with skills that need lots of abdominal stability.',
     criteria: [
       {
         // Arms DOWN by the sides → SMALL hip–shoulder–elbow angle
@@ -1291,11 +1304,11 @@ export const SHAPES: ShapeDef[] = [
         kind: 'joint_angle',
         points: L_SHOULDER,
         targetMin: 0,
-        targetMax: 35,
-        tolerance: 10,
+        targetMax: 45,
+        tolerance: 12,
         falloff: 45,
         weight: 20,
-        feedbackHigh: 'Keep arms down by your sides ({delta}° too high).',
+        feedbackHigh: 'Keep arms down by your sides — not by the ears yet ({delta}° too high).',
       },
       {
         // Lower-back compression proxy 1: hollow hip band
@@ -1361,6 +1374,18 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.2,
         weight: 14,
         feedbackHigh: 'Squeeze heels together.',
+      },
+      {
+        id: 'toes',
+        label: 'Toes pointed',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 25,
+        falloff: 50,
+        weight: 8,
+        needsView: 'side',
+        feedbackHigh: 'Point the toes ({delta}°).',
       },
     ],
   },

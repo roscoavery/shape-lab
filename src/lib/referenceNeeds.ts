@@ -53,8 +53,9 @@ const SHOTS: Record<string, string> = {
     'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
   mountain_climber:
     'SIDE. Not a lunge. Smaller step, back knee BENT, tumbling-C upper body (rounded, not straight-back open shoulders).',
-  hollow_arms_down: 'SIDE. Hollow on the floor, arms glued by the sides, low back down.',
-  hollow: 'SIDE. Hollow, arms by the ears, low back down.',
+  hollow_arms_down:
+    'SIDE. On the back. Start from a pike, inch back until the lower back is FLAT, arms by the sides, feet off the floor.',
+  hollow: 'SIDE. Same hollow, arms glued by the ears. Only after a solid arms-down minute.',
   superman: 'SIDE. Prone, straight arms behind ears, chin off chest, knees off the floor.',
   side_plank: 'SIDE. Body in one line, hips up. One photo (either side is fine).',
   wall_handstand: 'SIDE. Stomach-to-wall preferred. Same stacked body as freestanding.',
