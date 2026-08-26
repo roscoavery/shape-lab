@@ -202,9 +202,13 @@ export type ScoreResult = {
   viewWarning?: string | null
   /**
    * True when the pose is good enough to count a quality hold.
-   * Stricter than overall >= threshold: a single weak weighted check still blocks.
    */
   holdReady?: boolean
+  /**
+   * True when the athlete is actually in the shape except one piece
+   * (e.g. everything but open shoulders). Casual standing is not “close”.
+   */
+  nearHit?: boolean
 }
 
 export type AttemptRecord = {

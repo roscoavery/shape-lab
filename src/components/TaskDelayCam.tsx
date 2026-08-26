@@ -12,9 +12,10 @@ type Props = {
   stream: MediaStream | null
   cameraOn: boolean
   mirror: boolean
+  compact?: boolean
 }
 
-export function TaskDelayCam({ stream, cameraOn, mirror }: Props) {
+export function TaskDelayCam({ stream, cameraOn, mirror, compact = false }: Props) {
   const [delaySec, setDelaySec] = useState(6)
   const [mode, setMode] = useState<Mode>('delay')
   const [replaySrc, setReplaySrc] = useState<string | null>(null)
@@ -71,7 +72,7 @@ export function TaskDelayCam({ stream, cameraOn, mirror }: Props) {
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
 
   return (
-    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+    <section className={`rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] ${compact ? 'p-2' : 'p-3'}`}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
           Delay cam
@@ -105,7 +106,7 @@ export function TaskDelayCam({ stream, cameraOn, mirror }: Props) {
           <video
             ref={replayVideoRef}
             src={replaySrc}
-            className={`block max-h-48 w-full bg-black ${mirrorCls}`}
+            className={`block w-full bg-black ${compact ? 'max-h-36' : 'max-h-48'} ${mirrorCls}`}
             controls
             playsInline
             onLoadedMetadata={(e) => {
@@ -119,7 +120,7 @@ export function TaskDelayCam({ stream, cameraOn, mirror }: Props) {
         ) : (
           <video
             ref={delay.delayVideoRef}
-            className={`block max-h-48 w-full bg-black ${mode === 'delay' ? mirrorCls : 'hidden'}`}
+            className={`block w-full bg-black ${compact ? 'max-h-36' : 'max-h-48'} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
             playsInline
             muted
           />

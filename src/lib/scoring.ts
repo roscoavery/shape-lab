@@ -188,6 +188,7 @@ function emptyResult(shape: ShapeDef, message: string): ScoreResult {
     mainCorrection: message,
     viewWarning: null,
     holdReady: false,
+    nearHit: false,
   }
 }
 
@@ -339,8 +340,19 @@ function scoreOnce(
     mainCorrection = 'Excellent shape — hold it!'
   }
 
+  const important = results.filter((r) => r.weight >= 10)
+  const keyMisses = important.filter((r) => r.score < 55)
+  const strong = important.filter((r) => r.score >= 70)
   const holdReady =
-    overall >= threshold && !(shape.cameraView === 'front' && detected === 'side')
+    overall >= threshold &&
+    keyMisses.length === 0 &&
+    !(shape.cameraView === 'front' && detected === 'side')
+  const nearHit =
+    !holdReady &&
+    important.length >= 2 &&
+    strong.length >= important.length - 1 &&
+    keyMisses.length <= 1 &&
+    overall >= Math.max(52, threshold - 16)
 
   return {
     overall,
@@ -350,6 +362,7 @@ function scoreOnce(
     cameraViewDetected: detected,
     viewWarning,
     holdReady,
+    nearHit,
   }
 }
 

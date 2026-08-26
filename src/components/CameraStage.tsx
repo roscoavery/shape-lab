@@ -5,7 +5,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
-import type { Landmark } from '../types'
+import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
 
 type Props = {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -18,6 +18,48 @@ type Props = {
   demoMode?: boolean
   /** Extra UI on top of the live canvas (coach still, last hit). */
   overlay?: ReactNode
+  /** Color the skeleton from the live score (green = that line is in). */
+  shape?: ShapeDef
+  score?: ScoreResult | null
+}
+
+function criterionLandmarks(c: CriterionDef, all: CriterionDef[]): number[] {
+  if (c.points) return [...c.points]
+  if (c.segment) return [...c.segment]
+  if (c.pair) return [...c.pair]
+  if (c.leftPoints) return [...c.leftPoints]
+  if (c.rightPoints) return [...c.rightPoints]
+  if (c.of) {
+    return c.of.flatMap((id) => {
+      const sub = all.find((x) => x.id === id)
+      return sub ? criterionLandmarks(sub, all) : []
+    })
+  }
+  return []
+}
+
+function edgeTint(
+  a: number,
+  b: number,
+  shape: ShapeDef | undefined,
+  score: ScoreResult | null | undefined,
+): string {
+  if (!shape || !score) return 'rgba(45, 212, 168, 0.92)'
+  let worst = 100
+  let hit = false
+  for (const c of shape.criteria) {
+    if (c.id.startsWith('_')) continue
+    const pts = criterionLandmarks(c, shape.criteria)
+    if (!pts.includes(a) && !pts.includes(b)) continue
+    const row = score.criteria.find((r) => r.id === c.id)
+    if (!row) continue
+    hit = true
+    worst = Math.min(worst, row.score)
+  }
+  if (!hit) return 'rgba(180, 200, 210, 0.55)'
+  if (worst >= 80) return '#2dd4a8'
+  if (worst >= 65) return '#e4c35a'
+  return '#f07178'
 }
 
 const ANGLE_READOUTS: { label: string; points: [number, number, number]; color: string }[] = [
@@ -40,6 +82,8 @@ export function CameraStage({
   running,
   demoMode = false,
   overlay,
+  shape,
+  score,
 }: Props) {
   useEffect(() => {
     let raf = 0
@@ -91,13 +135,16 @@ export function CameraStage({
       }
 
       if (landmarks) {
-        ctx.lineWidth = Math.max(3, canvas.width * 0.003)
-        ctx.strokeStyle = 'rgba(45, 212, 168, 0.9)'
+        ctx.lineJoin = 'round'
+        ctx.lineCap = 'round'
         for (const [a, b] of POSE_EDGES) {
           const A = landmarks[a]
           const B = landmarks[b]
           if (!A || !B) continue
           if ((A.visibility ?? 1) < VISIBILITY_DRAW || (B.visibility ?? 1) < VISIBILITY_DRAW) continue
+          const color = edgeTint(a, b, shape, score)
+          ctx.lineWidth = Math.max(5, canvas.width * 0.006)
+          ctx.strokeStyle = color
           ctx.beginPath()
           ctx.moveTo(A.x * canvas.width, A.y * canvas.height)
           ctx.lineTo(B.x * canvas.width, B.y * canvas.height)
@@ -111,7 +158,7 @@ export function CameraStage({
           ctx.arc(
             lm.x * canvas.width,
             lm.y * canvas.height,
-            Math.max(3, canvas.width * 0.005),
+            Math.max(4, canvas.width * 0.006),
             0,
             Math.PI * 2,
           )
@@ -147,7 +194,7 @@ export function CameraStage({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode])
+  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score])
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-[var(--panel-border)] bg-black shadow-lg">

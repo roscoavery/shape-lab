@@ -15,16 +15,14 @@ import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
-import { ReferenceStill } from './components/ReferenceStill'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
 import { ShapeSelector } from './components/ShapeSelector'
-import { TaskDelayCam } from './components/TaskDelayCam'
 import { TaskTrainer } from './components/TaskTrainer'
+import { TasksWorkspace } from './components/TasksWorkspace'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
-import { pickCoachStill } from './lib/shippedRefs'
 import { scoreShape } from './lib/scoring'
 import {
   sampleGoodHandstand,
@@ -299,7 +297,7 @@ export default function App() {
   )
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl px-3 py-4 sm:px-6">
+    <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -343,69 +341,24 @@ export default function App() {
       </header>
 
       {tab === 'tasks' && (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="flex flex-col gap-3">
-            <CameraStage
-              videoRef={camera.videoRef}
-              canvasRef={camera.canvasRef}
-              landmarks={activeLandmarks}
-              mirror={settings.mirrorVideo}
-              showAngles={settings.showAngles}
-              running={camera.running}
-              demoMode={!camera.running && demoLandmarks !== null}
-              overlay={
-                <>
-                  {pickCoachStill(referencePhotos, shape.id) && (
-                    <div className="absolute right-2 top-2 w-[30%] max-w-[10rem] overflow-hidden rounded-md border border-white/25 bg-black/75 shadow-lg">
-                      <p className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/85">
-                        Hit this
-                      </p>
-                      <ReferenceStill
-                        shapeId={shape.id}
-                        photos={referencePhotos}
-                        alt=""
-                        className="max-h-40 w-full object-contain"
-                        emptyLabel=""
-                      />
-                    </div>
-                  )}
-                  {hitPreviewUrl && (
-                    <div className="absolute bottom-2 right-2 w-[30%] max-w-[10rem] overflow-hidden rounded-md border border-[var(--good)]/50 bg-black/75">
-                      <p className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--good)]">
-                        Your hit
-                      </p>
-                      <img
-                        src={hitPreviewUrl}
-                        alt="Last hit"
-                        className="max-h-36 w-full object-contain"
-                      />
-                    </div>
-                  )}
-                </>
-              }
-            />
-            {cameraControls}
-            {camera.error && (
-              <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
-                {camera.error}
-              </p>
-            )}
-            <TaskDelayCam
-              stream={camera.stream}
-              cameraOn={camera.running}
-              mirror={settings.mirrorVideo}
-            />
-            <ScorePanel
-              shape={shape}
-              score={score}
-              qualityThreshold={qualityThreshold}
-              totalHoldSeconds={hold.totalHoldSeconds}
-              qualityHoldSeconds={hold.qualityHoldSeconds}
-              onResetTimer={hold.reset}
-              onSave={saveAttempt}
-              canSave={Boolean(activeAthleteId)}
-            />
-          </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
+          <TasksWorkspace
+            shape={shape}
+            score={score}
+            qualityThreshold={qualityThreshold}
+            referencePhotos={referencePhotos}
+            videoRef={camera.videoRef}
+            canvasRef={camera.canvasRef}
+            landmarks={activeLandmarks}
+            mirror={settings.mirrorVideo}
+            showAngles={settings.showAngles}
+            cameraRunning={camera.running}
+            demoMode={!camera.running && demoLandmarks !== null}
+            stream={camera.stream}
+            cameraControls={cameraControls}
+            cameraError={camera.error}
+            hitPreviewUrl={hitPreviewUrl}
+          />
 
           <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
             <AthletePanel
@@ -458,6 +411,8 @@ export default function App() {
               showAngles={settings.showAngles}
               running={camera.running}
               demoMode={!camera.running && demoLandmarks !== null}
+              shape={shape}
+              score={score}
             />
             {cameraControls}
             {camera.error && (
@@ -525,6 +480,8 @@ export default function App() {
               showAngles={settings.showAngles}
               running={camera.running}
               demoMode={!camera.running && demoLandmarks !== null}
+              shape={shape}
+              score={score}
             />
             {cameraControls}
             {camera.error && (

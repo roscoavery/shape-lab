@@ -18,7 +18,6 @@ import {
 import { getStepGuide } from '../config/walkthrough'
 import { getShape } from '../config/shapes'
 import { TaskAnalysisPanel } from './TaskAnalysisPanel'
-import { ViewCallout } from './ViewCallout'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
   deleteCapture,
@@ -28,7 +27,6 @@ import {
   type TaskCapture,
 } from '../lib/captureStore'
 import { HitFolder } from './HitFolder'
-import { ReferenceStill } from './ReferenceStill'
 import { useRollingCapture } from '../hooks/useRollingCapture'
 import { useSpeechCoach, holdPrompt } from '../hooks/useSpeechCoach'
 import {
@@ -84,7 +82,6 @@ export function TaskTrainer({
   progress,
   onProgressChange,
   overallScore,
-  qualityThreshold,
   mainCorrection,
   score,
   onRequestShape,
@@ -457,8 +454,6 @@ export function TaskTrainer({
         profileOk: Boolean(step.profileOk),
       })
     }
-    const gate = qualityThreshold || stepShape.qualityThreshold
-    const closeFloor = Math.max(35, Math.min(gate - 18, Math.round(gate * 0.72)))
     const guide = getStepGuide(task.id, step.shapeId)
     const scripted = Boolean(guide)
     const gradeOnly = Boolean(step.gradeOnly)
@@ -553,7 +548,7 @@ export function TaskTrainer({
         // Must actually hold the shape — a 1-frame spike while walking
         // past the camera must not snapshot or say "got it".
         const inQ = readyAccumRef.current >= 0.2
-        const close = !inQ && overallScore >= closeFloor
+        const close = !inQ && Boolean(scoreRef.current.nearHit)
 
         if (gradeOnly) {
           tryAccumRef.current += dt
@@ -640,9 +635,8 @@ export function TaskTrainer({
           } else if (close) {
             setLiveKind((k) => (k === 'close' ? k : 'close'))
             if (!scripted && step.speakCorrections !== false) speakClose(mainCorrection)
-          } else if (overallScore >= 8 && step.speakCorrections !== false && !scripted) {
+          } else {
             setLiveKind((k) => (k === 'holding' || k === 'gotit' ? k : 'looking'))
-            speakCue(mainCorrection ?? '')
           }
         }
       }
@@ -660,7 +654,6 @@ export function TaskTrainer({
     stepHold,
     taskCompletions,
     overallScore,
-    qualityThreshold,
     timingActive,
     onRequestShape,
     finishTask,
@@ -962,8 +955,8 @@ export function TaskTrainer({
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through each shape and starts the next task on its
-            own — no extra Start tap. Coach still pops up on the camera. Delay
-            cam under the live view replays what you just did.
+            own — no extra Start tap. Body position, coach still, live feed,
+            score, and delay cam sit together on the left.
           </p>
         </div>
       )}
@@ -988,56 +981,20 @@ export function TaskTrainer({
         </div>
       )}
 
-      {/* Reference photo — shown beside camera while training */}
-      <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
-        {stepShape && (
-          <div className="mb-3 space-y-2">
-            {stepShape.bodyPosition && (
-              <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Body position
-                </p>
-                <p className="text-sm leading-snug">{stepShape.bodyPosition}</p>
-              </div>
-            )}
-            {stepShape.coachNotes && (
-              <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  How we use this
-                </p>
-                <p className="text-sm leading-snug">{stepShape.coachNotes}</p>
-              </div>
-            )}
-            <ViewCallout shape={stepShape} score={score} />
-            {step?.stance && (
-              <p className="text-xs text-[var(--accent)]">
-                This step: {step.stance === 'right' ? 'RIGHT' : 'LEFT'} foot / support forward
-              </p>
-            )}
-          </div>
-        )}
-        <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
-          Coach still
-          {stepShape ? ` · ${stepShape.name}` : ''}
-        </p>
-        {stepShape ? (
-          <div className="mb-2 max-h-48 overflow-hidden rounded-md bg-[#0d1218]">
-            <ReferenceStill
-              shapeId={stepShape.id}
-              photos={referencePhotos}
-              alt={stepShape.name}
-              className="max-h-48 w-full object-contain"
-              emptyLabel="No coach still for this shape yet"
-            />
-          </div>
-        ) : (
-          <p className="mb-2 text-xs text-[var(--muted)]">Pick a task to see the coach still.</p>
-        )}
-        <p className="mb-2 text-[11px] text-[var(--muted)]">
-          Your hits are saved in the folder below — they never replace this picture.
-        </p>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <label className="cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 hover:bg-[#243040]">
+      {stepShape && (
+        <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
+          {stepShape.coachNotes && (
+            <p className="mb-2 text-sm leading-snug text-[var(--muted)]">{stepShape.coachNotes}</p>
+          )}
+          {step?.stance && (
+            <p className="mb-2 text-xs text-[var(--accent)]">
+              This step: {step.stance === 'right' ? 'RIGHT' : 'LEFT'} foot / support forward
+            </p>
+          )}
+          <p className="mb-2 text-[11px] text-[var(--muted)]">
+            Hits go in the folder below — they never replace the coach still.
+          </p>
+          <label className="cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]">
             Replace coach still
             <input
               type="file"
@@ -1051,7 +1008,7 @@ export function TaskTrainer({
             />
           </label>
         </div>
-      </div>
+      )}
 
       {flash && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
