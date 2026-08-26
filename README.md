@@ -41,8 +41,8 @@ Allow camera permission when the browser asks. Click **Start camera**.
 1. Open the **Tasks** tab (primary).
 2. Create / select an athlete.
 3. Work through the ordered curriculum — later tasks stay locked until the previous one is completed at least once.
-4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**. **Freestanding handstand** is the exception — only a brief hit (~1s) is required to move on (wall handstand stays on Homework).
-5. Press **Start pathway** once (Voice on). The coach names the shape, says “Yes, that’s a …” every time you hit it — including after you fall out and find it again — and says “close / almost” plus a cue when you’re not quite there. When the hold is done it chimes, tells you the next shape (or next task), and **keeps going** so you do not tap Start again.
+4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**. **Freestanding handstand is not a gate** — you get **3 kick-up tries**, we grade the best line in the task analysis, and you move on. Wall handstand stays on Homework.
+5. Press **Start pathway** once (Voice on). On the FTOS → passé → lunge → lever → handstand → landing lunge sequences, the coach talks you through the holds (including 5-4-3-2 counts and “kick up to the best handstand you can hit”). After the task you get a **written analysis** of every shape — including the handstand — with corrections to read.
 6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
 7. Every quality hit is **snapshotted** into that athlete’s **shape folder** (Tasks + Learn → My shapes), grouped by position. Hold-complete also saves a **trimmed clip**. A hit still also becomes their personal reference photo for that shape.
 

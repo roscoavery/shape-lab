@@ -5,9 +5,12 @@
  * Each athlete works through these tasks in order.
  * Hold times: first successful completions use beginnerSeconds (5s).
  * After `masterAfterCompletions` successes, holds drop to masteredSeconds (3s).
- * Freestanding handstand uses HS_HOLD (~1s) — no 5s hold. Wall HS is homework.
+ * Freestanding handstand is grade-only (3 kick-up tries) — it does not gate
+ * the pathway. Wall HS is homework. After each task, athletes can read a
+ * written analysis of every shape they hit.
  *
  * passThrough: step counts if athlete briefly hits quality (no long hold required).
+ * gradeOnly: scored in the analysis, not required to advance.
  * speakCorrections: app narrates live corrections while on that step.
  */
 
@@ -22,6 +25,15 @@ export type TaskStepDef = {
    * Used for lever → landing lunge “pass through” on the MC sequence.
    */
   passThrough?: boolean
+  /**
+   * Score this shape in the task analysis, but do not require a quality
+   * hold to advance. Used for freestanding handstand (too hard to gate).
+   */
+  gradeOnly?: boolean
+  /** Kick-up attempts before moving on (grade-only steps). Default 3. */
+  tries?: number
+  /** Seconds to watch each kick-up try. Default 10. */
+  trySeconds?: number
   /** Speak live corrections while holding this step (great for lunges). */
   speakCorrections?: boolean
   /** Optional coach note shown under the step */
@@ -51,10 +63,24 @@ const HOLD = {
   speakCorrections: true,
 } as const
 
-/** Freestanding handstand — just hit it; do not require a 5s hold (wall HS is homework). */
-const HS_HOLD = {
-  beginnerSeconds: 1,
-  masteredSeconds: 0.8,
+/**
+ * Freestanding handstand — grade whatever they hit, do not gate the pathway.
+ * Three kick-up tries, then move on. Wall HS stays on homework.
+ */
+const HS_TRY = {
+  beginnerSeconds: 0,
+  masteredSeconds: 0,
+  gradeOnly: true,
+  tries: 3,
+  trySeconds: 10,
+  speakCorrections: false,
+  note: '3 tries · best kick-up is graded · does not block moving on',
+} as const
+
+/** Passé hold in the spoken lunge–lever–handstand walkthrough (3…2). */
+const PASSE_HOLD = {
+  beginnerSeconds: 3,
+  masteredSeconds: 3,
   speakCorrections: true,
 } as const
 
@@ -151,16 +177,16 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_handstand',
-    name: '8. Handstand',
+    name: '8. Handstand (practice)',
     description:
-      'Fully straight line, ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes. Cover the ears (looking toward the hands is fine). Hit it — no 5s hold. Side or 3/4 view.',
+      'Kick up to the best handstand you can. Three tries. We grade the line you hit — ribs in, butt in, ears covered — but you do not need a perfect handstand to move on. Wall handstand stays on Homework.',
     requiresTaskId: 'task_lever',
-    masterAfterCompletions: 2,
+    masterAfterCompletions: 1,
     steps: [
       {
         shapeId: 'handstand',
-        ...HS_HOLD,
-        note: 'SIDE or 3/4 · hit it (no 5s hold) · ribs in · ears covered · push tall',
+        ...HS_TRY,
+        note: 'SIDE or 3/4 · 3 kick-up tries · graded, not required',
       },
     ],
   },
@@ -209,31 +235,32 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
     name: '12. Sequence (RIGHT): FTOS → Passé → Lunge → Lever → HS → Lunge',
     description:
-      'Fall from passé into the lunge, then lever, handstand, landing lunge. Right side. Every sequence of this type finishes in the landing lunge.',
+      'Spoken walkthrough: FTOS, passé, starting lunge, lever, then kick up to the best handstand you can (3 tries) and finish in a landing lunge. Required to move on: FTOS, starting lunge, lever, landing lunge. Handstand is graded in the analysis, not a gate. Right side.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_left',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'passe', ...HOLD, stance: 'right', note: 'Right stance leg (left knee up)' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge · heel UP · open shoulders' },
-      { shapeId: 'lever', ...HOLD, stance: 'right' },
-      { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · heel FLAT · closer stance' },
+      { shapeId: 'feet_together_open_shoulders', ...HOLD, note: 'Arms tight by the ears · ribs in · butt in · chin up' },
+      { shapeId: 'passe', ...PASSE_HOLD, stance: 'right', note: 'Pull one leg to passé · hold 3' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to lunge · heel UP · hold 5' },
+      { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Lever hold 5' },
+      { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · heel FLAT · open shoulders · then clean' },
     ],
   },
   {
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
     name: '13. Sequence (LEFT): FTOS → Passé → Lunge → Lever → HS → Lunge',
-    description: 'Same full sequence on the left side. Finish in a landing lunge.',
+    description:
+      'Same spoken walkthrough on the left side. Required: FTOS, starting lunge, lever, landing lunge. Handstand is 3 graded tries, not a gate.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'passe', ...HOLD, stance: 'left', note: 'Left stance leg (right knee up)' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge · heel UP · open shoulders' },
-      { shapeId: 'lever', ...HOLD, stance: 'left' },
-      { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · heel FLAT · closer stance' },
+      { shapeId: 'feet_together_open_shoulders', ...HOLD, note: 'Arms tight by the ears · ribs in · butt in · chin up' },
+      { shapeId: 'passe', ...PASSE_HOLD, stance: 'left', note: 'Pull one leg to passé · hold 3' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to lunge · heel UP · hold 5' },
+      { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Lever hold 5' },
+      { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · heel FLAT · open shoulders · then clean' },
     ],
   },
   {
@@ -264,7 +291,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       { shapeId: 'stand_clean', ...HOLD },
       { shapeId: 'mountain_climber', ...HOLD },
-      { shapeId: 'handstand', ...HS_HOLD },
+      { shapeId: 'handstand', ...HS_TRY, note: '3 kick-up tries · graded, not required' },
       {
         shapeId: 'lever',
         beginnerSeconds: 1.2,

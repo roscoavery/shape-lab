@@ -241,6 +241,31 @@ export type AthleteTaskProgress = {
   updatedAt: string
 }
 
+/** One shape inside a finished task run — used for the written analysis. */
+export type TaskStepReport = {
+  shapeId: string
+  shapeName: string
+  required: boolean
+  tries?: number
+  bestOverall: number
+  qualityHit: boolean
+  holdSeconds: number
+  mainCorrection: string | null
+  criteria: { id: string; label: string; score: number; feedback: string | null }[]
+  notes: string
+}
+
+/** Written analysis of one completed task attempt. */
+export type TaskRunReport = {
+  id: string
+  athleteId: string
+  taskId: string
+  taskName: string
+  createdAt: string
+  steps: TaskStepReport[]
+  summary: string
+}
+
 /** Who put a homework item on the athlete's list. */
 export type HomeworkSource = 'auto' | 'coach' | 'athlete'
 

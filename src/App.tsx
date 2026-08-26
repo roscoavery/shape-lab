@@ -509,14 +509,13 @@ export default function App() {
             </h2>
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Tasks</strong> tab, pick an athlete,
-              and work through the ordered curriculum (stand clean → FTOS → passé → lunges →
-              lever → handstand → sequences → C shape → mountain climber). Most holds start at 5s
-              and drop to 3s after mastery. Freestanding handstand only needs a brief hit (~1s) —
-              wall handstand stays on Homework. Press <strong className="text-[var(--text)]">Start pathway</strong>{' '}
-              once — the coach tells you the shape, calls “that’s a …” every time you hit it
-              (including after you fall out and find it again), says “close / almost” with a cue
-              when you’re not quite there, then chimes and names the next shape so you never
-              have to tap Start again. Hits are snapshotted into that athlete’s shape folder.
+              and work through the ordered curriculum. Most holds start at 5s and drop to 3s after
+              mastery. Freestanding handstand is <strong className="text-[var(--text)]">three kick-up tries</strong> —
+              we grade the best line in a written analysis, and it does not block moving on (wall
+              handstand stays on Homework). Required to pass the lunge–lever sequences:{' '}
+              <strong className="text-[var(--text)]">FTOS, starting lunge, lever, landing lunge</strong>.
+              After each task you can read corrections. Voice talks you through the
+              passé–lunge–lever–handstand walkthrough when you get there.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

@@ -15,6 +15,7 @@ import type {
   HomeworkItem,
   HomeworkLog,
   ReferencePhoto,
+  TaskRunReport,
 } from '../types'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
@@ -25,6 +26,7 @@ const PROGRESS_KEY = 'shape-lab.athleteProgress.v1'
 const REFS_KEY = 'shape-lab.referencePhotos.v1'
 const HOMEWORK_KEY = 'shape-lab.homework.v1'
 const HOMEWORK_LOGS_KEY = 'shape-lab.homeworkLogs.v1'
+const TASK_ANALYSES_KEY = 'shape-lab.taskAnalyses.v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -150,6 +152,28 @@ export function recordTaskCompletion(
   }
   saveTaskProgress(next)
   return next
+}
+
+const MAX_TASK_ANALYSES = 80
+
+export function loadTaskAnalyses(athleteId?: string): TaskRunReport[] {
+  const all = readJson<TaskRunReport[]>(TASK_ANALYSES_KEY, [])
+  return athleteId ? all.filter((r) => r.athleteId === athleteId) : all
+}
+
+export function saveTaskAnalysis(report: TaskRunReport): void {
+  const all = readJson<TaskRunReport[]>(TASK_ANALYSES_KEY, [])
+  all.unshift(report)
+  writeJson(TASK_ANALYSES_KEY, all.slice(0, MAX_TASK_ANALYSES))
+}
+
+export function latestTaskAnalysis(
+  athleteId: string,
+  taskId: string,
+): TaskRunReport | null {
+  return (
+    loadTaskAnalyses(athleteId).find((r) => r.taskId === taskId) ?? null
+  )
 }
 
 // ---------------------------------------------------------------------------

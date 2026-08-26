@@ -15,7 +15,9 @@ import {
   taskStatus,
   type TaskDef,
 } from '../config/curriculum'
+import { getStepGuide } from '../config/walkthrough'
 import { getShape } from '../config/shapes'
+import { TaskAnalysisPanel } from './TaskAnalysisPanel'
 import { ViewCallout } from './ViewCallout'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
@@ -33,15 +35,19 @@ import {
   createId,
   deleteReferencePhoto,
   fileToDataUrl,
+  latestTaskAnalysis,
   pickReferencePhoto,
   recordTaskCompletion,
   saveReferencePhoto,
+  saveTaskAnalysis,
   saveTaskProgress,
 } from '../lib/storage'
+import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
 import type {
   AthleteTaskProgress,
   ReferencePhoto,
   ScoreResult,
+  TaskRunReport,
 } from '../types'
 
 type Props = {
@@ -92,6 +98,8 @@ export function TaskTrainer({
   const [captures, setCaptures] = useState<TaskCapture[]>([])
   const [liveKind, setLiveKind] = useState<'looking' | 'close' | 'holding' | 'gotit'>('looking')
   const [banner, setBanner] = useState('Start the pathway — keep listening and hit each shape.')
+  const [analysis, setAnalysis] = useState<TaskRunReport | null>(null)
+  const [tryDisplay, setTryDisplay] = useState(0)
   const holdAccumRef = useRef(0)
   const lastRef = useRef<number | null>(null)
   const completingRef = useRef(false)
@@ -101,6 +109,15 @@ export function TaskTrainer({
   const sessionRef = useRef(false)
   const skipIntroRef = useRef(false)
   const hadHitThisStepRef = useRef(false)
+  const samplesRef = useRef<LiveStepSample[]>([])
+  const spokenBeatsRef = useRef<Set<number>>(new Set())
+  const tryCountRef = useRef(0)
+  const tryAccumRef = useRef(0)
+  const invertedRef = useRef(false)
+  const scoreRef = useRef(score)
+  useEffect(() => {
+    scoreRef.current = score
+  }, [score])
 
   const {
     speakCue,
@@ -152,6 +169,7 @@ export function TaskTrainer({
     setStepIndex(0)
     setStepProgress(0)
     holdAccumRef.current = 0
+    setAnalysis(null)
     resetSpeech()
   }
 
@@ -166,6 +184,19 @@ export function TaskTrainer({
     completingRef.current = false
     setStepIndex(0)
     setStepProgress(0)
+    setTryDisplay(0)
+    setAnalysis(null)
+    samplesRef.current = task.steps.map((s) => ({
+      shapeId: s.shapeId,
+      required: !s.gradeOnly,
+      holdSeconds: holdSecondsForStep(task, s, taskCompletions),
+      best: null,
+      qualityHit: false,
+    }))
+    spokenBeatsRef.current = new Set()
+    tryCountRef.current = 0
+    tryAccumRef.current = 0
+    invertedRef.current = false
     sessionRef.current = true
     skipIntroRef.current = true
     inQualityRef.current = false
@@ -178,7 +209,10 @@ export function TaskTrainer({
     if (first) onRequestShape(first.shapeId, first.stance ?? 'auto')
     const firstShape = first ? getShape(first.shapeId) : undefined
     const hold = first ? holdSecondsForStep(task, first, taskCompletions) : 0
-    const line = `Let's go. Show me a ${firstShape?.name ?? 'shape'}. ${holdPrompt(hold)}`
+    const guide = first ? getStepGuide(task.id, first.shapeId) : undefined
+    const line =
+      guide?.intro ??
+      `Let's go. Show me a ${firstShape?.name ?? 'shape'}. ${holdPrompt(hold)}`
     setBanner(line)
     setLiveKind('looking')
     speakEvent(line)
@@ -193,58 +227,46 @@ export function TaskTrainer({
     resetSpeech()
   }
 
-  const finishTask = useCallback(() => {
+  const finishTask = useCallback((prefix?: string) => {
     if (!athleteId || !task || completingRef.current) return
     completingRef.current = true
     const updated = recordTaskCompletion(athleteId, task.id)
     const idx = CURRICULUM_TASKS.findIndex((t) => t.id === task.id)
     const nextTask = CURRICULUM_TASKS[idx + 1]
-    const canContinue =
-      sessionRef.current &&
-      nextTask &&
-      isTaskUnlocked(nextTask, updated.completions)
-
-    if (canContinue && nextTask) {
-      const withCurrent = { ...updated, currentTaskId: nextTask.id }
-      saveTaskProgress(withCurrent)
-      onProgressChange(withCurrent)
-      skipIntroRef.current = true
-      setStepIndex(0)
-      setStepProgress(0)
-      holdAccumRef.current = 0
-      inQualityRef.current = false
-      hitAtRef.current = null
-      hadHitThisStepRef.current = false
-      completingRef.current = false
-      const n0 = nextTask.steps[0]
-      if (n0) onRequestShape(n0.shapeId, n0.stance ?? 'auto')
-      const nShape = n0 ? getShape(n0.shapeId) : undefined
-      const nHold = n0 ? holdSecondsForStep(nextTask, n0, 0) : 0
-      const lastShape = getShape(task.steps[task.steps.length - 1]?.shapeId ?? '')
-      const line = `Got it. That's the ${lastShape?.name ?? 'shape'}. ${task.name.replace(/^\d+\.\s*/, '')} is done. Next task: ${nextTask.name.replace(/^\d+\.\s*/, '')}. Show me a ${nShape?.name ?? 'shape'}. ${holdPrompt(nHold)}`
-      setFlash(`Next: ${nextTask.name}`)
-      setBanner(line)
-      setLiveKind('gotit')
-      speakEvent(line)
-      window.setTimeout(() => setFlash(null), 4000)
-      return
-    }
+    const report = buildTaskReport({
+      id: createId('an'),
+      athleteId,
+      taskId: task.id,
+      taskName: task.name,
+      samples: samplesRef.current,
+    })
+    saveTaskAnalysis(report)
+    setAnalysis(report)
 
     sessionRef.current = false
     setActive(false)
-    const nextId = suggestCurrentTaskId(updated.completions)
+    const nextId =
+      nextTask && isTaskUnlocked(nextTask, updated.completions)
+        ? nextTask.id
+        : suggestCurrentTaskId(updated.completions)
     const withCurrent = { ...updated, currentTaskId: nextId }
     saveTaskProgress(withCurrent)
     onProgressChange(withCurrent)
-    const doneLine = nextTask
-      ? `That's a wrap on ${task.name.replace(/^\d+\.\s*/, '')}.`
-      : "That's the whole pathway. Great work."
+    const doneLine = [
+      prefix,
+      nextTask
+        ? `That's ${task.name.replace(/^\d+\.\s*/, '')}. Read your analysis, then start the next one when you're ready.`
+        : "That's the whole pathway. Read your analysis — great work.",
+    ]
+      .filter(Boolean)
+      .join(' ')
     setFlash(`Completed: ${task.name}`)
     setBanner(doneLine)
     setLiveKind('gotit')
     speakEvent(doneLine)
     window.setTimeout(() => setFlash(null), 4000)
-  }, [athleteId, task, onProgressChange, onRequestShape, speakEvent])
+    completingRef.current = false
+  }, [athleteId, task, onProgressChange, speakEvent])
 
   const refreshCaptures = useCallback(async () => {
     if (!athleteId) {
@@ -266,19 +288,26 @@ export function TaskTrainer({
     inQualityRef.current = false
     hitAtRef.current = null
     hadHitThisStepRef.current = false
+    spokenBeatsRef.current = new Set()
+    tryCountRef.current = 0
+    tryAccumRef.current = 0
+    invertedRef.current = false
+    setTryDisplay(0)
   }, [stepIndex, task?.id])
 
   useEffect(() => {
-    if (!active || !stepShape) return
+    if (!active || !stepShape || !step || !task) return
     if (skipIntroRef.current) {
       skipIntroRef.current = false
       return
     }
-    const line = `Show me a ${stepShape.name}. ${holdPrompt(stepHold)}`
+    const guide = getStepGuide(task.id, step.shapeId)
+    const line =
+      guide?.intro ?? `Show me a ${stepShape.name}. ${holdPrompt(stepHold)}`
     setBanner(line)
     setLiveKind('looking')
     speakEvent(line)
-  }, [active, stepIndex, task?.id, stepShape, stepHold, speakEvent])
+  }, [active, stepIndex, task, step, stepShape, stepHold, speakEvent])
 
   const saveHitSnapshot = useCallback(() => {
     if (!athleteId || !task || !stepShape) return
@@ -344,6 +373,81 @@ export function TaskTrainer({
     if (stepShape.id) onRequestShape(step.shapeId, step.stance ?? 'auto')
     const gate = qualityThreshold || stepShape.qualityThreshold
     const closeFloor = Math.max(35, Math.min(gate - 18, Math.round(gate * 0.72)))
+    const guide = getStepGuide(task.id, step.shapeId)
+    const scripted = Boolean(guide)
+    const gradeOnly = Boolean(step.gradeOnly)
+    const maxTries = step.tries ?? 3
+    const tryWindow = step.trySeconds ?? 10
+    const attemptFloor = 25
+
+    const noteBest = (result: ScoreResult) => {
+      const slot = samplesRef.current[stepIndex]
+      if (!slot) return
+      if (!slot.best || result.overall > slot.best.overall) {
+        slot.best = result
+      }
+      if (result.overall >= gate) slot.qualityHit = true
+      if (gradeOnly) slot.tries = tryCountRef.current
+    }
+
+    const completeStep = () => {
+      holdAccumRef.current = 0
+      setStepProgress(0)
+      lastRef.current = null
+      advancingRef.current = true
+      playSuccessChime()
+      const endAt = performance.now()
+      const hitAt = hitAtRef.current ?? endAt - Math.max(stepHold, 0.4) * 1000
+      const shapeName = stepShape.name
+      const shapeId = stepShape.id
+      const holdSec = stepHold
+      const nextStep = task.steps[stepIndex + 1]
+      const nextShape = nextStep ? getShape(nextStep.shapeId) : undefined
+      const nextHold = nextStep ? holdSecondsForStep(task, nextStep, taskCompletions) : 0
+      const nextGuide = nextStep ? getStepGuide(task.id, nextStep.shapeId) : undefined
+      const isLast = stepIndex + 1 >= task.steps.length
+      const outro = guide?.outro
+      if (!isLast && nextShape) {
+        skipIntroRef.current = true
+        const line = [outro, nextGuide?.intro ?? `Got it. That's the ${shapeName}. Next, show me a ${nextShape.name}. ${holdPrompt(nextHold)}`]
+          .filter(Boolean)
+          .join(' ')
+        setBanner(line)
+        setLiveKind('gotit')
+        speakEvent(line)
+      } else if (isLast) {
+        finishTask(outro)
+      }
+      void (async () => {
+        try {
+          const clip = await trimClip(hitAt, endAt)
+          if (clip && clip.size > 400 && athleteId) {
+            await saveCapture(
+              {
+                id: createId('clip'),
+                athleteId,
+                taskId: task.id,
+                shapeId,
+                shapeName,
+                kind: 'clip',
+                createdAt: new Date().toISOString(),
+                holdSeconds: holdSec,
+              },
+              clip,
+            )
+            await refreshCaptures()
+          }
+        } catch {
+          /* recording optional */
+        }
+        hitAtRef.current = null
+        inQualityRef.current = false
+        advancingRef.current = false
+        if (!isLast) {
+          setStepIndex((i) => i + 1)
+        }
+      })()
+    }
 
     let raf = 0
     const tick = (now: number) => {
@@ -354,15 +458,50 @@ export function TaskTrainer({
       }
       if (lastRef.current != null) {
         const dt = (now - lastRef.current) / 1000
+        noteBest(scoreRef.current)
         const inQ = overallScore >= gate
         const close = !inQ && overallScore >= closeFloor
 
-        if (inQ) {
+        if (gradeOnly) {
+          tryAccumRef.current += dt
+          const inverted = overallScore >= attemptFloor
+          if (inverted && !invertedRef.current) {
+            invertedRef.current = true
+            playHitTick()
+            if (!hadHitThisStepRef.current) {
+              hadHitThisStepRef.current = true
+              saveHitSnapshot()
+            }
+            setLiveKind('holding')
+            setBanner(
+              `Try ${Math.min(tryCountRef.current + 1, maxTries)} of ${maxTries} — best kick-up`,
+            )
+          }
+          const windowDone = tryAccumRef.current >= tryWindow
+          const cameDown = invertedRef.current && !inverted
+          if (cameDown || windowDone) {
+            invertedRef.current = false
+            tryAccumRef.current = 0
+            tryCountRef.current += 1
+            const n = tryCountRef.current
+            const slot = samplesRef.current[stepIndex]
+            if (slot) slot.tries = n
+            setTryDisplay(n)
+            if (n >= maxTries) {
+              completeStep()
+              return
+            }
+            const again = `That's ${n}. Kick up again — best handstand you can hit.`
+            setBanner(again)
+            setLiveKind('looking')
+            speakEvent(again)
+          }
+        } else if (inQ) {
           if (!inQualityRef.current) {
             inQualityRef.current = true
             hitAtRef.current = now
             playHitTick()
-            speakHit(stepShape.name, hadHitThisStepRef.current)
+            if (!scripted) speakHit(stepShape.name, hadHitThisStepRef.current)
             hadHitThisStepRef.current = true
             saveHitSnapshot()
             setLiveKind('holding')
@@ -370,59 +509,21 @@ export function TaskTrainer({
           }
           holdAccumRef.current += dt
           setStepProgress(holdAccumRef.current)
-          if (holdAccumRef.current >= stepHold) {
-            holdAccumRef.current = 0
-            setStepProgress(0)
-            lastRef.current = null
-            advancingRef.current = true
-            playSuccessChime()
-            const endAt = performance.now()
-            const hitAt = hitAtRef.current ?? endAt - stepHold * 1000
-            const shapeName = stepShape.name
-            const shapeId = stepShape.id
-            const holdSec = stepHold
-            const nextStep = task.steps[stepIndex + 1]
-            const nextShape = nextStep ? getShape(nextStep.shapeId) : undefined
-            const nextHold = nextStep ? holdSecondsForStep(task, nextStep, taskCompletions) : 0
-            const isLast = stepIndex + 1 >= task.steps.length
-            if (!isLast && nextShape) {
-              skipIntroRef.current = true
-              const line = `Got it. That's the ${shapeName}. Next, show me a ${nextShape.name}. ${holdPrompt(nextHold)}`
-              setBanner(line)
-              setLiveKind('gotit')
-              speakEvent(line)
-            } else if (isLast) {
-              finishTask()
+          if (guide?.beats) {
+            const remaining = stepHold - holdAccumRef.current
+            for (const beat of guide.beats) {
+              if (
+                remaining <= beat.at &&
+                remaining > beat.at - 0.85 &&
+                !spokenBeatsRef.current.has(beat.at)
+              ) {
+                spokenBeatsRef.current.add(beat.at)
+                speakEvent(beat.text)
+              }
             }
-            void (async () => {
-              try {
-                const clip = await trimClip(hitAt, endAt)
-                if (clip && clip.size > 400 && athleteId) {
-                  await saveCapture(
-                    {
-                      id: createId('clip'),
-                      athleteId,
-                      taskId: task.id,
-                      shapeId,
-                      shapeName,
-                      kind: 'clip',
-                      createdAt: new Date().toISOString(),
-                      holdSeconds: holdSec,
-                    },
-                    clip,
-                  )
-                  await refreshCaptures()
-                }
-              } catch {
-                /* recording optional */
-              }
-              hitAtRef.current = null
-              inQualityRef.current = false
-              advancingRef.current = false
-              if (!isLast) {
-                setStepIndex((i) => i + 1)
-              }
-            })()
+          }
+          if (holdAccumRef.current >= stepHold) {
+            completeStep()
             return
           }
         } else {
@@ -431,13 +532,14 @@ export function TaskTrainer({
             hitAtRef.current = null
             holdAccumRef.current = 0
             setStepProgress(0)
-            speakLost(mainCorrection)
+            spokenBeatsRef.current = new Set()
+            if (!scripted) speakLost(mainCorrection)
             setLiveKind(close ? 'close' : 'looking')
             setBanner(close ? `Almost — ${mainCorrection ?? 'find it again'}` : 'Find the shape again')
           } else if (close) {
             setLiveKind((k) => (k === 'close' ? k : 'close'))
-            speakClose(mainCorrection)
-          } else if (overallScore >= 8) {
+            if (!scripted && step.speakCorrections !== false) speakClose(mainCorrection)
+          } else if (overallScore >= 8 && step.speakCorrections !== false && !scripted) {
             setLiveKind((k) => (k === 'holding' || k === 'gotit' ? k : 'looking'))
             speakCue(mainCorrection ?? '')
           }
@@ -566,8 +668,11 @@ export function TaskTrainer({
           const count = completions[t.id] ?? 0
           const selected = t.id === selectedTaskId
           const locked = status === 'locked'
-          const holdLabel =
-            status === 'mastered'
+          const holdLabel = t.steps.some((s) => s.gradeOnly)
+            ? t.steps[0]?.gradeOnly
+              ? '3 HS tries'
+              : 'holds + 3 HS tries'
+            : status === 'mastered'
               ? `${t.steps[0]?.masteredSeconds ?? 3}s holds`
               : `${t.steps[0]?.beginnerSeconds ?? 5}s holds`
           return (
@@ -613,10 +718,11 @@ export function TaskTrainer({
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-semibold text-[var(--text)]">{task.name}</p>
             <p className="text-xs text-[var(--muted)]">
-              Holds:{' '}
-              {taskCompletions >= task.masterAfterCompletions
-                ? `${task.steps[0]?.masteredSeconds ?? 3}s (mastered)`
-                : `${task.steps[0]?.beginnerSeconds ?? 5}s → ${task.steps[0]?.masteredSeconds ?? 3}s after ${task.masterAfterCompletions} clears`}
+              {task.steps.some((s) => s.gradeOnly)
+                ? 'Handstand: 3 graded kick-up tries — not required to move on'
+                : taskCompletions >= task.masterAfterCompletions
+                  ? `Holds: ${task.steps[0]?.masteredSeconds ?? 3}s (mastered)`
+                  : `Holds: ${task.steps[0]?.beginnerSeconds ?? 5}s → ${task.steps[0]?.masteredSeconds ?? 3}s after ${task.masterAfterCompletions} clears`}
             </p>
           </div>
 
@@ -661,6 +767,7 @@ export function TaskTrainer({
               const hold = holdSecondsForStep(task, s, taskCompletions)
               const isCurrent = active && i === stepIndex
               const done = active && i < stepIndex
+              const tries = s.tries ?? 3
               return (
                 <li
                   key={`${s.shapeId}-${i}`}
@@ -674,15 +781,21 @@ export function TaskTrainer({
                 >
                   {i + 1}. {shape?.name ?? s.shapeId}{' '}
                   <span className="opacity-70">
-                    ({s.passThrough ? 'pass-through ' : ''}
-                    {Number.isInteger(hold) ? hold : hold.toFixed(1)}s)
+                    {s.gradeOnly
+                      ? `(${tries} tries · graded, not required)`
+                      : `(${s.passThrough ? 'pass-through ' : ''}${Number.isInteger(hold) ? hold : hold.toFixed(1)}s)`}
                   </span>
                   {s.note && (
                     <span className="mt-0.5 block text-[11px] opacity-80">{s.note}</span>
                   )}
-                  {isCurrent && (
+                  {isCurrent && !s.gradeOnly && (
                     <span className="ml-2 tabular-nums">
                       {Math.min(stepProgress, hold).toFixed(1)}/{hold}s
+                    </span>
+                  )}
+                  {isCurrent && s.gradeOnly && (
+                    <span className="ml-2 tabular-nums">
+                      try {Math.min(tryDisplay + 1, tries)}/{tries}
                     </span>
                   )}
                 </li>
@@ -722,11 +835,41 @@ export function TaskTrainer({
                 Pause pathway
               </button>
             )}
+            {athleteId && latestTaskAnalysis(athleteId, task.id) && !analysis && (
+              <button
+                type="button"
+                onClick={() => setAnalysis(latestTaskAnalysis(athleteId, task.id))}
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+              >
+                View last analysis
+              </button>
+            )}
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
-            One start. After each hold it tells you what is next and keeps going — no extra taps.
+            Voice talks you through the shapes. After you finish, read the written
+            analysis — handstand is graded there and does not block moving on.
           </p>
         </div>
+      )}
+
+      {analysis && athleteId && (
+        <TaskAnalysisPanel
+          report={analysis}
+          onClose={() => setAnalysis(null)}
+          onContinue={() => {
+            const idx = CURRICULUM_TASKS.findIndex((t) => t.id === analysis.taskId)
+            const next = CURRICULUM_TASKS[idx + 1]
+            setAnalysis(null)
+            if (next && isTaskUnlocked(next, completions)) selectTask(next.id)
+          }}
+          continueLabel={
+            (() => {
+              const idx = CURRICULUM_TASKS.findIndex((t) => t.id === analysis.taskId)
+              const next = CURRICULUM_TASKS[idx + 1]
+              return next ? `Next: ${next.name.replace(/^\d+\.\s*/, '')}` : 'Done'
+            })()
+          }
+        />
       )}
 
       {/* Reference photo — shown beside camera while training */}
