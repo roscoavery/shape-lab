@@ -36,13 +36,12 @@ import {
   loadAttempts,
   loadReferencePhotos,
   loadSettings,
+  loadTab,
   loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
   saveSettings,
   saveTab,
-  tabFromLocation,
-  writeTabLocation,
 } from './lib/storage'
 import type {
   AppSettings,
@@ -58,10 +57,8 @@ type Tab = 'tasks' | 'homework' | 'learn' | 'compare' | 'coach' | 'history' | 'a
 
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<Tab>(() => tabFromLocation())
-  const [compareOpened, setCompareOpened] = useState(
-    () => tabFromLocation() === 'compare',
-  )
+  const [tab, setTab] = useState<Tab>(() => loadTab())
+  const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
@@ -106,15 +103,8 @@ export default function App() {
 
   useEffect(() => {
     saveTab(tab)
-    writeTabLocation(tab)
     if (tab === 'compare') setCompareOpened(true)
   }, [tab])
-
-  useEffect(() => {
-    const onHash = () => setTab(tabFromLocation())
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
 
   const cameraTab = tab === 'tasks' || tab === 'homework' || tab === 'coach'
   useEffect(() => {
@@ -285,7 +275,7 @@ export default function App() {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-3 py-4 sm:px-6">
-      <header className="sticky top-0 z-30 mb-4 flex flex-wrap items-end justify-between gap-3 bg-[var(--bg)]/95 py-2 backdrop-blur-sm">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Shape Lab

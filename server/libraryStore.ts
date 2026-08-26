@@ -47,6 +47,10 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
     collections: parsed.collections,
   }
   fs.mkdirSync(path.dirname(FILE), { recursive: true })
+  const existing = readLibraryFile()
+  if (JSON.stringify(existing.collections) === JSON.stringify(next.collections)) {
+    return existing
+  }
   fs.writeFileSync(FILE, JSON.stringify(next, null, 2))
   return next
 }

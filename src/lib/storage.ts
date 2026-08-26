@@ -501,29 +501,3 @@ export function saveTab(tab: AppTab) {
     /* quota */
   }
 }
-
-/** Hash wins so a preview reload does not dump you back on Tasks. */
-export function tabFromLocation(): AppTab {
-  try {
-    const h = window.location.hash.replace(/^#/, '').split('?')[0]
-    if ((APP_TABS as readonly string[]).includes(h)) return h as AppTab
-  } catch {
-    /* SSR / odd hosts */
-  }
-  return loadTab()
-}
-
-export function writeTabLocation(tab: AppTab) {
-  try {
-    const next = `#${tab}`
-    if (window.location.hash !== next) {
-      history.replaceState(
-        null,
-        '',
-        `${window.location.pathname}${window.location.search}${next}`,
-      )
-    }
-  } catch {
-    /* ignore */
-  }
-}

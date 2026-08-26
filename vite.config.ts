@@ -12,6 +12,10 @@ export default defineConfig({
     port: 43127,
     strictPort: true,
     allowedHosts: true,
+    watch: {
+      // Writing the Compare library must not full-reload the preview.
+      ignored: ['**/data/**'],
+    },
   },
   preview: {
     host: true,
