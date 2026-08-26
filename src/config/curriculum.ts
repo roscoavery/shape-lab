@@ -25,6 +25,12 @@ export type TaskStepDef = {
   speakCorrections?: boolean
   /** Optional coach note shown under the step */
   note?: string
+  /**
+   * Which leg is in front for this step.
+   * left = left foot forward, right = right foot forward.
+   * Omit to auto-detect the better matching stance.
+   */
+  stance?: 'left' | 'right'
 }
 
 export type TaskDef = {
@@ -38,6 +44,12 @@ export type TaskDef = {
   masterAfterCompletions: number
 }
 
+const HOLD = {
+  beginnerSeconds: 5,
+  masteredSeconds: 3,
+  speakCorrections: true,
+} as const
+
 /**
  * Full pathway Ryan described.
  * Shape ids must exist in shapes.ts.
@@ -49,14 +61,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     description: 'Stand tall and clean before anything else — feet together, posture set.',
     requiresTaskId: null,
     masterAfterCompletions: 2,
-    steps: [
-      {
-        shapeId: 'stand_clean',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
-    ],
+    steps: [{ shapeId: 'stand_clean', ...HOLD }],
   },
   {
     id: 'task_ftos',
@@ -65,162 +70,178 @@ export const CURRICULUM_TASKS: TaskDef[] = [
       'Straight knees, open hips, open shoulders, straight elbows, hands reaching to the ceiling.',
     requiresTaskId: 'task_stand_clean',
     masterAfterCompletions: 2,
+    steps: [{ shapeId: 'feet_together_open_shoulders', ...HOLD }],
+  },
+  {
+    id: 'task_arm_positions',
+    name: '3. Arm positions lesson',
+    description:
+      'Learn the five arm shapes standing: low V back, front middle, open shoulders, T, and high V with chest out. You will reuse these on lunges next.',
+    requiresTaskId: 'task_ftos',
+    masterAfterCompletions: 2,
     steps: [
-      {
-        shapeId: 'feet_together_open_shoulders',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
+      { shapeId: 'arms_low_v_back', ...HOLD, note: 'Side view — arms reach slightly back' },
+      { shapeId: 'arms_front_middle', ...HOLD, note: 'Side view — reach forward at middle height' },
+      { shapeId: 'arms_open_shoulders', ...HOLD, note: 'Arms by ears, hands to the ceiling' },
+      { shapeId: 'arms_t', ...HOLD, note: 'FACE the camera — both arms out to the sides' },
+      { shapeId: 'arms_high_v_chest', ...HOLD, note: 'High V, chest out — not covering the ears' },
     ],
   },
   {
     id: 'task_passe',
-    name: '3. Passé',
+    name: '4. Passé',
     description:
-      'Keep feet-together open-shoulders lines, then pull one knee up into passé.',
-    requiresTaskId: 'task_ftos',
+      'Keep feet-together open-shoulders lines, then pull one knee up into passé. Either knee.',
+    requiresTaskId: 'task_arm_positions',
     masterAfterCompletions: 2,
-    steps: [
-      {
-        shapeId: 'passe',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
-    ],
+    steps: [{ shapeId: 'passe', ...HOLD }],
   },
   {
     id: 'task_lunge_start',
-    name: '4. Starting lunge',
+    name: '5. Starting lunge',
     description:
-      'Fall forward from passé into a lunge and hold long enough to fix it. Back heel stays UP.',
+      'Fall forward from passé into a lunge and hold long enough to fix it. Back heel stays UP. Side view. Either leg forward.',
     requiresTaskId: 'task_passe',
     masterAfterCompletions: 2,
     steps: [
       {
         shapeId: 'lunge_start',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-        note: 'Back leg straight · chest tilts for one line foot→hands · shoulders open · chin up · arms by ears · heel up',
+        ...HOLD,
+        note: 'SIDE VIEW · back leg straight · one line foot→hands · heel UP · arms by ears',
       },
+    ],
+  },
+  {
+    id: 'task_lunge_arm_holds',
+    name: '6. Lunge holds · arm positions',
+    description:
+      'Hold a starting lunge while cycling the five arm shapes: low V back, front middle, open shoulders, T, high V chest out.',
+    requiresTaskId: 'task_lunge_start',
+    masterAfterCompletions: 2,
+    steps: [
+      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · heel up · low V' },
+      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · arms forward middle' },
+      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · open shoulders / by ears' },
+      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T' },
+      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out' },
     ],
   },
   {
     id: 'task_lever',
-    name: '5. Lever',
+    name: '7. Lever',
     description:
-      'Weight on the bent front foot. Chest tilts until parallel with the ground. Open shoulders. Straight line back foot → hands.',
-    requiresTaskId: 'task_lunge_start',
+      'Weight on the bent front foot. Chest tilts until parallel with the ground. Open shoulders. Straight line back foot → hands. Side view. Either support leg.',
+    requiresTaskId: 'task_lunge_arm_holds',
     masterAfterCompletions: 2,
-    steps: [
-      {
-        shapeId: 'lever',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
-    ],
+    steps: [{ shapeId: 'lever', ...HOLD, note: 'SIDE VIEW' }],
   },
   {
     id: 'task_handstand',
-    name: '6. Handstand',
-    description: 'Match Handstand Lab quality — stacked, open shoulders, tight body line.',
+    name: '8. Handstand',
+    description: 'Match Handstand Lab quality — stacked, open shoulders, tight body line. Side view.',
     requiresTaskId: 'task_lever',
     masterAfterCompletions: 2,
-    steps: [
-      {
-        shapeId: 'handstand',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
-    ],
+    steps: [{ shapeId: 'handstand', ...HOLD, note: 'SIDE or 3/4 view — not face-on' }],
   },
   {
     id: 'task_lunge_land',
-    name: '7. Landing lunge',
+    name: '9. Landing lunge',
     description:
-      'Like the starting lunge, but back foot steps ~8 inches closer and the back heel is FLAT (no collapsed arch).',
+      'Like the starting lunge, but back foot steps ~8 inches closer and the back heel is FLAT (no collapsed arch). Side view.',
     requiresTaskId: 'task_handstand',
     masterAfterCompletions: 2,
     steps: [
       {
         shapeId: 'lunge_land',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-        note: 'Heel flat · back leg straight · line from back foot to hands',
+        ...HOLD,
+        note: 'SIDE VIEW · heel FLAT · closer step · back leg straight',
       },
     ],
   },
   {
-    id: 'task_seq_ftos_passe_lunge_lever_lunge',
-    name: '8. Sequence: FTOS → Passé → Lunge → Lever → Lunge',
-    description: 'Link the setup shapes into one continuous sequence.',
+    id: 'task_seq_ftos_lunge_lever_lunge_right',
+    name: '10. Sequence (RIGHT): FTOS → Lunge → Lever → Landing lunge',
+    description: 'Right foot forward through the lunge and lever.',
     requiresTaskId: 'task_lunge_land',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'passe', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lunge_start', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lever', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lunge_land', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
+      { shapeId: 'feet_together_open_shoulders', ...HOLD },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW' },
+      { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Right foot forward · heel flat' },
     ],
   },
   {
-    id: 'task_seq_ftos_passe_lunge_lever_hs_lunge',
-    name: '9. Sequence: FTOS → Passé → Lunge → Lever → Handstand → Lunge',
-    description: 'Same pathway with handstand before the landing lunge.',
-    requiresTaskId: 'task_seq_ftos_passe_lunge_lever_lunge',
+    id: 'task_seq_ftos_lunge_lever_lunge_left',
+    name: '11. Sequence (LEFT): FTOS → Lunge → Lever → Landing lunge',
+    description: 'Same sequence, left foot forward.',
+    requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_right',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'passe', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lunge_start', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lever', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'handstand', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'lunge_land', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
+      { shapeId: 'feet_together_open_shoulders', ...HOLD },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW' },
+      { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Left foot forward · heel flat' },
+    ],
+  },
+  {
+    id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
+    name: '12. Sequence (RIGHT): FTOS → Passé → Lunge → Lever → HS → Lunge',
+    description:
+      'Fall from passé into the lunge, then lever, handstand, landing lunge. Right side.',
+    requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_left',
+    masterAfterCompletions: 2,
+    steps: [
+      { shapeId: 'feet_together_open_shoulders', ...HOLD },
+      { shapeId: 'passe', ...HOLD, stance: 'right', note: 'Right stance leg (left knee up)' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge' },
+      { shapeId: 'lever', ...HOLD, stance: 'right' },
+      { shapeId: 'handstand', ...HOLD, note: 'SIDE VIEW' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'right' },
+    ],
+  },
+  {
+    id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
+    name: '13. Sequence (LEFT): FTOS → Passé → Lunge → Lever → HS → Lunge',
+    description: 'Same full sequence on the left side.',
+    requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
+    masterAfterCompletions: 2,
+    steps: [
+      { shapeId: 'feet_together_open_shoulders', ...HOLD },
+      { shapeId: 'passe', ...HOLD, stance: 'left', note: 'Left stance leg (right knee up)' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge' },
+      { shapeId: 'lever', ...HOLD, stance: 'left' },
+      { shapeId: 'handstand', ...HOLD, note: 'SIDE VIEW' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'left' },
     ],
   },
   {
     id: 'task_c_shape',
-    name: '10. C shape',
-    description: 'Learn a clean C shape after the FTOS–HS pathway is solid.',
-    requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge',
+    name: '14. C shape',
+    description: 'Learn a clean C shape after both-side FTOS–HS pathways are solid.',
+    requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
     masterAfterCompletions: 2,
-    steps: [
-      { shapeId: 'c_shape', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-    ],
+    steps: [{ shapeId: 'c_shape', ...HOLD }],
   },
   {
     id: 'task_mountain_climber',
-    name: '11. Mountain climber',
-    description:
-      'Smaller step than a lunge. Upper body in a C shape. Back leg bends.',
+    name: '15. Mountain climber',
+    description: 'Smaller step than a lunge. Upper body in a C shape. Back leg bends.',
     requiresTaskId: 'task_c_shape',
     masterAfterCompletions: 2,
-    steps: [
-      {
-        shapeId: 'mountain_climber',
-        beginnerSeconds: 5,
-        masteredSeconds: 3,
-        speakCorrections: true,
-      },
-    ],
+    steps: [{ shapeId: 'mountain_climber', ...HOLD, note: 'SIDE VIEW · back knee bends' }],
   },
   {
     id: 'task_seq_clean_mc_hs_lever_lunge',
-    name: '12. Sequence: Clean → Mountain climber → HS → Lever → Lunge',
+    name: '16. Sequence: Clean → Mountain climber → HS → Lever → Lunge',
     description:
       'Pass through the lever into the landing lunge — hit it and try to stop, but a full 3–5s lever hold is optional.',
     requiresTaskId: 'task_mountain_climber',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'stand_clean', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'mountain_climber', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
-      { shapeId: 'handstand', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
+      { shapeId: 'stand_clean', ...HOLD },
+      { shapeId: 'mountain_climber', ...HOLD },
+      { shapeId: 'handstand', ...HOLD },
       {
         shapeId: 'lever',
         beginnerSeconds: 1.2,
@@ -229,7 +250,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         speakCorrections: true,
         note: 'Pass through — hit lever and continue to landing lunge unless you can hold',
       },
-      { shapeId: 'lunge_land', beginnerSeconds: 5, masteredSeconds: 3, speakCorrections: true },
+      { shapeId: 'lunge_land', ...HOLD },
     ],
   },
 ]

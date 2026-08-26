@@ -45,6 +45,10 @@ Allow camera permission when the browser asks. Click **Start camera**.
 5. Toggle **Voice** to hear spoken corrections (~every 4s) on steps marked `speakCorrections`.
 6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
 
+You do **not** need to film from the same angle as a reference photo. Joint angles grade from any facing. Shapes that need a **side view** (lunges, lever, handstand body line) or **front view** (T arms) show a banner — turn if it appears. Lunges/levers auto-detect left vs right foot forward unless the task specifies a side.
+
+The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge → lever → HS → lunge sequences are **required on both sides**. Before those, athletes complete an **arm positions lesson** (low V back, front middle, open shoulders, T, high V chest out) and **lunge holds** in those same arm positions.
+
 Optional default images (if you drop files into the repo):
 
 ```text

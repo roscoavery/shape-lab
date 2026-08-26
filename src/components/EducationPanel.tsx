@@ -16,6 +16,7 @@ import {
 } from '../lib/educationCopy'
 import { pickReferencePhoto } from '../lib/storage'
 import type { ReferencePhoto, ShapeDef } from '../types'
+import { ViewCallout } from './ViewCallout'
 
 type EduView =
   | { kind: 'home' }
@@ -403,6 +404,12 @@ function ShapeDetail({
               )}
             </div>
             <p className="mt-2 text-sm text-[var(--muted)]">{shape.description}</p>
+            {shape.bodyPosition && (
+              <p className="mt-3 text-sm leading-relaxed text-[var(--text)]">{shape.bodyPosition}</p>
+            )}
+            <div className="mt-3">
+              <ViewCallout shape={shape} />
+            </div>
             <p className="mt-2 text-xs text-[var(--muted)]">
               Category: {shape.category} · Quality threshold:{' '}
               <strong className="text-[var(--text)]">{shape.qualityThreshold}</strong>

@@ -65,6 +65,7 @@ export default function App() {
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
   const [demoLandmarks, setDemoLandmarks] = useState<Landmark[] | null>(null)
   const [taskProgress, setTaskProgress] = useState<AthleteTaskProgress | null>(null)
+  const [scoreStance, setScoreStance] = useState<'left' | 'right' | 'auto'>('auto')
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>(() =>
     loadReferencePhotos(),
   )
@@ -75,8 +76,8 @@ export default function App() {
   const activeLandmarks = camera.running ? camera.landmarks : demoLandmarks
 
   const score = useMemo(
-    () => scoreShape(activeLandmarks, shape, qualityThreshold),
-    [activeLandmarks, shape, qualityThreshold],
+    () => scoreShape(activeLandmarks, shape, qualityThreshold, { stance: scoreStance }),
+    [activeLandmarks, shape, qualityThreshold, scoreStance],
   )
 
   const timingActive = camera.running || demoLandmarks !== null
@@ -111,11 +112,13 @@ export default function App() {
 
   const onSelectShape = useCallback((s: ShapeDef) => {
     setShape(s)
+    setScoreStance('auto')
   }, [])
 
-  const onJumpToShape = useCallback((shapeId: string) => {
+  const onJumpToShape = useCallback((shapeId: string, stance?: 'left' | 'right' | 'auto') => {
     const s = SHAPES.find((x) => x.id === shapeId)
     if (s) setShape(s)
+    setScoreStance(stance ?? 'auto')
   }, [])
 
   const saveAttempt = () => {

@@ -105,7 +105,17 @@ export type CriterionDef = {
 
   /** Fallback feedback if side-specific messages are omitted. */
   feedback?: string
+
+  /**
+   * If set, this check is only reliable from that camera angle.
+   * When the athlete is filmed from the wrong angle, it is excluded from the
+   * overall score (so a front-on photo doesn't tank a side-view body line).
+   */
+  needsView?: 'side' | 'front'
 }
+
+/** Which way to point the camera for this shape. */
+export type CameraView = 'any' | 'side' | 'front'
 
 export type ShapeCategory = 'static' | 'hold' | 'transition'
 
@@ -117,9 +127,25 @@ export type ShapeDef = {
   id: string
   name: string
   description: string
+  /**
+   * Full written standard for the body position. This is the grading contract —
+   * criteria below measure these words. Shown large in Tasks / Learn / scoring.
+   */
+  bodyPosition?: string
   category: ShapeCategory
   /** Minimum overall score (0–100) to count quality hold time / advance sequences */
   qualityThreshold: number
+  /**
+   * any = joint angles work from most angles (athlete may face any way).
+   * side = body line / lever / lunge line needs a side or 3/4 view — never face-on.
+   * front = both arms/legs need to be visible (T, symmetry).
+   */
+  cameraView?: CameraView
+  /**
+   * When true, scoring tries both “left leg in front” and “right leg in front”
+   * and uses the better match — so athletes don’t have to match a photo’s side.
+   */
+  stanceAware?: boolean
   /** Optional coaching tips shown in the UI */
   tips?: string[]
   criteria: CriterionDef[]
@@ -158,6 +184,12 @@ export type ScoreResult = {
   overall: number
   criteria: CriterionScore[]
   mainCorrection: string | null
+  /** Which front-leg stance scored better (when the shape is stance-aware). */
+  detectedStance?: 'left' | 'right'
+  /** What the camera appears to see. */
+  cameraViewDetected?: 'front' | 'side' | 'unknown'
+  /** Shown when the athlete is facing the wrong way for this shape. */
+  viewWarning?: string | null
 }
 
 export type AttemptRecord = {

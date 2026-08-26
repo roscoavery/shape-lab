@@ -83,9 +83,9 @@ export function howToHitShape(shape: ShapeDef): string[] {
     if (cues.length === 0) return []
     return cues.map((cue) => `${c.label}: ${cue}`)
   })
-  // Prefer tips first, then criterion-derived cues (dedupe exact matches)
   const seen = new Set<string>()
   const out: string[] = []
+  if (shape.bodyPosition) out.push(shape.bodyPosition)
   for (const line of [...fromTips, ...fromCriteria]) {
     const key = line.toLowerCase()
     if (seen.has(key)) continue

@@ -17,6 +17,7 @@ import {
   type TaskDef,
 } from '../config/curriculum'
 import { getShape } from '../config/shapes'
+import { ViewCallout } from './ViewCallout'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import {
   createId,
@@ -42,8 +43,8 @@ type Props = {
   qualityThreshold: number
   mainCorrection: string | null
   score: ScoreResult
-  /** Ask parent to switch camera scoring to this shape */
-  onRequestShape: (shapeId: string) => void
+  /** Ask parent to switch camera scoring to this shape (+ optional stance) */
+  onRequestShape: (shapeId: string, stance?: 'left' | 'right' | 'auto') => void
   referencePhotos: ReferencePhoto[]
   onReferencesChange: (photos: ReferencePhoto[]) => void
   voiceEnabled: boolean
@@ -136,7 +137,7 @@ export function TaskTrainer({
     setActive(true)
     resetSpeech()
     const first = task.steps[0]
-    if (first) onRequestShape(first.shapeId)
+    if (first) onRequestShape(first.shapeId, first.stance ?? 'auto')
   }
 
   const stop = () => {
@@ -167,7 +168,7 @@ export function TaskTrainer({
       return
     }
 
-    if (stepShape.id) onRequestShape(step.shapeId)
+    if (stepShape.id) onRequestShape(step.shapeId, step.stance ?? 'auto')
 
     let raf = 0
     const tick = (now: number) => {
@@ -432,6 +433,24 @@ export function TaskTrainer({
 
       {/* Reference photo — shown beside camera while training */}
       <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
+        {stepShape && (
+          <div className="mb-3 space-y-2">
+            {stepShape.bodyPosition && (
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Body position
+                </p>
+                <p className="text-sm leading-snug">{stepShape.bodyPosition}</p>
+              </div>
+            )}
+            <ViewCallout shape={stepShape} score={score} />
+            {step?.stance && (
+              <p className="text-xs text-[var(--accent)]">
+                This step: {step.stance === 'right' ? 'RIGHT' : 'LEFT'} foot / support forward
+              </p>
+            )}
+          </div>
+        )}
         <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
           Reference photo
           {stepShape ? ` · ${stepShape.name}` : ''}

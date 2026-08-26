@@ -3,14 +3,30 @@
  * Scoring engine
  * ============================================================================
  * Turns raw landmarks + a ShapeDef into:
- *   - overall score 0–100
+ *   - overall score 0–100  (driven by the written body-position standard)
  *   - per-criterion scores
  *   - main correction message
+ *   - camera-view warning when a side/front view is required
  *
  * Coaches: change targets/tolerances/weights in config/shapes.ts — not here.
+ *
+ * View independence:
+ * - Joint angles grade from any facing.
+ * - Criteria tagged needsView:'side' or 'front' are skipped (not failed) when
+ *   the athlete is filmed from the wrong angle, so a front-on FTOS photo does
+ *   not tank a lunge body-line check.
+ * - stanceAware shapes score both “left foot forward” and “right foot forward”
+ *   and keep the better match.
  */
 
 import { jointAngle, pointDistance, segmentAngleFromHorizontal, segmentAngleFromVertical } from './angles'
+import {
+  criterionViewOk,
+  detectCameraView,
+  swapLeftRight,
+  viewMatches,
+  type DetectedView,
+} from './view'
 import type {
   CriterionDef,
   CriterionScore,
@@ -23,12 +39,6 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n))
 }
 
-/**
- * Map a measured value onto 0–100 using target (or range) + tolerance + falloff.
- *
- * Score is 100 inside [target±tolerance] or [targetMin−tolerance, targetMax+tolerance].
- * Then linear drop to 0 across `falloff` additional units.
- */
 export function scoreAgainstTarget(
   measured: number,
   criterion: CriterionDef,
@@ -110,9 +120,6 @@ function measureCriterion(
         .map((id) => measuredCache[id])
         .filter((v): v is number => v !== null && v !== undefined)
       if (!vals.length) return null
-      // For composites that wrap angle criteria scored individually elsewhere,
-      // we store the *worst sub-score* later. Here measured = average of subs
-      // for display; actual score uses min of sub-scores in scoreShape.
       return vals.reduce((a, b) => a + b, 0) / vals.length
     }
     default:
@@ -140,42 +147,41 @@ function feedbackFor(
   return null
 }
 
-/**
- * Score a full shape against the current pose landmarks.
- */
-export function scoreShape(
-  landmarks: Landmark[] | null,
-  shape: ShapeDef,
-  qualityThresholdOverride?: number | null,
-): ScoreResult {
-  if (!landmarks || landmarks.length < 33) {
-    return {
-      overall: 0,
-      criteria: shape.criteria.map((c) => ({
+function emptyResult(shape: ShapeDef, message: string): ScoreResult {
+  return {
+    overall: 0,
+    criteria: shape.criteria
+      .filter((c) => !c.id.startsWith('_'))
+      .map((c) => ({
         id: c.id,
         label: c.label,
         score: 0,
         measured: null,
         weight: c.weight,
-        feedback: 'No pose detected',
+        feedback: message,
       })),
-      mainCorrection: 'Step into the camera frame',
-    }
+    mainCorrection: message,
+    viewWarning: null,
   }
+}
 
-  // First pass: measure non-composite criteria
+function scoreOnce(
+  landmarks: Landmark[],
+  shape: ShapeDef,
+  qualityThresholdOverride: number | null | undefined,
+  detected: DetectedView,
+  stance: 'left' | 'right',
+): ScoreResult {
   const measuredCache: Record<string, number | null> = {}
   for (const c of shape.criteria) {
     if (c.kind === 'composite_min') continue
     measuredCache[c.id] = measureCriterion(landmarks, c, measuredCache)
   }
-  // Second pass: composites (need cache filled)
   for (const c of shape.criteria) {
     if (c.kind !== 'composite_min') continue
     measuredCache[c.id] = measureCriterion(landmarks, c, measuredCache)
   }
 
-  // Pre-score atomic criteria so composites can take min of their scores
   const atomicScores: Record<string, number> = {}
   for (const c of shape.criteria) {
     if (c.kind === 'composite_min') continue
@@ -190,20 +196,26 @@ export function scoreShape(
   const results: CriterionScore[] = []
   let weightedSum = 0
   let weightTotal = 0
+  const viewWrong = !viewMatches(shape.cameraView, detected)
 
   for (const c of shape.criteria) {
-    // Skip hidden atomic criteria that only exist to feed a composite
-    // Convention: id starting with "_" are internal helpers
     if (c.id.startsWith('_')) continue
+
+    const skipForView = !criterionViewOk(c.needsView, detected)
 
     let score: number
     let measured = measuredCache[c.id] ?? null
     let feedback: string | null = null
 
-    if (c.kind === 'composite_min' && c.of) {
+    if (skipForView) {
+      score = 0
+      feedback =
+        c.needsView === 'side'
+          ? 'Needs a side view — turn so we can see your body line'
+          : 'Needs a front view — face the camera'
+    } else if (c.kind === 'composite_min' && c.of) {
       const subScores = c.of.map((id) => atomicScores[id] ?? 0)
       score = subScores.length ? Math.min(...subScores) : 0
-      // Pick feedback from the worst sub-criterion
       let worstId = c.of[0]
       let worstScore = Infinity
       for (const id of c.of) {
@@ -237,28 +249,101 @@ export function scoreShape(
       feedback,
     })
 
-    weightedSum += score * c.weight
-    weightTotal += c.weight
+    if (!skipForView) {
+      weightedSum += score * c.weight
+      weightTotal += c.weight
+    }
   }
 
   const overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
 
-  // Main correction = lowest-scoring criterion that has feedback
-  const sorted = [...results].sort((a, b) => a.score - b.score)
+  const sorted = [...results]
+    .filter((r) => {
+      const def = shape.criteria.find((c) => c.id === r.id)
+      return criterionViewOk(def?.needsView, detected)
+    })
+    .sort((a, b) => a.score - b.score)
+
   const threshold = qualityThresholdOverride ?? shape.qualityThreshold
   let mainCorrection: string | null = null
-  for (const r of sorted) {
-    if (r.feedback && r.score < 95) {
-      mainCorrection = r.feedback
-      break
+  let viewWarning: string | null = null
+
+  if (viewWrong && shape.cameraView === 'side') {
+    viewWarning =
+      'Side view needed — stand in profile (not face-on or back-on) so we can grade the body line.'
+    mainCorrection = viewWarning
+  } else if (viewWrong && shape.cameraView === 'front') {
+    viewWarning =
+      'Face the camera — both arms and legs need to be visible for this shape.'
+    mainCorrection = viewWarning
+  }
+
+  if (!mainCorrection) {
+    for (const r of sorted) {
+      if (r.feedback && r.score < 95) {
+        mainCorrection = r.feedback
+        break
+      }
     }
   }
   if (!mainCorrection && overall < threshold) {
-    mainCorrection = 'Adjust body line to raise score'
+    mainCorrection = shape.bodyPosition
+      ? 'Match the body-position description'
+      : 'Adjust body line to raise score'
   }
-  if (overall >= 95) {
+  if (overall >= 95 && !viewWrong) {
     mainCorrection = 'Excellent shape — hold it!'
   }
 
-  return { overall, criteria: results, mainCorrection }
+  return {
+    overall,
+    criteria: results,
+    mainCorrection,
+    detectedStance: stance,
+    cameraViewDetected: detected,
+    viewWarning,
+  }
+}
+
+export type ScoreOptions = {
+  /**
+   * left = grade as left-foot-forward (shape defs use left = front).
+   * right = grade as right-foot-forward.
+   * auto (default) = try both on stanceAware shapes and keep the better score.
+   */
+  stance?: 'left' | 'right' | 'auto'
+}
+
+/**
+ * Score a full shape against the current pose landmarks.
+ */
+export function scoreShape(
+  landmarks: Landmark[] | null,
+  shape: ShapeDef,
+  qualityThresholdOverride?: number | null,
+  options?: ScoreOptions,
+): ScoreResult {
+  if (!landmarks || landmarks.length < 33) {
+    return emptyResult(shape, 'Step into the camera frame')
+  }
+
+  const detected = detectCameraView(landmarks)
+  const want = options?.stance ?? 'auto'
+
+  if (want === 'right') {
+    return scoreOnce(swapLeftRight(landmarks), shape, qualityThresholdOverride, detected, 'right')
+  }
+  if (want === 'left' || !shape.stanceAware) {
+    return scoreOnce(landmarks, shape, qualityThresholdOverride, detected, want === 'left' ? 'left' : 'left')
+  }
+
+  const left = scoreOnce(landmarks, shape, qualityThresholdOverride, detected, 'left')
+  const right = scoreOnce(
+    swapLeftRight(landmarks),
+    shape,
+    qualityThresholdOverride,
+    detected,
+    'right',
+  )
+  return left.overall >= right.overall ? left : right
 }
