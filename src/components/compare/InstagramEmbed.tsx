@@ -1,20 +1,35 @@
 /**
  * Public Instagram reel/post → looping in-app player.
- * Resolves a real mp4 through the local /api/ig-resolve helper (not Instagram's
- * embed iframe, which often refuses to play and sends you out to Instagram).
+ * Prefers a blob already saved in IndexedDB. Otherwise resolves a playable
+ * mp4 through /api/ig-resolve, stores the bytes, and plays that copy.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { parseInstagramUrl } from '../../lib/clipStore'
+import {
+  fetchInstagramVideoBlob,
+  isQuotaError,
+  loadCachedInstagramBlob,
+} from '../../lib/igCache'
+import { putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
-const resolvedCache = new Map<string, string>()
+type Props = {
+  url: string
+  itemId?: string
+  onCached?: (itemId: string) => void
+}
 
-export function InstagramEmbed({ url }: { url: string }) {
+export function InstagramEmbed({ url, itemId, onCached }: Props) {
   const parsed = parseInstagramUrl(url)
-  const [src, setSrc] = useState<string | null>(() => resolvedCache.get(url) ?? null)
+  const onCachedRef = useRef(onCached)
+  onCachedRef.current = onCached
+  const [src, setSrc] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(!resolvedCache.has(url))
+  const [loading, setLoading] = useState(true)
+  const [fromCache, setFromCache] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [quotaWarn, setQuotaWarn] = useState(false)
 
   useEffect(() => {
     const parsedUrl = parseInstagramUrl(url)
@@ -26,45 +41,72 @@ export function InstagramEmbed({ url }: { url: string }) {
       setSrc(null)
       return
     }
-    const cached = resolvedCache.get(url)
-    if (cached) {
-      setSrc(cached)
-      setError(null)
-      setLoading(false)
-      return
-    }
+
     let cancelled = false
+    let objectUrl: string | null = null
     setLoading(true)
     setError(null)
     setSrc(null)
+    setFromCache(false)
+    setSaved(false)
+    setQuotaWarn(false)
+
     void (async () => {
       try {
-        const res = await fetch(`/api/ig-resolve?url=${encodeURIComponent(url)}`)
-        const data = (await res.json()) as { videoUrl?: string; error?: string }
-        if (cancelled) return
-        if (!res.ok || !data.videoUrl) {
-          setError(
-            data.error ??
-              'Could not load that reel here. Private and some region-blocked clips will not play.',
-          )
-          setLoading(false)
+        if (itemId) {
+          const cached = await loadCachedInstagramBlob(itemId)
+          if (cancelled) return
+          if (cached) {
+            objectUrl = URL.createObjectURL(cached)
+            if (cancelled) {
+              URL.revokeObjectURL(objectUrl)
+              return
+            }
+            setSrc(objectUrl)
+            setFromCache(true)
+            setLoading(false)
+            return
+          }
+        }
+
+        const blob = await fetchInstagramVideoBlob(url)
+        if (cancelled) {
           return
         }
-        resolvedCache.set(url, data.videoUrl)
-        setSrc(data.videoUrl)
+        if (itemId) {
+          try {
+            await putBlob(itemId, blob)
+            if (!cancelled) {
+              setSaved(true)
+              onCachedRef.current?.(itemId)
+            }
+          } catch (err) {
+            if (isQuotaError(err)) setQuotaWarn(true)
+          }
+        }
+        objectUrl = URL.createObjectURL(blob)
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl)
+          return
+        }
+        setSrc(objectUrl)
         setLoading(false)
-      } catch {
+      } catch (err) {
         if (cancelled) return
         setError(
-          'Could not reach the local reel helper. Keep the Shape Lab dev server running (npm run dev).',
+          err instanceof Error
+            ? err.message
+            : 'Could not reach the local reel helper. Keep the Shape Lab dev server running (npm run dev).',
         )
         setLoading(false)
       }
     })()
+
     return () => {
       cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [url])
+  }, [url, itemId])
 
   if (!parsed) {
     return (
@@ -77,7 +119,7 @@ export function InstagramEmbed({ url }: { url: string }) {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
-        Fetching reel so it can play and loop here…
+        Opening reel…
       </div>
     )
   }
@@ -100,13 +142,18 @@ export function InstagramEmbed({ url }: { url: string }) {
     )
   }
 
+  const footer = fromCache
+    ? 'Saved in this app — plays without re-fetching Instagram.'
+    : quotaWarn
+      ? 'Playing this copy, but it could not be saved (device storage may be full).'
+      : saved
+        ? 'Saved in this app. Pause, scrub, and slow-mo work on this copy. Public reels only.'
+        : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public reels only.'
+
   return (
     <div className="flex flex-col gap-2">
       <VideoWorkbench src={src} allowAbLoop autoPlay />
-      <p className="text-xs text-[var(--muted)]">
-        Playing in this app, looping. Pause, scrub, and slow-mo work on this copy.
-        Public reels only.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{footer}</p>
     </div>
   )
 }

@@ -101,7 +101,7 @@ export async function deleteCollection(collection: RefCollection): Promise<void>
   tx.objectStore(COLLECTIONS).delete(collection.id)
   const blobs = tx.objectStore(BLOBS)
   for (const item of collection.items) {
-    if (item.kind === 'file') blobs.delete(item.id)
+    blobs.delete(item.id)
   }
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -132,6 +132,24 @@ export async function deleteBlob(id: string): Promise<void> {
   const db = await openDb()
   const tx = db.transaction(BLOBS, 'readwrite')
   await requestToPromise(tx.objectStore(BLOBS).delete(id))
+}
+
+/** True if a blob is stored for this id — does not load the bytes. */
+export async function hasBlob(id: string): Promise<boolean> {
+  const db = await openDb()
+  const tx = db.transaction(BLOBS, 'readonly')
+  const count = await requestToPromise(tx.objectStore(BLOBS).count(id))
+  return count > 0
+}
+
+export async function listCachedIds(ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>()
+  await Promise.all(
+    ids.map(async (id) => {
+      if (await hasBlob(id)) out.add(id)
+    }),
+  )
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -197,4 +215,46 @@ export function parseInstagramUrl(
   if (!m) return null
   const type = m[1].toLowerCase() === 'reels' ? 'reel' : (m[1].toLowerCase() as 'p' | 'reel' | 'tv')
   return { type, code: m[2] }
+}
+
+export function instagramCode(url: string): string | null {
+  return parseInstagramUrl(url)?.code ?? null
+}
+
+/** Same IG shortcode, or the same URL ignoring trailing slashes. */
+export function isSameReferenceUrl(a: string, b: string): boolean {
+  const ca = instagramCode(a)
+  const cb = instagramCode(b)
+  if (ca && cb) return ca.toLowerCase() === cb.toLowerCase()
+  return a.replace(/\/+$/, '') === b.replace(/\/+$/, '')
+}
+
+export function itemMatchesQuery(item: RefItem, query: string): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+  if (item.name.toLowerCase().includes(needle)) return true
+  if (item.url?.toLowerCase().includes(needle)) return true
+  const code = item.url ? instagramCode(item.url) : null
+  return Boolean(code?.toLowerCase().includes(needle))
+}
+
+export function reorderItems(items: RefItem[], fromId: string, toId: string): RefItem[] {
+  if (fromId === toId) return items
+  const next = [...items]
+  const from = next.findIndex((i) => i.id === fromId)
+  const to = next.findIndex((i) => i.id === toId)
+  if (from < 0 || to < 0) return items
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
+}
+
+export function moveItem(items: RefItem[], id: string, dir: -1 | 1): RefItem[] {
+  const from = items.findIndex((i) => i.id === id)
+  const to = from + dir
+  if (from < 0 || to < 0 || to >= items.length) return items
+  const next = [...items]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
 }

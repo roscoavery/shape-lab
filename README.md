@@ -115,7 +115,7 @@ Side-by-side technique study: a **reference video** (the technique to copy) next
 
 ### The Instagram constraint (honest version)
 
-Instagram does **not** offer a free public API to log in and pull your saved collections. Compare still lets you **paste public post/reel URLs**. The local app resolves those to a playable video and **loops them in the tab** (pause, scrub, slow-mo). Private posts will not load. Optional: `pip install yt-dlp` gives a local fallback if the built-in resolver misses a clip.
+Instagram does **not** offer a free public API to log in and pull your saved collections. Compare still lets you **paste public post/reel URLs**. The local app resolves those to a playable video, **saves the file in IndexedDB**, and **loops them in the tab** (pause, scrub, slow-mo). Use **Save all in app** to download every pasted reel at once. **Export library** downloads a JSON of every URL and name — keep that file; Instagram post URLs do not expire, but throwaway `trycloudflare.com` preview links do (and IndexedDB is origin-scoped, so a new tunnel looks empty). Search by name, URL, or IG shortcode (hits in other collections are listed too). Drag or use ↑↓ to reorder — reorder pauses while a search is active. Private posts will not load. Optional: `pip install yt-dlp` gives a local fallback if the built-in resolver misses a clip.
 
 You do **not** need to screen-record every reference. Upload a file only when you already have one.
 
@@ -128,7 +128,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ### Recommended coach workflow
 
-1. Paste the public Instagram reel URL into a Compare collection (e.g. "Back handspring refs"). **Rename** the saved clip so the list is readable.
+1. Paste public Instagram reel URL(s) into a Compare collection (e.g. "Back handspring refs"). **Rename**, **search**, and **reorder** the list. Hit **Save all in app** so the videos stay on this device. **Export library** for a JSON backup of every URL.
 2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
 3. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay last Ns** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
 
