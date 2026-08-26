@@ -276,7 +276,7 @@ function scoreOnce(
     } else {
       let { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
       // Side-on: far-arm joint angles are junk. Keep the better of the two arms.
-      if (allowOccludedSide && c.kind === 'joint_angle' && c.points && s < 85) {
+      if (allowOccludedSide && c.kind === 'joint_angle' && c.points) {
         const other = measureCriterion(swapLeftRight(landmarks), c, {})
         if (other !== null) {
           const alt = scoreAgainstTarget(other, c)
@@ -289,7 +289,13 @@ function scoreOnce(
         }
       }
       score = s
-      feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
+      // Lunge open-shoulders: 85% is a pass — do not wait for a perfect 180°.
+      if (c.id === 'shoulders' && shape.id.includes('lunge') && score >= 85) {
+        score = 100
+        feedback = null
+      } else {
+        feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
+      }
     }
 
     const skipFromOverall = allowOccludedSide && c.kind === 'symmetry'
@@ -323,7 +329,7 @@ function scoreOnce(
   }
 
   for (const r of sorted) {
-    if (r.feedback && r.score < 90) {
+    if (r.feedback && r.score < 85) {
       mainCorrection = r.feedback
       break
     }
@@ -341,7 +347,10 @@ function scoreOnce(
   }
 
   const important = results.filter((r) => r.weight >= 10)
-  const keyMisses = important.filter((r) => r.score < 55)
+  const keyMisses = important.filter((r) => {
+    if (r.id === 'shoulders' && shape.id.includes('lunge')) return r.score < 85
+    return r.score < 50
+  })
   const strong = important.filter((r) => r.score >= 70)
   const holdReady =
     overall >= threshold &&

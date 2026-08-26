@@ -94,6 +94,23 @@ const LUNGE_DIAGONAL: CriterionDef = {
   feedbackLow: 'Tilt the chest a bit — long line from back foot to hands.',
   feedbackHigh: 'Keep a long diagonal from back foot to hands — this is not a lever yet.',
 }
+
+/**
+ * Open shoulders on a lunge (side view). 85% is enough — not a perfect 180°.
+ * Side-on MediaPipe often reads a real “arms by ears” as ~120–150°.
+ */
+const LUNGE_OPEN_SHOULDERS: CriterionDef = {
+  id: 'shoulders',
+  label: 'Open shoulders',
+  kind: 'joint_angle',
+  points: L_SHOULDER,
+  targetMin: 128,
+  targetMax: 180,
+  tolerance: 26,
+  falloff: 52,
+  weight: 20,
+  feedbackLow: 'Open shoulders — arms by ears.',
+}
 const LUNGE_STRAIGHT_BACK: CriterionDef = {
   id: 'straight_back',
   label: 'Straight back (not a C)',
@@ -815,17 +832,7 @@ export const SHAPES: ShapeDef[] = [
         feedbackHigh: 'A bit smaller — still longer than the landing lunge.',
       },
       LUNGE_DIAGONAL,
-      {
-        id: 'shoulders',
-        label: 'Open shoulders',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        targetMin: 130,
-        targetMax: 180,
-        tolerance: 14,
-        weight: 22,
-        feedbackLow: 'Open shoulders — arms by ears.',
-      },
+      LUNGE_OPEN_SHOULDERS,
       {
         id: 'elbows',
         label: 'Elbows straight',
@@ -892,17 +899,7 @@ export const SHAPES: ShapeDef[] = [
       LANDING_HEEL_FLAT,
       LANDING_CLOSER_STEP,
       LUNGE_DIAGONAL,
-      {
-        id: 'shoulders',
-        label: 'Open shoulders',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        targetMin: 130,
-        targetMax: 180,
-        tolerance: 14,
-        weight: 16,
-        feedbackLow: 'Open shoulders — arms by ears.',
-      },
+      { ...LUNGE_OPEN_SHOULDERS, weight: 16 },
       {
         id: 'elbows',
         label: 'Elbows straight',
@@ -2850,17 +2847,7 @@ export const SHAPES: ShapeDef[] = [
       },
       LANDING_HEEL_FLAT,
       LANDING_CLOSER_STEP,
-      {
-        id: 'shoulders',
-        label: 'Open shoulders',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        targetMin: 130,
-        targetMax: 180,
-        tolerance: 14,
-        weight: 28,
-        feedbackLow: 'Open shoulders — arms by ears.',
-      },
+      { ...LUNGE_OPEN_SHOULDERS, weight: 24 },
       LUNGE_DIAGONAL,
       {
         id: 'elbows',
