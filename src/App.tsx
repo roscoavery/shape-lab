@@ -15,13 +15,16 @@ import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
+import { ReferenceStill } from './components/ReferenceStill'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
 import { ShapeSelector } from './components/ShapeSelector'
+import { TaskDelayCam } from './components/TaskDelayCam'
 import { TaskTrainer } from './components/TaskTrainer'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
+import { pickCoachStill } from './lib/shippedRefs'
 import { scoreShape } from './lib/scoring'
 import {
   sampleGoodHandstand,
@@ -73,6 +76,7 @@ export default function App() {
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>(() =>
     loadReferencePhotos(),
   )
+  const [hitPreviewUrl, setHitPreviewUrl] = useState<string | null>(null)
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
@@ -105,6 +109,13 @@ export default function App() {
     saveTab(tab)
     if (tab === 'compare') setCompareOpened(true)
   }, [tab])
+
+  useEffect(
+    () => () => {
+      if (hitPreviewUrl) URL.revokeObjectURL(hitPreviewUrl)
+    },
+    [hitPreviewUrl],
+  )
 
   const cameraTab = tab === 'tasks' || tab === 'homework' || tab === 'coach'
   useEffect(() => {
@@ -328,6 +339,36 @@ export default function App() {
               showAngles={settings.showAngles}
               running={camera.running}
               demoMode={!camera.running && demoLandmarks !== null}
+              overlay={
+                <>
+                  {pickCoachStill(referencePhotos, shape.id) && (
+                    <div className="absolute right-2 top-2 w-[30%] max-w-[10rem] overflow-hidden rounded-md border border-white/25 bg-black/75 shadow-lg">
+                      <p className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/85">
+                        Hit this
+                      </p>
+                      <ReferenceStill
+                        shapeId={shape.id}
+                        photos={referencePhotos}
+                        alt=""
+                        className="max-h-40 w-full object-contain"
+                        emptyLabel=""
+                      />
+                    </div>
+                  )}
+                  {hitPreviewUrl && (
+                    <div className="absolute bottom-2 right-2 w-[30%] max-w-[10rem] overflow-hidden rounded-md border border-[var(--good)]/50 bg-black/75">
+                      <p className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--good)]">
+                        Your hit
+                      </p>
+                      <img
+                        src={hitPreviewUrl}
+                        alt="Last hit"
+                        className="max-h-36 w-full object-contain"
+                      />
+                    </div>
+                  )}
+                </>
+              }
             />
             {cameraControls}
             {camera.error && (
@@ -335,6 +376,11 @@ export default function App() {
                 {camera.error}
               </p>
             )}
+            <TaskDelayCam
+              stream={camera.stream}
+              cameraOn={camera.running}
+              mirror={settings.mirrorVideo}
+            />
             <ScorePanel
               shape={shape}
               score={score}
@@ -373,6 +419,15 @@ export default function App() {
               videoRef={camera.videoRef}
               canvasRef={camera.canvasRef}
               cameraRunning={camera.running}
+              onEnsureCamera={() => {
+                if (!camera.running) void camera.start()
+              }}
+              onHitPreview={(blob) => {
+                setHitPreviewUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev)
+                  return URL.createObjectURL(blob)
+                })
+              }}
             />
           </div>
         </div>

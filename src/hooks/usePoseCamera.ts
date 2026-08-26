@@ -16,6 +16,7 @@ export type PoseCameraState = {
   start: () => Promise<void>
   stop: () => void
   running: boolean
+  stream: MediaStream | null
 }
 
 export function usePoseCamera(): PoseCameraState {
@@ -31,11 +32,13 @@ export function usePoseCamera(): PoseCameraState {
   const [error, setError] = useState<string | null>(null)
   const [landmarks, setLandmarks] = useState<Landmark[] | null>(null)
   const [fps, setFps] = useState(0)
+  const [stream, setStream] = useState<MediaStream | null>(null)
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
+    setStream(null)
     if (videoRef.current) videoRef.current.srcObject = null
     setRunning(false)
     setLandmarks(null)
@@ -96,6 +99,7 @@ export function usePoseCamera(): PoseCameraState {
         },
       })
       streamRef.current = stream
+      setStream(stream)
       const video = videoRef.current
       if (!video) throw new Error('Video element missing')
       video.srcObject = stream
@@ -127,5 +131,6 @@ export function usePoseCamera(): PoseCameraState {
     start,
     stop,
     running,
+    stream,
   }
 }

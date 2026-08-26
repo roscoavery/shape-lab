@@ -69,6 +69,10 @@ type Props = {
   videoRef: React.RefObject<HTMLVideoElement | null>
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   cameraRunning: boolean
+  /** Turn the pose camera on with Start pathway (one tap). */
+  onEnsureCamera?: () => void
+  /** Latest hit still for the PiP (parent holds the object URL). */
+  onHitPreview?: (blob: Blob) => void
 }
 
 export function TaskTrainer({
@@ -88,6 +92,8 @@ export function TaskTrainer({
   videoRef,
   canvasRef,
   cameraRunning,
+  onEnsureCamera,
+  onHitPreview,
 }: Props) {
   const [active, setActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
@@ -165,23 +171,19 @@ export function TaskTrainer({
     resetSpeech()
   }
 
-  const start = () => {
-    if (!task || !athleteId) return
-    if (!isTaskUnlocked(task, completions, skipped)) {
-      setFlash('Complete the previous task first.')
-      return
-    }
+  const beginTask = (t: TaskDef) => {
+    if (!athleteId) return
+    const comps = taskCompletionsFor(t)
     holdAccumRef.current = 0
     lastRef.current = null
     completingRef.current = false
     setStepIndex(0)
     setStepProgress(0)
     setTryDisplay(0)
-    setAnalysis(null)
-    samplesRef.current = task.steps.map((s) => ({
+    samplesRef.current = t.steps.map((s) => ({
       shapeId: s.shapeId,
       required: !s.gradeOnly,
-      holdSeconds: holdSecondsForStep(task, s, taskCompletions),
+      holdSeconds: holdSecondsForStep(t, s, comps),
       best: null,
       qualityHit: false,
     }))
@@ -197,17 +199,33 @@ export function TaskTrainer({
     hadHitThisStepRef.current = false
     setActive(true)
     resetSpeech()
-    const first = task.steps[0]
+    const first = t.steps[0]
     if (first) onRequestShape(first.shapeId, first.stance ?? 'auto')
     const firstShape = first ? getShape(first.shapeId) : undefined
-    const hold = first ? holdSecondsForStep(task, first, taskCompletions) : 0
-    const guide = first ? getStepGuide(task.id, first.shapeId) : undefined
+    const hold = first ? holdSecondsForStep(t, first, comps) : 0
+    const guide = first ? getStepGuide(t.id, first.shapeId) : undefined
     const line =
       guide?.intro ??
       `Let's go. Show me a ${firstShape?.name ?? 'shape'}. ${holdPrompt(hold)}`
     setBanner(line)
     setLiveKind('looking')
     speakEvent(line)
+  }
+
+  const taskCompletionsFor = (t: TaskDef) => completions[t.id] ?? 0
+
+  const beginTaskRef = useRef<(t: TaskDef) => void>(() => {})
+  beginTaskRef.current = beginTask
+
+  const start = () => {
+    if (!task || !athleteId) return
+    if (!isTaskUnlocked(task, completions, skipped)) {
+      setFlash('Complete the previous task first.')
+      return
+    }
+    onEnsureCamera?.()
+    setAnalysis(null)
+    beginTask(task)
   }
 
   const stop = () => {
@@ -266,30 +284,49 @@ export function TaskTrainer({
     saveTaskAnalysis(report)
     setAnalysis(report)
 
-    sessionRef.current = false
-    setActive(false)
-    const nextId =
-      nextTask && isTaskUnlocked(nextTask, updated.completions, updated.skippedTaskIds ?? [])
-        ? nextTask.id
-        : suggestCurrentTaskId(updated.completions, updated.skippedTaskIds ?? [])
+    const nextUnlocked =
+      nextTask &&
+      isTaskUnlocked(nextTask, updated.completions, updated.skippedTaskIds ?? [])
+    const nextId = nextUnlocked
+      ? nextTask.id
+      : suggestCurrentTaskId(updated.completions, updated.skippedTaskIds ?? [])
     const withCurrent = { ...updated, currentTaskId: nextId }
     saveTaskProgress(withCurrent)
     onProgressChange(withCurrent)
-    const doneLine = [
-      prefix,
-      nextTask
-        ? `That's ${task.name.replace(/^\d+\.\s*/, '')}. Read your analysis, then start the next one when you're ready.`
-        : "That's the whole pathway. Read your analysis — great work.",
-    ]
-      .filter(Boolean)
-      .join(' ')
-    setFlash(`Completed: ${task.name}`)
-    setBanner(doneLine)
-    setLiveKind('gotit')
-    speakEvent(doneLine)
-    window.setTimeout(() => setFlash(null), 4000)
-    completingRef.current = false
-  }, [athleteId, task, onProgressChange, speakEvent])
+
+    if (nextUnlocked && nextTask) {
+      const doneLine = [
+        prefix,
+        `That's ${task.name.replace(/^\d+\.\s*/, '')}. Keep going — next is ${nextTask.name.replace(/^\d+\.\s*/, '')}.`,
+      ]
+        .filter(Boolean)
+        .join(' ')
+      setFlash(`Completed: ${task.name}`)
+      setBanner(doneLine)
+      setLiveKind('gotit')
+      speakEvent(doneLine)
+      window.setTimeout(() => setFlash(null), 4000)
+      window.setTimeout(() => {
+        completingRef.current = false
+        beginTaskRef.current(nextTask)
+      }, 2200)
+    } else {
+      sessionRef.current = false
+      setActive(false)
+      const doneLine = [
+        prefix,
+        "That's the whole pathway. Read your analysis — great work.",
+      ]
+        .filter(Boolean)
+        .join(' ')
+      setFlash(`Completed: ${task.name}`)
+      setBanner(doneLine)
+      setLiveKind('gotit')
+      speakEvent(doneLine)
+      window.setTimeout(() => setFlash(null), 4000)
+      completingRef.current = false
+    }
+  }, [athleteId, task, onProgressChange, speakEvent, onRequestShape])
 
   const refreshCaptures = useCallback(async () => {
     if (!athleteId) {
@@ -349,12 +386,13 @@ export function TaskTrainer({
     void (async () => {
       try {
         await saveCapture(meta, blob)
+        onHitPreview?.(blob)
         await refreshCaptures()
       } catch {
         /* capture optional */
       }
     })()
-  }, [athleteId, task, stepShape, canvasRef, refreshCaptures])
+  }, [athleteId, task, stepShape, canvasRef, refreshCaptures, onHitPreview])
 
   // Hold quality, talk through hits / close / lost, advance the pathway
   useEffect(() => {
@@ -790,7 +828,7 @@ export function TaskTrainer({
                 disabled={!isTaskUnlocked(task, completions, skipped)}
                 className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
               >
-                Start pathway
+                Start pathway — camera + voice
               </button>
             ) : (
               <button
@@ -822,8 +860,9 @@ export function TaskTrainer({
             )}
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
-            Voice talks you through the shapes. After you finish, read the written
-            analysis — handstand is graded there and does not block moving on.
+            Voice talks you through each shape and starts the next task on its
+            own — no extra Start tap. Coach still pops up on the camera. Delay
+            cam under the live view replays what you just did.
           </p>
         </div>
       )}
@@ -832,19 +871,8 @@ export function TaskTrainer({
         <TaskAnalysisPanel
           report={analysis}
           onClose={() => setAnalysis(null)}
-          onContinue={() => {
-            const idx = CURRICULUM_TASKS.findIndex((t) => t.id === analysis.taskId)
-            const next = CURRICULUM_TASKS[idx + 1]
-            setAnalysis(null)
-            if (next && isTaskUnlocked(next, completions, skipped)) selectTask(next.id)
-          }}
-          continueLabel={
-            (() => {
-              const idx = CURRICULUM_TASKS.findIndex((t) => t.id === analysis.taskId)
-              const next = CURRICULUM_TASKS[idx + 1]
-              return next ? `Next: ${next.name.replace(/^\d+\.\s*/, '')}` : 'Done'
-            })()
-          }
+          onContinue={() => setAnalysis(null)}
+          continueLabel="Keep going"
         />
       )}
 

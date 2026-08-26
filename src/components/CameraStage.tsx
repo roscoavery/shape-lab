@@ -2,7 +2,7 @@
  * Draws mirrored video + skeleton overlay + optional live angle labels
  */
 
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { jointAngle } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import type { Landmark } from '../types'
@@ -16,6 +16,8 @@ type Props = {
   running: boolean
   /** When true, draw skeleton on a blank stage (no live video). */
   demoMode?: boolean
+  /** Extra UI on top of the live canvas (coach still, last hit). */
+  overlay?: ReactNode
 }
 
 const ANGLE_READOUTS: { label: string; points: [number, number, number]; color: string }[] = [
@@ -37,6 +39,7 @@ export function CameraStage({
   showAngles,
   running,
   demoMode = false,
+  overlay,
 }: Props) {
   useEffect(() => {
     let raf = 0
@@ -164,6 +167,7 @@ export function CameraStage({
           Demo pose (no camera)
         </div>
       )}
+      {overlay}
     </div>
   )
 }
