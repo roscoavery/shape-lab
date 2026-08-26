@@ -72,6 +72,29 @@ export function segmentAngleFromHorizontal(
   return Math.abs(90 - fromVert)
 }
 
+/**
+ * How far landmark `a` is in front of landmark `b` along the floor.
+ * Facing = heel → toe (toes point forward). Positive = a is in front of b.
+ * Returns null if the foot is not a clear side-view (toes not ahead of the heel).
+ */
+export function forwardOffset(
+  landmarks: Landmark[],
+  a: number,
+  b: number,
+  heel: number,
+  toe: number,
+): number | null {
+  const A = landmarks[a]
+  const B = landmarks[b]
+  const H = landmarks[heel]
+  const T = landmarks[toe]
+  if (!isVisible(A) || !isVisible(B) || !isVisible(H) || !isVisible(T)) return null
+  const fx = T.x - H.x
+  if (Math.abs(fx) < 0.02) return null
+  const sign = fx > 0 ? 1 : -1
+  return (A.x - B.x) * sign
+}
+
 /** Euclidean distance in normalized landmark space. */
 export function pointDistance(
   landmarks: Landmark[],

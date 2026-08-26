@@ -168,7 +168,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lunge_land',
     name: '9. Landing lunge',
     description:
-      'Shorter stance than the starting lunge, back heel FLAT, one line from back heel to hands. Cartwheels finish here unless a zombie landing is specified. Side view.',
+      'Shorter stance than the starting lunge, back heel FLAT, one line from back heel to hands. Usual cartwheels finish here. Cartwheel step-ins (round-off prep) finish in a zombie. Side view.',
     requiresTaskId: 'task_handstand',
     masterAfterCompletions: 2,
     steps: [

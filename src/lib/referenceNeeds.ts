@@ -57,6 +57,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. On the back. Start from a pike, inch back until the lower back is FLAT, arms by the sides, feet off the floor.',
   hollow_arms_up:
     'SIDE. Same hollow, arms glued by the ears. Only after a proper 1-minute arms-down hold.',
+  zombie:
+    'SIDE. Standing hollow, feet together. Arms in front, shoulders shrugged so the arms cover the ears. Eyes forward/down toward where they came from.',
   superman: 'SIDE. Prone, straight arms behind ears, chin off chest, knees off the floor.',
   side_plank: 'SIDE. Body in one line, hips up. One photo (either side is fine).',
   wall_handstand: 'SIDE. Stomach-to-wall preferred. Same stacked body as freestanding.',

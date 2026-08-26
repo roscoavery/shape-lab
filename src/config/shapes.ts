@@ -13,6 +13,7 @@
  *    segment_vs_vertical  → how upright a body line is (0° = vertical)
  *    segment_vs_horizontal→ how level a body line is (0° = horizontal)
  *    point_distance       → how close two landmarks are (feet together)
+ *    forward_of           → how far pair[0] is in front of pair[1] (heel→toe facing)
  *    symmetry             → left/right joint angle difference (0° = perfect)
  *    composite_min        → overall = worst of several hidden "_..." criteria
  *
@@ -838,7 +839,8 @@ export const SHAPES: ShapeDef[] = [
 
   // ===========================================================================
   // LANDING LUNGE — heel FLAT, shorter stance than start (task 9)
-  // Finish for cartwheels (unless zombie) and every lunge → lever → HS → lunge.
+  // Finish for usual cartwheels (cartwheel step-ins / RO prep land in zombie)
+  // and every lunge → lever → HS → lunge.
   // ===========================================================================
   {
     id: 'lunge_land',
@@ -858,7 +860,7 @@ export const SHAPES: ShapeDef[] = [
       'Back leg straight, back straight, shoulders open — not a mountain climber.',
     ],
     coachNotes:
-      'Cartwheels finish in this landing lunge unless a zombie landing is specified. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge.',
+      'Usual cartwheels finish in this landing lunge. Cartwheel step-ins (the round-off prep) finish in a zombie instead — train that landing before round-offs. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge.',
     criteria: [
       {
         id: 'front_knee',
@@ -2205,34 +2207,123 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // ZOMBIE (arms forward, hollow-ish standing / lying drill)
+  // ZOMBIE — standing hollow, arms in front, shoulders shrugged to cover ears
+  // Cartwheel step-in landing (RO prep). All RO / BHS land here until skills
+  // above a round-off handspring series (then arms go up to block).
   // ===========================================================================
   {
     id: 'zombie',
     name: 'Zombie',
     description:
-      'Zombie: arms reaching forward at shoulder height, body tight and hollow. The exception landing when a cartwheel should not finish in a landing lunge.',
+      'Standing hollow with half-closed shoulders. Straight knees. Butt in. Armpits in front of the toes. Landing for cartwheel step-ins, round-offs, and handsprings.',
     bodyPosition:
-      'Arms reach straight forward at shoulder height, elbows locked. Body tight and hollow. Used as a specified cartwheel landing — if zombie is not named, cartwheels finish in a landing lunge.',
-    category: 'static',
+      'SIDE VIEW, standing. Hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of the toes — that keeps the hollow if the hips want to push into an arch. Feet together. Arms reach forward; shrug so the arms cover the ears. Eyes forward/down toward where you came from. Same idea as candlestick and front support, standing upright. Not arms overhead — arms up only when blocking into a skill above a round-off handspring series.',
+    category: 'hold',
     qualityThreshold: 60,
+    cameraView: 'side',
     tips: [
-      'Arms forward at shoulder height, not up by the ears.',
-      'Only use this as a cartwheel finish when a zombie landing is specified.',
+      'Hollow body with half-closed shoulder.',
+      'Straight knees.',
+      'Butt in.',
+      'Armpits in front of toes — that keeps the hollow if they push the hips into an arch.',
+      'Eyes forward/down toward where you came from.',
+      'SIDE VIEW, standing.',
     ],
     coachNotes:
-      'Cartwheels finish in a landing lunge unless a zombie landing is specified. This is that exception.',
+      'Verbal cues: hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of toes — use that if they are pushing the hips into an arch. Standing hollow with arms in front, shoulders shrugged so the arms cover the ears. Eyes look forward/down toward where they just came from — out of a cartwheel, round-off, handspring, or whip. Same idea as candlestick and front support, just standing upright. Helps get the chest up out of a round-off to a stand. Arms in front are where they can whip back to generate speed into a handspring or whip, and they speed rotation so the feet get in front — then we can keep momentum backwards with handspring connections. All round-offs and handsprings land here until the athlete is working skills above a round-off handspring series. Arms go up only when blocking into a higher skill. We train this shape on cartwheel step-ins before working round-offs. Usual cartwheels still finish in a landing lunge unless this landing is named.',
     criteria: [
       {
+        // Hip–shoulder–elbow ~90° = half-closed (arms in front), not open ~170°.
+        id: 'half_closed_shoulder',
+        label: 'Half-closed shoulder',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 55,
+        targetMax: 115,
+        tolerance: 15,
+        falloff: 40,
+        weight: 20,
+        feedbackLow: 'Hollow body with half-closed shoulder.',
+        feedbackHigh: 'Hollow body with half-closed shoulder — not arms up.',
+      },
+      {
+        id: 'knees',
+        label: 'Straight knees',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 160,
+        targetMax: 180,
+        tolerance: 8,
+        weight: 16,
+        feedbackLow: 'Straight knees.',
+      },
+      {
+        id: 'butt_in',
+        label: 'Butt in',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 148,
+        targetMax: 172,
+        tolerance: 8,
+        falloff: 30,
+        weight: 16,
+        feedbackLow: 'Hollow body — don’t pike.',
+        feedbackHigh: 'Butt in.',
+      },
+      {
+        // Shoulder (armpit) should sit at or in front of the toes. If they
+        // push the hips into an arch, the armpits drop behind the toes.
+        id: 'armpits_front',
+        label: 'Armpits in front of toes',
+        kind: 'forward_of',
+        pair: [LM.LEFT_SHOULDER, LM.LEFT_FOOT_INDEX],
+        targetMin: -0.02,
+        targetMax: 0.18,
+        tolerance: 0.03,
+        falloff: 0.12,
+        weight: 18,
+        needsView: 'side',
+        feedbackLow: 'Armpits in front of toes — hollow, don’t push the hips into an arch.',
+        feedbackHigh: 'Stay standing hollow — don’t dive the chest.',
+      },
+      {
         id: 'arms_forward',
-        label: 'Arms forward',
+        label: 'Arms in front',
         kind: 'segment_vs_horizontal',
         segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        targetMin: 0,
+        targetMax: 25,
+        tolerance: 12,
+        falloff: 40,
+        weight: 10,
+        needsView: 'side',
+        feedbackLow: 'Reach the arms forward — not down by the hips.',
+        feedbackHigh: 'Keep arms in front — not up overhead.',
+      },
+      {
+        id: 'ears_covered',
+        label: 'Shoulders shrug / ears covered',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ELBOW, LM.LEFT_EAR],
         target: 0,
-        tolerance: 20,
-        falloff: 45,
-        weight: 30,
-        feedbackHigh: 'Reach arms forward at shoulder height ({delta}°).',
+        tolerance: 0.12,
+        falloff: 0.22,
+        weight: 8,
+        feedbackHigh: 'Shrug the shoulders up so the arms cover the ears.',
+      },
+      {
+        id: 'eyes_down',
+        label: 'Eyes forward / down',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.NOSE],
+        targetMin: 22,
+        targetMax: 70,
+        tolerance: 12,
+        falloff: 40,
+        weight: 6,
+        needsView: 'side',
+        feedbackLow: 'Look forward/down toward where you came from — not chin up.',
+        feedbackHigh: 'Eyes forward/down, not a full sit-up tuck.',
       },
       {
         id: 'elbows',
@@ -2242,30 +2333,19 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 25,
+        weight: 6,
         feedbackLow: 'Straighten elbows.',
       },
       {
-        id: 'torso',
-        label: 'Torso line',
-        kind: 'segment_vs_vertical',
-        segment: [LM.LEFT_HIP, LM.LEFT_SHOULDER],
+        id: 'feet_together',
+        label: 'Feet together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
         target: 0,
-        tolerance: 20,
-        falloff: 45,
-        weight: 25,
-        feedbackHigh: 'Keep torso controlled ({delta}° off).',
-      },
-      {
-        id: 'knees',
-        label: 'Knees straight',
-        kind: 'joint_angle',
-        points: L_KNEE,
-        targetMin: 155,
-        targetMax: 180,
-        tolerance: 10,
-        weight: 20,
-        feedbackLow: 'Straighten knees.',
+        tolerance: 0.07,
+        falloff: 0.2,
+        weight: 4,
+        feedbackHigh: 'Squeeze the feet together.',
       },
     ],
   },

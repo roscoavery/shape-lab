@@ -14,7 +14,7 @@ export function visibleCriteria(shape: ShapeDef): CriterionDef[] {
 /** Human-friendly target description for a criterion. */
 export function formatCriterionTarget(c: CriterionDef): string {
   const unit =
-    c.kind === 'point_distance'
+    c.kind === 'point_distance' || c.kind === 'forward_of'
       ? ''
       : c.kind === 'symmetry'
         ? '° difference'
@@ -22,14 +22,14 @@ export function formatCriterionTarget(c: CriterionDef): string {
 
   if (c.targetMin != null && c.targetMax != null) {
     const tol = c.tolerance ? ` (±${c.tolerance}${unit || '°'})` : ''
-    if (c.kind === 'point_distance') {
+    if (c.kind === 'point_distance' || c.kind === 'forward_of') {
       return `Aim ${c.targetMin.toFixed(2)}–${c.targetMax.toFixed(2)} (frame units)${c.tolerance ? ` ±${c.tolerance}` : ''}`
     }
     return `Aim ${c.targetMin}–${c.targetMax}${unit}${tol}`
   }
 
   if (c.target != null) {
-    if (c.kind === 'point_distance') {
+    if (c.kind === 'point_distance' || c.kind === 'forward_of') {
       return `Aim near ${c.target}${c.tolerance ? ` (within ${c.tolerance})` : ''}`
     }
     if (c.kind === 'segment_vs_vertical') {

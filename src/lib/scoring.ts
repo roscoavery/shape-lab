@@ -19,7 +19,14 @@
  *   and keep the better match.
  */
 
-import { jointAngle, pointDistance, segmentAngleFromHorizontal, segmentAngleFromVertical } from './angles'
+import {
+  forwardOffset,
+  jointAngle,
+  pointDistance,
+  segmentAngleFromHorizontal,
+  segmentAngleFromVertical,
+} from './angles'
+import { LM } from './landmarks'
 import {
   criterionViewOk,
   detectCameraView,
@@ -96,6 +103,16 @@ function measureCriterion(
     case 'point_distance': {
       if (!c.pair) return null
       return pointDistance(landmarks, c.pair[0], c.pair[1])
+    }
+    case 'forward_of': {
+      if (!c.pair) return null
+      return forwardOffset(
+        landmarks,
+        c.pair[0],
+        c.pair[1],
+        LM.LEFT_HEEL,
+        LM.LEFT_FOOT_INDEX,
+      )
     }
     case 'symmetry': {
       if (!c.leftPoints || !c.rightPoints) return null

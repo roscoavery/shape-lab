@@ -20,6 +20,7 @@ export type CriterionKind =
   | 'segment_vs_vertical' // Line between two points vs true vertical
   | 'segment_vs_horizontal' // Line between two points vs true horizontal
   | 'point_distance' // Distance between two landmarks (normalized)
+  | 'forward_of' // How far pair[0] is in front of pair[1] (heel→toe facing)
   | 'symmetry' // Absolute difference between two joint angles
   | 'composite_min' // Takes the worse (min) of several sub-measurements
 
@@ -54,6 +55,10 @@ export type CriterionDef = {
   /**
    * For point_distance: [pointA, pointB]
    * Distance is in normalized image units (roughly 0–1 of frame width).
+   *
+   * For forward_of: [frontPoint, rearPoint] — how far frontPoint is in front
+   * of rearPoint along the floor, using heel→toe as facing. Positive = in front.
+   * Side view only (needsView: 'side').
    */
   pair?: [number, number]
 

@@ -67,6 +67,7 @@ public/references/handstand.jpg   — stacked freestanding HS (ribs in, ears cov
 public/references/candlestick.jpg — candlestick (open hips, ribs in; HS forward roll)
 public/references/hollow_arms_down.jpg — hollow hold, arms down (pike in, low back flat)
 public/references/hollow_arms_up.jpg   — hollow hold, arms by ears (after 1-minute arms-down)
+public/references/zombie.jpg           — standing hollow, arms in front, ears covered (RO / BHS landing)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or

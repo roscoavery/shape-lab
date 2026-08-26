@@ -16,6 +16,7 @@ Included:
 - `candlestick.jpg` — shoulder-stand candlestick (open hips, ribs in)
 - `hollow_arms_down.jpg` — hollow body hold, arms by the sides
 - `hollow_arms_up.jpg` — hollow body hold, arms by the ears (after 1-minute arms-down)
+- `zombie.jpg` — standing hollow, arms in front, shoulders shrugged to cover ears
 
 Still needed (shot list is also in Learn → Glossary → Need photos):
 

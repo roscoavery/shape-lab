@@ -7,7 +7,9 @@
  * qualityThreshold before the sequence advances.
  *
  * Cartwheels are not scored yet. Usual start: starting lunge or mountain climber.
- * Usual finish: landing lunge, unless a zombie landing is specified.
+ * Usual cartwheel finish: landing lunge. Cartwheel step-ins (round-off prep)
+ * finish in a zombie — train that before round-offs. All round-offs and
+ * handsprings land in zombie until skills above a RO-BHS series.
  */
 
 import type { SequenceDef } from '../types'
@@ -40,7 +42,7 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'lunge_cartwheel_land',
     name: 'Starting lunge → Cartwheel → Landing lunge',
     description:
-      'Usual cartwheel: start from a starting lunge (or a mountain climber). Finish in a landing lunge unless a zombie landing is specified. Cartwheel itself is not scored yet.',
+      'Usual cartwheel: start from a starting lunge (or a mountain climber). Finish in a landing lunge. Cartwheel step-ins (round-off prep) finish in a zombie instead. Cartwheel itself is not scored yet.',
     steps: [
       { shapeId: 'lunge_start', holdSeconds: 1.5 },
       { shapeId: 'lunge_land', holdSeconds: 1.5 },
@@ -50,7 +52,7 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'mc_cartwheel_lever_lunge',
     name: 'Mountain Climber → Cartwheel → Landing lunge',
     description:
-      'Other usual cartwheel start: mountain climber. Finish in a landing lunge unless zombie is specified. Cartwheel is not scored yet — the middle hold is the tumbling C.',
+      'Other usual cartwheel start: mountain climber. Finish in a landing lunge. Cartwheel is not scored yet — the middle hold is the tumbling C.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'c_shape', holdSeconds: 1.2 },
@@ -59,9 +61,9 @@ export const SEQUENCES: SequenceDef[] = [
   },
   {
     id: 'c_passe_cartwheel_zombie',
-    name: 'C Shape → Passé → Cartwheel → Zombie landing',
+    name: 'C Shape → Passé → Cartwheel step-in → Zombie',
     description:
-      'The exception: finish the cartwheel in a zombie landing when that is specified. Otherwise cartwheels finish in a landing lunge.',
+      'Train zombie on cartwheel step-ins before round-offs. Standing hollow, arms in front, shoulders shrugged to cover the ears, eyes forward/down. All round-offs and handsprings land here until skills above a RO-BHS series (then arms go up to block). Usual cartwheels still finish in a landing lunge.',
     steps: [
       { shapeId: 'c_shape', holdSeconds: 1.5 },
       { shapeId: 'passe', holdSeconds: 1.5 },

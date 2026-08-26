@@ -346,6 +346,7 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   candlestick: '/references/candlestick.jpg',
   hollow_arms_down: '/references/hollow_arms_down.jpg',
   hollow_arms_up: '/references/hollow_arms_up.jpg',
+  zombie: '/references/zombie.jpg',
 }
 
 /** Files that actually ship in public/references/ (not just hoped-for names). */
@@ -360,6 +361,7 @@ export const SHIPPED_REFERENCE_IDS = new Set([
   'candlestick',
   'hollow_arms_down',
   'hollow_arms_up',
+  'zombie',
 ])
 
 export function loadReferencePhotos(): ReferencePhoto[] {
