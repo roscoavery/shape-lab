@@ -35,12 +35,40 @@ import {
   restoreMetaIfIndexedDbEmpty,
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
-
-/** Same public tunnel Ryan used to paste URLs — IndexedDB on that origin may still hold them. */
-const RECOVERY_ORIGIN = 'https://zope-strengthening-sharon-companies.trycloudflare.com'
 import { createId } from '../../lib/storage'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
+
+/** Same public tunnel used when the URL list was first pasted. */
+const RECOVERY_ORIGIN = 'https://zope-strengthening-sharon-companies.trycloudflare.com'
+
+const DUMP_SNIPPET = `void (async () => {
+  const req = indexedDB.open('shape-lab-compare');
+  const db = await new Promise((res, rej) => {
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+  if (![...db.objectStoreNames].includes('collections')) {
+    alert('No Shape Lab library on THIS page. Open the original link and run again.');
+    return;
+  }
+  const tx = db.transaction('collections', 'readonly');
+  const rows = await new Promise((res, rej) => {
+    const q = tx.objectStore('collections').getAll();
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error);
+  });
+  const blob = new Blob([JSON.stringify({
+    kind: 'shape-lab-library',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    collections: rows,
+  }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'shape-lab-library-recovered.json';
+  a.click();
+})();`
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
@@ -104,7 +132,24 @@ export function ReferencePane() {
         publishLibrary(list)
         setActiveCollectionId(list[0].id)
         await refreshCachedIds(list)
-        if (synced.pulled > 0) {
+        const urlCount = list.reduce(
+          (n, c) => n + c.items.filter((i) => i.url).length,
+          0,
+        )
+        if (urlCount > 0) {
+          publishLibrary(list)
+          try {
+            if (!sessionStorage.getItem('shape-lab-captured-library')) {
+              downloadBackupFile(list)
+              sessionStorage.setItem('shape-lab-captured-library', '1')
+            }
+          } catch {
+            /* ignore */
+          }
+          setNotice(
+            `This browser has ${urlCount} saved URL${urlCount === 1 ? '' : 's'} (with names). Copied to the app server${synced.pulled ? ` and merged ${synced.pulled} from the server` : ''}. A backup file was downloaded.`,
+          )
+        } else if (synced.pulled > 0) {
           setNotice(
             `Restored ${synced.pulled} saved URL${synced.pulled === 1 ? '' : 's'} from the app server.`,
           )
@@ -740,28 +785,66 @@ export function ReferencePane() {
 
       {libraryReady &&
         collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
-        <div className="rounded-lg border border-[var(--warn)]/40 bg-[#2a2415] px-3 py-2 text-sm leading-relaxed text-[var(--text)]">
-          <p>
-            This preview has no saved URLs. Browsers keep the list{' '}
-            <em>per web address</em>, so a new preview looks empty even when the
-            old one still has everything.
-          </p>
+        <div className="rounded-lg border border-[var(--warn)]/50 bg-[#2a2415] px-3 py-3 text-sm leading-relaxed text-[var(--text)]">
+          <p className="font-semibold">Your named URLs are still in the browser where you pasted them.</p>
           <p className="mt-2">
-            Open the same link you used when you pasted — that copy will sync onto
-            the app server and then show up here:{' '}
-            <a
-              className="text-[var(--accent)] underline break-all"
-              href={RECOVERY_ORIGIN}
-              target="_blank"
-              rel="noreferrer"
+            This page is <code className="text-[var(--accent)]">{window.location.origin}</code> —
+            empty. The list is stored under the <em>original</em> web address, with the names you
+            typed. It is not deleted.
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>
+              On the <strong>same phone or computer and the same browser</strong> you used when
+              you pasted, open Compare at{' '}
+              <a
+                className="break-all text-[var(--accent)] underline"
+                href={RECOVERY_ORIGIN}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {RECOVERY_ORIGIN}
+              </a>
+            </li>
+            <li>
+              Stay on Compare a few seconds. If the list appears, this app copies names + URLs
+              to the server and downloads a backup. Then come back here and refresh.
+            </li>
+            <li>
+              Chrome: open a tab to <code className="text-[var(--accent)]">chrome://indexeddb-internals</code>,
+              find <code>shape-lab-compare</code>, note its origin, and open that origin.
+            </li>
+          </ol>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]"
+              onClick={() => {
+                void navigator.clipboard.writeText(DUMP_SNIPPET).then(
+                  () =>
+                    setNotice(
+                      'Copied a recover snippet. On the ORIGINAL link, open DevTools → Console, paste, Enter. It downloads the named URL list.',
+                    ),
+                  () => setError('Could not copy — select the snippet from the box below.'),
+                )
+              }}
             >
-              {RECOVERY_ORIGIN}
-            </a>
-          </p>
-          <p className="mt-2 text-[var(--muted)]">
-            Or use Import / paste the list again. After it appears, click Export
-            library.
-          </p>
+              Copy recover snippet
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]"
+              onClick={() => importInputRef.current?.click()}
+            >
+              Import JSON backup
+            </button>
+          </div>
+          <textarea
+            readOnly
+            value={DUMP_SNIPPET}
+            className="mt-2 h-20 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2 font-mono text-[10px] text-[var(--muted)]"
+            aria-label="Recover snippet"
+            onFocus={(e) => e.target.select()}
+          />
         </div>
       )}
 
