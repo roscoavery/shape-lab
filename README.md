@@ -62,6 +62,7 @@ public/references/passe.png       — passé with FTOS arms
 public/references/feet_together_open_shoulders.jpg — FTOS (feet glued, hands to the ceiling)
 public/references/lunge_start.jpg — starting lunge (heel up, straight back, open shoulders)
 public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
+public/references/lever.jpg       — lever (slight front-knee bend, chest parallel)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or

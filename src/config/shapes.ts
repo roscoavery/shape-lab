@@ -908,38 +908,41 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // LEVER — weight on bent front foot, chest parallel, line back foot → hands
+  // LEVER — slight front-knee bend, chest parallel, line back foot → hands (task 7)
   // ===========================================================================
   {
     id: 'lever',
     name: 'Lever',
     description:
-      'Weight on the bent front foot. Chest parallel to the ground. Open shoulders. Straight line back foot → hands.',
+      'Front knee slightly bent. Chest tilts until parallel with the ground. Back leg lifts so one straight line from back foot to hands sits parallel to the floor. Open shoulders.',
     bodyPosition:
-      'All weight on the bent front/support foot. Chest tilts until it is parallel with the ground. Back leg long. Open shoulders (arms by ears — push more open than a slightly closed photo). One straight line from the back foot through the body to the hands. Either leg can be the support leg.',
+      'SIDE VIEW. Weight on the front/support foot with a SLIGHT bend in that knee (not locked, not a deep squat). Chest tilts forward until it is parallel with the ground. Back leg lifts and stays long so one straight line runs from the back foot through the body to the hands — that whole line parallel with the floor. Shoulders OPEN, arms by the ears. Either leg can be the support leg.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'Film from the side.',
-      'Best reference: support leg vertical, torso + back leg + arms one horizontal line (T-scale / lever).',
-      'Load the bent front leg; tilt until the chest is parallel to the floor.',
-      'Open shoulders fully — arms by ears. Slightly closed shoulders is common; push them more open.',
-      'Keep one long line from the back foot through the body to the hands.',
+      'SIDE VIEW required.',
+      'Slight bend in the front knee — not locked, not sitting.',
+      'Tilt the chest until it is parallel with the floor.',
+      'Lift the back leg: one line back foot → hands, parallel to the ground.',
+      'Open shoulders — arms by the ears.',
     ],
+    coachNotes:
+      'Front knee should be slightly bent. Chest tilts forward until parallel with the ground. The back leg lifts up to keep a straight line from back foot to hands, with that whole line parallel with the ground. Open shoulders.',
     criteria: [
       {
         id: 'front_knee',
-        label: 'Front knee bent',
+        label: 'Front knee slightly bent',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 75,
-        targetMax: 120,
-        tolerance: 12,
+        targetMin: 145,
+        targetMax: 172,
+        tolerance: 8,
+        falloff: 40,
         weight: 18,
-        feedbackLow: 'Bend the front knee — put weight on it.',
-        feedbackHigh: 'Keep a clear bend in the front knee.',
+        feedbackLow: 'Don’t sit so deep — only a slight bend in the front knee.',
+        feedbackHigh: 'Soften the front knee — not locked straight.',
       },
       {
         id: 'chest_parallel',
@@ -963,7 +966,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 22,
         needsView: 'side',
-        feedbackHigh: 'One line from back foot to hands ({delta}°).',
+        feedbackHigh: 'Lift the back leg — one line back foot to hands, parallel to the ground ({delta}°).',
       },
       {
         id: 'shoulders',

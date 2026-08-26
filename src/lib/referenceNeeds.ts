@@ -43,7 +43,8 @@ const SHOTS: Record<string, string> = {
   lunge_arms_open: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Open shoulders, arms by ears.',
   lunge_arms_t: 'FACE the camera. Landing-lunge stance (heel FLAT, closer feet). Arms in a T.',
   lunge_arms_high_v: 'FRONT or 3/4. Landing-lunge stance (heel FLAT, closer feet). High V, chest out.',
-  lever: 'SIDE. Chest parallel, open shoulders, one line back foot → hands (T-scale).',
+  lever:
+    'SIDE. Slight bend in the front knee. Chest parallel to the floor. One line back foot → hands, also parallel. Open shoulders.',
   handstand: 'SIDE or 3/4. Stacked HS — not stomach-to-wall. Tight body line.',
   lunge_land:
     'SIDE. Landing lunge: back heel FLAT, shorter than a starting lunge, open shoulders, one line heel → hands.',

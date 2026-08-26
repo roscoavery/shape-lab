@@ -341,6 +341,7 @@ export const SHIPPED_REFERENCE_IDS = new Set([
   'lunge_land',
   'lunge_start',
   'feet_together_open_shoulders',
+  'lever',
 ])
 
 export function loadReferencePhotos(): ReferencePhoto[] {

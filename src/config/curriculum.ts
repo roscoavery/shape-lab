@@ -144,10 +144,10 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lever',
     name: '7. Lever',
     description:
-      'Weight on the bent front foot. Chest tilts until parallel with the ground. Open shoulders. Straight line back foot → hands. Side view. Either support leg.',
+      'Front knee slightly bent. Chest tilts until parallel with the ground. Back leg lifts so one straight line from back foot to hands sits parallel to the floor. Open shoulders. Side view.',
     requiresTaskId: 'task_lunge_arm_holds',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'lever', ...HOLD, note: 'SIDE VIEW' }],
+    steps: [{ shapeId: 'lever', ...HOLD, note: 'SIDE VIEW · slight front-knee bend · chest parallel · line back foot→hands' }],
   },
   {
     id: 'task_handstand',
