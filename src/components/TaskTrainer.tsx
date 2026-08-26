@@ -40,7 +40,7 @@ import {
   saveTaskProgress,
 } from '../lib/storage'
 import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
-import { isOpenShoulderCue, isSoftShoulderShape } from '../lib/scoring'
+import { isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
 import type {
   AthleteTaskProgress,
   ReferencePhoto,
@@ -593,7 +593,14 @@ export function TaskTrainer({
             hadHitThisStepRef.current = true
             saveHitSnapshot()
             setLiveKind('holding')
-            setBanner(`HOLDING — that's a ${stepShape.name}`)
+            const sh = openShoulderScore(scoreRef.current)
+            const shoulderCue =
+              isSoftShoulderShape(stepShape.id) && sh && sh.score < 85
+                ? ' Open your shoulders — arms by your ears.'
+                : ''
+            const hitLine = `Yes, that's a ${stepShape.name}.${shoulderCue}`
+            setBanner(shoulderCue ? `HOLDING — that's a ${stepShape.name}. Open your shoulders.` : `HOLDING — that's a ${stepShape.name}`)
+            speakEvent(hitLine)
           }
           holdAccumRef.current += dt
           setStepProgress(holdAccumRef.current)

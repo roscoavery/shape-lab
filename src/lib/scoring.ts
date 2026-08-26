@@ -21,9 +21,9 @@
  * - Cues come from the written criterion, never a coverage slogan.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
- * - Starting lunge, landing lunge, and lever: open shoulders pass at 75%.
- *   Legs and the back-foot → shoulders line must be 85%+ to move on.
- *   Shoulder notes go in the written analysis — they are not a voice loop.
+ * - Starting lunge, landing lunge, and lever: open shoulders never block
+ *   a pass. Legs and the back-foot → shoulders line must be 85%+ to move on.
+ *   The snapshot still grades open shoulders; voice cues them once, not as a gate.
  */
 
 import {
@@ -65,7 +65,7 @@ function isArmJointAngle(c: CriterionDef): boolean {
   return c.kind === 'joint_angle' && vertex !== undefined && ARM_VERTICES.has(vertex)
 }
 
-/** 75% open-shoulder pass — starting lunge, landing lunge, lever only. */
+/** Open shoulders are graded, not required — starting/landing lunge and lever. */
 const SOFT_SHOULDER_SHAPES = new Set(['lunge_start', 'lunge_land', 'lever'])
 
 /** Legs + back-foot → shoulders line: 85% required to move on. */
@@ -90,17 +90,23 @@ export function isShoulderCriterionId(id: string): boolean {
   return id === 'shoulders' || id === 'shoulders_open'
 }
 
-/** Voice must not loop these — they belong in the written analysis. */
+/** Voice uses this once on a hit — not as a “close / almost” loop. */
 export function isOpenShoulderCue(text: string | null | undefined): boolean {
   if (!text) return false
   const t = text.toLowerCase()
   return t.includes('open shoulder') || t.includes('arms by ears')
 }
 
+export function openShoulderScore(
+  score: { criteria: { id: string; score: number; feedback: string | null }[] },
+): { score: number; feedback: string | null } | null {
+  const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
+  return sh ? { score: sh.score, feedback: sh.feedback } : null
+}
+
 function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: number }): boolean {
-  if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) {
-    return r.score < 75
-  }
+  // Open shoulders never block starting lunge, landing lunge, or lever.
+  if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) return false
   if (LEG_LINE_IDS.has(r.id) && isSoftShoulderShape(shape.id)) {
     return r.score < 85
   }
@@ -351,12 +357,11 @@ function scoreOnce(
       }
       score = s
       feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
-      // Keep the real shoulder grade for the snapshot / written analysis.
-      // 75% is enough to *pass* on starting/landing lunge and lever — do not
-      // rewrite it to 100.
     }
 
-    const skipFromOverall = allowOccludedSide && c.kind === 'symmetry'
+    const hideSymmetry = allowOccludedSide && c.kind === 'symmetry'
+    const skipShoulderPass =
+      isSoftShoulderShape(shape.id) && isShoulderCriterionId(c.id)
 
     results.push({
       id: c.id,
@@ -364,10 +369,10 @@ function scoreOnce(
       score: Math.round(score),
       measured: measured === null ? null : Math.round(measured * 10) / 10,
       weight: c.weight,
-      feedback: skipFromOverall ? null : feedback,
+      feedback: hideSymmetry ? null : feedback,
     })
 
-    if (!skipFromOverall) {
+    if (!hideSymmetry && !skipShoulderPass) {
       weightedSum += score * c.weight
       weightTotal += c.weight
     }
@@ -388,9 +393,7 @@ function scoreOnce(
 
   for (const r of sorted) {
     if (!r.feedback) continue
-    // Open shoulders on these shapes are written, not spoken — skip them
-    // once they are at the 75% pass, and always skip them as the live nag
-    // when legs/line are already in.
+    // Open shoulders are spoken once on the hit, not used as the live gate cue.
     if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) continue
     if (r.score < 85) {
       mainCorrection = r.feedback

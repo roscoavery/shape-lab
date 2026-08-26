@@ -54,6 +54,14 @@ export function TasksWorkspace({
   const holding = Boolean(score.holdReady)
   const close = Boolean(score.nearHit)
   const status = holding ? 'HOLDING' : close ? 'ALMOST — one piece off' : 'Looking'
+  const snapshotShoulders = score.criteria.find(
+    (c) => c.id === 'shoulders' || c.id === 'shoulders_open',
+  )
+  const showShoulderNote =
+    holding &&
+    (shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever') &&
+    snapshotShoulders &&
+    snapshotShoulders.score < 85
 
   return (
     <div className="flex flex-col gap-3">
@@ -69,11 +77,17 @@ export function TasksWorkspace({
           Pass when this body position is true. The still is a picture of the
           idea — you do not have to match the photo.
           {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
-            ? ' Open shoulders pass at 75% and are graded in writing. Legs and the line from back foot to shoulders need 85% to move on.'
+            ? ' Open shoulders are graded on the snapshot and you will hear a cue, but they do not block the pass. Legs and the line from back foot to shoulders need 85% to move on.'
             : ''}
         </p>
         {holding && (
           <p className="mt-2 text-base font-semibold text-[var(--good)]">Hold it.</p>
+        )}
+        {showShoulderNote && snapshotShoulders && (
+          <p className="mt-1 text-sm text-[var(--warn)]">
+            Open shoulders {snapshotShoulders.score}/100 on this snapshot — keep reaching
+            arms by the ears. This does not block the pass.
+          </p>
         )}
         {close && score.mainCorrection && (
           <p className="mt-2 text-base font-semibold text-[var(--warn)]">{score.mainCorrection}</p>

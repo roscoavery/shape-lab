@@ -113,8 +113,7 @@ const LUNGE_DIAGONAL: CriterionDef = {
 
 /**
  * Open shoulders on starting lunge, landing lunge, and lever.
- * 75% is a pass — not a perfect 180°. Graded in writing after the snapshot.
- * Side-on MediaPipe often under-reads arms-by-ears.
+ * Never required to pass. Snapshot still grades the angle; voice cues it.
  */
 const LUNGE_OPEN_SHOULDERS: CriterionDef = {
   id: 'shoulders',

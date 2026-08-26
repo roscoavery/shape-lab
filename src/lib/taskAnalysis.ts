@@ -31,11 +31,8 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
   if (!isSoftShoulderShape(shapeId)) return null
   const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
   if (!sh) return null
-  if (sh.score >= 90) return `Open shoulders ${sh.score}/100.`
-  if (sh.score >= 75) {
-    return `Open shoulders ${sh.score}/100 — passed (75% is enough). Keep reaching arms by the ears.`
-  }
-  return `Open shoulders ${sh.score}/100 — ${sh.feedback || 'arms by ears'}. Written correction only; this did not have to be perfect to move on once it hit 75%.`
+  if (sh.score >= 85) return `Open shoulders ${sh.score}/100 on the snapshot.`
+  return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That grade is for the picture; it did not block moving on.`
 }
 
 export function notesForStep(sample: LiveStepSample): string {
