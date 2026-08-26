@@ -746,7 +746,7 @@ export const SHAPES: ShapeDef[] = [
       'Not a mountain climber — do not bend the back knee or round into a C.',
     ],
     coachNotes:
-      'Land here from falling forward on a passé. Cartwheels usually start from this shape or from a mountain climber. Know the difference: on lunges the back leg is straight, the back is straight, and the shoulders are open. Mountain climbers bend the back knee and use a C upper body.',
+      'Land here from falling forward on a passé. Cartwheels usually start from this shape or from a mountain climber. Know the difference: on lunges the back leg is straight, the back is straight, and the shoulders are open. A mountain climber is a C plus one medium step (or a lunge with the back knee bent and a C upper body). We never finish a skill in a mountain climber.',
     criteria: [
       {
         id: 'front_knee',
@@ -1025,55 +1025,58 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // MOUNTAIN CLIMBER — smaller step, tumbling-C upper body, back leg BENDS (task 15)
+  // MOUNTAIN CLIMBER — C + medium step, both knees bent (task 15)
+  // Pass-through entry only. Never a finish.
   // ===========================================================================
   {
     id: 'mountain_climber',
     name: 'Mountain climber',
     description:
-      'Not a lunge. Smaller step. Back knee BENDS. Upper body in the tumbling C (rounded), not a straight-back open-shoulder line.',
+      'A tumbling C plus one medium step forward — or a lunge with the back knee bent and a C upper body. Two bent knees. Reach from the middle out. Pass-through only; never a finish.',
     bodyPosition:
-      'Shorter step than a lunge. Front knee bent. Back knee BENDS (unlike any lunge). Upper body uses the tumbling C: hips under, chest hollow, rounded back. Shoulders are not the open-by-the-ears lunge line. Either leg forward.',
+      'SIDE VIEW. Take a C shape and step one medium step forward — not as big as a lunge. Or take a lunge, bend the back knee, and C-shape the upper half. Both knees BEND (two bent knees to generate speed and power into a kick and push). Upper body is the tumbling C: hips under, chest hollow, rounded back. Arms reach forward and out from the middle — not from the top down after a hurdle. Either leg forward. We never finish a skill here.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'This is not a lunge.',
-      'Bend the back knee — do not lock it straight.',
-      'Round into the C — do not keep a straight back or open-shoulder lunge line.',
+      'C plus one medium step — not as big as a lunge.',
+      'Both knees bent — that is the power for the kick and push.',
+      'C-shape the upper body. Do not keep a straight-back open-shoulder lunge line.',
+      'Reach forward and out from the middle, not from the top down.',
+      'Pass-through only. We never finish a skill in this shape.',
     ],
     coachNotes:
-      'Cartwheels can start from a mountain climber or from a starting lunge. The difference matters: lunges keep the back leg straight, the back straight, and the shoulders open. Mountain climber bends the back knee and uses the tumbling C.',
+      'A mountain climber is a lunge and a C shape combined: take a C and step one medium step forward (not as big as a lunge), or take a lunge, bend the back knee, and C-shape the upper half. Two bent knees generate speed and power into a kick and push. It also trains reaching forward and out rather than taking the hands from the top down after a hurdle — from the middle and out forward is the goal for long cartwheels and round-offs. Good pass-through for entering handstands, cartwheels, round-offs, standing aerials, front aerials, and front handsprings. We never finish a skill in this position. Into a cartwheel, look ahead of you rather than too far down. Into a handstand, look at where the hands will go. Cartwheels can also start from a starting lunge: lunges keep the back leg straight, the back straight, and the shoulders open.',
     criteria: [
       {
-        id: 'smaller_step',
-        label: 'Smaller step',
+        id: 'medium_step',
+        label: 'Medium step',
         kind: 'point_distance',
         pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
-        targetMin: 0.08,
+        targetMin: 0.1,
         targetMax: 0.22,
         tolerance: 0.04,
         falloff: 0.2,
-        weight: 16,
-        feedbackLow: 'Take a small step.',
-        feedbackHigh: 'Bring the feet closer — smaller than a lunge.',
+        weight: 14,
+        feedbackLow: 'Take a medium step forward — C plus one step.',
+        feedbackHigh: 'Medium step — not as big as a lunge.',
       },
       {
         id: 'front_knee',
-        label: 'Front knee',
+        label: 'Front knee bent',
         kind: 'joint_angle',
         points: L_KNEE,
         targetMin: 70,
         targetMax: 120,
         tolerance: 15,
         weight: 16,
-        feedbackLow: 'Bend front knee more.',
-        feedbackHigh: 'Soften the front knee.',
+        feedbackLow: 'Bend the front knee — two bent knees for power.',
+        feedbackHigh: 'Keep a clear bend in the front knee.',
       },
       {
         id: 'back_knee_bent',
-        label: 'Back leg bends',
+        label: 'Back knee bent',
         kind: 'joint_angle',
         points: R_KNEE,
         targetMin: 90,
@@ -1081,8 +1084,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 22,
-        feedbackLow: 'Bend the back knee — do not lock it.',
-        feedbackHigh: 'Keep a clear bend in the back knee.',
+        feedbackLow: 'Bend the back knee — two bent knees for the kick and push.',
+        feedbackHigh: 'Keep a clear bend in the back knee — this is not a lunge.',
       },
       {
         id: 'upper_c',
@@ -1093,20 +1096,23 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 165,
         tolerance: 15,
         falloff: 45,
-        weight: 24,
-        feedbackLow: 'Curve the upper body into a C.',
-        feedbackHigh: 'Soften the C slightly.',
+        weight: 22,
+        feedbackLow: 'C-shape the upper half — hips under, chest hollow.',
+        feedbackHigh: 'Keep the C — this is not a straight-back lunge.',
       },
       {
-        id: 'shoulders',
-        label: 'Shoulders / arms',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        targetMin: 130,
-        targetMax: 180,
-        tolerance: 15,
-        weight: 12,
-        feedbackLow: 'Reach arms longer by the ear.',
+        id: 'arms_forward',
+        label: 'Reach from the middle out',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        targetMin: 15,
+        targetMax: 55,
+        tolerance: 12,
+        falloff: 40,
+        weight: 16,
+        needsView: 'side',
+        feedbackLow: 'Reach forward and out from the middle — not hanging down.',
+        feedbackHigh: 'From the middle out forward — not from the top down by the ears.',
       },
       {
         id: 'elbows',
@@ -2136,10 +2142,10 @@ export const SHAPES: ShapeDef[] = [
       'SIDE VIEW — stand in profile so the C is obvious.',
       'Hips under, chest hollow — round the back, do not arch.',
       'Arms reach forward (not by the ears). Elbows straight.',
-      'This C is a piece of mountain climber.',
+      'This C plus one medium step forward is a mountain climber.',
     ],
     coachNotes:
-      'C shape is used for connecting into a back handspring. Commonly used when teaching round-off back handspring connection. It is another fundamental piece of the mountain climber shape. We may pull a passé from the C shape before going into a cartwheel or a round-off. I commonly teach back extension rolls starting from this shape.',
+      'C shape is used for connecting into a back handspring. Commonly used when teaching round-off back handspring connection. A mountain climber is this C plus one medium step forward, with the back knee bent. We may pull a passé from the C shape before going into a cartwheel or a round-off. I commonly teach back extension rolls starting from this shape.',
     criteria: [
       {
         id: 'knees_bent',

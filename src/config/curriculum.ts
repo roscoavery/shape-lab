@@ -276,21 +276,31 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_mountain_climber',
     name: '15. Mountain climber',
     description:
-      'Not a lunge: smaller step, back knee BENDS, upper body in the tumbling C. Lunges keep the back leg straight, the back straight, and the shoulders open.',
+      'C plus one medium step — or a lunge with the back knee bent and a C upper body. Two bent knees for power. Reach from the middle out. Pass-through for handstands, cartwheels, round-offs, and aerials. We never finish a skill here.',
     requiresTaskId: 'task_c_shape',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'mountain_climber', ...HOLD, note: 'SIDE VIEW · back knee BENDS · C upper body — not a lunge' }],
+    steps: [
+      {
+        shapeId: 'mountain_climber',
+        ...HOLD,
+        note: 'SIDE VIEW · C + medium step · both knees bent · reach from the middle out',
+      },
+    ],
   },
   {
     id: 'task_seq_clean_mc_hs_lever_lunge',
     name: '16. Sequence: Clean → Mountain climber → HS → Lever → Lunge',
     description:
-      'Pass through the lever into the landing lunge — hit it and try to stop, but a full 3–5s lever hold is optional.',
+      'Pass through mountain climber (look at where the hands will go), kick up, then pass through the lever into the landing lunge. Never finish in the mountain climber. A full 3–5s lever hold is optional.',
     requiresTaskId: 'task_mountain_climber',
     masterAfterCompletions: 2,
     steps: [
       { shapeId: 'stand_clean', ...HOLD },
-      { shapeId: 'mountain_climber', ...HOLD },
+      {
+        shapeId: 'mountain_climber',
+        ...HOLD,
+        note: 'Pass through · look at where the hands will go',
+      },
       { shapeId: 'handstand', ...HS_TRY, note: '3 kick-up tries · graded, not required' },
       {
         shapeId: 'lever',

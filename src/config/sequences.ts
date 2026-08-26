@@ -7,9 +7,10 @@
  * qualityThreshold before the sequence advances.
  *
  * Cartwheels are not scored yet. Usual start: starting lunge or mountain climber.
- * Usual cartwheel finish: landing lunge. Cartwheel step-ins (round-off prep)
- * finish in a zombie — train that before round-offs. All round-offs and
- * handsprings land in zombie until skills above a RO-BHS series.
+ * Usual cartwheel finish: landing lunge. Never finish a skill in a mountain climber.
+ * Cartwheel step-ins (round-off prep) finish in a zombie — train that before
+ * round-offs. All round-offs and handsprings land in zombie until skills above
+ * a RO-BHS series.
  */
 
 import type { SequenceDef } from '../types'
@@ -30,7 +31,8 @@ export const SEQUENCES: SequenceDef[] = [
   {
     id: 'mc_hs_lever_lunge',
     name: 'Mountain Climber → Handstand → Lever → Landing lunge',
-    description: 'Entry from mountain climber. Finish in a landing lunge.',
+    description:
+      'Pass through mountain climber (look at the hands), then kick up. Finish in a landing lunge — never in the mountain climber.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'handstand', holdSeconds: 2 },
@@ -52,7 +54,7 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'mc_cartwheel_lever_lunge',
     name: 'Mountain Climber → Cartwheel → Landing lunge',
     description:
-      'Other usual cartwheel start: mountain climber. Finish in a landing lunge. Cartwheel is not scored yet — the middle hold is the tumbling C.',
+      'Other usual cartwheel start: mountain climber (look ahead, not too far down). Finish in a landing lunge — never in the mountain climber. Cartwheel is not scored yet — the middle hold is the tumbling C.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'c_shape', holdSeconds: 1.2 },

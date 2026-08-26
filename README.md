@@ -68,6 +68,7 @@ public/references/candlestick.jpg — candlestick (open hips, ribs in; HS forwar
 public/references/hollow_arms_down.jpg — hollow hold, arms down (pike in, low back flat)
 public/references/hollow_arms_up.jpg   — hollow hold, arms by ears (after 1-minute arms-down)
 public/references/zombie.jpg           — standing hollow, arms in front, ears covered (RO / BHS landing)
+public/references/mountain_climber.jpg — C plus a medium step, both knees bent (pass-through only)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or

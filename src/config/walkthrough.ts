@@ -82,8 +82,20 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
   task_handstand: HS_PRACTICE,
   task_seq_ftos_passe_lunge_lever_hs_lunge_right: HS_SEQ,
   task_seq_ftos_passe_lunge_lever_hs_lunge_left: HS_SEQ,
+  task_mountain_climber: {
+    steps: {
+      mountain_climber: {
+        intro:
+          'Mountain climber. Take a C and step one medium step forward. Both knees bent. Reach the arms forward and out from the middle. This is a pass-through — we never finish a skill here.',
+      },
+    },
+  },
   task_seq_clean_mc_hs_lever_lunge: {
     steps: {
+      mountain_climber: {
+        intro:
+          'Mountain climber. Two bent knees for power. Reach forward and out. Look at where the hands will go.',
+      },
       handstand: {
         intro:
           'Kick up to the best handstand you can hit, then finish through the lever into a landing lunge. Three tries on the handstand.',

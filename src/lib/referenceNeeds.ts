@@ -52,7 +52,7 @@ const SHOTS: Record<string, string> = {
   c_shape:
     'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
   mountain_climber:
-    'SIDE. Not a lunge. Smaller step, back knee BENT, tumbling-C upper body (rounded, not straight-back open shoulders).',
+    'SIDE. C plus one medium step (not as big as a lunge). Both knees bent. Upper body in the tumbling C. Arms reaching forward and out from the middle.',
   hollow_arms_down:
     'SIDE. On the back. Start from a pike, inch back until the lower back is FLAT, arms by the sides, feet off the floor.',
   hollow_arms_up:
