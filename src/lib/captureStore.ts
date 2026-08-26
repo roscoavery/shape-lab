@@ -4,9 +4,10 @@
  */
 
 const DB_NAME = 'shape-lab-captures'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const META = 'meta'
 const BLOBS = 'blobs'
+const LEGACY_ITEMS = 'items'
 
 /** Keep the newest N captures per athlete so the gym iPad does not fill up. */
 const MAX_PER_ATHLETE = 36
@@ -24,22 +25,53 @@ export type TaskCapture = {
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
+function ensureStores(db: IDBDatabase, tx: IDBTransaction | null) {
+  if (!db.objectStoreNames.contains(META)) {
+    const s = db.createObjectStore(META, { keyPath: 'id' })
+    s.createIndex('by-athlete', 'athleteId')
+  } else if (tx) {
+    const s = tx.objectStore(META)
+    if (!s.indexNames.contains('by-athlete')) {
+      s.createIndex('by-athlete', 'athleteId')
+    }
+  }
+  if (!db.objectStoreNames.contains(BLOBS)) {
+    db.createObjectStore(BLOBS)
+  }
+  if (db.objectStoreNames.contains(LEGACY_ITEMS)) {
+    db.deleteObjectStore(LEGACY_ITEMS)
+  }
+}
+
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
-      const db = req.result
-      if (!db.objectStoreNames.contains(META)) {
-        const s = db.createObjectStore(META, { keyPath: 'id' })
-        s.createIndex('by-athlete', 'athleteId')
-      }
-      if (!db.objectStoreNames.contains(BLOBS)) {
-        db.createObjectStore(BLOBS)
-      }
+      ensureStores(req.result, req.transaction)
     }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB unavailable'))
+    req.onsuccess = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains(META) || !db.objectStoreNames.contains(BLOBS)) {
+        db.close()
+        dbPromise = null
+        const del = indexedDB.deleteDatabase(DB_NAME)
+        del.onsuccess = () => {
+          openDb().then(resolve, reject)
+        }
+        del.onerror = () => reject(del.error ?? new Error('Could not reset capture store'))
+        return
+      }
+      db.onversionchange = () => {
+        db.close()
+        dbPromise = null
+      }
+      resolve(db)
+    }
+    req.onerror = () => {
+      dbPromise = null
+      reject(req.error ?? new Error('IndexedDB unavailable'))
+    }
   })
   return dbPromise
 }
@@ -65,9 +97,18 @@ export async function saveCapture(meta: TaskCapture, blob: Blob): Promise<void> 
 
 export async function listCaptures(athleteId: string): Promise<TaskCapture[]> {
   const db = await openDb()
+  if (!db.objectStoreNames.contains(META)) return []
   const tx = db.transaction(META, 'readonly')
-  const idx = tx.objectStore(META).index('by-athlete')
-  const rows = await reqToPromise(idx.getAll(athleteId) as IDBRequest<TaskCapture[]>)
+  const store = tx.objectStore(META)
+  let rows: TaskCapture[]
+  if (store.indexNames.contains('by-athlete')) {
+    rows = await reqToPromise(
+      store.index('by-athlete').getAll(athleteId) as IDBRequest<TaskCapture[]>,
+    )
+  } else {
+    const all = await reqToPromise(store.getAll() as IDBRequest<TaskCapture[]>)
+    rows = all.filter((c) => c.athleteId === athleteId)
+  }
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
