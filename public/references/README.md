@@ -12,6 +12,7 @@ Included:
 - `lunge_start.jpg` — starting lunge, back heel UP, straight back, open shoulders
 - `lunge_land.jpg` — landing lunge, back heel FLAT, shorter stance
 - `lever.jpg` — lever: slight front-knee bend, chest parallel, line back foot → hands
+- `handstand.jpg` — stacked freestanding HS, ribs in, ears covered
 
 Still needed (shot list is also in Learn → Glossary → Need photos):
 

@@ -105,17 +105,20 @@ export const SHAPES: ShapeDef[] = [
     id: 'handstand',
     name: 'Handstand',
     description:
-      'Stacked handstand: arms by ears, open shoulders, straight hips and knees, tight body line.',
+      'Fully straight line, ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes. Push through the ground and stand tall.',
     bodyPosition:
-      'Hands on the floor, arms straight and covering the ears, shoulders fully open, hips stacked, knees straight, feet glued, one long vertical body line from hands to toes. Head stays relatively neutral.',
+      'SIDE or 3/4. Hands on the floor. Straight elbows, open shoulders, ears covered. Ribs in, butt in, hips stacked, knees straight, toes pointed. One long vertical line from hands to toes — push through the ground and stand tall. Looking up toward the hands is fine if the ears stay covered. Goal: cover the ears and see the thumbs through the eyebrows. Looking at the wall behind you is only a temporary cue if it straightens the line.',
     category: 'hold',
     qualityThreshold: 70,
     cameraView: 'side',
     tips: [
       'Side or 3/4 view — not face-on. We need to see the body line.',
-      'Push tall through the shoulders (open shoulder angle).',
-      'Squeeze legs together and point toes.',
+      'Push through the ground. Stand tall in a straight line.',
+      'Ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes.',
+      'Cover the ears. Seeing the thumbs through the eyebrows is the goal.',
     ],
+    coachNotes:
+      'Fully straight line with ribs in. The athlete can look up toward the hands as long as the ears are still covered. I commonly tell athletes to look at the wall behind them if that straightens out the line initially, but it is encouraged to cover the ears and see the thumbs through the eyebrows. Straight elbows, open shoulders, ribs in, butt in, straight knees, pointed toes. Pushing through the ground, standing tall in a straight line.',
     criteria: [
       // --- hidden left/right building blocks ---
       {
@@ -239,12 +242,13 @@ export const SHAPES: ShapeDef[] = [
       },
       {
         id: 'hips',
-        label: 'Hips',
+        label: 'Ribs in / butt in',
         kind: 'composite_min',
         of: ['_left_hip', '_right_hip'],
         tolerance: 0,
         weight: 18,
-        feedbackLow: 'Open hips {delta}° more.',
+        feedbackLow: 'Ribs in — reduce pike.',
+        feedbackHigh: 'Butt in — reduce the arch.',
       },
       {
         id: 'knees',
@@ -265,20 +269,20 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 16,
         needsView: 'side',
-        feedbackHigh: 'Stack body line — you are {delta}° off vertical.',
+        feedbackHigh: 'Push through the ground — stand tall in a straight line ({delta}° off).',
       },
       {
         id: 'head',
-        label: 'Head position',
+        label: 'Ears covered',
         kind: 'segment_vs_vertical',
-        // Nose should stay roughly stacked with shoulders (neutral head)
+        // Looking toward the hands is OK. A huge head poke (wall-stare) is only a light cue.
         segment: [LM.LEFT_SHOULDER, LM.NOSE],
         targetMin: 0,
-        targetMax: 35,
-        tolerance: 10,
-        falloff: 40,
-        weight: 8,
-        feedbackHigh: 'Neutralize head — tuck chin slightly ({delta}° off).',
+        targetMax: 48,
+        tolerance: 14,
+        falloff: 50,
+        weight: 4,
+        feedbackHigh: 'Cover the ears — see the thumbs through the eyebrows if you can.',
       },
       {
         id: 'feet_together',
@@ -290,6 +294,18 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.2,
         weight: 6,
         feedbackHigh: 'Squeeze feet together.',
+      },
+      {
+        id: 'toes',
+        label: 'Toes pointed',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 22,
+        falloff: 50,
+        weight: 6,
+        needsView: 'side',
+        feedbackHigh: 'Point the toes ({delta}°).',
       },
     ],
   },
@@ -1928,7 +1944,11 @@ export const SHAPES: ShapeDef[] = [
     description: 'Handstand at the wall — same body standards as freestanding, slightly more forgiving line.',
     category: 'hold',
     qualityThreshold: 65,
-    tips: ['Use the same cues as freestanding handstand.', 'Prefer stomach-to-wall for open shoulders.'],
+    tips: [
+      'Use the same cues as freestanding handstand.',
+      'Prefer stomach-to-wall for open shoulders.',
+      'Ribs in, butt in, straight elbows, cover the ears, point the toes, push tall.',
+    ],
     criteria: [
       {
         id: '_left_elbow',

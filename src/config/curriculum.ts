@@ -152,10 +152,17 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   {
     id: 'task_handstand',
     name: '8. Handstand',
-    description: 'Match Handstand Lab quality — stacked, open shoulders, tight body line. Side view.',
+    description:
+      'Fully straight line, ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes. Cover the ears (looking toward the hands is fine). Hit it — no 5s hold. Side or 3/4 view.',
     requiresTaskId: 'task_lever',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'handstand', ...HS_HOLD, note: 'SIDE or 3/4 view — hit it (no 5s hold)' }],
+    steps: [
+      {
+        shapeId: 'handstand',
+        ...HS_HOLD,
+        note: 'SIDE or 3/4 · hit it (no 5s hold) · ribs in · ears covered · push tall',
+      },
+    ],
   },
   {
     id: 'task_lunge_land',

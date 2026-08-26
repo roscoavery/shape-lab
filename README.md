@@ -63,6 +63,7 @@ public/references/feet_together_open_shoulders.jpg — FTOS (feet glued, hands t
 public/references/lunge_start.jpg — starting lunge (heel up, straight back, open shoulders)
 public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
 public/references/lever.jpg       — lever (slight front-knee bend, chest parallel)
+public/references/handstand.jpg   — stacked freestanding HS (ribs in, ears covered)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or
