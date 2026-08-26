@@ -19,6 +19,16 @@ import {
 import { getShape } from '../config/shapes'
 import { ViewCallout } from './ViewCallout'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
+import { useRollingCapture } from '../hooks/useRollingCapture'
+import { playSuccessChime } from '../lib/sounds'
+import {
+  deleteCapture,
+  getCaptureBlob,
+  listCaptures,
+  saveCapture,
+  snapshotCanvas,
+  type TaskCapture,
+} from '../lib/captureStore'
 import {
   createId,
   deleteReferencePhoto,
@@ -51,6 +61,9 @@ type Props = {
   onVoiceEnabledChange: (on: boolean) => void
   /** Whether pose timing should accumulate (camera or demo active) */
   timingActive: boolean
+  videoRef: React.RefObject<HTMLVideoElement | null>
+  canvasRef: React.RefObject<HTMLCanvasElement | null>
+  cameraRunning: boolean
 }
 
 export function TaskTrainer({
@@ -67,19 +80,28 @@ export function TaskTrainer({
   voiceEnabled,
   onVoiceEnabledChange,
   timingActive,
+  videoRef,
+  canvasRef,
+  cameraRunning,
 }: Props) {
   const [active, setActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [stepProgress, setStepProgress] = useState(0)
   const [flash, setFlash] = useState<string | null>(null)
   const [refFailedId, setRefFailedId] = useState<string | null>(null)
+  const [captures, setCaptures] = useState<TaskCapture[]>([])
+  const [preview, setPreview] = useState<{ url: string; kind: 'snapshot' | 'clip' } | null>(null)
   const holdAccumRef = useRef(0)
   const lastRef = useRef<number | null>(null)
   const completingRef = useRef(false)
+  const inQualityRef = useRef(false)
+  const hitAtRef = useRef<number | null>(null)
+  const advancingRef = useRef(false)
 
-  const { speak, reset: resetSpeech, supported: speechSupported } = useSpeechCoach(
+  const { speak, speakHit, reset: resetSpeech, supported: speechSupported } = useSpeechCoach(
     voiceEnabled && active,
   )
+  const { trimClip } = useRollingCapture(videoRef, canvasRef, active)
 
   const completions = progress?.completions ?? {}
   const assigned = progress?.assignedTaskIds
@@ -138,6 +160,9 @@ export function TaskTrainer({
     resetSpeech()
     const first = task.steps[0]
     if (first) onRequestShape(first.shapeId, first.stance ?? 'auto')
+    inQualityRef.current = false
+    hitAtRef.current = null
+    advancingRef.current = false
   }
 
   const stop = () => {
@@ -160,6 +185,63 @@ export function TaskTrainer({
     resetSpeech()
   }, [athleteId, task, onProgressChange, resetSpeech])
 
+  const refreshCaptures = useCallback(async () => {
+    if (!athleteId) {
+      setCaptures([])
+      return
+    }
+    try {
+      setCaptures(await listCaptures(athleteId))
+    } catch {
+      /* IDB unavailable */
+    }
+  }, [athleteId])
+
+  useEffect(() => {
+    void refreshCaptures()
+  }, [refreshCaptures])
+
+  useEffect(() => {
+    inQualityRef.current = false
+    hitAtRef.current = null
+  }, [stepIndex])
+
+  // Snapshot + spoken "that's the shape" on first quality hit this step
+  useEffect(() => {
+    if (!active || !stepShape || !athleteId || !task) return
+    const gate = qualityThreshold || stepShape.qualityThreshold
+    const inQ = overallScore >= gate
+    if (inQ && !inQualityRef.current) {
+      inQualityRef.current = true
+      hitAtRef.current = performance.now()
+      speakHit(stepShape.name)
+      const blob = snapshotCanvas(canvasRef.current)
+      if (blob) {
+        const meta = {
+          id: createId('snap'),
+          athleteId,
+          taskId: task.id,
+          shapeId: stepShape.id,
+          shapeName: stepShape.name,
+          kind: 'snapshot' as const,
+          createdAt: new Date().toISOString(),
+          holdSeconds: 0,
+        }
+        void saveCapture(meta, blob).then(() => refreshCaptures())
+      }
+    }
+  }, [
+    active,
+    overallScore,
+    qualityThreshold,
+    stepShape,
+    athleteId,
+    task,
+    speakHit,
+    canvasRef,
+    refreshCaptures,
+  ])
+
   // Advance steps while holding quality
   useEffect(() => {
     if (!active || !task || !step || !stepShape) return
@@ -172,6 +254,11 @@ export function TaskTrainer({
 
     let raf = 0
     const tick = (now: number) => {
+      if (advancingRef.current) {
+        lastRef.current = now
+        raf = requestAnimationFrame(tick)
+        return
+      }
       if (lastRef.current != null) {
         const dt = (now - lastRef.current) / 1000
         if (overallScore >= (qualityThreshold || stepShape.qualityThreshold)) {
@@ -181,11 +268,44 @@ export function TaskTrainer({
             holdAccumRef.current = 0
             setStepProgress(0)
             lastRef.current = null
-            if (stepIndex + 1 >= task.steps.length) {
-              finishTask()
-            } else {
-              setStepIndex((i) => i + 1)
-            }
+            advancingRef.current = true
+            playSuccessChime()
+            const endAt = performance.now()
+            const hitAt = hitAtRef.current ?? endAt - stepHold * 1000
+            const shapeName = stepShape.name
+            const shapeId = stepShape.id
+            const holdSec = stepHold
+            void (async () => {
+              try {
+                const clip = await trimClip(hitAt, endAt)
+                if (clip && clip.size > 400 && athleteId) {
+                  await saveCapture(
+                    {
+                      id: createId('clip'),
+                      athleteId,
+                      taskId: task.id,
+                      shapeId,
+                      shapeName,
+                      kind: 'clip',
+                      createdAt: new Date().toISOString(),
+                      holdSeconds: holdSec,
+                    },
+                    clip,
+                  )
+                  await refreshCaptures()
+                }
+              } catch {
+                /* recording optional */
+              }
+              hitAtRef.current = null
+              inQualityRef.current = false
+              advancingRef.current = false
+              if (stepIndex + 1 >= task.steps.length) {
+                finishTask()
+              } else {
+                setStepIndex((i) => i + 1)
+              }
+            })()
             return
           }
         }
@@ -207,17 +327,22 @@ export function TaskTrainer({
     timingActive,
     onRequestShape,
     finishTask,
+    trimClip,
+    athleteId,
+    refreshCaptures,
   ])
 
-  // Voice coaching on steps that request it
+  // Voice coaching on steps that request it — stay quiet once they are in
+  // the shape so the hit callout ("Yes, that's a …") is not talked over.
   useEffect(() => {
-    if (!active || !step?.speakCorrections) return
+    if (!active || !step?.speakCorrections || !stepShape) return
     if (!mainCorrection) return
-    // Don't spam "Excellent" while holding
     if (mainCorrection.startsWith('Excellent')) return
     if (overallScore < 5) return
+    const gate = qualityThreshold || stepShape.qualityThreshold
+    if (overallScore >= gate) return
     speak(mainCorrection)
-  }, [active, step, mainCorrection, overallScore, speak])
+  }, [active, step, stepShape, mainCorrection, overallScore, qualityThreshold, speak])
 
   const onUploadRef = async (file: File | null) => {
     if (!file || !stepShape) return
@@ -386,7 +511,7 @@ export function TaskTrainer({
                   {i + 1}. {shape?.name ?? s.shapeId}{' '}
                   <span className="opacity-70">
                     ({s.passThrough ? 'pass-through ' : ''}
-                    {hold}s)
+                    {Number.isInteger(hold) ? hold : hold.toFixed(1)}s)
                   </span>
                   {s.note && (
                     <span className="mt-0.5 block text-[11px] opacity-80">{s.note}</span>
@@ -405,6 +530,12 @@ export function TaskTrainer({
             <p className="mb-2 text-sm">
               <span className="text-[var(--muted)]">Cue: </span>
               <span className="font-medium text-[var(--text)]">{score.mainCorrection}</span>
+            </p>
+          )}
+
+          {active && !cameraRunning && (
+            <p className="mb-2 text-xs text-[var(--muted)]">
+              Start the camera to save a snapshot and a short trimmed clip when you hit the shape.
             </p>
           )}
 
@@ -525,6 +656,95 @@ export function TaskTrainer({
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
           {flash}
         </p>
+      )}
+
+      <CaptureStrip
+        captures={task ? captures.filter((c) => c.taskId === task.id) : []}
+        preview={preview}
+        onPreview={setPreview}
+        onDelete={async (id) => {
+          await deleteCapture(id)
+          if (preview) URL.revokeObjectURL(preview.url)
+          setPreview(null)
+          await refreshCaptures()
+        }}
+      />
+    </div>
+  )
+}
+
+function CaptureStrip({
+  captures,
+  preview,
+  onPreview,
+  onDelete,
+}: {
+  captures: TaskCapture[]
+  preview: { url: string; kind: 'snapshot' | 'clip' } | null
+  onPreview: (p: { url: string; kind: 'snapshot' | 'clip' } | null) => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
+      <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
+        Hits — snapshots &amp; clips
+      </p>
+      {!captures.length ? (
+        <p className="text-xs text-[var(--muted)]">
+          When you hit the shape, a still is saved. When the hold finishes, a chime plays and a
+          short clip is trimmed (~2s before the hit through a beat after).
+        </p>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {captures.slice(0, 12).map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="shrink-0 rounded border border-[var(--panel-border)] px-2 py-1 text-left text-xs hover:bg-[#243040]"
+              onClick={async () => {
+                const blob = await getCaptureBlob(c.id)
+                if (!blob) return
+                if (preview) URL.revokeObjectURL(preview.url)
+                onPreview({ url: URL.createObjectURL(blob), kind: c.kind })
+              }}
+            >
+              <div className="font-medium text-[var(--text)]">{c.shapeName}</div>
+              <div className="text-[var(--muted)]">
+                {c.kind === 'clip' ? 'clip' : 'photo'} · {new Date(c.createdAt).toLocaleTimeString()}
+              </div>
+              <span
+                role="button"
+                tabIndex={0}
+                className="text-[10px] text-[var(--bad)]"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(c.id)
+                }}
+              >
+                remove
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {preview && (
+        <div className="mt-2">
+          {preview.kind === 'clip' ? (
+            <video src={preview.url} controls className="max-h-48 w-full rounded bg-black" />
+          ) : (
+            <img src={preview.url} alt="Hit snapshot" className="max-h-48 w-full rounded object-contain" />
+          )}
+          <button
+            type="button"
+            className="mt-1 text-xs text-[var(--muted)] underline"
+            onClick={() => {
+              URL.revokeObjectURL(preview.url)
+              onPreview(null)
+            }}
+          >
+            Close preview
+          </button>
+        </div>
       )}
     </div>
   )

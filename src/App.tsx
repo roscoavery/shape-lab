@@ -346,6 +346,9 @@ export default function App() {
                 setSettings((s) => ({ ...s, voiceEnabled: on }))
               }
               timingActive={timingActive}
+              videoRef={camera.videoRef}
+              canvasRef={camera.canvasRef}
+              cameraRunning={camera.running}
             />
           </div>
         </div>
@@ -498,9 +501,12 @@ export default function App() {
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Tasks</strong> tab, pick an athlete,
               and work through the ordered curriculum (stand clean → FTOS → passé → lunges →
-              lever → handstand → sequences → C shape → mountain climber). Holds start at 5s and
-              drop to 3s after mastery. Upload reference photos per shape (shared or
-              athlete-specific) so athletes can match the picture beside the camera.
+              lever → handstand → sequences → C shape → mountain climber). Most holds start at 5s
+              and drop to 3s after mastery. Freestanding handstand only needs a brief hit (~1s) —
+              wall handstand stays on Homework. When they hit the shape, the app snapshots,
+              speaks “Yes, that’s a …”, records a short trimmed clip, and chimes when the hold
+              is done. Upload reference photos per shape (shared or athlete-specific) so
+              athletes can match the picture beside the camera.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

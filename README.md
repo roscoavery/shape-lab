@@ -41,9 +41,10 @@ Allow camera permission when the browser asks. Click **Start camera**.
 1. Open the **Tasks** tab (primary).
 2. Create / select an athlete.
 3. Work through the ordered curriculum — later tasks stay locked until the previous one is completed at least once.
-4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**.
-5. Toggle **Voice** to hear spoken corrections (~every 4s) on steps marked `speakCorrections`.
+4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**. **Freestanding handstand** is the exception — only a brief hit (~1s) is required to move on (wall handstand stays on Homework).
+5. Toggle **Voice** to hear spoken corrections (~every 4s) on steps marked `speakCorrections`. When they first hit the shape, the coach says things like “Yes, that’s a handstand” / “Yep, there’s the lunge.” The browser uses the most natural on-device English voice it can find (Google US, Samantha, Aria/Jenny Neural, …) — ChatGPT Cove is not available in a free local app.
 6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
+7. On each quality hit the app **snapshots** the pose. When the required hold finishes it plays a **success chime** and saves a **trimmed clip** (~2.2s before the hit through ~1.3s after the hold). Review them under **Hits — snapshots & clips** on the task. Clips stay in this browser (IndexedDB), newest 36 per athlete.
 
 You do **not** need to film from the same angle as a reference photo. Joint angles grade from any facing. Shapes that need a **side view** (lunges, lever, handstand body line) or **front view** (T arms) show a banner — turn if it appears. Lunges/levers auto-detect left vs right foot forward unless the task specifies a side.
 
@@ -167,8 +168,11 @@ src/
   lib/pose.ts            MediaPipe setup
   lib/storage.ts         localStorage (athletes, progress, refs)
   lib/clipStore.ts       IndexedDB (Compare collections + recorded clips)
+  lib/captureStore.ts    IndexedDB (task hit snapshots + trimmed clips)
+  lib/sounds.ts          success chime
   components/compare/    Compare tab (reference player, delay cam, replay)
   hooks/useSpeechCoach.ts
+  hooks/useRollingCapture.ts
   components/TaskTrainer.tsx
   components/EducationPanel.tsx  Learn tab (shapes + pathways)
   lib/educationCopy.ts   readable cues from criteria

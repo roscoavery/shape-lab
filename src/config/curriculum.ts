@@ -5,6 +5,7 @@
  * Each athlete works through these tasks in order.
  * Hold times: first successful completions use beginnerSeconds (5s).
  * After `masterAfterCompletions` successes, holds drop to masteredSeconds (3s).
+ * Freestanding handstand uses HS_HOLD (~1s) — no 5s hold. Wall HS is homework.
  *
  * passThrough: step counts if athlete briefly hits quality (no long hold required).
  * speakCorrections: app narrates live corrections while on that step.
@@ -47,6 +48,13 @@ export type TaskDef = {
 const HOLD = {
   beginnerSeconds: 5,
   masteredSeconds: 3,
+  speakCorrections: true,
+} as const
+
+/** Freestanding handstand — just hit it; do not require a 5s hold (wall HS is homework). */
+const HS_HOLD = {
+  beginnerSeconds: 1,
+  masteredSeconds: 0.8,
   speakCorrections: true,
 } as const
 
@@ -141,7 +149,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     description: 'Match Handstand Lab quality — stacked, open shoulders, tight body line. Side view.',
     requiresTaskId: 'task_lever',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'handstand', ...HOLD, note: 'SIDE or 3/4 view — not face-on' }],
+    steps: [{ shapeId: 'handstand', ...HS_HOLD, note: 'SIDE or 3/4 view — hit it (no 5s hold)' }],
   },
   {
     id: 'task_lunge_land',
@@ -196,7 +204,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
       { shapeId: 'passe', ...HOLD, stance: 'right', note: 'Right stance leg (left knee up)' },
       { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge' },
       { shapeId: 'lever', ...HOLD, stance: 'right' },
-      { shapeId: 'handstand', ...HOLD, note: 'SIDE VIEW' },
+      { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'right' },
     ],
   },
@@ -211,7 +219,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
       { shapeId: 'passe', ...HOLD, stance: 'left', note: 'Left stance leg (right knee up)' },
       { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge' },
       { shapeId: 'lever', ...HOLD, stance: 'left' },
-      { shapeId: 'handstand', ...HOLD, note: 'SIDE VIEW' },
+      { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'left' },
     ],
   },
@@ -241,7 +249,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       { shapeId: 'stand_clean', ...HOLD },
       { shapeId: 'mountain_climber', ...HOLD },
-      { shapeId: 'handstand', ...HOLD },
+      { shapeId: 'handstand', ...HS_HOLD },
       {
         shapeId: 'lever',
         beginnerSeconds: 1.2,
