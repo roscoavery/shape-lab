@@ -16,6 +16,20 @@ import { useCallback, useEffect, useRef } from 'react'
 
 const CUE_THROTTLE_MS = 2200
 
+/** Voice says the correction, not a protractor reading. */
+function stripDegreeSpeak(text: string): string {
+  let s = text.replace(/\{delta\}/gi, '')
+  s = s.replace(/\(\s*[-+]?\d+(?:\.\d+)?\s*°?\s*\)/g, '')
+  s = s.replace(/[-+]?\d+(?:\.\d+)?\s*°/g, '')
+  s = s.replace(/\s*°/g, '')
+  s = s.replace(/\s+off vertical/gi, '')
+  s = s.replace(/\s{2,}/g, ' ')
+  s = s.replace(/\s+([.,!?;:])/g, '$1')
+  s = s.replace(/[—–-]\s*$/g, '')
+  s = s.replace(/\s+\./g, '.')
+  return s.replace(/\s+/g, ' ').trim()
+}
+
 type SpeechJob = {
   text: string
   rate: number
@@ -134,7 +148,9 @@ export function useSpeechCoach(enabled: boolean) {
   const enqueue = useCallback(
     (text: string, opts: { rate: number; pitch: number; interrupt?: boolean }) => {
       if (!enabled || !supported || !text.trim()) return
-      const job: SpeechJob = { text: text.trim(), rate: opts.rate, pitch: opts.pitch }
+      const spoken = stripDegreeSpeak(text.trim())
+      if (!spoken) return
+      const job: SpeechJob = { text: spoken, rate: opts.rate, pitch: opts.pitch }
       if (opts.interrupt) {
         queueRef.current = [job]
         speakingRef.current = false
@@ -163,7 +179,8 @@ export function useSpeechCoach(enabled: boolean) {
   const speakCue = useCallback(
     (text: string) => {
       if (!text.trim()) return
-      const cleaned = text.trim()
+      const cleaned = stripDegreeSpeak(text.trim())
+      if (!cleaned) return
       const now = Date.now()
       if (cleaned === lastCueRef.current && now - lastCueAt.current < CUE_THROTTLE_MS) return
       if (now - lastCueAt.current < 900) return

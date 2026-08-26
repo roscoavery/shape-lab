@@ -146,24 +146,30 @@ function measureCriterion(
   }
 }
 
+function coachCue(text: string): string {
+  let s = text.replace(/\{delta\}/gi, '')
+  s = s.replace(/\(\s*[-+]?\d+(?:\.\d+)?\s*°?\s*\)/g, '')
+  s = s.replace(/[-+]?\d+(?:\.\d+)?\s*°/g, '')
+  s = s.replace(/\s*°/g, '')
+  s = s.replace(/\s+off vertical/gi, '')
+  s = s.replace(/\s{2,}/g, ' ')
+  s = s.replace(/\s+([.,!?;:])/g, '$1')
+  s = s.replace(/[—–-]\s*$/g, '')
+  s = s.replace(/\s+\./g, '.')
+  return s.replace(/\s+/g, ' ').trim()
+}
+
 function feedbackFor(
   c: CriterionDef,
   _measured: number,
   deltaLow: number,
   deltaHigh: number,
 ): string | null {
-  const fmt = (template: string, delta: number) =>
-    template.replace(/\{delta\}/g, String(Math.round(delta)))
-
-  if (deltaLow > 0.5) {
-    const t = c.feedbackLow ?? c.feedback
-    return t ? fmt(t, deltaLow) : null
-  }
-  if (deltaHigh > 0.5) {
-    const t = c.feedbackHigh ?? c.feedback
-    return t ? fmt(t, deltaHigh) : null
-  }
-  return null
+  let template: string | undefined
+  if (deltaLow > 0.5) template = c.feedbackLow ?? c.feedback
+  else if (deltaHigh > 0.5) template = c.feedbackHigh ?? c.feedback
+  if (!template) return null
+  return coachCue(template) || null
 }
 
 function emptyResult(shape: ShapeDef, message: string): ScoreResult {
@@ -235,7 +241,7 @@ function scoreOnce(
       const subScores = ids.map((id) => atomicScores[id] ?? 0)
       if (presentIds.length === 0) {
         score = 0
-        feedback = c.feedbackLow ?? c.feedback ?? 'Straighten and show both legs.'
+        feedback = coachCue(c.feedbackLow ?? c.feedback ?? '') || null
       } else if (presentIds.length === 1 && allowOccludedSide) {
         score = subScores[0] ?? 0
       } else if (allowOccludedSide && subScores.length >= 2) {
@@ -264,9 +270,23 @@ function scoreOnce(
       }
     } else if (measured === null) {
       score = 0
-      feedback = c.feedbackLow ?? c.feedbackHigh ?? c.feedback ?? null
+      const raw = c.feedbackLow ?? c.feedbackHigh ?? c.feedback
+      feedback = raw ? coachCue(raw) : null
     } else {
-      const { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
+      let { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
+      // Side-on: far-arm joint angles are junk. Keep the better of the two arms.
+      if (allowOccludedSide && c.kind === 'joint_angle' && c.points && s < 85) {
+        const other = measureCriterion(swapLeftRight(landmarks), c, {})
+        if (other !== null) {
+          const alt = scoreAgainstTarget(other, c)
+          if (alt.score > s) {
+            s = alt.score
+            measured = other
+            deltaLow = alt.deltaLow
+            deltaHigh = alt.deltaHigh
+          }
+        }
+      }
       score = s
       feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
     }
