@@ -265,7 +265,7 @@ export function TasksWorkspace({
               className={fullscreen ? 'h-full min-h-0 flex-1' : ''}
               overlay={
                 <div className="pointer-events-none absolute inset-0 z-20">
-                  <HitCheckOverlay burst={hitBurst} kind={hitKind} />
+                  <HitCheckOverlay burst={hitBurst} kind={hitKind} holding={holding} />
 
                   <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-end gap-4 rounded-2xl bg-black/55 px-4 py-2 text-center shadow-lg backdrop-blur-sm">
                     <div>
