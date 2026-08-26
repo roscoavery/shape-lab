@@ -162,7 +162,60 @@ export async function mergeLibraryBackup(
     await putCollection(col)
   }
   persistLibraryMeta(collections)
+  void pushServerLibrary(collections)
   return { collections, added, skipped }
+}
+
+export async function pullServerLibrary(): Promise<LibraryBackup | null> {
+  try {
+    const res = await fetch('/api/library')
+    if (!res.ok) return null
+    const data = (await res.json()) as LibraryBackup
+    if (!data || data.kind !== 'shape-lab-library' || !Array.isArray(data.collections)) {
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+export async function pushServerLibrary(collections: RefCollection[]): Promise<void> {
+  try {
+    await fetch('/api/library', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectionsToBackup(collections)),
+    })
+  } catch {
+    // dev server down — IndexedDB + localStorage still hold a copy
+  }
+}
+
+export function publishLibrary(collections: RefCollection[]): void {
+  persistLibraryMeta(collections)
+  void pushServerLibrary(collections)
+}
+
+/** Merge this origin's IndexedDB with the on-disk library every preview shares. */
+export async function syncLibraryWithServer(
+  local: RefCollection[],
+): Promise<{ collections: RefCollection[]; pulled: number }> {
+  const server = await pullServerLibrary()
+  const serverCount = server ? backupUrlCount(server) : 0
+  const localCount = local.reduce(
+    (n, c) => n + c.items.filter((i) => i.kind !== 'file' && i.url).length,
+    0,
+  )
+  if (server && serverCount > 0) {
+    const { collections, added } = await mergeLibraryBackup(server)
+    if (localCount > 0) await pushServerLibrary(collections)
+    return { collections, pulled: added }
+  }
+  if (localCount > 0) {
+    await pushServerLibrary(local)
+  }
+  return { collections: local, pulled: 0 }
 }
 
 export function downloadBackupFile(collections: RefCollection[]): void {

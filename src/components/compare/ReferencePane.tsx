@@ -31,9 +31,13 @@ import {
   downloadBackupFile,
   mergeLibraryBackup,
   parseLibraryBackup,
-  persistLibraryMeta,
+  publishLibrary,
   restoreMetaIfIndexedDbEmpty,
+  syncLibraryWithServer,
 } from '../../lib/libraryBackup'
+
+/** Same public tunnel Ryan used to paste URLs — IndexedDB on that origin may still hold them. */
+const RECOVERY_ORIGIN = 'https://zope-strengthening-sharon-companies.trycloudflare.com'
 import { createId } from '../../lib/storage'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
@@ -93,10 +97,17 @@ export function ReferencePane() {
           list = [def]
         }
         list = await restoreMetaIfIndexedDbEmpty(list)
+        const synced = await syncLibraryWithServer(list)
+        list = synced.collections
         setCollections(list)
-        persistLibraryMeta(list)
+        publishLibrary(list)
         setActiveCollectionId(list[0].id)
         await refreshCachedIds(list)
+        if (synced.pulled > 0) {
+          setNotice(
+            `Restored ${synced.pulled} saved URL${synced.pulled === 1 ? '' : 's'} from the app server.`,
+          )
+        }
       } catch {
         setError('IndexedDB is unavailable in this browser — collections cannot be saved.')
       }
@@ -138,7 +149,7 @@ export function ReferencePane() {
     await putCollection(next)
     setCollections((prev) => {
       const list = prev.map((c) => (c.id === next.id ? next : c))
-      persistLibraryMeta(list)
+      publishLibrary(list)
       return list
     })
   }
@@ -155,7 +166,7 @@ export function ReferencePane() {
     await putCollection(col)
     setCollections((prev) => {
       const list = [...prev, col]
-      persistLibraryMeta(list)
+      publishLibrary(list)
       return list
     })
     setActiveCollectionId(col.id)
@@ -168,7 +179,7 @@ export function ReferencePane() {
     await deleteCollection(activeCollection)
     const rest = collections.filter((c) => c.id !== activeCollection.id)
     setCollections(rest)
-    persistLibraryMeta(rest)
+    publishLibrary(rest)
     setActiveCollectionId(rest[0]?.id ?? null)
     setActiveItemId(null)
     revokeSrc()
@@ -376,7 +387,7 @@ export function ReferencePane() {
       return
     }
     downloadBackupFile(collections)
-    persistLibraryMeta(collections)
+    publishLibrary(collections)
     const n = collections.reduce(
       (sum, c) => sum + c.items.filter((i) => i.url).length,
       0,
@@ -709,7 +720,8 @@ export function ReferencePane() {
         download into this app the first time they play — or hit Save all in app.
         Search by name, URL, or IG code. Drag or use ↑↓ to reorder (not while
         searching). Rename anytime. Export library downloads a JSON of every URL
-        so a tunnel change cannot wipe the list.
+        so a tunnel change cannot wipe the list. The list also saves on the app
+        server, so Preview and the public link share it.
       </p>
 
       {error && (
@@ -721,6 +733,32 @@ export function ReferencePane() {
         <p className="rounded-lg border border-[var(--panel-border)] bg-[#152018] px-3 py-2 text-sm text-[var(--text)]">
           {notice}
         </p>
+      )}
+
+      {collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
+        <div className="rounded-lg border border-[var(--warn)]/40 bg-[#2a2415] px-3 py-2 text-sm leading-relaxed text-[var(--text)]">
+          <p>
+            This preview has no saved URLs. Browsers keep the list{' '}
+            <em>per web address</em>, so a new preview looks empty even when the
+            old one still has everything.
+          </p>
+          <p className="mt-2">
+            Open the same link you used when you pasted — that copy will sync onto
+            the app server and then show up here:{' '}
+            <a
+              className="text-[var(--accent)] underline break-all"
+              href={RECOVERY_ORIGIN}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {RECOVERY_ORIGIN}
+            </a>
+          </p>
+          <p className="mt-2 text-[var(--muted)]">
+            Or use Import / paste the list again. After it appears, click Export
+            library.
+          </p>
+        </div>
       )}
 
       {activeCollection && (currentHits.length > 0 || otherHits.length > 0) && (
