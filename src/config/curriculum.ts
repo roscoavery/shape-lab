@@ -210,8 +210,9 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_right',
-    name: '8. Sequence (RIGHT): FTOS → Lunge → Lever → Landing lunge',
-    description: 'Right foot forward through the lunge and lever. Finish in a landing lunge (heel flat, closer stance).',
+    name: '8. Sequence (RIGHT): FTOS → Passé → Starting lunge → Lever → Landing lunge',
+    description:
+      'Right side: feet together open shoulders, pull passé, fall to a starting lunge, lever, finish in a landing lunge (heel flat, closer stance).',
     requiresTaskId: 'task_lunge_land',
     masterAfterCompletions: 2,
     steps: [
@@ -221,15 +222,16 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         profileOk: true,
         note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
       },
-      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'right', note: 'Right foot forward · SIDE VIEW · find the lunge, then open and count 3-2-1' },
+      { shapeId: 'passe', ...PASSE_HOLD, stance: 'right', note: 'Pull one leg to passé · hold 3' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'right', note: 'Fall to starting lunge · right foot forward · open and count 3-2-1' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
       { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'right', note: 'Finish here · right foot forward · find the lunge, then open and count 3-2-1' },
     ],
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_left',
-    name: '9. Sequence (LEFT): FTOS → Lunge → Lever → Landing lunge',
-    description: 'Same sequence, left foot forward. Finish in a landing lunge.',
+    name: '9. Sequence (LEFT): FTOS → Passé → Starting lunge → Lever → Landing lunge',
+    description: 'Same sequence, left side. FTOS, passé, starting lunge, lever, landing lunge.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_right',
     masterAfterCompletions: 2,
     steps: [
@@ -239,7 +241,8 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         profileOk: true,
         note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
       },
-      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'left', note: 'Left foot forward · SIDE VIEW · find the lunge, then open and count 3-2-1' },
+      { shapeId: 'passe', ...PASSE_HOLD, stance: 'left', note: 'Pull one leg to passé · hold 3' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'left', note: 'Fall to starting lunge · left foot forward · open and count 3-2-1' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
       { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'left', note: 'Finish here · left foot forward · find the lunge, then open and count 3-2-1' },
     ],

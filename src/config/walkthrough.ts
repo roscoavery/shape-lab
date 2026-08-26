@@ -23,7 +23,7 @@ export type TaskGuide = {
   steps: Partial<Record<string, StepGuide>>
 }
 
-const HS_SEQ: TaskGuide = {
+const FIRST_SEQ: TaskGuide = {
   steps: {
     feet_together_open_shoulders: {
       intro:
@@ -39,14 +39,20 @@ const HS_SEQ: TaskGuide = {
     lever: {
       intro: 'Lever. I will count 3, 2, 1.',
     },
-    handstand: {
-      intro:
-        'Kick up to the best handstand you can hit, and finish in a good landing lunge. Three tries.',
-    },
     lunge_land: {
       intro:
         'Landing lunge — back heel flat. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1 and snapshot your best open.',
       outro: 'And clean.',
+    },
+  },
+}
+
+const HS_SEQ: TaskGuide = {
+  steps: {
+    ...FIRST_SEQ.steps,
+    handstand: {
+      intro:
+        'Kick up to the best handstand you can hit, and finish in a good landing lunge. Three tries.',
     },
   },
 }
@@ -85,6 +91,8 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
     },
   },
   task_handstand: HS_PRACTICE,
+  task_seq_ftos_lunge_lever_lunge_right: FIRST_SEQ,
+  task_seq_ftos_lunge_lever_lunge_left: FIRST_SEQ,
   task_seq_ftos_passe_lunge_lever_hs_lunge_right: HS_SEQ,
   task_seq_ftos_passe_lunge_lever_hs_lunge_left: HS_SEQ,
   task_mountain_climber: {
