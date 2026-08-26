@@ -5,25 +5,36 @@
  * progression, superman, side plank, wall handstand) plus any items the
  * coach assigns or the athlete self-selects from the shape library.
  *
- * Running an item reuses the live camera scoring + hold timers from App
- * (same flow as the Coach tab); logging a session stores total hold,
- * quality hold and score so progress accumulates over the whole journey.
+ * Two ways to log a session:
+ *  - CAMERA (primary, encouraged): live scoring with two timers — total hold
+ *    vs "proper" hold (score at/above the form standard, default 85). While
+ *    form falls below the standard the panel speaks the main correction
+ *    (useSpeechCoach, ~4s throttle) and records a breakdown event (when,
+ *    which criterion, coach cue) into the log for later review.
+ *  - MANUAL (secondary): type a hold time with an editable date — flagged
+ *    with method: 'manual' and shown with a badge (no proper-hold data).
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
-import { formatSeconds } from '../hooks/useHoldTimer'
+import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
+import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import {
+  DEFAULT_FORM_STANDARD,
   HOLLOW_PROGRESS_TARGET_SECONDS,
   addHomeworkItem,
   addHomeworkLog,
   createId,
   ensureAutoHomework,
+  formStandardFor,
   loadHomeworkLogs,
+  logProperHoldSeconds,
   progressHollowHomework,
   removeHomeworkItem,
+  updateHomeworkItem,
 } from '../lib/storage'
 import type {
+  HomeworkBreakdown,
   HomeworkItem,
   HomeworkLog,
   HomeworkSource,
@@ -35,16 +46,14 @@ type PlankSide = 'left' | 'right' | 'both'
 type Props = {
   athleteId: string | null
   score: ScoreResult
-  qualityThreshold: number
   /** Shape the camera is currently scoring (App state) */
   currentShapeId: string
-  totalHoldSeconds: number
-  qualityHoldSeconds: number
-  onResetTimer: () => void
   /** Ask App to switch camera scoring to this shape */
   onRequestShape: (shapeId: string) => void
   /** Whether pose timing is accumulating (camera or demo active) */
   timingActive: boolean
+  /** Speak form tips during camera sessions */
+  voiceEnabled: boolean
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -58,7 +67,14 @@ function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
   }
 }
 
-/** Tiny quality-hold trend over the last sessions (chronological). */
+function todayInputValue(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+/** Tiny proper-hold trend over the last camera sessions (chronological). */
 function Sparkline({ values, target }: { values: number[]; target?: number }) {
   if (values.length < 2) return null
   const w = 120
@@ -81,7 +97,7 @@ function Sparkline({ values, target }: { values: number[]; target?: number }) {
       height={h}
       viewBox={`0 0 ${w} ${h}`}
       className="shrink-0"
-      aria-label="Quality hold trend"
+      aria-label="Proper hold trend"
     >
       {targetY !== null && (
         <line
@@ -108,13 +124,10 @@ function Sparkline({ values, target }: { values: number[]; target?: number }) {
 export function HomeworkPanel({
   athleteId,
   score,
-  qualityThreshold,
   currentShapeId,
-  totalHoldSeconds,
-  qualityHoldSeconds,
-  onResetTimer,
   onRequestShape,
   timingActive,
+  voiceEnabled,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -125,6 +138,17 @@ export function HomeworkPanel({
   const [addSource, setAddSource] = useState<'coach' | 'athlete'>('coach')
   const [addTarget, setAddTarget] = useState('20')
   const [addNotes, setAddNotes] = useState('')
+  // Manual logging (secondary flow)
+  const [manualItemId, setManualItemId] = useState<string | null>(null)
+  const [manualSeconds, setManualSeconds] = useState('')
+  const [manualDate, setManualDate] = useState(todayInputValue())
+  const [manualSide, setManualSide] = useState<PlankSide>('left')
+  // Live breakdown count for the session box
+  const [breakdownCount, setBreakdownCount] = useState(0)
+
+  const breakdownsRef = useRef<HomeworkBreakdown[]>([])
+  const wasProperRef = useRef(false)
+  const lastEncourageAtRef = useRef(0)
 
   // Load (and auto-seed) homework whenever the athlete changes
   useEffect(() => {
@@ -132,11 +156,13 @@ export function HomeworkPanel({
       setItems([])
       setLogs([])
       setActiveItemId(null)
+      setManualItemId(null)
       return
     }
     setItems(ensureAutoHomework(athleteId))
     setLogs(loadHomeworkLogs(athleteId))
     setActiveItemId(null)
+    setManualItemId(null)
   }, [athleteId])
 
   const logsByItem = useMemo(() => {
@@ -151,25 +177,86 @@ export function HomeworkPanel({
 
   const activeItem = items.find((i) => i.id === activeItemId) ?? null
   const activeShape = activeItem ? getShape(activeItem.shapeId) : undefined
+  const standard = activeItem ? formStandardFor(activeItem) : DEFAULT_FORM_STANDARD
+
+  // Session timers: total vs proper (≥ form standard), independent of the
+  // global quality threshold used elsewhere in the app.
+  const sessionTiming =
+    timingActive && activeItem !== null && currentShapeId === activeItem.shapeId
+  const hold = useHoldTimer(sessionTiming, score.overall, standard)
+  const properHoldSeconds = hold.qualityHoldSeconds
+
+  const { speak, reset: resetSpeech, supported: speechSupported } =
+    useSpeechCoach(voiceEnabled && activeItem !== null)
+
+  // Verbal tips + breakdown capture while holding
+  useEffect(() => {
+    if (!sessionTiming) return
+    if (score.overall >= standard) {
+      wasProperRef.current = true
+      // Occasional encouragement while form is good (~every 12s of hold)
+      if (
+        hold.totalHoldSeconds > 3 &&
+        hold.totalHoldSeconds - lastEncourageAtRef.current >= 12
+      ) {
+        lastEncourageAtRef.current = hold.totalHoldSeconds
+        speak('Good hold — keep breathing.')
+      }
+      return
+    }
+    // Form fell below the standard: record one breakdown per drop
+    if (wasProperRef.current && hold.totalHoldSeconds > 0.5) {
+      wasProperRef.current = false
+      const visible = score.criteria.filter((c) => !c.id.startsWith('_'))
+      const worst = visible.reduce(
+        (w, c) => (c.score < w.score ? c : w),
+        visible[0],
+      )
+      if (worst && breakdownsRef.current.length < 30) {
+        breakdownsRef.current.push({
+          atSeconds: Number(hold.totalHoldSeconds.toFixed(1)),
+          criterionId: worst.id,
+          criterionLabel: worst.label,
+          feedback: worst.feedback ?? score.mainCorrection,
+        })
+        setBreakdownCount(breakdownsRef.current.length)
+      }
+    }
+    // Speak the current main correction to pull form back (4s throttle in hook)
+    if (score.overall > 5 && score.mainCorrection) {
+      speak(score.mainCorrection)
+    }
+  }, [sessionTiming, score, standard, hold.totalHoldSeconds, speak])
 
   const showFlash = (msg: string) => {
     setFlash(msg)
     setTimeout(() => setFlash(null), 2500)
   }
 
+  const resetSession = () => {
+    hold.reset()
+    breakdownsRef.current = []
+    wasProperRef.current = false
+    lastEncourageAtRef.current = 0
+    setBreakdownCount(0)
+  }
+
   const startItem = (item: HomeworkItem) => {
     setActiveItemId(item.id)
+    setManualItemId(null)
     onRequestShape(item.shapeId)
-    onResetTimer()
+    resetSession()
+    resetSpeech()
   }
 
   const stopItem = () => {
     setActiveItemId(null)
+    resetSpeech()
   }
 
   const logSession = () => {
     if (!athleteId || !activeItem) return
-    if (totalHoldSeconds < 0.5) {
+    if (hold.totalHoldSeconds < 0.5) {
       showFlash('Nothing to log yet — hold the shape first.')
       return
     }
@@ -180,18 +267,70 @@ export function HomeworkPanel({
       homeworkId: activeItem.id,
       shapeId: activeItem.shapeId,
       date: new Date().toISOString(),
-      totalHoldSeconds: Number(totalHoldSeconds.toFixed(2)),
-      qualityHoldSeconds: Number(qualityHoldSeconds.toFixed(2)),
+      method: 'camera',
+      totalHoldSeconds: Number(hold.totalHoldSeconds.toFixed(2)),
+      properHoldSeconds: Number(properHoldSeconds.toFixed(2)),
+      formStandard: standard,
+      breakdowns: [...breakdownsRef.current],
       score: score.overall,
       ...(isPlank && plankSide !== 'both' ? { side: plankSide } : {}),
     }
     addHomeworkLog(log)
     setLogs((prev) => [log, ...prev])
-    onResetTimer()
+    resetSession()
     const shapeName = getShape(activeItem.shapeId)?.name ?? activeItem.shapeId
     showFlash(
-      `Logged ${shapeName} — Q ${formatSeconds(log.qualityHoldSeconds)}`,
+      `Logged ${shapeName} — proper ${formatSeconds(log.properHoldSeconds ?? 0)}`,
     )
+  }
+
+  const openManual = (item: HomeworkItem) => {
+    setManualItemId((prev) => (prev === item.id ? null : item.id))
+    setManualSeconds('')
+    setManualDate(todayInputValue())
+    setManualSide('left')
+  }
+
+  const logManual = (item: HomeworkItem) => {
+    if (!athleteId) return
+    const secs = Number(manualSeconds)
+    if (!Number.isFinite(secs) || secs <= 0) {
+      showFlash('Enter the hold time in seconds.')
+      return
+    }
+    // Noon local time avoids the date shifting across timezones
+    const when = new Date(`${manualDate}T12:00:00`)
+    const isPlank = item.shapeId === 'side_plank'
+    const log: HomeworkLog = {
+      id: createId('hwlog'),
+      athleteId,
+      homeworkId: item.id,
+      shapeId: item.shapeId,
+      date: Number.isNaN(when.getTime())
+        ? new Date().toISOString()
+        : when.toISOString(),
+      method: 'manual',
+      totalHoldSeconds: Number(secs.toFixed(2)),
+      score: 0,
+      ...(isPlank && manualSide !== 'both' ? { side: manualSide } : {}),
+    }
+    addHomeworkLog(log)
+    setLogs((prev) =>
+      [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
+    )
+    setManualItemId(null)
+    const shapeName = getShape(item.shapeId)?.name ?? item.shapeId
+    showFlash(`Manually logged ${shapeName} — ${formatSeconds(secs)}`)
+  }
+
+  const changeStandard = (item: HomeworkItem, value: string) => {
+    const v = Number(value)
+    if (!Number.isFinite(v)) return
+    const clamped = Math.min(100, Math.max(0, Math.round(v)))
+    const updated = updateHomeworkItem(item.id, { formStandard: clamped })
+    if (updated) {
+      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+    }
   }
 
   const levelUpHollow = (item: HomeworkItem) => {
@@ -229,6 +368,7 @@ export function HomeworkPanel({
     removeHomeworkItem(item.id)
     setItems((prev) => prev.filter((i) => i.id !== item.id))
     if (activeItemId === item.id) setActiveItemId(null)
+    if (manualItemId === item.id) setManualItemId(null)
   }
 
   if (!athleteId) {
@@ -252,12 +392,13 @@ export function HomeworkPanel({
         </h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
           4 automatic drills for every athlete, plus coach-assigned and
-          athlete-picked shapes. Run a drill with the camera, then log the
-          session to build history.
+          athlete-picked shapes. Train with the camera for form-checked
+          &ldquo;proper hold&rdquo; time and spoken tips — or log a time
+          manually if no camera is handy.
         </p>
       </div>
 
-      {/* Active session */}
+      {/* Active camera session */}
       {activeItem && activeShape && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#102820] p-3">
           <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
@@ -266,7 +407,7 @@ export function HomeworkPanel({
             </p>
             <p className="text-xs text-[var(--muted)]">
               {currentShapeId === activeShape.id
-                ? timingActive
+                ? sessionTiming
                   ? 'Camera scoring live'
                   : 'Start the camera (or a demo) to time the hold'
                 : 'Switching camera to this shape…'}
@@ -284,17 +425,42 @@ export function HomeworkPanel({
                 Total hold
               </p>
               <p className="text-lg font-semibold tabular-nums">
-                {formatSeconds(totalHoldSeconds)}
+                {formatSeconds(hold.totalHoldSeconds)}
               </p>
             </div>
             <div>
               <p className="text-[10px] uppercase text-[var(--muted)]">
-                Quality (≥{qualityThreshold})
+                Proper hold (≥{standard})
               </p>
               <p className="text-lg font-semibold tabular-nums text-[var(--accent)]">
-                {formatSeconds(qualityHoldSeconds)}
+                {formatSeconds(properHoldSeconds)}
               </p>
             </div>
+          </div>
+          <div className="mb-2 flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
+            <label className="flex items-center gap-1">
+              Form standard
+              <input
+                type="number"
+                min={0}
+                max={100}
+                className="w-14 rounded border border-[var(--panel-border)] bg-[#0d1218] px-1.5 py-0.5"
+                value={standard}
+                onChange={(e) => changeStandard(activeItem, e.target.value)}
+                title="Score required to count proper-hold time (default 85)"
+              />
+            </label>
+            <span>
+              {breakdownCount === 0
+                ? 'No form breaks yet'
+                : `${breakdownCount} form break${breakdownCount === 1 ? '' : 's'} this session`}
+            </span>
+            {voiceEnabled && !speechSupported && (
+              <span className="text-[var(--warn)]">voice unavailable</span>
+            )}
+            {!voiceEnabled && (
+              <span>Voice tips off — enable “Voice” in the camera bar</span>
+            )}
           </div>
           {activeItem.targetSeconds ? (
             <div className="mb-2">
@@ -304,13 +470,13 @@ export function HomeworkPanel({
                   style={{
                     width: `${Math.min(
                       100,
-                      (qualityHoldSeconds / activeItem.targetSeconds) * 100,
+                      (properHoldSeconds / activeItem.targetSeconds) * 100,
                     )}%`,
                   }}
                 />
               </div>
               <p className="mt-1 text-[11px] text-[var(--muted)]">
-                Target: {activeItem.targetSeconds}s quality hold
+                Target: {activeItem.targetSeconds}s proper hold
               </p>
             </div>
           ) : null}
@@ -351,7 +517,7 @@ export function HomeworkPanel({
             </button>
             <button
               type="button"
-              onClick={onResetTimer}
+              onClick={resetSession}
               className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
             >
               Reset timer
@@ -372,30 +538,30 @@ export function HomeworkPanel({
         {items.map((item) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
-          const bestQuality = itemLogs.reduce(
-            (b, l) => Math.max(b, l.qualityHoldSeconds),
-            0,
-          )
+          const properValues = itemLogs
+            .map((l) => logProperHoldSeconds(l))
+            .filter((v): v is number => v !== null)
+          const bestProper = properValues.reduce((b, v) => Math.max(b, v), 0)
           const badge = sourceBadge(item.source)
           const isHollowAuto = item.source === 'auto' && item.autoKey === 'hollow'
           const hollowStage1 = isHollowAuto && item.shapeId === 'hollow_arms_down'
           const readyToLevelUp =
-            hollowStage1 && bestQuality >= HOLLOW_PROGRESS_TARGET_SECONDS
+            hollowStage1 && bestProper >= HOLLOW_PROGRESS_TARGET_SECONDS
           const isPlank = item.shapeId === 'side_plank'
-          const bestLeft = isPlank
-            ? itemLogs
-                .filter((l) => l.side === 'left')
-                .reduce((b, l) => Math.max(b, l.qualityHoldSeconds), 0)
-            : 0
-          const bestRight = isPlank
-            ? itemLogs
-                .filter((l) => l.side === 'right')
-                .reduce((b, l) => Math.max(b, l.qualityHoldSeconds), 0)
-            : 0
-          const trendValues = [...itemLogs]
+          const bestSide = (side: 'left' | 'right') =>
+            itemLogs
+              .filter((l) => l.side === side)
+              .map((l) => logProperHoldSeconds(l))
+              .filter((v): v is number => v !== null)
+              .reduce((b, v) => Math.max(b, v), 0)
+          const bestLeft = isPlank ? bestSide('left') : 0
+          const bestRight = isPlank ? bestSide('right') : 0
+          const trendValues = itemLogs
+            .filter((l) => logProperHoldSeconds(l) !== null)
             .slice(0, 10)
             .reverse()
-            .map((l) => l.qualityHoldSeconds)
+            .map((l) => logProperHoldSeconds(l) ?? 0)
+          const manualOpen = manualItemId === item.id
           return (
             <div
               key={item.id}
@@ -420,14 +586,29 @@ export function HomeworkPanel({
                       goal {item.targetSeconds}s
                     </span>
                   ) : null}
+                  <span
+                    className="text-[11px] text-[var(--muted)]"
+                    title="Form standard for proper-hold time"
+                  >
+                    form ≥{formStandardFor(item)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
+                    title="Camera session with live form scoring (recommended)"
                   >
                     Train
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openManual(item)}
+                    className="rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+                    title="No camera? Type a hold time instead"
+                  >
+                    Log manually
                   </button>
                   {item.source !== 'auto' && (
                     <button
@@ -441,6 +622,72 @@ export function HomeworkPanel({
                 </div>
               </div>
 
+              {/* Manual log form (secondary flow) */}
+              {manualOpen && (
+                <div className="mt-2 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
+                  <p className="mb-1.5 text-[11px] text-[var(--muted)]">
+                    Manual entry — no form check, only total time. Use the
+                    camera when you can for proper-hold tracking.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <label className="flex items-center gap-1 text-[var(--muted)]">
+                      held
+                      <input
+                        type="number"
+                        min={0}
+                        step="1"
+                        autoFocus
+                        className="w-16 rounded border border-[var(--panel-border)] bg-[#121820] px-1.5 py-1"
+                        placeholder="sec"
+                        value={manualSeconds}
+                        onChange={(e) => setManualSeconds(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') logManual(item)
+                        }}
+                      />
+                      s
+                    </label>
+                    <label className="flex items-center gap-1 text-[var(--muted)]">
+                      on
+                      <input
+                        type="date"
+                        className="rounded border border-[var(--panel-border)] bg-[#121820] px-1.5 py-1"
+                        value={manualDate}
+                        max={todayInputValue()}
+                        onChange={(e) => setManualDate(e.target.value)}
+                      />
+                    </label>
+                    {isPlank && (
+                      <select
+                        className="rounded border border-[var(--panel-border)] bg-[#121820] px-1.5 py-1"
+                        value={manualSide}
+                        onChange={(e) =>
+                          setManualSide(e.target.value as PlankSide)
+                        }
+                      >
+                        <option value="left">left</option>
+                        <option value="right">right</option>
+                        <option value="both">both</option>
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => logManual(item)}
+                      className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 font-semibold text-white"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualItemId(null)}
+                      className="text-[var(--muted)] underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Hollow progression state */}
               {isHollowAuto && (
                 <div className="mt-2">
@@ -448,11 +695,12 @@ export function HomeworkPanel({
                     <>
                       <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
                         <span>
-                          Stage 1 of 2 — arms down · best quality hold{' '}
+                          Stage 1 of 2 — arms down · best proper hold{' '}
                           <span className="text-[var(--text)]">
-                            {formatSeconds(bestQuality)}
+                            {formatSeconds(bestProper)}
                           </span>{' '}
                           / {HOLLOW_PROGRESS_TARGET_SECONDS}s to level up
+                          (camera-verified)
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded bg-[#0d1218]">
@@ -461,7 +709,7 @@ export function HomeworkPanel({
                           style={{
                             width: `${Math.min(
                               100,
-                              (bestQuality / HOLLOW_PROGRESS_TARGET_SECONDS) *
+                              (bestProper / HOLLOW_PROGRESS_TARGET_SECONDS) *
                                 100,
                             )}%`,
                           }}
@@ -473,7 +721,7 @@ export function HomeworkPanel({
                             🎉 Level up: train Hollow with arms up!
                           </p>
                           <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                            Best quality hold hit{' '}
+                            Best proper hold hit{' '}
                             {HOLLOW_PROGRESS_TARGET_SECONDS}s with arms down.
                             Switch this drill to the arms-up hollow (arms by
                             ears) — history is kept.
@@ -506,12 +754,12 @@ export function HomeworkPanel({
                 </p>
               )}
 
-              {/* Progress over time */}
+              {/* Progress over time (proper hold) */}
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--panel-border)] pt-2 text-xs text-[var(--muted)]">
                 <div>
-                  <span className="text-[10px] uppercase">Best quality </span>
+                  <span className="text-[10px] uppercase">Best proper </span>
                   <span className="font-semibold text-[var(--accent)]">
-                    {formatSeconds(bestQuality)}
+                    {formatSeconds(bestProper)}
                   </span>
                   {isPlank && (bestLeft > 0 || bestRight > 0) && (
                     <span className="ml-2">
@@ -526,21 +774,49 @@ export function HomeworkPanel({
               </div>
               {itemLogs.length > 0 && (
                 <ul className="mt-1 space-y-0.5">
-                  {itemLogs.slice(0, 5).map((l) => (
-                    <li
-                      key={l.id}
-                      className="flex justify-between gap-2 text-[11px] text-[var(--muted)]"
-                    >
-                      <span>
-                        {new Date(l.date).toLocaleString()}
-                        {l.side ? ` · ${l.side === 'left' ? 'L' : 'R'}` : ''}
-                      </span>
-                      <span className="text-[var(--text)]">
-                        {l.score} · Q {formatSeconds(l.qualityHoldSeconds)} /{' '}
-                        {formatSeconds(l.totalHoldSeconds)}
-                      </span>
-                    </li>
-                  ))}
+                  {itemLogs.slice(0, 5).map((l) => {
+                    const proper = logProperHoldSeconds(l)
+                    const isManual = l.method === 'manual'
+                    return (
+                      <li key={l.id} className="text-[11px] text-[var(--muted)]">
+                        <div className="flex justify-between gap-2">
+                          <span>
+                            {new Date(l.date).toLocaleString()}
+                            {l.side ? ` · ${l.side === 'left' ? 'L' : 'R'}` : ''}
+                            {isManual && (
+                              <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
+                                manual
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[var(--text)]">
+                            {isManual
+                              ? `${formatSeconds(l.totalHoldSeconds)} total`
+                              : `${l.score} · P ${formatSeconds(proper ?? 0)} / ${formatSeconds(l.totalHoldSeconds)}`}
+                          </span>
+                        </div>
+                        {l.breakdowns && l.breakdowns.length > 0 && (
+                          <details className="ml-2">
+                            <summary className="cursor-pointer text-[10px] text-[var(--warn)]">
+                              {l.breakdowns.length} form break
+                              {l.breakdowns.length === 1 ? '' : 's'}
+                            </summary>
+                            <ul className="ml-2 mt-0.5 space-y-px">
+                              {l.breakdowns.map((b, i) => (
+                                <li key={i} className="text-[10px]">
+                                  <span className="tabular-nums text-[var(--text)]">
+                                    {formatSeconds(b.atSeconds)}
+                                  </span>{' '}
+                                  — {b.criterionLabel}
+                                  {b.feedback ? `: ${b.feedback}` : ''}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </div>

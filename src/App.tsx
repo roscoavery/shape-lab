@@ -388,13 +388,10 @@ export default function App() {
             <HomeworkPanel
               athleteId={activeAthleteId}
               score={score}
-              qualityThreshold={qualityThreshold}
               currentShapeId={shape.id}
-              totalHoldSeconds={hold.totalHoldSeconds}
-              qualityHoldSeconds={hold.qualityHoldSeconds}
-              onResetTimer={hold.reset}
               onRequestShape={onJumpToShape}
               timingActive={timingActive}
+              voiceEnabled={settings.voiceEnabled}
             />
           </div>
         </div>

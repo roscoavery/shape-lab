@@ -67,14 +67,18 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 
 On top of that, the **coach can assign** any shape from the library as homework, and the **athlete can self-select** drills too ("Coach assigns" / "Athlete picks" when adding).
 
-How it works:
+**Camera sessions (primary, encouraged):**
 
 1. Open the **Homework** tab, pick an athlete.
-2. Press **Train** on a drill — the camera scores that shape live with total / quality hold timers (same engine as Coach mode).
-3. Press **Log session** — the session (date, total hold, quality hold, score, side) is saved to `localStorage`.
-4. Each drill card shows **best quality hold**, session count, a quality-hold **trend sparkline**, and the last 5 sessions.
+2. Press **Train** on a drill — the camera scores that shape live with two timers: **Total hold** and **Proper hold** (time at/above the **form standard**, default **85**, editable per drill in the session box).
+3. While form drops below the standard, the app **speaks the main correction** (~4s throttle, reuses the Voice toggle in the camera bar) and records a **form-breakdown event** — seconds into the hold, which criterion failed, and the coach cue. When form is good it stays quiet apart from occasional encouragement.
+4. Press **Log session** — date, total hold, proper hold, score, form standard, side, and breakdowns are saved to `localStorage`. Breakdowns are reviewable per session in history (e.g. `0:42 — Hips: Open hips / reduce pike`).
 
-Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog`); the auto drills are defined in `AUTO_HOMEWORK_DEFS` and the 60s hollow level-up gate in `HOLLOW_PROGRESS_TARGET_SECONDS`.
+**Manual logging (secondary):** press **Log manually** on any drill to type a hold time with an editable date (defaults to today). Manual sessions are flagged `method: 'manual'`, get a **manual** badge in history, and only count total time — no proper-hold data, so they don't feed the trend or the hollow level-up.
+
+Each drill card shows **best proper hold** (legacy v1 quality-hold logs still count), session count, a proper-hold **trend sparkline**, and the last 5 sessions.
+
+Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBreakdown`); the auto drills are defined in `AUTO_HOMEWORK_DEFS`, the 60s hollow level-up gate in `HOLLOW_PROGRESS_TARGET_SECONDS`, and the default form standard in `DEFAULT_FORM_STANDARD`.
 
 ## Education (Learn tab)
 

@@ -159,6 +159,24 @@ export function recordTaskCompletion(
 /** Quality-hold seconds on hollow (arms down) that unlock the arms-up level. */
 export const HOLLOW_PROGRESS_TARGET_SECONDS = 60
 
+/** Default form standard: score required for "proper hold" time. */
+export const DEFAULT_FORM_STANDARD = 85
+
+/** Effective form standard for a homework item (item override or default). */
+export function formStandardFor(item: Pick<HomeworkItem, 'formStandard'>): number {
+  return item.formStandard ?? DEFAULT_FORM_STANDARD
+}
+
+/**
+ * Proper-hold seconds of a log, reading legacy v1 logs too:
+ * new camera logs → properHoldSeconds, v1 logs → qualityHoldSeconds,
+ * manual logs → null (no form data, only total time).
+ */
+export function logProperHoldSeconds(log: HomeworkLog): number | null {
+  if (log.method === 'manual') return null
+  return log.properHoldSeconds ?? log.qualityHoldSeconds ?? null
+}
+
 /**
  * The 4 automatic homework drills EVERY athlete always has.
  * Order here = display order. `autoKey` is stable; the hollow item's shapeId
@@ -252,6 +270,19 @@ export function addHomeworkItem(item: HomeworkItem): HomeworkItem[] {
   all.push(item)
   saveAllHomework(all)
   return sortHomework(all.filter((h) => h.athleteId === item.athleteId))
+}
+
+/** Update editable fields on a homework item (e.g. formStandard). */
+export function updateHomeworkItem(
+  id: string,
+  patch: Partial<Pick<HomeworkItem, 'formStandard' | 'targetSeconds' | 'notes'>>,
+): HomeworkItem | null {
+  const all = loadAllHomework()
+  const item = all.find((h) => h.id === id)
+  if (!item) return null
+  Object.assign(item, patch)
+  saveAllHomework(all)
+  return { ...item }
 }
 
 /** Remove a homework item. Auto items are protected and cannot be removed. */

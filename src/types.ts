@@ -221,10 +221,26 @@ export type HomeworkItem = {
   autoKey?: string
   /** Quality-hold goal in seconds (shown as a progress bar) */
   targetSeconds?: number
+  /**
+   * Form standard for this drill: score required for "proper hold" time and
+   * verbal form tips. Missing = global default (85).
+   */
+  formStandard?: number
   notes?: string
   createdAt: string
   /** Set when the hollow auto item was leveled up arms-down → arms-up */
   progressedAt?: string
+}
+
+/** One form-breakdown event during a camera homework session. */
+export type HomeworkBreakdown = {
+  /** Seconds into the hold when form fell below the standard */
+  atSeconds: number
+  /** Lowest-scoring criterion at that moment */
+  criterionId: string
+  criterionLabel: string
+  /** Coach cue explaining why form broke (if available) */
+  feedback: string | null
 }
 
 /** One logged homework session (a completed timed hold). */
@@ -236,8 +252,20 @@ export type HomeworkLog = {
   /** ISO date-time of the session */
   date: string
   totalHoldSeconds: number
-  qualityHoldSeconds: number
-  /** Overall shape score (0–100) at log time */
+  /**
+   * LEGACY (v1 camera logs): hold time above the old quality threshold.
+   * New logs write properHoldSeconds instead — read via logProperHoldSeconds().
+   */
+  qualityHoldSeconds?: number
+  /** Hold time at/above the form standard (camera sessions only) */
+  properHoldSeconds?: number
+  /** Form standard (score) the proper-hold timer used */
+  formStandard?: number
+  /** How the session was recorded. Missing (v1 logs) = 'camera'. */
+  method?: 'camera' | 'manual'
+  /** When/why form broke during the hold (camera sessions) */
+  breakdowns?: HomeworkBreakdown[]
+  /** Overall shape score (0–100) at log time; 0 for manual entries */
   score: number
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
