@@ -48,11 +48,11 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 ### Learn: shape test
 
-Open **Learn → Shape test**. Mixed multiple-choice: name the shape from a body-position description, or identify a reference picture. **My shapes** shows the athlete’s own hit photos.
+Open **Learn → Shape test** for mixed multiple-choice. **Learn → Arm positions test** covers low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **My shapes** shows the athlete’s own hit photos.
 
 You do **not** need to match a coach still to move on. Scoring grades the **written body position**, not a pixel match to the photo. On **starting lunge and landing lunge**, the app first recognizes a good lunge (legs 85%+). Open shoulders do **not** block that. Then we **count 3, 2, 1** out loud and snapshot the best open in that window. **Passé** passes on stance leg + passé knee; open shoulders are graded, not required. **Low V lunge** looks for the line from the back foot to the shoulders plus arms in a low V slightly back — shorts that fake a bent back knee do not block the pass. You also do **not** need to film from the same angle as a reference photo. Joint angles grade from any facing. Side-view shapes (lunges, lever, C) are scored in profile — you do not need to face the camera, and a guessed “front” label will not fail the pose. Standalone FTOS is easiest from the front; **sequence FTOS stays in profile**. T arms still need a front view. Lunges/levers auto-detect left vs right foot forward unless the task specifies a side.
 
-The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge → lever → HS → lunge sequences are **required on both sides**. Before those, athletes complete an **arm positions lesson** (low V back, front middle, open shoulders, T, high V chest out) and **lunge holds** in those same arm positions.
+The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge → lever → HS → lunge sequences are **required on both sides**. Arm-position drills (low V, T, front middle, high V — standing and on a lunge) are **not** a Tasks gate right now; they live in **Learn → Arm positions test** until we put them back.
 
 Shipped coach stills live in `src/assets/references/` (and `public/references/`) so they
 show on every Preview or tunnel link. Hit snapshots go in the Tasks hit folder and

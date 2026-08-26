@@ -34,6 +34,7 @@ type SpeechJob = {
   text: string
   rate: number
   pitch: number
+  onEnd?: () => void
 }
 
 function voiceScore(v: SpeechSynthesisVoice): number {
@@ -131,12 +132,13 @@ export function useSpeechCoach(enabled: boolean) {
     u.pitch = next.pitch
     u.volume = 1
     speakingRef.current = true
-    const done = () => {
+    const done = (ok: boolean) => {
+      if (ok) next.onEnd?.()
       speakingRef.current = false
       pumpRef.current()
     }
-    u.onend = done
-    u.onerror = done
+    u.onend = () => done(true)
+    u.onerror = () => done(false)
     try {
       window.speechSynthesis.speak(u)
     } catch {
@@ -147,11 +149,25 @@ export function useSpeechCoach(enabled: boolean) {
   pumpRef.current = pump
 
   const enqueue = useCallback(
-    (text: string, opts: { rate: number; pitch: number; interrupt?: boolean }) => {
-      if (!enabled || !supported || !text.trim()) return
+    (
+      text: string,
+      opts: { rate: number; pitch: number; interrupt?: boolean; onEnd?: () => void },
+    ) => {
       const spoken = stripDegreeSpeak(text.trim())
-      if (!spoken) return
-      const job: SpeechJob = { text: spoken, rate: opts.rate, pitch: opts.pitch }
+      if (!spoken) {
+        opts.onEnd?.()
+        return
+      }
+      if (!enabled || !supported) {
+        opts.onEnd?.()
+        return
+      }
+      const job: SpeechJob = {
+        text: spoken,
+        rate: opts.rate,
+        pitch: opts.pitch,
+        onEnd: opts.onEnd,
+      }
       if (opts.interrupt) {
         queueRef.current = [job]
         speakingRef.current = false
@@ -171,8 +187,8 @@ export function useSpeechCoach(enabled: boolean) {
   )
 
   const speakEvent = useCallback(
-    (text: string, interrupt = false) => {
-      enqueue(text, { rate: 0.94, pitch: 1.06, interrupt })
+    (text: string, interrupt = false, onEnd?: () => void) => {
+      enqueue(text, { rate: 0.94, pitch: 1.06, interrupt, onEnd })
     },
     [enqueue],
   )

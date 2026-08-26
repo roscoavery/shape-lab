@@ -104,6 +104,24 @@ export function curriculumShapeIds(): Set<string> {
   return ids
 }
 
+/**
+ * Arm-position shapes parked out of Tasks. Still quizzed in Learn.
+ * Standing: low V, front middle, open shoulders, T, high V.
+ * Lunge: the same five on a landing-lunge stance.
+ */
+export const ARM_POSITION_SHAPE_IDS: string[] = [
+  'arms_low_v_back',
+  'arms_front_middle',
+  'arms_open_shoulders',
+  'arms_t',
+  'arms_high_v_chest',
+  'lunge_arms_low_v',
+  'lunge_arms_front',
+  'lunge_arms_open',
+  'lunge_arms_t',
+  'lunge_arms_high_v',
+]
+
 /** Task index (0-based) where a shape first appears in the pathway, or null. */
 export function firstPathwayTaskIndex(shapeId: string): number | null {
   const idx = CURRICULUM_TASKS.findIndex((t) =>

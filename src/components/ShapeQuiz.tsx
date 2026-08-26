@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
-import { buildShapeQuiz, type QuizQuestion } from '../lib/shapeQuiz'
+import { buildShapeQuiz, type QuizPool, type QuizQuestion } from '../lib/shapeQuiz'
 import type { ReferencePhoto } from '../types'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
   onExit: () => void
+  pool?: QuizPool
 }
 
-export function ShapeQuiz({ referencePhotos, onExit }: Props) {
+export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) {
   const [seed, setSeed] = useState(0)
   const questions = useMemo(
-    () => buildShapeQuiz(referencePhotos, 8),
+    () => buildShapeQuiz(referencePhotos, pool === 'arm-positions' ? 10 : 8, pool),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [referencePhotos, seed],
+    [referencePhotos, seed, pool],
   )
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
@@ -46,7 +47,9 @@ export function ShapeQuiz({ referencePhotos, onExit }: Props) {
   if (done) {
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Shape test</p>
+        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
+          {pool === 'arm-positions' ? 'Arm positions test' : 'Shape test'}
+        </p>
         <h3 className="mt-1 text-xl font-semibold">
           {score} / {total} correct
         </h3>
@@ -84,7 +87,8 @@ export function ShapeQuiz({ referencePhotos, onExit }: Props) {
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
-          Shape test · {q!.kind === 'picture' ? 'Name the picture' : 'Name the description'}
+          {pool === 'arm-positions' ? 'Arm positions test' : 'Shape test'} ·{' '}
+          {q!.kind === 'picture' ? 'Name the picture' : 'Name the description'}
         </p>
         <p className="text-xs text-[var(--muted)]">
           {index + 1} / {total}

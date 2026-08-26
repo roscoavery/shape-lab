@@ -5,6 +5,8 @@
  * `outro` plays when the hold (or grade-only tries) finish.
  */
 
+import { getShape } from './shapes'
+
 export type HoldBeat = {
   /** Speak when remaining hold seconds first drop to this value. */
   at: number
@@ -109,6 +111,27 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
 
 export function getStepGuide(taskId: string, shapeId: string): StepGuide | undefined {
   return TASK_GUIDES[taskId]?.steps[shapeId]
+}
+
+/** Full spoken cue for a step — body position first, hold instruction last. */
+export function stepIntroLine(
+  taskId: string,
+  shapeId: string,
+  holdSeconds: number,
+  prefix?: string,
+): string {
+  const guide = getStepGuide(taskId, shapeId)
+  if (guide?.intro) return [prefix, guide.intro].filter(Boolean).join(' ')
+  const shape = getShape(shapeId)
+  const name = shape?.name ?? 'shape'
+  const body = shape?.bodyPosition ?? shape?.description ?? ''
+  const hold =
+    holdSeconds <= 1.05
+      ? 'Hit it and keep it for a beat.'
+      : holdSeconds <= 3.05
+        ? "I'll count 3, 2, 1 after you hit it."
+        : `After you hit it, hold ${Number.isInteger(holdSeconds) ? holdSeconds : holdSeconds.toFixed(1)} seconds.`
+  return [prefix, `Show me a ${name}.`, body, hold].filter(Boolean).join(' ')
 }
 
 export function isGuidedTask(taskId: string): boolean {

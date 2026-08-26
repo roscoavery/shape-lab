@@ -10,6 +10,10 @@
  * snapshot window after the lunge is recognized. Freestanding handstand is
  * grade-only (3 kick-up tries) — it does not gate the pathway.
  *
+ * Standing arm-position drills and landing-lunge arm holds (low V, T, front
+ * middle, high V) are parked out of Tasks for now. They live in Learn as
+ * the Arm positions test and can be put back on the pathway later.
+ *
  * passThrough: step counts if athlete briefly hits quality (no long hold required).
  * gradeOnly: scored in the analysis, not required to advance.
  * speakCorrections: app narrates live corrections while on that step.
@@ -142,32 +146,17 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     ],
   },
   {
-    id: 'task_arm_positions',
-    name: '3. Arm positions lesson',
-    description:
-      'Learn the five arm shapes standing: low V back, front middle, open shoulders, T, and high V with chest out. You will reuse these on lunges next.',
-    requiresTaskId: 'task_ftos',
-    masterAfterCompletions: 2,
-    steps: [
-      { shapeId: 'arms_low_v_back', ...HOLD, note: 'Side view — arms reach slightly back' },
-      { shapeId: 'arms_front_middle', ...HOLD, note: 'Side view — reach forward at middle height' },
-      { shapeId: 'arms_open_shoulders', ...HOLD, note: 'Arms by ears, hands to the ceiling' },
-      { shapeId: 'arms_t', ...HOLD, note: 'FACE the camera — both arms out to the sides' },
-      { shapeId: 'arms_high_v_chest', ...HOLD, note: 'High V, chest out — not covering the ears' },
-    ],
-  },
-  {
     id: 'task_passe',
-    name: '4. Passé',
+    name: '3. Passé',
     description:
       'Keep the FTOS lines (feet together, open shoulders, ribs in, hands to the ceiling), then pull one knee up into passé. Either knee.',
-    requiresTaskId: 'task_arm_positions',
+    requiresTaskId: 'task_ftos',
     masterAfterCompletions: 2,
     steps: [{ shapeId: 'passe', ...HOLD }],
   },
   {
     id: 'task_lunge_start',
-    name: '5. Starting lunge with open shoulders',
+    name: '4. Starting lunge with open shoulders',
     description:
       'Fall forward from passé into this lunge. Back heel UP, back leg STRAIGHT, back STRAIGHT, shoulders OPEN. Longer stance than the landing lunge. Cartwheels often start here (or from a mountain climber). Side view.',
     requiresTaskId: 'task_passe',
@@ -181,32 +170,17 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     ],
   },
   {
-    id: 'task_lunge_arm_holds',
-    name: '6. Lunge holds · arm positions',
-    description:
-      'Drill all five arm shapes on a landing-lunge stance: back heel FLAT, feet closer than a starting lunge. Cycle low V back, front middle, open shoulders, T, high V chest out.',
-    requiresTaskId: 'task_lunge_start',
-    masterAfterCompletions: 2,
-    steps: [
-      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · line back foot → shoulders · low V arms slightly back' },
-      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · landing stance · heel FLAT · arms forward middle' },
-      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · landing stance · heel FLAT · open shoulders' },
-      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T · landing stance · heel FLAT' },
-      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out · landing stance · heel FLAT' },
-    ],
-  },
-  {
     id: 'task_lever',
-    name: '7. Lever',
+    name: '5. Lever',
     description:
       'Front knee slightly bent. Chest tilts until parallel with the ground. Back leg lifts so one straight line from back foot to hands sits parallel to the floor. Open shoulders. Side view.',
-    requiresTaskId: 'task_lunge_arm_holds',
+    requiresTaskId: 'task_lunge_start',
     masterAfterCompletions: 2,
     steps: [{ shapeId: 'lever', ...HOLD, note: 'SIDE VIEW · slight front-knee bend · chest parallel · line back foot→hands' }],
   },
   {
     id: 'task_handstand',
-    name: '8. Handstand (practice)',
+    name: '6. Handstand (practice)',
     description:
       'Kick up to the best handstand you can. Three tries. We grade the line you hit — ribs in, butt in, ears covered — but you do not need a perfect handstand to move on. Wall handstand stays on Homework.',
     requiresTaskId: 'task_lever',
@@ -221,7 +195,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_lunge_land',
-    name: '9. Landing lunge',
+    name: '7. Landing lunge',
     description:
       'Shorter stance than the starting lunge, back heel FLAT, one line from back heel to hands. Usual cartwheels finish here. Cartwheel step-ins (round-off prep) finish in a zombie. Side view.',
     requiresTaskId: 'task_handstand',
@@ -236,7 +210,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_right',
-    name: '10. Sequence (RIGHT): FTOS → Lunge → Lever → Landing lunge',
+    name: '8. Sequence (RIGHT): FTOS → Lunge → Lever → Landing lunge',
     description: 'Right foot forward through the lunge and lever. Finish in a landing lunge (heel flat, closer stance).',
     requiresTaskId: 'task_lunge_land',
     masterAfterCompletions: 2,
@@ -254,7 +228,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_left',
-    name: '11. Sequence (LEFT): FTOS → Lunge → Lever → Landing lunge',
+    name: '9. Sequence (LEFT): FTOS → Lunge → Lever → Landing lunge',
     description: 'Same sequence, left foot forward. Finish in a landing lunge.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_right',
     masterAfterCompletions: 2,
@@ -272,7 +246,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
-    name: '12. Sequence (RIGHT): FTOS → Passé → Lunge → Lever → HS → Lunge',
+    name: '10. Sequence (RIGHT): FTOS → Passé → Lunge → Lever → HS → Lunge',
     description:
       'Spoken walkthrough: FTOS, passé, starting lunge, lever, then kick up to the best handstand you can (3 tries) and finish in a landing lunge. Required to move on: FTOS, starting lunge, lever, landing lunge. Handstand is graded in the analysis, not a gate. Right side.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_left',
@@ -293,7 +267,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
-    name: '13. Sequence (LEFT): FTOS → Passé → Lunge → Lever → HS → Lunge',
+    name: '11. Sequence (LEFT): FTOS → Passé → Lunge → Lever → HS → Lunge',
     description:
       'Same spoken walkthrough on the left side. Required: FTOS, starting lunge, lever, landing lunge. Handstand is 3 graded tries, not a gate.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
@@ -314,7 +288,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_c_shape',
-    name: '14. C shape',
+    name: '12. C shape',
     description:
       'Tumbling C: squat, hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring and to teach the round-off back handspring. Same C idea as mountain climber. You can pull a passé from here before a cartwheel or round-off. Back extension rolls often start from this shape.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
@@ -323,7 +297,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_mountain_climber',
-    name: '15. Mountain climber',
+    name: '13. Mountain climber',
     description:
       'C plus one medium step — or a lunge with the back knee bent and a C upper body. Two bent knees for power. Reach from the middle out. Pass-through for handstands, cartwheels, round-offs, and aerials. We never finish a skill here.',
     requiresTaskId: 'task_c_shape',
@@ -338,7 +312,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_seq_clean_mc_hs_lever_lunge',
-    name: '16. Sequence: Clean → Mountain climber → HS → Lever → Lunge',
+    name: '14. Sequence: Clean → Mountain climber → HS → Lever → Lunge',
     description:
       'Pass through mountain climber (look at where the hands will go), kick up, then pass through the lever into the landing lunge. Never finish in the mountain climber. A full 3–5s lever hold is optional.',
     requiresTaskId: 'task_mountain_climber',

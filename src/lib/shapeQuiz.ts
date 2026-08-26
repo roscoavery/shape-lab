@@ -3,7 +3,7 @@
  * Mix of "name this description" and "name this picture" questions.
  */
 
-import { curriculumShapeIds } from './educationCopy'
+import { ARM_POSITION_SHAPE_IDS, curriculumShapeIds } from './educationCopy'
 import { SHAPES } from '../config/shapes'
 import { pickReferencePhoto } from './storage'
 import type { ReferencePhoto, ShapeDef } from '../types'
@@ -37,17 +37,26 @@ function distractors(correct: ShapeDef, pool: ShapeDef[], n: number): ShapeDef[]
   return shuffle([...others, ...rest]).slice(0, n)
 }
 
+export type QuizPool = 'pathway' | 'arm-positions'
+
 /**
  * Build a quiz from pathway shapes (falls back to the full library).
  * Picture questions only appear when a reference photo exists.
+ * Arm-positions pool covers standing + lunge arm shapes parked out of Tasks.
  */
 export function buildShapeQuiz(
   photos: ReferencePhoto[],
   count = 8,
+  pool: QuizPool = 'pathway',
 ): QuizQuestion[] {
   const pathway = curriculumShapeIds()
-  const pool = SHAPES.filter((s) => pathway.has(s.id))
-  const source = pool.length >= 6 ? pool : SHAPES
+  const arm = new Set(ARM_POSITION_SHAPE_IDS)
+  const wanted =
+    pool === 'arm-positions'
+      ? arm
+      : new Set([...pathway, ...ARM_POSITION_SHAPE_IDS])
+  const poolShapes = SHAPES.filter((s) => wanted.has(s.id))
+  const source = poolShapes.length >= 4 ? poolShapes : SHAPES
   const withPhoto = source.filter((s) => Boolean(pickReferencePhoto(photos, s.id, null)?.dataUrl))
 
   const describePool = shuffle(source)

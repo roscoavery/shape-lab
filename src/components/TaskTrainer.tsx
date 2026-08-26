@@ -15,7 +15,7 @@ import {
   taskStatus,
   type TaskDef,
 } from '../config/curriculum'
-import { getStepGuide } from '../config/walkthrough'
+import { getStepGuide, stepIntroLine } from '../config/walkthrough'
 import { getShape } from '../config/shapes'
 import { TaskAnalysisPanel } from './TaskAnalysisPanel'
 import type { TaskLiveUi } from './TasksWorkspace'
@@ -29,7 +29,7 @@ import {
 } from '../lib/captureStore'
 import { HitFolder } from './HitFolder'
 import { useRollingCapture } from '../hooks/useRollingCapture'
-import { useSpeechCoach, holdPrompt } from '../hooks/useSpeechCoach'
+import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import {
   createId,
   fileToDataUrl,
@@ -125,6 +125,8 @@ export function TaskTrainer({
   const advancingRef = useRef(false)
   const sessionRef = useRef(false)
   const skipIntroRef = useRef(false)
+  const introReadyRef = useRef(true)
+  const introTimerRef = useRef<number | null>(null)
   const hadHitThisStepRef = useRef(false)
   const bestShoulderRef = useRef(-1)
   const bestScoreRef = useRef(-1)
@@ -147,6 +149,21 @@ export function TaskTrainer({
     supported: speechSupported,
   } = useSpeechCoach(voiceEnabled)
   const { trimClip } = useRollingCapture(videoRef, canvasRef, active)
+
+  const finishIntroSpeech = () => {
+    introReadyRef.current = true
+    if (introTimerRef.current != null) {
+      window.clearTimeout(introTimerRef.current)
+      introTimerRef.current = null
+    }
+  }
+
+  const speakBodyPosition = (text: string, interrupt = false) => {
+    introReadyRef.current = false
+    if (introTimerRef.current != null) window.clearTimeout(introTimerRef.current)
+    introTimerRef.current = window.setTimeout(finishIntroSpeech, 20000)
+    speakEvent(text, interrupt, finishIntroSpeech)
+  }
 
   const completions = progress?.completions ?? {}
   const skipped = progress?.skippedTaskIds ?? []
@@ -222,13 +239,12 @@ export function TaskTrainer({
     }
     const firstShape = first ? getShape(first.shapeId) : undefined
     const hold = first ? holdSecondsForStep(t, first, comps) : 0
-    const guide = first ? getStepGuide(t.id, first.shapeId) : undefined
-    const line =
-      guide?.intro ??
-      `Let's go. Show me a ${firstShape?.name ?? 'shape'}. ${holdPrompt(hold)}`
+    const line = first
+      ? stepIntroLine(t.id, first.shapeId, hold, `Let's go.`)
+      : `Let's go. Show me a ${firstShape?.name ?? 'shape'}.`
     setBanner(line)
     setLiveKind('looking')
-    speakEvent(line)
+    speakBodyPosition(line)
   }
 
   const taskCompletionsFor = (t: TaskDef) => completions[t.id] ?? 0
@@ -279,18 +295,19 @@ export function TaskTrainer({
     hadHitThisStepRef.current = false
     advancingRef.current = false
     skipIntroRef.current = true
-    const nextShape = getShape(nextStep.shapeId)
     const nextHold = holdSecondsForStep(task, nextStep, taskCompletions)
-    const nextGuide = getStepGuide(task.id, nextStep.shapeId)
-    const line =
-      nextGuide?.intro ??
-      `Skipping this shape. Next, show me a ${nextShape?.name ?? 'shape'}. ${holdPrompt(nextHold)}`
+    const line = stepIntroLine(
+      task.id,
+      nextStep.shapeId,
+      nextHold,
+      'Skipping this shape. Next,',
+    )
     setStepIndex((i) => i + 1)
     setBanner(line)
     setLiveKind('looking')
     setFlash('Skipped this shape')
     window.setTimeout(() => setFlash(null), 3000)
-    speakEvent(line, true)
+    speakBodyPosition(line, true)
     onRequestShape(nextStep.shapeId, nextStep.stance ?? 'auto', {
       profileOk: Boolean(nextStep.profileOk),
     })
@@ -441,13 +458,11 @@ export function TaskTrainer({
       skipIntroRef.current = false
       return
     }
-    const guide = getStepGuide(task.id, step.shapeId)
-    const line =
-      guide?.intro ?? `Show me a ${stepShape.name}. ${holdPrompt(stepHold)}`
+    const line = stepIntroLine(task.id, step.shapeId, stepHold)
     setBanner(line)
     setLiveKind('looking')
-    speakEvent(line)
-  }, [active, stepIndex, task, step, stepShape, stepHold, speakEvent])
+    speakBodyPosition(line)
+  }, [active, stepIndex, task, step, stepShape, stepHold])
 
   const saveHitSnapshot = useCallback(() => {
     if (!athleteId || !task || !stepShape) return
@@ -554,19 +569,25 @@ export function TaskTrainer({
       const shapeId = stepShape.id
       const holdSec = stepHold
       const nextStep = task.steps[stepIndex + 1]
-      const nextShape = nextStep ? getShape(nextStep.shapeId) : undefined
       const nextHold = nextStep ? holdSecondsForStep(task, nextStep, taskCompletions) : 0
-      const nextGuide = nextStep ? getStepGuide(task.id, nextStep.shapeId) : undefined
       const isLast = stepIndex + 1 >= task.steps.length
       const outro = guide?.outro
-      if (!isLast && nextShape) {
+      if (!isLast && nextStep) {
         skipIntroRef.current = true
-        const line = [outro, nextGuide?.intro ?? `Got it. That's the ${shapeName}. Next, show me a ${nextShape.name}. ${holdPrompt(nextHold)}`]
+        const line = [
+          outro,
+          stepIntroLine(
+            task.id,
+            nextStep.shapeId,
+            nextHold,
+            `Got it. That's the ${shapeName}. Next,`,
+          ),
+        ]
           .filter(Boolean)
           .join(' ')
         setBanner(line)
         setLiveKind('gotit')
-        speakEvent(line, true)
+        speakBodyPosition(line, true)
         setStepIndex((i) => i + 1)
       } else if (isLast) {
         finishTask(outro)
@@ -600,7 +621,7 @@ export function TaskTrainer({
 
     let raf = 0
     const tick = (now: number) => {
-      if (advancingRef.current) {
+      if (advancingRef.current || !introReadyRef.current) {
         lastRef.current = now
         raf = requestAnimationFrame(tick)
         return
@@ -669,13 +690,13 @@ export function TaskTrainer({
               bestShoulderRef.current = sh?.score ?? 0
               const line = "That's the lunge. Open your shoulders as far as you can."
               setBanner(line)
-              speakEvent(line, true)
+              speakEvent(line)
             } else if (stepShape.id === 'stand_clean') {
               setBanner('Stand clean — that’s it.')
               speakEvent('Stand clean.')
             } else if (countdownHold) {
               setBanner(`HOLDING — that's a ${stepShape.name}`)
-              speakEvent('Hold it.', true)
+              speakEvent('Hold it.')
             } else {
               setBanner(`HOLDING — that's a ${stepShape.name}`)
               speakEvent('Hold it.')

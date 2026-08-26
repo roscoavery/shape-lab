@@ -28,7 +28,7 @@ type EduView =
   | { kind: 'shape'; shapeId: string }
   | { kind: 'pathways' }
   | { kind: 'task'; taskId: string }
-  | { kind: 'quiz' }
+  | { kind: 'quiz'; pool?: 'pathway' | 'arm-positions' }
   | { kind: 'hits' }
   | { kind: 'glossary' }
 
@@ -124,9 +124,14 @@ export function EducationPanel({
             label="Glossary"
           />
           <NavChip
-            active={view.kind === 'quiz'}
-            onClick={() => setView({ kind: 'quiz' })}
+            active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
+            onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
             label="Shape test"
+          />
+          <NavChip
+            active={view.kind === 'quiz' && view.pool === 'arm-positions'}
+            onClick={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
+            label="Arm positions"
           />
           <NavChip
             active={view.kind === 'hits'}
@@ -143,7 +148,8 @@ export function EducationPanel({
           taskCount={CURRICULUM_TASKS.length}
           onShapes={goShapes}
           onPathways={goPathways}
-          onQuiz={() => setView({ kind: 'quiz' })}
+          onQuiz={() => setView({ kind: 'quiz', pool: 'pathway' })}
+          onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
           onHits={() => setView({ kind: 'hits' })}
           onGlossary={() => setView({ kind: 'glossary' })}
         />
@@ -195,6 +201,7 @@ export function EducationPanel({
       {view.kind === 'quiz' && (
         <ShapeQuiz
           referencePhotos={referencePhotos}
+          pool={view.pool === 'arm-positions' ? 'arm-positions' : 'pathway'}
           onExit={goHome}
         />
       )}
@@ -246,6 +253,7 @@ function HomeView({
   onShapes,
   onPathways,
   onQuiz,
+  onArmQuiz,
   onHits,
   onGlossary,
 }: {
@@ -255,6 +263,7 @@ function HomeView({
   onShapes: () => void
   onPathways: () => void
   onQuiz: () => void
+  onArmQuiz: () => void
   onHits: () => void
   onGlossary: () => void
 }) {
@@ -315,6 +324,20 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the test →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onArmQuiz}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Arm positions test</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Low V, front middle, open shoulders, T, and high V — standing and on a
+          landing lunge. These are not a Tasks gate right now; study them here.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Test arm positions →
         </span>
       </button>
       <button
