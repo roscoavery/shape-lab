@@ -112,6 +112,10 @@ export function openShoulderScore(
 }
 
 function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: number }): boolean {
+  if (shape.id === 'stand_clean') {
+    if (r.id === 'feet_together' || r.id === 'arms_down') return r.score < 40
+    return false
+  }
   // Open-shoulder *angle* never blocks a lunge or lever.
   if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) return false
   if (r.id === 'elbows' && isSoftShoulderShape(shape.id)) return false
@@ -425,12 +429,14 @@ function scoreOnce(
   const linePieces = important.filter((r) => !isShoulderCriterionId(r.id))
   const strongLine = linePieces.filter((r) => r.score >= 85)
   const holdReady =
-    (isSoftShoulderShape(shape.id)
+    (shape.id === 'stand_clean' || isSoftShoulderShape(shape.id)
       ? keyMisses.length === 0
       : overall >= threshold && keyMisses.length === 0) &&
     !(shape.cameraView === 'front' && detected === 'side')
   // “Close” is for a leftover leg/line piece, never for open shoulders.
+  // Stand clean is a glance — never nag “almost”.
   const nearHit =
+    shape.id !== 'stand_clean' &&
     !holdReady &&
     blockingMisses.length === 1 &&
     linePieces.length >= 2 &&
@@ -478,7 +484,10 @@ export function scoreShape(
 
   const detected = detectCameraView(landmarks)
   const want = options?.stance ?? 'auto'
-  const allowOccludedSide = Boolean(options?.profileOk) || shape.cameraView === 'side'
+  const allowOccludedSide =
+    Boolean(options?.profileOk) ||
+    shape.cameraView === 'side' ||
+    shape.id === 'stand_clean'
 
   if (want === 'right') {
     return scoreOnce(

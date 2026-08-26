@@ -112,10 +112,19 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   {
     id: 'task_stand_clean',
     name: '1. Stand clean',
-    description: 'Stand tall and clean before anything else — feet together, posture set.',
+    description: 'Stand in the frame with feet together and arms down. Once we see that, we move on.',
     requiresTaskId: null,
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'stand_clean', ...HOLD }],
+    steps: [
+      {
+        shapeId: 'stand_clean',
+        beginnerSeconds: 0.45,
+        masteredSeconds: 0.45,
+        speakCorrections: false,
+        profileOk: true,
+        note: 'Feet together, arms down — once we see you, we move on',
+      },
+    ],
   },
   {
     id: 'task_ftos',

@@ -626,6 +626,9 @@ export function TaskTrainer({
                 "That's the lunge. Open your shoulders as far as you can. Count 3 in your head."
               setBanner(line)
               speakEvent(line, true)
+            } else if (stepShape.id === 'stand_clean') {
+              setBanner('Stand clean — that’s it.')
+              speakEvent('Stand clean.')
             } else {
               setBanner(`HOLDING — that's a ${stepShape.name}`)
               speakEvent('Hold it.')
@@ -668,7 +671,7 @@ export function TaskTrainer({
             holdAccumRef.current = 0
             setStepProgress(0)
             spokenBeatsRef.current = new Set()
-            if (!scripted && !isOpenShoulderCue(mainCorrection)) speakLost(mainCorrection)
+            if (!scripted && stepShape.id !== 'stand_clean' && !isOpenShoulderCue(mainCorrection)) speakLost(mainCorrection)
             setLiveKind(close ? 'close' : 'looking')
             setBanner(close ? `Almost — ${mainCorrection ?? 'find it again'}` : 'Find the shape again')
           } else if (close) {
@@ -676,6 +679,7 @@ export function TaskTrainer({
             if (
               !scripted &&
               step.speakCorrections !== false &&
+              stepShape.id !== 'stand_clean' &&
               !(isSoftShoulderShape(stepShape.id) && isOpenShoulderCue(mainCorrection))
             ) {
               speakClose(mainCorrection)
