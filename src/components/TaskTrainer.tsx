@@ -955,8 +955,9 @@ export function TaskTrainer({
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through each shape and starts the next task on its
-            own — no extra Start tap. Body position, coach still, live feed,
-            score, and delay cam sit together on the left.
+            own — no extra Start tap. We grade the written body position, not a
+            match to the coach still. Body position, still, live feed, score, and
+            delay cam sit together on the left.
           </p>
         </div>
       )}

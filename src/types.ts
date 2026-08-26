@@ -353,7 +353,8 @@ export type HomeworkLog = {
 }
 
 /**
- * Coach-uploaded reference photo for athletes to match.
+ * Coach still that shows the idea of a shape.
+ * Grading uses the written body position, not a pixel match to this photo.
  * Stored as a data URL (base64) in localStorage / IndexedDB.
  */
 export type ReferencePhoto = {

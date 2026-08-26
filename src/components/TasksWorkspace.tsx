@@ -65,6 +65,10 @@ export function TasksWorkspace({
         <p className="mt-1 text-sm leading-snug text-[var(--text)] sm:text-base">
           {shape.bodyPosition ?? shape.description}
         </p>
+        <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
+          Pass when this body position is true. The still is a picture of the
+          idea — you do not have to match the photo.
+        </p>
         {holding && (
           <p className="mt-2 text-base font-semibold text-[var(--good)]">Hold it.</p>
         )}
@@ -94,7 +98,7 @@ export function TasksWorkspace({
         <div className="flex min-w-0 flex-col gap-2">
           <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]">
             <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Coach still
+              Coach still — picture of the idea, not a photo match
             </p>
             <ReferenceStill
               shapeId={shape.id}

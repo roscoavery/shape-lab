@@ -16,10 +16,13 @@
  *   cannot pass by skipping arms and legs.
  * - Side / sequence-profile: if left and right disagree a lot, trust the
  *   clearer side. Do not invent a pass.
- * - Quality hold is the overall score vs the shape threshold — same as the
- *   live cue. Cues come from the written criterion, never a coverage slogan.
+ * - Quality hold is the written body-position standard vs the shape
+ *   threshold — not a pixel match to the coach still.
+ * - Cues come from the written criterion, never a coverage slogan.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
+ * - Leniency is only on lunge open shoulders (85% is a pass). Other
+ *   important parts stay strict so a mountain-climber cannot sneak through.
  */
 
 import {
@@ -46,6 +49,19 @@ import type {
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n))
+}
+
+/** Shoulder / elbow vertices — the only joints we L/R-fallback on in profile. */
+const ARM_VERTICES = new Set<number>([
+  LM.LEFT_SHOULDER,
+  LM.RIGHT_SHOULDER,
+  LM.LEFT_ELBOW,
+  LM.RIGHT_ELBOW,
+])
+
+function isArmJointAngle(c: CriterionDef): boolean {
+  const vertex = c.points?.[1]
+  return c.kind === 'joint_angle' && vertex !== undefined && ARM_VERTICES.has(vertex)
 }
 
 export function scoreAgainstTarget(
@@ -275,8 +291,9 @@ function scoreOnce(
       feedback = raw ? coachCue(raw) : null
     } else {
       let { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
-      // Side-on: far-arm joint angles are junk. Keep the better of the two arms.
-      if (allowOccludedSide && c.kind === 'joint_angle' && c.points) {
+      // Side-on: far-arm angles are junk. Take the better *arm* only —
+      // never the better knee/hip, or a bent back leg hides behind the front.
+      if (allowOccludedSide && isArmJointAngle(c)) {
         const other = measureCriterion(swapLeftRight(landmarks), c, {})
         if (other !== null) {
           const alt = scoreAgainstTarget(other, c)
@@ -290,6 +307,7 @@ function scoreOnce(
       }
       score = s
       // Lunge open-shoulders: 85% is a pass — do not wait for a perfect 180°.
+      // This is the only lunge check that gets this leniency.
       if (c.id === 'shoulders' && shape.id.includes('lunge') && score >= 85) {
         score = 100
         feedback = null
@@ -348,8 +366,9 @@ function scoreOnce(
 
   const important = results.filter((r) => r.weight >= 10)
   const keyMisses = important.filter((r) => {
+    // Open shoulders on a lunge: 85% is enough. Everything else stays strict.
     if (r.id === 'shoulders' && shape.id.includes('lunge')) return r.score < 85
-    return r.score < 50
+    return r.score < 65
   })
   const strong = important.filter((r) => r.score >= 70)
   const holdReady =

@@ -57,11 +57,27 @@ const LANDING_HEEL_FLAT: CriterionDef = {
   kind: 'segment_vs_horizontal',
   segment: [LM.RIGHT_HEEL, LM.RIGHT_FOOT_INDEX],
   target: 0,
-  tolerance: 14,
+  tolerance: 12,
   falloff: 40,
   weight: 14,
   needsView: 'side',
   feedbackHigh: 'Press the back heel flat.',
+}
+
+/**
+ * Lunges: back leg must actually be straight. Graded from the named back
+ * knee (no “better of L/R” fallback) so a mountain climber cannot pass.
+ */
+const LUNGE_BACK_LEG: CriterionDef = {
+  id: 'back_leg',
+  label: 'Back leg straight',
+  kind: 'joint_angle',
+  points: R_KNEE,
+  targetMin: 155,
+  targetMax: 180,
+  tolerance: 10,
+  weight: 18,
+  feedbackLow: 'Straighten the back leg.',
 }
 
 /** Shorter stance than the starting lunge. */
@@ -96,8 +112,9 @@ const LUNGE_DIAGONAL: CriterionDef = {
 }
 
 /**
- * Open shoulders on a lunge (side view). 85% is enough — not a perfect 180°.
- * Side-on MediaPipe often reads a real “arms by ears” as ~120–150°.
+ * Open shoulders on a lunge (side view). THIS is the only lenient lunge
+ * check: 85% is a pass. Side-on MediaPipe often reads a real “arms by
+ * ears” as ~120–150°. Do not require a match to the coach still.
  */
 const LUNGE_OPEN_SHOULDERS: CriterionDef = {
   id: 'shoulders',
@@ -116,9 +133,9 @@ const LUNGE_STRAIGHT_BACK: CriterionDef = {
   label: 'Straight back (not a C)',
   kind: 'joint_angle',
   points: R_HIP,
-  targetMin: 150,
+  targetMin: 155,
   targetMax: 180,
-  tolerance: 12,
+  tolerance: 10,
   falloff: 40,
   weight: 12,
   feedbackLow: 'Straighten the back — this is a lunge, not a mountain climber C.',
@@ -792,26 +809,16 @@ export const SHAPES: ShapeDef[] = [
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
-      {
-        id: 'back_leg',
-        label: 'Back leg straight',
-        kind: 'joint_angle',
-        points: R_KNEE,
-        targetMin: 150,
-        targetMax: 180,
-        tolerance: 12,
-        weight: 18,
-        feedbackLow: 'Straighten the back leg.',
-      },
+      LUNGE_BACK_LEG,
       {
         id: 'heel_up',
         label: 'Back heel up',
         // Heel raised off the floor: heel→toe segment tips up vs horizontal
         kind: 'segment_vs_horizontal',
         segment: [LM.RIGHT_FOOT_INDEX, LM.RIGHT_HEEL],
-        targetMin: 12,
-        targetMax: 60,
-        tolerance: 12,
+        targetMin: 15,
+        targetMax: 55,
+        tolerance: 10,
         falloff: 45,
         weight: 14,
         needsView: 'side',
@@ -823,9 +830,9 @@ export const SHAPES: ShapeDef[] = [
         label: 'Longer step than landing',
         kind: 'point_distance',
         pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
-        targetMin: 0.2,
-        targetMax: 0.55,
-        tolerance: 0.06,
+        targetMin: 0.22,
+        targetMax: 0.5,
+        tolerance: 0.05,
         falloff: 0.25,
         weight: 10,
         feedbackLow: 'Take a longer step — bigger than the landing lunge.',
@@ -885,17 +892,7 @@ export const SHAPES: ShapeDef[] = [
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
-      {
-        id: 'back_leg',
-        label: 'Back leg straight',
-        kind: 'joint_angle',
-        points: R_KNEE,
-        targetMin: 150,
-        targetMax: 180,
-        tolerance: 12,
-        weight: 18,
-        feedbackLow: 'Straighten the back leg.',
-      },
+      LUNGE_BACK_LEG,
       LANDING_HEEL_FLAT,
       LANDING_CLOSER_STEP,
       LUNGE_DIAGONAL,
@@ -981,7 +978,7 @@ export const SHAPES: ShapeDef[] = [
         label: 'Open shoulders',
         kind: 'joint_angle',
         points: L_SHOULDER,
-        // Push OPEN more even if a reference photo looks slightly closed
+        // Lever shoulders stay strict — leniency is only on lunge open shoulders.
         targetMin: 155,
         targetMax: 180,
         tolerance: 8,
@@ -2834,21 +2831,12 @@ export const SHAPES: ShapeDef[] = [
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
-      {
-        id: 'back_leg',
-        label: 'Back leg straight',
-        kind: 'joint_angle',
-        points: R_KNEE,
-        targetMin: 150,
-        targetMax: 180,
-        tolerance: 12,
-        weight: 18,
-        feedbackLow: 'Straighten the back leg.',
-      },
+      LUNGE_BACK_LEG,
       LANDING_HEEL_FLAT,
       LANDING_CLOSER_STEP,
       { ...LUNGE_OPEN_SHOULDERS, weight: 24 },
       LUNGE_DIAGONAL,
+      LUNGE_STRAIGHT_BACK,
       {
         id: 'elbows',
         label: 'Elbows straight',
