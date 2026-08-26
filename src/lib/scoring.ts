@@ -12,11 +12,11 @@
  *
  * View independence:
  * - Joint angles grade from any facing.
- * - Side-view shapes (lunge, lever, C) always score the landmarks we can see.
- *   A guessed "front" classification does not fail the pose or demand a
- *   face-on turn. Far-side landmarks that MediaPipe hides are skipped, not
- *   scored as zero.
- * - Sequence FTOS (profileOk) grades the camera-side of the body the same way.
+ * - Missing landmarks score 0 (they do not get dropped). A person standing
+ *   beside the camera cannot pass by skipping arms/legs that are out of frame.
+ * - Side / sequence-profile shapes: if left and right disagree a lot, trust
+ *   the better side (the far side is noisy). Do not invent a pass.
+ * - A quality hold also needs a full body in frame, not a cropped snapshot.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
  */
@@ -27,6 +27,7 @@ import {
   pointDistance,
   segmentAngleFromHorizontal,
   segmentAngleFromVertical,
+  VISIBILITY_MIN,
 } from './angles'
 import { LM } from './landmarks'
 import {
@@ -184,6 +185,44 @@ function emptyResult(shape: ShapeDef, message: string): ScoreResult {
   }
 }
 
+const COVERAGE_POINTS = [
+  LM.NOSE,
+  LM.LEFT_SHOULDER,
+  LM.RIGHT_SHOULDER,
+  LM.LEFT_HIP,
+  LM.RIGHT_HIP,
+  LM.LEFT_ANKLE,
+  LM.RIGHT_ANKLE,
+  LM.LEFT_WRIST,
+  LM.RIGHT_WRIST,
+] as const
+
+function isUprightShape(shape: ShapeDef): boolean {
+  const id = shape.id
+  return (
+    !id.includes('hollow') &&
+    !id.includes('candle') &&
+    !id.includes('superman') &&
+    !id.includes('plank')
+  )
+}
+
+function poseCoverage(landmarks: Landmark[]): { visible: number; height: number } {
+  let visible = 0
+  let minY = 1
+  let maxY = 0
+  let nY = 0
+  for (const i of COVERAGE_POINTS) {
+    const p = landmarks[i]
+    if (!p || (p.visibility ?? 1) < VISIBILITY_MIN) continue
+    visible += 1
+    minY = Math.min(minY, p.y)
+    maxY = Math.max(maxY, p.y)
+    nY += 1
+  }
+  return { visible, height: nY >= 4 ? maxY - minY : 0 }
+}
+
 function scoreOnce(
   landmarks: Landmark[],
   shape: ShapeDef,
@@ -219,29 +258,33 @@ function scoreOnce(
   const results: CriterionScore[] = []
   let weightedSum = 0
   let weightTotal = 0
-  let definedWeight = 0
   const viewWrong = !viewMatches(shape.cameraView, detected)
 
   for (const c of shape.criteria) {
     if (c.id.startsWith('_')) continue
-    definedWeight += c.weight
 
-    const skipSymmetry = allowOccludedSide && c.kind === 'symmetry'
     let score: number
     let measured = measuredCache[c.id] ?? null
     let feedback: string | null = null
-    let include = true
 
-    if (skipSymmetry) {
-      include = false
-      score = 100
-      feedback = null
-    } else if (c.kind === 'composite_min' && c.of) {
+    if (c.kind === 'composite_min' && c.of) {
       const presentIds = c.of.filter((id) => atomicPresent[id])
-      const ids =
-        allowOccludedSide && presentIds.length > 0 ? presentIds : c.of
+      const ids = presentIds.length > 0 ? presentIds : c.of
       const subScores = ids.map((id) => atomicScores[id] ?? 0)
-      score = subScores.length ? Math.min(...subScores) : 0
+      if (presentIds.length === 0) {
+        score = 0
+        feedback = 'Need the full body in the frame'
+      } else if (presentIds.length === 1 && allowOccludedSide) {
+        score = subScores[0] ?? 0
+      } else if (allowOccludedSide && subScores.length >= 2) {
+        const hi = Math.max(...subScores)
+        const lo = Math.min(...subScores)
+        // Far-side MediaPipe angles are often junk. Trust the better side
+        // only when they wildly disagree — never when both are mediocre.
+        score = hi - lo >= 35 ? hi : lo
+      } else {
+        score = Math.min(...subScores)
+      }
       let worstId = ids[0]
       let worstScore = Infinity
       for (const id of ids) {
@@ -255,36 +298,18 @@ function scoreOnce(
       const worstMeasured = worstId ? measuredCache[worstId] : null
       if (worstDef && worstMeasured !== null && worstMeasured !== undefined) {
         const { deltaLow, deltaHigh } = scoreAgainstTarget(worstMeasured, worstDef)
-        feedback = feedbackFor(worstDef, worstMeasured, deltaLow, deltaHigh)
-      } else if (presentIds.length === 0) {
-        if (allowOccludedSide) {
-          include = false
-          score = 0
-          feedback = null
-        } else {
-          score = 0
-          feedback = 'Landmark not visible'
-        }
+        feedback = feedbackFor(worstDef, worstMeasured, deltaLow, deltaHigh) ?? feedback
       }
     } else if (measured === null) {
-      if (allowOccludedSide) {
-        include = false
-        score = 0
-        feedback = null
-      } else {
-        score = 0
-        feedback = 'Landmark not visible'
-      }
+      score = 0
+      feedback = 'Need the full body in the frame'
     } else {
       const { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
       score = s
       feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
     }
 
-    if (!include) {
-      definedWeight -= c.weight
-      continue
-    }
+    const skipFromOverall = allowOccludedSide && c.kind === 'symmetry'
 
     results.push({
       id: c.id,
@@ -292,37 +317,30 @@ function scoreOnce(
       score: Math.round(score),
       measured: measured === null ? null : Math.round(measured * 10) / 10,
       weight: c.weight,
-      feedback,
+      feedback: skipFromOverall ? null : feedback,
     })
 
-    weightedSum += score * c.weight
-    weightTotal += c.weight
+    if (!skipFromOverall) {
+      weightedSum += score * c.weight
+      weightTotal += c.weight
+    }
   }
 
   const overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
 
-  const sorted = [...results]
-    .filter((r) => r.feedback)
-    .sort((a, b) => a.score - b.score)
+  const sorted = [...results].sort((a, b) => a.score - b.score)
 
   const threshold = qualityThresholdOverride ?? shape.qualityThreshold
   let mainCorrection: string | null = null
   let viewWarning: string | null = null
 
-  if (weightTotal === 0) {
-    mainCorrection = 'Stay in the frame — we see you, but need a clearer body line.'
-  }
-
-  // Only nag about facing the camera when the shape truly needs a front view
-  // (T arms) AND we are confident they are in profile. Never block a side-view
-  // shape on a guessed "front" classification — MediaPipe is often wrong.
   if (viewWrong && shape.cameraView === 'front' && detected === 'side') {
     viewWarning =
       'Face the camera — both arms and legs need to be visible for this shape.'
   }
 
   for (const r of sorted) {
-    if (r.feedback && r.score < 95) {
+    if (r.feedback && r.score < 90) {
       mainCorrection = r.feedback
       break
     }
@@ -335,20 +353,27 @@ function scoreOnce(
       ? 'Match the body-position description'
       : 'Adjust body line to raise score'
   }
-  if (overall >= 95 && !viewWarning) {
-    mainCorrection = 'Excellent shape — hold it!'
-  }
 
-  const important = results.filter((r) => r.weight >= 8)
+  const coverage = poseCoverage(landmarks)
+  const upright = isUprightShape(shape)
+  const inFrame =
+    coverage.visible >= (upright ? 6 : 4) && (!upright || coverage.height >= 0.4)
+
+  const important = results.filter((r) => r.weight >= 10)
   const worstImportant =
-    important.length > 0 ? Math.min(...important.map((r) => r.score)) : 0
-  const enoughWeight = definedWeight > 0 && weightTotal >= Math.max(1, definedWeight * 0.55)
+    important.length > 0 ? Math.min(...important.map((r) => r.score)) : overall
+
   const holdReady =
+    inFrame &&
     overall >= threshold &&
-    important.length > 0 &&
-    worstImportant >= 50 &&
-    enoughWeight &&
+    worstImportant >= 62 &&
     !(shape.cameraView === 'front' && detected === 'side')
+
+  if (holdReady) {
+    mainCorrection = 'Excellent shape — hold it!'
+  } else if (!inFrame) {
+    mainCorrection = 'Step fully into the frame — head to feet, not beside the screen.'
+  }
 
   return {
     overall,

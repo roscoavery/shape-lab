@@ -112,6 +112,7 @@ export function TaskTrainer({
   const lastRef = useRef<number | null>(null)
   const completingRef = useRef(false)
   const inQualityRef = useRef(false)
+  const readyAccumRef = useRef(0)
   const hitAtRef = useRef<number | null>(null)
   const advancingRef = useRef(false)
   const sessionRef = useRef(false)
@@ -197,6 +198,7 @@ export function TaskTrainer({
     sessionRef.current = true
     skipIntroRef.current = true
     inQualityRef.current = false
+    readyAccumRef.current = 0
     hitAtRef.current = null
     advancingRef.current = false
     hadHitThisStepRef.current = false
@@ -258,6 +260,7 @@ export function TaskTrainer({
     setStepProgress(0)
     lastRef.current = null
     inQualityRef.current = false
+    readyAccumRef.current = 0
     hitAtRef.current = null
     spokenBeatsRef.current = new Set()
     tryCountRef.current = 0
@@ -392,6 +395,7 @@ export function TaskTrainer({
 
   useEffect(() => {
     inQualityRef.current = false
+    readyAccumRef.current = 0
     hitAtRef.current = null
     hadHitThisStepRef.current = false
     spokenBeatsRef.current = new Set()
@@ -541,7 +545,14 @@ export function TaskTrainer({
       if (lastRef.current != null) {
         const dt = (now - lastRef.current) / 1000
         noteBest(scoreRef.current)
-        const inQ = Boolean(scoreRef.current.holdReady)
+        if (scoreRef.current.holdReady) {
+          readyAccumRef.current += dt
+        } else {
+          readyAccumRef.current = 0
+        }
+        // Must actually hold the shape — a 1-frame spike while walking
+        // past the camera must not snapshot or say "got it".
+        const inQ = readyAccumRef.current >= 0.45
         const close = !inQ && overallScore >= closeFloor
 
         if (gradeOnly) {
@@ -618,6 +629,7 @@ export function TaskTrainer({
         } else {
           if (inQualityRef.current) {
             inQualityRef.current = false
+            readyAccumRef.current = 0
             hitAtRef.current = null
             holdAccumRef.current = 0
             setStepProgress(0)

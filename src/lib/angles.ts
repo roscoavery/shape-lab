@@ -9,8 +9,10 @@
 
 import type { Landmark } from '../types'
 
-/** Side-on poses often report low MediaPipe visibility on the far side. */
-export const VISIBILITY_MIN = 0.18
+/** Grade only landmarks MediaPipe is reasonably sure about. */
+export const VISIBILITY_MIN = 0.38
+/** Draw a fainter skeleton on the far side of a profile pose. */
+export const VISIBILITY_DRAW = 0.22
 
 function isVisible(lm: Landmark | undefined, min = VISIBILITY_MIN): boolean {
   if (!lm) return false

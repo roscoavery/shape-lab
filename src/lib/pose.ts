@@ -27,9 +27,9 @@ async function createLandmarker(delegate: 'GPU' | 'CPU'): Promise<PoseLandmarker
     },
     runningMode: 'VIDEO',
     numPoses: 1,
-    minPoseDetectionConfidence: 0.35,
-    minPosePresenceConfidence: 0.35,
-    minTrackingConfidence: 0.35,
+    minPoseDetectionConfidence: 0.45,
+    minPosePresenceConfidence: 0.45,
+    minTrackingConfidence: 0.45,
   })
 }
 
