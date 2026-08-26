@@ -128,7 +128,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ### Recommended coach workflow
 
-1. Paste the public Instagram reel URL into a Compare collection (e.g. "Back handspring refs").
+1. Paste the public Instagram reel URL into a Compare collection (e.g. "Back handspring refs"). **Rename** the saved clip so the list is readable.
 2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
 3. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay last Ns** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
 

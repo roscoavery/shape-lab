@@ -1,8 +1,8 @@
 /**
  * Compare tab — reference video pane.
  * Named collections stored in IndexedDB; each collection holds uploaded
- * video files (full loop/scrub control), direct video URLs, or Instagram
- * post/reel links (view-only public embed).
+ * video files, direct video URLs, or Instagram post/reel links (played and
+ * looped in-app). Item names can be renamed after saving.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -36,6 +36,8 @@ export function ReferencePane() {
   const [newCollectionName, setNewCollectionName] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -205,6 +207,23 @@ export function ReferencePane() {
       revokeSrc()
       setItemSrc(null)
     }
+    if (renamingId === item.id) setRenamingId(null)
+  }
+
+  const startRename = (item: RefItem) => {
+    setRenamingId(item.id)
+    setRenameDraft(item.name)
+  }
+
+  const commitRename = async (item: RefItem) => {
+    if (renamingId !== item.id) return
+    const name = renameDraft.trim()
+    setRenamingId(null)
+    if (!activeCollection || !name || name === item.name) return
+    await updateCollection({
+      ...activeCollection,
+      items: activeCollection.items.map((i) => (i.id === item.id ? { ...i, name } : i)),
+    })
   }
 
   const inputCls =
@@ -292,8 +311,8 @@ export function ReferencePane() {
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
         Paste one Instagram link or a list (spaces or new lines). Public reels
-        play and loop in this tab — pause, scrub, slow-mo. No screen-recording
-        needed. Upload a file only if you already have one.
+        play and loop in this tab — pause, scrub, slow-mo. Rename a saved clip
+        anytime so the list reads like “BHS step-out,” not a random IG code.
       </p>
 
       {error && (
@@ -307,20 +326,58 @@ export function ReferencePane() {
         <ul className="flex max-h-36 flex-col gap-1 overflow-y-auto panel-scroll">
           {activeCollection.items.map((item) => (
             <li key={item.id} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void selectItem(item)}
-                className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
-                  activeItemId === item.id
-                    ? 'bg-[var(--accent-dim)]/30 text-[var(--text)]'
-                    : 'text-[var(--muted)] hover:bg-[#243040] hover:text-[var(--text)]'
-                }`}
-              >
-                <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                  {KIND_LABEL[item.kind]}
-                </span>
-                <span className="truncate">{item.name}</span>
-              </button>
+              {renamingId === item.id ? (
+                <form
+                  className="flex min-w-0 flex-1 items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void commitRename(item)
+                  }}
+                >
+                  <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                    {KIND_LABEL[item.kind]}
+                  </span>
+                  <input
+                    autoFocus
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setRenamingId(null)
+                      }
+                    }}
+                    onBlur={() => void commitRename(item)}
+                    className={`${inputCls} min-w-0 flex-1 py-1`}
+                    aria-label="Reference name"
+                  />
+                </form>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void selectItem(item)}
+                    className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
+                      activeItemId === item.id
+                        ? 'bg-[var(--accent-dim)]/30 text-[var(--text)]'
+                        : 'text-[var(--muted)] hover:bg-[#243040] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                      {KIND_LABEL[item.kind]}
+                    </span>
+                    <span className="truncate">{item.name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startRename(item)}
+                    className="rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+                    title="Rename this reference"
+                  >
+                    Rename
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => void removeItem(item)}
