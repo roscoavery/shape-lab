@@ -35,11 +35,8 @@ const HS_SEQ: TaskGuide = {
       ],
     },
     lunge_start: {
-      intro: 'Fall to lunge and hold 3.',
-      beats: [
-        { at: 3, text: '3' },
-        { at: 2, text: '2' },
-      ],
+      intro:
+        'Fall to a starting lunge. When I see the lunge, open your shoulders as far as you can and count 3 in your head. I will snapshot your best open.',
     },
     lever: {
       intro: 'Lever. Hold 3.',
@@ -53,11 +50,8 @@ const HS_SEQ: TaskGuide = {
         'Kick up to the best handstand you can hit, and finish in a good landing lunge. Three tries.',
     },
     lunge_land: {
-      intro: 'Landing lunge. Hold 3. Back foot flat.',
-      beats: [
-        { at: 3, text: '3. Arms in open shoulders.' },
-        { at: 2, text: '2. Chin stays up.' },
-      ],
+      intro:
+        'Landing lunge — back heel flat. When I see the lunge, open your shoulders as far as you can and count 3 in your head. I will snapshot your best open.',
       outro: 'And clean.',
     },
   },
@@ -73,6 +67,22 @@ const HS_PRACTICE: TaskGuide = {
 }
 
 export const TASK_GUIDES: Record<string, TaskGuide> = {
+  task_lunge_start: {
+    steps: {
+      lunge_start: {
+        intro:
+          'Show me a starting lunge. Side view. Back heel up, back leg straight, back straight. When I see the lunge, open your shoulders as far as you can and count 3 in your head.',
+      },
+    },
+  },
+  task_lunge_land: {
+    steps: {
+      lunge_land: {
+        intro:
+          'Show me a landing lunge. Side view. Back heel flat, shorter stance. When I see the lunge, open your shoulders as far as you can and count 3 in your head.',
+      },
+    },
+  },
   task_handstand: HS_PRACTICE,
   task_seq_ftos_passe_lunge_lever_hs_lunge_right: HS_SEQ,
   task_seq_ftos_passe_lunge_lever_hs_lunge_left: HS_SEQ,

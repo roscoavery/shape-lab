@@ -32,7 +32,7 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
   const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
   if (!sh) return null
   if (sh.score >= 85) return `Open shoulders ${sh.score}/100 on the snapshot.`
-  return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That grade is for the picture; it did not block moving on.`
+  return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That is the grade from your 3-second best open; it did not block moving on.`
 }
 
 export function notesForStep(sample: LiveStepSample): string {

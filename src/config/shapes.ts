@@ -101,14 +101,14 @@ const LUNGE_DIAGONAL: CriterionDef = {
   label: 'Long line back foot → shoulders',
   kind: 'segment_vs_horizontal',
   segment: [LM.RIGHT_ANKLE, LM.LEFT_SHOULDER],
-  targetMin: 8,
-  targetMax: 50,
-  tolerance: 14,
+  targetMin: 5,
+  targetMax: 70,
+  tolerance: 16,
   falloff: 40,
-  weight: 14,
+  weight: 10,
   needsView: 'side',
-  feedbackLow: 'Tilt the chest a bit — long line from back foot to shoulders.',
-  feedbackHigh: 'Keep a long diagonal from back foot to shoulders — this is not a lever yet.',
+  feedbackLow: 'Tilt the chest a bit — long line from the back foot through the hips.',
+  feedbackHigh: 'Keep a long diagonal from the back foot through the body — this is not a lever yet.',
 }
 
 /**
@@ -784,7 +784,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Fall forward from passé into this lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Back stays STRAIGHT (not a C). Shoulders OPEN, arms by the ears, one diagonal from the back foot through the body to the hands. Longer stance than a landing lunge. This is not a mountain climber.',
     category: 'static',
-    qualityThreshold: 75,
+    qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
@@ -867,7 +867,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side.',
     category: 'static',
-    qualityThreshold: 75,
+    qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
@@ -922,7 +922,7 @@ export const SHAPES: ShapeDef[] = [
     bodyPosition:
       'SIDE VIEW. Weight on the front/support foot with a SLIGHT bend in that knee (not locked, not a deep squat). Chest tilts forward until it is parallel with the ground. Back leg lifts and stays long so one straight line runs from the back foot through the body to the hands — that whole line parallel with the floor. Shoulders OPEN, arms by the ears. Either leg can be the support leg.',
     category: 'hold',
-    qualityThreshold: 75,
+    qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [

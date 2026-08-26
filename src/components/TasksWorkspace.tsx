@@ -77,7 +77,7 @@ export function TasksWorkspace({
           Pass when this body position is true. The still is a picture of the
           idea — you do not have to match the photo.
           {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
-            ? ' Open shoulders are graded on the snapshot and you will hear a cue, but they do not block the pass. Legs and the line from back foot to shoulders need 85% to move on.'
+            ? ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can and count 3. We snapshot your best open and grade it — open shoulders do not block the pass. Legs need 85%.'
             : ''}
         </p>
         {holding && (

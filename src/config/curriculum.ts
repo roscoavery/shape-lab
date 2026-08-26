@@ -6,9 +6,9 @@
  * Hold times: first successful completions of a *standalone* shape use
  * beginnerSeconds (5s). After `masterAfterCompletions` successes, holds drop
  * to masteredSeconds (3s). Multi-shape sequences always use 3s holds so the
- * athlete can flow. Freestanding handstand is grade-only (3 kick-up tries) —
- * it does not gate the pathway. Wall HS is homework. After each task, athletes
- * can read a written analysis of every shape they hit.
+ * athlete can flow. Starting and landing lunges use a 3s open-shoulder
+ * snapshot window after the lunge is recognized. Freestanding handstand is
+ * grade-only (3 kick-up tries) — it does not gate the pathway.
  *
  * passThrough: step counts if athlete briefly hits quality (no long hold required).
  * gradeOnly: scored in the analysis, not required to advance.
@@ -74,6 +74,13 @@ const SEQ_HOLD = {
   beginnerSeconds: 3,
   masteredSeconds: 3,
   speakCorrections: true,
+} as const
+
+/** Starting / landing lunge: 3s to open shoulders after the lunge is recognized. */
+const LUNGE_WINDOW = {
+  beginnerSeconds: 3,
+  masteredSeconds: 3,
+  speakCorrections: false,
 } as const
 
 /**
@@ -159,8 +166,8 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       {
         shapeId: 'lunge_start',
-        ...HOLD,
-        note: 'SIDE VIEW · heel UP · straight back leg · straight back · open shoulders',
+        ...LUNGE_WINDOW,
+        note: 'SIDE VIEW · find the lunge, then open shoulders and count 3',
       },
     ],
   },
@@ -213,8 +220,8 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       {
         shapeId: 'lunge_land',
-        ...HOLD,
-        note: 'SIDE VIEW · heel FLAT · shorter than starting lunge · back leg straight',
+        ...LUNGE_WINDOW,
+        note: 'SIDE VIEW · find the lunge, then open shoulders and count 3',
       },
     ],
   },
@@ -231,9 +238,9 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         profileOk: true,
         note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
       },
-      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW · heel UP · open shoulders' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'right', note: 'Right foot forward · SIDE VIEW · find the lunge, then open and count 3' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'right', note: 'Finish here · right foot forward · heel FLAT · closer stance' },
+      { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'right', note: 'Finish here · right foot forward · find the lunge, then open and count 3' },
     ],
   },
   {
@@ -249,9 +256,9 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         profileOk: true,
         note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
       },
-      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW · heel UP · open shoulders' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'left', note: 'Left foot forward · SIDE VIEW · find the lunge, then open and count 3' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'left', note: 'Finish here · left foot forward · heel FLAT · closer stance' },
+      { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'left', note: 'Finish here · left foot forward · find the lunge, then open and count 3' },
     ],
   },
   {
@@ -269,10 +276,10 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         note: 'Stay in profile · arms tight by the ears · ribs in · butt in · chin up',
       },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'right', note: 'Pull one leg to passé · hold 3' },
-      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'right', note: 'Fall to lunge · heel UP · hold 3' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'right', note: 'Fall to lunge · then open shoulders and count 3' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'right', note: 'Lever hold 3' },
       { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
-      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'right', note: 'Finish here · heel FLAT · open shoulders · then clean' },
+      { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'right', note: 'Finish here · then open shoulders and count 3' },
     ],
   },
   {
@@ -290,10 +297,10 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         note: 'Stay in profile · arms tight by the ears · ribs in · butt in · chin up',
       },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'left', note: 'Pull one leg to passé · hold 3' },
-      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'left', note: 'Fall to lunge · heel UP · hold 3' },
+      { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'left', note: 'Fall to lunge · then open shoulders and count 3' },
       { shapeId: 'lever', ...SEQ_HOLD, stance: 'left', note: 'Lever hold 3' },
       { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
-      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'left', note: 'Finish here · heel FLAT · open shoulders · then clean' },
+      { shapeId: 'lunge_land', ...LUNGE_WINDOW, stance: 'left', note: 'Finish here · then open shoulders and count 3' },
     ],
   },
   {
@@ -343,7 +350,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         speakCorrections: true,
         note: 'Pass through — hit lever and continue to landing lunge unless you can hold',
       },
-      { shapeId: 'lunge_land', ...SEQ_HOLD },
+      { shapeId: 'lunge_land', ...LUNGE_WINDOW },
     ],
   },
 ]

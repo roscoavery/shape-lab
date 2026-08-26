@@ -5,6 +5,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
+import { isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
 
 type Props = {
@@ -49,6 +50,7 @@ function edgeTint(
   let hit = false
   for (const c of shape.criteria) {
     if (c.id.startsWith('_')) continue
+    if (isShoulderCriterionId(c.id) && isSoftShoulderShape(shape.id)) continue
     const pts = criterionLandmarks(c, shape.criteria)
     if (!pts.includes(a) && !pts.includes(b)) continue
     const row = score.criteria.find((r) => r.id === c.id)

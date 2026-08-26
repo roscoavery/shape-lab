@@ -65,30 +65,37 @@ function isArmJointAngle(c: CriterionDef): boolean {
   return c.kind === 'joint_angle' && vertex !== undefined && ARM_VERTICES.has(vertex)
 }
 
-/** Open shoulders are graded, not required — starting/landing lunge and lever. */
-const SOFT_SHOULDER_SHAPES = new Set(['lunge_start', 'lunge_land', 'lever'])
+/** Open shoulders are graded, not required — any lunge plus lever. */
+export function isSoftShoulderShape(shapeId: string): boolean {
+  return shapeId === 'lever' || shapeId.includes('lunge')
+}
 
-/** Legs + back-foot → shoulders line: 85% required to move on. */
-const LEG_LINE_IDS = new Set([
+/** Starting / landing lunge: find the lunge, then a 3s open-shoulder snapshot window. */
+export function isLungeShoulderWindow(shapeId: string): boolean {
+  return shapeId === 'lunge_start' || shapeId === 'lunge_land'
+}
+
+export function isShoulderCriterionId(id: string): boolean {
+  return id === 'shoulders' || id === 'shoulders_open'
+}
+
+/** Legs / stance that must be 85% to move on. Not open-shoulder angle, not the arm line. */
+const LUNGE_LEG_IDS = new Set([
   'front_knee',
   'back_leg',
   'heel_up',
   'heel_flat',
   'longer_step',
   'closer_step',
-  'line_foot_hands',
-  'line_foot_shoulders',
   'straight_back',
-  'chest_parallel',
 ])
 
-export function isSoftShoulderShape(shapeId: string): boolean {
-  return SOFT_SHOULDER_SHAPES.has(shapeId)
-}
-
-export function isShoulderCriterionId(id: string): boolean {
-  return id === 'shoulders' || id === 'shoulders_open'
-}
+const LEVER_BODY_IDS = new Set([
+  'front_knee',
+  'back_leg',
+  'chest_parallel',
+  'line_foot_hands',
+])
 
 /** Voice uses this once on a hit — not as a “close / almost” loop. */
 export function isOpenShoulderCue(text: string | null | undefined): boolean {
@@ -105,11 +112,11 @@ export function openShoulderScore(
 }
 
 function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: number }): boolean {
-  // Open shoulders never block starting lunge, landing lunge, or lever.
+  // Open-shoulder *angle* never blocks a lunge or lever.
   if (isShoulderCriterionId(r.id) && isSoftShoulderShape(shape.id)) return false
-  if (LEG_LINE_IDS.has(r.id) && isSoftShoulderShape(shape.id)) {
-    return r.score < 85
-  }
+  if (r.id === 'elbows' && isSoftShoulderShape(shape.id)) return false
+  if (shape.id === 'lever' && LEVER_BODY_IDS.has(r.id)) return r.score < 85
+  if (shape.id.includes('lunge') && LUNGE_LEG_IDS.has(r.id)) return r.score < 85
   if (r.weight < 10) return false
   return r.score < 65
 }
@@ -418,8 +425,9 @@ function scoreOnce(
   const linePieces = important.filter((r) => !isShoulderCriterionId(r.id))
   const strongLine = linePieces.filter((r) => r.score >= 85)
   const holdReady =
-    overall >= threshold &&
-    keyMisses.length === 0 &&
+    (isSoftShoulderShape(shape.id)
+      ? keyMisses.length === 0
+      : overall >= threshold && keyMisses.length === 0) &&
     !(shape.cameraView === 'front' && detected === 'side')
   // “Close” is for a leftover leg/line piece, never for open shoulders.
   const nearHit =

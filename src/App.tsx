@@ -375,6 +375,7 @@ export default function App() {
               qualityThreshold={qualityThreshold}
               mainCorrection={score.mainCorrection}
               score={score}
+              scoredShapeId={shape.id}
               onRequestShape={onJumpToShape}
               referencePhotos={referencePhotos}
               onReferencesChange={setReferencePhotos}

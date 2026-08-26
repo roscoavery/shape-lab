@@ -40,7 +40,7 @@ import {
   saveTaskProgress,
 } from '../lib/storage'
 import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
-import { isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
+import { isLungeShoulderWindow, isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
 import type {
   AthleteTaskProgress,
   ReferencePhoto,
@@ -57,6 +57,8 @@ type Props = {
   qualityThreshold: number
   mainCorrection: string | null
   score: ScoreResult
+  /** Shape the camera is actually scoring right now (must match the step). */
+  scoredShapeId: string
   /** Ask parent to switch camera scoring to this shape (+ optional stance) */
   onRequestShape: (
     shapeId: string,
@@ -85,6 +87,7 @@ export function TaskTrainer({
   overallScore,
   mainCorrection,
   score,
+  scoredShapeId,
   onRequestShape,
   referencePhotos,
   onReferencesChange,
@@ -116,6 +119,7 @@ export function TaskTrainer({
   const sessionRef = useRef(false)
   const skipIntroRef = useRef(false)
   const hadHitThisStepRef = useRef(false)
+  const bestShoulderRef = useRef(-1)
   const samplesRef = useRef<LiveStepSample[]>([])
   const spokenBeatsRef = useRef<Set<number>>(new Set())
   const tryCountRef = useRef(0)
@@ -396,6 +400,7 @@ export function TaskTrainer({
     readyAccumRef.current = 0
     hitAtRef.current = null
     hadHitThisStepRef.current = false
+    bestShoulderRef.current = -1
     spokenBeatsRef.current = new Set()
     tryCountRef.current = 0
     tryAccumRef.current = 0
@@ -450,11 +455,10 @@ export function TaskTrainer({
       return
     }
 
-    if (stepShape.id) {
-      onRequestShape(step.shapeId, step.stance ?? 'auto', {
-        profileOk: Boolean(step.profileOk),
-      })
-    }
+    onRequestShape(step.shapeId, step.stance ?? 'auto', {
+      profileOk: Boolean(step.profileOk),
+    })
+    advancingRef.current = false
     const guide = getStepGuide(task.id, step.shapeId)
     const scripted = Boolean(guide)
     const gradeOnly = Boolean(step.gradeOnly)
@@ -465,7 +469,15 @@ export function TaskTrainer({
     const noteBest = (result: ScoreResult) => {
       const slot = samplesRef.current[stepIndex]
       if (!slot) return
-      if (!slot.best || result.overall > slot.best.overall) {
+      if (isLungeShoulderWindow(stepShape.id)) {
+        const cur = openShoulderScore(result)
+        const prev = slot.best ? openShoulderScore(slot.best) : null
+        if (result.holdReady && cur && (!prev || cur.score >= prev.score)) {
+          slot.best = result
+        } else if (!slot.best && result.holdReady) {
+          slot.best = result
+        }
+      } else if (!slot.best || result.overall > slot.best.overall) {
         slot.best = result
       }
       if (result.holdReady) slot.qualityHit = true
@@ -496,7 +508,8 @@ export function TaskTrainer({
           .join(' ')
         setBanner(line)
         setLiveKind('gotit')
-        speakEvent(line)
+        speakEvent(line, true)
+        setStepIndex((i) => i + 1)
       } else if (isLast) {
         finishTask(outro)
       }
@@ -524,10 +537,6 @@ export function TaskTrainer({
         }
         hitAtRef.current = null
         inQualityRef.current = false
-        advancingRef.current = false
-        if (!isLast) {
-          setStepIndex((i) => i + 1)
-        }
       })()
     }
 
@@ -540,16 +549,16 @@ export function TaskTrainer({
       }
       if (lastRef.current != null) {
         const dt = (now - lastRef.current) / 1000
-        noteBest(scoreRef.current)
-        if (scoreRef.current.holdReady) {
+        const scoringThisStep = scoredShapeId === step.shapeId
+        const shoulderWindow = isLungeShoulderWindow(stepShape.id)
+        if (scoringThisStep) noteBest(scoreRef.current)
+        if (scoringThisStep && scoreRef.current.holdReady) {
           readyAccumRef.current += dt
-        } else {
+        } else if (!(shoulderWindow && inQualityRef.current)) {
           readyAccumRef.current = 0
         }
-        // Must actually hold the shape — a 1-frame spike while walking
-        // past the camera must not snapshot or say "got it".
-        const inQ = readyAccumRef.current >= 0.2
-        const close = !inQ && Boolean(scoreRef.current.nearHit)
+        const inQ = scoringThisStep && readyAccumRef.current >= 0.2
+        const close = !inQ && Boolean(scoreRef.current.nearHit) && scoringThisStep
 
         if (gradeOnly) {
           tryAccumRef.current += dt
@@ -585,6 +594,23 @@ export function TaskTrainer({
             setLiveKind('looking')
             speakEvent(again)
           }
+        } else if (shoulderWindow && inQualityRef.current) {
+          holdAccumRef.current += dt
+          setStepProgress(holdAccumRef.current)
+          if (scoringThisStep && scoreRef.current.holdReady) {
+            const sh = openShoulderScore(scoreRef.current)
+            if (sh && sh.score > bestShoulderRef.current) {
+              bestShoulderRef.current = sh.score
+              saveHitSnapshot()
+            }
+          }
+          setBanner(
+            `Open as far as you can — count 3. ${Math.max(0, 3 - holdAccumRef.current).toFixed(1)}s`,
+          )
+          if (holdAccumRef.current >= 3) {
+            completeStep()
+            return
+          }
         } else if (inQ) {
           if (!inQualityRef.current) {
             inQualityRef.current = true
@@ -593,18 +619,22 @@ export function TaskTrainer({
             hadHitThisStepRef.current = true
             saveHitSnapshot()
             setLiveKind('holding')
-            const sh = openShoulderScore(scoreRef.current)
-            const shoulderCue =
-              isSoftShoulderShape(stepShape.id) && sh && sh.score < 85
-                ? ' Open your shoulders — arms by your ears.'
-                : ''
-            const hitLine = `Yes, that's a ${stepShape.name}.${shoulderCue}`
-            setBanner(shoulderCue ? `HOLDING — that's a ${stepShape.name}. Open your shoulders.` : `HOLDING — that's a ${stepShape.name}`)
-            speakEvent(hitLine)
+            if (shoulderWindow) {
+              const sh = openShoulderScore(scoreRef.current)
+              bestShoulderRef.current = sh?.score ?? 0
+              const line =
+                "That's the lunge. Open your shoulders as far as you can. Count 3 in your head."
+              setBanner(line)
+              speakEvent(line, true)
+            } else {
+              setBanner(`HOLDING — that's a ${stepShape.name}`)
+              speakEvent('Hold it.')
+            }
           }
           holdAccumRef.current += dt
           setStepProgress(holdAccumRef.current)
           if (
+            !shoulderWindow &&
             !scripted &&
             step.speakCorrections !== false &&
             mainCorrection &&
@@ -613,7 +643,7 @@ export function TaskTrainer({
           ) {
             speakCue(mainCorrection)
           }
-          if (guide?.beats) {
+          if (!shoulderWindow && guide?.beats) {
             const remaining = stepHold - holdAccumRef.current
             for (const beat of guide.beats) {
               if (
@@ -626,7 +656,7 @@ export function TaskTrainer({
               }
             }
           }
-          if (holdAccumRef.current >= stepHold) {
+          if (!shoulderWindow && holdAccumRef.current >= stepHold) {
             completeStep()
             return
           }
@@ -681,6 +711,7 @@ export function TaskTrainer({
     speakEvent,
     saveHitSnapshot,
     mainCorrection,
+    scoredShapeId,
   ])
 
   const onUploadSharedRef = async (file: File | null) => {
