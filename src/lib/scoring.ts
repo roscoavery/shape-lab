@@ -12,11 +12,12 @@
  *
  * View independence:
  * - Joint angles grade from any facing.
- * - Missing landmarks score 0 (they do not get dropped). A person standing
- *   beside the camera cannot pass by skipping arms/legs that are out of frame.
- * - Side / sequence-profile shapes: if left and right disagree a lot, trust
- *   the better side (the far side is noisy). Do not invent a pass.
- * - A quality hold also needs a full body in frame, not a cropped snapshot.
+ * - Missing landmarks score 0 (they do not get dropped), so a cropped body
+ *   cannot pass by skipping arms and legs.
+ * - Side / sequence-profile: if left and right disagree a lot, trust the
+ *   clearer side. Do not invent a pass.
+ * - Quality hold is the overall score vs the shape threshold — same as the
+ *   live cue. Cues come from the written criterion, never a coverage slogan.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
  */
@@ -27,7 +28,6 @@ import {
   pointDistance,
   segmentAngleFromHorizontal,
   segmentAngleFromVertical,
-  VISIBILITY_MIN,
 } from './angles'
 import { LM } from './landmarks'
 import {
@@ -185,44 +185,6 @@ function emptyResult(shape: ShapeDef, message: string): ScoreResult {
   }
 }
 
-const COVERAGE_POINTS = [
-  LM.NOSE,
-  LM.LEFT_SHOULDER,
-  LM.RIGHT_SHOULDER,
-  LM.LEFT_HIP,
-  LM.RIGHT_HIP,
-  LM.LEFT_ANKLE,
-  LM.RIGHT_ANKLE,
-  LM.LEFT_WRIST,
-  LM.RIGHT_WRIST,
-] as const
-
-function isUprightShape(shape: ShapeDef): boolean {
-  const id = shape.id
-  return (
-    !id.includes('hollow') &&
-    !id.includes('candle') &&
-    !id.includes('superman') &&
-    !id.includes('plank')
-  )
-}
-
-function poseCoverage(landmarks: Landmark[]): { visible: number; height: number } {
-  let visible = 0
-  let minY = 1
-  let maxY = 0
-  let nY = 0
-  for (const i of COVERAGE_POINTS) {
-    const p = landmarks[i]
-    if (!p || (p.visibility ?? 1) < VISIBILITY_MIN) continue
-    visible += 1
-    minY = Math.min(minY, p.y)
-    maxY = Math.max(maxY, p.y)
-    nY += 1
-  }
-  return { visible, height: nY >= 4 ? maxY - minY : 0 }
-}
-
 function scoreOnce(
   landmarks: Landmark[],
   shape: ShapeDef,
@@ -273,7 +235,7 @@ function scoreOnce(
       const subScores = ids.map((id) => atomicScores[id] ?? 0)
       if (presentIds.length === 0) {
         score = 0
-        feedback = 'Need the full body in the frame'
+        feedback = c.feedbackLow ?? c.feedback ?? 'Straighten and show both legs.'
       } else if (presentIds.length === 1 && allowOccludedSide) {
         score = subScores[0] ?? 0
       } else if (allowOccludedSide && subScores.length >= 2) {
@@ -302,7 +264,7 @@ function scoreOnce(
       }
     } else if (measured === null) {
       score = 0
-      feedback = 'Need the full body in the frame'
+      feedback = c.feedbackLow ?? c.feedbackHigh ?? c.feedback ?? null
     } else {
       const { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
       score = s
@@ -353,27 +315,12 @@ function scoreOnce(
       ? 'Match the body-position description'
       : 'Adjust body line to raise score'
   }
-
-  const coverage = poseCoverage(landmarks)
-  const upright = isUprightShape(shape)
-  const inFrame =
-    coverage.visible >= (upright ? 6 : 4) && (!upright || coverage.height >= 0.4)
-
-  const important = results.filter((r) => r.weight >= 10)
-  const worstImportant =
-    important.length > 0 ? Math.min(...important.map((r) => r.score)) : overall
+  if (overall >= 95) {
+    mainCorrection = 'Excellent shape — hold it!'
+  }
 
   const holdReady =
-    inFrame &&
-    overall >= threshold &&
-    worstImportant >= 62 &&
-    !(shape.cameraView === 'front' && detected === 'side')
-
-  if (holdReady) {
-    mainCorrection = 'Excellent shape — hold it!'
-  } else if (!inFrame) {
-    mainCorrection = 'Step fully into the frame — head to feet, not beside the screen.'
-  }
+    overall >= threshold && !(shape.cameraView === 'front' && detected === 'side')
 
   return {
     overall,

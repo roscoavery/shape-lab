@@ -552,7 +552,7 @@ export function TaskTrainer({
         }
         // Must actually hold the shape — a 1-frame spike while walking
         // past the camera must not snapshot or say "got it".
-        const inQ = readyAccumRef.current >= 0.45
+        const inQ = readyAccumRef.current >= 0.2
         const close = !inQ && overallScore >= closeFloor
 
         if (gradeOnly) {
