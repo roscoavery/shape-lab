@@ -14,8 +14,9 @@ export function ComparePanel() {
         <strong className="text-[var(--text)]">About Instagram:</strong> Instagram
         offers no free public API to log in and read your saved collections (the
         Basic Display API was shut down, and scraping violates their terms). You
-        can paste a post/reel link to view it here via Instagram's public embed —
-        but embeds can't be scrubbed or slow-mo'd.{' '}
+        can paste post/reel links to view them here. Play again / Loop restarts
+        the embed in this tab so Instagram cannot yank you out to replay. Embeds
+        still can't be scrubbed or slow-mo'd.{' '}
         <strong className="text-[var(--accent)]">
           Recommended: screen-record or download your own IG videos and upload
           the file

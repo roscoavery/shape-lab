@@ -117,7 +117,7 @@ Side-by-side technique study: a **reference video** (the technique to copy) next
 
 Instagram does **not** offer a free public API to log in and read your saved collections — the Basic Display API was shut down, oEmbed requires app review, and scraping violates their Terms of Service. So Compare implements the closest free, legal workflow:
 
-1. **Paste an Instagram post/reel URL** — shown via Instagram's public embed. View-only: embeds can't be frame-scrubbed, slow-mo'd, or reliably auto-looped, and private posts won't render.
+1. **Paste Instagram post/reel URL(s)** — shown via Instagram's public embed. **Play again** and **Loop in this app** restart the embed in Compare so you are not sent out to Instagram to watch a second time. Still no frame-scrub or slow-mo. Private posts and some copyrighted-audio reels will not play outside Instagram.
 2. **Upload a video file** (mp4/mov/webm) or **paste a direct video URL** — full control: loop, frame-by-frame scrub, 0.25x/0.5x/1x speed, A/B loop region. **Recommended:** screen-record or download your own IG videos and upload them here.
 3. Organize references into named **collections** (stored locally in IndexedDB).
 

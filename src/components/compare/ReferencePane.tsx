@@ -131,36 +131,44 @@ export function ReferencePane() {
 
   const addUrl = async () => {
     if (!activeCollection) return
-    const url = urlInput.trim()
-    if (!/^https?:\/\//i.test(url)) {
-      setError('Paste a full URL starting with http(s)://')
+    const urls = urlInput
+      .split(/[\s,]+/)
+      .map((u) => u.trim())
+      .filter(Boolean)
+    if (urls.length === 0) return
+    const bad = urls.find((u) => !/^https?:\/\//i.test(u))
+    if (bad) {
+      setError('Paste full URL(s) starting with http(s):// — one or several IG links is fine.')
       return
     }
     setError(null)
-    const instagram = isInstagramUrl(url)
-    const name = instagram
-      ? `IG ${parseInstagramUrl(url)?.code ?? 'post'}`
-      : (() => {
-          try {
-            const path = new URL(url).pathname.split('/').filter(Boolean)
-            return path[path.length - 1] || url
-          } catch {
-            return url
-          }
-        })()
-    const item: RefItem = {
-      id: createId('ref'),
-      kind: instagram ? 'instagram' : 'url',
-      name,
-      url,
-      createdAt: new Date().toISOString(),
-    }
+    const items: RefItem[] = urls.map((url) => {
+      const instagram = isInstagramUrl(url)
+      const name = instagram
+        ? `IG ${parseInstagramUrl(url)?.code ?? 'post'}`
+        : (() => {
+            try {
+              const path = new URL(url).pathname.split('/').filter(Boolean)
+              return path[path.length - 1] || url
+            } catch {
+              return url
+            }
+          })()
+      return {
+        id: createId('ref'),
+        kind: instagram ? 'instagram' : 'url',
+        name,
+        url,
+        createdAt: new Date().toISOString(),
+      }
+    })
     await updateCollection({
       ...activeCollection,
-      items: [item, ...activeCollection.items],
+      items: [...items, ...activeCollection.items],
     })
     setUrlInput('')
-    await selectItem(item)
+    const first = items[0]
+    if (first) await selectItem(first)
   }
 
   const addFile = async (file: File) => {
@@ -257,7 +265,7 @@ export function ReferencePane() {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
-          placeholder="Instagram post/reel URL or direct video URL"
+          placeholder="Instagram post/reel URL(s) or a direct video URL"
           className={`${inputCls} min-w-0 flex-1`}
         />
         <button type="button" onClick={() => void addUrl()} className={btnCls}>
@@ -283,8 +291,9 @@ export function ReferencePane() {
         />
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
-        Best experience: upload a video file (mp4/mov/webm) — full loop, scrub,
-        slow-mo, A/B region. Instagram links show as view-only embeds.
+        Paste one Instagram link or a list (spaces or new lines). IG clips replay
+        in this tab (Play again / Loop) so you do not have to jump out to
+        Instagram. Upload a file for scrub, slow-mo, and A/B loop.
       </p>
 
       {error && (
