@@ -741,6 +741,14 @@ export function TaskTrainer({
                 <p className="text-sm leading-snug">{stepShape.bodyPosition}</p>
               </div>
             )}
+            {stepShape.coachNotes && (
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  How we use this
+                </p>
+                <p className="text-sm leading-snug">{stepShape.coachNotes}</p>
+              </div>
+            )}
             <ViewCallout shape={stepShape} score={score} />
             {step?.stance && (
               <p className="text-xs text-[var(--accent)]">

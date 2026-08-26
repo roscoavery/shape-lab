@@ -54,14 +54,15 @@ You do **not** need to film from the same angle as a reference photo. Joint angl
 
 The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge → lever → HS → lunge sequences are **required on both sides**. Before those, athletes complete an **arm positions lesson** (low V back, front middle, open shoulders, T, high V chest out) and **lunge holds** in those same arm positions.
 
-Optional default images (if you drop files into the repo):
+Shipped coach stills live in `public/references/`. Included so far:
 
 ```text
-public/references/feet_together_open_shoulders.jpg
-public/references/lunge_start.jpg
-public/references/lever.jpg
-public/references/lunge_land.jpg
+public/references/c_shape.jpg   — tumbling C (back handspring / round-off connection)
+public/references/passe.png     — passé with FTOS arms
 ```
+
+Other pathway stills can be dropped here (see `public/references/README.md`) or
+uploaded in **Learn → Glossary**.
 
 Curriculum order is edited in `src/config/curriculum.ts`.
 

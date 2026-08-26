@@ -256,12 +256,17 @@ function PracticeGrid({
             </button>
             {open && (
               <div className="mt-3 border-t border-[var(--panel-border)] pt-3">
-                {ref?.notes && (
+                {getShape(s.shapeId)?.coachNotes && (
+                  <p className="mb-2 whitespace-pre-wrap text-sm">
+                    {getShape(s.shapeId)!.coachNotes}
+                  </p>
+                )}
+                {ref?.notes && ref.notes !== getShape(s.shapeId)?.coachNotes && (
                   <p className="mb-2 whitespace-pre-wrap text-sm">{ref.notes}</p>
                 )}
                 <UploadFields
                   key={s.shapeId}
-                  existingNotes={ref?.notes ?? ''}
+                  existingNotes={ref?.notes && ref.notes !== getShape(s.shapeId)?.coachNotes ? ref.notes : ''}
                   replace={have}
                   onSave={(file, notes) => onUpload(s.shapeId, file, notes)}
                 />

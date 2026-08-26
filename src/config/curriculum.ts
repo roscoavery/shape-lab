@@ -226,15 +226,16 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   {
     id: 'task_c_shape',
     name: '14. C shape',
-    description: 'Learn a clean C shape after both-side FTOS–HS pathways are solid.',
+    description:
+      'Tumbling C: squat, hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring and to teach the round-off back handspring. Same C idea as mountain climber. You can pull a passé from here before a cartwheel or round-off. Back extension rolls often start from this shape.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'c_shape', ...HOLD }],
+    steps: [{ shapeId: 'c_shape', ...HOLD, note: 'SIDE VIEW · squat C, not a standing side-bend' }],
   },
   {
     id: 'task_mountain_climber',
     name: '15. Mountain climber',
-    description: 'Smaller step than a lunge. Upper body in a C shape. Back leg bends.',
+    description: 'Smaller step than a lunge. Upper body in the tumbling C. Back leg bends.',
     requiresTaskId: 'task_c_shape',
     masterAfterCompletions: 2,
     steps: [{ shapeId: 'mountain_climber', ...HOLD, note: 'SIDE VIEW · back knee bends' }],

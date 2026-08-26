@@ -331,7 +331,11 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
   lunge_start: '/references/lunge_start.jpg',
   lever: '/references/lever.jpg',
   lunge_land: '/references/lunge_land.jpg',
+  c_shape: '/references/c_shape.jpg',
 }
+
+/** Files that actually ship in public/references/ (not just hoped-for names). */
+export const SHIPPED_REFERENCE_IDS = new Set(['c_shape', 'passe'])
 
 export function loadReferencePhotos(): ReferencePhoto[] {
   return readJson<ReferencePhoto[]>(REFS_KEY, [])
@@ -356,8 +360,8 @@ export async function deleteReferencePhoto(id: string): Promise<void> {
 }
 
 /**
- * Prefer athlete-specific upload → shared coach upload → default public path.
- * Returns a ReferencePhoto-like object (synthetic id for defaults).
+ * Prefer athlete-specific upload → shared coach upload → shipped public file.
+ * Default paths that are not in SHIPPED_REFERENCE_IDS are ignored (hoped-for names).
  */
 export function pickReferencePhoto(
   photos: ReferencePhoto[],
@@ -375,13 +379,13 @@ export function pickReferencePhoto(
   if (shared) return shared
 
   const defaultPath = DEFAULT_REFERENCE_PATHS[shapeId]
-  if (defaultPath) {
+  if (defaultPath && SHIPPED_REFERENCE_IDS.has(shapeId)) {
     return {
       id: `default_${shapeId}`,
       shapeId,
       athleteId: null,
       dataUrl: defaultPath,
-      label: 'Default reference',
+      label: 'Coach reference',
       createdAt: '',
     }
   }

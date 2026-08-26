@@ -949,22 +949,22 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // MOUNTAIN CLIMBER — smaller step, upper-body C, back leg BENDS (task 11)
+  // MOUNTAIN CLIMBER — smaller step, tumbling-C upper body, back leg BENDS (task 15)
   // ===========================================================================
   {
     id: 'mountain_climber',
     name: 'Mountain climber',
     description:
-      'Smaller step than a lunge. Upper body in a C shape. Back leg bends (not straight).',
+      'Smaller step than a lunge. Upper body in the tumbling C. Back leg bends (not straight).',
     bodyPosition:
-      'Shorter step than a lunge. Front knee bent. Back knee BENDS (unlike the lunge). Upper body curves into a C. Either leg forward.',
+      'Shorter step than a lunge. Front knee bent. Back knee BENDS (unlike the lunge). Upper body uses the same tumbling C: hips under, chest hollow, rounded back. Either leg forward.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'Shorter stance than the lunges.',
-      'Curve the upper body into a C.',
+      'Same C as the tumbling C: hips under, hollow chest, rounded back.',
       'Bend the back knee — do not lock it straight.',
     ],
     criteria: [
@@ -1946,49 +1946,67 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // C SHAPE
+  // C SHAPE — tumbling C (back handspring / roundoff / mountain climber)
+  // SIDE view: squat, hollow chest, hips under, arms reaching forward.
   // ===========================================================================
   {
     id: 'c_shape',
     name: 'C shape',
-    description: 'Standing artistic C-curve: long side bend with arms framing the head.',
+    description:
+      'Tumbling C: squat with a hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring.',
+    bodyPosition:
+      'SIDE VIEW. Feet together (or close), flat on the floor. Knees bent in a partial squat. Hips tucked under. Chest hollow, shoulders rounded forward so the back makes a clear C from shoulders to tailbone. Arms reach straight forward and slightly up, elbows locked. Wrists can flex so palms face away. Head follows the curve — look toward the hands. This is not a standing side-bend.',
     category: 'static',
-    qualityThreshold: 55,
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'SIDE VIEW — stand in profile so the C is obvious.',
+      'Hips under, chest hollow — round the back, do not arch.',
+      'Arms reach forward (not by the ears). Elbows straight.',
+      'This C is a piece of mountain climber.',
+    ],
+    coachNotes:
+      'C shape is used for connecting into a back handspring. Commonly used when teaching round-off back handspring connection. It is another fundamental piece of the mountain climber shape. We may pull a passé from the C shape before going into a cartwheel or a round-off. I commonly teach back extension rolls starting from this shape.',
     criteria: [
       {
-        id: 'side_curve',
-        label: 'Side curve',
-        kind: 'joint_angle',
-        points: [LM.LEFT_SHOULDER, LM.LEFT_HIP, LM.LEFT_KNEE],
-        targetMin: 140,
-        targetMax: 170,
-        tolerance: 15,
-        falloff: 45,
-        weight: 35,
-        feedbackLow: 'Create a clearer C-curve through the side.',
-        feedbackHigh: 'Soften the curve slightly.',
-      },
-      {
-        id: 'arms_frame',
-        label: 'Arms framing head',
-        kind: 'joint_angle',
-        points: L_SHOULDER,
-        targetMin: 130,
-        targetMax: 180,
-        tolerance: 15,
-        weight: 30,
-        feedbackLow: 'Reach arms longer by the ear.',
-      },
-      {
-        id: 'stance_leg',
-        label: 'Stance leg',
+        id: 'knees_bent',
+        label: 'Knees bent (squat)',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 155,
-        targetMax: 180,
-        tolerance: 10,
-        weight: 20,
-        feedbackLow: 'Straighten the standing leg.',
+        targetMin: 85,
+        targetMax: 130,
+        tolerance: 12,
+        falloff: 40,
+        weight: 24,
+        feedbackLow: 'Bend the knees — this C sits in a squat, not standing tall.',
+        feedbackHigh: 'Come up a little — keep a squat, not a sit.',
+      },
+      {
+        id: 'hollow_c',
+        label: 'Hollow C (hips under)',
+        kind: 'joint_angle',
+        points: [LM.LEFT_SHOULDER, LM.LEFT_HIP, LM.LEFT_KNEE],
+        targetMin: 70,
+        targetMax: 130,
+        tolerance: 12,
+        falloff: 40,
+        weight: 28,
+        feedbackLow: 'Tuck the hips under and hollow the chest — make a C.',
+        feedbackHigh: 'Keep the C — hips under, chest hollow.',
+      },
+      {
+        id: 'arms_forward',
+        label: 'Arms reaching forward',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        targetMin: 10,
+        targetMax: 50,
+        tolerance: 12,
+        falloff: 40,
+        weight: 24,
+        needsView: 'side',
+        feedbackLow: 'Lift the arms slightly — reach forward, not down.',
+        feedbackHigh: 'Reach forward, not up by the ears.',
       },
       {
         id: 'elbows',
@@ -1998,8 +2016,19 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 150,
         targetMax: 180,
         tolerance: 12,
-        weight: 15,
+        weight: 14,
         feedbackLow: 'Straighten elbows.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Feet close',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0.06,
+        tolerance: 0.06,
+        falloff: 0.12,
+        weight: 10,
+        feedbackHigh: 'Keep the feet closer together.',
       },
     ],
   },

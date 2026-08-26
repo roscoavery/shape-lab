@@ -6,6 +6,7 @@
 import { CURRICULUM_TASKS } from '../config/curriculum'
 import { SHAPES, getShape } from '../config/shapes'
 import { curriculumShapeIds } from './educationCopy'
+import { DEFAULT_REFERENCE_PATHS, SHIPPED_REFERENCE_IDS } from './storage'
 import type { ReferencePhoto, ShapeDef } from '../types'
 
 /** Homework drills that are practiced on camera but not on the task pathway. */
@@ -45,7 +46,8 @@ const SHOTS: Record<string, string> = {
   lever: 'SIDE. Chest parallel, open shoulders, one line back foot → hands (T-scale).',
   handstand: 'SIDE or 3/4. Stacked HS — not stomach-to-wall. Tight body line.',
   lunge_land: 'SIDE. Landing lunge: back heel FLAT, closer step, open shoulders.',
-  c_shape: 'FRONT or 3/4. Standing artistic C-curve, arms framing the head.',
+  c_shape:
+    'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
   mountain_climber: 'SIDE. Smaller step than a lunge, C upper body, back knee bent.',
   hollow_arms_down: 'SIDE. Hollow on the floor, arms glued by the sides, low back down.',
   hollow: 'SIDE. Hollow, arms by the ears, low back down.',
@@ -110,13 +112,18 @@ export function builtinExtraShapes(): ShapeDef[] {
  * and not a missing public/ file path.
  */
 export function hasCoachReference(photos: ReferencePhoto[], shapeId: string): boolean {
-  return photos.some(
-    (p) =>
-      p.shapeId === shapeId &&
-      p.athleteId == null &&
-      typeof p.dataUrl === 'string' &&
-      p.dataUrl.startsWith('data:image'),
-  )
+  if (
+    photos.some(
+      (p) =>
+        p.shapeId === shapeId &&
+        p.athleteId == null &&
+        typeof p.dataUrl === 'string' &&
+        p.dataUrl.startsWith('data:image'),
+    )
+  ) {
+    return true
+  }
+  return SHIPPED_REFERENCE_IDS.has(shapeId)
 }
 
 export function missingCoachReferences(photos: ReferencePhoto[]): ShotNeed[] {
@@ -128,5 +135,22 @@ export function pickCoachReference(
   photos: ReferencePhoto[],
   shapeId: string,
 ): ReferencePhoto | null {
-  return photos.find((p) => p.shapeId === shapeId && p.athleteId == null && p.dataUrl) ?? null
+  const uploaded = photos.find(
+    (p) => p.shapeId === shapeId && p.athleteId == null && p.dataUrl?.startsWith('data:image'),
+  )
+  if (uploaded) return uploaded
+  const path = DEFAULT_REFERENCE_PATHS[shapeId]
+  if (path && SHIPPED_REFERENCE_IDS.has(shapeId)) {
+    const shape = getShape(shapeId)
+    return {
+      id: `default_${shapeId}`,
+      shapeId,
+      athleteId: null,
+      dataUrl: path,
+      label: 'Coach reference',
+      notes: shape?.coachNotes,
+      createdAt: '',
+    }
+  }
+  return null
 }

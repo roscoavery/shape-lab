@@ -39,7 +39,7 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'mc_cartwheel_lever_lunge',
     name: 'Mountain Climber → Cartwheel → Lever → Lunge',
     description:
-      'Placeholder path — Cartwheel grading lands in a later version; for now the middle step uses C shape as a stand-in cue.',
+      'Cartwheel is not scored yet. The middle hold is the tumbling C — the same connection used into a back handspring and round-off back handspring.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'c_shape', holdSeconds: 1.2 },
@@ -49,9 +49,9 @@ export const SEQUENCES: SequenceDef[] = [
   },
   {
     id: 'c_passe_cartwheel_zombie',
-    name: 'C Shape → Passé → Cartwheel → Zombie',
+    name: 'C Shape → Passé → Cartwheel cue',
     description:
-      'Artistic pathway. Cartwheel is represented by C shape until dynamic skill grading ships.',
+      'Pull a passé from the tumbling C before a cartwheel or round-off. Cartwheel is not scored yet; the second C is the connection cue. Zombie is a related arms-forward hold.',
     steps: [
       { shapeId: 'c_shape', holdSeconds: 1.5 },
       { shapeId: 'passe', holdSeconds: 1.5 },

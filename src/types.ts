@@ -148,6 +148,11 @@ export type ShapeDef = {
   stanceAware?: boolean
   /** Optional coaching tips shown in the UI */
   tips?: string[]
+  /**
+   * Extra teach-notes (when you use this shape, connections, common mistakes).
+   * Shown in Learn / Glossary with the reference photo.
+   */
+  coachNotes?: string
   criteria: CriterionDef[]
 }
 

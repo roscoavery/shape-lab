@@ -561,7 +561,7 @@ function ShapeDetail({
               className="max-h-80 w-full rounded-md object-contain bg-[#0d1218]"
               onError={() => onRefError(ref.id)}
             />
-            {ref.notes && (
+            {ref.notes && ref.notes !== shape.coachNotes && (
               <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{ref.notes}</p>
             )}
           </>
@@ -575,6 +575,17 @@ function ShapeDetail({
           </div>
         )}
       </div>
+
+      {shape.coachNotes && (
+        <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+            How we use this shape
+          </h4>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
+            {shape.coachNotes}
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
