@@ -643,18 +643,19 @@ export const SHAPES: ShapeDef[] = [
   // ===========================================================================
   {
     id: 'lunge_start',
-    name: 'Starting lunge',
+    name: 'Starting lunge with open shoulders',
     description:
-      'Starting lunge: back heel UP, back leg straight, chest tilts so one line runs back foot → hands. Open shoulders, chin up, arms by ears.',
+      'Starting lunge: back heel UP, open shoulders (arms by ears), back leg straight, chest tilts so one line runs back foot → hands. Chin up.',
     bodyPosition:
-      'Fall forward from passé into a lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot. Chest tilts forward until there is one straight diagonal from the back foot through the body to the hands. Shoulders stay open, arms tight by the ears, chin up. You do not have to match the photo’s camera side — left or right foot forward both grade.',
+      'Fall forward from passé into a lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Chest tilts forward until there is one straight diagonal from the back foot through the body to the hands. Shoulders stay fully open, arms tight by the ears, chin up. You do not have to match the photo’s camera side — left or right foot forward both grade.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'SIDE VIEW — stand in profile. Do not face the camera.',
-      'Back heel stays up on the ball of the foot.',
+      'Back heel stays up on the ball of the foot (starting lunge only).',
+      'Open shoulders — arms covering the ears.',
       'Tilt the chest until you see one long line from back foot to hands.',
     ],
     criteria: [
@@ -716,7 +717,7 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 145,
         targetMax: 180,
         tolerance: 10,
-        weight: 16,
+        weight: 20,
         feedbackLow: 'Open shoulders — arms by ears.',
       },
       {
@@ -2399,18 +2400,19 @@ export const SHAPES: ShapeDef[] = [
     ],
   },
 
-  // Lunge holds that reuse starting-lunge legs + each arm position
+  // Lunge holds that reuse lunge legs + each arm position.
+  // Back foot may be FLAT — heel up is only required on the starting lunge.
   {
     id: 'lunge_arms_low_v',
     name: 'Lunge · low V arms',
-    description: 'Starting-lunge legs with low V arms back.',
+    description: 'Lunge legs with low V arms back. Back foot may be flat.',
     bodyPosition:
-      'Lunge: front knee bent, back leg straight, heel UP. Arms in a low V slightly back. Side view.',
+      'Lunge: front knee bent, back leg straight. The back foot may stay FLAT (heel up is only for the starting lunge). Arms in a low V slightly back. Side view.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Side view. Back heel up. Arms low V, not overhead.'],
+    tips: ['Side view. Back foot can be flat. Arms low V, not overhead.'],
     criteria: [
       {
         id: 'front_knee',
@@ -2463,14 +2465,14 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_front',
     name: 'Lunge · arms front middle',
-    description: 'Starting-lunge legs with arms reaching forward at middle height.',
+    description: 'Lunge legs with arms reaching forward at middle height. Back foot may be flat.',
     bodyPosition:
-      'Lunge legs (heel up, back leg straight). Arms reach forward at chest height, elbows straight.',
+      'Lunge legs (back leg straight; back foot may be flat). Arms reach forward at chest height, elbows straight.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Side view. Arms forward, not up.'],
+    tips: ['Side view. Back foot can be flat. Arms forward, not up.'],
     criteria: [
       {
         id: 'front_knee',
@@ -2523,14 +2525,14 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_open',
     name: 'Lunge · open shoulders',
-    description: 'Starting-lunge legs with FTOS arms (by the ears).',
+    description: 'Lunge legs with FTOS arms (by the ears). Back foot may be flat.',
     bodyPosition:
-      'Same lunge as the starting lunge: heel up, back leg straight, line toward the hands, arms covering the ears.',
+      'Lunge: front knee bent, back leg straight, back foot may be FLAT. Arms covering the ears, shoulders open. Heel up is only for the starting lunge.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['This is the same arm line as the starting lunge / FTOS.'],
+    tips: ['Open-shoulder arms on a lunge. Back foot can be flat — unlike the starting lunge.'],
     criteria: [
       {
         id: 'front_knee',
@@ -2594,14 +2596,14 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_t',
     name: 'Lunge · T arms',
-    description: 'Lunge legs with arms in a T. Face the camera so both arms show.',
+    description: 'Lunge legs with arms in a T. Face the camera so both arms show. Back foot may be flat.',
     bodyPosition:
-      'Lunge (heel up, back leg straight) with arms straight out to the sides at shoulder height. Face the camera.',
+      'Lunge (back leg straight; back foot may be flat) with arms straight out to the sides at shoulder height. Face the camera.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'front',
     stanceAware: true,
-    tips: ['FACE THE CAMERA for the T. Back leg still straight.'],
+    tips: ['FACE THE CAMERA for the T. Back foot can be flat. Back leg still straight.'],
     criteria: [
       {
         id: 'front_knee',
@@ -2666,14 +2668,14 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_high_v',
     name: 'Lunge · high V chest out',
-    description: 'Lunge legs with a high V and an open chest.',
+    description: 'Lunge legs with a high V and an open chest. Back foot may be flat.',
     bodyPosition:
-      'Lunge (heel up, back leg straight). Arms in a high V (not covering the ears). Chest open.',
+      'Lunge (back leg straight; back foot may be flat). Arms in a high V (not covering the ears). Chest open.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'any',
     stanceAware: true,
-    tips: ['High V, chest out — not arms by ears yet.'],
+    tips: ['High V, chest out — not arms by ears yet. Back foot can be flat.'],
     criteria: [
       {
         id: 'front_knee',

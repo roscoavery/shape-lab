@@ -106,16 +106,16 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   },
   {
     id: 'task_lunge_start',
-    name: '5. Starting lunge',
+    name: '5. Starting lunge with open shoulders',
     description:
-      'Fall forward from passé into a lunge and hold long enough to fix it. Back heel stays UP. Side view. Either leg forward.',
+      'Fall forward from passé into a lunge with OPEN SHOULDERS (arms by ears). Back heel stays UP — this is the only lunge that requires it. Side view. Either leg forward.',
     requiresTaskId: 'task_passe',
     masterAfterCompletions: 2,
     steps: [
       {
         shapeId: 'lunge_start',
         ...HOLD,
-        note: 'SIDE VIEW · back leg straight · one line foot→hands · heel UP · arms by ears',
+        note: 'SIDE VIEW · heel UP · open shoulders / arms by ears · one line foot→hands',
       },
     ],
   },
@@ -123,15 +123,15 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lunge_arm_holds',
     name: '6. Lunge holds · arm positions',
     description:
-      'Hold a starting lunge while cycling the five arm shapes: low V back, front middle, open shoulders, T, high V chest out.',
+      'Hold a lunge while cycling the five arm shapes: low V back, front middle, open shoulders, T, high V chest out. The back foot may stay FLAT — heel up is only for the starting lunge.',
     requiresTaskId: 'task_lunge_start',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · heel up · low V' },
-      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · arms forward middle' },
-      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · open shoulders / by ears' },
-      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T' },
-      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out' },
+      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · back foot may be flat · low V' },
+      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · back foot may be flat · arms forward middle' },
+      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · back foot may be flat · open shoulders' },
+      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T · back foot may be flat' },
+      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out · back foot may be flat' },
     ],
   },
   {
@@ -174,7 +174,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     masterAfterCompletions: 2,
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Right foot forward · heel flat' },
     ],
@@ -187,7 +187,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     masterAfterCompletions: 2,
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Left foot forward · heel flat' },
     ],
@@ -202,7 +202,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
       { shapeId: 'passe', ...HOLD, stance: 'right', note: 'Right stance leg (left knee up)' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'right' },
       { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'right' },
@@ -217,7 +217,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
       { shapeId: 'passe', ...HOLD, stance: 'left', note: 'Left stance leg (right knee up)' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge' },
+      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'left' },
       { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
       { shapeId: 'lunge_land', ...HOLD, stance: 'left' },
