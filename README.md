@@ -59,6 +59,7 @@ Shipped coach stills live in `public/references/`. Included so far:
 ```text
 public/references/c_shape.jpg     — tumbling C (back handspring / round-off connection)
 public/references/passe.png       — passé with FTOS arms
+public/references/feet_together_open_shoulders.jpg — FTOS (feet glued, hands to the ceiling)
 public/references/lunge_start.jpg — starting lunge (heel up, straight back, open shoulders)
 public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
 ```

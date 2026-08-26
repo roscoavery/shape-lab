@@ -8,12 +8,12 @@ Included:
 
 - `c_shape.jpg` — tumbling C (squat, hollow chest, hips under, arms forward)
 - `passe.png` — passé with FTOS arms
+- `feet_together_open_shoulders.jpg` — FTOS, feet glued, arms to the ceiling
 - `lunge_start.jpg` — starting lunge, back heel UP, straight back, open shoulders
 - `lunge_land.jpg` — landing lunge, back heel FLAT, shorter stance
 
 Still needed (shot list is also in Learn → Glossary → Need photos):
 
-- `feet_together_open_shoulders.jpg` — FTOS, arms to ceiling, feet glued
 - `lever.jpg` — horizontal lever / T-scale
 
 Coaches can also upload photos in Tasks or Learn → Glossary (saved in

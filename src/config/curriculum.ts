@@ -75,10 +75,16 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_ftos',
     name: '2. Feet together, open shoulders',
     description:
-      'Straight knees, open hips, open shoulders, straight elbows, hands reaching to the ceiling.',
+      'Feet together, straight knees, open hips, ribs in, open shoulders, chin up and neutral, straight elbows, hands to the ceiling. Often the start before pulling a passé.',
     requiresTaskId: 'task_stand_clean',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'feet_together_open_shoulders', ...HOLD }],
+    steps: [
+      {
+        shapeId: 'feet_together_open_shoulders',
+        ...HOLD,
+        note: 'FRONT or 3/4 · feet glued · ribs in · hands to the ceiling',
+      },
+    ],
   },
   {
     id: 'task_arm_positions',
@@ -99,7 +105,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_passe',
     name: '4. Passé',
     description:
-      'Keep feet-together open-shoulders lines, then pull one knee up into passé. Either knee.',
+      'Keep the FTOS lines (feet together, open shoulders, ribs in, hands to the ceiling), then pull one knee up into passé. Either knee.',
     requiresTaskId: 'task_arm_positions',
     masterAfterCompletions: 2,
     steps: [{ shapeId: 'passe', ...HOLD }],

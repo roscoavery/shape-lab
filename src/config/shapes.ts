@@ -395,22 +395,26 @@ export const SHAPES: ShapeDef[] = [
 
   // ===========================================================================
   // FEET TOGETHER, OPEN SHOULDERS (task 2)
+  // Front/3/4: stacked stand, then often pull a passé.
   // ===========================================================================
   {
     id: 'feet_together_open_shoulders',
     name: 'Feet together, open shoulders',
     description:
-      'Straight knees and hips, open shoulders, straight elbows, hands reaching to the ceiling.',
+      'Feet together, straight knees, open hips, ribs in, open shoulders, chin up and neutral, straight elbows, hands reaching to the ceiling.',
     bodyPosition:
-      'Feet glued together. Knees straight. Hips open (no pike, no sit). Arms reach straight up to the ceiling, covering the ears, elbows locked, shoulders fully open. Head stays between the arms. This is the same long body you will later take into passé, lunge, lever, and handstand.',
+      'FRONT or 3/4. Feet glued. Knees straight. Hips open. Ribs in (no arch). Shoulders fully open, arms covering the ears, elbows locked, hands reaching to the ceiling. Chin up and neutral — look straight ahead. This is the same long body you take into passé.',
     category: 'static',
     qualityThreshold: 70,
     cameraView: 'any',
     tips: [
-      'Front or 3/4 is easiest to see both arms. Side view still grades knees, hips, and elbows.',
-      'Arms cover the ears.',
-      'Reach fingertips to the ceiling.',
+      'Front or 3/4 is easiest to see both arms.',
+      'Feet together, knees straight, hips open, ribs in.',
+      'Open shoulders, elbows straight, hands to the ceiling.',
+      'Chin up and neutral.',
     ],
+    coachNotes:
+      'We will often start here before pulling a passé. Keep feet together, straight knees, open hips, ribs in, open shoulders, chin up and neutral, straight elbows, and hands reaching toward the ceiling.',
     criteria: [
       {
         id: 'feet_together',
@@ -569,6 +573,29 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 8,
         feedbackHigh: 'Even the arms — left/right differ by {delta}°.',
+      },
+      {
+        id: 'ribs_in',
+        label: 'Ribs in / torso stacked',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_HIP, LM.LEFT_SHOULDER],
+        target: 0,
+        tolerance: 10,
+        falloff: 35,
+        weight: 10,
+        feedbackHigh: 'Ribs in — stand stacked, no arch ({delta}°).',
+      },
+      {
+        id: 'chin',
+        label: 'Chin up, neutral',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.NOSE],
+        targetMin: 0,
+        targetMax: 30,
+        tolerance: 10,
+        falloff: 40,
+        weight: 8,
+        feedbackHigh: 'Chin up and neutral — look straight ahead ({delta}°).',
       },
     ],
   },
@@ -1608,6 +1635,8 @@ export const SHAPES: ShapeDef[] = [
       'Keep FTOS lines — open shoulders, arms by ears, elbows straight.',
       'Hips square and torso tall; don’t lean into the passé hip.',
     ],
+    coachNotes:
+      'Pull this from feet-together open shoulders. Keep the same upper-body line: ribs in, open shoulders, hands to the ceiling.',
     criteria: [
       {
         id: 'stance_knee',

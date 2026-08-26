@@ -29,7 +29,7 @@ export type ShotNeed = {
 const SHOTS: Record<string, string> = {
   stand_clean: 'FRONT. Stand tall, feet glued, arms by the sides. Full body in frame.',
   feet_together_open_shoulders:
-    'FRONT or 3/4. Feet glued, knees straight, arms covering ears, hands to the ceiling.',
+    'FRONT or 3/4. Feet glued, knees straight, open hips, ribs in, arms covering ears, chin up and neutral, hands to the ceiling.',
   arms_low_v_back: 'SIDE. Standing. Low V arms reaching slightly back. Elbows straight.',
   arms_front_middle: 'SIDE. Standing. Arms reaching forward at middle / chest height.',
   arms_open_shoulders: 'FRONT or 3/4. Standing. Arms by ears, shoulders fully open.',
