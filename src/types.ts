@@ -316,5 +316,7 @@ export type ReferencePhoto = {
   /** data:image/...;base64,... */
   dataUrl: string
   label?: string
+  /** Extra coach notes entered when the picture was uploaded. */
+  notes?: string
   createdAt: string
 }

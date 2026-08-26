@@ -408,6 +408,7 @@ export default function App() {
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+          onReferencesChange={setReferencePhotos}
         />
       )}
 
@@ -495,9 +496,10 @@ export default function App() {
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Learn</strong> tab to study shapes
               (cues, criteria, reference photos) and the full task pathway before practicing.
-              Take a <strong className="text-[var(--text)]">Shape test</strong> (name the
-              description or the picture) and open <strong className="text-[var(--text)]">My shapes</strong>{' '}
-              to review the athlete&apos;s own hit photos. No camera required for studying.
+              Take a <strong className="text-[var(--text)]">Shape test</strong>, review{' '}
+              <strong className="text-[var(--text)]">My shapes</strong>, and keep one coach photo
+              per position in the <strong className="text-[var(--text)]">Glossary</strong> (plus an
+              Extra folder for shapes you will not practice on camera).
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

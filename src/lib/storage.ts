@@ -348,7 +348,7 @@ export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
     (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
   )
   filtered.unshift(photo)
-  saveReferencePhotos(filtered.slice(0, 80))
+  saveReferencePhotos(filtered.slice(0, 120))
 }
 
 export async function deleteReferencePhoto(id: string): Promise<void> {

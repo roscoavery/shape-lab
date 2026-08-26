@@ -18,6 +18,7 @@ import { pickReferencePhoto } from '../lib/storage'
 import { listCaptures, type TaskCapture } from '../lib/captureStore'
 import type { ReferencePhoto, ShapeDef } from '../types'
 import { ViewCallout } from './ViewCallout'
+import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 
@@ -29,16 +30,23 @@ type EduView =
   | { kind: 'task'; taskId: string }
   | { kind: 'quiz' }
   | { kind: 'hits' }
+  | { kind: 'glossary' }
 
 type Props = {
   referencePhotos: ReferencePhoto[]
   athleteId: string | null
   athleteName?: string | null
+  onReferencesChange: (photos: ReferencePhoto[]) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
 
-export function EducationPanel({ referencePhotos, athleteId, athleteName }: Props) {
+export function EducationPanel({
+  referencePhotos,
+  athleteId,
+  athleteName,
+  onReferencesChange,
+}: Props) {
   const [view, setView] = useState<EduView>({ kind: 'home' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
@@ -112,6 +120,11 @@ export function EducationPanel({ referencePhotos, athleteId, athleteName }: Prop
             label="Task pathways"
           />
           <NavChip
+            active={view.kind === 'glossary'}
+            onClick={() => setView({ kind: 'glossary' })}
+            label="Glossary"
+          />
+          <NavChip
             active={view.kind === 'quiz'}
             onClick={() => setView({ kind: 'quiz' })}
             label="Shape test"
@@ -133,6 +146,7 @@ export function EducationPanel({ referencePhotos, athleteId, athleteName }: Prop
           onPathways={goPathways}
           onQuiz={() => setView({ kind: 'quiz' })}
           onHits={() => setView({ kind: 'hits' })}
+          onGlossary={() => setView({ kind: 'glossary' })}
         />
       )}
 
@@ -173,6 +187,13 @@ export function EducationPanel({ referencePhotos, athleteId, athleteName }: Prop
           onBack={goPathways}
           onOpenShape={openShape}
           onOpenTask={openTask}
+        />
+      )}
+
+      {view.kind === 'glossary' && (
+        <ShapeGlossary
+          referencePhotos={referencePhotos}
+          onReferencesChange={onReferencesChange}
         />
       )}
 
@@ -231,6 +252,7 @@ function HomeView({
   onPathways,
   onQuiz,
   onHits,
+  onGlossary,
 }: {
   pathwayCount: number
   shapeCount: number
@@ -239,6 +261,7 @@ function HomeView({
   onPathways: () => void
   onQuiz: () => void
   onHits: () => void
+  onGlossary: () => void
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -268,6 +291,21 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           View pathway →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onGlossary}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Shape glossary</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          One coach photo per practiced shape, plus an Extra folder for positions you
+          want athletes to learn but will not score with the camera. Add notes when you
+          upload.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open glossary →
         </span>
       </button>
       <button
@@ -516,21 +554,23 @@ function ShapeDetail({
           Reference photo
         </h4>
         {showRef ? (
-          <img
-            src={ref.dataUrl}
-            alt={`${shape.name} reference`}
-            className="max-h-80 w-full rounded-md object-contain bg-[#0d1218]"
-            onError={() => onRefError(ref.id)}
-          />
+          <>
+            <img
+              src={ref.dataUrl}
+              alt={`${shape.name} reference`}
+              className="max-h-80 w-full rounded-md object-contain bg-[#0d1218]"
+              onError={() => onRefError(ref.id)}
+            />
+            {ref.notes && (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{ref.notes}</p>
+            )}
+          </>
         ) : (
           <div className="rounded-lg border border-dashed border-[var(--panel-border)] bg-[#121820] px-4 py-8 text-center text-sm text-[var(--muted)]">
             <p className="font-medium text-[var(--text)]">No reference photo yet</p>
             <p className="mt-2">
-              A coach can upload one in the <strong className="text-[var(--text)]">Tasks</strong>{' '}
-              tab (shared for this shape), or drop a file in{' '}
-              <code className="text-[var(--accent)]">public/references/</code> named like{' '}
-              <code className="text-[var(--accent)]">{shape.id}.jpg</code> or{' '}
-              <code className="text-[var(--accent)]">{shape.id}.png</code>.
+              Open <strong className="text-[var(--text)]">Learn → Glossary</strong> to upload
+              one clear still and any extra notes for this shape.
             </p>
           </div>
         )}

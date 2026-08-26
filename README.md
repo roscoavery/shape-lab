@@ -91,13 +91,12 @@ Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBr
 
 ## Education (Learn tab)
 
-Athletes and parents can study body positions **without setting up a camera**:
-
 1. Open the **Learn** tab.
-2. **Shape library** — browse all shapes (filter to pathway-only). Each shape shows description, tips, key criteria with coach-friendly targets/cues, quality threshold, and a reference photo when available (uploaded shared ref or `public/references/…`).
-3. **Task pathways** — walk the 12 curriculum tasks in order, see unlock story (what comes next), step-by-step shapes with beginner/mastered hold times, pass-through notes, and voice-correction flags. Tap a step to open that shape’s education page.
-
-“How to hit this shape” copy is derived from `tips` and criterion `feedbackLow` / `feedbackHigh` in `src/config/shapes.ts` — coaches still edit scoring there.
+2. **Shape glossary** — one stored coach photo per practiced shape. **Need photos** lists exactly what to shoot (view + body). Upload the picture and type extra notes in the same form. **Extra shapes** is a folder for positions you will not score on camera: library extras (pike, bridge, tucked HS, …) plus any shape you add yourself (name, body position, camera hint, notes, photo).
+3. **Shape library** — browse all scored shapes.
+4. **Task pathways** — walk the curriculum in order.
+5. **Shape test** — multiple choice from descriptions or pictures.
+6. **My shapes** — the athlete’s own hit photos.
 
 ## Compare (video study tab)
 
