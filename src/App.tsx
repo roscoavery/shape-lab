@@ -36,12 +36,13 @@ import {
   loadAttempts,
   loadReferencePhotos,
   loadSettings,
-  loadTab,
   loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
   saveSettings,
   saveTab,
+  tabFromLocation,
+  writeTabLocation,
 } from './lib/storage'
 import type {
   AppSettings,
@@ -57,7 +58,10 @@ type Tab = 'tasks' | 'homework' | 'learn' | 'compare' | 'coach' | 'history' | 'a
 
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<Tab>(() => loadTab())
+  const [tab, setTab] = useState<Tab>(() => tabFromLocation())
+  const [compareOpened, setCompareOpened] = useState(
+    () => tabFromLocation() === 'compare',
+  )
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
@@ -102,7 +106,25 @@ export default function App() {
 
   useEffect(() => {
     saveTab(tab)
+    writeTabLocation(tab)
+    if (tab === 'compare') setCompareOpened(true)
   }, [tab])
+
+  useEffect(() => {
+    const onHash = () => setTab(tabFromLocation())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  const cameraTab = tab === 'tasks' || tab === 'homework' || tab === 'coach'
+  useEffect(() => {
+    if (!cameraTab && camera.running) camera.stop()
+  }, [cameraTab, camera.running, camera.stop])
+
+  const goTab = (id: Tab) => {
+    setTab(id)
+    if (id === 'compare') setCompareOpened(true)
+  }
 
   useEffect(() => {
     if (!activeAthleteId) {
@@ -263,7 +285,7 @@ export default function App() {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-3 py-4 sm:px-6">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <header className="sticky top-0 z-30 mb-4 flex flex-wrap items-end justify-between gap-3 bg-[var(--bg)]/95 py-2 backdrop-blur-sm">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Shape Lab
@@ -272,7 +294,7 @@ export default function App() {
             Free browser gymnastics coaching prototype · MediaPipe Pose
           </p>
         </div>
-        <nav className="flex gap-1 rounded-lg border border-[var(--panel-border)] bg-[var(--panel)] p-1">
+        <nav className="relative z-20 flex max-w-full shrink-0 gap-1 overflow-x-auto rounded-lg border border-[var(--panel-border)] bg-[var(--panel)] p-1">
           {(
             [
               ['tasks', 'Tasks'],
@@ -287,8 +309,13 @@ export default function App() {
             <button
               key={id}
               type="button"
-              onClick={() => setTab(id)}
-              className={`rounded-md px-3 py-1.5 text-sm ${
+              aria-current={tab === id ? 'page' : undefined}
+              onPointerDown={(e) => {
+                if (e.button !== 0) return
+                goTab(id)
+              }}
+              onClick={() => goTab(id)}
+              className={`shrink-0 rounded-md px-3 py-1.5 text-sm ${
                 tab === id
                   ? 'bg-[var(--accent-dim)] font-semibold text-white'
                   : 'text-[var(--muted)] hover:text-[var(--text)]'
@@ -420,10 +447,12 @@ export default function App() {
         />
       )}
 
-      {tab === 'compare' && (
-        <CompareErrorBoundary>
-          <ComparePanel />
-        </CompareErrorBoundary>
+      {(compareOpened || tab === 'compare') && (
+        <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>
+          <CompareErrorBoundary>
+            <ComparePanel />
+          </CompareErrorBoundary>
+        </div>
       )}
 
       {tab === 'coach' && (

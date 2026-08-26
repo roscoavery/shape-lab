@@ -43,7 +43,11 @@ export function usePoseCamera(): PoseCameraState {
 
   const loop = useCallback(async () => {
     const video = videoRef.current
-    if (!video || video.readyState < 2) {
+    if (!video) {
+      // Stage unmounted (user left Tasks/Coach) — do not spin rAF.
+      return
+    }
+    if (video.readyState < 2) {
       rafRef.current = requestAnimationFrame(() => {
         void loop()
       })

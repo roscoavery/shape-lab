@@ -67,6 +67,7 @@ export function ReferencePane() {
     null,
   )
   const [dragId, setDragId] = useState<string | null>(null)
+  const [libraryReady, setLibraryReady] = useState(false)
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -110,6 +111,8 @@ export function ReferencePane() {
         }
       } catch {
         setError('IndexedDB is unavailable in this browser — collections cannot be saved.')
+      } finally {
+        setLibraryReady(true)
       }
     })()
     return () => {
@@ -735,7 +738,8 @@ export function ReferencePane() {
         </p>
       )}
 
-      {collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
+      {libraryReady &&
+        collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
         <div className="rounded-lg border border-[var(--warn)]/40 bg-[#2a2415] px-3 py-2 text-sm leading-relaxed text-[var(--text)]">
           <p>
             This preview has no saved URLs. Browsers keep the list{' '}
@@ -824,11 +828,13 @@ export function ReferencePane() {
         <VideoWorkbench src={itemSrc} allowAbLoop />
       ) : (
         <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
-          {activeCollection?.items.length
-            ? searching
-              ? 'Select a match above'
-              : 'Select a reference above'
-            : 'Add a reference video to this collection'}
+          {!libraryReady
+            ? 'Loading saved references…'
+            : activeCollection?.items.length
+              ? searching
+                ? 'Select a match above'
+                : 'Select a reference above'
+              : 'Add a reference video to this collection'}
         </div>
       )}
     </section>
