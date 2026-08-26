@@ -1,41 +1,6 @@
 {
   "kind": "shape-lab-library",
   "version": 1,
-  "exportedAt": "2026-08-26T10:09:59.466Z",
-  "collections": [
-    {
-      "id": "col_mt9p4n2l_35lcph",
-      "name": "My references",
-      "createdAt": "2026-08-26T06:11:40.365Z",
-      "items": [
-        {
-          "id": "ref_mt9vjh1t_n33ug7",
-          "kind": "instagram",
-          "name": "Landing drill",
-          "url": "https://www.instagram.com/reel/DJE5ZrzIiwh/",
-          "createdAt": "2026-08-26T09:11:10.097Z"
-        },
-        {
-          "id": "ref_mt9xfort_ohyz83",
-          "kind": "instagram",
-          "name": "BHS step-out",
-          "url": "https://www.instagram.com/reel/ABC123xyz99/",
-          "createdAt": "2026-08-26T10:04:12.713Z"
-        },
-        {
-          "id": "ref_mt9uwfmv_wg3qwx",
-          "kind": "instagram",
-          "name": "IG C8Qw0x0N0x0",
-          "url": "https://www.instagram.com/reel/C8Qw0x0N0x0/",
-          "createdAt": "2026-08-26T08:53:15.175Z"
-        }
-      ]
-    },
-    {
-      "id": "col_mt9p4n2m_w2mt5k",
-      "name": "My references",
-      "createdAt": "2026-08-26T06:11:40.366Z",
-      "items": []
-    }
-  ]
+  "exportedAt": "",
+  "collections": []
 }
