@@ -6,8 +6,8 @@
  * `holdSeconds` = how long the athlete must stay above that shape's
  * qualityThreshold before the sequence advances.
  *
- * Future skills (cartwheel, roundoff, rolls) can be added as shapes first,
- * then dropped into sequences here.
+ * Cartwheels are not scored yet. Usual start: starting lunge or mountain climber.
+ * Usual finish: landing lunge, unless a zombie landing is specified.
  */
 
 import type { SequenceDef } from '../types'
@@ -15,43 +15,53 @@ import type { SequenceDef } from '../types'
 export const SEQUENCES: SequenceDef[] = [
   {
     id: 'lunge_lever_hs_lunge',
-    name: 'Lunge → Lever → Handstand → Lunge',
-    description: 'Basic support-to-handstand pathway returning to lunge.',
+    name: 'Starting lunge → Lever → Handstand → Landing lunge',
+    description:
+      'Every lunge → lever → handstand → lunge finishes in a landing lunge (heel flat, closer stance).',
     steps: [
-      { shapeId: 'lunge', holdSeconds: 1.5 },
+      { shapeId: 'lunge_start', holdSeconds: 1.5 },
       { shapeId: 'lever', holdSeconds: 1.5 },
       { shapeId: 'handstand', holdSeconds: 2 },
-      { shapeId: 'lunge', holdSeconds: 1.5 },
+      { shapeId: 'lunge_land', holdSeconds: 1.5 },
     ],
   },
   {
     id: 'mc_hs_lever_lunge',
-    name: 'Mountain Climber → Handstand → Lever → Lunge',
-    description: 'Entry from mountain climber into handstand and exit.',
+    name: 'Mountain Climber → Handstand → Lever → Landing lunge',
+    description: 'Entry from mountain climber. Finish in a landing lunge.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'handstand', holdSeconds: 2 },
       { shapeId: 'lever', holdSeconds: 1.5 },
-      { shapeId: 'lunge', holdSeconds: 1.5 },
+      { shapeId: 'lunge_land', holdSeconds: 1.5 },
+    ],
+  },
+  {
+    id: 'lunge_cartwheel_land',
+    name: 'Starting lunge → Cartwheel → Landing lunge',
+    description:
+      'Usual cartwheel: start from a starting lunge (or a mountain climber). Finish in a landing lunge unless a zombie landing is specified. Cartwheel itself is not scored yet.',
+    steps: [
+      { shapeId: 'lunge_start', holdSeconds: 1.5 },
+      { shapeId: 'lunge_land', holdSeconds: 1.5 },
     ],
   },
   {
     id: 'mc_cartwheel_lever_lunge',
-    name: 'Mountain Climber → Cartwheel → Lever → Lunge',
+    name: 'Mountain Climber → Cartwheel → Landing lunge',
     description:
-      'Cartwheel is not scored yet. The middle hold is the tumbling C — the same connection used into a back handspring and round-off back handspring.',
+      'Other usual cartwheel start: mountain climber. Finish in a landing lunge unless zombie is specified. Cartwheel is not scored yet — the middle hold is the tumbling C.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'c_shape', holdSeconds: 1.2 },
-      { shapeId: 'lever', holdSeconds: 1.5 },
-      { shapeId: 'lunge', holdSeconds: 1.5 },
+      { shapeId: 'lunge_land', holdSeconds: 1.5 },
     ],
   },
   {
     id: 'c_passe_cartwheel_zombie',
-    name: 'C Shape → Passé → Cartwheel cue',
+    name: 'C Shape → Passé → Cartwheel → Zombie landing',
     description:
-      'Pull a passé from the tumbling C before a cartwheel or round-off. Cartwheel is not scored yet; the second C is the connection cue. Zombie is a related arms-forward hold.',
+      'The exception: finish the cartwheel in a zombie landing when that is specified. Otherwise cartwheels finish in a landing lunge.',
     steps: [
       { shapeId: 'c_shape', holdSeconds: 1.5 },
       { shapeId: 'passe', holdSeconds: 1.5 },

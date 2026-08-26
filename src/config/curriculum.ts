@@ -108,14 +108,14 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lunge_start',
     name: '5. Starting lunge with open shoulders',
     description:
-      'Fall forward from passé into a lunge with OPEN SHOULDERS (arms by ears). Back heel stays UP — this is the only lunge that requires it. Side view. Either leg forward.',
+      'Fall forward from passé into this lunge. Back heel UP, back leg STRAIGHT, back STRAIGHT, shoulders OPEN. Longer stance than the landing lunge. Cartwheels often start here (or from a mountain climber). Side view.',
     requiresTaskId: 'task_passe',
     masterAfterCompletions: 2,
     steps: [
       {
         shapeId: 'lunge_start',
         ...HOLD,
-        note: 'SIDE VIEW · heel UP · open shoulders / arms by ears · one line foot→hands',
+        note: 'SIDE VIEW · heel UP · straight back leg · straight back · open shoulders',
       },
     ],
   },
@@ -123,15 +123,15 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lunge_arm_holds',
     name: '6. Lunge holds · arm positions',
     description:
-      'Hold a lunge while cycling the five arm shapes: low V back, front middle, open shoulders, T, high V chest out. The back foot may stay FLAT — heel up is only for the starting lunge.',
+      'Drill all five arm shapes on a landing-lunge stance: back heel FLAT, feet closer than a starting lunge. Cycle low V back, front middle, open shoulders, T, high V chest out.',
     requiresTaskId: 'task_lunge_start',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · back foot may be flat · low V' },
-      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · back foot may be flat · arms forward middle' },
-      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · back foot may be flat · open shoulders' },
-      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T · back foot may be flat' },
-      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out · back foot may be flat' },
+      { shapeId: 'lunge_arms_low_v', ...HOLD, note: 'Side view · landing stance · heel FLAT · low V' },
+      { shapeId: 'lunge_arms_front', ...HOLD, note: 'Side view · landing stance · heel FLAT · arms forward middle' },
+      { shapeId: 'lunge_arms_open', ...HOLD, note: 'Side view · landing stance · heel FLAT · open shoulders' },
+      { shapeId: 'lunge_arms_t', ...HOLD, note: 'FACE the camera for the T · landing stance · heel FLAT' },
+      { shapeId: 'lunge_arms_high_v', ...HOLD, note: 'High V, chest out · landing stance · heel FLAT' },
     ],
   },
   {
@@ -155,48 +155,48 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_lunge_land',
     name: '9. Landing lunge',
     description:
-      'Like the starting lunge, but back foot steps ~8 inches closer and the back heel is FLAT (no collapsed arch). Side view.',
+      'Shorter stance than the starting lunge, back heel FLAT, one line from back heel to hands. Cartwheels finish here unless a zombie landing is specified. Side view.',
     requiresTaskId: 'task_handstand',
     masterAfterCompletions: 2,
     steps: [
       {
         shapeId: 'lunge_land',
         ...HOLD,
-        note: 'SIDE VIEW · heel FLAT · closer step · back leg straight',
+        note: 'SIDE VIEW · heel FLAT · shorter than starting lunge · back leg straight',
       },
     ],
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_right',
     name: '10. Sequence (RIGHT): FTOS → Lunge → Lever → Landing lunge',
-    description: 'Right foot forward through the lunge and lever.',
+    description: 'Right foot forward through the lunge and lever. Finish in a landing lunge (heel flat, closer stance).',
     requiresTaskId: 'task_lunge_land',
     masterAfterCompletions: 2,
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
       { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Right foot forward · heel flat' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · right foot forward · heel FLAT · closer stance' },
     ],
   },
   {
     id: 'task_seq_ftos_lunge_lever_lunge_left',
     name: '11. Sequence (LEFT): FTOS → Lunge → Lever → Landing lunge',
-    description: 'Same sequence, left foot forward.',
+    description: 'Same sequence, left foot forward. Finish in a landing lunge.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_right',
     masterAfterCompletions: 2,
     steps: [
       { shapeId: 'feet_together_open_shoulders', ...HOLD },
       { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Left foot forward · heel flat' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · left foot forward · heel FLAT · closer stance' },
     ],
   },
   {
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
     name: '12. Sequence (RIGHT): FTOS → Passé → Lunge → Lever → HS → Lunge',
     description:
-      'Fall from passé into the lunge, then lever, handstand, landing lunge. Right side.',
+      'Fall from passé into the lunge, then lever, handstand, landing lunge. Right side. Every sequence of this type finishes in the landing lunge.',
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_left',
     masterAfterCompletions: 2,
     steps: [
@@ -205,13 +205,13 @@ export const CURRICULUM_TASKS: TaskDef[] = [
       { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to right-foot-forward lunge · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'right' },
       { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'right' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · heel FLAT · closer stance' },
     ],
   },
   {
     id: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
     name: '13. Sequence (LEFT): FTOS → Passé → Lunge → Lever → HS → Lunge',
-    description: 'Same full sequence on the left side.',
+    description: 'Same full sequence on the left side. Finish in a landing lunge.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
     masterAfterCompletions: 2,
     steps: [
@@ -220,7 +220,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
       { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to left-foot-forward lunge · heel UP · open shoulders' },
       { shapeId: 'lever', ...HOLD, stance: 'left' },
       { shapeId: 'handstand', ...HS_HOLD, note: 'SIDE VIEW — hit it, no 5s hold' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'left' },
+      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · heel FLAT · closer stance' },
     ],
   },
   {
@@ -235,10 +235,11 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   {
     id: 'task_mountain_climber',
     name: '15. Mountain climber',
-    description: 'Smaller step than a lunge. Upper body in the tumbling C. Back leg bends.',
+    description:
+      'Not a lunge: smaller step, back knee BENDS, upper body in the tumbling C. Lunges keep the back leg straight, the back straight, and the shoulders open.',
     requiresTaskId: 'task_c_shape',
     masterAfterCompletions: 2,
-    steps: [{ shapeId: 'mountain_climber', ...HOLD, note: 'SIDE VIEW · back knee bends' }],
+    steps: [{ shapeId: 'mountain_climber', ...HOLD, note: 'SIDE VIEW · back knee BENDS · C upper body — not a lunge' }],
   },
   {
     id: 'task_seq_clean_mc_hs_lever_lunge',

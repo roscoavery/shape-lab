@@ -57,8 +57,10 @@ The FTOS → lunge → lever → landing lunge and FTOS → passé → lunge →
 Shipped coach stills live in `public/references/`. Included so far:
 
 ```text
-public/references/c_shape.jpg   — tumbling C (back handspring / round-off connection)
-public/references/passe.png     — passé with FTOS arms
+public/references/c_shape.jpg     — tumbling C (back handspring / round-off connection)
+public/references/passe.png       — passé with FTOS arms
+public/references/lunge_start.jpg — starting lunge (heel up, straight back, open shoulders)
+public/references/lunge_land.jpg  — landing lunge (heel flat, shorter stance)
 ```
 
 Other pathway stills can be dropped here (see `public/references/README.md`) or

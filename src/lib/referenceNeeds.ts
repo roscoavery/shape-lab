@@ -37,18 +37,20 @@ const SHOTS: Record<string, string> = {
   arms_high_v_chest: 'FRONT. Standing. High V (not covering the ears), chest open.',
   passe: 'FRONT or 3/4. Stance leg straight, other foot at the knee, FTOS arms up.',
   lunge_start:
-    'SIDE. Starting lunge: back HEEL UP, open shoulders / arms by ears, one line back foot → hands.',
-  lunge_arms_low_v: 'SIDE. Lunge (back foot may be FLAT). Low V arms slightly back.',
-  lunge_arms_front: 'SIDE. Lunge (back foot may be FLAT). Arms forward at middle height.',
-  lunge_arms_open: 'SIDE. Lunge (back foot may be FLAT). Open shoulders, arms by ears.',
-  lunge_arms_t: 'FACE the camera. Lunge (back foot may be FLAT). Arms in a T.',
-  lunge_arms_high_v: 'FRONT or 3/4. Lunge (back foot may be FLAT). High V, chest out.',
+    'SIDE. Starting lunge: back HEEL UP, back leg STRAIGHT, back STRAIGHT, shoulders OPEN. Longer than a landing lunge.',
+  lunge_arms_low_v: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Low V arms slightly back.',
+  lunge_arms_front: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Arms forward at middle height.',
+  lunge_arms_open: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Open shoulders, arms by ears.',
+  lunge_arms_t: 'FACE the camera. Landing-lunge stance (heel FLAT, closer feet). Arms in a T.',
+  lunge_arms_high_v: 'FRONT or 3/4. Landing-lunge stance (heel FLAT, closer feet). High V, chest out.',
   lever: 'SIDE. Chest parallel, open shoulders, one line back foot → hands (T-scale).',
   handstand: 'SIDE or 3/4. Stacked HS — not stomach-to-wall. Tight body line.',
-  lunge_land: 'SIDE. Landing lunge: back heel FLAT, closer step, open shoulders.',
+  lunge_land:
+    'SIDE. Landing lunge: back heel FLAT, shorter than a starting lunge, open shoulders, one line heel → hands.',
   c_shape:
     'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
-  mountain_climber: 'SIDE. Smaller step than a lunge, C upper body, back knee bent.',
+  mountain_climber:
+    'SIDE. Not a lunge. Smaller step, back knee BENT, tumbling-C upper body (rounded, not straight-back open shoulders).',
   hollow_arms_down: 'SIDE. Hollow on the floor, arms glued by the sides, low back down.',
   hollow: 'SIDE. Hollow, arms by the ears, low back down.',
   superman: 'SIDE. Prone, straight arms behind ears, chin off chest, knees off the floor.',

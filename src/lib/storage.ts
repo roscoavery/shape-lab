@@ -335,7 +335,7 @@ export const DEFAULT_REFERENCE_PATHS: Record<string, string> = {
 }
 
 /** Files that actually ship in public/references/ (not just hoped-for names). */
-export const SHIPPED_REFERENCE_IDS = new Set(['c_shape', 'passe'])
+export const SHIPPED_REFERENCE_IDS = new Set(['c_shape', 'passe', 'lunge_land', 'lunge_start'])
 
 export function loadReferencePhotos(): ReferencePhoto[] {
   return readJson<ReferencePhoto[]>(REFS_KEY, [])

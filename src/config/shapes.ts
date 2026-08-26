@@ -37,7 +37,7 @@
  */
 
 import { LM } from '../lib/landmarks'
-import type { ShapeDef } from '../types'
+import type { CriterionDef, ShapeDef } from '../types'
 
 /** Shortcut: left elbow angle landmarks */
 const L_ELBOW: [number, number, number] = [LM.LEFT_SHOULDER, LM.LEFT_ELBOW, LM.LEFT_WRIST]
@@ -48,6 +48,49 @@ const L_HIP: [number, number, number] = [LM.LEFT_SHOULDER, LM.LEFT_HIP, LM.LEFT_
 const R_HIP: [number, number, number] = [LM.RIGHT_SHOULDER, LM.RIGHT_HIP, LM.RIGHT_KNEE]
 const L_SHOULDER: [number, number, number] = [LM.LEFT_HIP, LM.LEFT_SHOULDER, LM.LEFT_ELBOW]
 const R_SHOULDER: [number, number, number] = [LM.RIGHT_HIP, LM.RIGHT_SHOULDER, LM.RIGHT_ELBOW]
+
+/** Back heel FLAT — landing lunge and every lunge arm-position hold. */
+const LANDING_HEEL_FLAT: CriterionDef = {
+  id: 'heel_flat',
+  label: 'Back heel flat',
+  kind: 'segment_vs_horizontal',
+  segment: [LM.RIGHT_HEEL, LM.RIGHT_FOOT_INDEX],
+  target: 0,
+  tolerance: 14,
+  falloff: 40,
+  weight: 14,
+  needsView: 'side',
+  feedbackHigh: 'Press the back heel flat ({delta}°).',
+}
+
+/** Shorter stance than the starting lunge. */
+const LANDING_CLOSER_STEP: CriterionDef = {
+  id: 'closer_step',
+  label: 'Closer than starting lunge',
+  kind: 'point_distance',
+  pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+  targetMin: 0.1,
+  targetMax: 0.24,
+  tolerance: 0.04,
+  falloff: 0.22,
+  weight: 12,
+  feedbackLow: 'Take a small step — still shorter than a starting lunge.',
+  feedbackHigh: 'Bring the feet closer — shorter than the starting lunge.',
+}
+
+/** Lunges (not mountain climbers): back stays straight, not a C. */
+const LUNGE_STRAIGHT_BACK: CriterionDef = {
+  id: 'straight_back',
+  label: 'Straight back (not a C)',
+  kind: 'joint_angle',
+  points: R_HIP,
+  targetMin: 150,
+  targetMax: 180,
+  tolerance: 12,
+  falloff: 40,
+  weight: 12,
+  feedbackLow: 'Straighten the back — this is a lunge, not a mountain climber C.',
+}
 
 /**
  * All shapes available in Shape Lab v1.
@@ -638,26 +681,28 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // STARTING LUNGE — heel UP, chest tilts for line back-foot → hands (task 4)
-  // Assumes left = front, right = back (film from side).
+  // STARTING LUNGE — heel UP, straight back leg, straight back, open shoulders (task 5)
+  // Fall forward from passé. Usual cartwheel start (or mountain climber).
   // ===========================================================================
   {
     id: 'lunge_start',
     name: 'Starting lunge with open shoulders',
     description:
-      'Starting lunge: back heel UP, open shoulders (arms by ears), back leg straight, chest tilts so one line runs back foot → hands. Chin up.',
+      'Starting lunge: back heel UP, back leg straight, back straight, shoulders open. Longer stance than the landing lunge. Fall here from passé; usual cartwheel start.',
     bodyPosition:
-      'Fall forward from passé into a lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Chest tilts forward until there is one straight diagonal from the back foot through the body to the hands. Shoulders stay fully open, arms tight by the ears, chin up. You do not have to match the photo’s camera side — left or right foot forward both grade.',
+      'SIDE VIEW. Fall forward from passé into this lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Back stays STRAIGHT (not a C). Shoulders OPEN, arms by the ears, one diagonal from the back foot through the body to the hands. Longer stance than a landing lunge. This is not a mountain climber.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'SIDE VIEW — stand in profile. Do not face the camera.',
-      'Back heel stays up on the ball of the foot (starting lunge only).',
-      'Open shoulders — arms covering the ears.',
-      'Tilt the chest until you see one long line from back foot to hands.',
+      'Back heel up. Back leg straight. Back straight. Shoulders open.',
+      'Longer stance than the landing lunge.',
+      'Not a mountain climber — do not bend the back knee or round into a C.',
     ],
+    coachNotes:
+      'Land here from falling forward on a passé. Cartwheels usually start from this shape or from a mountain climber. Know the difference: on lunges the back leg is straight, the back is straight, and the shoulders are open. Mountain climbers bend the back knee and use a C upper body.',
     criteria: [
       {
         id: 'front_knee',
@@ -698,6 +743,19 @@ export const SHAPES: ShapeDef[] = [
         feedbackHigh: 'Keep heel up but stable.',
       },
       {
+        id: 'longer_step',
+        label: 'Longer step than landing',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        targetMin: 0.22,
+        targetMax: 0.5,
+        tolerance: 0.05,
+        falloff: 0.25,
+        weight: 10,
+        feedbackLow: 'Take a longer step — bigger than the landing lunge.',
+        feedbackHigh: 'A bit smaller — still longer than the landing lunge.',
+      },
+      {
         id: 'line_foot_hands',
         label: 'Line foot → hands',
         kind: 'segment_vs_horizontal',
@@ -731,48 +789,41 @@ export const SHAPES: ShapeDef[] = [
         weight: 8,
         feedbackLow: 'Straighten elbows.',
       },
-      {
-        id: 'chin_up',
-        label: 'Chin up',
-        kind: 'segment_vs_vertical',
-        segment: [LM.LEFT_SHOULDER, LM.NOSE],
-        targetMin: 0,
-        targetMax: 40,
-        tolerance: 12,
-        falloff: 40,
-        weight: 8,
-        feedbackHigh: 'Chin up — eyes forward ({delta}°).',
-      },
+      LUNGE_STRAIGHT_BACK,
     ],
   },
 
   // ===========================================================================
-  // LANDING LUNGE — heel FLAT, closer step (~8"), no collapsed arch (task 7)
+  // LANDING LUNGE — heel FLAT, shorter stance than start (task 9)
+  // Finish for cartwheels (unless zombie) and every lunge → lever → HS → lunge.
   // ===========================================================================
   {
     id: 'lunge_land',
     name: 'Landing lunge',
     description:
-      'Landing lunge: like the start, but back foot closer (~8"), back heel FLAT (no collapsed arch), back leg straight, line foot → hands.',
+      'Landing lunge: shorter stance than the start, back heel FLAT, back leg straight, one line from back heel through the body to the hands.',
     bodyPosition:
-      'Same as the starting lunge except the back foot steps about 8 inches closer and the back HEEL is FLAT on the floor — do not let the arch collapse. Back leg still straight. One line from back foot to hands. Shoulders open, arms by ears. Either leg forward is fine unless the task specifies a side.',
+      'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'SIDE VIEW required.',
-      'Step the back foot ~8 inches closer than the starting lunge.',
+      'Shorter stance than the starting lunge.',
       'Press the back heel flat — no rolling in on the arch.',
+      'Back leg straight, back straight, shoulders open — not a mountain climber.',
     ],
+    coachNotes:
+      'Cartwheels finish in this landing lunge unless a zombie landing is specified. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge.',
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
         weight: 16,
         feedbackLow: 'Bend front knee more.',
@@ -789,32 +840,8 @@ export const SHAPES: ShapeDef[] = [
         weight: 18,
         feedbackLow: 'Straighten the back leg {delta}°.',
       },
-      {
-        id: 'heel_flat',
-        label: 'Back heel flat',
-        kind: 'segment_vs_horizontal',
-        segment: [LM.RIGHT_HEEL, LM.RIGHT_FOOT_INDEX],
-        target: 0,
-        tolerance: 14,
-        falloff: 40,
-        weight: 14,
-        needsView: 'side',
-        feedbackHigh: 'Press the back heel flat ({delta}°).',
-      },
-      {
-        id: 'closer_step',
-        label: 'Closer step (~8")',
-        // Landing step is shorter than a long start lunge
-        kind: 'point_distance',
-        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
-        targetMin: 0.12,
-        targetMax: 0.32,
-        tolerance: 0.05,
-        falloff: 0.25,
-        weight: 12,
-        feedbackLow: 'Step the back foot a bit farther (about 8 inches).',
-        feedbackHigh: 'Bring the back foot closer — about 8 inches.',
-      },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'line_foot_hands',
         label: 'Line foot → hands',
@@ -849,6 +876,7 @@ export const SHAPES: ShapeDef[] = [
         weight: 8,
         feedbackLow: 'Straighten elbows.',
       },
+      LUNGE_STRAIGHT_BACK,
     ],
   },
 
@@ -955,18 +983,20 @@ export const SHAPES: ShapeDef[] = [
     id: 'mountain_climber',
     name: 'Mountain climber',
     description:
-      'Smaller step than a lunge. Upper body in the tumbling C. Back leg bends (not straight).',
+      'Not a lunge. Smaller step. Back knee BENDS. Upper body in the tumbling C (rounded), not a straight-back open-shoulder line.',
     bodyPosition:
-      'Shorter step than a lunge. Front knee bent. Back knee BENDS (unlike the lunge). Upper body uses the same tumbling C: hips under, chest hollow, rounded back. Either leg forward.',
+      'Shorter step than a lunge. Front knee bent. Back knee BENDS (unlike any lunge). Upper body uses the tumbling C: hips under, chest hollow, rounded back. Shoulders are not the open-by-the-ears lunge line. Either leg forward.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'Shorter stance than the lunges.',
-      'Same C as the tumbling C: hips under, hollow chest, rounded back.',
+      'This is not a lunge.',
       'Bend the back knee — do not lock it straight.',
+      'Round into the C — do not keep a straight back or open-shoulder lunge line.',
     ],
+    coachNotes:
+      'Cartwheels can start from a mountain climber or from a starting lunge. The difference matters: lunges keep the back leg straight, the back straight, and the shoulders open. Mountain climber bends the back knee and uses the tumbling C.',
     criteria: [
       {
         id: 'smaller_step',
@@ -2039,9 +2069,18 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'zombie',
     name: 'Zombie',
-    description: 'Zombie: arms reaching forward at shoulder height, body tight and hollow.',
+    description:
+      'Zombie: arms reaching forward at shoulder height, body tight and hollow. The exception landing when a cartwheel should not finish in a landing lunge.',
+    bodyPosition:
+      'Arms reach straight forward at shoulder height, elbows locked. Body tight and hollow. Used as a specified cartwheel landing — if zombie is not named, cartwheels finish in a landing lunge.',
     category: 'static',
     qualityThreshold: 60,
+    tips: [
+      'Arms forward at shoulder height, not up by the ears.',
+      'Only use this as a cartwheel finish when a zombie landing is specified.',
+    ],
+    coachNotes:
+      'Cartwheels finish in a landing lunge unless a zombie landing is specified. This is that exception.',
     criteria: [
       {
         id: 'arms_forward',
@@ -2429,29 +2468,28 @@ export const SHAPES: ShapeDef[] = [
     ],
   },
 
-  // Lunge holds that reuse lunge legs + each arm position.
-  // Back foot may be FLAT — heel up is only required on the starting lunge.
+  // Lunge arm-position holds use LANDING lunge legs: shorter stance, back heel FLAT.
   {
     id: 'lunge_arms_low_v',
     name: 'Lunge · low V arms',
-    description: 'Lunge legs with low V arms back. Back foot may be flat.',
+    description: 'Landing-lunge legs with low V arms back. Back heel flat, shorter stance.',
     bodyPosition:
-      'Lunge: front knee bent, back leg straight. The back foot may stay FLAT (heel up is only for the starting lunge). Arms in a low V slightly back. Side view.',
+      'Same stance as the landing lunge: front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a low V slightly back. Side view.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Side view. Back foot can be flat. Arms low V, not overhead.'],
+    tips: ['Side view. Back heel flat. Shorter than a starting lunge. Arms low V, not overhead.'],
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
@@ -2463,9 +2501,11 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 24,
+        weight: 20,
         feedbackLow: 'Straighten the back leg.',
       },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'low_v',
         label: 'Low V arms',
@@ -2486,7 +2526,7 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 20,
+        weight: 16,
         feedbackLow: 'Straighten elbows.',
       },
     ],
@@ -2494,24 +2534,24 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_front',
     name: 'Lunge · arms front middle',
-    description: 'Lunge legs with arms reaching forward at middle height. Back foot may be flat.',
+    description: 'Landing-lunge legs with arms reaching forward at middle height. Back heel flat.',
     bodyPosition:
-      'Lunge legs (back leg straight; back foot may be flat). Arms reach forward at chest height, elbows straight.',
+      'Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms reach forward at chest height, elbows straight.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Side view. Back foot can be flat. Arms forward, not up.'],
+    tips: ['Side view. Back heel flat. Shorter than a starting lunge. Arms forward, not up.'],
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
@@ -2523,9 +2563,11 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 24,
+        weight: 20,
         feedbackLow: 'Straighten the back leg.',
       },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'forward',
         label: 'Arms forward',
@@ -2554,24 +2596,24 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_open',
     name: 'Lunge · open shoulders',
-    description: 'Lunge legs with FTOS arms (by the ears). Back foot may be flat.',
+    description: 'Landing-lunge legs with FTOS arms (by the ears). Back heel flat, shorter stance.',
     bodyPosition:
-      'Lunge: front knee bent, back leg straight, back foot may be FLAT. Arms covering the ears, shoulders open. Heel up is only for the starting lunge.',
+      'Same stance as the landing lunge: front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Open-shoulder arms on a lunge. Back foot can be flat — unlike the starting lunge.'],
+    tips: ['Open-shoulder arms on a landing lunge. Back heel flat. Shorter than a starting lunge.'],
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
-        weight: 20,
+        weight: 16,
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
@@ -2583,9 +2625,11 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Straighten the back leg.',
       },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'shoulders',
         label: 'Open shoulders',
@@ -2625,24 +2669,25 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_t',
     name: 'Lunge · T arms',
-    description: 'Lunge legs with arms in a T. Face the camera so both arms show. Back foot may be flat.',
+    description:
+      'Landing-lunge legs with arms in a T. Face the camera so both arms show. Back heel flat.',
     bodyPosition:
-      'Lunge (back leg straight; back foot may be flat) with arms straight out to the sides at shoulder height. Face the camera.',
+      'Same stance as the landing lunge (back leg straight, back HEEL FLAT, shorter than a starting lunge) with arms straight out to the sides at shoulder height. Face the camera.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'front',
     stanceAware: true,
-    tips: ['FACE THE CAMERA for the T. Back foot can be flat. Back leg still straight.'],
+    tips: ['FACE THE CAMERA for the T. Back heel flat. Shorter than a starting lunge. Back leg still straight.'],
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
@@ -2654,9 +2699,11 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Straighten the back leg.',
       },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'left_t',
         label: 'Left arm T',
@@ -2697,24 +2744,24 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_high_v',
     name: 'Lunge · high V chest out',
-    description: 'Lunge legs with a high V and an open chest. Back foot may be flat.',
+    description: 'Landing-lunge legs with a high V and an open chest. Back heel flat, shorter stance.',
     bodyPosition:
-      'Lunge (back leg straight; back foot may be flat). Arms in a high V (not covering the ears). Chest open.',
+      'Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a high V (not covering the ears). Chest open.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'any',
     stanceAware: true,
-    tips: ['High V, chest out — not arms by ears yet. Back foot can be flat.'],
+    tips: ['High V, chest out — not arms by ears yet. Back heel flat. Shorter than a starting lunge.'],
     criteria: [
       {
         id: 'front_knee',
         label: 'Front knee',
         kind: 'joint_angle',
         points: L_KNEE,
-        targetMin: 80,
-        targetMax: 115,
+        targetMin: 85,
+        targetMax: 125,
         tolerance: 12,
-        weight: 22,
+        weight: 18,
         feedbackLow: 'Bend front knee more.',
         feedbackHigh: 'Ease front knee bend.',
       },
@@ -2726,9 +2773,11 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 155,
         targetMax: 180,
         tolerance: 10,
-        weight: 24,
+        weight: 20,
         feedbackLow: 'Straighten the back leg.',
       },
+      LANDING_HEEL_FLAT,
+      LANDING_CLOSER_STEP,
       {
         id: 'high_v',
         label: 'High V',
