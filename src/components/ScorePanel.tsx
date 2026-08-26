@@ -30,7 +30,7 @@ export function ScorePanel({
   onSave,
   canSave,
 }: Props) {
-  const inQuality = score.overall >= qualityThreshold
+  const inQuality = score.holdReady ?? score.overall >= qualityThreshold
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">

@@ -3,11 +3,12 @@
  * CURRICULUM TASKS — ordered athlete pathway (edit this file)
  * ============================================================================
  * Each athlete works through these tasks in order.
- * Hold times: first successful completions use beginnerSeconds (5s).
- * After `masterAfterCompletions` successes, holds drop to masteredSeconds (3s).
- * Freestanding handstand is grade-only (3 kick-up tries) — it does not gate
- * the pathway. Wall HS is homework. After each task, athletes can read a
- * written analysis of every shape they hit.
+ * Hold times: first successful completions of a *standalone* shape use
+ * beginnerSeconds (5s). After `masterAfterCompletions` successes, holds drop
+ * to masteredSeconds (3s). Multi-shape sequences always use 3s holds so the
+ * athlete can flow. Freestanding handstand is grade-only (3 kick-up tries) —
+ * it does not gate the pathway. Wall HS is homework. After each task, athletes
+ * can read a written analysis of every shape they hit.
  *
  * passThrough: step counts if athlete briefly hits quality (no long hold required).
  * gradeOnly: scored in the analysis, not required to advance.
@@ -44,6 +45,11 @@ export type TaskStepDef = {
    * Omit to auto-detect the better matching stance.
    */
   stance?: 'left' | 'right'
+  /**
+   * Stay in profile — do not require facing the camera.
+   * Used for FTOS as the first step of a lunge/lever sequence.
+   */
+  profileOk?: boolean
 }
 
 export type TaskDef = {
@@ -59,6 +65,13 @@ export type TaskDef = {
 
 const HOLD = {
   beginnerSeconds: 5,
+  masteredSeconds: 3,
+  speakCorrections: true,
+} as const
+
+/** Sequence steps — 3s every time, including the first pass. */
+const SEQ_HOLD = {
+  beginnerSeconds: 3,
   masteredSeconds: 3,
   speakCorrections: true,
 } as const
@@ -212,10 +225,15 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     requiresTaskId: 'task_lunge_land',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW · heel UP · open shoulders' },
-      { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · right foot forward · heel FLAT · closer stance' },
+      {
+        shapeId: 'feet_together_open_shoulders',
+        ...SEQ_HOLD,
+        profileOk: true,
+        note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
+      },
+      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'right', note: 'Right foot forward · SIDE VIEW · heel UP · open shoulders' },
+      { shapeId: 'lever', ...SEQ_HOLD, stance: 'right', note: 'Right support leg · SIDE VIEW' },
+      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'right', note: 'Finish here · right foot forward · heel FLAT · closer stance' },
     ],
   },
   {
@@ -225,10 +243,15 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_right',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW · heel UP · open shoulders' },
-      { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · left foot forward · heel FLAT · closer stance' },
+      {
+        shapeId: 'feet_together_open_shoulders',
+        ...SEQ_HOLD,
+        profileOk: true,
+        note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
+      },
+      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'left', note: 'Left foot forward · SIDE VIEW · heel UP · open shoulders' },
+      { shapeId: 'lever', ...SEQ_HOLD, stance: 'left', note: 'Left support leg · SIDE VIEW' },
+      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'left', note: 'Finish here · left foot forward · heel FLAT · closer stance' },
     ],
   },
   {
@@ -239,12 +262,17 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     requiresTaskId: 'task_seq_ftos_lunge_lever_lunge_left',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD, note: 'Arms tight by the ears · ribs in · butt in · chin up' },
+      {
+        shapeId: 'feet_together_open_shoulders',
+        ...SEQ_HOLD,
+        profileOk: true,
+        note: 'Stay in profile · arms tight by the ears · ribs in · butt in · chin up',
+      },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'right', note: 'Pull one leg to passé · hold 3' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'right', note: 'Fall to lunge · heel UP · hold 5' },
-      { shapeId: 'lever', ...HOLD, stance: 'right', note: 'Lever hold 5' },
+      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'right', note: 'Fall to lunge · heel UP · hold 3' },
+      { shapeId: 'lever', ...SEQ_HOLD, stance: 'right', note: 'Lever hold 3' },
       { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'right', note: 'Finish here · heel FLAT · open shoulders · then clean' },
+      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'right', note: 'Finish here · heel FLAT · open shoulders · then clean' },
     ],
   },
   {
@@ -255,12 +283,17 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_right',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'feet_together_open_shoulders', ...HOLD, note: 'Arms tight by the ears · ribs in · butt in · chin up' },
+      {
+        shapeId: 'feet_together_open_shoulders',
+        ...SEQ_HOLD,
+        profileOk: true,
+        note: 'Stay in profile · arms tight by the ears · ribs in · butt in · chin up',
+      },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'left', note: 'Pull one leg to passé · hold 3' },
-      { shapeId: 'lunge_start', ...HOLD, stance: 'left', note: 'Fall to lunge · heel UP · hold 5' },
-      { shapeId: 'lever', ...HOLD, stance: 'left', note: 'Lever hold 5' },
+      { shapeId: 'lunge_start', ...SEQ_HOLD, stance: 'left', note: 'Fall to lunge · heel UP · hold 3' },
+      { shapeId: 'lever', ...SEQ_HOLD, stance: 'left', note: 'Lever hold 3' },
       { shapeId: 'handstand', ...HS_TRY, note: 'Best kick-up of 3 · not required to pass' },
-      { shapeId: 'lunge_land', ...HOLD, stance: 'left', note: 'Finish here · heel FLAT · open shoulders · then clean' },
+      { shapeId: 'lunge_land', ...SEQ_HOLD, stance: 'left', note: 'Finish here · heel FLAT · open shoulders · then clean' },
     ],
   },
   {
@@ -295,10 +328,10 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     requiresTaskId: 'task_mountain_climber',
     masterAfterCompletions: 2,
     steps: [
-      { shapeId: 'stand_clean', ...HOLD },
+      { shapeId: 'stand_clean', ...SEQ_HOLD },
       {
         shapeId: 'mountain_climber',
-        ...HOLD,
+        ...SEQ_HOLD,
         note: 'Pass through · look at where the hands will go',
       },
       { shapeId: 'handstand', ...HS_TRY, note: '3 kick-up tries · graded, not required' },
@@ -310,7 +343,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         speakCorrections: true,
         note: 'Pass through — hit lever and continue to landing lunge unless you can hold',
       },
-      { shapeId: 'lunge_land', ...HOLD },
+      { shapeId: 'lunge_land', ...SEQ_HOLD },
     ],
   },
 ]

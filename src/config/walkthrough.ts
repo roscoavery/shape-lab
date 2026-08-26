@@ -25,7 +25,7 @@ const HS_SEQ: TaskGuide = {
   steps: {
     feet_together_open_shoulders: {
       intro:
-        'Feet together, open shoulders. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up.',
+        'Feet together, open shoulders. Stay in profile — you do not need to face the camera. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up. Hold 3.',
     },
     passe: {
       intro: 'Pull one leg to passé and hold.',
@@ -35,19 +35,15 @@ const HS_SEQ: TaskGuide = {
       ],
     },
     lunge_start: {
-      intro: 'Fall to lunge and hold.',
+      intro: 'Fall to lunge and hold 3.',
       beats: [
-        { at: 5, text: '5' },
-        { at: 4, text: '4' },
         { at: 3, text: '3' },
         { at: 2, text: '2' },
       ],
     },
     lever: {
-      intro: 'Lever. Hold.',
+      intro: 'Lever. Hold 3.',
       beats: [
-        { at: 5, text: '5' },
-        { at: 4, text: '4' },
         { at: 3, text: '3' },
         { at: 2, text: '2' },
       ],
@@ -57,11 +53,9 @@ const HS_SEQ: TaskGuide = {
         'Kick up to the best handstand you can hit, and finish in a good landing lunge. Three tries.',
     },
     lunge_land: {
-      intro: 'Landing lunge. Hold. Back foot flat.',
+      intro: 'Landing lunge. Hold 3. Back foot flat.',
       beats: [
-        { at: 5, text: 'Hold for 5. With your back foot flat.' },
-        { at: 4, text: '4. Arms in open shoulders.' },
-        { at: 3, text: '3. Chest stays tilted forward.' },
+        { at: 3, text: '3. Arms in open shoulders.' },
         { at: 2, text: '2. Chin stays up.' },
       ],
       outro: 'And clean.',

@@ -5,13 +5,22 @@
  * English voice the OS/browser ships and speak a bit slower than default.
  *
  * Two channels:
- *   speakEvent — hits, hold-complete, next-shape (always allowed, interrupts)
- *   speakCue   — close / almost / corrections (throttled so it does not nag)
+ *   speakEvent — hits, hold-complete, next-shape (queued; does not cut a sentence)
+ *   speakCue   — close / almost / corrections (queued, lightly throttled)
+ *
+ * Only skip / reset / pause cancel speech. Everything else waits its turn so
+ * the coach can finish the cue before saying the next line.
  */
 
 import { useCallback, useEffect, useRef } from 'react'
 
-const CUE_THROTTLE_MS = 2800
+const CUE_THROTTLE_MS = 2200
+
+type SpeechJob = {
+  text: string
+  rate: number
+  pitch: number
+}
 
 function voiceScore(v: SpeechSynthesisVoice): number {
   const n = `${v.name} ${v.lang}`.toLowerCase()
@@ -59,25 +68,6 @@ const HIT_AGAIN = [
 const CLOSE_PREFIX = ['Close.', 'Almost.', 'Nearly there.']
 const LOST_PREFIX = ['You lost it.', 'Almost had it.', 'It slipped.']
 
-function speakNow(
-  text: string,
-  voice: SpeechSynthesisVoice | null,
-  opts: { rate: number; pitch: number; interrupt: boolean },
-): void {
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = voice?.lang || 'en-US'
-  if (voice) u.voice = voice
-  u.rate = opts.rate
-  u.pitch = opts.pitch
-  u.volume = 1
-  try {
-    if (opts.interrupt) window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(u)
-  } catch {
-    /* speech blocked */
-  }
-}
-
 export function holdPrompt(seconds: number): string {
   if (seconds <= 1.05) return 'Hit it and keep it for a beat.'
   const n = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1)
@@ -87,12 +77,13 @@ export function holdPrompt(seconds: number): string {
 export function useSpeechCoach(enabled: boolean) {
   const lastCueRef = useRef<string | null>(null)
   const lastCueAt = useRef(0)
-  const lastEventAt = useRef(0)
   const hitIdx = useRef(0)
   const againIdx = useRef(0)
   const closeIdx = useRef(0)
   const lostIdx = useRef(0)
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
+  const queueRef = useRef<SpeechJob[]>([])
+  const speakingRef = useRef(false)
   const supported =
     typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined'
 
@@ -111,29 +102,76 @@ export function useSpeechCoach(enabled: boolean) {
     return voiceRef.current
   }, [])
 
-  const speakEvent = useCallback(
-    (text: string) => {
+  const pumpRef = useRef<() => void>(() => {})
+
+  const pump = useCallback(() => {
+    if (!supported || speakingRef.current) return
+    const next = queueRef.current.shift()
+    if (!next) return
+    const voice = ensureVoice()
+    const u = new SpeechSynthesisUtterance(next.text)
+    u.lang = voice?.lang || 'en-US'
+    if (voice) u.voice = voice
+    u.rate = next.rate
+    u.pitch = next.pitch
+    u.volume = 1
+    speakingRef.current = true
+    const done = () => {
+      speakingRef.current = false
+      pumpRef.current()
+    }
+    u.onend = done
+    u.onerror = done
+    try {
+      window.speechSynthesis.speak(u)
+    } catch {
+      speakingRef.current = false
+    }
+  }, [supported, ensureVoice])
+
+  pumpRef.current = pump
+
+  const enqueue = useCallback(
+    (text: string, opts: { rate: number; pitch: number; interrupt?: boolean }) => {
       if (!enabled || !supported || !text.trim()) return
-      lastEventAt.current = Date.now()
-      lastCueAt.current = Date.now()
-      speakNow(text.trim(), ensureVoice(), { rate: 0.94, pitch: 1.06, interrupt: true })
+      const job: SpeechJob = { text: text.trim(), rate: opts.rate, pitch: opts.pitch }
+      if (opts.interrupt) {
+        queueRef.current = [job]
+        speakingRef.current = false
+        try {
+          window.speechSynthesis.cancel()
+        } catch {
+          /* ignore */
+        }
+        window.setTimeout(() => pump(), 40)
+        return
+      }
+      if (queueRef.current.length >= 4) queueRef.current.pop()
+      queueRef.current.push(job)
+      pump()
     },
-    [enabled, supported, ensureVoice],
+    [enabled, supported, pump],
+  )
+
+  const speakEvent = useCallback(
+    (text: string, interrupt = false) => {
+      enqueue(text, { rate: 0.94, pitch: 1.06, interrupt })
+    },
+    [enqueue],
   )
 
   const speakCue = useCallback(
     (text: string) => {
-      if (!enabled || !supported || !text.trim()) return
+      if (!text.trim()) return
       const cleaned = text.trim()
       const now = Date.now()
-      if (now - lastEventAt.current < 1200) return
       if (cleaned === lastCueRef.current && now - lastCueAt.current < CUE_THROTTLE_MS) return
-      if (now - lastCueAt.current < CUE_THROTTLE_MS && lastCueRef.current) return
+      if (now - lastCueAt.current < 900) return
       lastCueRef.current = cleaned
       lastCueAt.current = now
-      speakNow(cleaned, ensureVoice(), { rate: 0.92, pitch: 1.04, interrupt: false })
+      enqueue(cleaned, { rate: 0.92, pitch: 1.04, interrupt: false })
     },
-    [enabled, supported, ensureVoice],
+    [enqueue],
   )
 
   /** Corrections / homework still call this. */
@@ -141,15 +179,13 @@ export function useSpeechCoach(enabled: boolean) {
 
   const speakHit = useCallback(
     (shapeName: string, again: boolean) => {
-      if (!enabled || !supported || !shapeName) return
-      const now = Date.now()
-      if (now - lastEventAt.current < 650) return
+      if (!shapeName) return
       const line = again
         ? HIT_AGAIN[againIdx.current++ % HIT_AGAIN.length]!(shapeName)
         : HIT_FIRST[hitIdx.current++ % HIT_FIRST.length]!(shapeName)
       speakEvent(line)
     },
-    [enabled, supported, speakEvent],
+    [speakEvent],
   )
 
   const speakClose = useCallback(
@@ -173,7 +209,8 @@ export function useSpeechCoach(enabled: boolean) {
   const reset = useCallback(() => {
     lastCueRef.current = null
     lastCueAt.current = 0
-    lastEventAt.current = 0
+    queueRef.current = []
+    speakingRef.current = false
     if (supported) {
       try {
         window.speechSynthesis.cancel()

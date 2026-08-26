@@ -17,11 +17,18 @@ export type DetectedView = 'front' | 'side' | 'unknown'
 export function detectCameraView(landmarks: Landmark[]): DetectedView {
   const ls = landmarks[LM.LEFT_SHOULDER]
   const rs = landmarks[LM.RIGHT_SHOULDER]
+  const lh = landmarks[LM.LEFT_HIP]
+  const rh = landmarks[LM.RIGHT_HIP]
   if (!ls || !rs) return 'unknown'
-  const width = Math.abs(ls.x - rs.x)
-  if (width >= 0.12) return 'front'
-  if (width <= 0.07) return 'side'
-  return 'unknown' // 3/4 — usable for both
+  const shoulderW = Math.abs(ls.x - rs.x)
+  const hipW = lh && rh ? Math.abs(lh.x - rh.x) : shoulderW
+  const zDiff = Math.abs((ls.z ?? 0) - (rs.z ?? 0))
+  // Profile: shoulders overlap in x, or a clear depth split between them.
+  if (shoulderW <= 0.08 || (shoulderW <= 0.12 && zDiff > 0.1)) return 'side'
+  // Face-on only when both girdles are clearly wide — gymnastics side views
+  // often still show ~0.12–0.18 shoulder width and used to be mislabeled "front".
+  if (shoulderW >= 0.22 && hipW >= 0.15) return 'front'
+  return 'unknown'
 }
 
 export function viewMatches(
@@ -52,9 +59,9 @@ export const CAMERA_VIEW_COPY: Record<
       'You do not need to match the reference photo’s camera angle. Face any way that shows the body.',
   },
   side: {
-    label: 'Side view required',
+    label: 'Side view',
     instruction:
-      'Stand in profile (3/4 is OK). Do not face the camera or turn your back — we need to see the body line from back foot to hands.',
+      'Stand in profile (3/4 is OK). Stay sideways — you do not need to face the camera. We grade the body line from the landmarks we can see.',
   },
   front: {
     label: 'Front view required',

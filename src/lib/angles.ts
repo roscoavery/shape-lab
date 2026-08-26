@@ -9,7 +9,10 @@
 
 import type { Landmark } from '../types'
 
-function isVisible(lm: Landmark | undefined, min = 0.4): boolean {
+/** Side-on poses often report low MediaPipe visibility on the far side. */
+export const VISIBILITY_MIN = 0.18
+
+function isVisible(lm: Landmark | undefined, min = VISIBILITY_MIN): boolean {
   if (!lm) return false
   return (lm.visibility ?? 1) >= min
 }

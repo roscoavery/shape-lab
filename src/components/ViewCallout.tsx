@@ -28,9 +28,9 @@ export function ViewCallout({ shape, score }: Props) {
       }`}
     >
       <div className="text-[10px] font-semibold uppercase tracking-wider opacity-80">
-        {warn ? 'Turn the body' : copy.label}
+        {warn && view === 'front' ? 'Turn the body' : copy.label}
       </div>
-      <p className="mt-0.5">{warn ?? copy.instruction}</p>
+      <p className="mt-0.5">{warn && view === 'front' ? warn : copy.instruction}</p>
       {score?.detectedStance && shape.stanceAware && (
         <p className="mt-1 text-xs opacity-80">
           Grading {score.detectedStance === 'right' ? 'right' : 'left'} foot / support forward

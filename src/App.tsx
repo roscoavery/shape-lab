@@ -73,6 +73,7 @@ export default function App() {
   const [demoLandmarks, setDemoLandmarks] = useState<Landmark[] | null>(null)
   const [taskProgress, setTaskProgress] = useState<AthleteTaskProgress | null>(null)
   const [scoreStance, setScoreStance] = useState<'left' | 'right' | 'auto'>('auto')
+  const [scoreProfileOk, setScoreProfileOk] = useState(false)
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>(() =>
     loadReferencePhotos(),
   )
@@ -84,12 +85,20 @@ export default function App() {
   const activeLandmarks = camera.running ? camera.landmarks : demoLandmarks
 
   const score = useMemo(
-    () => scoreShape(activeLandmarks, shape, qualityThreshold, { stance: scoreStance }),
-    [activeLandmarks, shape, qualityThreshold, scoreStance],
+    () =>
+      scoreShape(activeLandmarks, shape, qualityThreshold, {
+        stance: scoreStance,
+        profileOk: scoreProfileOk,
+      }),
+    [activeLandmarks, shape, qualityThreshold, scoreStance, scoreProfileOk],
   )
 
   const timingActive = camera.running || demoLandmarks !== null
-  const hold = useHoldTimer(timingActive, score.overall, qualityThreshold)
+  const hold = useHoldTimer(
+    timingActive,
+    score.holdReady ? Math.max(score.overall, qualityThreshold) : score.overall,
+    score.holdReady ? qualityThreshold : 101,
+  )
 
   useEffect(() => {
     saveAthletes(athletes)
@@ -143,13 +152,18 @@ export default function App() {
   const onSelectShape = useCallback((s: ShapeDef) => {
     setShape(s)
     setScoreStance('auto')
+    setScoreProfileOk(false)
   }, [])
 
-  const onJumpToShape = useCallback((shapeId: string, stance?: 'left' | 'right' | 'auto') => {
-    const s = SHAPES.find((x) => x.id === shapeId)
-    if (s) setShape(s)
-    setScoreStance(stance ?? 'auto')
-  }, [])
+  const onJumpToShape = useCallback(
+    (shapeId: string, stance?: 'left' | 'right' | 'auto', opts?: { profileOk?: boolean }) => {
+      const s = SHAPES.find((x) => x.id === shapeId)
+      if (s) setShape(s)
+      setScoreStance(stance ?? 'auto')
+      setScoreProfileOk(Boolean(opts?.profileOk))
+    },
+    [],
+  )
 
   const saveAttempt = () => {
     if (!activeAthleteId) {
@@ -594,8 +608,9 @@ export default function App() {
             </h2>
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Tasks</strong> tab, pick an athlete,
-              and work through the ordered curriculum. Most holds start at 5s and drop to 3s after
-              mastery. Freestanding handstand is <strong className="text-[var(--text)]">three kick-up tries</strong> —
+              and work through the ordered curriculum. Standalone holds start at 5s and drop to 3s after
+              mastery. Sequences always use 3s holds, and FTOS in those sequences does not require
+              facing the camera. Freestanding handstand is <strong className="text-[var(--text)]">three kick-up tries</strong> —
               we grade the best line in a written analysis, and it does not block moving on (wall
               handstand stays on Homework). Required to pass the lunge–lever sequences:{' '}
               <strong className="text-[var(--text)]">FTOS, starting lunge, lever, landing lunge</strong>.

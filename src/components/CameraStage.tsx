@@ -3,7 +3,7 @@
  */
 
 import { useEffect, type ReactNode } from 'react'
-import { jointAngle } from '../lib/angles'
+import { jointAngle, VISIBILITY_MIN } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import type { Landmark } from '../types'
 
@@ -97,7 +97,7 @@ export function CameraStage({
           const A = landmarks[a]
           const B = landmarks[b]
           if (!A || !B) continue
-          if ((A.visibility ?? 1) < 0.4 || (B.visibility ?? 1) < 0.4) continue
+          if ((A.visibility ?? 1) < VISIBILITY_MIN || (B.visibility ?? 1) < VISIBILITY_MIN) continue
           ctx.beginPath()
           ctx.moveTo(A.x * canvas.width, A.y * canvas.height)
           ctx.lineTo(B.x * canvas.width, B.y * canvas.height)
@@ -105,7 +105,7 @@ export function CameraStage({
         }
 
         for (const lm of landmarks) {
-          if ((lm.visibility ?? 1) < 0.4) continue
+          if ((lm.visibility ?? 1) < VISIBILITY_MIN) continue
           ctx.beginPath()
           ctx.fillStyle = '#ffffff'
           ctx.arc(
@@ -127,7 +127,7 @@ export function CameraStage({
             const ang = jointAngle(landmarks, ...readout.points)
             if (ang === null) continue
             const joint = landmarks[readout.points[1]]
-            if (!joint || (joint.visibility ?? 1) < 0.4) continue
+            if (!joint || (joint.visibility ?? 1) < VISIBILITY_MIN) continue
             let x = joint.x * canvas.width
             let y = joint.y * canvas.height
             if (mirror) x = canvas.width - x

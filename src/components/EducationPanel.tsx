@@ -281,8 +281,8 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Task pathways</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Walk the {taskCount}-task curriculum in order. See hold times (5s beginner /
-          3s mastered), pass-through notes, and what unlocks next.
+          Walk the {taskCount}-task curriculum in order. See hold times (5s on
+          standalone first hits, 3s in sequences), pass-through notes, and what unlocks next.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           View pathway →
@@ -620,7 +620,8 @@ function PathwayList({
     <section className="space-y-3">
       <p className="text-sm text-[var(--muted)]">
         Tasks unlock in order. Complete a task once in <strong className="text-[var(--text)]">Tasks</strong>{' '}
-        mode to open the next. Holds start at 5s and drop to 3s after mastery.
+        mode to open the next. Standalone holds start at 5s and drop to 3s after mastery.
+        Sequences always use 3s holds. Sequence FTOS can stay in profile.
       </p>
       <ol className="space-y-3">
         {CURRICULUM_TASKS.map((task, i) => {

@@ -12,9 +12,11 @@
  *
  * View independence:
  * - Joint angles grade from any facing.
- * - Criteria tagged needsView:'side' or 'front' are skipped (not failed) when
- *   the athlete is filmed from the wrong angle, so a front-on FTOS photo does
- *   not tank a lunge body-line check.
+ * - Side-view shapes (lunge, lever, C) always score the landmarks we can see.
+ *   A guessed "front" classification does not fail the pose or demand a
+ *   face-on turn. Far-side landmarks that MediaPipe hides are skipped, not
+ *   scored as zero.
+ * - Sequence FTOS (profileOk) grades the camera-side of the body the same way.
  * - stanceAware shapes score both “left foot forward” and “right foot forward”
  *   and keep the better match.
  */
@@ -28,7 +30,6 @@ import {
 } from './angles'
 import { LM } from './landmarks'
 import {
-  criterionViewOk,
   detectCameraView,
   swapLeftRight,
   viewMatches,
@@ -179,6 +180,7 @@ function emptyResult(shape: ShapeDef, message: string): ScoreResult {
       })),
     mainCorrection: message,
     viewWarning: null,
+    holdReady: false,
   }
 }
 
@@ -188,6 +190,7 @@ function scoreOnce(
   qualityThresholdOverride: number | null | undefined,
   detected: DetectedView,
   stance: 'left' | 'right',
+  allowOccludedSide: boolean,
 ): ScoreResult {
   const measuredCache: Record<string, number | null> = {}
   for (const c of shape.criteria) {
@@ -200,42 +203,48 @@ function scoreOnce(
   }
 
   const atomicScores: Record<string, number> = {}
+  const atomicPresent: Record<string, boolean> = {}
   for (const c of shape.criteria) {
     if (c.kind === 'composite_min') continue
     const m = measuredCache[c.id]
     if (m === null || m === undefined) {
       atomicScores[c.id] = 0
+      atomicPresent[c.id] = false
     } else {
       atomicScores[c.id] = scoreAgainstTarget(m, c).score
+      atomicPresent[c.id] = true
     }
   }
 
   const results: CriterionScore[] = []
   let weightedSum = 0
   let weightTotal = 0
+  let definedWeight = 0
   const viewWrong = !viewMatches(shape.cameraView, detected)
 
   for (const c of shape.criteria) {
     if (c.id.startsWith('_')) continue
+    definedWeight += c.weight
 
-    const skipForView = !criterionViewOk(c.needsView, detected)
-
+    const skipSymmetry = allowOccludedSide && c.kind === 'symmetry'
     let score: number
     let measured = measuredCache[c.id] ?? null
     let feedback: string | null = null
+    let include = true
 
-    if (skipForView) {
-      score = 0
-      feedback =
-        c.needsView === 'side'
-          ? 'Needs a side view — turn so we can see your body line'
-          : 'Needs a front view — face the camera'
+    if (skipSymmetry) {
+      include = false
+      score = 100
+      feedback = null
     } else if (c.kind === 'composite_min' && c.of) {
-      const subScores = c.of.map((id) => atomicScores[id] ?? 0)
+      const presentIds = c.of.filter((id) => atomicPresent[id])
+      const ids =
+        allowOccludedSide && presentIds.length > 0 ? presentIds : c.of
+      const subScores = ids.map((id) => atomicScores[id] ?? 0)
       score = subScores.length ? Math.min(...subScores) : 0
-      let worstId = c.of[0]
+      let worstId = ids[0]
       let worstScore = Infinity
-      for (const id of c.of) {
+      for (const id of ids) {
         const s = atomicScores[id] ?? 0
         if (s < worstScore) {
           worstScore = s
@@ -243,18 +252,38 @@ function scoreOnce(
         }
       }
       const worstDef = shape.criteria.find((x) => x.id === worstId)
-      const worstMeasured = measuredCache[worstId]
+      const worstMeasured = worstId ? measuredCache[worstId] : null
       if (worstDef && worstMeasured !== null && worstMeasured !== undefined) {
         const { deltaLow, deltaHigh } = scoreAgainstTarget(worstMeasured, worstDef)
         feedback = feedbackFor(worstDef, worstMeasured, deltaLow, deltaHigh)
+      } else if (presentIds.length === 0) {
+        if (allowOccludedSide) {
+          include = false
+          score = 0
+          feedback = null
+        } else {
+          score = 0
+          feedback = 'Landmark not visible'
+        }
       }
     } else if (measured === null) {
-      score = 0
-      feedback = 'Landmark not visible'
+      if (allowOccludedSide) {
+        include = false
+        score = 0
+        feedback = null
+      } else {
+        score = 0
+        feedback = 'Landmark not visible'
+      }
     } else {
       const { score: s, deltaLow, deltaHigh } = scoreAgainstTarget(measured, c)
       score = s
       feedback = feedbackFor(c, measured, deltaLow, deltaHigh)
+    }
+
+    if (!include) {
+      definedWeight -= c.weight
+      continue
     }
 
     results.push({
@@ -266,51 +295,60 @@ function scoreOnce(
       feedback,
     })
 
-    if (!skipForView) {
-      weightedSum += score * c.weight
-      weightTotal += c.weight
-    }
+    weightedSum += score * c.weight
+    weightTotal += c.weight
   }
 
   const overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
 
   const sorted = [...results]
-    .filter((r) => {
-      const def = shape.criteria.find((c) => c.id === r.id)
-      return criterionViewOk(def?.needsView, detected)
-    })
+    .filter((r) => r.feedback)
     .sort((a, b) => a.score - b.score)
 
   const threshold = qualityThresholdOverride ?? shape.qualityThreshold
   let mainCorrection: string | null = null
   let viewWarning: string | null = null
 
-  if (viewWrong && shape.cameraView === 'side') {
-    viewWarning =
-      'Side view needed — stand in profile (not face-on or back-on) so we can grade the body line.'
-    mainCorrection = viewWarning
-  } else if (viewWrong && shape.cameraView === 'front') {
-    viewWarning =
-      'Face the camera — both arms and legs need to be visible for this shape.'
-    mainCorrection = viewWarning
+  if (weightTotal === 0) {
+    mainCorrection = 'Stay in the frame — we see you, but need a clearer body line.'
   }
 
-  if (!mainCorrection) {
-    for (const r of sorted) {
-      if (r.feedback && r.score < 95) {
-        mainCorrection = r.feedback
-        break
-      }
+  // Only nag about facing the camera when the shape truly needs a front view
+  // (T arms) AND we are confident they are in profile. Never block a side-view
+  // shape on a guessed "front" classification — MediaPipe is often wrong.
+  if (viewWrong && shape.cameraView === 'front' && detected === 'side') {
+    viewWarning =
+      'Face the camera — both arms and legs need to be visible for this shape.'
+  }
+
+  for (const r of sorted) {
+    if (r.feedback && r.score < 95) {
+      mainCorrection = r.feedback
+      break
     }
+  }
+  if (!mainCorrection && viewWarning) {
+    mainCorrection = viewWarning
   }
   if (!mainCorrection && overall < threshold) {
     mainCorrection = shape.bodyPosition
       ? 'Match the body-position description'
       : 'Adjust body line to raise score'
   }
-  if (overall >= 95 && !viewWrong) {
+  if (overall >= 95 && !viewWarning) {
     mainCorrection = 'Excellent shape — hold it!'
   }
+
+  const important = results.filter((r) => r.weight >= 8)
+  const worstImportant =
+    important.length > 0 ? Math.min(...important.map((r) => r.score)) : 0
+  const enoughWeight = definedWeight > 0 && weightTotal >= Math.max(1, definedWeight * 0.55)
+  const holdReady =
+    overall >= threshold &&
+    important.length > 0 &&
+    worstImportant >= 50 &&
+    enoughWeight &&
+    !(shape.cameraView === 'front' && detected === 'side')
 
   return {
     overall,
@@ -319,6 +357,7 @@ function scoreOnce(
     detectedStance: stance,
     cameraViewDetected: detected,
     viewWarning,
+    holdReady,
   }
 }
 
@@ -329,6 +368,11 @@ export type ScoreOptions = {
    * auto (default) = try both on stanceAware shapes and keep the better score.
    */
   stance?: 'left' | 'right' | 'auto'
+  /**
+   * Sequence FTOS (and similar): grade the camera-side of the body so the
+   * athlete can stay in profile. Side-view shapes always get this treatment.
+   */
+  profileOk?: boolean
 }
 
 /**
@@ -346,21 +390,40 @@ export function scoreShape(
 
   const detected = detectCameraView(landmarks)
   const want = options?.stance ?? 'auto'
+  const allowOccludedSide = Boolean(options?.profileOk) || shape.cameraView === 'side'
 
   if (want === 'right') {
-    return scoreOnce(swapLeftRight(landmarks), shape, qualityThresholdOverride, detected, 'right')
+    return scoreOnce(
+      swapLeftRight(landmarks),
+      shape,
+      qualityThresholdOverride,
+      detected,
+      'right',
+      allowOccludedSide,
+    )
   }
-  if (want === 'left' || !shape.stanceAware) {
-    return scoreOnce(landmarks, shape, qualityThresholdOverride, detected, want === 'left' ? 'left' : 'left')
+  if (want === 'left') {
+    return scoreOnce(landmarks, shape, qualityThresholdOverride, detected, 'left', allowOccludedSide)
+  }
+  if (shape.stanceAware || options?.profileOk) {
+    const left = scoreOnce(
+      landmarks,
+      shape,
+      qualityThresholdOverride,
+      detected,
+      'left',
+      allowOccludedSide,
+    )
+    const right = scoreOnce(
+      swapLeftRight(landmarks),
+      shape,
+      qualityThresholdOverride,
+      detected,
+      'right',
+      allowOccludedSide,
+    )
+    return left.overall >= right.overall ? left : right
   }
 
-  const left = scoreOnce(landmarks, shape, qualityThresholdOverride, detected, 'left')
-  const right = scoreOnce(
-    swapLeftRight(landmarks),
-    shape,
-    qualityThresholdOverride,
-    detected,
-    'right',
-  )
-  return left.overall >= right.overall ? left : right
+  return scoreOnce(landmarks, shape, qualityThresholdOverride, detected, 'left', allowOccludedSide)
 }

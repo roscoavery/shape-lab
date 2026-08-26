@@ -59,7 +59,11 @@ type Props = {
   mainCorrection: string | null
   score: ScoreResult
   /** Ask parent to switch camera scoring to this shape (+ optional stance) */
-  onRequestShape: (shapeId: string, stance?: 'left' | 'right' | 'auto') => void
+  onRequestShape: (
+    shapeId: string,
+    stance?: 'left' | 'right' | 'auto',
+    opts?: { profileOk?: boolean },
+  ) => void
   referencePhotos: ReferencePhoto[]
   onReferencesChange: (photos: ReferencePhoto[]) => void
   voiceEnabled: boolean
@@ -126,7 +130,6 @@ export function TaskTrainer({
   const {
     speakCue,
     speakEvent,
-    speakHit,
     speakClose,
     speakLost,
     reset: resetSpeech,
@@ -200,7 +203,11 @@ export function TaskTrainer({
     setActive(true)
     resetSpeech()
     const first = t.steps[0]
-    if (first) onRequestShape(first.shapeId, first.stance ?? 'auto')
+    if (first) {
+      onRequestShape(first.shapeId, first.stance ?? 'auto', {
+        profileOk: Boolean(first.profileOk),
+      })
+    }
     const firstShape = first ? getShape(first.shapeId) : undefined
     const hold = first ? holdSecondsForStep(t, first, comps) : 0
     const guide = first ? getStepGuide(t.id, first.shapeId) : undefined
@@ -237,6 +244,45 @@ export function TaskTrainer({
     resetSpeech()
   }
 
+  const skipCurrentShape = () => {
+    if (!athleteId || !task) {
+      skipToNextTask()
+      return
+    }
+    const nextStep = task.steps[stepIndex + 1]
+    if (!nextStep) {
+      skipToNextTask()
+      return
+    }
+    holdAccumRef.current = 0
+    setStepProgress(0)
+    lastRef.current = null
+    inQualityRef.current = false
+    hitAtRef.current = null
+    spokenBeatsRef.current = new Set()
+    tryCountRef.current = 0
+    tryAccumRef.current = 0
+    invertedRef.current = false
+    hadHitThisStepRef.current = false
+    advancingRef.current = false
+    skipIntroRef.current = true
+    const nextShape = getShape(nextStep.shapeId)
+    const nextHold = holdSecondsForStep(task, nextStep, taskCompletions)
+    const nextGuide = getStepGuide(task.id, nextStep.shapeId)
+    const line =
+      nextGuide?.intro ??
+      `Skipping this shape. Next, show me a ${nextShape?.name ?? 'shape'}. ${holdPrompt(nextHold)}`
+    setStepIndex((i) => i + 1)
+    setBanner(line)
+    setLiveKind('looking')
+    setFlash('Skipped this shape')
+    window.setTimeout(() => setFlash(null), 3000)
+    speakEvent(line, true)
+    onRequestShape(nextStep.shapeId, nextStep.stance ?? 'auto', {
+      profileOk: Boolean(nextStep.profileOk),
+    })
+  }
+
   const skipToNextTask = () => {
     if (!athleteId || !task || !progress) return
     sessionRef.current = false
@@ -264,7 +310,7 @@ export function TaskTrainer({
       : 'Skipped this task.'
     setFlash(line)
     setBanner(line)
-    speakEvent(line)
+    speakEvent(line, true)
     window.setTimeout(() => setFlash(null), 4000)
   }
 
@@ -402,7 +448,11 @@ export function TaskTrainer({
       return
     }
 
-    if (stepShape.id) onRequestShape(step.shapeId, step.stance ?? 'auto')
+    if (stepShape.id) {
+      onRequestShape(step.shapeId, step.stance ?? 'auto', {
+        profileOk: Boolean(step.profileOk),
+      })
+    }
     const gate = qualityThreshold || stepShape.qualityThreshold
     const closeFloor = Math.max(35, Math.min(gate - 18, Math.round(gate * 0.72)))
     const guide = getStepGuide(task.id, step.shapeId)
@@ -418,7 +468,7 @@ export function TaskTrainer({
       if (!slot.best || result.overall > slot.best.overall) {
         slot.best = result
       }
-      if (result.overall >= gate) slot.qualityHit = true
+      if (result.holdReady) slot.qualityHit = true
       if (gradeOnly) slot.tries = tryCountRef.current
     }
 
@@ -491,7 +541,7 @@ export function TaskTrainer({
       if (lastRef.current != null) {
         const dt = (now - lastRef.current) / 1000
         noteBest(scoreRef.current)
-        const inQ = overallScore >= gate
+        const inQ = Boolean(scoreRef.current.holdReady)
         const close = !inQ && overallScore >= closeFloor
 
         if (gradeOnly) {
@@ -533,7 +583,6 @@ export function TaskTrainer({
             inQualityRef.current = true
             hitAtRef.current = now
             playHitTick()
-            if (!scripted) speakHit(stepShape.name, hadHitThisStepRef.current)
             hadHitThisStepRef.current = true
             saveHitSnapshot()
             setLiveKind('holding')
@@ -541,6 +590,14 @@ export function TaskTrainer({
           }
           holdAccumRef.current += dt
           setStepProgress(holdAccumRef.current)
+          if (
+            !scripted &&
+            step.speakCorrections !== false &&
+            mainCorrection &&
+            !mainCorrection.toLowerCase().startsWith('excellent')
+          ) {
+            speakCue(mainCorrection)
+          }
           if (guide?.beats) {
             const remaining = stepHold - holdAccumRef.current
             for (const beat of guide.beats) {
@@ -598,7 +655,6 @@ export function TaskTrainer({
     trimClip,
     athleteId,
     refreshCaptures,
-    speakHit,
     speakLost,
     speakClose,
     speakCue,
@@ -662,6 +718,32 @@ export function TaskTrainer({
           )}
         </label>
       </div>
+
+      {task && (
+        <div className="sticky top-0 z-20 rounded-lg border border-[var(--warn)]/60 bg-[#2a2410] p-2 shadow-lg">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--warn)]">
+            Stuck? Skip without a pass
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={skipToNextTask}
+              className="rounded-lg bg-[var(--warn)] px-3 py-2 text-sm font-semibold text-[#1a1408] hover:brightness-110"
+            >
+              App not working right? Try the next task
+            </button>
+            {active && (
+              <button
+                type="button"
+                onClick={skipCurrentShape}
+                className="rounded-lg border border-[var(--warn)]/70 px-3 py-2 text-sm text-[var(--warn)] hover:bg-[#3a3218]"
+              >
+                Skip this shape
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <ol className="max-h-56 space-y-1 overflow-y-auto text-sm">
         {visibleTasks.map((t) => {
@@ -848,16 +930,23 @@ export function TaskTrainer({
                 View last analysis
               </button>
             )}
-            {isTaskUnlocked(task, completions, skipped) && (
+            {active && (
               <button
                 type="button"
-                onClick={skipToNextTask}
+                onClick={skipCurrentShape}
                 className="rounded-lg border border-[var(--warn)]/50 px-3 py-2 text-sm text-[var(--warn)] hover:bg-[#2a2410]"
-                title="Unlock the next task if scoring is stuck"
               >
-                App not working right? Try the next task
+                Skip this shape
               </button>
             )}
+            <button
+              type="button"
+              onClick={skipToNextTask}
+              className="rounded-lg border border-[var(--warn)]/50 px-3 py-2 text-sm text-[var(--warn)] hover:bg-[#2a2410]"
+              title="Unlock the next task if scoring is stuck"
+            >
+              App not working right? Try the next task
+            </button>
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through each shape and starts the next task on its
@@ -868,12 +957,23 @@ export function TaskTrainer({
       )}
 
       {analysis && athleteId && (
-        <TaskAnalysisPanel
-          report={analysis}
-          onClose={() => setAnalysis(null)}
-          onContinue={() => setAnalysis(null)}
-          continueLabel="Keep going"
-        />
+        <div className="space-y-2">
+          <div className="rounded-lg border border-[var(--warn)]/60 bg-[#2a2410] p-2">
+            <button
+              type="button"
+              onClick={skipToNextTask}
+              className="rounded-lg bg-[var(--warn)] px-3 py-2 text-sm font-semibold text-[#1a1408]"
+            >
+              App not working right? Try the next task
+            </button>
+          </div>
+          <TaskAnalysisPanel
+            report={analysis}
+            onClose={() => setAnalysis(null)}
+            onContinue={() => setAnalysis(null)}
+            continueLabel="Keep going"
+          />
+        </div>
       )}
 
       {/* Reference photo — shown beside camera while training */}

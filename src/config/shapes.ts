@@ -420,12 +420,13 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Feet together, straight knees, open hips, ribs in, open shoulders, chin up and neutral, straight elbows, hands reaching to the ceiling.',
     bodyPosition:
-      'FRONT or 3/4. Feet glued. Knees straight. Hips open. Ribs in (no arch). Shoulders fully open, arms covering the ears, elbows locked, hands reaching to the ceiling. Chin up and neutral — look straight ahead. This is the same long body you take into passé.',
+      'Feet glued. Knees straight. Hips open. Ribs in (no arch). Shoulders fully open, arms covering the ears, elbows locked, hands reaching to the ceiling. Chin up and neutral — look straight ahead. This is the same long body you take into passé. Standalone: front or 3/4 is easiest to see both arms. In a sequence, stay in profile — you do not need to face the camera.',
     category: 'static',
     qualityThreshold: 70,
     cameraView: 'any',
     tips: [
-      'Front or 3/4 is easiest to see both arms.',
+      'Standalone: front or 3/4 is easiest to see both arms.',
+      'In a sequence, stay in profile — do not turn to face the camera.',
       'Feet together, knees straight, hips open, ribs in.',
       'Open shoulders, elbows straight, hands to the ceiling.',
       'Chin up and neutral.',

@@ -200,6 +200,11 @@ export type ScoreResult = {
   cameraViewDetected?: 'front' | 'side' | 'unknown'
   /** Shown when the athlete is facing the wrong way for this shape. */
   viewWarning?: string | null
+  /**
+   * True when the pose is good enough to count a quality hold.
+   * Stricter than overall >= threshold: a single weak weighted check still blocks.
+   */
+  holdReady?: boolean
 }
 
 export type AttemptRecord = {
