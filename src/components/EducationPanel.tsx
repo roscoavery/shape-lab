@@ -3,7 +3,7 @@
  * For gymnasts and parents studying body positions before Tasks practice.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CURRICULUM_TASKS, getTask } from '../config/curriculum'
 import { getShape, SHAPES } from '../config/shapes'
 import {
@@ -15,8 +15,11 @@ import {
   visibleCriteria,
 } from '../lib/educationCopy'
 import { pickReferencePhoto } from '../lib/storage'
+import { listCaptures, type TaskCapture } from '../lib/captureStore'
 import type { ReferencePhoto, ShapeDef } from '../types'
 import { ViewCallout } from './ViewCallout'
+import { ShapeQuiz } from './ShapeQuiz'
+import { HitFolder } from './HitFolder'
 
 type EduView =
   | { kind: 'home' }
@@ -24,18 +27,31 @@ type EduView =
   | { kind: 'shape'; shapeId: string }
   | { kind: 'pathways' }
   | { kind: 'task'; taskId: string }
+  | { kind: 'quiz' }
+  | { kind: 'hits' }
 
 type Props = {
   referencePhotos: ReferencePhoto[]
+  athleteId: string | null
+  athleteName?: string | null
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
 
-export function EducationPanel({ referencePhotos }: Props) {
+export function EducationPanel({ referencePhotos, athleteId, athleteName }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'home' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [refFailed, setRefFailed] = useState<Record<string, boolean>>({})
+  const [hits, setHits] = useState<TaskCapture[]>([])
+
+  useEffect(() => {
+    if (!athleteId) {
+      setHits([])
+      return
+    }
+    void listCaptures(athleteId).then(setHits).catch(() => setHits([]))
+  }, [athleteId, view.kind])
 
   const pathwayIds = useMemo(() => curriculumShapeIds(), [])
 
@@ -95,6 +111,16 @@ export function EducationPanel({ referencePhotos }: Props) {
             onClick={goPathways}
             label="Task pathways"
           />
+          <NavChip
+            active={view.kind === 'quiz'}
+            onClick={() => setView({ kind: 'quiz' })}
+            label="Shape test"
+          />
+          <NavChip
+            active={view.kind === 'hits'}
+            onClick={() => setView({ kind: 'hits' })}
+            label="My shapes"
+          />
         </div>
       </header>
 
@@ -105,6 +131,8 @@ export function EducationPanel({ referencePhotos }: Props) {
           taskCount={CURRICULUM_TASKS.length}
           onShapes={goShapes}
           onPathways={goPathways}
+          onQuiz={() => setView({ kind: 'quiz' })}
+          onHits={() => setView({ kind: 'hits' })}
         />
       )}
 
@@ -147,6 +175,26 @@ export function EducationPanel({ referencePhotos }: Props) {
           onOpenTask={openTask}
         />
       )}
+
+      {view.kind === 'quiz' && (
+        <ShapeQuiz
+          referencePhotos={referencePhotos}
+          onExit={goHome}
+        />
+      )}
+
+      {view.kind === 'hits' && (
+        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+          {!athleteId ? (
+            <p className="text-sm text-[var(--muted)]">
+              Select an athlete on the Tasks tab first — their hit photos show up here, grouped by
+              shape.
+            </p>
+          ) : (
+            <HitFolder captures={hits} athleteName={athleteName} />
+          )}
+        </section>
+      )}
     </div>
   )
 }
@@ -181,12 +229,16 @@ function HomeView({
   taskCount,
   onShapes,
   onPathways,
+  onQuiz,
+  onHits,
 }: {
   pathwayCount: number
   shapeCount: number
   taskCount: number
   onShapes: () => void
   onPathways: () => void
+  onQuiz: () => void
+  onHits: () => void
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -216,6 +268,34 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           View pathway →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onQuiz}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Multiple choice: name the position from a body-position description, or identify
+          the shape in a reference photo.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Take the test →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onHits}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">My shapes</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          The athlete&apos;s own hit photos, filed by shape — a personal reference folder
+          built automatically in Tasks.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open folder →
         </span>
       </button>
     </div>

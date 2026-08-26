@@ -58,11 +58,22 @@ export function ScorePanel({
             Quality gate:{' '}
             <span className="text-[var(--text)]">{qualityThreshold}</span>
           </div>
-          <div className={inQuality ? 'text-[var(--good)]' : 'text-[var(--warn)]'}>
-            {inQuality ? 'In quality zone' : 'Below threshold'}
+          <div className={inQuality ? 'text-[var(--good)] font-semibold' : 'text-[var(--warn)]'}>
+            {inQuality ? 'HOLDING — stay there' : score.overall >= qualityThreshold * 0.72 && score.overall >= 35 ? 'CLOSE' : 'Below threshold'}
           </div>
         </div>
       </div>
+
+      {inQuality && (
+        <div className="rounded-lg border border-[var(--good)] bg-[#102820] px-3 py-2 text-lg font-bold text-[var(--good)]">
+          HOLDING — keep that {shape.name}
+        </div>
+      )}
+      {!inQuality && score.overall >= Math.max(35, qualityThreshold * 0.72) && (
+        <div className="rounded-lg border border-[var(--warn)] bg-[#2a2410] px-3 py-2 text-base font-semibold text-[var(--warn)]">
+          CLOSE — {score.mainCorrection ?? 'adjust'}
+        </div>
+      )}
 
       {score.mainCorrection && (
         <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm">

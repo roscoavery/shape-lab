@@ -9,8 +9,9 @@ const META = 'meta'
 const BLOBS = 'blobs'
 const LEGACY_ITEMS = 'items'
 
-/** Keep the newest N captures per athlete so the gym iPad does not fill up. */
-const MAX_PER_ATHLETE = 36
+/** Keep the newest N clips; always keep the latest snapshot per shape. */
+const MAX_CLIPS_PER_ATHLETE = 16
+const MAX_EXTRA_SNAPSHOTS = 10
 
 export type TaskCapture = {
   id: string
@@ -132,9 +133,56 @@ export async function deleteCapture(id: string): Promise<void> {
 
 async function pruneAthlete(athleteId: string): Promise<void> {
   const all = await listCaptures(athleteId)
-  if (all.length <= MAX_PER_ATHLETE) return
-  const extra = all.slice(MAX_PER_ATHLETE)
-  await Promise.all(extra.map((c) => deleteCapture(c.id)))
+  const snapshots = all.filter((c) => c.kind === 'snapshot')
+  const clips = all.filter((c) => c.kind === 'clip')
+
+  const seenShape = new Set<string>()
+  const keepLatest = new Set<string>()
+  for (const s of snapshots) {
+    if (!seenShape.has(s.shapeId)) {
+      seenShape.add(s.shapeId)
+      keepLatest.add(s.id)
+    }
+  }
+  let extra = 0
+  for (const s of snapshots) {
+    if (keepLatest.has(s.id)) continue
+    extra += 1
+    if (extra > MAX_EXTRA_SNAPSHOTS) await deleteCapture(s.id)
+  }
+  for (const c of clips.slice(MAX_CLIPS_PER_ATHLETE)) {
+    await deleteCapture(c.id)
+  }
+}
+
+export type ShapeHitGroup = {
+  shapeId: string
+  shapeName: string
+  snapshots: TaskCapture[]
+  clips: TaskCapture[]
+}
+
+export function groupCapturesByShape(captures: TaskCapture[]): ShapeHitGroup[] {
+  const map = new Map<string, ShapeHitGroup>()
+  for (const c of captures) {
+    let g = map.get(c.shapeId)
+    if (!g) {
+      g = { shapeId: c.shapeId, shapeName: c.shapeName, snapshots: [], clips: [] }
+      map.set(c.shapeId, g)
+    }
+    if (c.kind === 'clip') g.clips.push(c)
+    else g.snapshots.push(c)
+  }
+  return [...map.values()]
+}
+
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'))
+    reader.readAsDataURL(blob)
+  })
 }
 
 /** JPEG snapshot of the pose canvas (sync, so we can fire on the hit frame). */

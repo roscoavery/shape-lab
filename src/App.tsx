@@ -404,7 +404,11 @@ export default function App() {
       )}
 
       {tab === 'learn' && (
-        <EducationPanel referencePhotos={referencePhotos} />
+        <EducationPanel
+          referencePhotos={referencePhotos}
+          athleteId={activeAthleteId}
+          athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+        />
       )}
 
       {tab === 'compare' && <ComparePanel />}
@@ -491,7 +495,9 @@ export default function App() {
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Learn</strong> tab to study shapes
               (cues, criteria, reference photos) and the full task pathway before practicing.
-              No camera required — useful for gymnasts and parents reviewing positions at home.
+              Take a <strong className="text-[var(--text)]">Shape test</strong> (name the
+              description or the picture) and open <strong className="text-[var(--text)]">My shapes</strong>{' '}
+              to review the athlete&apos;s own hit photos. No camera required for studying.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -503,10 +509,11 @@ export default function App() {
               and work through the ordered curriculum (stand clean → FTOS → passé → lunges →
               lever → handstand → sequences → C shape → mountain climber). Most holds start at 5s
               and drop to 3s after mastery. Freestanding handstand only needs a brief hit (~1s) —
-              wall handstand stays on Homework. When they hit the shape, the app snapshots,
-              speaks “Yes, that’s a …”, records a short trimmed clip, and chimes when the hold
-              is done. Upload reference photos per shape (shared or athlete-specific) so
-              athletes can match the picture beside the camera.
+              wall handstand stays on Homework. Press <strong className="text-[var(--text)]">Start pathway</strong>{' '}
+              once — the coach tells you the shape, calls “that’s a …” every time you hit it
+              (including after you fall out and find it again), says “close / almost” with a cue
+              when you’re not quite there, then chimes and names the next shape so you never
+              have to tap Start again. Hits are snapshotted into that athlete’s shape folder.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

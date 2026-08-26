@@ -42,9 +42,13 @@ Allow camera permission when the browser asks. Click **Start camera**.
 2. Create / select an athlete.
 3. Work through the ordered curriculum — later tasks stay locked until the previous one is completed at least once.
 4. Hold times: **5 seconds** until the task is mastered (`masterAfterCompletions`), then **3 seconds**. **Freestanding handstand** is the exception — only a brief hit (~1s) is required to move on (wall handstand stays on Homework).
-5. Toggle **Voice** to hear spoken corrections (~every 4s) on steps marked `speakCorrections`. When they first hit the shape, the coach says things like “Yes, that’s a handstand” / “Yep, there’s the lunge.” The browser uses the most natural on-device English voice it can find (Google US, Samantha, Aria/Jenny Neural, …) — ChatGPT Cove is not available in a free local app.
+5. Press **Start pathway** once (Voice on). The coach names the shape, says “Yes, that’s a …” every time you hit it — including after you fall out and find it again — and says “close / almost” plus a cue when you’re not quite there. When the hold is done it chimes, tells you the next shape (or next task), and **keeps going** so you do not tap Start again.
 6. Upload a **reference photo** (shared for the shape, or athlete-specific) — it appears beside the camera while training.
-7. On each quality hit the app **snapshots** the pose. When the required hold finishes it plays a **success chime** and saves a **trimmed clip** (~2.2s before the hit through ~1.3s after the hold). Review them under **Hits — snapshots & clips** on the task. Clips stay in this browser (IndexedDB), newest 36 per athlete.
+7. Every quality hit is **snapshotted** into that athlete’s **shape folder** (Tasks + Learn → My shapes), grouped by position. Hold-complete also saves a **trimmed clip**. A hit still also becomes their personal reference photo for that shape.
+
+### Learn: shape test
+
+Open **Learn → Shape test**. Mixed multiple-choice: name the shape from a body-position description, or identify a reference picture. **My shapes** shows the athlete’s own hit photos.
 
 You do **not** need to film from the same angle as a reference photo. Joint angles grade from any facing. Shapes that need a **side view** (lunges, lever, handstand body line) or **front view** (T arms) show a banner — turn if it appears. Lunges/levers auto-detect left vs right foot forward unless the task specifies a side.
 
@@ -174,8 +178,10 @@ src/
   hooks/useSpeechCoach.ts
   hooks/useRollingCapture.ts
   components/TaskTrainer.tsx
-  components/EducationPanel.tsx  Learn tab (shapes + pathways)
-  lib/educationCopy.ts   readable cues from criteria
+  lib/shapeQuiz.ts       Learn tab multiple-choice shape test
+  components/HitFolder.tsx  athlete hit photos grouped by shape
+  components/ShapeQuiz.tsx
+  components/EducationPanel.tsx  Learn tab (shapes, quiz, my shapes, pathways)
   App.tsx                main UI (Tasks | Homework | Learn | Compare | Coach | Athletes | About)
 public/references/       optional default coach photos
 ```

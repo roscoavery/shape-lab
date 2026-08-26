@@ -37,3 +37,25 @@ export function playSuccessChime(): void {
     /* audio blocked or unsupported */
   }
 }
+
+/** Single bright tick when they first match the shape (hold chime is separate). */
+export function playHitTick(): void {
+  try {
+    const ac = audio()
+    void ac.resume()
+    const now = ac.currentTime
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    g.gain.setValueAtTime(0.0001, now)
+    g.gain.exponentialRampToValueAtTime(0.18, now + 0.015)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.16)
+    osc.connect(g)
+    g.connect(ac.destination)
+    osc.start(now)
+    osc.stop(now + 0.18)
+  } catch {
+    /* audio blocked */
+  }
+}
