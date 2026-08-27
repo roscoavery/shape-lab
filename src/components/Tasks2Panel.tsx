@@ -146,7 +146,15 @@ export function Tasks2Panel({
     }
     const p = loadFlowProgress(athleteId)
     setProgress(p)
-    if (p.currentId && getFlowSequence(p.currentId)) setSeqId(p.currentId)
+    if (p.currentId && getFlowSequence(p.currentId)) {
+      setSeqId(p.currentId)
+    } else {
+      const firstId = FLOW_SEQUENCES[0]!.id
+      setSeqId(firstId)
+      if (p.currentId && p.currentId !== firstId) {
+        saveFlowProgress({ ...p, currentId: firstId })
+      }
+    }
     setHistory(flowHistoryForSequence(athleteId, p.currentId ?? seqId))
   }, [athleteId])
 
@@ -162,7 +170,6 @@ export function Tasks2Panel({
       ? { shapeId: setup }
       : (seq.previewShapes[0] ?? seq.beats.find((b) => b.shapeId))
     if (first?.shapeId) onRequestShape(first.shapeId, 'auto', { profileOk: true })
-    return () => onPreviewItems?.(null)
     return () => onPreviewItems?.(null)
   }, [seq.id, onPreviewItems, onRequestShape])
 
@@ -297,6 +304,7 @@ export function Tasks2Panel({
         captureId: s.captureId,
         atSec: s.atSec,
         clipId: replayCaptureId,
+        marker: s.marker,
       }))
       const built: FlowRunReport = {
         id: createId('flow'),
@@ -397,7 +405,12 @@ export function Tasks2Panel({
       let currentShape =
         first?.shapeId ?? seqRun.beats.find((b) => b.shapeId)?.shapeId ?? 'stand_clean'
 
-      const huntBest = async (shapeId: string, windowMs: number, minMs: number) => {
+      const huntBest = async (
+        shapeId: string,
+        windowMs: number,
+        minMs: number,
+        marker?: 'playhead',
+      ) => {
         const started = performance.now()
         let bestOverall = -1
         let bestFrozen: ScoreResult | null = null
@@ -419,11 +432,11 @@ export function Tasks2Panel({
         }
         if (!bestFrozen) {
           const view = await takeSnapshot(shapeId, delay.capturedSec())
-          if (view) collected.push(view)
+          if (view) collected.push(marker ? { ...view, marker } : view)
           return
         }
         const view = await takeSnapshot(shapeId, bestAt, bestFrozen, bestBlob)
-        if (view) collected.push(view)
+        if (view) collected.push(marker ? { ...view, marker } : view)
       }
 
       for (let i = 0; i < seqRun.beats.length; i++) {
@@ -439,7 +452,9 @@ export function Tasks2Panel({
         setCue(beat.speak)
 
         let snapP: Promise<void> = Promise.resolve()
-        if (beat.snapshotBestMs != null) {
+        if (beat.playheadBestMs != null) {
+          snapP = huntBest(currentShape, beat.playheadBestMs, beat.snapshotMinMs ?? 0, 'playhead')
+        } else if (beat.snapshotBestMs != null) {
           snapP = huntBest(currentShape, beat.snapshotBestMs, beat.snapshotMinMs ?? 0)
         } else if (beat.snapshotAtMs != null) {
           snapP = wait(beat.snapshotAtMs).then(async () => {
@@ -692,9 +707,11 @@ export function Tasks2Panel({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{s.name}</span>
-                  <span className="mt-0.5 block font-mono text-[11px] tracking-wide text-[var(--accent)]">
-                    {s.nickname}
-                  </span>
+                  {!s.name.includes(s.nickname) && (
+                    <span className="mt-0.5 block font-mono text-[11px] tracking-wide text-[var(--accent)]">
+                      {s.nickname}
+                    </span>
+                  )}
                   <span className="mt-0.5 block text-[11px] text-[var(--muted)]">{s.description}</span>
                 </span>
               </button>
@@ -817,7 +834,9 @@ export function Tasks2Panel({
                         No still
                       </div>
                     )}
-                    <p className="px-1 py-0.5 text-[10px] font-semibold text-white">{s.shapeName}</p>
+                    <p className="px-1 py-0.5 text-[10px] font-semibold text-white">
+                      {s.marker === 'playhead' ? `${s.shapeName} · marker` : s.shapeName}
+                    </p>
                     <p className="px-1 pb-1 text-[10px] tabular-nums" style={{ color: scoreColor(s.overall) }}>
                       {s.overall}/100
                     </p>
@@ -856,7 +875,9 @@ export function Tasks2Panel({
                   )}
                   <div className="min-w-0 flex-1 p-2">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-[var(--text)]">{s.shapeName}</span>
+                      <span className="font-medium text-[var(--text)]">
+                        {s.marker === 'playhead' ? `${s.shapeName} · replay marker` : s.shapeName}
+                      </span>
                       <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(s.overall) }}>
                         {s.overall}/100
                       </span>
@@ -869,7 +890,9 @@ export function Tasks2Panel({
                       </ul>
                     ) : (
                       <p className="mt-1 text-[12px] text-[var(--good)]">
-                        Lines look in on this snapshot. Keep that body position next time.
+                        {s.marker === 'playhead'
+                          ? 'Best matching frame in the pass-through — tap to jump the replay here.'
+                          : 'Lines look in on this snapshot. Keep that body position next time.'}
                       </p>
                     )}
                     {s.atSec != null && replayUrl && (

@@ -268,6 +268,8 @@ export type FlowStepSnap = {
   clipId?: string | null
   /** Seconds into the run replay when this shape was snapshotted. */
   atSec?: number
+  /** Replay seek marker from best match (not a timed class-count snapshot). */
+  marker?: 'playhead'
 }
 
 /** Written review of one Tasks 2 sequence. */

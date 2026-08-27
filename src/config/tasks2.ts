@@ -23,6 +23,11 @@ export type FlowBeat = {
   snapshotBestMs?: number
   /** Ignore the first part of a best-window (kick-up, walking in). */
   snapshotMinMs?: number
+  /**
+   * Hunt the best-matching frame as a replay playhead (accuracy), not a
+   * class-count snapshot. Same hunt as snapshotBestMs.
+   */
+  playheadBestMs?: number
 }
 
 export type FlowSequence = {
@@ -174,49 +179,49 @@ function hsNonCartwheel(): FlowBeat[] {
   ]
 }
 
-function lungeLeverFlow(side: 'left' | 'right'): FlowBeat[] {
+function mcHsLeverLunge(): FlowBeat[] {
   return [
     {
-      speak:
-        'Start feet together, fully open shoulders, arms in close by the ears.',
-      shapeId: 'feet_together_open_shoulders',
+      speak: 'Ready.',
+      shapeId: 'stand_clean',
       profileOk: true,
-      pauseMs: 300,
-      snapshotBestMs: 2800,
+      pauseMs: 350,
+    },
+    {
+      speak: 'Start clean.',
+      pauseMs: 400,
+    },
+    {
+      speak: 'Step to mountain climber and hold for 3.',
+      shapeId: 'mountain_climber',
+      pauseMs: 350,
+    },
+    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
+    {
+      speak: 'Kick to handstand.',
+      shapeId: 'handstand',
+      pauseMs: 250,
+      snapshotBestMs: 2600,
       snapshotMinMs: 700,
     },
     {
-      speak: 'Take your cartwheel leg to a passé and hold.',
-      shapeId: 'passe',
-      stance: side,
-      pauseMs: 200,
-    },
-    { speak: '3.', pauseMs: 350 },
-    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
-    {
-      speak: 'Fall to a starting lunge.',
-      shapeId: 'lunge_start',
-      stance: side,
-      pauseMs: 250,
-    },
-    { speak: 'Hold for 3.', pauseMs: 350 },
-    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
-    {
       speak: 'Lever.',
       shapeId: 'lever',
-      stance: side,
+      stance: 'right',
       pauseMs: 250,
+      playheadBestMs: 2200,
+      snapshotMinMs: 200,
     },
-    { speak: 'Hold for 3.', pauseMs: 350 },
-    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
     {
-      speak: 'Landing lunge. Back heel flat.',
+      speak: 'Back to lunge.',
       shapeId: 'lunge_land',
-      stance: side,
+      stance: 'right',
       pauseMs: 250,
     },
-    { speak: 'Hold for 3.', pauseMs: 350 },
-    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
+    { speak: 'Hold for 5. With the back foot flat.', pauseMs: 200 },
+    { speak: '4. Arms tight behind the ears.', pauseMs: 200 },
+    { speak: '3. Chest stays tilted forward.', pauseMs: 200 },
+    { speak: '2. Chin stays up.', pauseMs: 400, snapshotAtMs: 120 },
     {
       speak: 'And clean.',
       shapeId: 'stand_clean',
@@ -230,10 +235,10 @@ function lungeLeverFlow(side: 'left' | 'right'): FlowBeat[] {
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
-    name: '1. Handstand progression (cartwheel side)',
+    name: 'LG LV HS LG (Cartwheel side)',
     nickname: 'LG LV HS LG',
     description:
-      'Cartwheel side. Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate — we guide, snapshot, and grade after.',
+      'Cartwheel side. Lunge, lever, handstand, lunge. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate.',
     previewSpeak: 'This sequence is lunge, lever, handstand, lunge. Cartwheel side.',
     setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
     setupShapeId: 'stand_clean',
@@ -242,7 +247,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
   },
   {
     id: 'flow_hs_left',
-    name: '2. Handstand progression (non-cartwheel side)',
+    name: 'LG LV HS LG (NON Cartwheel side)',
     nickname: 'LG LV HS LG',
     description:
       'Same sequence on the non-cartwheel side. Open shoulders often get harder here — extra effort. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate.',
@@ -255,95 +260,20 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     beats: hsNonCartwheel(),
   },
   {
-    id: 'flow_lunge_lever_right',
-    name: '3. Lunge–lever sequence (RIGHT)',
-    nickname: 'FTOS PASSE LG LV LG',
-    description:
-      'Shorter class flow without the handstand: FTOS, passé, starting lunge, lever, landing lunge, clean.',
-    previewSpeak:
-      'This sequence is feet together, passé, lunge, lever, landing lunge.',
-    previewShapes: [
-      { shapeId: 'feet_together_open_shoulders', label: 'FTOS' },
-      { shapeId: 'passe', label: 'PASSE' },
-      { shapeId: 'lunge_start', label: 'LG' },
-      { shapeId: 'lever', label: 'LV' },
-      { shapeId: 'lunge_land', label: 'LG' },
-    ],
-    beats: lungeLeverFlow('right'),
-  },
-  {
-    id: 'flow_lunge_lever_left',
-    name: '4. Lunge–lever sequence (LEFT)',
-    nickname: 'FTOS PASSE LG LV LG',
-    description: 'Same shorter flow, left side.',
-    previewSpeak:
-      'Left side. Feet together, passé, lunge, lever, landing lunge.',
-    previewShapes: [
-      { shapeId: 'feet_together_open_shoulders', label: 'FTOS' },
-      { shapeId: 'passe', label: 'PASSE' },
-      { shapeId: 'lunge_start', label: 'LG' },
-      { shapeId: 'lever', label: 'LV' },
-      { shapeId: 'lunge_land', label: 'LG' },
-    ],
-    beats: lungeLeverFlow('left'),
-  },
-  {
     id: 'flow_mc_hs',
-    name: '5. Mountain climber → HS → lever → lunge',
+    name: 'MC HS LV LG',
     nickname: 'MC HS LV LG',
     description:
-      'Pass through mountain climber, kick up, lever, landing lunge, clean. Graded after — not a gate.',
+      'Cartwheel side. Ready in clean, mountain climber 3-2, kick to handstand, pass through lever, landing lunge 5-count, clean. Lever is a replay marker from your best match, not a timed snapshot. After clean you get a fullscreen replay. Not a gate.',
     previewSpeak: 'This sequence is mountain climber, handstand, lever, landing lunge.',
+    setupShapeId: 'stand_clean',
     previewShapes: [
       { shapeId: 'mountain_climber', label: 'MC' },
       { shapeId: 'handstand', label: 'HS' },
       { shapeId: 'lever', label: 'LV' },
       { shapeId: 'lunge_land', label: 'LG' },
     ],
-    beats: [
-      {
-        speak: 'Stand clean.',
-        shapeId: 'stand_clean',
-        profileOk: true,
-        pauseMs: 500,
-        snapshotAtMs: 400,
-      },
-      {
-        speak:
-          'Mountain climber. Two bent knees. Reach forward and out. Look at where the hands will go.',
-        shapeId: 'mountain_climber',
-        pauseMs: 400,
-        snapshotAtMs: 1800,
-      },
-      {
-        speak: 'Kick up. Best handstand you can hit.',
-        shapeId: 'handstand',
-        pauseMs: 250,
-        snapshotBestMs: 2800,
-        snapshotMinMs: 700,
-      },
-      {
-        speak: 'Lever.',
-        shapeId: 'lever',
-        pauseMs: 250,
-      },
-      { speak: 'Hold for 3.', pauseMs: 350 },
-      { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
-      {
-        speak: 'Landing lunge. Back heel flat.',
-        shapeId: 'lunge_land',
-        pauseMs: 250,
-      },
-      { speak: 'Hold for 3.', pauseMs: 350 },
-      { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
-      {
-        speak: 'And clean.',
-        shapeId: 'stand_clean',
-        profileOk: true,
-        pauseMs: 900,
-        snapshotAtMs: 500,
-      },
-    ],
+    beats: mcHsLeverLunge(),
   },
 ]
 

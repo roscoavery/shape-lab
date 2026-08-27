@@ -650,9 +650,10 @@ export default function App() {
               <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
               the way class runs: we name the sequence (LG LV HS LG), show the stills, then tell
               you <strong className="text-[var(--text)]">side view, stand clean</strong> before
-              counts start. After the cartwheel-side run, the next sequence is the same flow on the
-              <strong className="text-[var(--text)]"> non-cartwheel side</strong> with extra
-              open-shoulder coaching. After you clean, you get a
+              counts start. Three sequences: <strong className="text-[var(--text)]">LG LV HS LG
+              (Cartwheel side)</strong>, the same flow on the{' '}
+              <strong className="text-[var(--text)]">NON Cartwheel side</strong>, then{' '}
+              <strong className="text-[var(--text)]">MC HS LV LG</strong>. After you clean, you get a
               fullscreen replay of the run, a snapshot of each shape with a score, and a few
               written cues to think about next time. Go again, take the next sequence, or pick
               another. Progress

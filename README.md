@@ -81,11 +81,11 @@ Curriculum order is edited in `src/config/curriculum.ts`.
 Open the **Tasks 2** tab. This is the same body-position work as Tasks, run the way class runs:
 
 1. Pick an athlete. Every sequence is open — grades do not lock the next one.
-2. Sequence **1** is the handstand progression on the **cartwheel side** (LG LV HS LG stills). Sequence **2** is the same flow on the **non-cartwheel side**, with extra open-shoulder coaching after the side-view get-set.
-3. Voice names the sequence, then says **side view, stand clean, stay clean until we start**. On the non-cartwheel run it then reminds you that open shoulders often get harder. Then the class script (feet together / passé 3-2 / fall to lunge 3-2 / lever 3-2 / handstand / landing lunge 5-count / clean). **Start sequence** jumps the live camera to **full screen** so you can get set. You can also tap **Full screen first** and start from the camera. The still switches to the shape being named.
-4. Snapshots fire on the spoken **2**. Live scores are notes. The show goes on even with flaws.
+2. Three sequences: **LG LV HS LG (Cartwheel side)**, **LG LV HS LG (NON Cartwheel side)**, then **MC HS LV LG** (cartwheel side only).
+3. Voice names the sequence, then says **side view, stand clean** on the lunge–lever–handstand runs. On the non-cartwheel run it then reminds you that open shoulders often get harder. **MC HS LV LG** is: ready in clean, mountain climber 3-2, kick to handstand, lever (replay marker from best match, not a timed snapshot), landing lunge 5-count, clean. **Start sequence** jumps the live camera to **full screen**. You can also tap **Full screen first** and start from the camera. The still switches to the shape being named.
+4. Snapshots fire on the spoken **2** (except lever on MC, which is an accuracy playhead). Live scores are notes. The show goes on even with flaws.
 5. After **and clean**, the last run replays fullscreen from the delay-cam buffer (default **20s**, whole take from sequence start if the camera was on). Scrub, or tap a snapshot to jump to that shape.
-6. From the replay or the grades: **Go again**, **Next** (after sequence 1 that is the non-cartwheel side), or **Choose another sequence**. Past runs stay on that sequence so you can watch scores climb. Each run can **download video + analysis**, **Share to Instagram Story** (caption copied, Instagram opened — Instagram will not let a website auto-post a Story), or **Send to Ryan** (coach inbox on the Athletes tab, same device).
+6. From the replay or the grades: **Go again**, **Next**, or **Choose another sequence**. Past runs stay on that sequence so you can watch scores climb. Each run can **download video + analysis**, **Share to Instagram Story** (caption copied, Instagram opened — Instagram will not let a website auto-post a Story), or **Send to Ryan** (coach inbox on the Athletes tab, same device).
 
 Create an athlete profile and attach an Instagram `@handle` on the athlete card. Clips stay on this device in IndexedDB. There is no Instagram login that can post Stories for you from a website.
 
