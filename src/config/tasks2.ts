@@ -156,8 +156,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     nickname: 'LG LV HS LG',
     description:
       'Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Not a gate — we guide, snapshot, and grade after.',
-    previewSpeak:
-      'This sequence is lunge, lever, handstand, lunge. LG. LV. HS. LG.',
+    previewSpeak: 'This sequence is lunge, lever, handstand, lunge.',
     previewShapes: HS_PREVIEW,
     beats: hsProgression('right'),
   },
@@ -166,8 +165,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: '2. Handstand progression (LEFT)',
     nickname: 'LG LV HS LG',
     description: 'Same class flow on the left side. The show goes on — we grade after.',
-    previewSpeak:
-      'Left side. This sequence is lunge, lever, handstand, lunge. LG. LV. HS. LG.',
+    previewSpeak: 'Left side. This sequence is lunge, lever, handstand, lunge.',
     previewShapes: HS_PREVIEW,
     beats: hsProgression('left'),
   },
@@ -210,8 +208,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     nickname: 'MC HS LV LG',
     description:
       'Pass through mountain climber, kick up, lever, landing lunge, clean. Graded after — not a gate.',
-    previewSpeak:
-      'This sequence is mountain climber, handstand, lever, landing lunge. MC. HS. LV. LG.',
+    previewSpeak: 'This sequence is mountain climber, handstand, lever, landing lunge.',
     previewShapes: [
       { shapeId: 'mountain_climber', label: 'MC' },
       { shapeId: 'handstand', label: 'HS' },

@@ -24,12 +24,14 @@ import {
 } from '../lib/storage'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
+  Athlete,
   FlowProgress,
   FlowRunReport,
   FlowStepSnap,
   ReferencePhoto,
   ScoreResult,
 } from '../types'
+import { FlowShareActions } from './FlowShareActions'
 import { ShapeStillStrip } from './ShapeStillStrip'
 
 type Phase = 'idle' | 'preview' | 'running' | 'replay' | 'review'
@@ -38,6 +40,7 @@ type SnapView = FlowStepSnap & { url: string | null }
 
 type Props = {
   athleteId: string | null
+  athlete?: Athlete | null
   score: ScoreResult
   scoredShapeId: string
   onRequestShape: (
@@ -85,6 +88,7 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
 
 export function Tasks2Panel({
   athleteId,
+  athlete = null,
   score,
   scoredShapeId,
   onRequestShape,
@@ -286,6 +290,7 @@ export function Tasks2Panel({
         replayCaptureId,
         steps,
         summary: summaryFor(seqRun, steps),
+        instagramHandle: athlete?.instagramHandle,
       }
       if (athleteId) {
         saveFlowAnalysis(built)
@@ -298,7 +303,7 @@ export function Tasks2Panel({
       setPhase('replay')
       setCue('Watch your run. Scrub, then continue to the grades.')
     },
-    [athleteId, delay],
+    [athlete?.instagramHandle, athleteId, delay],
   )
 
   const startSequence = useCallback(
@@ -708,6 +713,16 @@ export function Tasks2Panel({
               </button>
             )}
           </div>
+          <div className="mt-3">
+            <FlowShareActions
+              report={report}
+              athlete={athlete}
+              onUpdated={(next) => {
+                setReport(next)
+                if (athleteId) setHistory(flowHistoryForSequence(athleteId, seqId))
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -717,20 +732,24 @@ export function Tasks2Panel({
             Progress on {seq.nickname}
           </p>
           <p className="mb-2 text-[11px] text-[var(--muted)]">
-            Watch the grades climb over time. Tap a run to reopen the replay.
+            Watch the grades climb over time. Open a run, or download the video and written
+            analysis to keep or post.
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {history.slice(0, 8).map((h) => {
               const avg =
                 h.steps.length > 0
                   ? Math.round(h.steps.reduce((n, s) => n + s.overall, 0) / h.steps.length)
                   : 0
               return (
-                <li key={h.id}>
+                <li
+                  key={h.id}
+                  className="rounded-md border border-[var(--panel-border)] bg-[#0d1218] p-2"
+                >
                   <button
                     type="button"
                     onClick={() => void openHistoryReplay(h)}
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-[#243040]"
+                    className="flex w-full items-center justify-between gap-2 text-left text-sm hover:text-[var(--accent)]"
                   >
                     <span className="text-[12px] text-[var(--muted)]">
                       {new Date(h.createdAt).toLocaleString()}
@@ -739,6 +758,17 @@ export function Tasks2Panel({
                       {avg}/100
                     </span>
                   </button>
+                  <div className="mt-2">
+                    <FlowShareActions
+                      report={h}
+                      athlete={athlete}
+                      compact
+                      onUpdated={(next) => {
+                        setHistory((list) => list.map((x) => (x.id === next.id ? next : x)))
+                        if (report?.id === next.id) setReport(next)
+                      }}
+                    />
+                  </div>
                 </li>
               )
             })}

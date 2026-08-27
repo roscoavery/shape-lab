@@ -84,7 +84,9 @@ Open the **Tasks 2** tab. This is the same body-position work as Tasks, run the 
 3. Voice calls the class script (feet together / passé 3-2 / fall to lunge 3-2 / lever 3-2 / handstand / landing lunge 5-count / clean). The still switches to the shape being named — a lever still for lever, a mountain climber still for mountain climber, a landing-lunge still when we say landing lunge.
 4. Snapshots fire on the spoken **2**. Live scores are notes. The show goes on even with flaws.
 5. After **and clean**, the last run replays fullscreen (delay-cam buffer, default **20s**, whole take if the camera was on). Scrub, or tap a snapshot to jump to that shape.
-6. Then you get the written grades and a few corrective cues for next time. **Go again** or **Next sequence**. Past runs stay on that sequence so you can watch scores climb.
+6. Then you get the written grades and a few corrective cues for next time. **Go again** or **Next sequence**. Past runs stay on that sequence so you can watch scores climb. Each run can **download video + analysis**, **Share to Instagram Story** (caption copied, Instagram opened — Instagram will not let a website auto-post a Story), or **Send to Ryan** (coach inbox on the Athletes tab, same device).
+
+Create an athlete profile and attach an Instagram `@handle` on the athlete card. Clips stay on this device in IndexedDB. There is no Instagram login that can post Stories for you from a website.
 
 Edit the scripts in `src/config/tasks2.ts`.
 

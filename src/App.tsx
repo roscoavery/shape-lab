@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CameraStage } from './components/CameraStage'
+import { CoachInbox } from './components/CoachInbox'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
@@ -446,6 +447,7 @@ export default function App() {
             />
             <Tasks2Panel
               athleteId={activeAthleteId}
+              athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
               score={score}
               scoredShapeId={shape.id}
               onRequestShape={onJumpToShape}
@@ -602,6 +604,7 @@ export default function App() {
             onSelect={setActiveAthleteId}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
+          <CoachInbox athletes={athletes} />
         </div>
       )}
 
@@ -638,7 +641,9 @@ export default function App() {
               the way class runs: we name the sequence (LG LV HS LG), show the stills, then call
               the shapes at class pace. Grades do not stop you. After you clean, you get a
               fullscreen replay of the run, a snapshot of each shape with a score, and a few
-              written cues to think about next time. Go again, or take the next sequence.
+              written cues to think about next time. Go again, or take the next sequence. Progress
+              over time lets you download the video and analysis, share a Story caption + clip to
+              Instagram, or mark the run for Ryan on this device.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

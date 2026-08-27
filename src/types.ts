@@ -178,6 +178,8 @@ export type Athlete = {
   id: string
   name: string
   notes?: string
+  /** Instagram username without @. Used for Story captions and tagging Ryan. */
+  instagramHandle?: string
   createdAt: string
 }
 
@@ -279,6 +281,10 @@ export type FlowRunReport = {
   replayCaptureId: string | null
   steps: FlowStepSnap[]
   summary: string
+  /** When the athlete marked this run to send to Ryan. */
+  sharedWithCoachAt?: string | null
+  /** Handle used on the Story caption for this run. */
+  instagramHandle?: string
 }
 
 export type FlowProgress = {

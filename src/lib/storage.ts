@@ -241,8 +241,24 @@ export function loadFlowAnalyses(athleteId?: string): FlowRunReport[] {
 
 export function saveFlowAnalysis(report: FlowRunReport): void {
   const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
-  all.unshift(report)
+  const i = all.findIndex((r) => r.id === report.id)
+  if (i >= 0) all[i] = report
+  else all.unshift(report)
   writeJson(FLOW_ANALYSES_KEY, all.slice(0, MAX_FLOW_ANALYSES))
+}
+
+export function markFlowSharedWithCoach(reportId: string): FlowRunReport | null {
+  const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
+  const i = all.findIndex((r) => r.id === reportId)
+  if (i < 0) return null
+  const next = { ...all[i]!, sharedWithCoachAt: new Date().toISOString() }
+  all[i] = next
+  writeJson(FLOW_ANALYSES_KEY, all)
+  return next
+}
+
+export function loadCoachInbox(): FlowRunReport[] {
+  return loadFlowAnalyses().filter((r) => Boolean(r.sharedWithCoachAt))
 }
 
 export function flowHistoryForSequence(
