@@ -311,11 +311,12 @@ export function TasksWorkspace({
               canvasRef={canvasRef}
               landmarks={landmarks}
               mirror={mirror}
-              showAngles={showAngles}
+              showAngles={showAngles || flowMode}
               running={cameraRunning}
               demoMode={demoMode}
               shape={shape}
               score={score}
+              burnInHud={flowMode}
               fill={fullscreen}
               className={fullscreen ? 'h-full min-h-0 flex-1' : ''}
               overlay={
@@ -323,37 +324,41 @@ export function TasksWorkspace({
                   <HitCheckOverlay burst={hitBurst} kind={hitKind} holding={holding} />
 
                   {cueLine && (
-                    <div className="absolute inset-x-3 top-[4.6rem] rounded-xl bg-black/65 px-3 py-2 text-center shadow-lg sm:top-[5.2rem]">
+                    <div className={`absolute inset-x-3 rounded-xl bg-black/65 px-3 py-2 text-center shadow-lg ${
+                      flowMode ? 'top-[8.2rem] sm:top-[9rem]' : 'top-[4.6rem] sm:top-[5.2rem]'
+                    }`}>
                       <p className="text-sm font-semibold leading-snug text-white sm:text-base">{cueLine}</p>
                     </div>
                   )}
 
-                  <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-end gap-4 rounded-2xl bg-black/55 px-4 py-2 text-center shadow-lg backdrop-blur-sm">
-                    <div>
-                      <p
-                        className="text-4xl font-bold tabular-nums leading-none sm:text-5xl"
-                        style={{ color: scoreColor(score.overall) }}
-                      >
-                        {score.overall}
-                      </p>
-                      <p
-                        className={`mt-0.5 text-[11px] font-semibold uppercase tracking-wider ${
-                          holding
-                            ? 'text-[var(--good)]'
-                            : close
-                              ? 'text-[var(--warn)]'
-                              : 'text-white/70'
-                        }`}
-                      >
-                        {status}
-                      </p>
+                  {!flowMode && (
+                    <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-end gap-4 rounded-2xl bg-black/55 px-4 py-2 text-center shadow-lg backdrop-blur-sm">
+                      <div>
+                        <p
+                          className="text-4xl font-bold tabular-nums leading-none sm:text-5xl"
+                          style={{ color: scoreColor(score.overall) }}
+                        >
+                          {score.overall}
+                        </p>
+                        <p
+                          className={`mt-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                            holding
+                              ? 'text-[var(--good)]'
+                              : close
+                                ? 'text-[var(--warn)]'
+                                : 'text-white/70'
+                          }`}
+                        >
+                          {status}
+                        </p>
+                      </div>
+                      {countdown !== null && (
+                        <p className="min-w-[1.2em] text-5xl font-black tabular-nums text-white sm:text-6xl">
+                          {countdown}
+                        </p>
+                      )}
                     </div>
-                    {countdown !== null && (
-                      <p className="min-w-[1.2em] text-5xl font-black tabular-nums text-white sm:text-6xl">
-                        {countdown}
-                      </p>
-                    )}
-                  </div>
+                  )}
 
                   <div className="pointer-events-auto absolute right-2 top-2 flex gap-2 sm:right-3 sm:top-3">
                     <button

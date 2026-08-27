@@ -22,6 +22,8 @@ type Props = {
   /** Color the skeleton from the live score (green = that line is in). */
   shape?: ShapeDef
   score?: ScoreResult | null
+  /** Paint score + shape name onto the pixels so grade replays include them. */
+  burnInHud?: boolean
   className?: string
   /** Fill the parent instead of sizing to the video aspect. */
   fill?: boolean
@@ -79,6 +81,52 @@ const ANGLE_READOUTS: { label: string; points: [number, number, number]; color: 
   { label: 'R knee', points: [LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE], color: '#c4a5ff' },
 ]
 
+function scoreFill(n: number): string {
+  if (n >= 85) return '#2dd4a8'
+  if (n >= 70) return '#5ec2a8'
+  if (n >= 50) return '#e4c35a'
+  return '#f07178'
+}
+
+function drawGradeHud(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  overall: number,
+  label: string,
+) {
+  const cx = width / 2
+  const y = height * 0.025
+  const scoreText = String(overall)
+  const scorePx = Math.max(40, Math.round(width * 0.072))
+  const labelPx = Math.max(13, Math.round(width * 0.022))
+  ctx.save()
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
+  const scoreW = ctx.measureText(scoreText).width
+  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
+  const labelW = ctx.measureText(label).width
+  const boxW = Math.max(scoreW, labelW) + width * 0.05
+  const boxH = scorePx + labelPx + height * 0.035
+  const x0 = cx - boxW / 2
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.58)'
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath()
+    ctx.roundRect(x0, y, boxW, boxH, Math.max(10, width * 0.012))
+    ctx.fill()
+  } else {
+    ctx.fillRect(x0, y, boxW, boxH)
+  }
+  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
+  ctx.fillStyle = scoreFill(overall)
+  ctx.fillText(scoreText, cx, y + height * 0.008)
+  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'
+  ctx.fillText(label, cx, y + scorePx + height * 0.01)
+  ctx.restore()
+}
+
 export function CameraStage({
   videoRef,
   canvasRef,
@@ -90,6 +138,7 @@ export function CameraStage({
   overlay,
   shape,
   score,
+  burnInHud = false,
   className = '',
   fill = false,
 }: Props) {
@@ -197,12 +246,16 @@ export function CameraStage({
         }
       }
       ctx.restore()
+
+      if (burnInHud && score) {
+        drawGradeHud(ctx, canvas.width, canvas.height, score.overall, shape?.name ?? 'Live score')
+      }
       raf = requestAnimationFrame(draw)
     }
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score])
+  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud])
 
   return (
     <div

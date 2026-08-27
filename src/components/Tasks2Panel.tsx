@@ -150,18 +150,51 @@ export function Tasks2Panel({
   const scoreRef = useRef(score)
   const shapeIdRef = useRef(scoredShapeId)
   const streamRef = useRef(stream)
+  const overlayStreamRef = useRef<MediaStream | null>(null)
   const snapsRef = useRef<SnapView[]>([])
   const replayUrlRef = useRef<string | null>(null)
   const replayVideoRef = useRef<HTMLVideoElement | null>(null)
   const seqListRef = useRef<HTMLOListElement | null>(null)
+  const [overlayStream, setOverlayStream] = useState<MediaStream | null>(null)
 
   scoreRef.current = score
   shapeIdRef.current = scoredShapeId
   streamRef.current = stream
+  overlayStreamRef.current = overlayStream
 
   const { speakEvent, reset: resetSpeech, unlock: unlockSpeech, supported: speechSupported } =
     useSpeechCoach(true)
-  const delay = useDelayCam(stream, DELAY_MAX, cameraRunning && Boolean(stream))
+  const recordStream = overlayStream ?? stream
+  const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
+
+  useEffect(() => {
+    if (!cameraRunning) {
+      setOverlayStream(null)
+      return
+    }
+    let cancelled = false
+    let tries = 0
+    const grab = () => {
+      if (cancelled) return
+      const canvas = canvasRef.current
+      if (canvas && canvas.width > 16 && canvas.height > 16) {
+        try {
+          const captured = canvas.captureStream(24)
+          if (!cancelled) setOverlayStream(captured)
+          return
+        } catch {
+          if (!cancelled) setOverlayStream(stream)
+          return
+        }
+      }
+      if (++tries < 50) window.setTimeout(grab, 120)
+      else if (!cancelled) setOverlayStream(stream)
+    }
+    grab()
+    return () => {
+      cancelled = true
+    }
+  }, [cameraRunning, stream, canvasRef])
 
   useEffect(() => {
     if (!athleteId) {
@@ -402,11 +435,15 @@ export function Tasks2Panel({
       setSnaps([])
       setReport(null)
       setSeekTo(null)
-      for (let i = 0; i < 25 && !streamRef.current; i++) {
+      for (let i = 0; i < 40 && !(overlayStreamRef.current || streamRef.current); i++) {
         await wait(120)
         if (!alive()) return
       }
-      delay.restartRolling(streamRef.current)
+      for (let i = 0; i < 15 && !overlayStreamRef.current; i++) {
+        await wait(100)
+        if (!alive()) return
+      }
+      delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
       onRequestFullscreen?.()
       await wait(350)
       if (!alive()) return
@@ -543,7 +580,7 @@ export function Tasks2Panel({
           })
         }
         if (beat.replayStart) {
-          delay.restartRolling(streamRef.current)
+          delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
           for (const s of collected) {
             s.atSec = undefined
           }
