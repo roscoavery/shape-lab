@@ -1,9 +1,9 @@
 /**
  * Compare tab — reference video pane.
  * Named collections stored in IndexedDB; each collection holds uploaded
- * video files, direct video URLs, or Instagram post/reel links. Instagram
- * videos are downloaded into the app. Items can be renamed, reordered, and
- * searched across collections.
+ * video files, direct video URLs, or Instagram / TikTok / Facebook links.
+ * Social videos are downloaded into the app. Items can be renamed, reordered,
+ * and searched across collections.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -12,12 +12,12 @@ import {
   deleteCollection,
   getBlob,
   getCollections,
-  isInstagramUrl,
   isSameReferenceUrl,
+  isSocialVideoItem,
   itemMatchesQuery,
+  kindFromUrl,
   listCachedIds,
   moveItem,
-  parseInstagramUrl,
   canonicalReferenceUrl,
   putBlob,
   putCollection,
@@ -37,6 +37,7 @@ import {
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
 import { createId } from '../../lib/storage'
+import { defaultSocialName } from '../../lib/socialUrls'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 
@@ -44,6 +45,8 @@ const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
   url: 'URL',
   instagram: 'IG',
+  tiktok: 'TT',
+  facebook: 'FB',
 }
 
 type OtherHit = { item: RefItem; collection: RefCollection }
@@ -201,7 +204,7 @@ export function ReferencePane() {
     if (urls.length === 0) return
     const bad = urls.find((u) => !/^https?:\/\//i.test(u))
     if (bad) {
-      setError('Paste full URL(s) starting with http(s):// — one or several IG links is fine.')
+      setError('Paste full URL(s) starting with http(s):// — Instagram, TikTok, Facebook, or a direct video URL.')
       return
     }
     setError(null)
@@ -218,21 +221,18 @@ export function ReferencePane() {
         skipped += 1
         continue
       }
-      const instagram = isInstagramUrl(url)
-      const name = instagram
-        ? `IG ${parseInstagramUrl(url)?.code ?? 'post'}`
-        : (() => {
-            try {
-              const path = new URL(url).pathname.split('/').filter(Boolean)
-              return path[path.length - 1] || url
-            } catch {
-              return url
-            }
-          })()
+      const kind = kindFromUrl(url)
       items.push({
         id: createId('ref'),
-        kind: instagram ? 'instagram' : 'url',
-        name,
+        kind,
+        name: kind === 'url' ? (() => {
+          try {
+            const path = new URL(url).pathname.split('/').filter(Boolean)
+            return path[path.length - 1] || url
+          } catch {
+            return url
+          }
+        })() : defaultSocialName(url),
         url,
         createdAt: new Date().toISOString(),
       })
@@ -345,32 +345,27 @@ export function ReferencePane() {
     })
   }, [])
 
-  const allIgItems = useMemo(
-    () =>
-      collections.flatMap((c) =>
-        c.items.filter((i): i is RefItem & { url: string } =>
-          i.kind === 'instagram' && Boolean(i.url),
-        ),
-      ),
+  const allSocialItems = useMemo(
+    () => collections.flatMap((c) => c.items.filter(isSocialVideoItem)),
     [collections],
   )
-  const uncachedIg = allIgItems.filter((i) => !cachedIds.has(i.id))
+  const uncachedSocial = allSocialItems.filter((i) => !cachedIds.has(i.id))
 
   const saveAllInApp = async () => {
-    if (uncachedIg.length === 0 || saving) return
+    if (uncachedSocial.length === 0 || saving) return
     setError(null)
     setNotice(null)
     const failures: string[] = []
-    for (let i = 0; i < uncachedIg.length; i++) {
-      const item = uncachedIg[i]
-      setSaving({ current: i + 1, total: uncachedIg.length })
+    for (let i = 0; i < uncachedSocial.length; i++) {
+      const item = uncachedSocial[i]
+      setSaving({ current: i + 1, total: uncachedSocial.length })
       try {
         await saveInstagramInApp(item.id, item.url)
         markCached(item.id)
       } catch (err) {
         failures.push(item.name)
         if (err instanceof Error && /storage|quota/i.test(err.message)) {
-          setError('Device storage is full — some reels could not be saved in the app.')
+          setError('Device storage is full — some videos could not be saved in the app.')
           break
         }
       }
@@ -378,11 +373,11 @@ export function ReferencePane() {
     setSaving(null)
     if (failures.length) {
       setNotice(
-        `Could not save ${failures.length} reel${failures.length === 1 ? '' : 's'}: ${failures.slice(0, 3).join(', ')}${failures.length > 3 ? '…' : ''}. Private clips will not download.`,
+        `Could not save ${failures.length} video${failures.length === 1 ? '' : 's'}: ${failures.slice(0, 3).join(', ')}${failures.length > 3 ? '…' : ''}. Private clips will not download.`,
       )
     } else {
       setNotice(
-        `Saved ${uncachedIg.length} Instagram video${uncachedIg.length === 1 ? '' : 's'} in this app.`,
+        `Saved ${uncachedSocial.length} video${uncachedSocial.length === 1 ? '' : 's'} in this app.`,
       )
     }
   }
@@ -551,7 +546,7 @@ export function ReferencePane() {
                 {KIND_LABEL[item.kind]}
               </span>
               <span className="truncate">{item.name}</span>
-              {item.kind === 'instagram' && (
+              {isSocialVideoItem(item) && (
                 <span
                   className={`shrink-0 text-[10px] ${
                     cached ? 'text-[var(--good)]' : 'text-[var(--muted)]'
@@ -636,7 +631,7 @@ export function ReferencePane() {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
-          placeholder="Instagram post/reel URL(s) or a direct video URL"
+          placeholder="Instagram, TikTok, or Facebook video URL(s), or a direct video URL"
           className={`${inputCls} min-w-0 flex-1`}
         />
         <button type="button" onClick={() => void addUrl()} className={btnCls}>
@@ -666,23 +661,23 @@ export function ReferencePane() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search names, URLs, IG codes…"
+          placeholder="Search names, URLs, IG / TikTok / Facebook ids…"
           className={`${inputCls} min-w-0 flex-1`}
           aria-label="Search saved references"
         />
-        {allIgItems.length > 0 && (
+        {allSocialItems.length > 0 && (
           <button
             type="button"
             onClick={() => void saveAllInApp()}
-            disabled={Boolean(saving) || uncachedIg.length === 0}
+            disabled={Boolean(saving) || uncachedSocial.length === 0}
             className={`${btnCls} border-[var(--accent-dim)] text-[var(--accent)] disabled:opacity-50`}
-            title="Download every Instagram reel into this app so they play without Instagram"
+            title="Download every social video into this app so they play without the original site"
           >
             {saving
               ? `Saving ${saving.current}/${saving.total}…`
-              : uncachedIg.length === 0
-                ? 'All IG videos in app'
-                : `Save all in app (${uncachedIg.length})`}
+              : uncachedSocial.length === 0
+                ? 'All videos in app'
+                : `Save all in app (${uncachedSocial.length})`}
           </button>
         )}
         <button
@@ -722,9 +717,9 @@ export function ReferencePane() {
         />
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
-        Paste one Instagram link or a list (spaces or new lines). Public reels
+        Paste Instagram, TikTok, or Facebook links (or a list). Public videos
         download into this app the first time they play — or hit Save all in app.
-        Search by name, URL, or IG code. Drag or use ↑↓ to reorder (not while
+        Search by name, URL, or clip id. Drag or use ↑↓ to reorder (not while
         searching). Rename anytime. The named URL list saves into the app so
         later previews still have it. Export library is an extra JSON backup.
       </p>
@@ -743,7 +738,7 @@ export function ReferencePane() {
       {libraryReady &&
         collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
         <p className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-3 text-sm text-[var(--muted)]">
-          Paste a public Instagram reel or post URL to start this collection. Rename it after it
+          Paste a public Instagram, TikTok, or Facebook video URL to start this collection. Rename it after it
           lands — names and URLs save into the app.
         </p>
       )}
@@ -801,7 +796,7 @@ export function ReferencePane() {
       )}
 
       {/* Player */}
-      {activeItem?.kind === 'instagram' && activeItem.url ? (
+      {activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
           itemId={activeItem.id}

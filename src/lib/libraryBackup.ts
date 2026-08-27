@@ -55,7 +55,7 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
 }
 
 function isGenericIgName(name: string): boolean {
-  return /^IG\s+[A-Za-z0-9_-]+$/i.test(name.trim())
+  return /^(IG|TikTok|Facebook)\s+\S+$/i.test(name.trim())
 }
 
 function preferName(existing: string, incoming: string): string {
@@ -170,7 +170,13 @@ export async function mergeLibraryBackup(
       }
       const next: RefItem = {
         id: item.id || createId('ref'),
-        kind: item.kind === 'instagram' || item.kind === 'url' ? item.kind : 'url',
+        kind:
+          item.kind === 'instagram' ||
+          item.kind === 'tiktok' ||
+          item.kind === 'facebook' ||
+          item.kind === 'url'
+            ? item.kind
+            : 'url',
         name: item.name || item.url,
         url: item.url,
         createdAt: item.createdAt || new Date().toISOString(),

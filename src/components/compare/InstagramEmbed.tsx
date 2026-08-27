@@ -1,11 +1,11 @@
 /**
- * Public Instagram reel/post → looping in-app player.
+ * Public Instagram / TikTok / Facebook video → looping in-app player.
  * Prefers a blob already saved in IndexedDB. Otherwise resolves a playable
  * mp4 through /api/ig-resolve, stores the bytes, and plays that copy.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { parseInstagramUrl } from '../../lib/clipStore'
+import { socialOpenLabel, socialPlatform } from '../../lib/socialUrls'
 import {
   fetchInstagramVideoBlob,
   isQuotaError,
@@ -21,7 +21,7 @@ type Props = {
 }
 
 export function InstagramEmbed({ url, itemId, onCached }: Props) {
-  const parsed = parseInstagramUrl(url)
+  const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
   onCachedRef.current = onCached
   const [src, setSrc] = useState<string | null>(null)
@@ -32,10 +32,9 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
   const [quotaWarn, setQuotaWarn] = useState(false)
 
   useEffect(() => {
-    const parsedUrl = parseInstagramUrl(url)
-    if (!parsedUrl) {
+    if (!socialPlatform(url)) {
       setError(
-        "Couldn't parse that Instagram link. Expected a post/reel URL like https://www.instagram.com/reel/ABC123/",
+        "Couldn't parse that link. Paste a public Instagram, TikTok, or Facebook video URL.",
       )
       setLoading(false)
       setSrc(null)
@@ -96,7 +95,7 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
         setError(
           err instanceof Error
             ? err.message
-            : 'Could not reach the local reel helper. Keep the Shape Lab dev server running (npm run dev).',
+            : 'Could not reach the local video helper. Keep the Shape Lab dev server running (npm run dev).',
         )
         setLoading(false)
       }
@@ -108,7 +107,7 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
     }
   }, [url, itemId])
 
-  if (!parsed) {
+  if (!platform) {
     return (
       <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
         {error}
@@ -119,7 +118,7 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
-        Opening reel…
+        Opening video…
       </div>
     )
   }
@@ -136,19 +135,19 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
           rel="noreferrer"
           className="text-xs text-[var(--accent)] underline"
         >
-          Open on Instagram
+          {socialOpenLabel(platform)}
         </a>
       </div>
     )
   }
 
   const footer = fromCache
-    ? 'Saved in this app — plays without re-fetching Instagram.'
+    ? 'Saved in this app — plays without re-fetching the original site.'
     : quotaWarn
       ? 'Playing this copy, but it could not be saved (device storage may be full).'
       : saved
-        ? 'Saved in this app. Pause, scrub, and slow-mo work on this copy. Public reels only.'
-        : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public reels only.'
+        ? 'Saved in this app. Pause, scrub, and slow-mo work on this copy. Public videos only.'
+        : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public videos only.'
 
   return (
     <div className="flex flex-col gap-2">

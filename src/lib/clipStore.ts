@@ -2,19 +2,26 @@
  * ============================================================================
  * IndexedDB storage for the Compare tab
  * ============================================================================
- * Reference collections (uploaded video blobs, direct video URLs, Instagram
- * links) and recorded athlete attempt clips. Video blobs are far too large
- * for localStorage, so everything Compare-related lives in IndexedDB.
- * No server, no account — this device only.
+ * Reference collections (uploaded video blobs, direct video URLs, Instagram /
+ * TikTok / Facebook links) and recorded athlete attempt clips. Video blobs
+ * are far too large for localStorage, so everything Compare-related lives in
+ * IndexedDB. No server, no account — this device only.
  */
 
-export type RefItemKind = 'file' | 'url' | 'instagram'
+import {
+  canonicalSocialUrl,
+  parseInstagramUrl,
+  socialPlatform,
+  socialVideoKey,
+} from './socialUrls'
+
+export type RefItemKind = 'file' | 'url' | 'instagram' | 'tiktok' | 'facebook'
 
 export type RefItem = {
   id: string
   kind: RefItemKind
   name: string
-  /** Direct video URL (kind 'url') or Instagram post/reel URL (kind 'instagram'). */
+  /** Direct video URL, or an Instagram / TikTok / Facebook post/reel URL. */
   url?: string
   createdAt: string
 }
@@ -190,50 +197,30 @@ export async function deleteClip(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Instagram URL helpers
+// Social URL helpers (Instagram / TikTok / Facebook)
 // ---------------------------------------------------------------------------
 
-export function isInstagramUrl(url: string): boolean {
-  return /(^|\.)instagram\.com|instagr\.am/i.test(safeHost(url))
-}
-
-function safeHost(url: string): string {
-  try {
-    return new URL(url).host
-  } catch {
-    return ''
-  }
-}
-
-/** Canonical post/reel URL — drop share tracking so the same clip is one item. */
-export function canonicalReferenceUrl(url: string): string {
-  const parsed = parseInstagramUrl(url)
-  if (parsed) return `https://www.instagram.com/${parsed.type}/${parsed.code}/`
-  return url.trim()
-}
-
-/** Extract shortcode + path type from an Instagram post/reel/tv/share URL. */
-export function parseInstagramUrl(
-  url: string,
-): { type: 'p' | 'reel' | 'tv'; code: string } | null {
-  const m = url.match(
-    /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
-  )
-  if (!m) return null
-  const type = m[1].toLowerCase() === 'reels' ? 'reel' : (m[1].toLowerCase() as 'p' | 'reel' | 'tv')
-  return { type, code: m[2] }
-}
+export {
+  canonicalSocialUrl as canonicalReferenceUrl,
+  isFacebookUrl,
+  isInstagramUrl,
+  isTikTokUrl,
+  parseFacebookUrl,
+  parseInstagramUrl,
+  parseTikTokUrl,
+  socialPlatform,
+} from './socialUrls'
 
 export function instagramCode(url: string): string | null {
   return parseInstagramUrl(url)?.code ?? null
 }
 
-/** Same IG shortcode, or the same URL ignoring trailing slashes. */
+/** Same social clip (IG shortcode / TikTok id / Facebook id), or the same URL. */
 export function isSameReferenceUrl(a: string, b: string): boolean {
-  const ca = instagramCode(a)
-  const cb = instagramCode(b)
-  if (ca && cb) return ca.toLowerCase() === cb.toLowerCase()
-  return a.replace(/\/+$/, '') === b.replace(/\/+$/, '')
+  const ka = socialVideoKey(a)
+  const kb = socialVideoKey(b)
+  if (ka && kb) return ka === kb
+  return canonicalSocialUrl(a).replace(/\/+$/, '') === canonicalSocialUrl(b).replace(/\/+$/, '')
 }
 
 export function itemMatchesQuery(item: RefItem, query: string): boolean {
@@ -241,8 +228,19 @@ export function itemMatchesQuery(item: RefItem, query: string): boolean {
   if (!needle) return true
   if (item.name.toLowerCase().includes(needle)) return true
   if (item.url?.toLowerCase().includes(needle)) return true
-  const code = item.url ? instagramCode(item.url) : null
-  return Boolean(code?.toLowerCase().includes(needle))
+  const key = item.url ? socialVideoKey(item.url) : null
+  return Boolean(key?.toLowerCase().includes(needle))
+}
+
+export function kindFromUrl(url: string): RefItemKind {
+  return socialPlatform(url) ?? 'url'
+}
+
+export function isSocialVideoItem(item: RefItem): item is RefItem & { url: string } {
+  return (
+    Boolean(item.url) &&
+    (item.kind === 'instagram' || item.kind === 'tiktok' || item.kind === 'facebook')
+  )
 }
 
 export function reorderItems(items: RefItem[], fromId: string, toId: string): RefItem[] {

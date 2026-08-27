@@ -1,5 +1,5 @@
 /**
- * Resolve a public Instagram reel/post URL to a playable mp4.
+ * Resolve a public Instagram / TikTok / Facebook video URL to a playable mp4.
  * Used by the Vite dev/preview server so Compare can loop the clip in-app.
  *
  * Tries (in order): public Cobalt instances, then local yt-dlp if installed.
@@ -8,43 +8,27 @@
 import { spawn } from 'node:child_process'
 import { Readable } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 
-/** Community Cobalt APIs that currently accept unauthenticated Instagram requests. */
+/** Community Cobalt APIs that currently accept unauthenticated requests. */
 const COBALT_APIS = ['https://cobaltapi.cjs.nz/']
 
 const cache = new Map<string, { url: string; at: number }>()
 const CACHE_MS = 25 * 60 * 1000
 
-export function parseInstagramUrl(
-  url: string,
-): { type: string; code: string } | null {
-  const m = url.match(
-    /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
-  )
-  if (!m) return null
-  const type = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase()
-  return { type, code: m[2] }
+export function isResolvableVideoUrl(url: string): boolean {
+  return socialPlatform(url) !== null
 }
 
+/** @deprecated use isResolvableVideoUrl */
 export function isInstagramUrl(url: string): boolean {
-  try {
-    return /(^|\.)instagram\.com$|(^|\.)instagr\.am$/i.test(new URL(url).hostname)
-  } catch {
-    return false
-  }
+  return socialPlatform(url) === 'instagram'
 }
 
-function canonicalIgUrl(url: string): string {
-  const parsed = parseInstagramUrl(url)
-  if (!parsed) return url
-  const path = parsed.type === 'tv' ? 'tv' : parsed.type === 'p' ? 'p' : 'reel'
-  return `https://www.instagram.com/${path}/${parsed.code}/`
-}
-
-async function cobaltResolve(igUrl: string): Promise<string | null> {
+async function cobaltResolve(pageUrl: string): Promise<string | null> {
   for (const origin of COBALT_APIS) {
     try {
       const res = await fetch(origin, {
@@ -55,7 +39,7 @@ async function cobaltResolve(igUrl: string): Promise<string | null> {
           'User-Agent': UA,
         },
         body: JSON.stringify({
-          url: igUrl,
+          url: pageUrl,
           videoQuality: '720',
           disableMetadata: true,
         }),
@@ -108,36 +92,66 @@ function spawnResolve(cmd: string, args: string[]): Promise<string | null> {
   })
 }
 
-async function ytdlpResolve(igUrl: string): Promise<string | null> {
-  const args = ['-f', 'b', '-g', '--no-warnings', '--no-playlist', igUrl]
+async function ytdlpResolve(pageUrl: string): Promise<string | null> {
+  const args = ['-f', 'b', '-g', '--no-warnings', '--no-playlist', pageUrl]
   return (
     (await spawnResolve('yt-dlp', args)) ??
     (await spawnResolve('python3', ['-m', 'yt_dlp', ...args]))
   )
 }
 
-export async function resolveInstagramVideo(rawUrl: string): Promise<string | null> {
-  const igUrl = canonicalIgUrl(rawUrl)
-  const hit = cache.get(igUrl)
+export async function resolveSocialVideo(rawUrl: string): Promise<string | null> {
+  if (!isResolvableVideoUrl(rawUrl)) return null
+  const pageUrl = canonicalSocialUrl(rawUrl)
+  const hit = cache.get(pageUrl)
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.url
-  const direct = (await cobaltResolve(igUrl)) ?? (await ytdlpResolve(igUrl))
+  const direct = (await cobaltResolve(pageUrl)) ?? (await ytdlpResolve(pageUrl))
   if (!direct) return null
-  cache.set(igUrl, { url: direct, at: Date.now() })
+  cache.set(pageUrl, { url: direct, at: Date.now() })
   return direct
 }
 
+export async function resolveInstagramVideo(rawUrl: string): Promise<string | null> {
+  return resolveSocialVideo(rawUrl)
+}
+
+function cachedDirectUrls(): Set<string> {
+  return new Set([...cache.values()].map((v) => v.url))
+}
+
 function mediaHostAllowed(src: string): boolean {
+  if (cachedDirectUrls().has(src)) return true
   try {
     const host = new URL(src).hostname
     return (
       /(^|\.)cdninstagram\.com$/i.test(host) ||
       /(^|\.)fbcdn\.net$/i.test(host) ||
+      /(^|\.)facebook\.com$/i.test(host) ||
+      /(^|\.)fb\.com$/i.test(host) ||
       /(^|\.)instagram\.com$/i.test(host) ||
+      /(^|\.)tiktokcdn\.com$/i.test(host) ||
+      /(^|\.)tiktokcdn-us\.com$/i.test(host) ||
+      /(^|\.)tiktokv\.com$/i.test(host) ||
+      /(^|\.)musical\.ly$/i.test(host) ||
+      /(^|\.)byteoversea\.com$/i.test(host) ||
+      /(^|\.)ibyteimg\.com$/i.test(host) ||
+      /(^|\.)akamaized\.net$/i.test(host) ||
       /(^|\.)cjs\.nz$/i.test(host)
     )
   } catch {
     return false
   }
+}
+
+function refererFor(src: string): string {
+  try {
+    const host = new URL(src).hostname
+    if (/(tiktok|musical\.ly|byteoversea|ibyteimg)/i.test(host)) return 'https://www.tiktok.com/'
+    if (/(fbcdn|facebook|fb\.com)/i.test(host)) return 'https://www.facebook.com/'
+  } catch {
+    /* fall through */
+  }
+  return 'https://www.instagram.com/'
 }
 
 export async function proxyInstagramMedia(
@@ -153,7 +167,7 @@ export async function proxyInstagramMedia(
   }
   const headers: Record<string, string> = {
     'User-Agent': UA,
-    Referer: 'https://www.instagram.com/',
+    Referer: refererFor(src),
   }
   if (typeof req.headers.range === 'string') headers.Range = req.headers.range
   const upstream = await fetch(src, { headers, redirect: 'follow' })

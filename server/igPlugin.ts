@@ -1,8 +1,8 @@
 import type { Plugin, ViteDevServer } from 'vite'
 import {
-  isInstagramUrl,
+  isResolvableVideoUrl,
   proxyInstagramMedia,
-  resolveInstagramVideo,
+  resolveSocialVideo,
   sendJson,
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
@@ -36,18 +36,18 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         return
       }
       if (path === '/api/ig-resolve') {
-        const ig = url.searchParams.get('url') ?? ''
-        if (!isInstagramUrl(ig)) {
+        const page = url.searchParams.get('url') ?? ''
+        if (!isResolvableVideoUrl(page)) {
           sendJson(res, 400, {
-            error: 'Paste a full Instagram post or reel URL.',
+            error: 'Paste a public Instagram, TikTok, or Facebook video URL.',
           })
           return
         }
-        const direct = await resolveInstagramVideo(ig)
+        const direct = await resolveSocialVideo(page)
         if (!direct) {
           sendJson(res, 422, {
             error:
-              'Could not get a playable file for that reel. It may be private, deleted, or blocked in this region.',
+              'Could not get a playable file for that video. It may be private, deleted, or blocked in this region.',
           })
           return
         }
@@ -65,13 +65,13 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
     } catch (err) {
       if (res.headersSent) return
       sendJson(res, 500, {
-        error: err instanceof Error ? err.message : 'Instagram resolve failed',
+        error: err instanceof Error ? err.message : 'Video resolve failed',
       })
     }
   })
 }
 
-/** Local helper so Compare can play & loop public Instagram reels. */
+/** Local helper so Compare can play public Instagram, TikTok, and Facebook videos. */
 export function instagramResolvePlugin(): Plugin {
   return {
     name: 'shape-lab-ig-resolve',

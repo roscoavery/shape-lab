@@ -1,6 +1,7 @@
 /**
- * Download a public Instagram reel into IndexedDB so Compare can replay it
- * without hitting Instagram again (CDN URLs expire; blobs do not).
+ * Download a public Instagram / TikTok / Facebook video into IndexedDB so
+ * Compare can replay it without hitting the original site again (CDN URLs
+ * expire; blobs do not).
  */
 
 import { getBlob, hasBlob, putBlob } from './clipStore'
@@ -12,18 +13,18 @@ export function isQuotaError(err: unknown): boolean {
   )
 }
 
-export async function fetchInstagramVideoBlob(igUrl: string): Promise<Blob> {
-  const res = await fetch(`/api/ig-resolve?url=${encodeURIComponent(igUrl)}`)
+export async function fetchInstagramVideoBlob(pageUrl: string): Promise<Blob> {
+  const res = await fetch(`/api/ig-resolve?url=${encodeURIComponent(pageUrl)}`)
   const data = (await res.json()) as { videoUrl?: string; error?: string }
   if (!res.ok || !data.videoUrl) {
     throw new Error(
       data.error ??
-        'Could not load that reel here. Private and some region-blocked clips will not play.',
+        'Could not load that video here. Private and some region-blocked clips will not play.',
     )
   }
   const videoRes = await fetch(data.videoUrl)
   if (!videoRes.ok) {
-    throw new Error('Could not download the Instagram video.')
+    throw new Error('Could not download that video.')
   }
   return videoRes.blob()
 }
@@ -31,10 +32,10 @@ export async function fetchInstagramVideoBlob(igUrl: string): Promise<Blob> {
 /** Resolve + download + store. No-ops if this item is already cached. */
 export async function saveInstagramInApp(
   itemId: string,
-  igUrl: string,
+  pageUrl: string,
 ): Promise<'cached' | 'saved'> {
   if (await hasBlob(itemId)) return 'cached'
-  const blob = await fetchInstagramVideoBlob(igUrl)
+  const blob = await fetchInstagramVideoBlob(pageUrl)
   await putBlob(itemId, blob)
   return 'saved'
 }

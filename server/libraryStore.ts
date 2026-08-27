@@ -6,6 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { IncomingMessage } from 'node:http'
+import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
 
 const FILE = path.join(process.cwd(), 'data', 'library.json')
 const SHIPPED = path.join(process.cwd(), 'src/config/compareLibrary.json')
@@ -36,16 +37,6 @@ export function readLibraryFile(): DiskLibrary {
   }
 }
 
-function canonicalIgUrl(url: unknown): string | undefined {
-  if (typeof url !== 'string') return undefined
-  const m = url.match(
-    /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
-  )
-  if (!m) return url
-  const type = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase()
-  return `https://www.instagram.com/${type}/${m[2]}/`
-}
-
 function cleanCollections(raw: unknown[]): unknown[] {
   return raw
     .filter((c) => {
@@ -57,11 +48,16 @@ function cleanCollections(raw: unknown[]): unknown[] {
       const col = c as { items: Array<{ kind?: string; url?: string }> }
       return {
         ...col,
-        items: col.items.map((item) =>
-          item.kind === 'instagram' && item.url
-            ? { ...item, url: canonicalIgUrl(item.url) ?? item.url }
-            : item,
-        ),
+        items: col.items.map((item) => {
+          if (!item.url) return item
+          const platform = socialPlatform(item.url)
+          if (!platform) return item
+          return {
+            ...item,
+            kind: platform,
+            url: canonicalSocialUrl(item.url),
+          }
+        }),
       }
     })
 }
