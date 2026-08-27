@@ -24,14 +24,58 @@ export function instagramUrl(handle: string): string {
 }
 
 export function averageScore(report: FlowRunReport): number {
+  if (report.holdAttempts && report.holdAttempts.length > 0) {
+    const best = report.holdAttempts.find((h) => h.highlighted) ?? report.holdAttempts[0]!
+    return Math.round(best.livePeak)
+  }
   if (report.steps.length === 0) return 0
   return Math.round(report.steps.reduce((n, s) => n + s.overall, 0) / report.steps.length)
+}
+
+function holdTimeLabel(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const sec = seconds - m * 60
+  if (m > 0) return `${m}:${sec.toFixed(1).padStart(4, '0')}`
+  return `${sec.toFixed(1)}s`
+}
+
+export function isHoldReport(report: FlowRunReport): boolean {
+  return Boolean(report.holdAttempts) || report.bestHoldSeconds != null
 }
 
 export function analysisText(report: FlowRunReport, athlete?: Athlete | null): string {
   const handle = normalizeInstagramHandle(report.instagramHandle || athlete?.instagramHandle)
   const who = athlete?.name ?? 'Athlete'
   const ig = handle ? ` (@${handle})` : ''
+  if (isHoldReport(report)) {
+    const holds = report.holdAttempts ?? []
+    const longest = holds.find((h) => h.highlighted) ?? holds[0]
+    const lines = [
+      'Shape Lab — Handstand hold challenge',
+      `${who}${ig}`,
+      report.sequenceName,
+      new Date(report.createdAt).toLocaleString(),
+      longest ? `Longest hold ${holdTimeLabel(longest.holdSeconds)}` : 'No timed holds',
+      '',
+      report.summary,
+      '',
+    ]
+    for (const hold of holds) {
+      const mark = hold.highlighted ? ' — longest' : ''
+      lines.push(`Hold ${hold.index}${mark} — ${holdTimeLabel(hold.holdSeconds)}`)
+      if (hold.highlighted) {
+        if (hold.cues.length === 0) {
+          lines.push('  Line looks in on this hold. Push tall, ears covered, ribs in, legs together.')
+        } else {
+          for (const cue of hold.cues) lines.push(`  • ${cue}`)
+        }
+      }
+      lines.push('')
+    }
+    lines.push('Snapshots map the replay playhead — they are not grades.')
+    lines.push('Not a gate. These are notes for next time.')
+    return lines.join('\n')
+  }
   const lines = [
     'Shape Lab — Tasks 2 analysis',
     `${who}${ig}`,
@@ -57,11 +101,25 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
 
 export function storyCaption(report: FlowRunReport, athlete?: Athlete | null): string {
   const handle = normalizeInstagramHandle(report.instagramHandle || athlete?.instagramHandle)
+  const tag = handle ? `@${handle}` : athlete?.name ?? ''
+  if (isHoldReport(report)) {
+    const longest = report.bestHoldSeconds ?? report.holdAttempts?.find((h) => h.highlighted)?.holdSeconds
+    const bits = (report.holdAttempts ?? []).map(
+      (h) => `${h.index}:${holdTimeLabel(h.holdSeconds)}${h.highlighted ? '*' : ''}`,
+    )
+    return [
+      `${report.nickname} · longest ${longest != null ? holdTimeLabel(longest) : '—'}`,
+      bits.join(' · '),
+      tag,
+      'Shape Lab hold challenge',
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
   const avg = averageScore(report)
   const bits = report.steps.map((s) =>
     s.rep != null ? `${s.rep}:${s.overall}` : `${s.shapeName} ${s.overall}`,
   )
-  const tag = handle ? `@${handle}` : athlete?.name ?? ''
   return [
     `${report.nickname} · ${avg}/100`,
     bits.join(' · '),
@@ -81,10 +139,11 @@ export function analysisFileName(report: FlowRunReport): string {
   return `shape-lab_${nick}_${stamp(report.createdAt)}_analysis.txt`
 }
 
-export function videoFileName(report: FlowRunReport, type: string): string {
+export function videoFileName(report: FlowRunReport, type: string, holdIndex?: number): string {
   const nick = report.nickname.replace(/\s+/g, '_')
   const ext = type.includes('mp4') ? 'mp4' : 'webm'
-  return `shape-lab_${nick}_${stamp(report.createdAt)}.${ext}`
+  const hold = holdIndex != null ? `_hold${holdIndex}` : ''
+  return `shape-lab_${nick}_${stamp(report.createdAt)}${hold}.${ext}`
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
@@ -109,6 +168,17 @@ export async function downloadFlowVideo(report: FlowRunReport): Promise<boolean>
   const blob = await getCaptureBlob(report.replayCaptureId)
   if (!blob) return false
   downloadBlob(blob, videoFileName(report, blob.type))
+  return true
+}
+
+export async function downloadHoldVideo(
+  report: FlowRunReport,
+  clipId: string,
+  holdIndex: number,
+): Promise<boolean> {
+  const blob = await getCaptureBlob(clipId)
+  if (!blob) return false
+  downloadBlob(blob, videoFileName(report, blob.type, holdIndex))
   return true
 }
 

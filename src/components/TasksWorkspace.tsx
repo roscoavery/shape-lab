@@ -47,6 +47,9 @@ type Props = {
   /** Parent-controlled camera fullscreen (Tasks / Tasks 2). */
   fullscreen?: boolean
   onFullscreenChange?: (on: boolean) => void
+  /** Hold-challenge stopwatch burned into the live camera / grade replay. */
+  holdSeconds?: number | null
+  holdSecondsRef?: { current: number | null }
 }
 
 function scoreColor(n: number): string {
@@ -108,6 +111,8 @@ export function TasksWorkspace({
   previewItems = null,
   fullscreen: fullscreenProp,
   onFullscreenChange,
+  holdSeconds = null,
+  holdSecondsRef,
 }: Props) {
   const [localFullscreen, setLocalFullscreen] = useState(false)
   const fullscreen = fullscreenProp ?? localFullscreen
@@ -317,6 +322,8 @@ export function TasksWorkspace({
               shape={shape}
               score={score}
               burnInHud={flowMode}
+              holdSeconds={holdSeconds}
+              holdSecondsRef={holdSecondsRef}
               fill={fullscreen}
               className={fullscreen ? 'h-full min-h-0 flex-1' : ''}
               overlay={
@@ -325,7 +332,11 @@ export function TasksWorkspace({
 
                   {cueLine && (
                     <div className={`absolute inset-x-3 rounded-xl bg-black/65 px-3 py-2 text-center shadow-lg ${
-                      flowMode ? 'top-[8.2rem] sm:top-[9rem]' : 'top-[4.6rem] sm:top-[5.2rem]'
+                      flowMode
+                        ? holdSeconds != null
+                          ? 'top-[10.4rem] sm:top-[11.2rem]'
+                          : 'top-[8.2rem] sm:top-[9rem]'
+                        : 'top-[4.6rem] sm:top-[5.2rem]'
                     }`}>
                       <p className="text-sm font-semibold leading-snug text-white sm:text-base">{cueLine}</p>
                     </div>

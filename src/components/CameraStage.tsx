@@ -2,7 +2,7 @@
  * Draws mirrored video + skeleton overlay + optional live angle labels
  */
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
@@ -24,6 +24,9 @@ type Props = {
   score?: ScoreResult | null
   /** Paint score + shape name onto the pixels so grade replays include them. */
   burnInHud?: boolean
+  /** Hold-challenge stopwatch burned in next to the live score. */
+  holdSeconds?: number | null
+  holdSecondsRef?: { current: number | null }
   className?: string
   /** Fill the parent instead of sizing to the video aspect. */
   fill?: boolean
@@ -88,18 +91,28 @@ function scoreFill(n: number): string {
   return '#f07178'
 }
 
+function formatHoldClock(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const sec = seconds - m * 60
+  if (m > 0) return `${m}:${sec.toFixed(1).padStart(4, '0')}`
+  return `${sec.toFixed(1)}s`
+}
+
 function drawGradeHud(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   overall: number,
   label: string,
+  holdSeconds?: number | null,
 ) {
   const cx = width / 2
   const y = height * 0.025
   const scoreText = String(overall)
   const scorePx = Math.max(40, Math.round(width * 0.072))
   const labelPx = Math.max(13, Math.round(width * 0.022))
+  const clockPx = Math.max(18, Math.round(width * 0.038))
+  const clockText = holdSeconds != null ? formatHoldClock(holdSeconds) : null
   ctx.save()
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
@@ -107,8 +120,13 @@ function drawGradeHud(
   const scoreW = ctx.measureText(scoreText).width
   ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
   const labelW = ctx.measureText(label).width
-  const boxW = Math.max(scoreW, labelW) + width * 0.05
-  const boxH = scorePx + labelPx + height * 0.035
+  let clockW = 0
+  if (clockText) {
+    ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
+    clockW = ctx.measureText(clockText).width
+  }
+  const boxW = Math.max(scoreW, labelW, clockW) + width * 0.05
+  const boxH = scorePx + labelPx + (clockText ? clockPx + height * 0.012 : 0) + height * 0.035
   const x0 = cx - boxW / 2
   ctx.fillStyle = 'rgba(0, 0, 0, 0.58)'
   if (typeof ctx.roundRect === 'function') {
@@ -124,6 +142,11 @@ function drawGradeHud(
   ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.fillText(label, cx, y + scorePx + height * 0.01)
+  if (clockText) {
+    ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
+    ctx.fillStyle = '#f0b429'
+    ctx.fillText(clockText, cx, y + scorePx + labelPx + height * 0.018)
+  }
   ctx.restore()
 }
 
@@ -139,9 +162,17 @@ export function CameraStage({
   shape,
   score,
   burnInHud = false,
+  holdSeconds = null,
+  holdSecondsRef,
   className = '',
   fill = false,
 }: Props) {
+  const localHoldRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    localHoldRef.current = holdSeconds
+  }, [holdSeconds])
+
   useEffect(() => {
     let raf = 0
 
@@ -248,14 +279,21 @@ export function CameraStage({
       ctx.restore()
 
       if (burnInHud && score) {
-        drawGradeHud(ctx, canvas.width, canvas.height, score.overall, shape?.name ?? 'Live score')
+        drawGradeHud(
+          ctx,
+          canvas.width,
+          canvas.height,
+          score.overall,
+          shape?.name ?? 'Live score',
+          (holdSecondsRef ?? localHoldRef).current,
+        )
       }
       raf = requestAnimationFrame(draw)
     }
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud])
+  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud, holdSecondsRef])
 
   return (
     <div

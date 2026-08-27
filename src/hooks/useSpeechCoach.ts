@@ -167,9 +167,7 @@ export function useSpeechCoach(enabled: boolean) {
       window.speechSynthesis.resume()
       window.speechSynthesis.speak(u)
     } catch {
-      speakingRef.current = false
-      next.onEnd?.()
-      pumpRef.current()
+      done()
     }
   }, [supported, ensureVoice])
 

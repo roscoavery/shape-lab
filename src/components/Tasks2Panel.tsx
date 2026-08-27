@@ -14,6 +14,12 @@ import {
   saveCapture,
   snapshotCanvas,
 } from '../lib/captureStore'
+import { downloadHoldVideo } from '../lib/flowShare'
+import {
+  formatSeconds,
+  runHandstandHoldSession,
+  type HoldTick,
+} from '../lib/handstandHold'
 import {
   createId,
   flowHistoryForSequence,
@@ -26,16 +32,18 @@ import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
   Athlete,
+  FlowHoldAttempt,
   FlowProgress,
   FlowRunReport,
   FlowStepSnap,
+  Landmark,
   ReferencePhoto,
   ScoreResult,
 } from '../types'
 import { FlowShareActions } from './FlowShareActions'
 import { ShapeStillStrip } from './ShapeStillStrip'
 
-type Phase = 'idle' | 'preview' | 'running' | 'replay' | 'review'
+type Phase = 'idle' | 'preview' | 'running' | 'holding' | 'replay' | 'review'
 
 type SnapView = FlowStepSnap & { url: string | null }
 
@@ -63,6 +71,8 @@ type Props = {
   onRequestFullscreen?: () => void
   onExitFullscreen?: () => void
   cameraFullscreen?: boolean
+  landmarks?: Landmark[] | null
+  onHoldClock?: (seconds: number | null) => void
 }
 
 function scoreColor(n: number): string {
@@ -83,7 +93,8 @@ function wait(ms: number) {
   })
 }
 
-function snapTitle(s: { shapeId: string; shapeName: string; marker?: 'playhead'; rep?: number }): string {
+function snapTitle(s: { shapeId: string; shapeName: string; marker?: 'playhead'; rep?: number; holdSeconds?: number }): string {
+  if (s.holdSeconds != null && s.rep != null) return `Hold ${s.rep}`
   if (s.rep != null && s.shapeId === 'handstand') return `Handstand ${s.rep}`
   if (s.marker === 'playhead') return `${s.shapeName} · marker`
   return s.shapeName
@@ -93,6 +104,17 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   const graded = seq.reviewShapeIds
     ? steps.filter((s) => seq.reviewShapeIds!.includes(s.shapeId))
     : steps
+  if (seq.mode === 'hs-hold') {
+    const holds = steps.filter((s) => s.holdSeconds != null)
+    if (holds.length === 0) {
+      return `${seq.name}. No timed handstands this run. Kick up, hold, and tap Done when you are finished. Snapshots map the replay — they are not grades. Not a gate.`
+    }
+    const longest = [...holds].sort((a, b) => (b.holdSeconds ?? 0) - (a.holdSeconds ?? 0))[0]!
+    const bits = holds.map(
+      (s) => `Hold ${s.rep ?? '?'}: ${formatSeconds(s.holdSeconds ?? 0)}`,
+    )
+    return `${seq.name}. ${holds.length} hold${holds.length === 1 ? '' : 's'}. Longest ${formatSeconds(longest.holdSeconds ?? 0)} (hold ${longest.rep}). ${bits.join(' · ')}. Snapshots map the replay playhead — they are not grades. Not a gate.`
+  }
   const hsReps = graded.filter((s) => s.shapeId === 'handstand' && s.rep != null)
   if (hsReps.length > 1) {
     const bits = hsReps.map((s) => `${s.rep}: ${s.overall}`)
@@ -132,6 +154,8 @@ export function Tasks2Panel({
   onRequestFullscreen,
   onExitFullscreen,
   cameraFullscreen = false,
+  landmarks = null,
+  onHoldClock,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
@@ -156,11 +180,20 @@ export function Tasks2Panel({
   const replayVideoRef = useRef<HTMLVideoElement | null>(null)
   const seqListRef = useRef<HTMLOListElement | null>(null)
   const [overlayStream, setOverlayStream] = useState<MediaStream | null>(null)
+  const [holdTick, setHoldTick] = useState<HoldTick | null>(null)
+  const [activeClipId, setActiveClipId] = useState<string | null>(null)
+  const [holdClipUrls, setHoldClipUrls] = useState<Record<string, string>>({})
+  const clipUrlsRef = useRef<Map<string, string>>(new Map())
+  const holdDoneRef = useRef(false)
+  const landmarksRef = useRef(landmarks)
+  const onHoldClockRef = useRef(onHoldClock)
 
   scoreRef.current = score
   shapeIdRef.current = scoredShapeId
   streamRef.current = stream
   overlayStreamRef.current = overlayStream
+  landmarksRef.current = landmarks
+  onHoldClockRef.current = onHoldClock
 
   const { speakEvent, reset: resetSpeech, unlock: unlockSpeech, supported: speechSupported } =
     useSpeechCoach(true)
@@ -169,6 +202,14 @@ export function Tasks2Panel({
 
   useEffect(() => {
     if (!cameraRunning) {
+      overlayStreamRef.current?.getTracks().forEach((t) => {
+        try {
+          t.stop()
+        } catch {
+          /* already stopped */
+        }
+      })
+      overlayStreamRef.current = null
       setOverlayStream(null)
       return
     }
@@ -180,21 +221,30 @@ export function Tasks2Panel({
       if (canvas && canvas.width > 16 && canvas.height > 16) {
         try {
           const captured = canvas.captureStream(24)
-          if (!cancelled) setOverlayStream(captured)
+          if (!cancelled) {
+            overlayStreamRef.current = captured
+            setOverlayStream(captured)
+          }
           return
         } catch {
-          if (!cancelled) setOverlayStream(stream)
+          if (!cancelled) {
+            overlayStreamRef.current = streamRef.current
+            setOverlayStream(streamRef.current)
+          }
           return
         }
       }
       if (++tries < 50) window.setTimeout(grab, 120)
-      else if (!cancelled) setOverlayStream(stream)
+      else if (!cancelled) {
+        overlayStreamRef.current = streamRef.current
+        setOverlayStream(streamRef.current)
+      }
     }
     grab()
     return () => {
       cancelled = true
     }
-  }, [cameraRunning, stream, canvasRef])
+  }, [cameraRunning, canvasRef])
 
   useEffect(() => {
     if (!athleteId) {
@@ -243,6 +293,9 @@ export function Tasks2Panel({
       for (const s of snapsRef.current) {
         if (s.url) URL.revokeObjectURL(s.url)
       }
+      for (const url of clipUrlsRef.current.values()) URL.revokeObjectURL(url)
+      clipUrlsRef.current.clear()
+      onHoldClockRef.current?.(null)
     },
     [onCue, onPreviewItems],
   )
@@ -322,10 +375,13 @@ export function Tasks2Panel({
 
   const stopRun = useCallback(() => {
     runGen.current += 1
+    holdDoneRef.current = true
     resetSpeech()
     setPhase('idle')
     setBeatIndex(-1)
     setCue('')
+    setHoldTick(null)
+    onHoldClockRef.current?.(null)
     onExitFullscreen?.()
     setFlash('Stopped. The show can start again whenever you are ready.')
     window.setTimeout(() => setFlash(null), 2500)
@@ -412,6 +468,180 @@ export function Tasks2Panel({
     [athlete?.instagramHandle, athleteId, delay, onExitFullscreen],
   )
 
+  const revokeClipUrls = useCallback(() => {
+    for (const url of clipUrlsRef.current.values()) URL.revokeObjectURL(url)
+    clipUrlsRef.current.clear()
+    setHoldClipUrls({})
+  }, [])
+
+  const finishHoldRun = useCallback(
+    async (seqRun: FlowSequence, raw: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
+      onHoldClockRef.current?.(null)
+      setHoldTick(null)
+
+      revokeClipUrls()
+      if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
+      replayUrlRef.current = null
+      setReplayUrl(null)
+      setActiveClipId(null)
+
+      for (const s of snapsRef.current) {
+        if (s.url) URL.revokeObjectURL(s.url)
+      }
+
+      if (raw.length === 0) {
+        const built: FlowRunReport = {
+          id: createId('flow'),
+          athleteId: athleteId ?? 'none',
+          sequenceId: seqRun.id,
+          sequenceName: seqRun.name,
+          nickname: seqRun.nickname,
+          createdAt: new Date().toISOString(),
+          replayCaptureId: null,
+          steps: [],
+          holdAttempts: [],
+          bestHoldSeconds: 0,
+          summary: summaryFor(seqRun, []),
+          instagramHandle: athlete?.instagramHandle,
+        }
+        if (athleteId) {
+          saveFlowAnalysis(built)
+          const next = recordFlowCompletion(athleteId, seqRun.id)
+          setProgress(next)
+        }
+        setReport(built)
+        setSnaps([])
+        snapsRef.current = []
+        onExitFullscreen?.()
+        setPhase('review')
+        setCue('No timed handstands this run. Kick up, hold, then tap Done.')
+        return
+      }
+
+      const longestIdx = raw.reduce(
+        (best, a, i) => (a.holdSeconds > raw[best]!.holdSeconds ? i : best),
+        0,
+      )
+      const collected: SnapView[] = []
+      const holds: FlowHoldAttempt[] = []
+
+      for (let i = 0; i < raw.length; i++) {
+        const a = raw[i]!
+        const highlighted = i === longestIdx
+        let clipId: string | null = null
+        if (athleteId && a.clipBlob && a.clipBlob.size > 800) {
+          clipId = createId('clip')
+          try {
+            await saveCapture(
+              {
+                id: clipId,
+                athleteId,
+                taskId: seqRun.id,
+                shapeId: 'handstand',
+                shapeName: highlighted ? 'Longest handstand' : `Handstand hold ${i + 1}`,
+                kind: 'clip',
+                createdAt: new Date().toISOString(),
+                holdSeconds: a.holdSeconds,
+              },
+              a.clipBlob,
+            )
+            const url = URL.createObjectURL(a.clipBlob)
+            clipUrlsRef.current.set(clipId, url)
+          } catch {
+            clipId = null
+          }
+        } else if (a.clipBlob && a.clipBlob.size > 800) {
+          clipId = createId('clip')
+          clipUrlsRef.current.set(clipId, URL.createObjectURL(a.clipBlob))
+        }
+
+        const live = a.livePeak
+        const cues = live ? writtenCues(live, 'handstand', 6) : []
+        const livePeak = live ? Math.round(live.overall) : 0
+        const stillView = live
+          ? await takeSnapshot(
+              'handstand',
+              a.playheadSec,
+              live,
+              a.snapshotBlob,
+              i + 1,
+            )
+          : null
+        if (stillView) {
+          stillView.overall = 0
+          stillView.cues = highlighted ? cues : []
+          stillView.marker = 'playhead'
+          stillView.holdSeconds = a.holdSeconds
+          stillView.clipId = clipId
+          collected.push(stillView)
+        }
+
+        holds.push({
+          index: i + 1,
+          holdSeconds: a.holdSeconds,
+          livePeak,
+          cues: highlighted ? cues : [],
+          clipId,
+          snapshotId: stillView?.captureId ?? null,
+          playheadSec: a.playheadSec,
+          highlighted,
+        })
+      }
+
+      const bestHold = holds[longestIdx]!
+      const replayCaptureId = bestHold.clipId
+      const replayUrl =
+        (replayCaptureId && clipUrlsRef.current.get(replayCaptureId)) ||
+        [...clipUrlsRef.current.values()][0] ||
+        null
+      replayUrlRef.current = replayUrl
+      setReplayUrl(replayUrl)
+      setActiveClipId(replayCaptureId)
+      setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
+
+      const steps: FlowStepSnap[] = collected.map((s) => ({
+        shapeId: s.shapeId,
+        shapeName: s.shapeName,
+        overall: 0,
+        cues: s.cues,
+        captureId: s.captureId,
+        atSec: s.atSec,
+        clipId: s.clipId,
+        marker: 'playhead',
+        rep: s.rep,
+        holdSeconds: s.holdSeconds,
+      }))
+      const built: FlowRunReport = {
+        id: createId('flow'),
+        athleteId: athleteId ?? 'none',
+        sequenceId: seqRun.id,
+        sequenceName: seqRun.name,
+        nickname: seqRun.nickname,
+        createdAt: new Date().toISOString(),
+        replayCaptureId,
+        steps,
+        holdAttempts: holds,
+        bestHoldSeconds: bestHold.holdSeconds,
+        summary: summaryFor(seqRun, steps),
+        instagramHandle: athlete?.instagramHandle,
+      }
+      if (athleteId) {
+        saveFlowAnalysis(built)
+        const next = recordFlowCompletion(athleteId, seqRun.id)
+        setProgress(next)
+      }
+      setReport(built)
+      setSnaps(collected)
+      snapsRef.current = collected
+      onExitFullscreen?.()
+      setPhase('replay')
+      setCue(
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Live score, stopwatch, and joint angles are on the video. Snapshots jump the playhead — they are not grades.`,
+      )
+    },
+    [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
+  )
+
   const startSequence = useCallback(
     async (seqRun: FlowSequence) => {
       if (!athleteId) {
@@ -427,6 +657,11 @@ export function Tasks2Panel({
       runGen.current += 1
       const gen = runGen.current
       const alive = () => gen === runGen.current
+      holdDoneRef.current = false
+      setHoldTick(null)
+      onHoldClockRef.current?.(null)
+      setActiveClipId(null)
+      revokeClipUrls()
 
       for (const s of snapsRef.current) {
         if (s.url) URL.revokeObjectURL(s.url)
@@ -443,7 +678,9 @@ export function Tasks2Panel({
         await wait(100)
         if (!alive()) return
       }
-      delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+      if (seqRun.mode !== 'hs-hold') {
+        delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+      }
       onRequestFullscreen?.()
       await wait(350)
       if (!alive()) return
@@ -482,6 +719,32 @@ export function Tasks2Panel({
       if (!seqRun.setupSpeak && !seqRun.setupExtraSpeak) {
         await wait(700)
         if (!alive()) return
+      }
+
+      if (seqRun.mode === 'hs-hold') {
+        setPhase('holding')
+        onRequestShape('handstand', 'auto', { profileOk: true })
+        setCue(
+          'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
+        )
+        const raw = await runHandstandHoldSession({
+          cancelled: () => !alive(),
+          doneRequested: () => holdDoneRef.current || !alive(),
+          landmarks: () => landmarksRef.current,
+          score: () => scoreRef.current,
+          stream: () => overlayStreamRef.current ?? streamRef.current,
+          canvas: () => canvasRef.current,
+          onTick: (tick) => {
+            setHoldTick(tick)
+            onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
+          },
+          onCue: (line) => {
+            if (alive()) setCue(line)
+          },
+        })
+        if (!alive()) return
+        await finishHoldRun(seqRun, raw)
+        return
       }
 
       setPhase('running')
@@ -659,13 +922,16 @@ export function Tasks2Panel({
     },
     [
       athleteId,
+      canvasRef,
       delay,
+      finishHoldRun,
       finishRun,
       onEnsureCamera,
       onRequestFullscreen,
       onRequestShape,
       onVoiceEnabledChange,
       resetSpeech,
+      revokeClipUrls,
       speakLine,
       takeSnapshot,
       unlockSpeech,
@@ -673,7 +939,7 @@ export function Tasks2Panel({
   )
 
   const selectSeq = (id: string) => {
-    if (phase === 'preview' || phase === 'running') return
+    if (phase === 'preview' || phase === 'running' || phase === 'holding') return
     setSeqId(id)
     setPhase('idle')
     setReport(null)
@@ -704,13 +970,30 @@ export function Tasks2Panel({
   }
 
   const openHistoryReplay = async (r: FlowRunReport) => {
-    if (!r.replayCaptureId) return
-    const blob = await getCaptureBlob(r.replayCaptureId)
-    if (!blob) return
-    if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
-    const url = URL.createObjectURL(blob)
+    revokeClipUrls()
+    if (r.holdAttempts?.length) {
+      for (const h of r.holdAttempts) {
+        if (!h.clipId) continue
+        const b = await getCaptureBlob(h.clipId)
+        if (b) clipUrlsRef.current.set(h.clipId, URL.createObjectURL(b))
+      }
+    }
+    const mainId = r.replayCaptureId
+    if (!mainId && clipUrlsRef.current.size === 0) return
+    const blob = mainId ? await getCaptureBlob(mainId) : null
+    if (mainId && blob && !clipUrlsRef.current.has(mainId)) {
+      clipUrlsRef.current.set(mainId, URL.createObjectURL(blob))
+    }
+    const url =
+      (mainId && clipUrlsRef.current.get(mainId)) || [...clipUrlsRef.current.values()][0] || null
+    if (!url) return
+    if (replayUrlRef.current && ![...clipUrlsRef.current.values()].includes(replayUrlRef.current)) {
+      URL.revokeObjectURL(replayUrlRef.current)
+    }
     replayUrlRef.current = url
     setReplayUrl(url)
+    setActiveClipId(mainId)
+    setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
     setReport(r)
     setSeekTo(null)
     const views: SnapView[] = []
@@ -727,6 +1010,23 @@ export function Tasks2Panel({
     }
     snapsRef.current = views
     setSnaps(views)
+    setPhase('replay')
+  }
+
+  const playHoldClip = (clipId: string | null | undefined, atSec?: number) => {
+    if (!clipId) {
+      if (atSec != null) setSeekTo(atSec)
+      return
+    }
+    const url = clipUrlsRef.current.get(clipId)
+    if (!url) {
+      if (atSec != null) setSeekTo(atSec)
+      return
+    }
+    setReplayUrl(url)
+    replayUrlRef.current = url
+    setActiveClipId(clipId)
+    setSeekTo(atSec ?? 0)
     setPhase('replay')
   }
 
@@ -748,7 +1048,9 @@ export function Tasks2Panel({
 
   const askedBeat = phase === 'running' ? seq.beats[beatIndex] : null
   const askedShapeId =
-    askedBeat?.shapeId ??
+    phase === 'holding'
+      ? 'handstand'
+      : askedBeat?.shapeId ??
     [...seq.beats.slice(0, Math.max(0, beatIndex + 1))].reverse().find((b) => b.shapeId)?.shapeId ??
     ((phase === 'idle' || phase === 'preview') && seq.setupShapeId
       ? seq.setupShapeId
@@ -756,7 +1058,8 @@ export function Tasks2Panel({
     seq.previewShapes[0]?.shapeId
 
   const completions = progress?.completions[seq.id] ?? 0
-  const busy = phase === 'preview' || phase === 'running'
+  const busy = phase === 'preview' || phase === 'running' || phase === 'holding'
+  const holdMode = seq.mode === 'hs-hold' || Boolean(report?.holdAttempts)
   const nextSeqDef =
     FLOW_SEQUENCES[(FLOW_SEQUENCES.findIndex((s) => s.id === seq.id) + 1) % FLOW_SEQUENCES.length] ??
     FLOW_SEQUENCES[0]!
@@ -769,7 +1072,7 @@ export function Tasks2Panel({
           onClick={() => void startSequence(seq)}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
         >
-          {completions > 0 ? 'Go again — full screen' : 'Start sequence — full screen'}
+          {completions > 0 ? 'Go again — full screen' : holdMode || seq.mode === 'hs-hold' ? 'Start hold challenge — full screen' : 'Start sequence — full screen'}
         </button>
       )}
       {!busy && !cameraFullscreen && (
@@ -782,13 +1085,28 @@ export function Tasks2Panel({
         </button>
       )}
       {busy && (
-        <button
-          type="button"
-          onClick={stopRun}
-          className="rounded-lg border border-[var(--warn)]/70 px-3 py-2 text-sm text-[var(--warn)]"
-        >
-          Stop
-        </button>
+        <>
+          {phase === 'holding' && (
+            <button
+              type="button"
+              onClick={() => {
+                holdDoneRef.current = true
+                setFlash('Finishing this hold, then your analysis.')
+                window.setTimeout(() => setFlash(null), 2000)
+              }}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            >
+              Done — see my holds
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={stopRun}
+            className="rounded-lg border border-[var(--warn)]/70 px-3 py-2 text-sm text-[var(--warn)]"
+          >
+            Stop
+          </button>
+        </>
       )}
     </div>
   )
@@ -798,9 +1116,29 @@ export function Tasks2Panel({
       {cameraFullscreen && phase !== 'replay' && (
         <div className="pointer-events-auto fixed bottom-3 left-1/2 z-[95] w-[min(96vw,34rem)] -translate-x-1/2 rounded-2xl border border-white/25 bg-black/80 p-3 text-white shadow-2xl backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
-            {busy ? 'Stay with the voice' : seq.nickname}
+            {phase === 'holding'
+              ? 'Handstand hold challenge'
+              : busy
+                ? 'Stay with the voice'
+                : seq.nickname}
           </p>
-          {busy ? (
+          {phase === 'holding' ? (
+            <>
+              <p className="mt-1 text-3xl font-black tabular-nums text-[#f0b429]">
+                {holdTick?.running && holdTick.seconds != null
+                  ? formatSeconds(holdTick.seconds)
+                  : holdTick?.last != null
+                    ? formatSeconds(holdTick.last)
+                    : '0.0s'}
+              </p>
+              <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+              <p className="mt-1 text-[11px] text-white/60">
+                {holdTick
+                  ? `${holdTick.running ? `Hold ${(holdTick.tries ?? 0) + 1}` : `${holdTick.tries} timed`} · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
+                  : 'Clock starts when you are inverted. Stops when a foot hits.'}
+              </p>
+            </>
+          ) : busy ? (
             <>
               <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
               <p className="mt-1 text-[11px] text-white/60">Listen — follow the spoken script.</p>
@@ -935,12 +1273,30 @@ export function Tasks2Panel({
         {busy && (
           <div className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-              {phase === 'preview' ? 'Get set — then the sequence starts' : 'Class flow — stay with the voice'}
+              {phase === 'preview'
+                ? 'Get set — then the sequence starts'
+                : phase === 'holding'
+                  ? 'Hold challenge — clock runs in the handstand'
+                  : 'Class flow — stay with the voice'}
             </p>
             <p className="text-sm font-semibold leading-snug text-[var(--text)]">{cue}</p>
+            {phase === 'holding' && holdTick && (
+              <p className="mt-1 text-2xl font-black tabular-nums text-[var(--accent)]">
+                {holdTick.running && holdTick.seconds != null
+                  ? formatSeconds(holdTick.seconds)
+                  : holdTick.last != null
+                    ? formatSeconds(holdTick.last)
+                    : '0.0s'}
+                <span className="ml-2 text-[12px] font-semibold text-[var(--muted)]">
+                  {holdTick.running ? `Hold ${holdTick.tries + 1}` : `${holdTick.tries} timed`}
+                  {holdTick.best != null ? ` · best ${formatSeconds(holdTick.best)}` : ''}
+                </span>
+              </p>
+            )}
             <p className="mt-1 text-[11px] text-[var(--muted)]">
-              Live grade {score.overall}/100 on {getShape(shapeIdRef.current)?.name ?? 'this shape'} — not a
-              gate.
+              {phase === 'holding'
+                ? 'Live line grade and joint angles burn into each hold clip. Clock starts inverted, stops when a foot hits. Not a gate.'
+                : `Live grade ${score.overall}/100 on ${getShape(shapeIdRef.current)?.name ?? 'this shape'} — not a gate.`}
             </p>
           </div>
         )}
@@ -953,7 +1309,11 @@ export function Tasks2Panel({
       {phase === 'replay' && (
         <div className="fixed inset-0 z-[100] flex flex-col bg-black">
           <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 text-white">
-            <p className="text-sm font-semibold">Your run · {seq.nickname} — scrub the delay-cam replay</p>
+            <p className="text-sm font-semibold">
+              {holdMode
+                ? `Your longest hold${report?.bestHoldSeconds != null ? ` · ${formatSeconds(report.bestHoldSeconds)}` : ''} — snapshots jump the playhead (not grades)`
+                : `Your run · ${seq.nickname} — scrub the delay-cam replay`}
+            </p>
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
@@ -984,7 +1344,7 @@ export function Tasks2Panel({
                 }}
                 className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
               >
-                Continue to grades
+                Continue to {holdMode ? 'analysis' : 'grades'}
               </button>
             </div>
           </div>
@@ -1006,19 +1366,34 @@ export function Tasks2Panel({
           {snaps.length > 0 && (
             <div className="shrink-0 border-t border-white/15 bg-black/80 px-3 py-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">
-                {seq.id === 'flow_mc_hs_5reps'
+                {holdMode
+                  ? 'Each hold — highlighted is your longest. Tap to watch. Stills map the playhead, not a grade.'
+                  : seq.id === 'flow_mc_hs_5reps'
                   ? 'Handstand 1–5 — tap to jump in the replay'
                   : seq.reviewShapeIds?.includes('handstand')
                     ? 'Handstand snapshot — tap to jump in the replay'
                     : 'Snapshots — tap to jump in the replay'}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {snaps.map((s, i) => (
+                {snaps.map((s, i) => {
+                  const longest = Boolean(
+                    report?.holdAttempts?.some((h) => h.highlighted && h.index === s.rep),
+                  )
+                  const active = Boolean(s.clipId && s.clipId === activeClipId)
+                  return (
                   <button
                     key={`${s.shapeId}-${i}`}
                     type="button"
-                    onClick={() => s.atSec != null && setSeekTo(s.atSec)}
-                    className="w-24 shrink-0 overflow-hidden rounded-lg border border-white/20 bg-black text-left"
+                    onClick={() =>
+                      holdMode ? playHoldClip(s.clipId, s.atSec) : s.atSec != null && setSeekTo(s.atSec)
+                    }
+                    className={`w-24 shrink-0 overflow-hidden rounded-lg border bg-black text-left ${
+                      longest
+                        ? 'border-[var(--accent)] ring-2 ring-[var(--accent)]'
+                        : active
+                          ? 'border-white/70'
+                          : 'border-white/20'
+                    }`}
                   >
                     {s.url ? (
                       <img src={s.url} alt={s.shapeName} className="h-16 w-full object-contain" />
@@ -1028,13 +1403,20 @@ export function Tasks2Panel({
                       </div>
                     )}
                     <p className="px-1 py-0.5 text-[10px] font-semibold text-white">
-                      {snapTitle(s)}
+                      {longest ? `Longest · ${snapTitle(s)}` : snapTitle(s)}
                     </p>
+                    {holdMode ? (
+                      <p className="px-1 pb-1 text-[10px] tabular-nums text-[#f0b429]">
+                        {s.holdSeconds != null ? formatSeconds(s.holdSeconds) : '—'}
+                      </p>
+                    ) : (
                     <p className="px-1 pb-1 text-[10px] tabular-nums" style={{ color: scoreColor(s.overall) }}>
                       {s.overall}/100
                     </p>
+                    )}
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1044,7 +1426,9 @@ export function Tasks2Panel({
       {phase === 'review' && report && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {report.sequenceId === 'flow_mc_hs_5reps'
+            {holdMode
+              ? 'Hold challenge · not a gate'
+              : report.sequenceId === 'flow_mc_hs_5reps'
               ? 'Handstand reps · not a gate'
               : report.sequenceId === 'flow_mc_hs_lg_assist'
                 ? 'Handstand form · not a gate'
@@ -1052,6 +1436,97 @@ export function Tasks2Panel({
           </p>
           <h3 className="text-sm font-semibold text-[var(--text)]">{report.sequenceName}</h3>
           <p className="mt-1 text-sm leading-snug text-[var(--text)]">{report.summary}</p>
+          {holdMode && report.holdAttempts && report.holdAttempts.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {report.holdAttempts.map((h) => {
+                const still = snaps.find((s) => s.rep === h.index)
+                const clipUrl = h.clipId ? holdClipUrls[h.clipId] : null
+                return (
+                  <li
+                    key={h.index}
+                    className={`overflow-hidden rounded-md border bg-[#0d1218] ${
+                      h.highlighted
+                        ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]'
+                        : 'border-[var(--panel-border)]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-2">
+                      <p className="text-sm font-semibold text-[var(--text)]">
+                        {h.highlighted ? `Longest · Hold ${h.index}` : `Hold ${h.index}`}
+                      </p>
+                      <p className="text-lg font-black tabular-nums text-[#f0b429]">
+                        {formatSeconds(h.holdSeconds)}
+                      </p>
+                    </div>
+                    {clipUrl ? (
+                      <video
+                        src={clipUrl}
+                        className={`mt-2 w-full bg-black object-contain ${h.highlighted ? 'max-h-56' : 'max-h-36'}`}
+                        controls
+                        playsInline
+                      />
+                    ) : still?.url ? (
+                      <button
+                        type="button"
+                        onClick={() => playHoldClip(h.clipId, h.playheadSec)}
+                        className="mt-2 block w-full"
+                      >
+                        <img
+                          src={still.url}
+                          alt={`Hold ${h.index}`}
+                          className="max-h-32 w-full bg-black object-contain"
+                        />
+                      </button>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2 p-2">
+                      {h.clipId && (
+                        <button
+                          type="button"
+                          onClick={() => playHoldClip(h.clipId, h.playheadSec)}
+                          className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
+                        >
+                          Watch
+                        </button>
+                      )}
+                      {h.clipId && (
+                        <button
+                          type="button"
+                          onClick={() => void downloadHoldVideo(report, h.clipId!, h.index)}
+                          className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
+                        >
+                          {h.highlighted ? 'Save longest video' : 'Save this video'}
+                        </button>
+                      )}
+                    </div>
+                    {h.highlighted && (
+                      <div className="border-t border-[var(--panel-border)] px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                          Written form analysis · verbal cues from your longest hold
+                        </p>
+                        {h.cues.length > 0 ? (
+                          <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12px] leading-snug text-[var(--text)]">
+                            {h.cues.map((c) => (
+                              <li key={c}>{c}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-1 text-[12px] text-[var(--good)]">
+                            Push tall through the ground, ears covered, ribs in, butt in, legs
+                            together, pointed toes. That line held.
+                          </p>
+                        )}
+                        <p className="mt-1 text-[11px] text-[var(--muted)]">
+                          The still is a playhead map only — it is not a snapshot grade. Live score,
+                          stopwatch, and joint angles are on the video.
+                        </p>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+          <>
           {replayUrl && (
             <video
               src={replayUrl}
@@ -1113,6 +1588,8 @@ export function Tasks2Panel({
               </li>
             ))}
           </ol>
+          </>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -1169,6 +1646,7 @@ export function Tasks2Panel({
           </p>
           <ul className="space-y-2">
             {history.slice(0, 8).map((h) => {
+              const holdBest = h.bestHoldSeconds ?? h.holdAttempts?.find((a) => a.highlighted)?.holdSeconds
               const avg =
                 h.steps.length > 0
                   ? Math.round(h.steps.reduce((n, s) => n + s.overall, 0) / h.steps.length)
@@ -1185,10 +1663,19 @@ export function Tasks2Panel({
                   >
                     <span className="text-[12px] text-[var(--muted)]">
                       {new Date(h.createdAt).toLocaleString()}
+                      {h.holdAttempts?.length
+                        ? ` · ${h.holdAttempts.length} hold${h.holdAttempts.length === 1 ? '' : 's'}`
+                        : ''}
                     </span>
+                    {holdBest != null ? (
+                      <span className="font-semibold tabular-nums text-[#f0b429]">
+                        {formatSeconds(holdBest)}
+                      </span>
+                    ) : (
                     <span className="font-semibold tabular-nums" style={{ color: scoreColor(avg) }}>
                       {avg}/100
                     </span>
+                    )}
                   </button>
                   <div className="mt-2">
                     <FlowShareActions

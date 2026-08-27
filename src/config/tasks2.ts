@@ -41,6 +41,8 @@ export type FlowSequence = {
   name: string
   nickname: string
   description: string
+  /** Default is a spoken beat list. Hold challenge times inverted holds until Done. */
+  mode?: 'beats' | 'hs-hold'
   previewSpeak: string
   /**
    * Spoken and shown right before the first beat — get set (side view, clean).
@@ -449,6 +451,26 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     ],
     reviewShapeIds: ['handstand'],
     beats: mcHsFiveReps(),
+  },
+  {
+    id: 'flow_hs_hold_challenge',
+    name: 'Handstand hold challenge',
+    nickname: 'Hold challenge',
+    mode: 'hs-hold',
+    description:
+      'One-person hold-time challenge. Walking on the hands is allowed — try not to. The clock starts when you are in a handstand and stops when a foot hits the ground. As many tries as you want. The app trims each hold, highlights your longest, and writes form cues. Snapshots map the replay — they are not grades. Not a gate.',
+    previewSpeak: 'Ready to challenge your handstand hold time?',
+    setupSpeak:
+      'Handstand walking is allowed, but try not to walk. Start clean. Hit a mountain climber and hit a handstand when you are ready, and hold for as long as you can.',
+    setupExtraSpeak:
+      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+    setupShapeId: 'stand_clean',
+    previewShapes: [
+      { shapeId: 'mountain_climber', label: 'MC' },
+      { shapeId: 'handstand', label: 'HS' },
+    ],
+    reviewShapeIds: ['handstand'],
+    beats: [],
   },
 ]
 

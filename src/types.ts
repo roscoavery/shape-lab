@@ -272,6 +272,21 @@ export type FlowStepSnap = {
   marker?: 'playhead'
   /** 1-based rep number when this still is one of several handstand kicks. */
   rep?: number
+  /** Hold duration when this still maps a timed handstand (not a snapshot grade). */
+  holdSeconds?: number
+}
+
+/** One timed handstand inside a hold-challenge run. */
+export type FlowHoldAttempt = {
+  index: number
+  holdSeconds: number
+  /** Best live line during the hold — used for written cues, not a snapshot grade. */
+  livePeak: number
+  cues: string[]
+  clipId: string | null
+  snapshotId: string | null
+  playheadSec?: number
+  highlighted?: boolean
 }
 
 /** Written review of one Tasks 2 sequence. */
@@ -285,6 +300,9 @@ export type FlowRunReport = {
   replayCaptureId: string | null
   steps: FlowStepSnap[]
   summary: string
+  /** Timed holds for the one-person handstand hold challenge. */
+  holdAttempts?: FlowHoldAttempt[]
+  bestHoldSeconds?: number
   /** When the athlete marked this run to send to Ryan. */
   sharedWithCoachAt?: string | null
   /** Handle used on the Story caption for this run. */

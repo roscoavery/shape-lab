@@ -84,6 +84,8 @@ export default function App() {
     null,
   )
   const [camFullscreen, setCamFullscreen] = useState(false)
+  const [holdClock, setHoldClock] = useState<number | null>(null)
+  const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
 
   const qualityThreshold =
@@ -443,6 +445,8 @@ export default function App() {
             previewItems={flowPreview}
             fullscreen={camFullscreen}
             onFullscreenChange={setCamFullscreen}
+            holdSeconds={holdClock}
+            holdSecondsRef={holdSecondsRef}
           />
 
           <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
@@ -474,6 +478,14 @@ export default function App() {
               onRequestFullscreen={() => setCamFullscreen(true)}
               onExitFullscreen={() => setCamFullscreen(false)}
               cameraFullscreen={camFullscreen}
+              landmarks={activeLandmarks}
+              onHoldClock={(seconds) => {
+                holdSecondsRef.current = seconds
+                setHoldClock((prev) => {
+                  const next = seconds == null ? null : Math.round(seconds * 10) / 10
+                  return prev === next ? prev : next
+                })
+              }}
               onHitPreview={(blob) => {
                 setHitPreviewUrl((prev) => {
                   if (prev) URL.revokeObjectURL(prev)
