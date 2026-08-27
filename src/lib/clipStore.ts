@@ -23,6 +23,8 @@ export type RefItem = {
   name: string
   /** Direct video URL, or an Instagram / TikTok / Facebook post/reel URL. */
   url?: string
+  /** Shape / skill tags so one search lists every video with that shape. */
+  keywords?: string[]
   createdAt: string
 }
 
@@ -223,13 +225,36 @@ export function isSameReferenceUrl(a: string, b: string): boolean {
   return canonicalSocialUrl(a).replace(/\/+$/, '') === canonicalSocialUrl(b).replace(/\/+$/, '')
 }
 
+export function parseKeywords(raw: string | string[] | undefined | null): string[] {
+  const parts = Array.isArray(raw) ? raw : (raw ?? '').split(/[,;\n]+/)
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of parts) {
+    const tag = part.trim().replace(/\s+/g, ' ')
+    if (!tag) continue
+    const key = tag.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(tag)
+  }
+  return out
+}
+
+export function mergeKeywords(a?: string[], b?: string[]): string[] {
+  return parseKeywords([...(a ?? []), ...(b ?? [])])
+}
+
 export function itemMatchesQuery(item: RefItem, query: string): boolean {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   if (item.name.toLowerCase().includes(needle)) return true
   if (item.url?.toLowerCase().includes(needle)) return true
   const key = item.url ? socialVideoKey(item.url) : null
-  return Boolean(key?.toLowerCase().includes(needle))
+  if (key?.toLowerCase().includes(needle)) return true
+  return (item.keywords ?? []).some((tag) => {
+    const t = tag.toLowerCase()
+    return t === needle || t.includes(needle) || needle.includes(t)
+  })
 }
 
 export function kindFromUrl(url: string): RefItemKind {

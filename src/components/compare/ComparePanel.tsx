@@ -12,9 +12,10 @@ export function ComparePanel() {
   return (
     <div className="flex flex-col gap-4">
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
-        <strong className="text-[var(--text)]">Paste and rename here — it saves into the app.</strong>{' '}
+        <strong className="text-[var(--text)]">Paste, rename, and tag here — it saves into the app.</strong>{' '}
         Instagram, TikTok, and Facebook video URLs land in Compare, stay on this device, and write
-        into the app library so the next Preview still has them. Rename anytime. Tap{' '}
+        into the app library so the next Preview still has them. Add shape keywords (handstand, whip)
+        so a search lists every clip with that shape. Rename or tap Tags anytime. Tap{' '}
         <em>Save all in app</em> to keep the video files for offline playback.
       </section>
       <div className="grid gap-4 lg:grid-cols-2">

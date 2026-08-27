@@ -130,7 +130,7 @@ Side-by-side technique study: a **reference video** (the technique to copy) next
 
 ### The Instagram constraint (honest version)
 
-Instagram, TikTok, and Facebook do **not** offer a free public API to log in and pull your saved collections. Compare still lets you **paste public video URLs** from those sites (or a direct video file URL). The local app resolves those to a playable video, **saves the file in IndexedDB**, and **loops them in the tab** (pause, scrub, slow-mo). Use **Save all in app** to download every pasted clip at once. Paste and **rename** in the browser — names and URLs write into the app library (`src/config/compareLibrary.json` / `data/library.json`) so they are still there on the next Preview. **Export library** is an extra JSON backup. Search by name, URL, or clip id (hits in other collections are listed too). Drag or use ↑↓ to reorder — reorder pauses while a search is active. Private posts will not load. Optional: `pip install yt-dlp` gives a local fallback if the built-in resolver misses a clip.
+Instagram, TikTok, and Facebook do **not** offer a free public API to log in and pull your saved collections. Compare still lets you **paste public video URLs** from those sites (or a direct video file URL). The local app resolves those to a playable video, **saves the file in IndexedDB**, and **loops them in the tab** (pause, scrub, slow-mo). Use **Save all in app** to download every pasted clip at once. Paste, **rename**, and add **shape keywords** (handstand, whip, roundoff) in the browser — names, URLs, and tags write into the app library (`src/config/compareLibrary.json` / `data/library.json`) so they are still there on the next Preview. Search a keyword to list every video tagged with that shape, including clips in other collections. **Export library** is an extra JSON backup. Drag or use ↑↓ to reorder — reorder pauses while a search is active. Private posts will not load. Optional: `pip install yt-dlp` gives a local fallback if the built-in resolver misses a clip.
 
 You do **not** need to screen-record every reference. Upload a file only when you already have one.
 
@@ -143,7 +143,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ### Recommended coach workflow
 
-1. Paste public Instagram, TikTok, or Facebook video URL(s) into a Compare collection (e.g. "Back handspring refs"). **Rename**, **search**, and **reorder** the list. That named URL list saves into the app. Hit **Save all in app** so the video files stay on this device. **Export library** if you also want a JSON backup.
+1. Paste public Instagram, TikTok, or Facebook video URL(s) into a Compare collection (e.g. "Back handspring refs"). Add **keywords** for the shape, then **Rename**, **search**, and **reorder** the list. That named URL list saves into the app. Hit **Save all in app** so the video files stay on this device. **Export library** if you also want a JSON backup.
 2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
 3. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay last Ns** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
 

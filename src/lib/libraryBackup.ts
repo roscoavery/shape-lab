@@ -7,6 +7,8 @@
 import {
   getCollections,
   isSameReferenceUrl,
+  mergeKeywords,
+  parseKeywords,
   putCollection,
   type RefCollection,
   type RefItem,
@@ -29,6 +31,7 @@ export type LibraryBackup = {
       kind: RefItem['kind']
       name: string
       url?: string
+      keywords?: string[]
       createdAt: string
     }>
   }>
@@ -48,6 +51,7 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
         kind: i.kind,
         name: i.name,
         url: i.url,
+        ...(i.keywords && i.keywords.length ? { keywords: i.keywords } : {}),
         createdAt: i.createdAt,
       })),
     })),
@@ -111,7 +115,9 @@ export function allUrlsText(collections: RefCollection[]): string {
     .flatMap((c) =>
       c.items
         .filter((i) => i.url)
-        .map((i) => `${i.name}\t${i.url}`),
+        .map((i) =>
+          [i.name, i.url, (i.keywords ?? []).join(', ')].filter(Boolean).join('\t'),
+        ),
     )
     .join('\n')
 }
@@ -165,6 +171,7 @@ export async function mergeLibraryBackup(
       if (match) {
         const renamed = preferName(match.name, item.name || '')
         if (renamed !== match.name) match.name = renamed
+        match.keywords = mergeKeywords(match.keywords, parseKeywords(item.keywords))
         skipped += 1
         continue
       }
@@ -179,6 +186,7 @@ export async function mergeLibraryBackup(
             : 'url',
         name: item.name || item.url,
         url: item.url,
+        keywords: parseKeywords(item.keywords),
         createdAt: item.createdAt || new Date().toISOString(),
       }
       target.items = [...target.items, next]

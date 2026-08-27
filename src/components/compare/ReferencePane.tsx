@@ -2,8 +2,8 @@
  * Compare tab — reference video pane.
  * Named collections stored in IndexedDB; each collection holds uploaded
  * video files, direct video URLs, or Instagram / TikTok / Facebook links.
- * Social videos are downloaded into the app. Items can be renamed, reordered,
- * and searched across collections.
+ * Social videos are downloaded into the app. Items can be renamed, tagged
+ * with shape keywords, reordered, and searched across collections.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -17,7 +17,9 @@ import {
   itemMatchesQuery,
   kindFromUrl,
   listCachedIds,
+  mergeKeywords,
   moveItem,
+  parseKeywords,
   canonicalReferenceUrl,
   putBlob,
   putCollection,
@@ -38,6 +40,7 @@ import {
 } from '../../lib/libraryBackup'
 import { createId } from '../../lib/storage'
 import { defaultSocialName } from '../../lib/socialUrls'
+import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 
@@ -49,6 +52,16 @@ const KIND_LABEL: Record<RefItem['kind'], string> = {
   facebook: 'FB',
 }
 
+const SHAPE_TAG_SUGGESTIONS = [
+  ...new Set([
+    ...SHAPES.map((s) => s.name),
+    'roundoff',
+    'back handspring',
+    'whip',
+    'cartwheel',
+  ]),
+]
+
 type OtherHit = { item: RefItem; collection: RefCollection }
 
 export function ReferencePane() {
@@ -58,11 +71,14 @@ export function ReferencePane() {
   const [itemSrc, setItemSrc] = useState<string | null>(null)
   const [newCollectionName, setNewCollectionName] = useState('')
   const [urlInput, setUrlInput] = useState('')
+  const [keywordInput, setKeywordInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
+  const [taggingId, setTaggingId] = useState<string | null>(null)
+  const [tagDraft, setTagDraft] = useState('')
   const [cachedIds, setCachedIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState<{ current: number; total: number } | null>(
     null,
@@ -132,9 +148,12 @@ export function ReferencePane() {
     }
   }
 
-  const selectItem = async (item: RefItem) => {
+  const selectItem = async (item: RefItem, collection?: RefCollection) => {
     setError(null)
     revokeSrc()
+    if (collection && collection.id !== activeCollectionId) {
+      setActiveCollectionId(collection.id)
+    }
     setActiveItemId(item.id)
     if (item.kind === 'file') {
       const blob = await getBlob(item.id)
@@ -210,15 +229,30 @@ export function ReferencePane() {
     setError(null)
     setNotice(null)
 
-    const existing = activeCollection.items
+    const keywords = parseKeywords(keywordInput)
+    const nextItems = activeCollection.items.map((i) => ({ ...i }))
     const items: RefItem[] = []
     let skipped = 0
+    let taggedExisting = 0
     for (const raw of urls) {
       const url = canonicalReferenceUrl(raw)
-      const dup = existing.some((i) => i.url && isSameReferenceUrl(i.url, url))
-        || items.some((i) => i.url && isSameReferenceUrl(i.url, url))
-      if (dup) {
+      const dupNew = items.some((i) => i.url && isSameReferenceUrl(i.url, url))
+      if (dupNew) {
         skipped += 1
+        continue
+      }
+      const existingMatch = nextItems.find(
+        (i) => i.url && isSameReferenceUrl(i.url, url),
+      )
+      if (existingMatch) {
+        skipped += 1
+        if (keywords.length) {
+          const merged = mergeKeywords(existingMatch.keywords, keywords)
+          if (merged.join('\0') !== (existingMatch.keywords ?? []).join('\0')) {
+            existingMatch.keywords = merged
+            taggedExisting += 1
+          }
+        }
         continue
       }
       const kind = kindFromUrl(url)
@@ -234,10 +268,11 @@ export function ReferencePane() {
           }
         })() : defaultSocialName(url),
         url,
+        ...(keywords.length ? { keywords } : {}),
         createdAt: new Date().toISOString(),
       })
     }
-    if (items.length === 0) {
+    if (items.length === 0 && taggedExisting === 0) {
       setNotice(
         skipped
           ? `Already in this collection — skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.`
@@ -248,12 +283,19 @@ export function ReferencePane() {
     }
     await updateCollection({
       ...activeCollection,
-      items: [...items, ...activeCollection.items],
+      items: [...items, ...nextItems],
     })
     setUrlInput('')
-    if (skipped) {
+    setKeywordInput('')
+    if (taggedExisting && items.length === 0) {
       setNotice(
-        `Added ${items.length}, skipped ${skipped} already in this collection.`,
+        `Added keywords to ${taggedExisting} existing clip${taggedExisting === 1 ? '' : 's'}.`,
+      )
+    } else if (skipped) {
+      setNotice(
+        `Added ${items.length}, skipped ${skipped} already in this collection${
+          taggedExisting ? `, tagged ${taggedExisting}` : ''
+        }.`,
       )
     }
     const first = items[0]
@@ -263,10 +305,12 @@ export function ReferencePane() {
   const addFile = async (file: File) => {
     if (!activeCollection) return
     setError(null)
+    const keywords = parseKeywords(keywordInput)
     const item: RefItem = {
       id: createId('ref'),
       kind: 'file',
       name: file.name,
+      ...(keywords.length ? { keywords } : {}),
       createdAt: new Date().toISOString(),
     }
     try {
@@ -279,6 +323,7 @@ export function ReferencePane() {
       ...activeCollection,
       items: [item, ...activeCollection.items],
     })
+    setKeywordInput('')
     setCachedIds((prev) => new Set(prev).add(item.id))
     await selectItem(item)
   }
@@ -301,11 +346,19 @@ export function ReferencePane() {
       setItemSrc(null)
     }
     if (renamingId === item.id) setRenamingId(null)
+    if (taggingId === item.id) setTaggingId(null)
   }
 
   const startRename = (item: RefItem) => {
+    setTaggingId(null)
     setRenamingId(item.id)
     setRenameDraft(item.name)
+  }
+
+  const startTags = (item: RefItem) => {
+    setRenamingId(null)
+    setTaggingId(item.id)
+    setTagDraft((item.keywords ?? []).join(', '))
   }
 
   const commitRename = async (item: RefItem, collection = activeCollection) => {
@@ -316,6 +369,23 @@ export function ReferencePane() {
     await updateCollection({
       ...collection,
       items: collection.items.map((i) => (i.id === item.id ? { ...i, name } : i)),
+    })
+  }
+
+  const commitTags = async (item: RefItem, collection = activeCollection) => {
+    if (taggingId !== item.id) return
+    const keywords = parseKeywords(tagDraft)
+    setTaggingId(null)
+    if (!collection) return
+    const prev = item.keywords ?? []
+    if (prev.join('\0') === keywords.join('\0')) return
+    await updateCollection({
+      ...collection,
+      items: collection.items.map((i) =>
+        i.id === item.id
+          ? { ...i, keywords: keywords.length ? keywords : undefined }
+          : i,
+      ),
     })
   }
 
@@ -441,11 +511,25 @@ export function ReferencePane() {
             .map((item) => ({ item, collection })),
         )
     : []
+  const matchCount = currentHits.length + otherHits.length
+  const q = searchQuery.trim()
 
-  const jumpToHit = async (hit: OtherHit) => {
-    setActiveCollectionId(hit.collection.id)
-    await selectItem(hit.item)
-  }
+  const allKeywords = useMemo(() => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const col of collections) {
+      for (const item of col.items) {
+        for (const tag of item.keywords ?? []) {
+          const key = tag.toLowerCase()
+          if (seen.has(key)) continue
+          seen.add(key)
+          out.push(tag)
+        }
+      }
+    }
+    out.sort((a, b) => a.localeCompare(b))
+    return out
+  }, [collections])
 
   const inputCls =
     'rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2.5 py-1.5 text-sm'
@@ -469,7 +553,7 @@ export function ReferencePane() {
         className={`flex items-center gap-1 rounded-md ${
           dragId === item.id ? 'opacity-60' : ''
         }`}
-        draggable={opts.allowReorder && renamingId !== item.id}
+        draggable={opts.allowReorder && renamingId !== item.id && taggingId !== item.id}
         onDragStart={() => setDragId(item.id)}
         onDragOver={(e) => {
           if (!opts.allowReorder) return
@@ -531,11 +615,39 @@ export function ReferencePane() {
               aria-label="Reference name"
             />
           </form>
+        ) : taggingId === item.id ? (
+          <form
+            className="flex min-w-0 flex-1 items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void commitTags(item, opts.collection)
+            }}
+          >
+            <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+              Tags
+            </span>
+            <input
+              autoFocus
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  setTaggingId(null)
+                }
+              }}
+              onBlur={() => void commitTags(item, opts.collection)}
+              list="shape-keyword-suggestions"
+              placeholder="handstand, roundoff, whip"
+              className={`${inputCls} min-w-0 flex-1 py-1`}
+              aria-label="Shape keywords"
+            />
+          </form>
         ) : (
           <>
             <button
               type="button"
-              onClick={() => void selectItem(item)}
+              onClick={() => void selectItem(item, opts.collection)}
               className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
                 isActive
                   ? 'bg-[var(--accent-dim)]/30 text-[var(--text)]'
@@ -545,7 +657,31 @@ export function ReferencePane() {
               <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
                 {KIND_LABEL[item.kind]}
               </span>
-              <span className="truncate">{item.name}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{item.name}</span>
+                {opts.collection.id !== activeCollectionId ? (
+                  <span className="block truncate text-[10px] text-[var(--muted)]">
+                    in {opts.collection.name}
+                  </span>
+                ) : null}
+                {item.keywords && item.keywords.length > 0 ? (
+                  <span className="mt-0.5 flex flex-wrap gap-1">
+                    {item.keywords.map((kw) => (
+                      <span
+                        key={kw}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSearchQuery(kw)
+                        }}
+                        className="cursor-pointer rounded-full bg-[#0d1218] px-1.5 py-0 text-[10px] text-[var(--muted)] hover:bg-[var(--accent-dim)] hover:text-[var(--text)]"
+                        title={`Show every video tagged ${kw}`}
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+              </span>
               {isSocialVideoItem(item) && (
                 <span
                   className={`shrink-0 text-[10px] ${
@@ -563,6 +699,14 @@ export function ReferencePane() {
               title="Rename this reference"
             >
               Rename
+            </button>
+            <button
+              type="button"
+              onClick={() => startTags(item)}
+              className="rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+              title="Add shape keywords so you can search every clip with this shape"
+            >
+              Tags
             </button>
           </>
         )}
@@ -634,6 +778,20 @@ export function ReferencePane() {
           placeholder="Instagram, TikTok, or Facebook video URL(s), or a direct video URL"
           className={`${inputCls} min-w-0 flex-1`}
         />
+        <input
+          value={keywordInput}
+          onChange={(e) => setKeywordInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
+          list="shape-keyword-suggestions"
+          placeholder="Keywords — handstand, whip"
+          className={`${inputCls} w-full sm:w-52`}
+          aria-label="Shape keywords for this URL"
+        />
+        <datalist id="shape-keyword-suggestions">
+          {SHAPE_TAG_SUGGESTIONS.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
         <button type="button" onClick={() => void addUrl()} className={btnCls}>
           Add URL
         </button>
@@ -661,10 +819,19 @@ export function ReferencePane() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search names, URLs, IG / TikTok / Facebook ids…"
+          placeholder="Search a shape — handstand, whip, roundoff…"
           className={`${inputCls} min-w-0 flex-1`}
-          aria-label="Search saved references"
+          aria-label="Search saved references by name, URL, or keyword"
         />
+        {q ? (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className={`${btnCls} text-[var(--muted)]`}
+          >
+            Clear
+          </button>
+        ) : null}
         {allSocialItems.length > 0 && (
           <button
             type="button"
@@ -716,12 +883,36 @@ export function ReferencePane() {
           }}
         />
       </div>
+      {allKeywords.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {allKeywords.map((kw) => {
+            const on = q.toLowerCase() === kw.toLowerCase()
+            return (
+              <button
+                key={kw}
+                type="button"
+                onClick={() => setSearchQuery(on ? '' : kw)}
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                  on
+                    ? 'border-[var(--accent)] bg-[var(--accent-dim)]/40 text-[var(--text)]'
+                    : 'border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--text)]'
+                }`}
+              >
+                {kw}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
       <p className="text-xs leading-relaxed text-[var(--muted)]">
-        Paste Instagram, TikTok, or Facebook links (or a list). Public videos
-        download into this app the first time they play — or hit Save all in app.
-        Search by name, URL, or clip id. Drag or use ↑↓ to reorder (not while
-        searching). Rename anytime. The named URL list saves into the app so
-        later previews still have it. Export library is an extra JSON backup.
+        Paste Instagram, TikTok, or Facebook links (or a list). Add keywords
+        for the shape — handstand, whip, roundoff — so a search lists every
+        video with that tag, including clips in other collections. Public
+        videos download into this app the first time they play — or hit Save
+        all in app. Drag or use ↑↓ to reorder (not while searching). Rename
+        or tap Tags anytime. The named URL list (and keywords) saves into the
+        app so later previews still have it. Export library is an extra JSON
+        backup.
       </p>
 
       {error && (
@@ -744,12 +935,14 @@ export function ReferencePane() {
       )}
 
       {activeCollection && (currentHits.length > 0 || otherHits.length > 0) && (
-        <div className="flex max-h-56 flex-col gap-2 overflow-y-auto panel-scroll">
+        <div className={`flex ${searching ? 'max-h-80' : 'max-h-56'} flex-col gap-2 overflow-y-auto panel-scroll`}>
           {searching && (
             <p className="text-xs text-[var(--muted)]">
-              {currentHits.length + otherHits.length} match
-              {currentHits.length + otherHits.length === 1 ? '' : 'es'}
-              {searching ? ' — reorder is paused while you search' : ''}
+              {matchCount} video{matchCount === 1 ? '' : 's'} matching “{q}”
+              {otherHits.length
+                ? ` · ${otherHits.length} from other collections`
+                : ''}
+              {' — reorder is paused while you search'}
             </p>
           )}
           {currentHits.length > 0 && (
@@ -769,30 +962,26 @@ export function ReferencePane() {
               <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
                 In other collections
               </p>
-              {otherHits.map((hit) => (
-                <div key={hit.item.id} className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void jumpToHit(hit)}
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--muted)] hover:bg-[#243040] hover:text-[var(--text)]"
-                  >
-                    <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                      {KIND_LABEL[hit.item.kind]}
-                    </span>
-                    <span className="truncate">{hit.item.name}</span>
-                    <span className="shrink-0 truncate text-[10px] text-[var(--muted)]">
-                      {hit.collection.name}
-                    </span>
-                  </button>
-                </div>
-              ))}
+              <ul className="flex flex-col gap-1">
+                {otherHits.map((hit, index) =>
+                  renderRow(hit.item, {
+                    collection: hit.collection,
+                    index,
+                    total: otherHits.length,
+                    allowReorder: false,
+                  }),
+                )}
+              </ul>
             </div>
           )}
         </div>
       )}
 
       {searching && currentHits.length === 0 && otherHits.length === 0 && (
-        <p className="text-sm text-[var(--muted)]">No saved URLs match that search.</p>
+        <p className="text-sm text-[var(--muted)]">
+          No videos tagged or named “{q}”. Tap Tags on a clip, or add that
+          keyword when you paste the URL.
+        </p>
       )}
 
       {/* Player */}
