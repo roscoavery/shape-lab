@@ -116,7 +116,8 @@ export const CURRICULUM_TASKS: TaskDef[] = [
   {
     id: 'task_stand_clean',
     name: '1. Stand clean',
-    description: 'Stand in the frame with feet together and arms down. Once we see that, we move on.',
+    description:
+      'Cheer ready: feet together, arms pinned to the sides, fists or blades. Once we see that, we move on.',
     requiresTaskId: null,
     masterAfterCompletions: 2,
     steps: [
@@ -126,7 +127,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         masteredSeconds: 0.45,
         speakCorrections: false,
         profileOk: true,
-        note: 'Feet together, arms down — once we see you, we move on',
+        note: 'Cheer ready · feet together · fists or blades · once we see you, we move on',
       },
     ],
   },

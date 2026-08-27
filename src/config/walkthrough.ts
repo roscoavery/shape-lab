@@ -70,7 +70,7 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
   task_stand_clean: {
     steps: {
       stand_clean: {
-        intro: 'Stand clean. Feet together, arms down by your sides or in front.',
+        intro: 'Stand clean. Cheer ready. Feet together, arms down by your sides — fists or blades.',
       },
     },
   },

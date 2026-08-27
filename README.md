@@ -71,6 +71,7 @@ hollow_arms_down.jpg
 hollow_arms_up.jpg
 zombie.jpg
 mountain_climber.jpg
+stand_clean.jpg
 ```
 
 Curriculum order is edited in `src/config/curriculum.ts`.

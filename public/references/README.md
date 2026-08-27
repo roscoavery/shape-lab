@@ -23,6 +23,7 @@ Included:
 - `hollow_arms_up.jpg`
 - `zombie.jpg`
 - `mountain_climber.jpg`
+- `stand_clean.jpg`
 
 To add another still: drop a JPG in both folders, add the shape id in
 `src/lib/shippedRefs.ts` (`SHIPPED_FILES`).

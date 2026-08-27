@@ -364,17 +364,22 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'stand_clean',
     name: 'Stand clean',
-    description: 'Standing in frame: feet together, arms down by the sides or in front.',
+    description:
+      'Cheer ready before counts: feet together, arms pinned to the sides, fists or blades. Once we see that, we move on.',
     bodyPosition:
-      'Stand in the frame. Feet together. Arms straight down — by your sides or in front of your body. That is a stand clean. We do not nitpick chin or perfect posture.',
+      'FRONT. Cheer ready. Stand tall, feet glued, toes forward. Legs squeezed together. Arms straight down, pinned to the sides. Hands are fists or blades (flat hands along the outer thighs). Head neutral, looking forward. That is a stand clean. Standalone: face the camera. In a sequence, finishing clean in profile is enough.',
     category: 'static',
     qualityThreshold: 50,
     cameraView: 'any',
     tips: [
-      'Feet together.',
-      'Arms down by the sides or in front.',
+      'Cheer ready — this is the start before counts.',
+      'Feet together, legs squeezed.',
+      'Arms pinned to the sides. Fists or blades.',
+      'Standalone is easiest from the front. In a sequence, just finish clean — we still see it in profile.',
       'Once we see that, we move on.',
     ],
+    coachNotes:
+      'Used in cheer as the ready position before counts for a skill start. Fists or blades. Feet together, arms down and tight to the sides. We do not nitpick chin. Once we see the ready, we move on.',
     criteria: [
       {
         id: 'feet_together',

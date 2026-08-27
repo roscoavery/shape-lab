@@ -30,7 +30,8 @@ export type ShotNeed = {
 }
 
 const SHOTS: Record<string, string> = {
-  stand_clean: 'FRONT. Stand tall, feet glued, arms by the sides. Full body in frame.',
+  stand_clean:
+    'FRONT. Cheer ready. Feet glued, arms pinned to the sides, fists or blades. Full body in frame.',
   feet_together_open_shoulders:
     'FRONT or 3/4. Feet glued, knees straight, open hips, ribs in, arms covering ears, chin up and neutral, hands to the ceiling.',
   arms_low_v_back: 'SIDE. Standing. Low V arms reaching slightly back. Elbows straight.',
