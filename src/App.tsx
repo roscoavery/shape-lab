@@ -655,8 +655,10 @@ export default function App() {
               <strong className="text-[var(--text)]">NON Cartwheel side</strong>,{' '}
               <strong className="text-[var(--text)]">MC HS LV LG</strong>, and{' '}
               <strong className="text-[var(--text)]">MC HS LG (Assisted)</strong> — a spotted
-              handstand with a coach, friend, or parent. The assisted run grades the{' '}
-              <strong className="text-[var(--text)]">handstand only</strong>; the replay is
+              handstand with a coach, friend, or parent — and{' '}
+              <strong className="text-[var(--text)]">MC HS 5 reps</strong>. The assisted run grades the{' '}
+              <strong className="text-[var(--text)]">handstand only</strong>; five-reps grades each
+              kick, numbered 1–5, assisted or not. The replay is
               mountain climber through landing lunge. After you clean, you get a
               fullscreen replay of the run, a snapshot of each graded shape with a score, and a few
               written cues to think about next time. Go again, take the next sequence, or pick

@@ -43,7 +43,7 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
     '',
   ]
   for (const step of report.steps) {
-    lines.push(`${step.shapeName} — ${step.overall}/100`)
+    lines.push(`${step.rep != null ? `Handstand ${step.rep}` : step.shapeName} — ${step.overall}/100`)
     if (step.cues.length === 0) {
       lines.push('  Lines look in on this snapshot.')
     } else {
@@ -58,7 +58,9 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
 export function storyCaption(report: FlowRunReport, athlete?: Athlete | null): string {
   const handle = normalizeInstagramHandle(report.instagramHandle || athlete?.instagramHandle)
   const avg = averageScore(report)
-  const bits = report.steps.map((s) => `${s.shapeName} ${s.overall}`)
+  const bits = report.steps.map((s) =>
+    s.rep != null ? `${s.rep}:${s.overall}` : `${s.shapeName} ${s.overall}`,
+  )
   const tag = handle ? `@${handle}` : athlete?.name ?? ''
   return [
     `${report.nickname} · ${avg}/100`,

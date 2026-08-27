@@ -270,6 +270,8 @@ export type FlowStepSnap = {
   atSec?: number
   /** Replay seek marker from best match (not a timed class-count snapshot). */
   marker?: 'playhead'
+  /** 1-based rep number when this still is one of several handstand kicks. */
+  rep?: number
 }
 
 /** Written review of one Tasks 2 sequence. */

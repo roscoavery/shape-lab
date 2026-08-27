@@ -22,7 +22,7 @@ import {
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
-import { snapshotLooksRight } from '../lib/scoring'
+import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
   Athlete,
@@ -82,10 +82,22 @@ function wait(ms: number) {
   })
 }
 
+function snapTitle(s: { shapeId: string; shapeName: string; marker?: 'playhead'; rep?: number }): string {
+  if (s.rep != null && s.shapeId === 'handstand') return `Handstand ${s.rep}`
+  if (s.marker === 'playhead') return `${s.shapeName} · marker`
+  return s.shapeName
+}
+
 function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   const graded = seq.reviewShapeIds
     ? steps.filter((s) => seq.reviewShapeIds!.includes(s.shapeId))
     : steps
+  const hsReps = graded.filter((s) => s.shapeId === 'handstand' && s.rep != null)
+  if (hsReps.length > 1) {
+    const bits = hsReps.map((s) => `${s.rep}: ${s.overall}`)
+    const avg = Math.round(hsReps.reduce((n, s) => n + s.overall, 0) / hsReps.length)
+    return `${seq.name}. ${bits.join(' · ')}. Average ${avg}/100. Assisted or not — we grade the tallest, straightest line on each kick. Not a gate.`
+  }
   if (seq.reviewShapeIds?.length === 1 && seq.reviewShapeIds[0] === 'handstand') {
     const hs = graded.find((s) => s.shapeId === 'handstand')
     const score = hs ? `${hs.overall}/100` : 'no clear snapshot'
@@ -225,6 +237,7 @@ export function Tasks2Panel({
       atSec: number,
       frozen?: ScoreResult,
       blobOverride?: Blob | null,
+      rep?: number,
     ): Promise<SnapView | null> => {
       if (!athleteId) return null
       const shape = getShape(shapeId)
@@ -259,6 +272,7 @@ export function Tasks2Panel({
         captureId: blob ? captureId : null,
         atSec,
         url: blob ? URL.createObjectURL(blob) : null,
+        rep,
       }
       return view
     },
@@ -322,6 +336,7 @@ export function Tasks2Panel({
         atSec: s.atSec,
         clipId: replayCaptureId,
         marker: s.marker,
+        rep: s.rep,
       }))
       const built: FlowRunReport = {
         id: createId('flow'),
@@ -346,9 +361,11 @@ export function Tasks2Panel({
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        seqRun.reviewShapeIds?.includes('handstand')
-          ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
-          : 'Watch your run. Scrub, then continue to the grades.',
+        seqRun.id === 'flow_mc_hs_5reps'
+          ? 'Watch your 5 reps. Each handstand is numbered in the grades.'
+          : seqRun.id === 'flow_mc_hs_lg_assist'
+            ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
+            : 'Watch your run. Scrub, then continue to the grades.',
       )
     },
     [athlete?.instagramHandle, athleteId, delay, onExitFullscreen],
@@ -437,17 +454,20 @@ export function Tasks2Panel({
         windowMs: number,
         minMs: number,
         marker?: 'playhead',
+        rep?: number,
       ) => {
         const started = performance.now()
-        let matchOverall = -1
+        let matchRank = -1
         let matchFrozen: ScoreResult | null = null
         let matchBlob: Blob | null = null
         let matchAt = delay.capturedSec()
-        let anyOverall = -1
+        let anyRank = -1
         let anyFrozen: ScoreResult | null = null
         let anyBlob: Blob | null = null
         let anyAt = delay.capturedSec()
         let sawMatch = false
+        const rankOf = (live: ScoreResult) =>
+          shapeId === 'handstand' ? handstandPeakScore(live) : live.overall
         while (performance.now() - started < windowMs) {
           if (!alive()) return
           await wait(70)
@@ -455,17 +475,18 @@ export function Tasks2Panel({
           if (shapeIdRef.current !== shapeId) continue
           const live = scoreRef.current
           const looks = snapshotLooksRight(shapeId, live)
+          const rank = rankOf(live)
           const laterClean =
-            shapeId === 'stand_clean' && looks && live.overall >= matchOverall - 8
-          if (looks && (laterClean || live.overall > matchOverall)) {
+            shapeId === 'stand_clean' && looks && live.overall >= matchRank - 8
+          if (looks && (laterClean || rank > matchRank)) {
             sawMatch = true
-            matchOverall = live.overall
+            matchRank = rank
             matchFrozen = freezeScore(live)
             matchBlob = snapshotCanvas(canvasRef.current)
             matchAt = delay.capturedSec()
           }
-          if (live.overall > anyOverall) {
-            anyOverall = live.overall
+          if (rank > anyRank) {
+            anyRank = rank
             anyFrozen = freezeScore(live)
             anyBlob = snapshotCanvas(canvasRef.current)
             anyAt = delay.capturedSec()
@@ -475,15 +496,15 @@ export function Tasks2Panel({
         const pickBlob = sawMatch ? matchBlob : anyBlob
         const pickAt = sawMatch ? matchAt : anyAt
         if (!pickFrozen) {
-          const view = await takeSnapshot(shapeId, delay.capturedSec())
+          const view = await takeSnapshot(shapeId, delay.capturedSec(), undefined, null, rep)
           if (view) collected.push(marker ? { ...view, marker } : view)
           return
         }
-        const view = await takeSnapshot(shapeId, pickAt, pickFrozen, pickBlob)
+        const view = await takeSnapshot(shapeId, pickAt, pickFrozen, pickBlob, rep)
         if (!view) return
         if (!sawMatch && shapeId === 'handstand') {
           view.cues = [
-            'No clear handstand picture in this hold — this still is the closest frame. Push tall through the ground, ears covered, ribs in, butt in, legs together.',
+            'No clear handstand picture in this kick — this still is the closest frame. Push tall through the ground, ears covered, ribs in, butt in, legs together.',
             ...view.cues,
           ].slice(0, 6)
         }
@@ -522,13 +543,31 @@ export function Tasks2Panel({
 
         let snapP: Promise<void> = Promise.resolve()
         if (beat.playheadBestMs != null) {
-          snapP = huntBest(currentShape, beat.playheadBestMs, beat.snapshotMinMs ?? 0, 'playhead')
+          snapP = huntBest(
+            currentShape,
+            beat.playheadBestMs,
+            beat.snapshotMinMs ?? 0,
+            'playhead',
+            beat.rep,
+          )
         } else if (beat.snapshotBestMs != null) {
-          snapP = huntBest(currentShape, beat.snapshotBestMs, beat.snapshotMinMs ?? 0)
+          snapP = huntBest(
+            currentShape,
+            beat.snapshotBestMs,
+            beat.snapshotMinMs ?? 0,
+            undefined,
+            beat.rep,
+          )
         } else if (beat.snapshotAtMs != null) {
           snapP = wait(beat.snapshotAtMs).then(async () => {
             if (!alive()) return
-            const view = await takeSnapshot(currentShape, delay.capturedSec())
+            const view = await takeSnapshot(
+              currentShape,
+              delay.capturedSec(),
+              undefined,
+              null,
+              beat.rep,
+            )
             if (view) collected.push(view)
           })
         }
@@ -563,9 +602,11 @@ export function Tasks2Panel({
         ? collected.filter((s) => seqRun.reviewShapeIds!.includes(s.shapeId))
         : collected
       setCue(
-        seqRun.reviewShapeIds?.includes('handstand')
-          ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
-          : 'Watch your run. Scrub, then continue to the grades.',
+        seqRun.id === 'flow_mc_hs_5reps'
+          ? 'Watch your 5 reps. Each handstand is numbered in the grades.'
+          : seqRun.id === 'flow_mc_hs_lg_assist'
+            ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
+            : 'Watch your run. Scrub, then continue to the grades.',
       )
       await finishRun(seqRun, forReview, replayBlob)
     },
@@ -782,7 +823,7 @@ export function Tasks2Panel({
         </p>
       )}
 
-      <ol ref={seqListRef} className="mb-3 max-h-64 space-y-1 overflow-y-auto text-sm">
+      <ol ref={seqListRef} className="mb-3 max-h-72 space-y-1 overflow-y-auto text-sm">
         {FLOW_SEQUENCES.map((s) => {
           const count = progress?.completions[s.id] ?? 0
           const selected = s.id === seq.id
@@ -913,9 +954,11 @@ export function Tasks2Panel({
           {snaps.length > 0 && (
             <div className="shrink-0 border-t border-white/15 bg-black/80 px-3 py-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">
-                {seq.reviewShapeIds?.includes('handstand')
-                  ? 'Handstand snapshot — tap to jump in the replay'
-                  : 'Snapshots — tap to jump in the replay'}
+                {seq.id === 'flow_mc_hs_5reps'
+                  ? 'Handstand 1–5 — tap to jump in the replay'
+                  : seq.reviewShapeIds?.includes('handstand')
+                    ? 'Handstand snapshot — tap to jump in the replay'
+                    : 'Snapshots — tap to jump in the replay'}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {snaps.map((s, i) => (
@@ -933,7 +976,7 @@ export function Tasks2Panel({
                       </div>
                     )}
                     <p className="px-1 py-0.5 text-[10px] font-semibold text-white">
-                      {s.marker === 'playhead' ? `${s.shapeName} · marker` : s.shapeName}
+                      {snapTitle(s)}
                     </p>
                     <p className="px-1 pb-1 text-[10px] tabular-nums" style={{ color: scoreColor(s.overall) }}>
                       {s.overall}/100
@@ -949,9 +992,11 @@ export function Tasks2Panel({
       {phase === 'review' && report && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {report.sequenceId === 'flow_mc_hs_lg_assist'
-              ? 'Handstand form · not a gate'
-              : 'Written analysis · not a gate'}
+            {report.sequenceId === 'flow_mc_hs_5reps'
+              ? 'Handstand reps · not a gate'
+              : report.sequenceId === 'flow_mc_hs_lg_assist'
+                ? 'Handstand form · not a gate'
+                : 'Written analysis · not a gate'}
           </p>
           <h3 className="text-sm font-semibold text-[var(--text)]">{report.sequenceName}</h3>
           <p className="mt-1 text-sm leading-snug text-[var(--text)]">{report.summary}</p>
@@ -976,7 +1021,9 @@ export function Tasks2Panel({
                   <div className="min-w-0 flex-1 p-2">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-medium text-[var(--text)]">
-                        {s.marker === 'playhead' ? `${s.shapeName} · replay marker` : s.shapeName}
+                        {s.marker === 'playhead' && s.rep == null
+                          ? `${s.shapeName} · replay marker`
+                          : snapTitle(s)}
                       </span>
                       <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(s.overall) }}>
                         {s.overall}/100

@@ -153,6 +153,18 @@ export function handstandLooksRight(score: ScoreResult): boolean {
   return (byId.body_line ?? 0) >= 38 && (byId.elbows ?? 0) >= 35
 }
 
+/** Tallest + straightest handstand frame — body line first, then hips/knees. */
+export function handstandPeakScore(score: ScoreResult): number {
+  const byId = Object.fromEntries(score.criteria.map((c) => [c.id, c.score]))
+  return (
+    0.45 * (byId.body_line ?? 0) +
+    0.2 * (byId.hips ?? 0) +
+    0.15 * (byId.knees ?? 0) +
+    0.1 * (byId.elbows ?? 0) +
+    0.1 * score.overall
+  )
+}
+
 /** Frames we will actually save as a shape snapshot / playhead. */
 export function snapshotLooksRight(shapeId: string, score: ScoreResult): boolean {
   if (shapeId === 'lever') return leverLooksRight(score)

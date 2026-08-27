@@ -32,6 +32,8 @@ export type FlowBeat = {
   replayStart?: boolean
   /** Stop the saved replay after this beat (drop standing-clean after the lunge). */
   replayEnd?: boolean
+  /** Rep number for numbered handstand grades (MC HS 5 reps). */
+  rep?: number
 }
 
 export type FlowSequence = {
@@ -294,6 +296,80 @@ function mcHsLeverLunge(): FlowBeat[] {
   ]
 }
 
+function mcHsFiveReps(): FlowBeat[] {
+  const ordinal = ['one', 'two', 'three', 'four', 'five'] as const
+  const beats: FlowBeat[] = [
+    {
+      speak: 'Start clean.',
+      shapeId: 'stand_clean',
+      profileOk: true,
+      pauseMs: 280,
+      replayStart: true,
+    },
+    {
+      speak: 'Step to mountain climber.',
+      shapeId: 'mountain_climber',
+      pauseMs: 280,
+    },
+    {
+      speak: 'Kick to handstand.',
+      shapeId: 'handstand',
+      pauseMs: 180,
+      snapshotBestMs: 2400,
+      snapshotMinMs: 400,
+      rep: 1,
+    },
+    {
+      speak: 'Back to lunge.',
+      shapeId: 'lunge_land',
+      stance: 'right',
+      pauseMs: 250,
+    },
+    {
+      speak: 'And clean.',
+      shapeId: 'stand_clean',
+      profileOk: true,
+      pauseMs: 280,
+    },
+    { speak: "That's one.", pauseMs: 220 },
+  ]
+  for (let n = 2; n <= 5; n++) {
+    beats.push(
+      {
+        speak: 'Mountain climber.',
+        shapeId: 'mountain_climber',
+        pauseMs: 280,
+      },
+      {
+        speak: 'Kick to hands.',
+        shapeId: 'handstand',
+        pauseMs: 180,
+        snapshotBestMs: 2400,
+        snapshotMinMs: 400,
+        rep: n,
+      },
+      {
+        speak: 'Back to lunge.',
+        shapeId: 'lunge_land',
+        stance: 'right',
+        pauseMs: 250,
+      },
+      {
+        speak: 'And clean.',
+        shapeId: 'stand_clean',
+        profileOk: true,
+        pauseMs: 280,
+      },
+      {
+        speak: `That's ${ordinal[n - 1]}.`,
+        pauseMs: 220,
+        replayEnd: n === 5,
+      },
+    )
+  }
+  return beats
+}
+
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
@@ -355,6 +431,24 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     ],
     reviewShapeIds: ['handstand'],
     beats: mcHsLungeAssisted(),
+  },
+  {
+    id: 'flow_mc_hs_5reps',
+    name: 'MC HS 5 reps',
+    nickname: 'MC HS 5 reps',
+    description:
+      'Five mountain-climber → handstand → lunge → clean reps. Assisted or on your own. Each kick is graded at the tallest, straightest handstand. Numbered 1–5. Not a gate.',
+    previewSpeak: 'Ready for 5 handstand reps? Here we go.',
+    setupSpeak:
+      'Assisted or on your own is fine. We grade the tallest, straightest handstand on each kick.',
+    setupShapeId: 'handstand',
+    previewShapes: [
+      { shapeId: 'mountain_climber', label: 'MC' },
+      { shapeId: 'handstand', label: 'HS' },
+      { shapeId: 'lunge_land', label: 'LG' },
+    ],
+    reviewShapeIds: ['handstand'],
+    beats: mcHsFiveReps(),
   },
 ]
 
