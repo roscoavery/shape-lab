@@ -100,6 +100,7 @@ export function useSpeechCoach(enabled: boolean) {
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const queueRef = useRef<SpeechJob[]>([])
   const speakingRef = useRef(false)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const supported =
     typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined'
 
@@ -111,6 +112,24 @@ export function useSpeechCoach(enabled: boolean) {
     refresh()
     window.speechSynthesis.addEventListener('voiceschanged', refresh)
     return () => window.speechSynthesis.removeEventListener('voiceschanged', refresh)
+  }, [supported])
+
+  /**
+   * Chrome pauses speechSynthesis after ~15s of talking. A 5-rep sequence is
+   * longer than that — resume on a timer so the class script keeps speaking.
+   */
+  useEffect(() => {
+    if (!supported) return
+    const id = window.setInterval(() => {
+      try {
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending || window.speechSynthesis.paused) {
+          window.speechSynthesis.resume()
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 4000)
+    return () => window.clearInterval(id)
   }, [supported])
 
   const ensureVoice = useCallback(() => {
@@ -132,17 +151,25 @@ export function useSpeechCoach(enabled: boolean) {
     u.pitch = next.pitch
     u.volume = 1
     speakingRef.current = true
+    let finished = false
     const done = () => {
+      if (finished) return
+      finished = true
+      if (utteranceRef.current === u) utteranceRef.current = null
       next.onEnd?.()
       speakingRef.current = false
       pumpRef.current()
     }
     u.onend = () => done()
     u.onerror = () => done()
+    utteranceRef.current = u
     try {
+      window.speechSynthesis.resume()
       window.speechSynthesis.speak(u)
     } catch {
       speakingRef.current = false
+      next.onEnd?.()
+      pumpRef.current()
     }
   }, [supported, ensureVoice])
 
@@ -176,10 +203,9 @@ export function useSpeechCoach(enabled: boolean) {
         } catch {
           /* ignore */
         }
-        window.setTimeout(() => pump(), 40)
+        window.setTimeout(() => pump(), 60)
         return
       }
-      if (queueRef.current.length >= 4) queueRef.current.pop()
       queueRef.current.push(job)
       pump()
     },
@@ -245,12 +271,29 @@ export function useSpeechCoach(enabled: boolean) {
     lastCueAt.current = 0
     queueRef.current = []
     speakingRef.current = false
+    utteranceRef.current = null
     if (supported) {
       try {
         window.speechSynthesis.cancel()
       } catch {
         /* ignore */
       }
+    }
+  }, [supported])
+
+  /** Call from a click handler before any await — unlocks iOS / Chrome speech. */
+  const unlock = useCallback(() => {
+    if (!supported) return
+    try {
+      window.speechSynthesis.resume()
+      const u = new SpeechSynthesisUtterance(' ')
+      u.volume = 0
+      u.rate = 2
+      u.lang = 'en-US'
+      utteranceRef.current = u
+      window.speechSynthesis.speak(u)
+    } catch {
+      /* ignore */
     }
   }, [supported])
 
@@ -262,6 +305,7 @@ export function useSpeechCoach(enabled: boolean) {
     speakClose,
     speakLost,
     reset,
+    unlock,
     supported,
   }
 }

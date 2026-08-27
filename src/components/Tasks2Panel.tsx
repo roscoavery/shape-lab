@@ -51,6 +51,7 @@ type Props = {
   ) => void
   referencePhotos: ReferencePhoto[]
   voiceEnabled: boolean
+  onVoiceEnabledChange?: (on: boolean) => void
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   cameraRunning: boolean
   stream: MediaStream | null
@@ -119,7 +120,8 @@ export function Tasks2Panel({
   scoredShapeId,
   onRequestShape,
   referencePhotos,
-  voiceEnabled,
+  voiceEnabled: _voiceEnabled,
+  onVoiceEnabledChange,
   canvasRef,
   cameraRunning,
   stream,
@@ -157,7 +159,8 @@ export function Tasks2Panel({
   shapeIdRef.current = scoredShapeId
   streamRef.current = stream
 
-  const { speakEvent, reset: resetSpeech, supported: speechSupported } = useSpeechCoach(voiceEnabled)
+  const { speakEvent, reset: resetSpeech, unlock: unlockSpeech, supported: speechSupported } =
+    useSpeechCoach(true)
   const delay = useDelayCam(stream, DELAY_MAX, cameraRunning && Boolean(stream))
 
   useEffect(() => {
@@ -220,15 +223,20 @@ export function Tasks2Panel({
           settled = true
           resolve()
         }
-        const estimate = speakDurationMs(text)
-        if (!voiceEnabled || !speechSupported) {
+        const spoken = text.trim()
+        if (!spoken) {
+          done()
+          return
+        }
+        const estimate = speakDurationMs(spoken)
+        if (!speechSupported) {
           window.setTimeout(done, estimate)
           return
         }
-        speakEvent(text, false, done)
+        speakEvent(spoken, false, done)
         window.setTimeout(done, estimate + 8000)
       }),
-    [speakEvent, voiceEnabled, speechSupported],
+    [speakEvent, speechSupported],
   )
 
   const takeSnapshot = useCallback(
@@ -378,6 +386,9 @@ export function Tasks2Panel({
         window.setTimeout(() => setFlash(null), 2500)
         return
       }
+      onVoiceEnabledChange?.(true)
+      resetSpeech()
+      unlockSpeech()
       onEnsureCamera?.()
       onRequestFullscreen?.()
       runGen.current += 1
@@ -391,7 +402,6 @@ export function Tasks2Panel({
       setSnaps([])
       setReport(null)
       setSeekTo(null)
-      resetSpeech()
       for (let i = 0; i < 25 && !streamRef.current; i++) {
         await wait(120)
         if (!alive()) return
@@ -617,9 +627,11 @@ export function Tasks2Panel({
       onEnsureCamera,
       onRequestFullscreen,
       onRequestShape,
+      onVoiceEnabledChange,
       resetSpeech,
       speakLine,
       takeSnapshot,
+      unlockSpeech,
     ],
   )
 
@@ -752,7 +764,10 @@ export function Tasks2Panel({
             {busy ? 'Stay with the voice' : seq.nickname}
           </p>
           {busy ? (
-            <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+            <>
+              <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+              <p className="mt-1 text-[11px] text-white/60">Listen — follow the spoken script.</p>
+            </>
           ) : (
             <>
               <label className="mt-1 block text-[11px] text-white/70">
@@ -797,8 +812,8 @@ export function Tasks2Panel({
       <div className="sticky top-0 z-30 -mx-1 mb-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--panel)] p-2 shadow-lg">
         {startBar}
         <p className="mt-1 text-[11px] text-[var(--muted)]">
-          Start jumps into full screen on the live camera so you can get set. Or tap Full screen
-          first, then start from the camera.
+          Start jumps into full screen. Turn your volume up — the class script is spoken out loud.
+          Or tap Full screen first, then start from the camera.
         </p>
       </div>
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">

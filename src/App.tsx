@@ -460,6 +460,9 @@ export default function App() {
               onRequestShape={onJumpToShape}
               referencePhotos={referencePhotos}
               voiceEnabled={settings.voiceEnabled}
+              onVoiceEnabledChange={(on) =>
+                setSettings((s) => ({ ...s, voiceEnabled: on }))
+              }
               canvasRef={camera.canvasRef}
               cameraRunning={camera.running}
               stream={camera.stream}
