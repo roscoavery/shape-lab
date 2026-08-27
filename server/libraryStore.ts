@@ -36,16 +36,47 @@ export function readLibraryFile(): DiskLibrary {
   }
 }
 
+function canonicalIgUrl(url: unknown): string | undefined {
+  if (typeof url !== 'string') return undefined
+  const m = url.match(
+    /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
+  )
+  if (!m) return url
+  const type = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase()
+  return `https://www.instagram.com/${type}/${m[2]}/`
+}
+
+function cleanCollections(raw: unknown[]): unknown[] {
+  return raw
+    .filter((c) => {
+      if (!c || typeof c !== 'object') return false
+      const items = (c as { items?: unknown[] }).items
+      return Array.isArray(items) && items.length > 0
+    })
+    .map((c) => {
+      const col = c as { items: Array<{ kind?: string; url?: string }> }
+      return {
+        ...col,
+        items: col.items.map((item) =>
+          item.kind === 'instagram' && item.url
+            ? { ...item, url: canonicalIgUrl(item.url) ?? item.url }
+            : item,
+        ),
+      }
+    })
+}
+
 export function writeLibraryFile(data: unknown): DiskLibrary {
   const parsed = data as DiskLibrary
   if (!parsed || parsed.kind !== 'shape-lab-library' || !Array.isArray(parsed.collections)) {
     throw new Error('Invalid library payload')
   }
+  const collections = cleanCollections(parsed.collections)
   const next: DiskLibrary = {
     kind: 'shape-lab-library',
     version: 1,
     exportedAt: new Date().toISOString(),
-    collections: parsed.collections,
+    collections,
   }
   fs.mkdirSync(path.dirname(FILE), { recursive: true })
   const existing = readLibraryFile()
