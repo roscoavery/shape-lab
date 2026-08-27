@@ -84,6 +84,7 @@ type Props = {
   onLiveUi?: (ui: TaskLiveUi | null) => void
   /** Fullscreen next-task arrow calls this. */
   skipNextRef?: MutableRefObject<(() => void) | null>
+  onRequestFullscreen?: () => void
 }
 
 export function TaskTrainer({
@@ -107,6 +108,7 @@ export function TaskTrainer({
   onHitPreview,
   onLiveUi,
   skipNextRef,
+  onRequestFullscreen,
 }: Props) {
   const [active, setActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
@@ -273,6 +275,7 @@ export function TaskTrainer({
       return
     }
     onEnsureCamera?.()
+    onRequestFullscreen?.()
     setAnalysis(null)
     beginTask(task)
   }
@@ -873,7 +876,31 @@ export function TaskTrainer({
       </div>
 
       {task && (
-        <div className="sticky top-0 z-20 rounded-lg border border-[var(--warn)]/60 bg-[#2a2410] p-2 shadow-lg">
+        <div className="sticky top-0 z-20 space-y-2">
+          <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-2 shadow-lg">
+            {!active ? (
+              <button
+                type="button"
+                onClick={start}
+                disabled={!isTaskUnlocked(task, completions, skipped)}
+                className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+              >
+                Start pathway — full screen
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={stop}
+                className="w-full rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+              >
+                Pause pathway
+              </button>
+            )}
+            <p className="mt-1 text-[11px] text-[var(--muted)]">
+              Start jumps the live camera to full screen so you can get set.
+            </p>
+          </div>
+        <div className="rounded-lg border border-[var(--warn)]/60 bg-[#2a2410] p-2 shadow-lg">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--warn)]">
             Stuck? Skip without a pass
           </p>
@@ -895,6 +922,7 @@ export function TaskTrainer({
               </button>
             )}
           </div>
+        </div>
         </div>
       )}
 

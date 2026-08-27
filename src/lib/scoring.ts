@@ -139,7 +139,7 @@ function isKeyMiss(shape: ShapeDef, r: { id: string; score: number; weight: numb
   if (shape.id === 'lunge_arms_low_v' && (r.id === 'line_foot_hands' || r.id === 'low_v')) {
     return r.score < 62
   }
-  if (shape.id === 'lever' && LEVER_BODY_IDS.has(r.id)) return r.score < 85
+  if (shape.id === 'lever' && LEVER_BODY_IDS.has(r.id)) return r.score < 68
   if (shape.id.includes('lunge') && LUNGE_LEG_IDS.has(r.id)) return r.score < 85
   if (r.weight < 10) return false
   return r.score < 65
@@ -345,9 +345,14 @@ function scoreOnce(
       } else if (allowOccludedSide && subScores.length >= 2) {
         const hi = Math.max(...subScores)
         const lo = Math.min(...subScores)
-        // Far-side MediaPipe angles are often junk. Trust the better side
-        // only when they wildly disagree — never when both are mediocre.
-        score = hi - lo >= 35 ? hi : lo
+        const armComposite = c.of.some((id) => {
+          const def = shape.criteria.find((x) => x.id === id)
+          return def ? isArmJointAngle(def) : false
+        })
+        // Profile: far-arm MediaPipe angles often look bent. Trust the
+        // clearer arm for elbows/shoulders. Legs still use the worse side
+        // unless the two sides wildly disagree.
+        score = armComposite ? hi : hi - lo >= 35 ? hi : lo
       } else {
         score = Math.min(...subScores)
       }
@@ -511,7 +516,8 @@ export function scoreShape(
   const allowOccludedSide =
     Boolean(options?.profileOk) ||
     shape.cameraView === 'side' ||
-    shape.id === 'stand_clean'
+    shape.id === 'stand_clean' ||
+    detected === 'side'
 
   if (want === 'right') {
     return scoreOnce(
@@ -526,7 +532,7 @@ export function scoreShape(
   if (want === 'left') {
     return scoreOnce(landmarks, shape, qualityThresholdOverride, detected, 'left', allowOccludedSide)
   }
-  if (shape.stanceAware || options?.profileOk) {
+  if (shape.stanceAware) {
     const left = scoreOnce(
       landmarks,
       shape,

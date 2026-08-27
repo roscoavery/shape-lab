@@ -57,6 +57,10 @@ type Props = {
   onCue?: (line: string | null) => void
   onPreviewItems?: (items: { shapeId: string; label: string }[] | null) => void
   onHitPreview?: (blob: Blob) => void
+  /** Jump the live camera to fullscreen when the sequence starts. */
+  onRequestFullscreen?: () => void
+  onExitFullscreen?: () => void
+  cameraFullscreen?: boolean
 }
 
 function scoreColor(n: number): string {
@@ -101,6 +105,9 @@ export function Tasks2Panel({
   onCue,
   onPreviewItems,
   onHitPreview,
+  onRequestFullscreen,
+  onExitFullscreen,
+  cameraFullscreen = false,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
@@ -191,11 +198,16 @@ export function Tasks2Panel({
   )
 
   const takeSnapshot = useCallback(
-    async (shapeId: string, atSec: number): Promise<SnapView | null> => {
+    async (
+      shapeId: string,
+      atSec: number,
+      frozen?: ScoreResult,
+      blobOverride?: Blob | null,
+    ): Promise<SnapView | null> => {
       if (!athleteId) return null
       const shape = getShape(shapeId)
-      const live = scoreRef.current
-      const blob = snapshotCanvas(canvasRef.current)
+      const live = frozen ?? scoreRef.current
+      const blob = blobOverride ?? snapshotCanvas(canvasRef.current)
       const captureId = createId('snap')
       if (blob) {
         onHitPreview?.(blob)
@@ -237,9 +249,10 @@ export function Tasks2Panel({
     setPhase('idle')
     setBeatIndex(-1)
     setCue('')
+    onExitFullscreen?.()
     setFlash('Stopped. The show can start again whenever you are ready.')
     window.setTimeout(() => setFlash(null), 2500)
-  }, [resetSpeech])
+  }, [onExitFullscreen, resetSpeech])
 
   const finishRun = useCallback(
     async (seqRun: FlowSequence, collected: SnapView[]) => {
@@ -300,10 +313,11 @@ export function Tasks2Panel({
       setReport(built)
       setSnaps(collected)
       snapsRef.current = collected
+      onExitFullscreen?.()
       setPhase('replay')
       setCue('Watch your run. Scrub, then continue to the grades.')
     },
-    [athlete?.instagramHandle, athleteId, delay],
+    [athlete?.instagramHandle, athleteId, delay, onExitFullscreen],
   )
 
   const startSequence = useCallback(
@@ -314,6 +328,7 @@ export function Tasks2Panel({
         return
       }
       onEnsureCamera?.()
+      onRequestFullscreen?.()
       runGen.current += 1
       const gen = runGen.current
       const alive = () => gen === runGen.current
@@ -331,6 +346,9 @@ export function Tasks2Panel({
         if (!alive()) return
       }
       delay.restartRolling(streamRef.current)
+      onRequestFullscreen?.()
+      await wait(350)
+      if (!alive()) return
       setPhase('preview')
       setBeatIndex(-1)
       setCue(seqRun.previewSpeak)
@@ -346,6 +364,35 @@ export function Tasks2Panel({
       const collected: SnapView[] = []
       let currentShape = first?.shapeId ?? seqRun.beats.find((b) => b.shapeId)?.shapeId ?? 'stand_clean'
 
+      const huntBest = async (shapeId: string, windowMs: number, minMs: number) => {
+        const started = performance.now()
+        let bestOverall = -1
+        let bestFrozen: ScoreResult | null = null
+        let bestBlob: Blob | null = null
+        let bestAt = delay.capturedSec()
+        while (performance.now() - started < windowMs) {
+          if (!alive()) return
+          await wait(70)
+          if (performance.now() - started < minMs) continue
+          const live = scoreRef.current
+          if (live.overall <= bestOverall) continue
+          bestOverall = live.overall
+          bestFrozen = {
+            ...live,
+            criteria: live.criteria.map((c) => ({ ...c })),
+          }
+          bestBlob = snapshotCanvas(canvasRef.current)
+          bestAt = delay.capturedSec()
+        }
+        if (!bestFrozen) {
+          const view = await takeSnapshot(shapeId, delay.capturedSec())
+          if (view) collected.push(view)
+          return
+        }
+        const view = await takeSnapshot(shapeId, bestAt, bestFrozen, bestBlob)
+        if (view) collected.push(view)
+      }
+
       for (let i = 0; i < seqRun.beats.length; i++) {
         if (!alive()) return
         const beat = seqRun.beats[i]!
@@ -358,14 +405,16 @@ export function Tasks2Panel({
         setBeatIndex(i)
         setCue(beat.speak)
 
-        const snapP =
-          beat.snapshotAtMs != null
-            ? wait(beat.snapshotAtMs).then(async () => {
-                if (!alive()) return
-                const view = await takeSnapshot(currentShape, delay.capturedSec())
-                if (view) collected.push(view)
-              })
-            : Promise.resolve()
+        let snapP: Promise<void> = Promise.resolve()
+        if (beat.snapshotBestMs != null) {
+          snapP = huntBest(currentShape, beat.snapshotBestMs, beat.snapshotMinMs ?? 0)
+        } else if (beat.snapshotAtMs != null) {
+          snapP = wait(beat.snapshotAtMs).then(async () => {
+            if (!alive()) return
+            const view = await takeSnapshot(currentShape, delay.capturedSec())
+            if (view) collected.push(view)
+          })
+        }
 
         await Promise.all([speakLine(beat.speak), snapP])
         if (!alive()) return
@@ -381,6 +430,7 @@ export function Tasks2Panel({
       delay,
       finishRun,
       onEnsureCamera,
+      onRequestFullscreen,
       onRequestShape,
       resetSpeech,
       speakLine,
@@ -461,8 +511,87 @@ export function Tasks2Panel({
   const completions = progress?.completions[seq.id] ?? 0
   const busy = phase === 'preview' || phase === 'running'
 
+  const startBar = (
+    <div className="flex flex-wrap gap-2">
+      {!busy && phase !== 'replay' && (
+        <button
+          type="button"
+          onClick={() => void startSequence(seq)}
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+        >
+          {completions > 0 ? 'Go again — full screen' : 'Start sequence — full screen'}
+        </button>
+      )}
+      {!busy && !cameraFullscreen && (
+        <button
+          type="button"
+          onClick={() => onRequestFullscreen?.()}
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+        >
+          Full screen first
+        </button>
+      )}
+      {busy && (
+        <button
+          type="button"
+          onClick={stopRun}
+          className="rounded-lg border border-[var(--warn)]/70 px-3 py-2 text-sm text-[var(--warn)]"
+        >
+          Stop
+        </button>
+      )}
+    </div>
+  )
+
   return (
+    <>
+      {cameraFullscreen && phase !== 'replay' && (
+        <div className="pointer-events-auto fixed bottom-3 left-1/2 z-[95] w-[min(96vw,34rem)] -translate-x-1/2 rounded-2xl border border-white/25 bg-black/80 p-3 text-white shadow-2xl backdrop-blur">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
+            {busy ? 'Stay with the voice' : seq.nickname}
+          </p>
+          {busy ? (
+            <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+          ) : (
+            <>
+              <label className="mt-1 block text-[11px] text-white/70">
+                Sequence
+                <select
+                  className="mt-1 w-full rounded-lg border border-white/20 bg-black/70 px-2 py-1.5 text-sm text-white"
+                  value={seq.id}
+                  onChange={(e) => selectSeq(e.target.value)}
+                >
+                  {FLOW_SEQUENCES.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-1 text-[11px] text-white/60">{seq.previewSpeak}</p>
+            </>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {startBar}
+            <button
+              type="button"
+              onClick={() => onExitFullscreen?.()}
+              className="rounded-lg border border-white/25 px-3 py-2 text-sm"
+            >
+              Exit full screen
+            </button>
+          </div>
+        </div>
+      )}
+
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+      <div className="sticky top-0 z-30 -mx-1 mb-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--panel)] p-2 shadow-lg">
+        {startBar}
+        <p className="mt-1 text-[11px] text-[var(--muted)]">
+          Start jumps into full screen on the live camera so you can get set. Or tap Full screen
+          first, then start from the camera.
+        </p>
+      </div>
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -542,26 +671,7 @@ export function Tasks2Panel({
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {!busy && phase !== 'replay' && (
-            <button
-              type="button"
-              onClick={() => void startSequence(seq)}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
-            >
-              {completions > 0 ? 'Go again' : 'Start sequence'}
-            </button>
-          )}
-          {busy && (
-            <button
-              type="button"
-              onClick={stopRun}
-              className="rounded-lg border border-[var(--warn)]/70 px-3 py-2 text-sm text-[var(--warn)]"
-            >
-              Stop
-            </button>
-          )}
-        </div>
+        <div className="mt-3">{startBar}</div>
       </div>
 
       {flash && <p className="mb-2 text-sm text-[var(--accent)]">{flash}</p>}
@@ -776,5 +886,6 @@ export function Tasks2Panel({
         </div>
       )}
     </section>
+    </>
   )
 }

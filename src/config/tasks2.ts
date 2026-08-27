@@ -19,6 +19,10 @@ export type FlowBeat = {
   pauseMs?: number
   /** Grab a snapshot this many ms after the line starts (class “2”). */
   snapshotAtMs?: number
+  /** Hunt this many ms for the highest-scoring frame (handstand / FTOS). */
+  snapshotBestMs?: number
+  /** Ignore the first part of a best-window (kick-up, walking in). */
+  snapshotMinMs?: number
 }
 
 export type FlowSequence = {
@@ -46,8 +50,9 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
         'Start feet together, fully open shoulders, arms in close by the ears.',
       shapeId: 'feet_together_open_shoulders',
       profileOk: true,
-      pauseMs: 600,
-      snapshotAtMs: 2200,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
     },
     {
       speak: `Take your ${cartwheel} leg to a passé and hold for 3.`,
@@ -75,8 +80,9 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
     {
       speak: 'Handstand.',
       shapeId: 'handstand',
-      pauseMs: 1100,
-      snapshotAtMs: 850,
+      pauseMs: 250,
+      snapshotBestMs: 2600,
+      snapshotMinMs: 700,
     },
     {
       speak: 'Back to your landing lunge. Hold for 5. With your back foot flat.',
@@ -104,8 +110,9 @@ function lungeLeverFlow(side: 'left' | 'right'): FlowBeat[] {
         'Start feet together, fully open shoulders, arms in close by the ears.',
       shapeId: 'feet_together_open_shoulders',
       profileOk: true,
-      pauseMs: 600,
-      snapshotAtMs: 2200,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
     },
     {
       speak: 'Take your cartwheel leg to a passé and hold.',
@@ -233,8 +240,9 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       {
         speak: 'Kick up. Best handstand you can hit.',
         shapeId: 'handstand',
-        pauseMs: 2200,
-        snapshotAtMs: 1600,
+        pauseMs: 250,
+        snapshotBestMs: 2800,
+        snapshotMinMs: 700,
       },
       {
         speak: 'Lever.',

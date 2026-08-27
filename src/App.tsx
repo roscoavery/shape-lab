@@ -83,6 +83,7 @@ export default function App() {
   const [flowPreview, setFlowPreview] = useState<{ shapeId: string; label: string }[] | null>(
     null,
   )
+  const [camFullscreen, setCamFullscreen] = useState(false)
   const skipNextRef = useRef<(() => void) | null>(null)
 
   const qualityThreshold =
@@ -123,6 +124,7 @@ export default function App() {
   useEffect(() => {
     saveTab(tab)
     if (tab === 'compare') setCompareOpened(true)
+    if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
   }, [tab])
 
   useEffect(
@@ -369,6 +371,8 @@ export default function App() {
             hitPreviewUrl={hitPreviewUrl}
             liveUi={taskLiveUi}
             onSkipNextTask={() => skipNextRef.current?.()}
+            fullscreen={camFullscreen}
+            onFullscreenChange={setCamFullscreen}
           />
 
           <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
@@ -409,6 +413,7 @@ export default function App() {
               }}
               onLiveUi={setTaskLiveUi}
               skipNextRef={skipNextRef}
+              onRequestFullscreen={() => setCamFullscreen(true)}
             />
           </div>
         </div>
@@ -436,6 +441,8 @@ export default function App() {
             flowMode
             cueLine={flowCue}
             previewItems={flowPreview}
+            fullscreen={camFullscreen}
+            onFullscreenChange={setCamFullscreen}
           />
 
           <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
@@ -461,6 +468,9 @@ export default function App() {
               }}
               onCue={setFlowCue}
               onPreviewItems={setFlowPreview}
+              onRequestFullscreen={() => setCamFullscreen(true)}
+              onExitFullscreen={() => setCamFullscreen(false)}
+              cameraFullscreen={camFullscreen}
               onHitPreview={(blob) => {
                 setHitPreviewUrl((prev) => {
                   if (prev) URL.revokeObjectURL(prev)

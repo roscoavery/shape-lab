@@ -44,6 +44,9 @@ type Props = {
   cueLine?: string | null
   /** Sequence nicknames (LG LV HS LG) shown while naming the run. */
   previewItems?: { shapeId: string; label: string }[] | null
+  /** Parent-controlled camera fullscreen (Tasks / Tasks 2). */
+  fullscreen?: boolean
+  onFullscreenChange?: (on: boolean) => void
 }
 
 function scoreColor(n: number): string {
@@ -103,8 +106,16 @@ export function TasksWorkspace({
   flowMode = false,
   cueLine = null,
   previewItems = null,
+  fullscreen: fullscreenProp,
+  onFullscreenChange,
 }: Props) {
-  const [fullscreen, setFullscreen] = useState(false)
+  const [localFullscreen, setLocalFullscreen] = useState(false)
+  const fullscreen = fullscreenProp ?? localFullscreen
+  const setFullscreen = (next: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof next === 'function' ? next(fullscreen) : next
+    if (onFullscreenChange) onFullscreenChange(value)
+    else setLocalFullscreen(value)
+  }
   const [hitBurst, setHitBurst] = useState(0)
   const [hitKind, setHitKind] = useState<'hit' | 'gotit'>('hit')
   const wasReady = useRef(false)
