@@ -132,13 +132,13 @@ export function useSpeechCoach(enabled: boolean) {
     u.pitch = next.pitch
     u.volume = 1
     speakingRef.current = true
-    const done = (ok: boolean) => {
-      if (ok) next.onEnd?.()
+    const done = () => {
+      next.onEnd?.()
       speakingRef.current = false
       pumpRef.current()
     }
-    u.onend = () => done(true)
-    u.onerror = () => done(false)
+    u.onend = () => done()
+    u.onerror = () => done()
     try {
       window.speechSynthesis.speak(u)
     } catch {

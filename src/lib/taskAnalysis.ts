@@ -38,6 +38,10 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
   return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That is the grade from your 3-second best open; it did not block moving on.`
 }
 
+export function writtenCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
+  return weakCues(score, shapeId, limit)
+}
+
 export function notesForStep(sample: LiveStepSample): string {
   const shape = getShape(sample.shapeId)
   const name = shape?.name ?? sample.shapeId

@@ -16,6 +16,8 @@ import type {
   HomeworkLog,
   ReferencePhoto,
   TaskRunReport,
+  FlowProgress,
+  FlowRunReport,
 } from '../types'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
@@ -27,6 +29,8 @@ const REFS_KEY = 'shape-lab.referencePhotos.v1'
 const HOMEWORK_KEY = 'shape-lab.homework.v1'
 const HOMEWORK_LOGS_KEY = 'shape-lab.homeworkLogs.v1'
 const TASK_ANALYSES_KEY = 'shape-lab.taskAnalyses.v1'
+const FLOW_PROGRESS_KEY = 'shape-lab.tasks2Progress.v1'
+const FLOW_ANALYSES_KEY = 'shape-lab.tasks2Analyses.v1'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -191,6 +195,61 @@ export function latestTaskAnalysis(
   return (
     loadTaskAnalyses(athleteId).find((r) => r.taskId === taskId) ?? null
   )
+}
+
+const MAX_FLOW_ANALYSES = 80
+
+export function defaultFlowProgress(athleteId: string): FlowProgress {
+  return {
+    athleteId,
+    completions: {},
+    currentId: 'flow_hs_right',
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+export function loadFlowProgress(athleteId: string): FlowProgress {
+  const all = readJson<Record<string, FlowProgress>>(FLOW_PROGRESS_KEY, {})
+  return all[athleteId] ?? defaultFlowProgress(athleteId)
+}
+
+export function saveFlowProgress(progress: FlowProgress) {
+  const all = readJson<Record<string, FlowProgress>>(FLOW_PROGRESS_KEY, {})
+  all[progress.athleteId] = { ...progress, updatedAt: new Date().toISOString() }
+  writeJson(FLOW_PROGRESS_KEY, all)
+}
+
+export function recordFlowCompletion(athleteId: string, sequenceId: string): FlowProgress {
+  const progress = loadFlowProgress(athleteId)
+  const next: FlowProgress = {
+    ...progress,
+    completions: {
+      ...progress.completions,
+      [sequenceId]: (progress.completions[sequenceId] ?? 0) + 1,
+    },
+    currentId: sequenceId,
+    updatedAt: new Date().toISOString(),
+  }
+  saveFlowProgress(next)
+  return next
+}
+
+export function loadFlowAnalyses(athleteId?: string): FlowRunReport[] {
+  const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
+  return athleteId ? all.filter((r) => r.athleteId === athleteId) : all
+}
+
+export function saveFlowAnalysis(report: FlowRunReport): void {
+  const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
+  all.unshift(report)
+  writeJson(FLOW_ANALYSES_KEY, all.slice(0, MAX_FLOW_ANALYSES))
+}
+
+export function flowHistoryForSequence(
+  athleteId: string,
+  sequenceId: string,
+): FlowRunReport[] {
+  return loadFlowAnalyses(athleteId).filter((r) => r.sequenceId === sequenceId)
 }
 
 // ---------------------------------------------------------------------------
@@ -416,6 +475,7 @@ export function fileToDataUrl(file: File): Promise<string> {
 const TAB_KEY = 'shape-lab.tab.v1'
 export const APP_TABS = [
   'tasks',
+  'tasks2',
   'homework',
   'learn',
   'compare',

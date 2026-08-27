@@ -256,6 +256,38 @@ export type AthleteTaskProgress = {
   updatedAt: string
 }
 
+/** One snapshot from a Tasks 2 class-flow run. */
+export type FlowStepSnap = {
+  shapeId: string
+  shapeName: string
+  overall: number
+  cues: string[]
+  captureId: string | null
+  clipId?: string | null
+  /** Seconds into the run replay when this shape was snapshotted. */
+  atSec?: number
+}
+
+/** Written review of one Tasks 2 sequence. */
+export type FlowRunReport = {
+  id: string
+  athleteId: string
+  sequenceId: string
+  sequenceName: string
+  nickname: string
+  createdAt: string
+  replayCaptureId: string | null
+  steps: FlowStepSnap[]
+  summary: string
+}
+
+export type FlowProgress = {
+  athleteId: string
+  completions: Record<string, number>
+  currentId: string | null
+  updatedAt: string
+}
+
 /** One shape inside a finished task run — used for the written analysis. */
 export type TaskStepReport = {
   shapeId: string

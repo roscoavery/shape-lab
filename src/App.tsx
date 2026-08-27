@@ -1,9 +1,10 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks (curriculum) | Homework | Learn | Compare | Coach | Athletes | About
+ * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
+ * Tasks 2 scripts: src/config/tasks2.ts
  * Sequences: src/config/sequences.ts
  */
 
@@ -19,6 +20,7 @@ import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
 import { ShapeSelector } from './components/ShapeSelector'
 import { TaskTrainer } from './components/TaskTrainer'
+import { Tasks2Panel } from './components/Tasks2Panel'
 import { TasksWorkspace, type TaskLiveUi } from './components/TasksWorkspace'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
@@ -43,6 +45,7 @@ import {
   saveAthletes,
   saveSettings,
   saveTab,
+  type AppTab,
 } from './lib/storage'
 import type {
   AppSettings,
@@ -54,11 +57,9 @@ import type {
   ShapeDef,
 } from './types'
 
-type Tab = 'tasks' | 'homework' | 'learn' | 'compare' | 'coach' | 'history' | 'about'
-
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<Tab>(() => loadTab())
+  const [tab, setTab] = useState<AppTab>(() => loadTab())
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
@@ -77,6 +78,10 @@ export default function App() {
   )
   const [hitPreviewUrl, setHitPreviewUrl] = useState<string | null>(null)
   const [taskLiveUi, setTaskLiveUi] = useState<TaskLiveUi | null>(null)
+  const [flowCue, setFlowCue] = useState<string | null>(null)
+  const [flowPreview, setFlowPreview] = useState<{ shapeId: string; label: string }[] | null>(
+    null,
+  )
   const skipNextRef = useRef<(() => void) | null>(null)
 
   const qualityThreshold =
@@ -126,12 +131,12 @@ export default function App() {
     [hitPreviewUrl],
   )
 
-  const cameraTab = tab === 'tasks' || tab === 'homework' || tab === 'coach'
+  const cameraTab = tab === 'tasks' || tab === 'tasks2' || tab === 'homework' || tab === 'coach'
   useEffect(() => {
     if (!cameraTab && camera.running) camera.stop()
   }, [cameraTab, camera.running, camera.stop])
 
-  const goTab = (id: Tab) => {
+  const goTab = (id: AppTab) => {
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -313,6 +318,7 @@ export default function App() {
           {(
             [
               ['tasks', 'Tasks'],
+              ['tasks2', 'Tasks 2'],
               ['homework', 'Homework'],
               ['learn', 'Learn'],
               ['compare', 'Compare'],
@@ -402,6 +408,63 @@ export default function App() {
               }}
               onLiveUi={setTaskLiveUi}
               skipNextRef={skipNextRef}
+            />
+          </div>
+        </div>
+      )}
+
+      {tab === 'tasks2' && (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
+          <TasksWorkspace
+            shape={shape}
+            score={score}
+            qualityThreshold={qualityThreshold}
+            referencePhotos={referencePhotos}
+            videoRef={camera.videoRef}
+            canvasRef={camera.canvasRef}
+            landmarks={activeLandmarks}
+            mirror={settings.mirrorVideo}
+            showAngles={settings.showAngles}
+            cameraRunning={camera.running}
+            demoMode={!camera.running && demoLandmarks !== null}
+            stream={camera.stream}
+            cameraControls={cameraControls}
+            cameraError={camera.error}
+            hitPreviewUrl={hitPreviewUrl}
+            liveUi={null}
+            flowMode
+            cueLine={flowCue}
+            previewItems={flowPreview}
+          />
+
+          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+            <AthletePanel
+              athletes={athletes}
+              activeId={activeAthleteId}
+              onChangeAthletes={setAthletes}
+              onSelect={setActiveAthleteId}
+            />
+            <Tasks2Panel
+              athleteId={activeAthleteId}
+              score={score}
+              scoredShapeId={shape.id}
+              onRequestShape={onJumpToShape}
+              referencePhotos={referencePhotos}
+              voiceEnabled={settings.voiceEnabled}
+              canvasRef={camera.canvasRef}
+              cameraRunning={camera.running}
+              stream={camera.stream}
+              onEnsureCamera={() => {
+                if (!camera.running) void camera.start()
+              }}
+              onCue={setFlowCue}
+              onPreviewItems={setFlowPreview}
+              onHitPreview={(blob) => {
+                setHitPreviewUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev)
+                  return URL.createObjectURL(blob)
+                })
+              }}
             />
           </div>
         </div>
@@ -568,6 +631,18 @@ export default function App() {
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
+              Tasks 2 — class flow
+            </h2>
+            <p className="mb-2">
+              <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
+              the way class runs: we name the sequence (LG LV HS LG), show the stills, then call
+              the shapes at class pace. Grades do not stop you. After you clean, you get a
+              fullscreen replay of the run, a snapshot of each shape with a score, and a few
+              written cues to think about next time. Go again, or take the next sequence.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
               Athlete Tasks pathway
             </h2>
             <p className="mb-2">
@@ -579,7 +654,9 @@ export default function App() {
               handstand stays on Homework). Required to pass the lunge–lever sequences:{' '}
               <strong className="text-[var(--text)]">FTOS, starting lunge, lever, landing lunge</strong>.
               After each task you can read corrections. Voice talks you through the
-              passé–lunge–lever–handstand walkthrough when you get there.
+              passé–lunge–lever–handstand walkthrough when you get there. Coach stills are labeled
+              with the shape we are asking — a lever still for lever, a mountain climber still for
+              mountain climber.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

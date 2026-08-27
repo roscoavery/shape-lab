@@ -105,10 +105,38 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     const rec = rollingRecorderRef.current
     rollingRecorderRef.current = null
     if (rec && rec.state !== 'inactive') {
+      rec.ondataavailable = null
       rec.onstop = null
-      rec.stop()
+      try {
+        rec.stop()
+      } catch {
+        /* already stopping */
+      }
     }
   }, [])
+
+  /** Clear the run buffer and start a fresh recording (Tasks 2 sequence start). */
+  const restartRolling = useCallback(
+    (live: MediaStream | null) => {
+      const rec = rollingRecorderRef.current
+      rollingRecorderRef.current = null
+      flushWaiterRef.current = null
+      rollingChunksRef.current = []
+      rollingStartRef.current = performance.now()
+      rollingGenRef.current += 1
+      if (rec && rec.state !== 'inactive') {
+        rec.ondataavailable = null
+        rec.onstop = null
+        try {
+          rec.stop()
+        } catch {
+          /* already stopping */
+        }
+      }
+      if (live) startRolling(live)
+    },
+    [startRolling],
+  )
 
   const flushRollingBlob = useCallback((): Promise<Blob | null> => {
     const rec = rollingRecorderRef.current
@@ -248,6 +276,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     stopDelay,
     flushRollingBlob,
     startRolling,
+    restartRolling,
     capturedSec,
   }
 }

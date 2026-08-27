@@ -19,6 +19,7 @@ import { getStepGuide, stepIntroLine } from '../config/walkthrough'
 import { getShape } from '../config/shapes'
 import { TaskAnalysisPanel } from './TaskAnalysisPanel'
 import type { TaskLiveUi } from './TasksWorkspace'
+import { ShapeStillStrip } from './ShapeStillStrip'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
   deleteCapture,
@@ -187,6 +188,13 @@ export function TaskTrainer({
     task && step ? holdSecondsForStep(task, step, taskCompletions) : 0
   const stepShape = step ? getShape(step.shapeId) : undefined
 
+  useEffect(() => {
+    if (!step) return
+    onRequestShape(step.shapeId, step.stance ?? 'auto', {
+      profileOk: Boolean(step.profileOk),
+    })
+  }, [step?.shapeId, step?.stance, step?.profileOk, onRequestShape])
+
   const selectTask = (taskId: string) => {
     if (!athleteId || !progress) return
     const t = getTask(taskId)
@@ -200,6 +208,12 @@ export function TaskTrainer({
     holdAccumRef.current = 0
     setAnalysis(null)
     resetSpeech()
+    const first = t.steps[0]
+    if (first) {
+      onRequestShape(first.shapeId, first.stance ?? 'auto', {
+        profileOk: Boolean(first.profileOk),
+      })
+    }
   }
 
   const beginTask = (t: TaskDef) => {
@@ -335,6 +349,12 @@ export function TaskTrainer({
     setStepProgress(0)
     holdAccumRef.current = 0
     setAnalysis(null)
+    const first = nextTask?.steps[0]
+    if (first) {
+      onRequestShape(first.shapeId, first.stance ?? 'auto', {
+        profileOk: Boolean(first.profileOk),
+      })
+    }
     const line = nextTask
       ? `Skipping ahead. Next task: ${nextTask.name.replace(/^\d+\.\s*/, '')}.`
       : 'Skipped this task.'
@@ -943,6 +963,18 @@ export function TaskTrainer({
                   ? `Holds: ${task.steps[0]?.masteredSeconds ?? 3}s (mastered)`
                   : `Holds: ${task.steps[0]?.beginnerSeconds ?? 5}s → ${task.steps[0]?.masteredSeconds ?? 3}s after ${task.masterAfterCompletions} clears`}
             </p>
+          </div>
+
+          <div className="mb-3">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Stills for the shapes we will ask
+            </p>
+            <ShapeStillStrip
+              items={task.steps.map((s) => ({ shapeId: s.shapeId }))}
+              photos={referencePhotos}
+              activeShapeId={step?.shapeId}
+              size="sm"
+            />
           </div>
 
           {active && (

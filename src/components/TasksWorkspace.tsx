@@ -9,6 +9,7 @@ import type { Landmark, ReferencePhoto, ScoreResult, ShapeDef } from '../types'
 import { CameraStage } from './CameraStage'
 import { HitCheckOverlay } from './HitCheckOverlay'
 import { ReferenceStill } from './ReferenceStill'
+import { ShapeStillStrip } from './ShapeStillStrip'
 import { TaskDelayCam } from './TaskDelayCam'
 
 export type TaskLiveKind = 'looking' | 'close' | 'holding' | 'gotit'
@@ -37,6 +38,12 @@ type Props = {
   hitPreviewUrl: string | null
   liveUi?: TaskLiveUi | null
   onSkipNextTask?: () => void
+  /** Class-flow mode: grades after, not a gate. */
+  flowMode?: boolean
+  /** Spoken cue currently being called. */
+  cueLine?: string | null
+  /** Sequence nicknames (LG LV HS LG) shown while naming the run. */
+  previewItems?: { shapeId: string; label: string }[] | null
 }
 
 function scoreColor(n: number): string {
@@ -93,6 +100,9 @@ export function TasksWorkspace({
   hitPreviewUrl,
   liveUi,
   onSkipNextTask,
+  flowMode = false,
+  cueLine = null,
+  previewItems = null,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [hitBurst, setHitBurst] = useState(0)
@@ -102,7 +112,13 @@ export function TasksWorkspace({
 
   const holding = Boolean(score.holdReady) || liveUi?.liveKind === 'holding'
   const close = Boolean(score.nearHit)
-  const status = holding ? 'HOLDING' : close ? 'ALMOST — one piece off' : 'Looking'
+  const status = flowMode
+    ? 'Live grade'
+    : holding
+      ? 'HOLDING'
+      : close
+        ? 'ALMOST — one piece off'
+        : 'Looking'
   const snapshotShoulders = score.criteria.find(
     (c) => c.id === 'shoulders' || c.id === 'shoulders_open',
   )
@@ -171,19 +187,30 @@ export function TasksWorkspace({
             : 'px-3 py-1.5 text-[10px] text-[var(--muted)]'
         }`}
       >
-        {fullscreen ? 'Reference' : 'Coach still — picture of the idea, not a photo match'}
+        {fullscreen ? `Still — ${shape.name}` : `Coach still — ${shape.name}`}
       </p>
-      <ReferenceStill
-        shapeId={shape.id}
-        photos={referencePhotos}
-        alt={shape.name}
-        className={
-          fullscreen
-            ? 'max-h-36 w-full object-contain sm:max-h-44'
-            : 'max-h-56 w-full object-contain sm:max-h-64'
-        }
-        emptyLabel="No coach still for this shape yet"
-      />
+      <div className="relative">
+        <ReferenceStill
+          shapeId={shape.id}
+          photos={referencePhotos}
+          alt={shape.name}
+          className={
+            fullscreen
+              ? 'max-h-36 w-full object-contain sm:max-h-44'
+              : 'max-h-56 w-full object-contain sm:max-h-64'
+          }
+          emptyLabel={`No coach still for ${shape.name} yet`}
+        />
+        <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+          {shape.name}
+        </span>
+      </div>
+      {!fullscreen && (
+        <p className="px-3 py-1 text-[10px] leading-snug text-[var(--muted)]">
+          Picture of this shape, not a photo match. If we are asking for a lever or a mountain
+          climber, this still is that shape — not a lunge.
+        </p>
+      )}
     </div>
   )
 
@@ -201,6 +228,7 @@ export function TasksWorkspace({
         mirror={mirror}
         compact
         pip={fullscreen}
+        defaultDelaySec={flowMode ? 20 : 6}
       />
     </div>
   )
@@ -209,17 +237,33 @@ export function TasksWorkspace({
     <div className="flex flex-col gap-3">
       <section className={`rounded-xl border border-[var(--accent)]/35 bg-[#121f1a] p-3 ${fullscreen ? 'hidden' : ''}`}>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Hit this body position
+          {flowMode ? 'Asked shape — still matches this name' : 'Hit this body position'}
         </p>
         <h2 className="text-xl font-semibold text-[var(--text)]">{shape.name}</h2>
+        {previewItems && previewItems.length > 0 && (
+          <div className="mt-2">
+            <ShapeStillStrip items={previewItems} photos={referencePhotos} activeShapeId={shape.id} size="sm" />
+          </div>
+        )}
+        {cueLine && (
+          <p className="mt-2 rounded-lg border border-[var(--accent)]/35 bg-black/30 px-3 py-2 text-sm font-semibold leading-snug text-[var(--text)]">
+            {cueLine}
+          </p>
+        )}
         <p className="mt-1 text-sm leading-snug text-[var(--text)] sm:text-base">
           {shape.bodyPosition ?? shape.description}
         </p>
         <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
-          Pass when this body position is true. The still is a picture of the
-          idea — you do not have to match the photo.
+          {flowMode
+            ? 'The still is the shape we are naming right now. Live scores are notes — they do not stop the sequence. After you finish we write the grades.'
+            : 'Pass when this body position is true. The still is a picture of the idea — you do not have to match the photo.'}
           {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
-            ? ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open — open shoulders do not block the pass. Legs need 85%.'
+            ? flowMode
+              ? ' Starting and landing lunges and lever: this still is that shape.'
+              : ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open — open shoulders do not block the pass. Legs need 85%.'
+            : ''}
+          {shape.id === 'mountain_climber'
+            ? ' Mountain climber: both knees bent, C upper body, reach forward and out — not a lunge.'
             : ''}
           {shape.id === 'passe'
             ? ' Passé: pull the knee up and keep the stance leg straight. Open shoulders are graded on the snapshot, not required to move on.'
@@ -228,16 +272,16 @@ export function TasksWorkspace({
             ? ' Low V lunge: we look for the long line from the back foot to the shoulders, plus arms in a low V slightly back. A fake bent back knee from shorts does not block the pass.'
             : ''}
         </p>
-        {holding && (
+        {holding && !flowMode && (
           <p className="mt-2 text-base font-semibold text-[var(--good)]">Hold it.</p>
         )}
-        {showShoulderNote && snapshotShoulders && (
+        {showShoulderNote && snapshotShoulders && !flowMode && (
           <p className="mt-1 text-sm text-[var(--warn)]">
             Open shoulders {snapshotShoulders.score}/100 on this snapshot — keep reaching
             arms by the ears. This does not block the pass.
           </p>
         )}
-        {close && score.mainCorrection && (
+        {close && score.mainCorrection && !flowMode && (
           <p className="mt-2 text-base font-semibold text-[var(--warn)]">{score.mainCorrection}</p>
         )}
       </section>
@@ -266,6 +310,12 @@ export function TasksWorkspace({
               overlay={
                 <div className="pointer-events-none absolute inset-0 z-20">
                   <HitCheckOverlay burst={hitBurst} kind={hitKind} holding={holding} />
+
+                  {cueLine && (
+                    <div className="absolute inset-x-3 top-[4.6rem] rounded-xl bg-black/65 px-3 py-2 text-center shadow-lg sm:top-[5.2rem]">
+                      <p className="text-sm font-semibold leading-snug text-white sm:text-base">{cueLine}</p>
+                    </div>
+                  )}
 
                   <div className="absolute left-1/2 top-3 flex -translate-x-1/2 items-end gap-4 rounded-2xl bg-black/55 px-4 py-2 text-center shadow-lg backdrop-blur-sm">
                     <div>
@@ -377,7 +427,9 @@ export function TasksWorkspace({
                     </div>
                   ))}
               </div>
-              <p className="mt-2 text-[10px] text-[var(--muted)]">Gate {qualityThreshold}</p>
+              <p className="mt-2 text-[10px] text-[var(--muted)]">
+                {flowMode ? `Live grade · written after the run · threshold ${qualityThreshold} is not a gate` : `Gate ${qualityThreshold}`}
+              </p>
             </div>
           )}
 

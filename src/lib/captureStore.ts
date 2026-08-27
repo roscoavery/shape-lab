@@ -10,7 +10,7 @@ const BLOBS = 'blobs'
 const LEGACY_ITEMS = 'items'
 
 /** Keep the newest N clips; always keep the latest snapshot per shape. */
-const MAX_CLIPS_PER_ATHLETE = 16
+const MAX_CLIPS_PER_ATHLETE = 24
 const MAX_EXTRA_SNAPSHOTS = 10
 
 export type TaskCapture = {

@@ -75,6 +75,19 @@ mountain_climber.jpg
 
 Curriculum order is edited in `src/config/curriculum.ts`.
 
+## Tasks 2 — class-pace guided sequences
+
+Open the **Tasks 2** tab. This is the same body-position work as Tasks, run the way class runs:
+
+1. Pick an athlete. Every sequence is open — grades do not lock the next one.
+2. The first sequence is the handstand progression: we name it **LG LV HS LG** and show those four stills.
+3. Voice calls the class script (feet together / passé 3-2 / fall to lunge 3-2 / lever 3-2 / handstand / landing lunge 5-count / clean). The still switches to the shape being named — a lever still for lever, a mountain climber still for mountain climber, a landing-lunge still when we say landing lunge.
+4. Snapshots fire on the spoken **2**. Live scores are notes. The show goes on even with flaws.
+5. After **and clean**, the last run replays fullscreen (delay-cam buffer, default **20s**, whole take if the camera was on). Scrub, or tap a snapshot to jump to that shape.
+6. Then you get the written grades and a few corrective cues for next time. **Go again** or **Next sequence**. Past runs stay on that sequence so you can watch scores climb.
+
+Edit the scripts in `src/config/tasks2.ts`.
+
 ## Homework (per-athlete drill library)
 
 Every athlete automatically has **4 lifetime drills** (they can never be removed):

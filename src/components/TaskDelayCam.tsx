@@ -15,6 +15,8 @@ type Props = {
   compact?: boolean
   /** Tiny overlay: video + delay label, no panel chrome. */
   pip?: boolean
+  /** Initial delay (Tasks 2 uses a 20s buffer). */
+  defaultDelaySec?: number
 }
 
 export function TaskDelayCam({
@@ -23,8 +25,12 @@ export function TaskDelayCam({
   mirror,
   compact = false,
   pip = false,
+  defaultDelaySec = 6,
 }: Props) {
-  const [delaySec, setDelaySec] = useState(6)
+  const [delaySec, setDelaySec] = useState(defaultDelaySec)
+  useEffect(() => {
+    setDelaySec(defaultDelaySec)
+  }, [defaultDelaySec])
   const [mode, setMode] = useState<Mode>('delay')
   const [replaySrc, setReplaySrc] = useState<string | null>(null)
   const [replayTail, setReplayTail] = useState<number | null>(null)
