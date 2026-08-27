@@ -31,6 +31,13 @@ export type FlowSequence = {
   nickname: string
   description: string
   previewSpeak: string
+  /**
+   * Spoken and shown right before the first beat — get set (side view, clean).
+   * Not a graded snapshot.
+   */
+  setupSpeak?: string
+  /** Coach still while they get set (usually stand clean). */
+  setupShapeId?: string
   previewShapes: FlowPreviewShape[]
   beats: FlowBeat[]
 }
@@ -162,8 +169,10 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: '1. Handstand progression (RIGHT)',
     nickname: 'LG LV HS LG',
     description:
-      'Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Not a gate — we guide, snapshot, and grade after.',
+      'Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Side view. Stand clean before we start. Not a gate — we guide, snapshot, and grade after.',
     previewSpeak: 'This sequence is lunge, lever, handstand, lunge.',
+    setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
+    setupShapeId: 'stand_clean',
     previewShapes: HS_PREVIEW,
     beats: hsProgression('right'),
   },
@@ -171,8 +180,11 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     id: 'flow_hs_left',
     name: '2. Handstand progression (LEFT)',
     nickname: 'LG LV HS LG',
-    description: 'Same class flow on the left side. The show goes on — we grade after.',
+    description:
+      'Same class flow on the left side. Side view. Stand clean before we start. The show goes on — we grade after.',
     previewSpeak: 'Left side. This sequence is lunge, lever, handstand, lunge.',
+    setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
+    setupShapeId: 'stand_clean',
     previewShapes: HS_PREVIEW,
     beats: hsProgression('left'),
   },

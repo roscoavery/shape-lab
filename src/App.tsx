@@ -648,8 +648,9 @@ export default function App() {
             </h2>
             <p className="mb-2">
               <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
-              the way class runs: we name the sequence (LG LV HS LG), show the stills, then call
-              the shapes at class pace. Grades do not stop you. After you clean, you get a
+              the way class runs: we name the sequence (LG LV HS LG), show the stills, then tell
+              you <strong className="text-[var(--text)]">side view, stand clean</strong> before
+              counts start. Grades do not stop you. After you clean, you get a
               fullscreen replay of the run, a snapshot of each shape with a score, and a few
               written cues to think about next time. Go again, or take the next sequence. Progress
               over time lets you download the video and analysis, share a Story caption + clip to

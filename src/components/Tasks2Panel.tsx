@@ -156,8 +156,12 @@ export function Tasks2Panel({
 
   useEffect(() => {
     onPreviewItems?.(seq.previewShapes)
-    const first = seq.previewShapes[0] ?? seq.beats.find((b) => b.shapeId)
-    if (first?.shapeId) onRequestShape(first.shapeId)
+    const setup = seq.setupShapeId
+    const first = setup
+      ? { shapeId: setup }
+      : (seq.previewShapes[0] ?? seq.beats.find((b) => b.shapeId))
+    if (first?.shapeId) onRequestShape(first.shapeId, 'auto', { profileOk: true })
+    return () => onPreviewItems?.(null)
     return () => onPreviewItems?.(null)
   }, [seq.id, onPreviewItems, onRequestShape])
 
@@ -352,17 +356,34 @@ export function Tasks2Panel({
       setPhase('preview')
       setBeatIndex(-1)
       setCue(seqRun.previewSpeak)
-      const first = seqRun.previewShapes[0]
-      if (first) onRequestShape(first.shapeId)
+      if (seqRun.setupShapeId) {
+        onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+      } else {
+        const first = seqRun.previewShapes[0]
+        if (first) onRequestShape(first.shapeId)
+      }
 
       await speakLine(seqRun.previewSpeak)
       if (!alive()) return
-      await wait(700)
-      if (!alive()) return
+      if (seqRun.setupSpeak) {
+        setCue(seqRun.setupSpeak)
+        if (seqRun.setupShapeId) {
+          onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+        }
+        await speakLine(seqRun.setupSpeak)
+        if (!alive()) return
+        await wait(1400)
+        if (!alive()) return
+      } else {
+        await wait(700)
+        if (!alive()) return
+      }
 
       setPhase('running')
       const collected: SnapView[] = []
-      let currentShape = first?.shapeId ?? seqRun.beats.find((b) => b.shapeId)?.shapeId ?? 'stand_clean'
+      const first = seqRun.previewShapes[0]
+      let currentShape =
+        first?.shapeId ?? seqRun.beats.find((b) => b.shapeId)?.shapeId ?? 'stand_clean'
 
       const huntBest = async (shapeId: string, windowMs: number, minMs: number) => {
         const started = performance.now()
@@ -506,6 +527,9 @@ export function Tasks2Panel({
   const askedShapeId =
     askedBeat?.shapeId ??
     [...seq.beats.slice(0, Math.max(0, beatIndex + 1))].reverse().find((b) => b.shapeId)?.shapeId ??
+    ((phase === 'idle' || phase === 'preview') && seq.setupShapeId
+      ? seq.setupShapeId
+      : undefined) ??
     seq.previewShapes[0]?.shapeId
 
   const completions = progress?.completions[seq.id] ?? 0
@@ -569,6 +593,11 @@ export function Tasks2Panel({
                 </select>
               </label>
               <p className="mt-1 text-[11px] text-white/60">{seq.previewSpeak}</p>
+              {seq.setupSpeak && (
+                <p className="mt-1 text-sm font-semibold leading-snug text-white">
+                  Before you start: {seq.setupSpeak}
+                </p>
+              )}
             </>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
@@ -657,11 +686,19 @@ export function Tasks2Panel({
           activeShapeId={askedShapeId}
         />
         <p className="mt-2 text-[12px] leading-snug text-[var(--muted)]">{seq.previewSpeak}</p>
+        {seq.setupSpeak && !busy && (
+          <div className="mt-2 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Before you start
+            </p>
+            <p className="text-sm font-semibold leading-snug text-[var(--text)]">{seq.setupSpeak}</p>
+          </div>
+        )}
 
         {busy && (
           <div className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-              {phase === 'preview' ? 'Naming the sequence' : 'Class flow — stay with the voice'}
+              {phase === 'preview' ? 'Get set — then the sequence starts' : 'Class flow — stay with the voice'}
             </p>
             <p className="text-sm font-semibold leading-snug text-[var(--text)]">{cue}</p>
             <p className="mt-1 text-[11px] text-[var(--muted)]">
