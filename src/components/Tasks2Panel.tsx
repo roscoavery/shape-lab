@@ -22,6 +22,7 @@ import {
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
+import { snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
   Athlete,
@@ -268,6 +269,10 @@ export function Tasks2Panel({
 
   const finishRun = useCallback(
     async (seqRun: FlowSequence, collected: SnapView[]) => {
+      const lastClean = [...collected].reverse().find((s) => s.shapeId === 'stand_clean')
+      if (lastClean) {
+        lastClean.atSec = Math.max(0, delay.capturedSec() - 0.08)
+      }
       const blob = await delay.flushRollingBlob()
       if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
       const url = blob && blob.size > 800 ? URL.createObjectURL(blob) : null
@@ -405,6 +410,11 @@ export function Tasks2Panel({
       let currentShape =
         first?.shapeId ?? seqRun.beats.find((b) => b.shapeId)?.shapeId ?? 'stand_clean'
 
+      const freezeScore = (live: ScoreResult): ScoreResult => ({
+        ...live,
+        criteria: live.criteria.map((c) => ({ ...c })),
+      })
+
       const huntBest = async (
         shapeId: string,
         windowMs: number,
@@ -412,31 +422,61 @@ export function Tasks2Panel({
         marker?: 'playhead',
       ) => {
         const started = performance.now()
-        let bestOverall = -1
-        let bestFrozen: ScoreResult | null = null
-        let bestBlob: Blob | null = null
-        let bestAt = delay.capturedSec()
+        let matchOverall = -1
+        let matchFrozen: ScoreResult | null = null
+        let matchBlob: Blob | null = null
+        let matchAt = delay.capturedSec()
+        let anyOverall = -1
+        let anyFrozen: ScoreResult | null = null
+        let anyBlob: Blob | null = null
+        let anyAt = delay.capturedSec()
+        let sawMatch = false
         while (performance.now() - started < windowMs) {
           if (!alive()) return
           await wait(70)
           if (performance.now() - started < minMs) continue
+          if (shapeIdRef.current !== shapeId) continue
           const live = scoreRef.current
-          if (live.overall <= bestOverall) continue
-          bestOverall = live.overall
-          bestFrozen = {
-            ...live,
-            criteria: live.criteria.map((c) => ({ ...c })),
+          const looks = snapshotLooksRight(shapeId, live)
+          const laterClean =
+            shapeId === 'stand_clean' && looks && live.overall >= matchOverall - 8
+          if (looks && (laterClean || live.overall > matchOverall)) {
+            sawMatch = true
+            matchOverall = live.overall
+            matchFrozen = freezeScore(live)
+            matchBlob = snapshotCanvas(canvasRef.current)
+            matchAt = delay.capturedSec()
           }
-          bestBlob = snapshotCanvas(canvasRef.current)
-          bestAt = delay.capturedSec()
+          if (live.overall > anyOverall) {
+            anyOverall = live.overall
+            anyFrozen = freezeScore(live)
+            anyBlob = snapshotCanvas(canvasRef.current)
+            anyAt = delay.capturedSec()
+          }
         }
-        if (!bestFrozen) {
+        const pickFrozen = sawMatch ? matchFrozen : anyFrozen
+        const pickBlob = sawMatch ? matchBlob : anyBlob
+        const pickAt = sawMatch ? matchAt : anyAt
+        if (!pickFrozen) {
           const view = await takeSnapshot(shapeId, delay.capturedSec())
           if (view) collected.push(marker ? { ...view, marker } : view)
           return
         }
-        const view = await takeSnapshot(shapeId, bestAt, bestFrozen, bestBlob)
-        if (view) collected.push(marker ? { ...view, marker } : view)
+        const view = await takeSnapshot(shapeId, pickAt, pickFrozen, pickBlob)
+        if (!view) return
+        if (!sawMatch && shapeId === 'lever') {
+          view.cues = [
+            'No clear lever picture in this pass — chest toward parallel, support foot down, back leg lifting. This still is the closest frame, not a hit.',
+            ...view.cues,
+          ].slice(0, 3)
+        }
+        if (!sawMatch && shapeId === 'stand_clean') {
+          view.cues = [
+            'Stand clean is feet together, arms pinned. This still is the closest frame after the landing lunge — we map the replay to the last standing moment we can.',
+            ...view.cues,
+          ].slice(0, 3)
+        }
+        collected.push(marker ? { ...view, marker } : view)
       }
 
       for (let i = 0; i < seqRun.beats.length; i++) {
@@ -447,6 +487,12 @@ export function Tasks2Panel({
           onRequestShape(beat.shapeId, beat.stance ?? 'auto', {
             profileOk: Boolean(beat.profileOk),
           })
+        }
+        if (beat.replayStart) {
+          delay.restartRolling(streamRef.current)
+          for (const s of collected) {
+            s.atSec = undefined
+          }
         }
         setBeatIndex(i)
         setCue(beat.speak)
@@ -467,6 +513,22 @@ export function Tasks2Panel({
         await Promise.all([speakLine(beat.speak), snapP])
         if (!alive()) return
         await wait(beat.pauseMs ?? 200)
+        if (
+          currentShape === 'stand_clean' &&
+          snapshotLooksRight('stand_clean', scoreRef.current)
+        ) {
+          const later = await takeSnapshot('stand_clean', delay.capturedSec())
+          if (later) {
+            const idx = collected.findLastIndex((s) => s.shapeId === 'stand_clean')
+            if (idx >= 0) {
+              const prev = collected[idx]
+              if (prev?.url) URL.revokeObjectURL(prev.url)
+              collected[idx] = later
+            } else {
+              collected.push(later)
+            }
+          }
+        }
       }
 
       if (!alive()) return

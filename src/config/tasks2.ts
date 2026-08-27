@@ -28,6 +28,8 @@ export type FlowBeat = {
    * class-count snapshot. Same hunt as snapshotBestMs.
    */
   playheadBestMs?: number
+  /** Restart the saved replay here (drop get-set / standing around). */
+  replayStart?: boolean
 }
 
 export type FlowSequence = {
@@ -80,6 +82,7 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
       shapeId: 'lunge_start',
       stance: side,
       pauseMs: 250,
+      replayStart: true,
     },
     { speak: 'Hold for 3.', pauseMs: 350 },
     { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
@@ -111,8 +114,9 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
       speak: 'And clean.',
       shapeId: 'stand_clean',
       profileOk: true,
-      pauseMs: 900,
-      snapshotAtMs: 500,
+      pauseMs: 700,
+      snapshotBestMs: 2200,
+      snapshotMinMs: 1100,
     },
   ]
 }
@@ -141,6 +145,7 @@ function hsNonCartwheel(): FlowBeat[] {
       shapeId: 'lunge_start',
       stance: 'left',
       pauseMs: 250,
+      replayStart: true,
     },
     { speak: 'Hold for 3.', pauseMs: 350 },
     { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
@@ -173,8 +178,9 @@ function hsNonCartwheel(): FlowBeat[] {
       speak: 'And clean.',
       shapeId: 'stand_clean',
       profileOk: true,
-      pauseMs: 900,
-      snapshotAtMs: 500,
+      pauseMs: 700,
+      snapshotBestMs: 2200,
+      snapshotMinMs: 1100,
     },
   ]
 }
@@ -195,6 +201,7 @@ function mcHsLeverLunge(): FlowBeat[] {
       speak: 'Step to mountain climber and hold for 3.',
       shapeId: 'mountain_climber',
       pauseMs: 350,
+      replayStart: true,
     },
     { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
     {
@@ -226,8 +233,9 @@ function mcHsLeverLunge(): FlowBeat[] {
       speak: 'And clean.',
       shapeId: 'stand_clean',
       profileOk: true,
-      pauseMs: 900,
-      snapshotAtMs: 500,
+      pauseMs: 700,
+      snapshotBestMs: 2200,
+      snapshotMinMs: 1100,
     },
   ]
 }

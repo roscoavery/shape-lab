@@ -15,6 +15,12 @@ export type LiveStepSample = {
   qualityHit: boolean
 }
 
+function mountainClimberBackCue(score: number): string {
+  return score < 62
+    ? 'Keep a long line through the back — this is a lunge, not a mountain-climber C.'
+    : ''
+}
+
 function weakCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
   return [...score.criteria]
     .filter((c) => {
@@ -22,11 +28,15 @@ function weakCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
       if (c.id === 'elbows' && isSoftShoulderShape(shapeId)) return false
       if (isLungeArmHold(shapeId) && c.id === 'back_leg') return false
       if (shapeId === 'passe' && c.id !== 'stance_knee' && c.id !== 'passe_height') return false
+      if (c.id === 'straight_back') return c.score < 62
       return c.score < 85 && c.weight >= 10
     })
     .sort((a, b) => a.score - b.score)
     .slice(0, limit)
-    .map((c) => c.feedback || c.label)
+    .map((c) => {
+      if (c.id === 'straight_back') return mountainClimberBackCue(c.score) || c.feedback || c.label
+      return c.feedback || c.label
+    })
     .filter((t) => t && !t.toLowerCase().startsWith('excellent'))
 }
 
@@ -38,8 +48,41 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
   return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That is the grade from your 3-second best open; it did not block moving on.`
 }
 
+/** Tasks 2 review: lead with the real miss (open shoulders on lunges), not a C-back slogan. */
 export function writtenCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
-  return weakCues(score, shapeId, limit)
+  const cues: string[] = []
+  const gradeShoulders =
+    isSoftShoulderShape(shapeId) && shapeId !== 'passe' && (shapeId.includes('lunge') || shapeId === 'lever')
+  if (gradeShoulders) {
+    const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
+    if (sh && sh.score < 85) {
+      cues.push(
+        `Open shoulders ${sh.score}/100 — ${sh.feedback || 'arms by ears'}.`,
+      )
+    }
+  }
+
+  const rest = [...score.criteria]
+    .filter((c) => {
+      if (isShoulderCriterionId(c.id)) return false
+      if (c.id === 'elbows' && isSoftShoulderShape(shapeId)) return c.score < 70
+      if (isLungeArmHold(shapeId) && c.id === 'back_leg') return false
+      if (shapeId === 'passe' && c.id !== 'stance_knee' && c.id !== 'passe_height') return false
+      if (c.id === 'straight_back') return c.score < 62
+      return c.score < 85 && c.weight >= 8
+    })
+    .sort((a, b) => a.score - b.score)
+    .map((c) => {
+      if (c.id === 'straight_back') return mountainClimberBackCue(c.score) || c.feedback || c.label
+      return c.feedback || c.label
+    })
+    .filter((t) => t && !t.toLowerCase().startsWith('excellent'))
+
+  for (const line of rest) {
+    if (cues.length >= limit) break
+    if (!cues.includes(line)) cues.push(line)
+  }
+  return cues.slice(0, limit)
 }
 
 export function notesForStep(sample: LiveStepSample): string {

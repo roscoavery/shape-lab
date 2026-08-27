@@ -107,6 +107,53 @@ const LEVER_BODY_IDS = new Set([
   'line_foot_hands',
 ])
 
+/**
+ * Lever picture vs the written still: support foot on the floor, back leg
+ * lifted, chest toward parallel. A lunge (both feet down) or a handstand
+ * (both feet up) is not a lever even if other angles look tidy.
+ */
+function leverPicture(landmarks: Landmark[]): {
+  supportOnFloor: boolean
+  backLegLifted: boolean
+} {
+  const la = landmarks[LM.LEFT_ANKLE]
+  const ra = landmarks[LM.RIGHT_ANKLE]
+  if (!la || !ra) return { supportOnFloor: false, backLegLifted: false }
+  const dy = Math.abs(la.y - ra.y)
+  const maxY = Math.max(la.y, ra.y)
+  const supportOnFloor = maxY > 0.52
+  return {
+    supportOnFloor,
+    backLegLifted: supportOnFloor && dy >= 0.12,
+  }
+}
+
+export function leverLooksRight(score: ScoreResult): boolean {
+  if (score.overall < 60) return false
+  const byId = Object.fromEntries(score.criteria.map((c) => [c.id, c.score]))
+  return (
+    (byId.chest_parallel ?? 0) >= 55 &&
+    (byId.line_foot_hands ?? 0) >= 52 &&
+    (byId.front_knee ?? 0) >= 45
+  )
+}
+
+export function standCleanLooksRight(score: ScoreResult): boolean {
+  const byId = Object.fromEntries(score.criteria.map((c) => [c.id, c.score]))
+  return (
+    (byId.feet_together ?? 0) >= 48 &&
+    (byId.arms_down ?? 0) >= 42 &&
+    (byId.standing ?? 0) >= 50
+  )
+}
+
+/** Frames we will actually save as a shape snapshot / playhead. */
+export function snapshotLooksRight(shapeId: string, score: ScoreResult): boolean {
+  if (shapeId === 'lever') return leverLooksRight(score)
+  if (shapeId === 'stand_clean') return standCleanLooksRight(score)
+  return true
+}
+
 /** Voice uses this once on a hit — not as a “close / almost” loop. */
 export function isOpenShoulderCue(text: string | null | undefined): boolean {
   if (!text) return false
@@ -418,7 +465,32 @@ function scoreOnce(
     }
   }
 
-  const overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
+  let overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
+  let pictureMiss: string | null = null
+
+  if (shape.id === 'lever') {
+    const pic = leverPicture(landmarks)
+    if (!pic.backLegLifted) {
+      overall = Math.min(overall, 52)
+      pictureMiss = pic.supportOnFloor
+        ? 'Lift the back leg — this is still a lunge, not a lever. Chest toward parallel, one line from the back foot through the hands.'
+        : 'That is not a lever picture. Chest toward parallel, weight on the support foot, back leg lifting into a line toward the hands.'
+      const lift = results.find((c) => c.id === 'line_foot_hands')
+      if (lift) {
+        lift.score = Math.min(lift.score, 40)
+        lift.feedback = pictureMiss
+      } else {
+        results.unshift({
+          id: 'line_foot_hands',
+          label: 'Line back foot → shoulders',
+          score: 40,
+          measured: null,
+          weight: 18,
+          feedback: pictureMiss,
+        })
+      }
+    }
+  }
 
   const sorted = [...results].sort((a, b) => a.score - b.score)
 
@@ -440,7 +512,9 @@ function scoreOnce(
       break
     }
   }
-  if (!mainCorrection && viewWarning) {
+  if (pictureMiss) {
+    mainCorrection = pictureMiss
+  } else if (!mainCorrection && viewWarning) {
     mainCorrection = viewWarning
   }
   if (!mainCorrection && overall < threshold) {
@@ -448,7 +522,7 @@ function scoreOnce(
       ? 'Match the body-position description'
       : 'Adjust body line to raise score'
   }
-  if (overall >= 95) {
+  if (!pictureMiss && overall >= 95) {
     mainCorrection = 'Excellent shape — hold it!'
   }
 
