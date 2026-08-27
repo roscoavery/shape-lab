@@ -5,6 +5,7 @@
  */
 
 import {
+  deleteCollectionRecord,
   getCollections,
   isSameReferenceUrl,
   mergeKeywords,
@@ -134,6 +135,52 @@ export async function restoreMetaIfIndexedDbEmpty(
   return restored
 }
 
+export function coalesceCollections(
+  collections: RefCollection[],
+  preferIds?: Set<string>,
+): RefCollection[] {
+  const groups = new Map<string, RefCollection[]>()
+  for (const col of collections) {
+    const key = col.name.trim().toLowerCase() || col.id
+    const list = groups.get(key) ?? []
+    list.push(col)
+    groups.set(key, list)
+  }
+  const out: RefCollection[] = []
+  for (const group of groups.values()) {
+    const primary = [...group].sort((a, b) => {
+      const ap = preferIds?.has(a.id) ? 1 : 0
+      const bp = preferIds?.has(b.id) ? 1 : 0
+      if (ap !== bp) return bp - ap
+      return a.createdAt.localeCompare(b.createdAt)
+    })[0]
+    const items = primary.items.map((i) => ({ ...i, keywords: i.keywords ? [...i.keywords] : undefined }))
+    for (const col of group) {
+      if (col.id === primary.id) continue
+      for (const item of col.items) {
+        const match = items.find(
+          (existing) =>
+            existing.id === item.id ||
+            (existing.url && item.url && isSameReferenceUrl(existing.url, item.url)),
+        )
+        if (match) {
+          match.name = preferName(match.name, item.name)
+          match.keywords = mergeKeywords(match.keywords, item.keywords)
+        } else {
+          items.push({ ...item, keywords: item.keywords ? [...item.keywords] : undefined })
+        }
+      }
+    }
+    out.push({
+      ...primary,
+      items: items.map((i) =>
+        i.keywords && i.keywords.length ? i : { ...i, keywords: undefined },
+      ),
+    })
+  }
+  return out
+}
+
 export async function mergeLibraryBackup(
   backup: LibraryBackup,
 ): Promise<{ collections: RefCollection[]; added: number; skipped: number }> {
@@ -194,12 +241,20 @@ export async function mergeLibraryBackup(
     }
   }
 
+  const coalesced = coalesceCollections(
+    collections,
+    new Set(backup.collections.map((c) => c.id).filter(Boolean)),
+  )
+  const keepIds = new Set(coalesced.map((c) => c.id))
   for (const col of collections) {
+    if (!keepIds.has(col.id)) await deleteCollectionRecord(col.id)
+  }
+  for (const col of coalesced) {
     await putCollection(col)
   }
-  persistLibraryMeta(collections)
-  void pushServerLibrary(collections)
-  return { collections, added, skipped }
+  persistLibraryMeta(coalesced)
+  void pushServerLibrary(coalesced)
+  return { collections: coalesced, added, skipped }
 }
 
 export async function pullServerLibrary(): Promise<LibraryBackup | null> {

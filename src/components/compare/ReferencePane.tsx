@@ -104,6 +104,9 @@ export function ReferencePane() {
     void (async () => {
       try {
         let list = await getCollections()
+        list = await restoreMetaIfIndexedDbEmpty(list)
+        const synced = await syncLibraryWithServer(list)
+        list = synced.collections
         if (list.length === 0) {
           const def: RefCollection = {
             id: createId('col'),
@@ -114,9 +117,6 @@ export function ReferencePane() {
           await putCollection(def)
           list = [def]
         }
-        list = await restoreMetaIfIndexedDbEmpty(list)
-        const synced = await syncLibraryWithServer(list)
-        list = synced.collections
         setCollections(list)
         publishLibrary(list)
         setActiveCollectionId(list[0].id)

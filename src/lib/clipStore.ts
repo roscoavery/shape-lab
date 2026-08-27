@@ -118,6 +118,13 @@ export async function deleteCollection(collection: RefCollection): Promise<void>
   })
 }
 
+/** Remove a collection row without deleting video blobs (used when merging duplicates). */
+export async function deleteCollectionRecord(id: string): Promise<void> {
+  const db = await openDb()
+  const tx = db.transaction(COLLECTIONS, 'readwrite')
+  await requestToPromise(tx.objectStore(COLLECTIONS).delete(id))
+}
+
 // ---------------------------------------------------------------------------
 // Video blobs (uploaded reference files + recorded clips, keyed by item id)
 // ---------------------------------------------------------------------------

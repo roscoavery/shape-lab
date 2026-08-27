@@ -37,23 +37,78 @@ export function readLibraryFile(): DiskLibrary {
   }
 }
 
+function itemUrlKey(url: string): string {
+  return canonicalSocialUrl(url).replace(/\/+$/, '')
+}
+
+function unionKeywords(a?: unknown, b?: unknown): string[] | undefined {
+  const parts = [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]
+    .map((x) => String(x).trim())
+    .filter(Boolean)
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const tag of parts) {
+    const key = tag.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(tag)
+  }
+  return out.length ? out : undefined
+}
+
+function coalesceByName(raw: unknown[]): unknown[] {
+  const out: Array<Record<string, unknown> & { name: string; items: Array<Record<string, unknown>> }> = []
+  for (const c of raw) {
+    if (!c || typeof c !== 'object') continue
+    const col = c as { name?: unknown; items?: unknown[] }
+    const name = typeof col.name === 'string' ? col.name : ''
+    const items = Array.isArray(col.items)
+      ? col.items.filter((i) => i && typeof i === 'object') as Array<Record<string, unknown>>
+      : []
+    const existing = out.find((x) => x.name.trim().toLowerCase() === name.trim().toLowerCase())
+    if (!existing) {
+      out.push({ ...(col as Record<string, unknown>), name, items: items.map((i) => ({ ...i })) })
+      continue
+    }
+    for (const item of items) {
+      const url = typeof item.url === 'string' ? item.url : ''
+      const match = existing.items.find((e) => {
+        if (e.id && item.id && e.id === item.id) return true
+        const eu = typeof e.url === 'string' ? e.url : ''
+        return Boolean(url && eu && itemUrlKey(eu) === itemUrlKey(url))
+      })
+      if (match) {
+        const keywords = unionKeywords(match.keywords, item.keywords)
+        if (keywords) match.keywords = keywords
+        else delete match.keywords
+      } else {
+        existing.items.push({ ...item })
+      }
+    }
+  }
+  return out
+}
+
 function cleanCollections(raw: unknown[]): unknown[] {
-  return raw
+  return coalesceByName(raw)
     .filter((c) => {
       if (!c || typeof c !== 'object') return false
       const items = (c as { items?: unknown[] }).items
       return Array.isArray(items) && items.length > 0
     })
     .map((c) => {
-      const col = c as { items: Array<{ kind?: string; url?: string }> }
+      const col = c as { items: Array<{ kind?: string; url?: string; keywords?: string[] }> }
       return {
         ...col,
         items: col.items.map((item) => {
-          if (!item.url) return item
+          const keywords = unionKeywords(item.keywords)
+          const next = { ...item, ...(keywords ? { keywords } : {}) }
+          if (!keywords) delete (next as { keywords?: string[] }).keywords
+          if (!item.url) return next
           const platform = socialPlatform(item.url)
-          if (!platform) return item
+          if (!platform) return next
           return {
-            ...item,
+            ...next,
             kind: platform,
             url: canonicalSocialUrl(item.url),
           }
