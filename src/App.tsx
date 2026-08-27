@@ -650,9 +650,12 @@ export default function App() {
               <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
               the way class runs: we name the sequence (LG LV HS LG), show the stills, then tell
               you <strong className="text-[var(--text)]">side view, stand clean</strong> before
-              counts start. Grades do not stop you. After you clean, you get a
+              counts start. After the cartwheel-side run, the next sequence is the same flow on the
+              <strong className="text-[var(--text)]"> non-cartwheel side</strong> with extra
+              open-shoulder coaching. After you clean, you get a
               fullscreen replay of the run, a snapshot of each shape with a score, and a few
-              written cues to think about next time. Go again, or take the next sequence. Progress
+              written cues to think about next time. Go again, take the next sequence, or pick
+              another. Progress
               over time lets you download the video and analysis, share a Story caption + clip to
               Instagram, or mark the run for Ryan on this device.
             </p>

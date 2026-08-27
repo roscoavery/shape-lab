@@ -36,6 +36,8 @@ export type FlowSequence = {
    * Not a graded snapshot.
    */
   setupSpeak?: string
+  /** Extra coaching after the side-view get-set, still on the setup still. */
+  setupExtraSpeak?: string
   /** Coach still while they get set (usually stand clean). */
   setupShapeId?: string
   previewShapes: FlowPreviewShape[]
@@ -50,7 +52,7 @@ const HS_PREVIEW: FlowPreviewShape[] = [
 ]
 
 function hsProgression(side: 'left' | 'right'): FlowBeat[] {
-  const cartwheel = side === 'right' ? 'cartwheel' : 'cartwheel'
+  const cartwheel = side === 'right' ? 'cartwheel' : 'non cartwheel'
   return [
     {
       speak:
@@ -97,6 +99,68 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
       stance: side,
       pauseMs: 200,
     },
+    { speak: '4. Arms tight behind the ears.', pauseMs: 200 },
+    { speak: '3. Chest stays tilted forward.', pauseMs: 200 },
+    { speak: '2. Chin stays up.', pauseMs: 400, snapshotAtMs: 120 },
+    {
+      speak: 'And clean.',
+      shapeId: 'stand_clean',
+      profileOk: true,
+      pauseMs: 900,
+      snapshotAtMs: 500,
+    },
+  ]
+}
+
+/** Same HS class flow on the non-cartwheel side, with extra open-shoulder coaching. */
+function hsNonCartwheel(): FlowBeat[] {
+  return [
+    {
+      speak:
+        'Start feet together, fully open shoulders, arms in close by the ears.',
+      shapeId: 'feet_together_open_shoulders',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+    },
+    {
+      speak: 'Take your non cartwheel leg to a passé and hold for 3.',
+      shapeId: 'passe',
+      stance: 'left',
+      pauseMs: 350,
+    },
+    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
+    {
+      speak: 'Fall to lunge.',
+      shapeId: 'lunge_start',
+      stance: 'left',
+      pauseMs: 250,
+    },
+    { speak: 'Hold for 3.', pauseMs: 350 },
+    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
+    {
+      speak: 'Lever.',
+      shapeId: 'lever',
+      stance: 'left',
+      pauseMs: 250,
+    },
+    { speak: 'Hold for 3.', pauseMs: 350 },
+    { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
+    {
+      speak: 'Handstand.',
+      shapeId: 'handstand',
+      pauseMs: 250,
+      snapshotBestMs: 2600,
+      snapshotMinMs: 700,
+    },
+    {
+      speak: 'Back to your non cartwheel lunge.',
+      shapeId: 'lunge_land',
+      stance: 'left',
+      pauseMs: 250,
+    },
+    { speak: 'Hold for 5. With your back foot flat.', pauseMs: 200 },
     { speak: '4. Arms tight behind the ears.', pauseMs: 200 },
     { speak: '3. Chest stays tilted forward.', pauseMs: 200 },
     { speak: '2. Chin stays up.', pauseMs: 400, snapshotAtMs: 120 },
@@ -166,11 +230,11 @@ function lungeLeverFlow(side: 'left' | 'right'): FlowBeat[] {
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
-    name: '1. Handstand progression (RIGHT)',
+    name: '1. Handstand progression (cartwheel side)',
     nickname: 'LG LV HS LG',
     description:
-      'Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Side view. Stand clean before we start. Not a gate — we guide, snapshot, and grade after.',
-    previewSpeak: 'This sequence is lunge, lever, handstand, lunge.',
+      'Cartwheel side. Class flow: feet together, passé, starting lunge, lever, handstand, landing lunge, clean. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate — we guide, snapshot, and grade after.',
+    previewSpeak: 'This sequence is lunge, lever, handstand, lunge. Cartwheel side.',
     setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
     setupShapeId: 'stand_clean',
     previewShapes: HS_PREVIEW,
@@ -178,15 +242,17 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
   },
   {
     id: 'flow_hs_left',
-    name: '2. Handstand progression (LEFT)',
+    name: '2. Handstand progression (non-cartwheel side)',
     nickname: 'LG LV HS LG',
     description:
-      'Same class flow on the left side. Side view. Stand clean before we start. The show goes on — we grade after.',
-    previewSpeak: 'Left side. This sequence is lunge, lever, handstand, lunge.',
+      'Same sequence on the non-cartwheel side. Open shoulders often get harder here — extra effort. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate.',
+    previewSpeak: 'This sequence is lunge, lever, handstand, lunge. Non cartwheel side.',
     setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
+    setupExtraSpeak:
+      'Now that we are doing the non cartwheel side, open shoulders often become harder for athletes. Remember, extra effort on open shoulders. Here we go.',
     setupShapeId: 'stand_clean',
     previewShapes: HS_PREVIEW,
-    beats: hsProgression('left'),
+    beats: hsNonCartwheel(),
   },
   {
     id: 'flow_lunge_lever_right',

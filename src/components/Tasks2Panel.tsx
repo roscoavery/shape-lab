@@ -129,6 +129,7 @@ export function Tasks2Panel({
   const snapsRef = useRef<SnapView[]>([])
   const replayUrlRef = useRef<string | null>(null)
   const replayVideoRef = useRef<HTMLVideoElement | null>(null)
+  const seqListRef = useRef<HTMLOListElement | null>(null)
 
   scoreRef.current = score
   shapeIdRef.current = scoredShapeId
@@ -374,7 +375,18 @@ export function Tasks2Panel({
         if (!alive()) return
         await wait(1400)
         if (!alive()) return
-      } else {
+      }
+      if (seqRun.setupExtraSpeak) {
+        setCue(seqRun.setupExtraSpeak)
+        if (seqRun.setupShapeId) {
+          onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+        }
+        await speakLine(seqRun.setupExtraSpeak)
+        if (!alive()) return
+        await wait(600)
+        if (!alive()) return
+      }
+      if (!seqRun.setupSpeak && !seqRun.setupExtraSpeak) {
         await wait(700)
         if (!alive()) return
       }
@@ -480,6 +492,16 @@ export function Tasks2Panel({
     setCue('')
   }
 
+  const chooseAnotherSequence = () => {
+    setPhase('idle')
+    setCue('')
+    setFlash('Pick any sequence in the list.')
+    window.setTimeout(() => setFlash(null), 2800)
+    window.setTimeout(() => {
+      seqListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 50)
+  }
+
   const openHistoryReplay = async (r: FlowRunReport) => {
     if (!r.replayCaptureId) return
     const blob = await getCaptureBlob(r.replayCaptureId)
@@ -534,6 +556,9 @@ export function Tasks2Panel({
 
   const completions = progress?.completions[seq.id] ?? 0
   const busy = phase === 'preview' || phase === 'running'
+  const nextSeqDef =
+    FLOW_SEQUENCES[(FLOW_SEQUENCES.findIndex((s) => s.id === seq.id) + 1) % FLOW_SEQUENCES.length] ??
+    FLOW_SEQUENCES[0]!
 
   const startBar = (
     <div className="flex flex-wrap gap-2">
@@ -598,6 +623,9 @@ export function Tasks2Panel({
                   Before you start: {seq.setupSpeak}
                 </p>
               )}
+              {seq.setupExtraSpeak && (
+                <p className="mt-1 text-[12px] leading-snug text-white/85">{seq.setupExtraSpeak}</p>
+              )}
             </>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
@@ -643,7 +671,7 @@ export function Tasks2Panel({
         </p>
       )}
 
-      <ol className="mb-3 max-h-48 space-y-1 overflow-y-auto text-sm">
+      <ol ref={seqListRef} className="mb-3 max-h-48 space-y-1 overflow-y-auto text-sm">
         {FLOW_SEQUENCES.map((s) => {
           const count = progress?.completions[s.id] ?? 0
           const selected = s.id === seq.id
@@ -692,6 +720,9 @@ export function Tasks2Panel({
               Before you start
             </p>
             <p className="text-sm font-semibold leading-snug text-[var(--text)]">{seq.setupSpeak}</p>
+            {seq.setupExtraSpeak && (
+              <p className="mt-1.5 text-sm leading-snug text-[var(--text)]">{seq.setupExtraSpeak}</p>
+            )}
           </div>
         )}
 
@@ -716,17 +747,40 @@ export function Tasks2Panel({
       {phase === 'replay' && (
         <div className="fixed inset-0 z-[100] flex flex-col bg-black">
           <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 text-white">
-            <p className="text-sm font-semibold">Your run · {seq.nickname} — scrub to each shape</p>
-            <button
-              type="button"
-              onClick={() => {
-                setPhase('review')
-                setCue('')
-              }}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
-            >
-              Continue to grades
-            </button>
+            <p className="text-sm font-semibold">Your run · {seq.nickname} — scrub the delay-cam replay</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => void startSequence(seq)}
+                className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
+              >
+                Go again
+              </button>
+              <button
+                type="button"
+                onClick={nextSequence}
+                className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
+              >
+                Next: {nextSeqDef.name.replace(/^\d+\.\s*/, '')}
+              </button>
+              <button
+                type="button"
+                onClick={chooseAnotherSequence}
+                className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
+              >
+                Choose another
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhase('review')
+                  setCue('')
+                }}
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+              >
+                Continue to grades
+              </button>
+            </div>
           </div>
           {replayUrl ? (
             <video
@@ -848,7 +902,14 @@ export function Tasks2Panel({
               onClick={nextSequence}
               className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
             >
-              Next sequence
+              Next: {nextSeqDef.name.replace(/^\d+\.\s*/, '')}
+            </button>
+            <button
+              type="button"
+              onClick={chooseAnotherSequence}
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+            >
+              Choose another sequence
             </button>
             {replayUrl && (
               <button
