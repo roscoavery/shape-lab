@@ -650,11 +650,15 @@ export default function App() {
               <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
               the way class runs: we name the sequence (LG LV HS LG), show the stills, then tell
               you <strong className="text-[var(--text)]">side view, stand clean</strong> before
-              counts start. Three sequences: <strong className="text-[var(--text)]">LG LV HS LG
+              counts start. Sequences: <strong className="text-[var(--text)]">LG LV HS LG
               (Cartwheel side)</strong>, the same flow on the{' '}
-              <strong className="text-[var(--text)]">NON Cartwheel side</strong>, then{' '}
-              <strong className="text-[var(--text)]">MC HS LV LG</strong>. After you clean, you get a
-              fullscreen replay of the run, a snapshot of each shape with a score, and a few
+              <strong className="text-[var(--text)]">NON Cartwheel side</strong>,{' '}
+              <strong className="text-[var(--text)]">MC HS LV LG</strong>, and{' '}
+              <strong className="text-[var(--text)]">MC HS LG (Assisted)</strong> — a spotted
+              handstand with a coach, friend, or parent. The assisted run grades the{' '}
+              <strong className="text-[var(--text)]">handstand only</strong>; the replay is
+              mountain climber through landing lunge. After you clean, you get a
+              fullscreen replay of the run, a snapshot of each graded shape with a score, and a few
               written cues to think about next time. Go again, take the next sequence, or pick
               another. Progress
               over time lets you download the video and analysis, share a Story caption + clip to

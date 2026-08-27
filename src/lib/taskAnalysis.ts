@@ -50,6 +50,30 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
 
 /** Tasks 2 review: lead with the real miss (open shoulders on lunges), not a C-back slogan. */
 export function writtenCues(score: ScoreResult, shapeId: string, limit = 3): string[] {
+  if (shapeId === 'handstand') {
+    const cues = [...score.criteria]
+      .filter((c) => !c.id.startsWith('_') && c.score < 88)
+      .sort((a, b) => a.score - b.score)
+      .map((c) => {
+        if (c.id === 'body_line') return c.feedback || 'Push tall through the ground — one long line.'
+        if (c.id === 'hips') return c.feedback || 'Squeeze ribs in and squeeze butt in.'
+        if (c.id === 'head') return c.feedback || 'Cover the ears — look through the eyebrows at the hands.'
+        if (c.id === 'feet_together') return c.feedback || 'Legs tight together.'
+        if (c.id === 'toes') return c.feedback || 'Point the toes.'
+        if (c.id === 'knees') return c.feedback || 'Straight knees.'
+        if (c.id === 'shoulders') return c.feedback || 'Arms covering the ears — open shoulders.'
+        if (c.id === 'elbows') return c.feedback || 'Straight elbows.'
+        return c.feedback || c.label
+      })
+      .filter((t) => t && !t.toLowerCase().startsWith('excellent'))
+    const unique: string[] = []
+    for (const line of cues) {
+      if (unique.length >= Math.max(limit, 6)) break
+      if (!unique.includes(line)) unique.push(line)
+    }
+    return unique
+  }
+
   const cues: string[] = []
   const gradeShoulders =
     isSoftShoulderShape(shapeId) && shapeId !== 'passe' && (shapeId.includes('lunge') || shapeId === 'lever')

@@ -30,6 +30,8 @@ export type FlowBeat = {
   playheadBestMs?: number
   /** Restart the saved replay here (drop get-set / standing around). */
   replayStart?: boolean
+  /** Stop the saved replay after this beat (drop standing-clean after the lunge). */
+  replayEnd?: boolean
 }
 
 export type FlowSequence = {
@@ -49,6 +51,11 @@ export type FlowSequence = {
   setupShapeId?: string
   previewShapes: FlowPreviewShape[]
   beats: FlowBeat[]
+  /**
+   * If set, written analysis / snapshot grades only include these shapes.
+   * The replay can still cover the whole athletic pass.
+   */
+  reviewShapeIds?: string[]
 }
 
 const HS_PREVIEW: FlowPreviewShape[] = [
@@ -185,6 +192,53 @@ function hsNonCartwheel(): FlowBeat[] {
   ]
 }
 
+function mcHsLungeAssisted(): FlowBeat[] {
+  return [
+    {
+      speak: 'Ready.',
+      shapeId: 'stand_clean',
+      profileOk: true,
+      pauseMs: 280,
+      replayStart: true,
+    },
+    {
+      speak: 'Step to mountain climber.',
+      shapeId: 'mountain_climber',
+      pauseMs: 400,
+    },
+    {
+      speak:
+        'Kick to handstand and hold it. Push tall through the ground. Eyes can look through the eyebrows at the hands, with arms covering the ears. Squeeze ribs in and squeeze butt in. Legs tight together, straight knees, pointed toes.',
+      shapeId: 'handstand',
+      pauseMs: 250,
+    },
+    {
+      speak: 'Hold for 3.',
+      pauseMs: 350,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 350,
+    },
+    { speak: '2.', pauseMs: 400 },
+    {
+      speak: 'Back to lunge and hold for 3.',
+      shapeId: 'lunge_land',
+      stance: 'right',
+      pauseMs: 350,
+    },
+    {
+      speak: '2.',
+      pauseMs: 500,
+      replayEnd: true,
+    },
+    {
+      speak: 'Clean.',
+      shapeId: 'stand_clean',
+      profileOk: true,
+      pauseMs: 400,
+    },
+  ]
+}
+
 function mcHsLeverLunge(): FlowBeat[] {
   return [
     {
@@ -282,6 +336,25 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       { shapeId: 'lunge_land', label: 'LG' },
     ],
     beats: mcHsLeverLunge(),
+  },
+  {
+    id: 'flow_mc_hs_lg_assist',
+    name: 'MC HS LG (Assisted)',
+    nickname: 'MC HS LG',
+    description:
+      'Spotted handstand. A coach, friend, or parent can catch the first straight leg, then pull the feet together. Mountain climber, handstand, landing lunge. Analysis is the handstand only — you are not graded on the lunge. Replay is mountain climber through landing lunge. Not a gate.',
+    previewSpeak:
+      'This is an assisted handstand sequence, allowing more focus on the details of the handstand.',
+    setupSpeak:
+      'Make sure to kick up with straight legs one at a time so the spotter can grab the first one before pulling the feet together.',
+    setupShapeId: 'handstand',
+    previewShapes: [
+      { shapeId: 'mountain_climber', label: 'MC' },
+      { shapeId: 'handstand', label: 'HS' },
+      { shapeId: 'lunge_land', label: 'LG' },
+    ],
+    reviewShapeIds: ['handstand'],
+    beats: mcHsLungeAssisted(),
   },
 ]
 

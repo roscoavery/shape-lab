@@ -147,10 +147,17 @@ export function standCleanLooksRight(score: ScoreResult): boolean {
   )
 }
 
+export function handstandLooksRight(score: ScoreResult): boolean {
+  if (score.overall < 45) return false
+  const byId = Object.fromEntries(score.criteria.map((c) => [c.id, c.score]))
+  return (byId.body_line ?? 0) >= 38 && (byId.elbows ?? 0) >= 35
+}
+
 /** Frames we will actually save as a shape snapshot / playhead. */
 export function snapshotLooksRight(shapeId: string, score: ScoreResult): boolean {
   if (shapeId === 'lever') return leverLooksRight(score)
   if (shapeId === 'stand_clean') return standCleanLooksRight(score)
+  if (shapeId === 'handstand') return handstandLooksRight(score)
   return true
 }
 
