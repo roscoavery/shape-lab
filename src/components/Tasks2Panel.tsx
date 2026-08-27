@@ -90,6 +90,7 @@ type Props = {
   landmarks?: Landmark[] | null
   onHoldClock?: (seconds: number | null) => void
   mirror?: boolean
+  cameraError?: string | null
 }
 
 function scoreColor(n: number): string {
@@ -174,6 +175,7 @@ export function Tasks2Panel({
   landmarks = null,
   onHoldClock,
   mirror = true,
+  cameraError = null,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
@@ -229,13 +231,18 @@ export function Tasks2Panel({
 
   useEffect(() => {
     if (!cameraRunning) {
-      overlayStreamRef.current?.getTracks().forEach((t) => {
-        try {
-          t.stop()
-        } catch {
-          /* already stopped */
+      const overlay = overlayStreamRef.current
+      const cam = streamRef.current
+      if (overlay) {
+        for (const t of overlay.getTracks()) {
+          if (cam?.getTracks().includes(t)) continue
+          try {
+            t.stop()
+          } catch {
+            /* already stopped */
+          }
         }
-      })
+      }
       overlayStreamRef.current = null
       setOverlayStream(null)
       return
@@ -715,8 +722,6 @@ export function Tasks2Panel({
       onVoiceEnabledChange?.(true)
       resetSpeech()
       unlockSpeech()
-      onEnsureCamera?.()
-      onRequestFullscreen?.()
       runGen.current += 1
       const gen = runGen.current
       const alive = () => gen === runGen.current
@@ -725,6 +730,12 @@ export function Tasks2Panel({
       onHoldClockRef.current?.(null)
       setActiveClipId(null)
       revokeClipUrls()
+      setPhase('preview')
+      setBeatIndex(-1)
+      setCue('Starting camera…')
+      setFlash(null)
+      onRequestFullscreen?.()
+      onEnsureCamera?.()
 
       for (const s of snapsRef.current) {
         if (s.url) URL.revokeObjectURL(s.url)
@@ -733,84 +744,101 @@ export function Tasks2Panel({
       setSnaps([])
       setReport(null)
       setSeekTo(null)
-      for (let i = 0; i < 40 && !(overlayStreamRef.current || streamRef.current); i++) {
-        await wait(120)
-        if (!alive()) return
-      }
-      for (let i = 0; i < 15 && !overlayStreamRef.current; i++) {
-        await wait(100)
-        if (!alive()) return
-      }
-      if (seqRun.mode !== 'hs-hold') {
-        delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
-      }
-      onRequestFullscreen?.()
-      await wait(350)
-      if (!alive()) return
-      setPhase('preview')
-      setBeatIndex(-1)
-      setCue(seqRun.previewSpeak)
-      if (seqRun.setupShapeId) {
-        onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
-      } else {
-        const first = seqRun.previewShapes[0]
-        if (first) onRequestShape(first.shapeId)
-      }
 
-      await speakLine(seqRun.previewSpeak)
-      if (!alive()) return
-      if (seqRun.setupSpeak) {
-        setCue(seqRun.setupSpeak)
+      try {
+        for (let i = 0; i < 50 && !streamRef.current; i++) {
+          await wait(100)
+          if (!alive()) return
+        }
+        if (!streamRef.current) {
+          setPhase('idle')
+          setCue('')
+          setFlash('Camera did not start. Allow camera, then tap Start again.')
+          window.setTimeout(() => setFlash(null), 4000)
+          onExitFullscreen?.()
+          return
+        }
+        if (seqRun.mode !== 'hs-hold') {
+          for (let i = 0; i < 12 && !overlayStreamRef.current; i++) {
+            await wait(80)
+            if (!alive()) return
+          }
+          try {
+            delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+          } catch (err) {
+            console.warn('[tasks2] delay cam', err)
+            try {
+              delay.restartRolling(streamRef.current)
+            } catch {
+              /* sequence can still run without a replay buffer */
+            }
+          }
+        }
+        onRequestFullscreen?.()
+        await wait(200)
+        if (!alive()) return
+        setCue(seqRun.previewSpeak)
         if (seqRun.setupShapeId) {
           onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+        } else {
+          const first = seqRun.previewShapes[0]
+          if (first) onRequestShape(first.shapeId)
         }
-        await speakLine(seqRun.setupSpeak)
+
+        await speakLine(seqRun.previewSpeak)
         if (!alive()) return
-        await wait(1400)
-        if (!alive()) return
-      }
-      if (seqRun.setupExtraSpeak) {
-        setCue(seqRun.setupExtraSpeak)
-        if (seqRun.setupShapeId) {
-          onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+        if (seqRun.setupSpeak) {
+          setCue(seqRun.setupSpeak)
+          if (seqRun.setupShapeId) {
+            onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+          }
+          await speakLine(seqRun.setupSpeak)
+          if (!alive()) return
+          await wait(1400)
+          if (!alive()) return
         }
-        await speakLine(seqRun.setupExtraSpeak)
-        if (!alive()) return
-        await wait(600)
-        if (!alive()) return
-      }
-      if (!seqRun.setupSpeak && !seqRun.setupExtraSpeak) {
-        await wait(700)
-        if (!alive()) return
-      }
+        if (seqRun.setupExtraSpeak) {
+          setCue(seqRun.setupExtraSpeak)
+          if (seqRun.setupShapeId) {
+            onRequestShape(seqRun.setupShapeId, 'auto', { profileOk: true })
+          }
+          await speakLine(seqRun.setupExtraSpeak)
+          if (!alive()) return
+          await wait(600)
+          if (!alive()) return
+        }
+        if (!seqRun.setupSpeak && !seqRun.setupExtraSpeak) {
+          await wait(700)
+          if (!alive()) return
+        }
 
-      if (seqRun.mode === 'hs-hold') {
-        setPhase('holding')
-        onRequestShape('handstand', 'auto', { profileOk: true })
-        setCue(
-          'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
-        )
-        const raw = await runHandstandHoldSession({
-          cancelled: () => !alive(),
-          doneRequested: () => holdDoneRef.current || !alive(),
-          landmarks: () => landmarksRef.current,
-          score: () => scoreRef.current,
-          stream: () => streamRef.current ?? overlayStreamRef.current,
-          canvas: () => canvasRef.current,
-          onTick: (tick) => {
-            setHoldTick(tick)
-            onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
-          },
-          onCue: (line) => {
-            if (alive()) setCue(line)
-          },
-        })
-        if (!alive()) return
-        await finishHoldRun(seqRun, raw)
-        return
-      }
+        if (seqRun.mode === 'hs-hold') {
+          setPhase('holding')
+          onRequestShape('handstand', 'auto', { profileOk: true })
+          setCue(
+            'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
+          )
+          const raw = await runHandstandHoldSession({
+            cancelled: () => !alive(),
+            doneRequested: () => holdDoneRef.current || !alive(),
+            landmarks: () => landmarksRef.current,
+            score: () => scoreRef.current,
+            stream: () => streamRef.current ?? overlayStreamRef.current,
+            canvas: () => canvasRef.current,
+            onTick: (tick) => {
+              setHoldTick(tick)
+              onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
+            },
+            onCue: (line) => {
+              if (alive()) setCue(line)
+            },
+          })
+          if (!alive()) return
+          await finishHoldRun(seqRun, raw)
+          return
+        }
 
-      setPhase('running')
+        setPhase('running')
       const collected: SnapView[] = []
       let replayBlob: Blob | null = null
       const first = seqRun.previewShapes[0]
@@ -982,6 +1010,19 @@ export function Tasks2Panel({
             : 'Watch your run. Scrub, then continue to the grades.',
       )
       await finishRun(seqRun, forReview, replayBlob)
+      } catch (err) {
+        console.warn('[tasks2] start', err)
+        if (!alive()) return
+        setPhase('idle')
+        setCue('')
+        setFlash(
+          err instanceof Error
+            ? err.message
+            : 'Could not start this sequence. Allow the camera, then tap Start again.',
+        )
+        window.setTimeout(() => setFlash(null), 4500)
+        onExitFullscreen?.()
+      }
     },
     [
       athleteId,
@@ -990,6 +1031,7 @@ export function Tasks2Panel({
       finishHoldRun,
       finishRun,
       onEnsureCamera,
+      onExitFullscreen,
       onRequestFullscreen,
       onRequestShape,
       onVoiceEnabledChange,
@@ -1251,6 +1293,9 @@ export function Tasks2Panel({
                     : '0.0s'}
               </p>
               <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+              {cameraError && (
+                <p className="mt-1 text-[12px] text-[#f07178]">{cameraError}</p>
+              )}
               <p className="mt-1 text-[11px] text-white/60">
                 {holdTick
                   ? `${holdTick.running ? `Hold ${(holdTick.tries ?? 0) + 1}` : `${holdTick.tries} timed`} · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
@@ -1260,6 +1305,9 @@ export function Tasks2Panel({
           ) : busy ? (
             <>
               <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
+              {cameraError && (
+                <p className="mt-1 text-[12px] text-[#f07178]">{cameraError}</p>
+              )}
               <p className="mt-1 text-[11px] text-white/60">Listen — follow the spoken script.</p>
             </>
           ) : (

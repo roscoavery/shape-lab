@@ -480,6 +480,7 @@ export default function App() {
               cameraFullscreen={camFullscreen}
               landmarks={activeLandmarks}
               mirror={settings.mirrorVideo}
+              cameraError={camera.error}
               onHoldClock={(seconds) => {
                 holdSecondsRef.current = seconds
                 setHoldClock((prev) => {

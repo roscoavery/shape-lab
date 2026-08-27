@@ -465,7 +465,7 @@ export function TasksWorkspace({
       </div>
 
       {!fullscreen && cameraControls}
-      {cameraError && !fullscreen && (
+      {cameraError && (
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
           {cameraError}
         </p>

@@ -87,19 +87,32 @@ export function usePoseCamera(): PoseCameraState {
   const start = useCallback(async () => {
     setError(null)
     try {
-      // Warm up the model first so the first frames aren't stalled
-      await getPoseLandmarker()
-      setReady(true)
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: 'user',
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 30 },
+      // Open the camera on the tap first. Waiting on the pose model before
+      // getUserMedia lets iOS drop the user gesture, and min width/height
+      // rejects many phone cameras (OverconstrainedError).
+      const attempts: MediaStreamConstraints[] = [
+        {
+          audio: false,
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         },
-      })
+        { audio: false, video: { facingMode: 'user' } },
+        { audio: false, video: true },
+      ]
+      let stream: MediaStream | null = null
+      let lastErr: unknown = null
+      for (const constraints of attempts) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints)
+          break
+        } catch (err) {
+          lastErr = err
+        }
+      }
+      if (!stream) {
+        throw lastErr instanceof Error
+          ? lastErr
+          : new Error('Could not access camera. Allow camera permission and use HTTPS.')
+      }
       streamRef.current = stream
       setStream(stream)
       hintMotion(stream)
@@ -112,6 +125,17 @@ export function usePoseCamera(): PoseCameraState {
       rafRef.current = requestAnimationFrame(() => {
         void loop()
       })
+      try {
+        await getPoseLandmarker()
+        setReady(true)
+      } catch (err) {
+        console.warn(err)
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Camera is on, but pose scoring could not load. Try again on a stronger connection.',
+        )
+      }
     } catch (err) {
       const msg =
         err instanceof Error

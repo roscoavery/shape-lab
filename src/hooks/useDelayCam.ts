@@ -95,7 +95,12 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
             : null
         if (waiter) waiter(blob && blob.size > 500 ? blob : null)
       }
-      rec.start(200)
+      try {
+        rec.start(200)
+      } catch (err) {
+        rollingRecorderRef.current = null
+        setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
+      }
     },
     [pumpDelayQueue],
   )
