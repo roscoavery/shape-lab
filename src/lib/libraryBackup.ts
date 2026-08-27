@@ -12,6 +12,7 @@ import {
   type RefItem,
 } from './clipStore'
 import { createId } from './storage'
+import shippedLibrary from '../config/compareLibrary.json'
 
 export const LIBRARY_META_KEY = 'shape-lab.library-meta.v1'
 
@@ -53,6 +54,25 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
   }
 }
 
+function isGenericIgName(name: string): boolean {
+  return /^IG\s+[A-Za-z0-9_-]+$/i.test(name.trim())
+}
+
+function preferName(existing: string, incoming: string): string {
+  const next = incoming.trim()
+  if (!next) return existing
+  if (isGenericIgName(existing) && !isGenericIgName(next)) return next
+  if (!isGenericIgName(next) && next !== existing) return next
+  return existing
+}
+
+export function shippedCompareLibrary(): LibraryBackup | null {
+  const data = shippedLibrary as LibraryBackup
+  if (!data || data.kind !== 'shape-lab-library' || !Array.isArray(data.collections)) {
+    return null
+  }
+  return data
+}
 export function persistLibraryMeta(collections: RefCollection[]): void {
   try {
     localStorage.setItem(LIBRARY_META_KEY, JSON.stringify(collectionsToBackup(collections)))
@@ -137,12 +157,14 @@ export async function mergeLibraryBackup(
         skipped += 1
         continue
       }
-      const dup = target.items.some(
+      const match = target.items.find(
         (existing) =>
           existing.id === item.id ||
           (existing.url && isSameReferenceUrl(existing.url, item.url!)),
       )
-      if (dup) {
+      if (match) {
+        const renamed = preferName(match.name, item.name || '')
+        if (renamed !== match.name) match.name = renamed
         skipped += 1
         continue
       }
@@ -197,25 +219,32 @@ export function publishLibrary(collections: RefCollection[]): void {
   void pushServerLibrary(collections)
 }
 
-/** Merge this origin's IndexedDB with the on-disk library every preview shares. */
+/** Merge this origin's IndexedDB with the shipped list and the on-disk library. */
 export async function syncLibraryWithServer(
   local: RefCollection[],
 ): Promise<{ collections: RefCollection[]; pulled: number }> {
+  const seed = shippedCompareLibrary()
   const server = await pullServerLibrary()
-  const serverCount = server ? backupUrlCount(server) : 0
-  const localCount = local.reduce(
+  let collections = local
+  let pulled = 0
+
+  if (seed && backupUrlCount(seed) > 0) {
+    const merged = await mergeLibraryBackup(seed)
+    collections = merged.collections
+    pulled += merged.added
+  }
+  if (server && backupUrlCount(server) > 0) {
+    const merged = await mergeLibraryBackup(server)
+    collections = merged.collections
+    pulled += merged.added
+  }
+
+  const urlCount = collections.reduce(
     (n, c) => n + c.items.filter((i) => i.kind !== 'file' && i.url).length,
     0,
   )
-  if (server && serverCount > 0) {
-    const { collections, added } = await mergeLibraryBackup(server)
-    if (localCount > 0) await pushServerLibrary(collections)
-    return { collections, pulled: added }
-  }
-  if (localCount > 0) {
-    await pushServerLibrary(local)
-  }
-  return { collections: local, pulled: 0 }
+  if (urlCount > 0) await pushServerLibrary(collections)
+  return { collections, pulled }
 }
 
 export function downloadBackupFile(collections: RefCollection[]): void {

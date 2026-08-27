@@ -14,7 +14,7 @@ export default defineConfig({
     allowedHosts: true,
     watch: {
       // Writing the Compare library must not full-reload the preview.
-      ignored: ['**/data/**'],
+      ignored: ['**/data/**', '**/src/config/compareLibrary.json'],
     },
   },
   preview: {

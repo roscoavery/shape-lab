@@ -8,6 +8,7 @@ import path from 'node:path'
 import type { IncomingMessage } from 'node:http'
 
 const FILE = path.join(process.cwd(), 'data', 'library.json')
+const SHIPPED = path.join(process.cwd(), 'src/config/compareLibrary.json')
 
 export type DiskLibrary = {
   kind: 'shape-lab-library'
@@ -51,7 +52,14 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
   if (JSON.stringify(existing.collections) === JSON.stringify(next.collections)) {
     return existing
   }
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2))
+  const text = JSON.stringify(next, null, 2) + '\n'
+  fs.writeFileSync(FILE, text)
+  try {
+    fs.mkdirSync(path.dirname(SHIPPED), { recursive: true })
+    fs.writeFileSync(SHIPPED, text)
+  } catch {
+    // shipped copy is best-effort — data/library.json is the live list
+  }
   return next
 }
 

@@ -1,0 +1,21 @@
+{
+  "kind": "shape-lab-library",
+  "version": 1,
+  "exportedAt": "2026-08-27T20:13:48.311Z",
+  "collections": [
+    {
+      "id": "col_mtbyl9od_nuksa5",
+      "name": "My references",
+      "createdAt": "2026-08-27T20:12:05.053Z",
+      "items": [
+        {
+          "id": "ref_mtbyn4gl_l8db64",
+          "kind": "instagram",
+          "name": "kyoko ro sweep through",
+          "url": "https://www.instagram.com/p/DcbSCXMGjEv/",
+          "createdAt": "2026-08-27T20:13:31.605Z"
+        }
+      ]
+    }
+  ]
+}

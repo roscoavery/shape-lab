@@ -205,6 +205,13 @@ function safeHost(url: string): string {
   }
 }
 
+/** Canonical post/reel URL — drop share tracking so the same clip is one item. */
+export function canonicalReferenceUrl(url: string): string {
+  const parsed = parseInstagramUrl(url)
+  if (parsed) return `https://www.instagram.com/${parsed.type}/${parsed.code}/`
+  return url.trim()
+}
+
 /** Extract shortcode + path type from an Instagram post/reel/tv/share URL. */
 export function parseInstagramUrl(
   url: string,

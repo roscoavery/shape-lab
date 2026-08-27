@@ -1,6 +1,41 @@
 {
   "kind": "shape-lab-library",
   "version": 1,
-  "exportedAt": "",
-  "collections": []
+  "exportedAt": "2026-08-27T20:17:02.142Z",
+  "collections": [
+    {
+      "id": "col_mtbyl9oc_m523f5",
+      "name": "My references",
+      "createdAt": "2026-08-27T20:12:05.052Z",
+      "items": []
+    },
+    {
+      "id": "col_mtbyl9od_nuksa5",
+      "name": "My references",
+      "createdAt": "2026-08-27T20:12:05.053Z",
+      "items": [
+        {
+          "id": "ref_mtbyqp2e_4eirh5",
+          "kind": "instagram",
+          "name": "kyoko ro hs reference",
+          "url": "https://www.instagram.com/p/Db8WMq9Gprg/?igsi=dDc0cmtnd3Jidm1q",
+          "createdAt": "2026-08-27T20:16:18.278Z"
+        },
+        {
+          "id": "ref_mtbyq8xu_ekhn6f",
+          "kind": "instagram",
+          "name": "hard mat whips",
+          "url": "https://www.instagram.com/reel/Db-5w5iPiFu/?igsi=MXZrd2NqdXJtMXFwbQ==",
+          "createdAt": "2026-08-27T20:15:57.378Z"
+        },
+        {
+          "id": "ref_mtbyn4gl_l8db64",
+          "kind": "instagram",
+          "name": "kyoko ro sweep through",
+          "url": "https://www.instagram.com/p/DcbSCXMGjEv/?igsi=MW45cWFvZzRxcWpuOQ==",
+          "createdAt": "2026-08-27T20:13:31.605Z"
+        }
+      ]
+    }
+  ]
 }
