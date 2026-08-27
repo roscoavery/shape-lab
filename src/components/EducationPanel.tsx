@@ -12,6 +12,7 @@ import {
   firstPathwayTaskIndex,
   formatCriterionTarget,
   howToHitShape,
+  otherSamePositionIds,
   visibleCriteria,
 } from '../lib/educationCopy'
 import { ReferenceStill } from './ReferenceStill'
@@ -69,7 +70,10 @@ export function EducationPanel({
       if (filter === 'pathway' && !inPathway) return false
       if (filter === 'other' && inPathway) return false
       if (!q) return true
-      const hay = `${s.name} ${s.description} ${s.category}`.toLowerCase()
+      const aliases = otherSamePositionIds(s.id)
+        .map((id) => getShape(id)?.name ?? '')
+        .join(' ')
+      const hay = `${s.name} ${s.description} ${s.category} ${aliases}`.toLowerCase()
       return hay.includes(q)
     }).sort((a, b) => {
       // Pathway shapes first (by curriculum order), then alphabetical
@@ -175,6 +179,7 @@ export function EducationPanel({
           referencePhotos={referencePhotos}
           onBack={goShapes}
           onOpenTask={openTask}
+          onOpenShape={openShape}
         />
       )}
 
@@ -320,7 +325,8 @@ function HomeView({
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Multiple choice: name the position from a body-position description, or identify
-          the shape in a reference photo.
+          the shape in a reference photo. Landing lunge and Lunge · open shoulders are the
+          same position — the test treats them as one.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the test →
@@ -447,6 +453,11 @@ function ShapeLibrary({
                       </span>
                     )}
                   </div>
+                  {otherSamePositionIds(shape.id).length > 0 && (
+                    <p className="mt-0.5 text-[10px] font-medium text-[var(--accent)]">
+                      Same position as {otherSamePositionIds(shape.id).map((id) => getShape(id)?.name ?? id).join(', ')}
+                    </p>
+                  )}
                   <p className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">
                     {shape.description}
                   </p>
@@ -475,12 +486,14 @@ function ShapeDetail({
   referencePhotos,
   onBack,
   onOpenTask,
+  onOpenShape,
 }: {
   shapeId: string
   pathwayIds: Set<string>
   referencePhotos: ReferencePhoto[]
   onBack: () => void
   onOpenTask: (taskId: string) => void
+  onOpenShape: (shapeId: string) => void
 }) {
   const shape = getShape(shapeId)
   if (!shape) {
@@ -521,6 +534,27 @@ function ShapeDetail({
                 </span>
               )}
             </div>
+            {otherSamePositionIds(shape.id).length > 0 && (
+              <p className="mt-2 text-sm text-[var(--accent)]">
+                Same body position as{' '}
+                {otherSamePositionIds(shape.id).map((id, i, arr) => {
+                  const other = getShape(id)
+                  return (
+                    <span key={id}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenShape(id)}
+                        className="font-medium underline decoration-[var(--accent)]/40 underline-offset-2 hover:decoration-[var(--accent)]"
+                      >
+                        {other?.name ?? id}
+                      </button>
+                      {i < arr.length - 1 ? ', ' : ''}
+                    </span>
+                  )
+                })}
+                . They share this still.
+              </p>
+            )}
             <p className="mt-2 text-sm text-[var(--muted)]">{shape.description}</p>
             {shape.bodyPosition && (
               <p className="mt-3 text-sm leading-relaxed text-[var(--text)]">{shape.bodyPosition}</p>

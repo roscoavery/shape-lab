@@ -15,7 +15,7 @@ Included:
 - `passe.jpg`
 - `feet_together_open_shoulders.jpg`
 - `lunge_start.jpg`
-- `lunge_land.jpg`
+- `lunge_land.jpg` (also used for Lunge · open shoulders — same position)
 - `lever.jpg`
 - `handstand.jpg`
 - `candlestick.jpg`

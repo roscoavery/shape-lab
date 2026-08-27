@@ -827,9 +827,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'lunge_land',
     name: 'Landing lunge',
     description:
-      'Landing lunge: shorter stance than the start, back heel FLAT, back leg straight, one line from back heel through the body to the hands.',
+      'Landing lunge: shorter stance than the start, back heel FLAT, back leg straight, open shoulders. Same position as Lunge · open shoulders — they share this still.',
     bodyPosition:
-      'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side.',
+      'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side. This is the same shape as Lunge · open shoulders.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
@@ -841,7 +841,7 @@ export const SHAPES: ShapeDef[] = [
       'Back leg straight, back straight, shoulders open — not a mountain climber.',
     ],
     coachNotes:
-      'Usual cartwheels finish in this landing lunge. Cartwheel step-ins (the round-off prep) finish in a zombie instead — train that landing before round-offs. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge.',
+      'Usual cartwheels finish in this landing lunge. Cartwheel step-ins (the round-off prep) finish in a zombie instead — train that landing before round-offs. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge. In the library this is the same picture as Lunge · open shoulders — keep both names. Tasks says landing lunge; the arm-positions test says lunge · open shoulders.',
     criteria: [
       {
         id: 'front_knee',
@@ -2768,14 +2768,20 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'lunge_arms_open',
     name: 'Lunge · open shoulders',
-    description: 'Landing-lunge legs with FTOS arms (by the ears). Back heel flat, shorter stance.',
+    description:
+      'Same position as the landing lunge — landing-lunge legs, arms by the ears. Same still. We keep this name so it sits with the other lunge arm drills.',
     bodyPosition:
-      'Same stance as the landing lunge: front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open.',
+      'This is the landing lunge. Front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open. Same picture as Landing lunge.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Open-shoulder arms on a landing lunge. Back heel flat. Shorter than a starting lunge.'],
+    tips: [
+      'This is the landing lunge — same photo, same body.',
+      'Open-shoulder arms. Back heel flat. Shorter than a starting lunge.',
+    ],
+    coachNotes:
+      'This is the landing lunge. Same photo. We keep the name for the arm-positions test so it sits with low V, T, front middle, and high V on a lunge.',
     criteria: [
       {
         id: 'front_knee',

@@ -12,6 +12,7 @@ import {
   neededShotList,
   pickCoachReference,
 } from '../lib/referenceNeeds'
+import { otherSamePositionIds } from '../lib/educationCopy'
 import {
   blobToDataUrl,
   deleteExtraShape,
@@ -361,6 +362,15 @@ function ExtraFolder({
             return (
               <li key={s.id} className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
                 <p className="font-semibold">{s.name}</p>
+                {otherSamePositionIds(s.id).length > 0 && (
+                  <p className="mt-1 text-[11px] font-medium text-[var(--accent)]">
+                    Same position as{' '}
+                    {otherSamePositionIds(s.id)
+                      .map((id) => getShape(id)?.name ?? id)
+                      .join(', ')}{' '}
+                    — shared still.
+                  </p>
+                )}
                 <p className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{s.description}</p>
                 {ref && (
                   <img

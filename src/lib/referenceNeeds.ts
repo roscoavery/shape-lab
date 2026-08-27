@@ -44,7 +44,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. Starting lunge: back HEEL UP, back leg STRAIGHT, back STRAIGHT, shoulders OPEN. Longer than a landing lunge.',
   lunge_arms_low_v: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Low V arms slightly back.',
   lunge_arms_front: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Arms forward at middle height.',
-  lunge_arms_open: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Open shoulders, arms by ears.',
+  lunge_arms_open:
+    'Same photo as landing lunge. No extra shot — this is that position (heel FLAT, open shoulders, arms by ears).',
   lunge_arms_t: 'FACE the camera. Landing-lunge stance (heel FLAT, closer feet). Arms in a T.',
   lunge_arms_high_v: 'FRONT or 3/4. Landing-lunge stance (heel FLAT, closer feet). High V, chest out.',
   lever:
@@ -52,7 +53,7 @@ const SHOTS: Record<string, string> = {
   handstand:
     'SIDE or 3/4. Freestanding stacked HS. Ribs in, butt in, ears covered, toes pointed. Not stomach-to-wall.',
   lunge_land:
-    'SIDE. Landing lunge: back heel FLAT, shorter than a starting lunge, open shoulders, one line heel → hands.',
+    'SIDE. Landing lunge: back heel FLAT, shorter than a starting lunge, open shoulders, one line heel → hands. Same still as Lunge · open shoulders.',
   c_shape:
     'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
   mountain_climber:

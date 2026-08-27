@@ -3,7 +3,13 @@
  * Mix of "name this description" and "name this picture" questions.
  */
 
-import { ARM_POSITION_SHAPE_IDS, curriculumShapeIds } from './educationCopy'
+import {
+  ARM_POSITION_SHAPE_IDS,
+  canonicalSamePositionId,
+  curriculumShapeIds,
+  samePositionDisplayName,
+  samePositionGroup,
+} from './educationCopy'
 import { SHAPES } from '../config/shapes'
 import { pickReferencePhoto } from './storage'
 import type { ReferencePhoto, ShapeDef } from '../types'
@@ -32,9 +38,33 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function distractors(correct: ShapeDef, pool: ShapeDef[], n: number): ShapeDef[] {
-  const others = pool.filter((s) => s.id !== correct.id && s.category === correct.category)
-  const rest = pool.filter((s) => s.id !== correct.id && s.category !== correct.category)
+  const aliases = new Set(samePositionGroup(correct.id))
+  const others = pool.filter((s) => !aliases.has(s.id) && s.category === correct.category)
+  const rest = pool.filter((s) => !aliases.has(s.id) && s.category !== correct.category)
   return shuffle([...others, ...rest]).slice(0, n)
+}
+
+function quizLabel(shape: ShapeDef): string {
+  return samePositionDisplayName(shape.id)
+}
+
+/**
+ * One question per body position. If landing lunge and lunge · open shoulders
+ * are both in the pool, keep the pathway name and skip the duplicate.
+ */
+function uniquePositions(source: ShapeDef[]): ShapeDef[] {
+  const ids = new Set(source.map((s) => s.id))
+  const seen = new Set<string>()
+  const out: ShapeDef[] = []
+  for (const shape of source) {
+    const canon = canonicalSamePositionId(shape.id)
+    const keep = ids.has(canon) ? canon : shape.id
+    if (shape.id !== keep) continue
+    if (seen.has(keep)) continue
+    seen.add(keep)
+    out.push(shape)
+  }
+  return out
 }
 
 export type QuizPool = 'pathway' | 'arm-positions'
@@ -56,7 +86,7 @@ export function buildShapeQuiz(
       ? arm
       : new Set([...pathway, ...ARM_POSITION_SHAPE_IDS])
   const poolShapes = SHAPES.filter((s) => wanted.has(s.id))
-  const source = poolShapes.length >= 4 ? poolShapes : SHAPES
+  const source = uniquePositions(poolShapes.length >= 4 ? poolShapes : SHAPES)
   const withPhoto = source.filter((s) => Boolean(pickReferencePhoto(photos, s.id, null)?.dataUrl))
 
   const describePool = shuffle(source)
@@ -78,7 +108,7 @@ export function buildShapeQuiz(
         shapeId: shape.id,
         prompt: 'What shape is this?',
         photoUrl: photo.dataUrl,
-        choices: opts.map((s) => ({ id: s.id, label: s.name })),
+        choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })
     } else if (di < describePool.length) {
@@ -93,7 +123,7 @@ export function buildShapeQuiz(
           ? `Which shape is this?\n\n${body}`
           : 'Which shape is being described?',
         photoUrl: null,
-        choices: opts.map((s) => ({ id: s.id, label: s.name })),
+        choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })
     } else {

@@ -4,7 +4,37 @@
  */
 
 import { CURRICULUM_TASKS } from '../config/curriculum'
+import { getShape } from '../config/shapes'
 import type { CriterionDef, ShapeDef } from '../types'
+
+/**
+ * Library names that are the same body position. They share a coach still.
+ * Keep both cards; never quiz them against each other.
+ */
+export const SAME_POSITION_GROUPS: readonly (readonly string[])[] = [
+  ['lunge_land', 'lunge_arms_open'],
+]
+
+export function samePositionGroup(shapeId: string): string[] {
+  const group = SAME_POSITION_GROUPS.find((g) => g.includes(shapeId))
+  return group ? [...group] : [shapeId]
+}
+
+export function otherSamePositionIds(shapeId: string): string[] {
+  return samePositionGroup(shapeId).filter((id) => id !== shapeId)
+}
+
+/** Prefer the pathway name when both ids are in the quiz pool. */
+export function canonicalSamePositionId(shapeId: string): string {
+  return samePositionGroup(shapeId)[0] ?? shapeId
+}
+
+export function samePositionDisplayName(shapeId: string): string {
+  const group = samePositionGroup(shapeId)
+  const names = group.map((id) => getShape(id)?.name ?? id)
+  if (names.length < 2) return names[0] ?? shapeId
+  return `${names[0]} (also called ${names.slice(1).join(', ')})`
+}
 
 /** Visible (non-hidden) criteria coaches/athletes should read. */
 export function visibleCriteria(shape: ShapeDef): CriterionDef[] {
