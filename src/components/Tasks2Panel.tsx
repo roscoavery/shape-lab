@@ -11,15 +11,31 @@ import { DELAY_MAX, useDelayCam } from '../hooks/useDelayCam'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import {
   getCaptureBlob,
+  getPoseTrackJson,
   saveCapture,
+  savePoseTrackJson,
   snapshotCanvas,
 } from '../lib/captureStore'
-import { downloadHoldVideo } from '../lib/flowShare'
+import { videoFileName } from '../lib/flowShare'
 import {
   formatSeconds,
   runHandstandHoldSession,
   type HoldTick,
 } from '../lib/handstandHold'
+import {
+  getRememberedBlob,
+  prefersShareSave,
+  rememberCaptureBlob,
+  saveResultMessage,
+  saveVideoToDevice,
+} from '../lib/saveMedia'
+import {
+  getRememberedPoseTrack,
+  parsePoseTrack,
+  rememberPoseTrack,
+  serializePoseTrack,
+} from '../lib/poseTrack'
+import { HoldReplayPlayer } from './HoldReplayPlayer'
 import {
   createId,
   flowHistoryForSequence,
@@ -73,6 +89,7 @@ type Props = {
   cameraFullscreen?: boolean
   landmarks?: Landmark[] | null
   onHoldClock?: (seconds: number | null) => void
+  mirror?: boolean
 }
 
 function scoreColor(n: number): string {
@@ -156,6 +173,7 @@ export function Tasks2Panel({
   cameraFullscreen = false,
   landmarks = null,
   onHoldClock,
+  mirror = true,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
@@ -183,10 +201,17 @@ export function Tasks2Panel({
   const [holdTick, setHoldTick] = useState<HoldTick | null>(null)
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
   const [holdClipUrls, setHoldClipUrls] = useState<Record<string, string>>({})
+  const [deviceSave, setDeviceSave] = useState<{
+    blob: Blob
+    filename: string
+    label: string
+  } | null>(null)
   const clipUrlsRef = useRef<Map<string, string>>(new Map())
   const holdDoneRef = useRef(false)
   const landmarksRef = useRef(landmarks)
   const onHoldClockRef = useRef(onHoldClock)
+  const onCueRef = useRef(onCue)
+  const onPreviewItemsRef = useRef(onPreviewItems)
 
   scoreRef.current = score
   shapeIdRef.current = scoredShapeId
@@ -194,6 +219,8 @@ export function Tasks2Panel({
   overlayStreamRef.current = overlayStream
   landmarksRef.current = landmarks
   onHoldClockRef.current = onHoldClock
+  onCueRef.current = onCue
+  onPreviewItemsRef.current = onPreviewItems
 
   const { speakEvent, reset: resetSpeech, unlock: unlockSpeech, supported: speechSupported } =
     useSpeechCoach(true)
@@ -220,7 +247,14 @@ export function Tasks2Panel({
       const canvas = canvasRef.current
       if (canvas && canvas.width > 16 && canvas.height > 16) {
         try {
-          const captured = canvas.captureStream(24)
+          const captured = canvas.captureStream(30)
+          captured.getVideoTracks().forEach((t) => {
+            try {
+              t.contentHint = 'motion'
+            } catch {
+              /* Safari may ignore */
+            }
+          })
           if (!cancelled) {
             overlayStreamRef.current = captured
             setOverlayStream(captured)
@@ -287,17 +321,17 @@ export function Tasks2Panel({
 
   useEffect(
     () => () => {
-      onCue?.(null)
-      onPreviewItems?.(null)
-      if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
+      onCueRef.current?.(null)
+      onPreviewItemsRef.current?.(null)
       for (const s of snapsRef.current) {
         if (s.url) URL.revokeObjectURL(s.url)
       }
       for (const url of clipUrlsRef.current.values()) URL.revokeObjectURL(url)
       clipUrlsRef.current.clear()
+      replayUrlRef.current = null
       onHoldClockRef.current?.(null)
     },
-    [onCue, onPreviewItems],
+    [],
   )
 
   const speakLine = useCallback(
@@ -403,24 +437,27 @@ export function Tasks2Panel({
       setReplayUrl(url)
 
       let replayCaptureId: string | null = null
-      if (athleteId && blob && blob.size > 800) {
+      if (blob && blob.size > 800) {
         replayCaptureId = createId('clip')
-        try {
-          await saveCapture(
-            {
-              id: replayCaptureId,
-              athleteId,
-              taskId: seqRun.id,
-              shapeId: seqRun.previewShapes[0]?.shapeId ?? 'handstand',
-              shapeName: seqRun.nickname,
-              kind: 'clip',
-              createdAt: new Date().toISOString(),
-              holdSeconds: delay.capturedSec(),
-            },
-            blob,
-          )
-        } catch {
-          replayCaptureId = null
+        rememberCaptureBlob(replayCaptureId, blob)
+        if (athleteId) {
+          try {
+            await saveCapture(
+              {
+                id: replayCaptureId,
+                athleteId,
+                taskId: seqRun.id,
+                shapeId: seqRun.previewShapes[0]?.shapeId ?? 'handstand',
+                shapeName: seqRun.nickname,
+                kind: 'clip',
+                createdAt: new Date().toISOString(),
+                holdSeconds: delay.capturedSec(),
+              },
+              blob,
+            )
+          } catch {
+            /* still keep the in-memory clip for Photos / Files */
+          }
         }
       }
 
@@ -451,6 +488,20 @@ export function Tasks2Panel({
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
+      }
+      if (blob && blob.size > 800) {
+        const filename = videoFileName(built, blob.type)
+        setDeviceSave({ blob, filename, label: 'this run' })
+        if (!prefersShareSave()) {
+          void saveVideoToDevice(blob, filename).then((result) => {
+            if (result !== 'failed') {
+              setFlash(saveResultMessage(result))
+              window.setTimeout(() => setFlash(null), 4000)
+            }
+          })
+        }
+      } else {
+        setDeviceSave(null)
       }
       setReport(built)
       setSnaps(collected)
@@ -529,30 +580,35 @@ export function Tasks2Panel({
         const a = raw[i]!
         const highlighted = i === longestIdx
         let clipId: string | null = null
-        if (athleteId && a.clipBlob && a.clipBlob.size > 800) {
+        if (a.clipBlob && a.clipBlob.size > 800) {
           clipId = createId('clip')
-          try {
-            await saveCapture(
-              {
-                id: clipId,
-                athleteId,
-                taskId: seqRun.id,
-                shapeId: 'handstand',
-                shapeName: highlighted ? 'Longest handstand' : `Handstand hold ${i + 1}`,
-                kind: 'clip',
-                createdAt: new Date().toISOString(),
-                holdSeconds: a.holdSeconds,
-              },
-              a.clipBlob,
-            )
-            const url = URL.createObjectURL(a.clipBlob)
-            clipUrlsRef.current.set(clipId, url)
-          } catch {
-            clipId = null
-          }
-        } else if (a.clipBlob && a.clipBlob.size > 800) {
-          clipId = createId('clip')
+          rememberCaptureBlob(clipId, a.clipBlob)
           clipUrlsRef.current.set(clipId, URL.createObjectURL(a.clipBlob))
+          if (a.poseTrack.length) {
+            rememberPoseTrack(clipId, a.poseTrack)
+            void savePoseTrackJson(clipId, serializePoseTrack(a.poseTrack)).catch(() => {
+              /* pose track is still in memory for this session */
+            })
+          }
+          if (athleteId) {
+            try {
+              await saveCapture(
+                {
+                  id: clipId,
+                  athleteId,
+                  taskId: seqRun.id,
+                  shapeId: 'handstand',
+                  shapeName: highlighted ? 'Longest handstand' : `Handstand hold ${i + 1}`,
+                  kind: 'clip',
+                  createdAt: new Date().toISOString(),
+                  holdSeconds: a.holdSeconds,
+                },
+                a.clipBlob,
+              )
+            } catch {
+              /* phone storage full — clip still plays and can save to Photos */
+            }
+          }
         }
 
         const live = a.livePeak
@@ -584,6 +640,7 @@ export function Tasks2Panel({
           clipId,
           snapshotId: stillView?.captureId ?? null,
           playheadSec: a.playheadSec,
+          clockOffsetSec: a.clockOffsetSec,
           highlighted,
         })
       }
@@ -598,6 +655,11 @@ export function Tasks2Panel({
       setReplayUrl(replayUrl)
       setActiveClipId(replayCaptureId)
       setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
+      try {
+        window.history.pushState({ shapeLab: 'hold-replay' }, '')
+      } catch {
+        /* ignore */
+      }
 
       const steps: FlowStepSnap[] = collected.map((s) => ({
         shapeId: s.shapeId,
@@ -630,13 +692,14 @@ export function Tasks2Panel({
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
       }
+      setDeviceSave(null)
       setReport(built)
       setSnaps(collected)
       snapsRef.current = collected
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Live score, stopwatch, and joint angles are on the video. Snapshots jump the playhead — they are not grades.`,
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Switch Side view or Front overlay, then Save the video file to Photos / Files. Snapshots jump the playhead — they are not grades.`,
       )
     },
     [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
@@ -732,7 +795,7 @@ export function Tasks2Panel({
           doneRequested: () => holdDoneRef.current || !alive(),
           landmarks: () => landmarksRef.current,
           score: () => scoreRef.current,
-          stream: () => overlayStreamRef.current ?? streamRef.current,
+          stream: () => streamRef.current ?? overlayStreamRef.current,
           canvas: () => canvasRef.current,
           onTick: (tick) => {
             setHoldTick(tick)
@@ -975,12 +1038,19 @@ export function Tasks2Panel({
       for (const h of r.holdAttempts) {
         if (!h.clipId) continue
         const b = await getCaptureBlob(h.clipId)
-        if (b) clipUrlsRef.current.set(h.clipId, URL.createObjectURL(b))
+        if (b) {
+          rememberCaptureBlob(h.clipId, b)
+          clipUrlsRef.current.set(h.clipId, URL.createObjectURL(b))
+          const json = await getPoseTrackJson(h.clipId)
+          const track = json ? parsePoseTrack(json) : null
+          if (track) rememberPoseTrack(h.clipId, track)
+        }
       }
     }
     const mainId = r.replayCaptureId
     if (!mainId && clipUrlsRef.current.size === 0) return
     const blob = mainId ? await getCaptureBlob(mainId) : null
+    if (mainId && blob) rememberCaptureBlob(mainId, blob)
     if (mainId && blob && !clipUrlsRef.current.has(mainId)) {
       clipUrlsRef.current.set(mainId, URL.createObjectURL(blob))
     }
@@ -1013,12 +1083,23 @@ export function Tasks2Panel({
     setPhase('replay')
   }
 
+  const ensureClipUrl = useCallback((clipId: string): string | null => {
+    const existing = clipUrlsRef.current.get(clipId)
+    if (existing) return existing
+    const blob = getRememberedBlob(clipId)
+    if (!blob) return null
+    const url = URL.createObjectURL(blob)
+    clipUrlsRef.current.set(clipId, url)
+    setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
+    return url
+  }, [])
+
   const playHoldClip = (clipId: string | null | undefined, atSec?: number) => {
     if (!clipId) {
       if (atSec != null) setSeekTo(atSec)
       return
     }
-    const url = clipUrlsRef.current.get(clipId)
+    const url = ensureClipUrl(clipId)
     if (!url) {
       if (atSec != null) setSeekTo(atSec)
       return
@@ -1029,6 +1110,44 @@ export function Tasks2Panel({
     setSeekTo(atSec ?? 0)
     setPhase('replay')
   }
+
+  const saveDeviceOffer = async () => {
+    if (!deviceSave) return
+    const result = await saveVideoToDevice(deviceSave.blob, deviceSave.filename)
+    setFlash(saveResultMessage(result))
+    window.setTimeout(() => setFlash(null), 5000)
+  }
+
+  useEffect(() => {
+    if (phase !== 'replay' && phase !== 'review') return
+    if (!report?.holdAttempts?.length) return
+    let changed = false
+    for (const h of report.holdAttempts) {
+      if (!h.clipId || clipUrlsRef.current.has(h.clipId)) continue
+      const remembered = getRememberedBlob(h.clipId)
+      if (!remembered) continue
+      clipUrlsRef.current.set(h.clipId, URL.createObjectURL(remembered))
+      changed = true
+    }
+    if (changed) setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
+  }, [phase, report])
+
+  useEffect(() => {
+    if (phase !== 'replay' && phase !== 'review') return
+    const onPop = () => {
+      if (phase === 'replay') {
+        setPhase('review')
+        setCue('')
+        try {
+          window.history.pushState({ shapeLab: 'hold-review' }, '')
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [phase])
 
   useEffect(() => {
     if (seekTo == null) return
@@ -1315,6 +1434,25 @@ export function Tasks2Panel({
                 : `Your run · ${seq.nickname} — scrub the delay-cam replay`}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
+              {deviceSave && !holdMode && (
+                <button
+                  type="button"
+                  onClick={() => void saveDeviceOffer()}
+                  className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                >
+                  Save {deviceSave.label} to Photos / Files
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setPhase('review')
+                  setCue('')
+                }}
+                className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
+              >
+                Back to analysis
+              </button>
               <button
                 type="button"
                 onClick={() => void startSequence(seq)}
@@ -1348,7 +1486,34 @@ export function Tasks2Panel({
               </button>
             </div>
           </div>
-          {replayUrl ? (
+          {holdMode && replayUrl && report ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-black px-3 pb-3">
+              <HoldReplayPlayer
+                src={replayUrl}
+                blob={activeClipId ? getRememberedBlob(activeClipId) : null}
+                track={activeClipId ? getRememberedPoseTrack(activeClipId) : null}
+                holdSeconds={
+                  report.holdAttempts?.find((h) => h.clipId === activeClipId)?.holdSeconds ??
+                  report.bestHoldSeconds ??
+                  0
+                }
+                clockOffsetSec={
+                  report.holdAttempts?.find((h) => h.clipId === activeClipId)?.clockOffsetSec ?? 0
+                }
+                playheadSec={
+                  report.holdAttempts?.find((h) => h.clipId === activeClipId)?.playheadSec
+                }
+                mirror={mirror}
+                clipId={activeClipId}
+                encodeOnReady
+                filename={videoFileName(
+                  report,
+                  (activeClipId && getRememberedBlob(activeClipId)?.type) || 'video/mp4',
+                  report.holdAttempts?.find((h) => h.clipId === activeClipId)?.index,
+                )}
+              />
+            </div>
+          ) : replayUrl ? (
             <video
               ref={replayVideoRef}
               src={replayUrl}
@@ -1458,13 +1623,26 @@ export function Tasks2Panel({
                         {formatSeconds(h.holdSeconds)}
                       </p>
                     </div>
-                    {clipUrl ? (
-                      <video
-                        src={clipUrl}
-                        className={`mt-2 w-full bg-black object-contain ${h.highlighted ? 'max-h-56' : 'max-h-36'}`}
-                        controls
-                        playsInline
-                      />
+                    {h.clipId && (clipUrl || getRememberedBlob(h.clipId)) ? (
+                      <div className="mt-2 px-2">
+                        <HoldReplayPlayer
+                          src={clipUrl || ''}
+                          blob={getRememberedBlob(h.clipId)}
+                          track={getRememberedPoseTrack(h.clipId)}
+                          holdSeconds={h.holdSeconds}
+                          clockOffsetSec={h.clockOffsetSec ?? 0}
+                          playheadSec={h.playheadSec}
+                          mirror={mirror}
+                          clipId={h.clipId}
+                          compact={!h.highlighted}
+                          encodeOnReady={h.highlighted}
+                          filename={videoFileName(
+                            report,
+                            getRememberedBlob(h.clipId)?.type || 'video/mp4',
+                            h.index,
+                          )}
+                        />
+                      </div>
                     ) : still?.url ? (
                       <button
                         type="button"
@@ -1485,16 +1663,7 @@ export function Tasks2Panel({
                           onClick={() => playHoldClip(h.clipId, h.playheadSec)}
                           className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
                         >
-                          Watch
-                        </button>
-                      )}
-                      {h.clipId && (
-                        <button
-                          type="button"
-                          onClick={() => void downloadHoldVideo(report, h.clipId!, h.index)}
-                          className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
-                        >
-                          {h.highlighted ? 'Save longest video' : 'Save this video'}
+                          Watch fullscreen
                         </button>
                       )}
                     </div>
@@ -1615,13 +1784,40 @@ export function Tasks2Panel({
             {replayUrl && (
               <button
                 type="button"
-                onClick={() => setPhase('replay')}
+                onClick={() => {
+                  if (activeClipId) {
+                    const url = ensureClipUrl(activeClipId)
+                    if (url) {
+                      setReplayUrl(url)
+                      replayUrlRef.current = url
+                    }
+                  }
+                  setPhase('replay')
+                }}
                 className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
               >
                 Watch replay again
               </button>
             )}
           </div>
+          {deviceSave && (
+            <div className="mt-3 rounded-lg border border-[var(--accent)]/50 bg-[#102820] p-3">
+              <p className="text-sm font-semibold text-[var(--text)]">
+                Save {deviceSave.label} to Photos or Files
+              </p>
+              <p className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
+                On iPhone this opens the share sheet — tap Save Video for Photos, or Save to Files.
+                Android uses the same share sheet.
+              </p>
+              <button
+                type="button"
+                onClick={() => void saveDeviceOffer()}
+                className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              >
+                Save video to Photos / Files
+              </button>
+            </div>
+          )}
           <div className="mt-3">
             <FlowShareActions
               report={report}

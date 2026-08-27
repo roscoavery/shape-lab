@@ -287,6 +287,8 @@ export type FlowHoldAttempt = {
   snapshotId: string | null
   playheadSec?: number
   highlighted?: boolean
+  /** Seconds into the clip when the hold clock started. */
+  clockOffsetSec?: number
 }
 
 /** Written review of one Tasks 2 sequence. */

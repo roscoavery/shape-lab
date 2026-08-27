@@ -4,6 +4,7 @@ import {
   shareToInstagramStory,
   storyCaption,
 } from '../lib/flowShare'
+import { saveResultMessage } from '../lib/saveMedia'
 import { markFlowSharedWithCoach } from '../lib/storage'
 import type { Athlete, FlowRunReport } from '../types'
 
@@ -24,11 +25,11 @@ export function FlowShareActions({ report, athlete, onUpdated, compact }: Props)
 
   const download = async () => {
     const result = await downloadFlowPack(report, athlete)
-    note(
-      result.video
-        ? 'Downloaded video + analysis.'
-        : 'Downloaded analysis. No video on this run (keep the camera on next time).',
-    )
+    if (result.video === 'failed') {
+      note('Downloaded analysis. No video on this run (keep the camera on next time).')
+      return
+    }
+    note(saveResultMessage(result.video, 'pack'))
   }
 
   const shareStory = async () => {
@@ -57,7 +58,7 @@ export function FlowShareActions({ report, athlete, onUpdated, compact }: Props)
     <div>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => void download()} className={btn}>
-          Download video + analysis
+          Save video to Photos / Files
         </button>
         <button type="button" onClick={() => void shareStory()} className={btn}>
           Share to Instagram Story
@@ -68,8 +69,8 @@ export function FlowShareActions({ report, athlete, onUpdated, compact }: Props)
       </div>
       {!compact && (
         <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
-          Instagram does not let a website auto-post your Story. We save the clip, copy this
-          caption, and open Instagram so you can drop it on your Story. Caption:{' '}
+          Instagram does not let a website auto-post your Story. On a phone, Save opens the share
+          sheet so you can put the clip in Photos or Files. Caption:{' '}
           <span className="text-[var(--text)]">{storyCaption(report, athlete).split('\n')[0]}</span>
         </p>
       )}

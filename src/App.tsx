@@ -479,6 +479,7 @@ export default function App() {
               onExitFullscreen={() => setCamFullscreen(false)}
               cameraFullscreen={camFullscreen}
               landmarks={activeLandmarks}
+              mirror={settings.mirrorVideo}
               onHoldClock={(seconds) => {
                 holdSecondsRef.current = seconds
                 setHoldClock((prev) => {

@@ -7,6 +7,8 @@
 import type { Landmark, ScoreResult } from '../types'
 import { snapshotCanvas } from './captureStore'
 import { LM } from './landmarks'
+import { cloneLandmarks, type PoseTrack } from './poseTrack'
+import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
 import { handstandPeakScore } from './scoring'
 
 export function formatSeconds(s: number): string {
@@ -29,6 +31,8 @@ export type RawHoldAttempt = {
   snapshotBlob: Blob | null
   clipBlob: Blob | null
   playheadSec: number
+  clockOffsetSec: number
+  poseTrack: PoseTrack
 }
 
 export type HoldTick = {
@@ -106,41 +110,41 @@ export function footOnGround(lm: Landmark[] | null | undefined): boolean {
   return pts.some((p) => p.y > 0.62)
 }
 
-const MIME_CANDIDATES = [
-  'video/webm;codecs=vp8',
-  'video/webm;codecs=vp9',
-  'video/webm',
-  'video/mp4',
-]
-
-export function pickRecorderMime(): string | undefined {
-  if (typeof MediaRecorder === 'undefined') return undefined
-  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t))
-}
-
 export function startClipRecorder(stream: MediaStream): {
   startedAt: number
   stop: () => Promise<Blob>
 } {
-  const mime = pickRecorderMime()
-  const rec = mime
-    ? new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 1_200_000 })
-    : new MediaRecorder(stream)
+  const owned: MediaStreamTrack[] = []
+  const clones = stream.getVideoTracks().map((t) => {
+    try {
+      const c = t.clone()
+      owned.push(c)
+      return c
+    } catch {
+      return t
+    }
+  })
+  const recStream = new MediaStream(clones)
+  hintMotion(recStream)
+  const rec = createRecorder(recStream)
   const chunks: Blob[] = []
   rec.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) chunks.push(e.data)
   }
-  try {
-    rec.start(250)
-  } catch {
-    rec.start()
-  }
+  startRecorder(rec, 400)
   return {
     startedAt: performance.now(),
     stop: () =>
       new Promise((resolve) => {
         const finish = () => {
-          const type = rec.mimeType || mime || 'video/webm'
+          owned.forEach((t) => {
+            try {
+              t.stop()
+            } catch {
+              /* already stopped */
+            }
+          })
+          const type = rec.mimeType || 'video/mp4'
           resolve(new Blob(chunks, { type }))
         }
         rec.addEventListener('stop', finish, { once: true })
@@ -184,10 +188,20 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     let enterFrames = 0
     let recorder: ReturnType<typeof startClipRecorder> | null = null
     let recStart = 0
+    const poseTrack: PoseTrack = []
+
+    const samplePose = (lm: Landmark[] | null) => {
+      if (!recorder || !lm || lm.length < 33) return
+      const t = (performance.now() - recStart) / 1000
+      const last = poseTrack[poseTrack.length - 1]
+      if (last && t - last.t < 0.04) return
+      poseTrack.push({ t, lm: cloneLandmarks(lm) })
+    }
 
     while (!opts.cancelled() && !opts.doneRequested()) {
       const lm = opts.landmarks()
       const inverted = poseInverted(lm)
+      samplePose(lm)
       if (inverted) {
         enterFrames += 1
         if (!recorder) {
@@ -235,6 +249,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       const now = performance.now()
       holdSeconds = (now - holdStart) / 1000
       const lm = opts.landmarks()
+      samplePose(lm)
       const down = footOnGround(lm)
       if (down) exitFrames += 1
       else exitFrames = 0
@@ -274,7 +289,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     if (recorder) {
       try {
         const blob = await recorder.stop()
-        if (blob.size > 800) clipBlob = blob
+        if (blob.size > 800) clipBlob = await durableBlob(blob)
       } catch {
         clipBlob = null
       }
@@ -282,6 +297,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
 
     if (holdSeconds >= MIN_HOLD_SEC) {
       const playheadSec = Math.max(0, (peakAt - recStart) / 1000)
+      const clockOffsetSec = Math.max(0, (holdStart - recStart) / 1000)
       last = holdSeconds
       best = best == null ? holdSeconds : Math.max(best, holdSeconds)
       attempts.push({
@@ -290,6 +306,8 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         snapshotBlob: peakBlob,
         clipBlob,
         playheadSec,
+        clockOffsetSec,
+        poseTrack,
       })
       tick({ seconds: holdSeconds, running: false, inverted: false })
     }

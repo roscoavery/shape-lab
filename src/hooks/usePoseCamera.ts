@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getPoseLandmarker, resultToLandmarks } from '../lib/pose'
+import { hintMotion } from '../lib/saveMedia'
 import type { Landmark } from '../types'
 
 export type PoseCameraState = {
@@ -94,12 +95,14 @@ export function usePoseCamera(): PoseCameraState {
         audio: false,
         video: {
           facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
         },
       })
       streamRef.current = stream
       setStream(stream)
+      hintMotion(stream)
       const video = videoRef.current
       if (!video) throw new Error('Video element missing')
       video.srcObject = stream

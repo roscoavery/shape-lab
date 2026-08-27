@@ -7,6 +7,14 @@
  */
 
 import { getCaptureBlob } from './captureStore'
+import {
+  extForVideoType,
+  getRememberedBlob,
+  isAppleMobile,
+  rememberCaptureBlob,
+  saveVideoToDevice,
+  type SaveVideoResult,
+} from './saveMedia'
 import type { Athlete, FlowRunReport } from '../types'
 
 export function normalizeInstagramHandle(raw: string | undefined | null): string {
@@ -141,12 +149,12 @@ export function analysisFileName(report: FlowRunReport): string {
 
 export function videoFileName(report: FlowRunReport, type: string, holdIndex?: number): string {
   const nick = report.nickname.replace(/\s+/g, '_')
-  const ext = type.includes('mp4') ? 'mp4' : 'webm'
+  const ext = extForVideoType(type)
   const hold = holdIndex != null ? `_hold${holdIndex}` : ''
   return `shape-lab_${nick}_${stamp(report.createdAt)}${hold}.${ext}`
 }
 
-export function downloadBlob(blob: Blob, filename: string) {
+function triggerAnchorDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -158,34 +166,42 @@ export function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
+export function downloadBlob(blob: Blob, filename: string) {
+  triggerAnchorDownload(blob, filename)
+}
+
+async function blobForCapture(id: string): Promise<Blob | null> {
+  return getRememberedBlob(id) ?? (await getCaptureBlob(id))
+}
+
 export function downloadAnalysis(report: FlowRunReport, athlete?: Athlete | null) {
   const text = analysisText(report, athlete)
   downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), analysisFileName(report))
 }
 
-export async function downloadFlowVideo(report: FlowRunReport): Promise<boolean> {
-  if (!report.replayCaptureId) return false
-  const blob = await getCaptureBlob(report.replayCaptureId)
-  if (!blob) return false
-  downloadBlob(blob, videoFileName(report, blob.type))
-  return true
+export async function downloadFlowVideo(report: FlowRunReport): Promise<SaveVideoResult> {
+  if (!report.replayCaptureId) return 'failed'
+  const blob = await blobForCapture(report.replayCaptureId)
+  if (!blob) return 'failed'
+  rememberCaptureBlob(report.replayCaptureId, blob)
+  return saveVideoToDevice(blob, videoFileName(report, blob.type))
 }
 
 export async function downloadHoldVideo(
   report: FlowRunReport,
   clipId: string,
   holdIndex: number,
-): Promise<boolean> {
-  const blob = await getCaptureBlob(clipId)
-  if (!blob) return false
-  downloadBlob(blob, videoFileName(report, blob.type, holdIndex))
-  return true
+): Promise<SaveVideoResult> {
+  const blob = await blobForCapture(clipId)
+  if (!blob) return 'failed'
+  rememberCaptureBlob(clipId, blob)
+  return saveVideoToDevice(blob, videoFileName(report, blob.type, holdIndex))
 }
 
 export async function downloadFlowPack(
   report: FlowRunReport,
   athlete?: Athlete | null,
-): Promise<{ video: boolean; analysis: boolean }> {
+): Promise<{ video: SaveVideoResult; analysis: boolean }> {
   downloadAnalysis(report, athlete)
   const video = await downloadFlowVideo(report)
   return { video, analysis: true }
@@ -208,10 +224,11 @@ export async function shareToInstagramStory(
   await copyText(caption)
   let file: File | null = null
   if (report.replayCaptureId) {
-    const blob = await getCaptureBlob(report.replayCaptureId)
+    const blob = getRememberedBlob(report.replayCaptureId) ?? (await getCaptureBlob(report.replayCaptureId))
     if (blob) {
+      rememberCaptureBlob(report.replayCaptureId, blob)
       const name = videoFileName(report, blob.type)
-      file = new File([blob], name, { type: blob.type || 'video/webm' })
+      file = new File([blob], name, { type: blob.type || 'video/mp4' })
     }
   }
 
@@ -219,24 +236,32 @@ export async function shareToInstagramStory(
     canShare?: (data: ShareData) => boolean
   }
   if (file && typeof navigator.share === 'function') {
-    const data: ShareData = {
-      files: [file],
-      text: caption,
-      title: `${report.nickname} · Shape Lab`,
-    }
-    const can = typeof nav.canShare === 'function' ? nav.canShare(data) : true
-    if (can) {
+    const fileOnly: ShareData = { files: [file] }
+    const withCaption: ShareData = isAppleMobile()
+      ? fileOnly
+      : { files: [file], text: caption, title: `${report.nickname} · Shape Lab` }
+    const tryShare = async (data: ShareData) => {
+      const can = typeof nav.canShare === 'function' ? nav.canShare(data) : true
+      if (!can) return false
       try {
         await navigator.share(data)
-        return 'shared'
+        return true
       } catch (err) {
-        if ((err as DOMException)?.name === 'AbortError') return 'shared'
+        if ((err as DOMException)?.name === 'AbortError') return true
+        return false
       }
     }
+    if (await tryShare(withCaption)) return 'shared'
+    if (withCaption !== fileOnly && (await tryShare(fileOnly))) return 'shared'
   }
 
-  if (file) downloadBlob(file, file.name)
-  downloadAnalysis(report, athlete)
+  if (file) {
+    const saved = await saveVideoToDevice(file, file.name)
+    downloadAnalysis(report, athlete)
+    if (saved === 'failed') return 'failed'
+  } else {
+    downloadAnalysis(report, athlete)
+  }
 
   const story = 'instagram://story-camera'
   window.setTimeout(() => {

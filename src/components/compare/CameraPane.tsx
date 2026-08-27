@@ -22,6 +22,7 @@ import {
   type RecordedClip,
 } from '../../lib/clipStore'
 import { createId } from '../../lib/storage'
+import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
 
 type Mode = 'live' | 'delay' | 'replay'
@@ -32,10 +33,11 @@ const DELAY_MAX = 20
 const TRIM_MARGIN = 8
 
 const MIME_CANDIDATES = [
+  'video/mp4;codecs=avc1.42E01E',
+  'video/mp4',
   'video/webm;codecs=vp8',
   'video/webm;codecs=vp9',
   'video/webm',
-  'video/mp4',
 ]
 
 function pickRecorderMime(): string | null {
@@ -50,15 +52,6 @@ function pickDelayMime(): string | null {
       (t) => MediaRecorder.isTypeSupported(t) && MediaSource.isTypeSupported(t),
     ) ?? null
   )
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  window.setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
 export function CameraPane() {
@@ -501,10 +494,14 @@ export function CameraPane() {
       setError('Nothing to download — open a replay first.')
       return
     }
-    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
-    downloadBlob(blob, `shape-lab-replay-${delaySec}s.${ext}`)
-    setFlash('Downloading to this device…')
-    setTimeout(() => setFlash(null), 2000)
+    const ext = extForVideoType(blob.type)
+    void saveVideoToDevice(blob, `shape-lab-replay-${delaySec}s.${ext}`).then((result) => {
+      if (result === 'failed') setError('Could not save that clip to this device.')
+      else {
+        setFlash(saveResultMessage(result))
+        setTimeout(() => setFlash(null), 4000)
+      }
+    })
   }
 
   const removeClip = async (id: string) => {
@@ -685,7 +682,7 @@ export function CameraPane() {
                 Save in app
               </button>
               <button type="button" onClick={downloadReplay} className={btnCls}>
-                Save to device
+                Save to Photos / Files
               </button>
               <span className="text-xs text-[var(--muted)]">
                 Pause, play, and scrub. Saving keeps it in Recorded attempts below.

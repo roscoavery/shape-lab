@@ -125,10 +125,33 @@ export async function deleteCapture(id: string): Promise<void> {
   const tx = db.transaction([META, BLOBS], 'readwrite')
   tx.objectStore(META).delete(id)
   tx.objectStore(BLOBS).delete(id)
+  tx.objectStore(BLOBS).delete(`${id}::pose`)
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
+}
+
+export async function savePoseTrackJson(id: string, json: string): Promise<void> {
+  const db = await openDb()
+  const tx = db.transaction(BLOBS, 'readwrite')
+  await reqToPromise(
+    tx.objectStore(BLOBS).put(new Blob([json], { type: 'application/json' }), `${id}::pose`),
+  )
+}
+
+export async function getPoseTrackJson(id: string): Promise<string | null> {
+  const db = await openDb()
+  const tx = db.transaction(BLOBS, 'readonly')
+  const blob = await reqToPromise(
+    tx.objectStore(BLOBS).get(`${id}::pose`) as IDBRequest<Blob | undefined>,
+  )
+  if (!blob) return null
+  try {
+    return await blob.text()
+  } catch {
+    return null
+  }
 }
 
 async function pruneAthlete(athleteId: string): Promise<void> {
