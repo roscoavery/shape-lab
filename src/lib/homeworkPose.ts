@@ -143,7 +143,7 @@ export function homeworkLooksReady(
   if (shapeId === 'long_bridge') {
     return poseLooksLongBridge(lm) || overall >= 32
   }
-  if (shapeId === 'seated_pike') {
+  if (shapeId === 'seated_pike' || shapeId === 'pike_open_shoulders') {
     return poseLooksSeatedPike(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand') {

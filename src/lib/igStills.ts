@@ -5,7 +5,7 @@
 
 import { getShape } from '../config/shapes'
 import { learnLibraryShapes } from './educationCopy'
-import { isUsablePhotoSrc, pickCoachStill } from './shippedRefs'
+import { isUsablePhotoSrc, makeShippedPhotos, pickCoachStill } from './shippedRefs'
 import type { ReferencePhoto } from '../types'
 
 export function isIgStill(photo: ReferencePhoto): boolean {
@@ -60,17 +60,20 @@ export type OverlayStillOption = {
 export function listCoachOverlayStills(photos: ReferencePhoto[]): OverlayStillOption[] {
   const out: OverlayStillOption[] = []
   for (const s of learnLibraryShapes()) {
-    const coach = pickCoachStill(photos, s.id)
-    const src = coach?.dataUrl
-    if (!src || !isUsablePhotoSrc(src)) continue
-    out.push({
-      id: `coach:${s.id}`,
-      shapeId: s.id,
-      name: s.name,
-      src,
-      library: 'coach',
-      label: coach.label ?? 'Coach still',
-    })
+    const shipped = makeShippedPhotos(s.id)
+    const stills = shipped.length > 0 ? shipped : [pickCoachStill(photos, s.id)].filter(Boolean)
+    for (const coach of stills) {
+      const src = coach?.dataUrl
+      if (!src || !isUsablePhotoSrc(src)) continue
+      out.push({
+        id: `coach:${s.id}:${coach!.id}`,
+        shapeId: s.id,
+        name: s.name,
+        src,
+        library: 'coach',
+        label: coach!.label ?? 'Coach still',
+      })
+    }
   }
   return out
 }

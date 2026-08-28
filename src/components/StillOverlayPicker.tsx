@@ -132,7 +132,9 @@ export function StillOverlayPicker({ photos, compact = false, onVideo = false }:
                   onVideo ? 'bg-black/50 text-white' : 'text-[var(--text)]'
                 }`}
               >
-                {still.name}
+                {still.label && still.label !== 'Coach still' && still.label !== 'Coach reference'
+                  ? `${still.name} · ${still.label}`
+                  : still.name}
               </span>
             </button>
           )

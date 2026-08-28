@@ -7,7 +7,7 @@
 import type { ReferencePhoto } from '../types'
 
 /** Filename under src/assets/references/ (and public/references/ as fallback). */
-export const SHIPPED_FILES: Record<string, string> = {
+export const SHIPPED_FILES: Record<string, string | string[]> = {
   stand_clean: 'stand_clean.jpg',
   feet_together_open_shoulders: 'feet_together_open_shoulders.jpg',
   passe: 'passe.jpg',
@@ -25,10 +25,23 @@ export const SHIPPED_FILES: Record<string, string> = {
   hollow_arms_up: 'hollow_arms_up.jpg',
   zombie: 'zombie.jpg',
   seated_pike: 'pike_zombie_arms.jpg',
+  pike_open_shoulders: ['pike_open_shoulders.jpg', 'pike_open_shoulders_class.jpg'],
   mountain_climber: 'mountain_climber.jpg',
   superman: 'superman.jpg',
   rainbow_bridge: 'rainbow_bridge.jpg',
   long_bridge: 'long_bridge.jpg',
+}
+
+/** Caption on a second (or later) shipped still for the same shape. */
+const SHIPPED_STILL_LABELS: Record<string, string> = {
+  'pike_open_shoulders.jpg': 'Close-up',
+  'pike_open_shoulders_class.jpg': 'Class',
+}
+
+export function shippedFileList(shapeId: string): string[] {
+  const v = SHIPPED_FILES[shapeId]
+  if (!v) return []
+  return Array.isArray(v) ? v : [v]
 }
 
 export const SHIPPED_REFERENCE_IDS = new Set(Object.keys(SHIPPED_FILES))
@@ -39,18 +52,19 @@ const bundledStills = import.meta.glob('../assets/references/*.{jpg,jpeg,png}', 
   import: 'default',
 }) as Record<string, string>
 
-function bundledUrl(shapeId: string): string | null {
-  const file = SHIPPED_FILES[shapeId]
-  if (!file) return null
+function bundledUrlForFile(file: string): string | null {
   for (const [path, url] of Object.entries(bundledStills)) {
     if (path.endsWith(`/${file}`)) return url
   }
   return null
 }
 
-/** Root-absolute public/ paths (legacy + extra fallback). */
+/** Root-absolute public/ paths (legacy + extra fallback). First still if several. */
 export const DEFAULT_REFERENCE_PATHS: Record<string, string> = Object.fromEntries(
-  Object.entries(SHIPPED_FILES).map(([id, file]) => [id, `/references/${file}`]),
+  Object.entries(SHIPPED_FILES).map(([id, file]) => {
+    const first = Array.isArray(file) ? file[0] : file
+    return [id, `/references/${first}`]
+  }),
 )
 
 export function isUsablePhotoSrc(src: string | null | undefined): boolean {
@@ -71,16 +85,14 @@ function viteBasePrefix(): string {
   return base.endsWith('/') ? base : `${base}/`
 }
 
-/** Every URL we should try for a shipped still, first = bundled asset. */
-export function shippedStillCandidates(shapeId: string): string[] {
-  const file = SHIPPED_FILES[shapeId]
-  if (!file) return []
+/** Every URL we should try for one shipped file, first = bundled asset. */
+export function shippedFileCandidates(file: string): string[] {
   const rel = `references/${file}`
   const out: string[] = []
   const add = (u: string | null | undefined) => {
     if (u && !out.includes(u)) out.push(u)
   }
-  add(bundledUrl(shapeId))
+  add(bundledUrlForFile(file))
   add(`${viteBasePrefix()}${rel}`)
   add(`/${rel}`)
   add(rel)
@@ -94,21 +106,42 @@ export function shippedStillCandidates(shapeId: string): string[] {
   return out
 }
 
+/** Every URL we should try for a shipped still, first = bundled asset. */
+export function shippedStillCandidates(shapeId: string): string[] {
+  const out: string[] = []
+  for (const file of shippedFileList(shapeId)) {
+    for (const u of shippedFileCandidates(file)) {
+      if (!out.includes(u)) out.push(u)
+    }
+  }
+  return out
+}
+
 export function shippedStillUrl(shapeId: string): string | null {
   return shippedStillCandidates(shapeId)[0] ?? null
 }
 
 export function makeShippedPhoto(shapeId: string): ReferencePhoto | null {
-  const url = shippedStillUrl(shapeId)
-  if (!url) return null
-  return {
-    id: `default_${shapeId}`,
-    shapeId,
-    athleteId: null,
-    dataUrl: url,
-    label: 'Coach reference',
-    createdAt: '',
-  }
+  return makeShippedPhotos(shapeId)[0] ?? null
+}
+
+/** All coach stills that ship for this shape (one or more). */
+export function makeShippedPhotos(shapeId: string): ReferencePhoto[] {
+  const files = shippedFileList(shapeId)
+  const out: ReferencePhoto[] = []
+  files.forEach((file, i) => {
+    const url = shippedFileCandidates(file)[0]
+    if (!url) return
+    out.push({
+      id: `default_${shapeId}_${i}`,
+      shapeId,
+      athleteId: null,
+      dataUrl: url,
+      label: SHIPPED_STILL_LABELS[file] ?? (i === 0 ? 'Coach reference' : `Coach reference ${i + 1}`),
+      createdAt: '',
+    })
+  })
+  return out
 }
 
 /**

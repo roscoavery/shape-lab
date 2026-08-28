@@ -16,7 +16,7 @@ import {
   otherSamePositionIds,
   visibleCriteria,
 } from '../lib/educationCopy'
-import { ReferenceStill } from './ReferenceStill'
+import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
 import { listCaptures, type TaskCapture } from '../lib/captureStore'
 import type { ReferencePhoto, ShapeDef } from '../types'
 import { ViewCallout } from './ViewCallout'
@@ -630,15 +630,13 @@ function ShapeDetail({
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
           Coach still
         </h4>
-        <div className="max-h-80 overflow-hidden rounded-md bg-[#0d1218]">
-          <ReferenceStill
-            shapeId={shape.id}
-            photos={referencePhotos}
-            alt={`${shape.name} reference`}
-            className="max-h-80 w-full object-contain"
-            emptyLabel="No coach still for this shape yet"
-          />
-        </div>
+        <CoachStillGallery
+          shapeId={shape.id}
+          photos={referencePhotos}
+          alt={`${shape.name} reference`}
+          emptyLabel="No coach still for this shape yet"
+          imgClass="max-h-80 w-full object-contain"
+        />
       </div>
 
       {igForShape.length > 0 && (

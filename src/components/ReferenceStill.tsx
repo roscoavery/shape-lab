@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   isUsablePhotoSrc,
+  makeShippedPhotos,
   pickCoachStill,
   shippedStillCandidates,
 } from '../lib/shippedRefs'
@@ -36,9 +37,11 @@ export function ReferenceStill({
       if (u && isUsablePhotoSrc(u) && !list.includes(u)) list.push(u)
     }
     if (photo?.dataUrl) add(photo.dataUrl)
-    if (coach?.dataUrl?.startsWith('data:image')) add(coach.dataUrl)
-    for (const u of shippedStillCandidates(shapeId)) add(u)
-    if (coach?.dataUrl && !coach.dataUrl.startsWith('data:image')) add(coach.dataUrl)
+    if (!photo) {
+      if (coach?.dataUrl?.startsWith('data:image')) add(coach.dataUrl)
+      for (const u of shippedStillCandidates(shapeId)) add(u)
+      if (coach?.dataUrl && !coach.dataUrl.startsWith('data:image')) add(coach.dataUrl)
+    }
     return list
   }, [shapeId, coach?.dataUrl, photo?.dataUrl])
 
@@ -63,5 +66,64 @@ export function ReferenceStill({
       className={className}
       onError={() => setIndex((i) => i + 1)}
     />
+  )
+}
+
+/** One or more shipped coach stills for a shape (grid when there are several). */
+export function CoachStillGallery({
+  shapeId,
+  photos,
+  alt = '',
+  emptyLabel = 'No photo yet',
+  imgClass = 'max-h-80 w-full object-contain',
+}: {
+  shapeId: string
+  photos: ReferencePhoto[]
+  alt?: string
+  emptyLabel?: string
+  imgClass?: string
+}) {
+  const shipped = makeShippedPhotos(shapeId)
+  const one = pickCoachStill(photos, shapeId)
+  const stills = shipped.length > 0 ? shipped : one ? [one] : []
+  if (stills.length === 0) {
+    return (
+      <div className="flex min-h-16 items-center justify-center px-1 text-center text-[10px] leading-tight text-[var(--muted)]">
+        {emptyLabel}
+      </div>
+    )
+  }
+  if (stills.length === 1) {
+    return (
+      <ReferenceStill
+        shapeId={shapeId}
+        photos={photos}
+        photo={stills[0]}
+        alt={alt}
+        className={imgClass}
+        emptyLabel={emptyLabel}
+      />
+    )
+  }
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {stills.map((p) => (
+        <figure key={p.id} className="overflow-hidden rounded-md bg-[#0d1218]">
+          <ReferenceStill
+            shapeId={shapeId}
+            photos={photos}
+            photo={p}
+            alt={p.label ? `${alt} — ${p.label}` : alt}
+            className={imgClass}
+            emptyLabel={emptyLabel}
+          />
+          {p.label && (
+            <figcaption className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
+              {p.label}
+            </figcaption>
+          )}
+        </figure>
+      ))}
+    </div>
   )
 }

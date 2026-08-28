@@ -1203,6 +1203,124 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // PIKE (OPEN SHOULDERS) — seated pike, arms by the ears, reaching up.
+  // Two stills: close-up + class line. Not the zombie-arm pike.
+  // ===========================================================================
+  {
+    id: 'pike_open_shoulders',
+    name: 'Pike (open shoulders)',
+    description:
+      'Seated pike with open shoulders: legs together, knees straight, toes pointed, torso upright, arms reaching to the ceiling covering the ears. Used in pike–tuck–hollow–arch, rocking back to candlestick, and teaching arms behind the ears on a back tuck.',
+    bodyPosition:
+      'SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright — slightly rounded hollow, not arched. Arms straight up by the ears, shoulders open, fingers to the ceiling, palms facing each other. Head neutral, looking forward. This is not zombie arms (those reach forward).',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Sit tall in a pike. Legs glued, knees straight, toes pointed.',
+      'Arms up — cover the ears, shoulders open, reach to the ceiling.',
+      'Head neutral. Look forward, not up at the hands.',
+      'Not zombie arms. Those reach forward; these reach up.',
+    ],
+    coachNotes:
+      'We use the open-shoulder pike when training sequences like pike–tuck–hollow–arch. Athletes also start here and rock back to a candlestick for candle reps — that becomes a good prerequisite for hollow body rockers. The open-shoulder pike into a tuck is really good for teaching arms behind the ears while pulling for a back tuck. Two stills: a close-up of the line, and a class line of the same shape.',
+    criteria: [
+      {
+        id: 'torso_upright',
+        label: 'Torso upright',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 80,
+        targetMax: 115,
+        tolerance: 12,
+        falloff: 40,
+        weight: 18,
+        feedbackLow: 'Sit up — torso upright in the pike.',
+        feedbackHigh: 'Stay sitting in the pike — do not rock back yet.',
+      },
+      {
+        id: 'knees',
+        label: 'Knees straight',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 160,
+        targetMax: 180,
+        tolerance: 8,
+        weight: 14,
+        feedbackLow: 'Straight knees.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Legs together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.06,
+        falloff: 0.18,
+        weight: 8,
+        feedbackHigh: 'Legs glued together.',
+      },
+      {
+        id: 'toes',
+        label: 'Toes pointed',
+        kind: 'joint_angle',
+        points: [LM.LEFT_KNEE, LM.LEFT_ANKLE, LM.LEFT_FOOT_INDEX],
+        targetMin: 130,
+        targetMax: 180,
+        tolerance: 12,
+        falloff: 40,
+        weight: 6,
+        feedbackLow: 'Point the toes.',
+      },
+      {
+        id: 'open_shoulders',
+        label: 'Shoulders open / arms up',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 145,
+        targetMax: 180,
+        tolerance: 12,
+        weight: 22,
+        feedbackLow: 'Open the shoulders — arms up by the ears, not zombie arms.',
+      },
+      {
+        id: 'arms_vertical',
+        label: 'Arms to the ceiling',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        target: 0,
+        tolerance: 18,
+        falloff: 40,
+        weight: 12,
+        needsView: 'side',
+        feedbackHigh: 'Reach straight up — arms covering the ears.',
+      },
+      {
+        id: 'elbows',
+        label: 'Elbows straight',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 10,
+        feedbackLow: 'Straighten elbows.',
+      },
+      {
+        id: 'ears_covered',
+        label: 'Arms covering ears',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ELBOW, LM.LEFT_EAR],
+        target: 0,
+        tolerance: 0.12,
+        falloff: 0.22,
+        weight: 10,
+        feedbackHigh: 'Cover the ears — biceps by the head.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // HOLLOW (ARMS UP) — progression after a proper 1-minute arms-down hold
   // ===========================================================================
   {

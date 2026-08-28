@@ -86,13 +86,24 @@ export const SEQUENCES: SequenceDef[] = [
   },
   {
     id: 'pike_tuck_hollow_arch',
-    name: 'Pike → Tuck → Hollow → Arch',
-    description: 'Floor shape progression using tucked handstand as the tuck body cue.',
+    name: 'Pike (open shoulders) → Tuck → Hollow → Arch',
+    description:
+      'Open-shoulder pike into a tuck is how we teach arms behind the ears while pulling for a back tuck. Then hollow and arch. Repeat as a floor chain.',
     steps: [
-      { shapeId: 'seated_pike', holdSeconds: 1.5 },
+      { shapeId: 'pike_open_shoulders', holdSeconds: 1.5 },
       { shapeId: 'tucked_handstand', holdSeconds: 1.5 },
       { shapeId: 'hollow_arms_down', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
+    ],
+  },
+  {
+    id: 'pike_open_candlestick',
+    name: 'Pike (open shoulders) → Candlestick',
+    description:
+      'Start in an open-shoulder pike and rock back to a candlestick for candle reps. Good prerequisite for hollow body rockers.',
+    steps: [
+      { shapeId: 'pike_open_shoulders', holdSeconds: 2 },
+      { shapeId: 'candlestick', holdSeconds: 2 },
     ],
   },
 ]

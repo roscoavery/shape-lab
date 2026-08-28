@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
-import { ReferenceStill } from './ReferenceStill'
+import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
 import { StillOverlayPicker } from './StillOverlayPicker'
 import {
   DEFAULT_FORM_STANDARD,
@@ -472,6 +472,8 @@ export function HomeworkPanel({
           ? 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
           : addShapeId === 'seated_pike'
             ? 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Pinkies slightly up, thumbs slightly down. Snap-open drill: pike → hollow arms down → arch (supine).'
+            : addShapeId === 'pike_open_shoulders'
+              ? 'Arms up by the ears, shoulders open. Legs together, knees straight, toes pointed. Pike–tuck–hollow–arch; rock back to candlestick; pike–tuck for arms behind the ears on a back tuck.'
           : ''
     const notes = addNotes.trim() || defaultNotes
     const item: HomeworkItem = {
@@ -697,12 +699,12 @@ export function HomeworkPanel({
             />
           ) : (
             <div className="mb-2 overflow-hidden rounded-md border border-[var(--panel-border)] bg-[#0d1218]">
-              <ReferenceStill
+              <CoachStillGallery
                 shapeId={activeItem.shapeId}
                 photos={referencePhotos}
                 alt={activeShape.name}
-                className="max-h-48 w-full object-contain"
                 emptyLabel={`No coach still for ${activeShape.name} yet`}
+                imgClass="max-h-48 w-full object-contain"
               />
               {activeShape.bodyPosition && (
                 <p className="px-2 py-1.5 text-[11px] leading-snug text-[var(--text)]">
@@ -849,12 +851,12 @@ export function HomeworkPanel({
               </div>
 
               {!isHollowAuto && pickCoachStill(referencePhotos, item.shapeId) && (
-                <div className="mt-2 max-h-24 overflow-hidden rounded-md bg-[#0d1218]">
-                  <ReferenceStill
+                <div className="mt-2 overflow-hidden rounded-md bg-[#0d1218]">
+                  <CoachStillGallery
                     shapeId={item.shapeId}
                     photos={referencePhotos}
                     alt={shape?.name ?? item.shapeId}
-                    className="max-h-24 w-full object-contain"
+                    imgClass="max-h-24 w-full object-contain"
                   />
                 </div>
               )}
