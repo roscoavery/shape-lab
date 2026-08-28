@@ -70,7 +70,6 @@ function preferName(existing: string, incoming: string): string {
   const next = incoming.trim()
   if (!next) return existing
   if (isGenericIgName(existing) && !isGenericIgName(next)) return next
-  if (!isGenericIgName(next) && next !== existing) return next
   return existing
 }
 
@@ -273,15 +272,16 @@ export async function pullServerLibrary(): Promise<LibraryBackup | null> {
   }
 }
 
-export async function pushServerLibrary(collections: RefCollection[]): Promise<void> {
+export async function pushServerLibrary(collections: RefCollection[]): Promise<boolean> {
   try {
-    await fetch('/api/library', {
+    const res = await fetch('/api/library', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collectionsToBackup(collections)),
     })
+    return res.ok
   } catch {
-    // dev server down — IndexedDB + localStorage still hold a copy
+    return false
   }
 }
 
@@ -371,7 +371,9 @@ export async function syncLibraryWithServer(
     pulled += await mergeIn(seed)
     pulled += await mergeIn(roster)
     const collections = await getCollections()
-    await pushServerLibrary(collections)
+    // Only push when this browser added URLs the gym file did not have.
+    // Never auto-publish a stale tab's names over a newer saved library.
+    if (pulled > 0) await pushServerLibrary(collections)
     return { collections, pulled }
   }
 

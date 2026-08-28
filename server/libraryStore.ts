@@ -90,7 +90,39 @@ function coalesceByName(raw: unknown[]): unknown[] {
   return out
 }
 
-function cleanCollections(raw: unknown[]): unknown[] {
+type DiskItem = Record<string, unknown> & { url?: string; name?: string; id?: string }
+type DiskCollection = Record<string, unknown> & {
+  id?: string
+  name: string
+  items: DiskItem[]
+}
+
+function isGenericIgName(name: string): boolean {
+  return /^(IG|TikTok|Facebook)\s+\S+$/i.test(name.trim())
+}
+
+function preferItemName(existing: string, incoming: string): string {
+  const next = incoming.trim()
+  if (!next) return existing
+  if (isGenericIgName(existing) && !isGenericIgName(next)) return next
+  if (!isGenericIgName(next) && next !== existing) return next
+  return existing
+}
+
+function isLocalDevUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host === '127.0.0.1' || host === 'localhost'
+  } catch {
+    return false
+  }
+}
+
+function isPlaceholderIgUrl(url: string): boolean {
+  return /\/(ABC123xyz99|C8Qw0x0N0x0)\/?$/i.test(url)
+}
+
+function cleanCollections(raw: unknown[]): DiskCollection[] {
   return coalesceByName(raw)
     .filter((c) => {
       if (!c || typeof c !== 'object') return false
@@ -98,24 +130,86 @@ function cleanCollections(raw: unknown[]): unknown[] {
       return Array.isArray(items) && items.length > 0
     })
     .map((c) => {
-      const col = c as { items: Array<{ kind?: string; url?: string; keywords?: string[] }> }
+      const col = c as DiskCollection
+      const { athleteId: _athleteId, ...rest } = col
+      void _athleteId
       return {
-        ...col,
-        items: col.items.map((item) => {
-          const keywords = unionKeywords(item.keywords)
-          const next = { ...item, ...(keywords ? { keywords } : {}) }
-          if (!keywords) delete (next as { keywords?: string[] }).keywords
-          if (!item.url) return next
-          const platform = socialPlatform(item.url)
-          if (!platform) return next
-          return {
-            ...next,
-            kind: platform,
-            url: canonicalSocialUrl(item.url),
-          }
-        }),
+        ...rest,
+        items: col.items
+          .filter((item) => {
+            const url = typeof item.url === 'string' ? item.url : ''
+            if (!url) return false
+            if (isLocalDevUrl(url) || isPlaceholderIgUrl(url)) return false
+            return true
+          })
+          .map((item) => {
+            const keywords = unionKeywords(item.keywords)
+            const next = { ...item, ...(keywords ? { keywords } : {}) }
+            if (!keywords) delete (next as { keywords?: string[] }).keywords
+            if (!item.url) return next
+            const platform = socialPlatform(item.url)
+            if (!platform) return next
+            return {
+              ...next,
+              kind: platform,
+              url: canonicalSocialUrl(item.url),
+            }
+          }),
       }
     })
+    .filter((c) => c.items.length > 0)
+}
+
+/** Union gym libraries. Incoming names win; existing URLs are never dropped. */
+function unionCollections(existingRaw: unknown[], incomingRaw: unknown[]): DiskCollection[] {
+  const existing = cleanCollections(existingRaw)
+  const incoming = cleanCollections(incomingRaw)
+  if (incoming.length === 0) return existing
+  if (existing.length === 0) return incoming
+
+  const result: DiskCollection[] = existing.map((c) => ({
+    ...c,
+    items: c.items.map((i) => ({ ...i })),
+  }))
+
+  const findCollection = (inc: DiskCollection) =>
+    result.find((e) => e.id && inc.id && e.id === inc.id) ??
+    result.find(
+      (e) => e.name.trim().toLowerCase() === inc.name.trim().toLowerCase(),
+    )
+
+  for (const inc of incoming) {
+    let target = findCollection(inc)
+    if (!target) {
+      result.push({ ...inc, items: inc.items.map((i) => ({ ...i })) })
+      continue
+    }
+    if (inc.id && target.id === inc.id && inc.name.trim()) {
+      target.name = inc.name
+    } else if (inc.name.trim() && !isGenericIgName(inc.name)) {
+      target.name = inc.name
+    }
+    for (const item of inc.items) {
+      const url = typeof item.url === 'string' ? item.url : ''
+      const match = target.items.find((e) => {
+        if (e.id && item.id && e.id === item.id) return true
+        const eu = typeof e.url === 'string' ? e.url : ''
+        return Boolean(url && eu && itemUrlKey(eu) === itemUrlKey(url))
+      })
+      if (match) {
+        const existingName = typeof match.name === 'string' ? match.name : ''
+        const incomingName = typeof item.name === 'string' ? item.name : ''
+        match.name = preferItemName(existingName, incomingName)
+        const keywords = unionKeywords(match.keywords, item.keywords)
+        if (keywords) match.keywords = keywords
+        else delete match.keywords
+      } else {
+        target.items.push({ ...item })
+      }
+    }
+  }
+
+  return cleanCollections(result)
 }
 
 export function writeLibraryFile(data: unknown): DiskLibrary {
@@ -123,7 +217,9 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
   if (!parsed || parsed.kind !== 'shape-lab-library' || !Array.isArray(parsed.collections)) {
     throw new Error('Invalid library payload')
   }
-  const collections = cleanCollections(parsed.collections)
+  fs.mkdirSync(path.dirname(FILE), { recursive: true })
+  const existing = readLibraryFile()
+  const collections = unionCollections(existing.collections, parsed.collections)
   const next: DiskLibrary = {
     kind: 'shape-lab-library',
     version: 1,
@@ -131,8 +227,6 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
     managed: true,
     collections,
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  const existing = readLibraryFile()
   if (JSON.stringify(existing.collections) === JSON.stringify(next.collections)) {
     return existing
   }

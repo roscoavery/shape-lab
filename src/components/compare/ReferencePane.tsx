@@ -116,7 +116,9 @@ export function ReferencePane({ gymEditor = false }: Props) {
       persistLibraryMeta(list)
       if (gymEditor) {
         setSaveState('dirty')
-        void pushServerLibrary(list).then(() => setSaveState('saved'))
+        void pushServerLibrary(list).then((ok) => {
+          setSaveState(ok ? 'saved' : 'dirty')
+        })
       }
     },
     [gymEditor],
@@ -127,7 +129,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
     setSaveState('saving')
     setError(null)
     try {
-      await pushServerLibrary(collections)
+      const ok = await pushServerLibrary(collections)
+      if (!ok) throw new Error('library put failed')
       persistLibraryMeta(collections)
       setSaveState('saved')
       const n = collections.reduce((sum, c) => sum + c.items.filter((i) => i.url).length, 0)
@@ -148,7 +151,6 @@ export function ReferencePane({ gymEditor = false }: Props) {
         list = await restoreMetaIfIndexedDbEmpty(list)
         const synced = await syncLibraryWithServer(list, gymEditor)
         list = synced.collections
-        let createdEmpty = false
         if (list.length === 0) {
           const def: RefCollection = {
             id: createId('col'),
@@ -158,11 +160,9 @@ export function ReferencePane({ gymEditor = false }: Props) {
           }
           await putCollection(def)
           list = [def]
-          createdEmpty = true
         }
         if (cancelled) return
         setCollections(list)
-        if (!createdEmpty && gymEditor) persist(list)
         setActiveCollectionId((id) =>
           id && list.some((c) => c.id === id) ? id : list[0]!.id,
         )
