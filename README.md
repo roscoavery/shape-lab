@@ -148,7 +148,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 1. Paste public Instagram, TikTok, or Facebook video URL(s) into a Compare collection (e.g. "Back handspring refs"). Add **keywords** for the shape, then **Rename**, **search**, and **reorder** the list. That named URL list saves into the app. Hit **Save all in app** so the video files stay on this device. **Export library** if you also want a JSON backup.
 2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
-3. Athlete performs in front of the camera with **Delay cam** at 6–20s — they watch themselves hands-free. Tap **Replay last Ns** to pause, play, and scrub that same buffer, then **Save in app** or **Save to device**.
+3. On **either card** tap **Full screen with delay cam** / **Full screen with reference**, then **Left / right** or **Top / bottom**. That is only the looping clip plus delay cam or replay, with scrub on both. Athlete performs with **Delay cam** at 6–20s. Tap **Replay last Ns** to pause, play, and scrub that buffer, then **Save in app** or **Save to Photos**.
 
 ## First test: Handstand
 
