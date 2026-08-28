@@ -1,6 +1,6 @@
 /**
  * Coach markup on a Compare video: 3-dot connected arrows, freehand draw, two-tap arrows.
- * Line: tap, tap+line, tap+line; the next tap only clears; the tap after that starts over.
+ * Arrow: press, drag, let go — the arrowhead is where you release.
  */
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
@@ -90,6 +90,8 @@ export function VideoMarkOverlay({ videoRef }: Props) {
   const [drawPts, setDrawPts] = useState<Pt[] | null>(null)
   const drawingRef = useRef(false)
   const drawPtsRef = useRef<Pt[] | null>(null)
+  const arrowDragRef = useRef(false)
+  const arrowStartRef = useRef<Pt | null>(null)
   const toolRef = useRef(tool)
   toolRef.current = tool
 
@@ -186,18 +188,27 @@ export function VideoMarkOverlay({ videoRef }: Props) {
       return
     }
     if (toolRef.current === 'arrow') {
-      setArrowPts((prev) => (prev.length >= 2 ? [] : [...prev, pt]))
+      arrowDragRef.current = true
+      arrowStartRef.current = pt
+      setArrowPts([pt, pt])
       return
     }
     setLinePts((prev) => (prev.length >= 3 ? [] : [...prev, pt]))
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current || toolRef.current !== 'draw') return
     const host = hostRef.current
     if (!host) return
     const pt = eventToNorm(e, host, videoRef.current)
     if (!pt) return
+    if (arrowDragRef.current && toolRef.current === 'arrow') {
+      const start = arrowStartRef.current
+      if (!start) return
+      e.preventDefault()
+      setArrowPts([start, pt])
+      return
+    }
+    if (!drawingRef.current || toolRef.current !== 'draw') return
     e.preventDefault()
     setDrawPts((prev) => {
       const next = prev ? [...prev, pt] : [pt]
@@ -207,9 +218,25 @@ export function VideoMarkOverlay({ videoRef }: Props) {
   }
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    if (arrowDragRef.current && toolRef.current === 'arrow') {
+      arrowDragRef.current = false
+      const host = hostRef.current
+      const start = arrowStartRef.current
+      arrowStartRef.current = null
+      const pt = host ? eventToNorm(e, host, videoRef.current) : null
+      const end = pt ?? arrowPts[1] ?? start
+      if (start && end) {
+        const dist = Math.hypot(end.x - start.x, end.y - start.y)
+        if (dist > 0.012) {
+          setMarks((m) => [...m, { kind: 'arrow', a: start, b: end }])
+        }
+      }
+      setArrowPts([])
+      return
+    }
     if (!drawingRef.current) return
     drawingRef.current = false
-    e.preventDefault()
     const pts = drawPtsRef.current
     drawPtsRef.current = null
     setDrawPts(null)
@@ -225,6 +252,8 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     setDrawPts(null)
     drawingRef.current = false
     drawPtsRef.current = null
+    arrowDragRef.current = false
+    arrowStartRef.current = null
   }
 
   const btn = (id: MarkTool, label: string) => (
@@ -234,6 +263,8 @@ export function VideoMarkOverlay({ videoRef }: Props) {
         setTool(id)
         setArrowPts([])
         drawingRef.current = false
+        arrowDragRef.current = false
+        arrowStartRef.current = null
         setDrawPts(null)
       }}
       className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
