@@ -35,6 +35,7 @@ import {
   updateHomeworkItem,
 } from '../lib/storage'
 import { homeworkLooksReady } from '../lib/homeworkPose'
+import { pickCoachStill } from '../lib/shippedRefs'
 import type {
   HomeworkBreakdown,
   HomeworkItem,
@@ -680,11 +681,26 @@ export function HomeworkPanel({
               </span>
             </p>
           )}
-          {activeItem.source === 'auto' && activeItem.autoKey === 'hollow' && (
+          {activeItem.source === 'auto' && activeItem.autoKey === 'hollow' ? (
             <HollowPairRefs
               photos={referencePhotos}
               unlockedUp={activeItem.shapeId === 'hollow_arms_up'}
             />
+          ) : (
+            <div className="mb-2 overflow-hidden rounded-md border border-[var(--panel-border)] bg-[#0d1218]">
+              <ReferenceStill
+                shapeId={activeItem.shapeId}
+                photos={referencePhotos}
+                alt={activeShape.name}
+                className="max-h-48 w-full object-contain"
+                emptyLabel={`No coach still for ${activeShape.name} yet`}
+              />
+              {activeShape.bodyPosition && (
+                <p className="px-2 py-1.5 text-[11px] leading-snug text-[var(--text)]">
+                  {activeShape.bodyPosition}
+                </p>
+              )}
+            </div>
           )}
           <div className="mb-2">
             <StillOverlayPicker photos={referencePhotos} compact />
@@ -822,6 +838,17 @@ export function HomeworkPanel({
                   )}
                 </div>
               </div>
+
+              {!isHollowAuto && pickCoachStill(referencePhotos, item.shapeId) && (
+                <div className="mt-2 max-h-24 overflow-hidden rounded-md bg-[#0d1218]">
+                  <ReferenceStill
+                    shapeId={item.shapeId}
+                    photos={referencePhotos}
+                    alt={shape?.name ?? item.shapeId}
+                    className="max-h-24 w-full object-contain"
+                  />
+                </div>
+              )}
 
               {/* Manual log form (secondary flow) */}
               {manualOpen && (

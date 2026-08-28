@@ -25,6 +25,7 @@ export const SHIPPED_FILES: Record<string, string> = {
   hollow_arms_up: 'hollow_arms_up.jpg',
   zombie: 'zombie.jpg',
   mountain_climber: 'mountain_climber.jpg',
+  superman: 'superman.jpg',
 }
 
 export const SHIPPED_REFERENCE_IDS = new Set(Object.keys(SHIPPED_FILES))

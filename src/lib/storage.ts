@@ -320,7 +320,7 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'superman',
     targetSeconds: 30,
     notes:
-      'Straight arms behind ears, chin off chest, straight knees off the floor, feet & ankles together, toes pointed.',
+      'Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength.',
   },
   {
     autoKey: 'side_plank',
@@ -374,6 +374,8 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
   const missing = AUTO_HOMEWORK_DEFS.filter(
     (d) => !mine.some((h) => h.source === 'auto' && h.autoKey === d.autoKey),
   )
+  let changed = false
+  let next = mine
   if (missing.length > 0) {
     const now = new Date().toISOString()
     const seeded: HomeworkItem[] = missing.map((d) => ({
@@ -387,10 +389,20 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
       createdAt: now,
     }))
     all.push(...seeded)
-    saveAllHomework(all)
-    return sortHomework([...mine, ...seeded])
+    next = [...mine, ...seeded]
+    changed = true
   }
-  return sortHomework(mine)
+  const supermanDef = AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === 'superman')
+  if (supermanDef) {
+    for (const item of next) {
+      if (item.source === 'auto' && item.autoKey === 'superman' && item.notes !== supermanDef.notes) {
+        item.notes = supermanDef.notes
+        changed = true
+      }
+    }
+  }
+  if (changed) saveAllHomework(all)
+  return sortHomework(next)
 }
 
 /** Add a coach- or athlete-selected homework item; returns the athlete's list. */

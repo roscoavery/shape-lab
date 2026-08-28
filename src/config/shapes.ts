@@ -1448,36 +1448,41 @@ export const SHAPES: ShapeDef[] = [
 
   // ===========================================================================
   // SUPERMAN — homework auto-drill
-  // Prone hold: STRAIGHT arms behind the ears, chin OFF the chest (head
-  // neutral / slightly lifted), straight knees lifted off the ground,
-  // pointed toes, feet and ankles squeezed together. Film from the side.
+  // Prone arch: chin up, straight arms behind the ears, straight knees off
+  // the ground, feet and ankles together. Challenges open-shoulder angle and
+  // a big slice of the posterior chain. Film from the side.
   // ===========================================================================
   {
     id: 'superman',
     name: 'Superman',
     description:
-      'Prone Superman hold: straight arms behind the ears, chin off the chest (head neutral), straight knees lifted off the floor, feet and ankles together, toes pointed.',
+      'Prone Superman hold: chin up, straight arms behind the ears, straight knees off the ground, feet and ankles together. Strengthens a large portion of the posterior chain while challenging open shoulders, glued feet, and locked knees.',
+    bodyPosition:
+      'SIDE VIEW, on the stomach. Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open the shoulder angle so the arms sit slightly above / behind the ears. Point the toes.',
     category: 'hold',
     qualityThreshold: 60,
+    cameraView: 'side',
     tips: [
       'Film from the side while lying on your stomach.',
-      'Arms straight and squeezed behind the ears.',
-      'Chin OFF the chest — head neutral or slightly lifted.',
-      'Lift straight knees off the ground.',
-      'Squeeze feet and ankles together and point the toes hard.',
+      'Chin stays up with straight arms behind the ears.',
+      'Straight knees off of the ground.',
+      'Feet and ankles together.',
+      'Reach long through the arms so the shoulders stay open.',
     ],
+    coachNotes:
+      'Two athletes hitting the same prone arch: hips stay on the mat, chest and legs lift. This hold challenges open-shoulder angle, feet together, and straight knees while it strengthens a big portion of the posterior chain. Verbal cues: chin stays up with straight arms behind the ears; straight knees off of the ground; feet and ankles together.',
     criteria: [
       {
         // Arms behind ears → LARGE hip–shoulder–elbow angle.
         id: 'arms_behind_ears',
-        label: 'Arms behind ears',
+        label: 'Open shoulders / arms behind ears',
         kind: 'joint_angle',
         points: L_SHOULDER,
         targetMin: 150,
         targetMax: 180,
         tolerance: 12,
-        weight: 20,
-        feedbackLow: 'Squeeze straight arms behind the ears ({delta}° more).',
+        weight: 22,
+        feedbackLow: 'Open the shoulders — straight arms behind the ears ({delta}° more).',
       },
       {
         id: 'elbows',
@@ -1488,13 +1493,12 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 12,
-        feedbackLow: 'Straighten elbows — long arms.',
+        feedbackLow: 'Straighten elbows — long arms behind the ears.',
       },
       {
-        // Head neutral proxy: shoulder→nose segment lifted slightly
-        // above the (horizontal) prone torso line.
+        // Head lifted: shoulder→nose segment above the prone torso line.
         id: 'chin_off_chest',
-        label: 'Chin off chest',
+        label: 'Chin stays up',
         kind: 'segment_vs_horizontal',
         segment: [LM.LEFT_SHOULDER, LM.NOSE],
         targetMin: 5,
@@ -1502,12 +1506,11 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 10,
         falloff: 40,
         weight: 14,
-        feedbackLow: 'Lift the chin off the chest — head neutral.',
-        feedbackHigh: 'Relax the neck — head neutral, not cranked up.',
+        feedbackLow: 'Chin stays up — look slightly forward, not into the mat.',
+        feedbackHigh: 'Keep the chin up without cranking the neck.',
       },
       {
-        // Straight knees lifted off the ground → open (even hyper-extended)
-        // shoulder–hip–knee angle.
+        // Straight knees lifted off the ground → open shoulder–hip–knee angle.
         id: 'legs_lifted',
         label: 'Knees off floor',
         kind: 'joint_angle',
@@ -1515,8 +1518,8 @@ export const SHAPES: ShapeDef[] = [
         targetMin: 150,
         targetMax: 200,
         tolerance: 15,
-        weight: 20,
-        feedbackLow: 'Lift straight knees off the floor.',
+        weight: 18,
+        feedbackLow: 'Straight knees off of the ground.',
       },
       {
         id: 'knees',
@@ -1527,7 +1530,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 8,
         weight: 16,
-        feedbackLow: 'Straighten knees {delta}° — pointed toes.',
+        feedbackLow: 'Straighten knees {delta}° — keep them off the ground.',
       },
       {
         id: 'feet_ankles_together',
@@ -1538,7 +1541,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.06,
         falloff: 0.2,
         weight: 18,
-        feedbackHigh: 'Squeeze feet and ankles together.',
+        feedbackHigh: 'Feet and ankles together.',
       },
     ],
   },

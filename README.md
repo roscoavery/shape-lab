@@ -48,7 +48,7 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 ### Learn: shape library and tests
 
-**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, candlestick) plus homework that still needs a still (superman, side plank, wall handstand). Unused scoring leftovers (generic lunge, seated pike, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
+**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, candlestick, Superman) plus homework that still needs a still (side plank, wall handstand). Unused scoring leftovers (generic lunge, seated pike, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
 Open **Learn → Shape test** for mixed multiple-choice. **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** covers low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **My shapes** shows the athlete’s own hit photos.
 
@@ -74,6 +74,7 @@ hollow_arms_up.jpg
 zombie.jpg
 mountain_climber.jpg
 stand_clean.jpg
+superman.jpg
 ```
 
 Curriculum order is edited in `src/config/curriculum.ts`.
@@ -97,7 +98,7 @@ Edit the scripts in `src/config/tasks2.ts`.
 Every athlete automatically has **4 lifetime drills** (they can never be removed):
 
 1. **Hollow body hold — arms down** (`hollow_arms_down`) — start in a pike and inch back until the lower back is flat; arms by sides. When the best **quality hold reaches 60s**, the app prompts to **level up to Hollow (arms up)** (`hollow_arms_up`, arms by ears). Do not train arms-up until that minute is camera-verified. One click switches the drill and keeps all history. Both stills are shown on the homework card.
-2. **Superman** — straight arms behind ears, chin off chest (head neutral), straight knees off the floor, feet & ankles together, toes pointed.
+2. **Superman** — chin stays up with straight arms behind the ears; straight knees off the ground; feet and ankles together. Challenges open-shoulder angle while it strengthens a large portion of the posterior chain. Coach still: two athletes hitting the position (side view).
 3. **Side plank** — log left / right / both sides; per-side bests are tracked.
 4. **Wall handstand** — time + quality, same standards as freestanding.
 
