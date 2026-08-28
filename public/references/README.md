@@ -34,6 +34,8 @@ Included:
 - `superman.jpg`
 - `rainbow_bridge.jpg`
 - `long_bridge.jpg`
+- `side_plank_left.jpg`
+- `side_plank_right.jpg`
 
 To add another still: drop a JPG in both folders, add the shape id in
 `src/lib/shippedRefs.ts` (`SHIPPED_FILES`).

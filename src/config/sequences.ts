@@ -121,6 +121,28 @@ export const SEQUENCES: SequenceDef[] = [
       { shapeId: 'candlestick', holdSeconds: 2 },
     ],
   },
+  {
+    id: 'core_home',
+    name: 'Core home conditioning',
+    description:
+      'Easy home core: pike (zombie arms) → hollow → arch, then open-shoulder pike with tuck–hollow squeezes into an arch, then 30s side plank, Superman, and hollow. Hollow starts from a zombie-arm pike and inches back until the low back is flat. Work the holds toward a minute.',
+    steps: [
+      { shapeId: 'seated_pike', holdSeconds: 2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 2 },
+      { shapeId: 'arch', holdSeconds: 2 },
+      { shapeId: 'pike_open_shoulders', holdSeconds: 1.5 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'arch', holdSeconds: 2 },
+      { shapeId: 'side_plank', holdSeconds: 30 },
+      { shapeId: 'superman', holdSeconds: 30 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 30 },
+    ],
+  },
 ]
 
 export const SEQUENCES_BY_ID: Record<string, SequenceDef> = Object.fromEntries(

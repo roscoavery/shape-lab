@@ -111,7 +111,32 @@ export function poseLooksLongBridge(lm: Landmark[] | null | undefined): boolean 
 }
 
 /**
- * Seated open-shoulder tuck — sitting on the glutes, knees pulled in,
+ * Forearm side plank: one elbow down near the feet, hips lifted,
+ * body in a long line. Bent knees allowed. Not a rainbow bridge.
+ */
+export function poseLooksSidePlank(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.08)
+  if (!hip || !sh || !ank) return false
+  const leftEl = visOk(lm[LM.LEFT_ELBOW], 0.08) ? lm[LM.LEFT_ELBOW] : null
+  const rightEl = visOk(lm[LM.RIGHT_ELBOW], 0.08) ? lm[LM.RIGHT_ELBOW] : null
+  const support = [leftEl, rightEl].filter(Boolean).sort((a, b) => b!.y - a!.y)[0]
+  if (!support) return false
+  // Support elbow near the floor with the feet (not a handstand).
+  if (Math.abs(support.y - ank.y) > 0.3) return false
+  // Hips lifted off that elbow.
+  if (support.y - hip.y < 0.06) return false
+  // Long-ish body, not a tucked sit.
+  const span = Math.hypot(ank.x - sh.x, ank.y - sh.y)
+  if (span < 0.18) return false
+  // Not a rainbow: hips should not tower over the shoulders.
+  if (sh.y - hip.y > 0.18) return false
+  return true
+}
+
+/** Seated open-shoulder tuck — sitting on the glutes, knees pulled in,
  * at least one arm reaching up. Not a seated pike (straight knees) and
  * not a lying hollow (torso flat).
  */
@@ -158,8 +183,11 @@ export function homeworkLooksReady(
   if (shapeId.startsWith('hollow')) {
     return poseLooksHollow(lm) || overall >= 32
   }
-  if (shapeId === 'superman' || shapeId === 'side_plank') {
+  if (shapeId === 'superman') {
     return poseLooksLongBody(lm) || overall >= 32
+  }
+  if (shapeId === 'side_plank') {
+    return poseLooksSidePlank(lm) || overall >= 32
   }
   if (shapeId === 'rainbow_bridge') {
     return poseLooksRainbowBridge(lm) || overall >= 32

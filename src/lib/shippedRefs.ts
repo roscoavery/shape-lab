@@ -36,6 +36,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   superman: 'superman.jpg',
   rainbow_bridge: 'rainbow_bridge.jpg',
   long_bridge: 'long_bridge.jpg',
+  side_plank: ['side_plank_left.jpg', 'side_plank_right.jpg'],
 }
 
 /** Caption on a second (or later) shipped still for the same shape. */
@@ -48,6 +49,8 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'zombie.jpg': 'Stand',
   'pike_zombie_arms.jpg': 'Pike',
   'hands_push_through.jpg': 'Hands',
+  'side_plank_left.jpg': 'Left',
+  'side_plank_right.jpg': 'Right',
 }
 
 export function shippedFileList(shapeId: string): string[] {

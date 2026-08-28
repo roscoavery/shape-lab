@@ -468,6 +468,8 @@ export function HomeworkPanel({
     const defaultNotes =
       addShapeId === 'rainbow_bridge'
         ? 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
+        : addShapeId === 'side_plank'
+          ? 'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other. Top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; or bend them and put weight on the bottom knee. Both sides. Work toward a minute.'
         : addShapeId === 'long_bridge'
           ? 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
           : addShapeId === 'seated_pike'

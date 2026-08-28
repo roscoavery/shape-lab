@@ -83,7 +83,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. Rainbow bridge — not a straight-leg competition bridge. Feet flat, toes pointed straight ahead, feet apart, knees bent, hips up high, shoulders open over the hands. Head hangs between the arms.',
   long_bridge:
     'SIDE. Long bridge after rainbow shoulders are open. Straight legs together, heels flat, pushing through the toes, arms covering the ears, chin to chest. Fingers toward the feet.',
-  side_plank: 'SIDE. Body in one line, hips up. One photo (either side is fine).',
+  side_plank:
+    'SIDE. Forearm side plank, both sides. Pencil line, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line, no ribs flaring, no closed hips. Straight knees if you can; bent-knee with weight on the bottom knee is fine. Left and right stills.',
   wall_handstand: 'SIDE. Stomach-to-wall preferred. Same stacked body as freestanding.',
 }
 

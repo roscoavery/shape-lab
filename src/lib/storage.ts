@@ -313,20 +313,21 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'hollow_arms_down',
     targetSeconds: HOLLOW_PROGRESS_TARGET_SECONDS,
     notes:
-      'Start in a pike and inch back until the lower back is flat. Compress the low back, then let the feet lift. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears.',
+      'Start in a zombie-arm pike and inch back until the lowest part of the lower back touches the ground. Flatten the low back, then let the feet inch off. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears. Work toward a minute.',
   },
   {
     autoKey: 'superman',
     shapeId: 'superman',
     targetSeconds: 30,
     notes:
-      'Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength.',
+      'Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength. Work 30s toward a minute.',
   },
   {
     autoKey: 'side_plank',
     shapeId: 'side_plank',
     targetSeconds: 30,
-    notes: 'Train BOTH sides — log left and right separately.',
+    notes:
+      'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Work 30s toward a minute.',
   },
   {
     autoKey: 'wall_handstand',

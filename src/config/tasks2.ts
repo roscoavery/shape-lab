@@ -586,6 +586,148 @@ function lemonSqueezesClass(): FlowBeat[] {
   ]
 }
 
+/** Spoken ~30s hold after the athlete is already in the shape. */
+function holdCountThirty(): FlowBeat[] {
+  return [
+    { speak: 'Hold for 30.', pauseMs: 9000 },
+    { speak: '20.', pauseMs: 10000 },
+    { speak: '10.', pauseMs: 5000 },
+    { speak: '5.', pauseMs: 900 },
+    { speak: '4.', pauseMs: 900 },
+    { speak: '3.', pauseMs: 900 },
+    { speak: '2.', pauseMs: 900 },
+    { speak: '1.', pauseMs: 700 },
+  ]
+}
+
+/** Easy home core: 10× pike-hollow-arch, 3× open pike-tuck-hollow-arch, 30s holds. */
+function coreHomeClass(): FlowBeat[] {
+  const beats: FlowBeat[] = [
+    {
+      speak: 'Easy core at home. First, pike, hollow, arch. Ten times.',
+      shapeId: 'seated_pike',
+      pauseMs: 550,
+      replayStart: true,
+    },
+  ]
+  for (let i = 1; i <= 10; i++) {
+    beats.push({
+      speak: i === 1 ? 'Pike. Zombie arms.' : 'Pike.',
+      shapeId: 'seated_pike',
+      pauseMs: i === 1 ? 450 : 300,
+      ...(i === 1
+        ? { snapshotAtMs: 280, snapLabel: 'Pike (zombie arms)' }
+        : {}),
+    })
+    beats.push({
+      speak: i === 1 ? 'Hollow. Arms down.' : 'Hollow.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 320,
+      ...(i === 1 ? { snapshotAtMs: 180, snapLabel: 'Hollow' } : {}),
+    })
+    beats.push({
+      speak: i === 1 ? 'Arch. On your back.' : 'Arch.',
+      shapeId: 'arch',
+      pauseMs: 320,
+      ...(i === 1 || i === 10
+        ? { snapshotAtMs: 160, snapLabel: i === 1 ? 'Arch' : 'Arch 10' }
+        : {}),
+    })
+    beats.push({ speak: `That's ${i}.`, pauseMs: 200 })
+  }
+  beats.push({
+    speak:
+      'Now open-shoulder pike into tuck and hollow. Three times. Finish each one on an arch.',
+    shapeId: 'pike_open_shoulders',
+    pauseMs: 550,
+  })
+  for (let i = 1; i <= 3; i++) {
+    beats.push({
+      speak: i === 1 ? 'Pike. Arms up by the ears.' : 'Pike. Arms up.',
+      shapeId: 'pike_open_shoulders',
+      pauseMs: 380,
+      ...(i === 1
+        ? { snapshotAtMs: 240, snapLabel: 'Pike (open shoulders)' }
+        : {}),
+    })
+    for (let s = 1; s <= 3; s++) {
+      beats.push({
+        speak:
+          i === 1 && s === 1
+            ? 'Tuck. Flex the feet. Keep reaching.'
+            : 'Tuck.',
+        shapeId: 'tuck_open_shoulders',
+        pauseMs: 300,
+        ...(i === 1 && s === 1
+          ? { snapshotAtMs: 200, snapLabel: 'Tuck' }
+          : {}),
+      })
+      beats.push({
+        speak: 'Hollow.',
+        shapeId: 'hollow_arms_down',
+        pauseMs: 300,
+      })
+    }
+    beats.push({
+      speak: 'Arch.',
+      shapeId: 'arch',
+      pauseMs: 320,
+      ...(i === 3 ? { snapshotAtMs: 160, snapLabel: 'Arch (set 2)' } : {}),
+    })
+    beats.push({ speak: `That's ${i}.`, pauseMs: 200 })
+  }
+  beats.push({
+    speak:
+      'Side plank. Left side. Be a pencil. Foot stacked. Top hand on the hip. Head in line.',
+    shapeId: 'side_plank',
+    pauseMs: 700,
+    snapshotAtMs: 400,
+    snapLabel: 'Side plank left',
+  })
+  beats.push(...holdCountThirty())
+  beats.push({
+    speak:
+      'Other side. If the knees cannot stay straight, bend them and put weight on the bottom knee.',
+    shapeId: 'side_plank',
+    pauseMs: 700,
+    snapshotAtMs: 400,
+    snapLabel: 'Side plank right',
+  })
+  beats.push(...holdCountThirty())
+  beats.push({
+    speak: 'Superman. Chin up. Arms behind the ears. Straight knees off the mat.',
+    shapeId: 'superman',
+    pauseMs: 700,
+    snapshotAtMs: 400,
+    snapLabel: 'Superman',
+  })
+  beats.push(...holdCountThirty())
+  beats.push({
+    speak: 'Hollow hold. Start in a zombie-arm pike.',
+    shapeId: 'seated_pike',
+    pauseMs: 500,
+  })
+  beats.push({
+    speak: 'Inch back until the lowest part of the lower back touches the ground.',
+    shapeId: 'hollow_arms_down',
+    pauseMs: 700,
+  })
+  beats.push({
+    speak: 'Flatten the low back. Let the feet inch off the ground.',
+    pauseMs: 550,
+    snapshotAtMs: 320,
+    snapLabel: 'Hollow hold',
+  })
+  beats.push(...holdCountThirty())
+  beats.push({
+    speak:
+      'That is home core. Work those holds up to a minute — side plank, Superman, and hollow.',
+    pauseMs: 900,
+    replayEnd: true,
+  })
+  return beats
+}
+
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
@@ -755,6 +897,27 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
     ],
     beats: lemonSqueezesClass(),
+  },
+  {
+    id: 'flow_core_home',
+    name: 'Core home conditioning',
+    nickname: 'Home core',
+    description:
+      'Easy home core. Ten pike (zombie arms) → hollow → arch. Then three open-shoulder pike → tuck → hollow (three squeezes) → arch. Then 30-second side planks (both sides), Superman, and hollow. Hollow starts from a zombie-arm pike and inches back until the low back is flat. Finish by working those holds toward a minute. Not a gate.',
+    previewSpeak:
+      'Easy core at home. Shapes first, then 30-second holds. Work the holds toward a minute.',
+    setupSpeak: 'Side view. Sit in a pike with zombie arms. We will move, then we will hold.',
+    setupExtraSpeak:
+      'If a side plank with straight knees is too hard, bend the knees and put weight on the bottom knee. Be a pencil.',
+    setupShapeId: 'seated_pike',
+    previewShapes: [
+      { shapeId: 'seated_pike', label: 'Pike' },
+      { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
+      { shapeId: 'side_plank', label: 'Plank' },
+      { shapeId: 'superman', label: 'Super' },
+      { shapeId: 'hollow_arms_down', label: 'Hollow' },
+    ],
+    beats: coreHomeClass(),
   },
 ]
 

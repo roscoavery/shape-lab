@@ -1629,6 +1629,8 @@ export function Tasks2Panel({
                     ? 'Four stills — pike, tuck, hollow, arch'
                     : seq.id === 'flow_lemon_squeezes'
                     ? 'Stills — hollow and tuck (lemon squeezes)'
+                    : seq.id === 'flow_core_home'
+                    ? 'Home core — pike, tuck, side plank, Superman, hollow'
                     : seq.reviewShapeIds?.includes('handstand')
                     ? 'Handstand snapshot — tap to jump in the replay'
                     : 'Snapshots — tap to jump in the replay'}
