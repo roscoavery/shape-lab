@@ -1577,7 +1577,7 @@ export function Tasks2Panel({
                 }
                 mirror={mirror}
                 clipId={activeClipId}
-                encodeOnReady
+                encodeOnReady={false}
                 filename={videoFileName(
                   report,
                   (activeClipId && getRememberedBlob(activeClipId)?.type) || 'video/mp4',
@@ -1707,7 +1707,7 @@ export function Tasks2Panel({
                           mirror={mirror}
                           clipId={h.clipId}
                           compact={!h.highlighted}
-                          encodeOnReady={h.highlighted}
+                          encodeOnReady={false}
                           filename={videoFileName(
                             report,
                             getRememberedBlob(h.clipId)?.type || 'video/mp4',

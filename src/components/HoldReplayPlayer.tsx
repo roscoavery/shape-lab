@@ -58,7 +58,7 @@ export function HoldReplayPlayer({
   filename,
   clipId = null,
   compact = false,
-  encodeOnReady = true,
+  encodeOnReady = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
