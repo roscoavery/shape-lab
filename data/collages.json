@@ -1,6 +1,30 @@
 {
   "kind": "shape-lab-collages",
   "version": 1,
-  "exportedAt": "",
-  "collages": []
+  "exportedAt": "2026-08-28T20:13:03.974Z",
+  "collages": [
+    {
+      "id": "colg_mtde0ubz_ule6pu",
+      "name": "Whip board",
+      "createdAt": "2026-08-28T20:11:52.079Z",
+      "updatedAt": "2026-08-28T20:13:03.974Z",
+      "createdById": "ath_mtcjvcfu_e37tqy",
+      "slots": [
+        {
+          "clipId": "ref_mtbyq8xu_ekhn6f",
+          "url": "https://www.instagram.com/reel/Db-5w5iPiFu/",
+          "caption": "8 reps",
+          "loopA": null,
+          "loopB": null
+        },
+        {
+          "clipId": "ref_mtbyn4gl_l8db64",
+          "url": "https://www.instagram.com/p/DcbSCXMGjEv/",
+          "caption": "",
+          "loopA": null,
+          "loopB": null
+        }
+      ]
+    }
+  ]
 }
