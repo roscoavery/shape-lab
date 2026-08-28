@@ -48,7 +48,7 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 ### Learn: shape library and tests
 
-**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, pike with open shoulders, candlestick, Superman, Rainbow Bridge, Long Bridge) plus homework that still needs a still (side plank, wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
+**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, Superman, Rainbow Bridge, Long Bridge) plus homework that still needs a still (side plank, wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
 Open **Learn → Shape test** for mixed multiple-choice. **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** covers low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **My shapes** shows the athlete’s own hit photos.
 
@@ -73,6 +73,7 @@ hollow_arms_down.jpg
 hollow_arms_up.jpg
 zombie.jpg
 pike_zombie_arms.jpg
+hands_push_through.jpg
 pike_open_shoulders.jpg
 pike_open_shoulders_class.jpg
 tuck_open_shoulders.jpg
@@ -114,7 +115,7 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 
 **Long Bridge** is also assignable (not auto). Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. The class talk-through lives on **Tasks 2** (two snapshots: before and after chin to chest). A slightly less arched version of this is the flight-to-hands shape in a back handspring.
 
-**Pike (zombie arms)** is assignable too (not auto). Seated: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Standing zombie is a different shape. The snap-open drill (pike → hollow arms down → arch on the back) lives on **Tasks 2** and in Coach sequences.
+**Pike (zombie arms)** is assignable too (not auto). Seated: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Hands as if they just pushed through an object — wide fingers, thumbs slightly down, pinkies slightly up (same finish as standing **Zombie**; second still is the hands close-up). Standing zombie is a different shape. The snap-open drill (pike → hollow arms down → arch on the back) lives on **Tasks 2** and in Coach sequences.
 
 **Pike (open shoulders)** is assignable (not auto). Arms up by the ears, reaching to the ceiling. Two stills (close-up and class line). Used in pike–tuck–hollow–arch, rocking back to candlestick (candle reps / hollow rocker prep), and teaching arms behind the ears on a back tuck.
 

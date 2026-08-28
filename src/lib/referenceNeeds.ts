@@ -68,9 +68,11 @@ const SHOTS: Record<string, string> = {
   hollow_arms_up:
     'SIDE. Same hollow, arms glued by the ears. Only after a proper 1-minute arms-down hold.',
   zombie:
-    'SIDE. Standing hollow, feet together. Arms in front, shoulders shrugged so the arms cover the ears. Eyes forward/down toward where they came from.',
+    'SIDE. Standing hollow, feet together. Arms in front, shoulders shrugged so the arms cover the ears. Eyes forward/down toward where they came from. Hands as if they just pushed through an object: wide fingers, thumbs slightly down, pinkies slightly up. Body still plus hands close-up.',
   seated_pike:
-    'SIDE or 3/4. Sitting. Pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. Wide fingers, pinkies slightly up, thumbs slightly down.',
+    'SIDE or 3/4. Sitting. Pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. Hands as if they just pushed through an object: wide fingers, thumbs slightly down, pinkies slightly up. Body still plus hands close-up.',
+  hands_push_through:
+    'CLOSE-UP of the hands. Pose as if they just pushed through an object. Wide fingers, thumbs slightly down, pinkies slightly up. Same finish on zombie, seated pike, and every arm position.',
   pike_open_shoulders:
     'SIDE or 3/4. Sitting. Pike with arms up: legs together, knees straight, toes pointed, torso upright, shoulders open, arms covering the ears, fingers to the ceiling. Close-up and class line both count.',
   tuck_open_shoulders:

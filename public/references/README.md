@@ -23,6 +23,7 @@ Included:
 - `hollow_arms_up.jpg`
 - `zombie.jpg`
 - `pike_zombie_arms.jpg`
+- `hands_push_through.jpg`
 - `pike_open_shoulders.jpg`
 - `pike_open_shoulders_class.jpg`
 - `tuck_open_shoulders.jpg`

@@ -168,7 +168,7 @@ const SCAFFOLD_SHAPE_IDS = new Set([
 
 /**
  * Positions shown in Learn → Shape library: the pathway, homework, and
- * extras Ryan photographed (zombie, pike with zombie arms, pike with open
+ * extras Ryan photographed (zombie, pike with zombie arms, Hands, pike with open
  * shoulders, Tuck, candlestick, Superman, Rainbow Bridge, Long Bridge).
  * Arm-position drills live in the Arm positions test, not as a second empty catalog.
  */

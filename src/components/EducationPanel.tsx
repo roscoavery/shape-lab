@@ -367,7 +367,9 @@ function HomeView({
         <h3 className="text-lg font-semibold text-[var(--text)]">Arm positions test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Low V, front middle, open shoulders, T, and high V — standing and on a
-          landing lunge. These are not a Tasks gate right now; study them here.
+          landing lunge. Finish the hands as if they just pushed through an object
+          (wide fingers, thumbs slightly down, pinkies slightly up). These are not a
+          Tasks gate right now; study them here.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Test arm positions →

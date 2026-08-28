@@ -50,6 +50,10 @@ const R_HIP: [number, number, number] = [LM.RIGHT_SHOULDER, LM.RIGHT_HIP, LM.RIG
 const L_SHOULDER: [number, number, number] = [LM.LEFT_HIP, LM.LEFT_SHOULDER, LM.LEFT_ELBOW]
 const R_SHOULDER: [number, number, number] = [LM.RIGHT_HIP, LM.RIGHT_SHOULDER, LM.RIGHT_ELBOW]
 
+/** Shared hand finish — zombie, seated pike, and every arm position. */
+const HAND_FINISH =
+  'Hands pose as if they just pushed through an object. Wide fingers. Thumbs slightly down, pinkies slightly up.'
+
 /** Back heel FLAT — landing lunge and every lunge arm-position hold. */
 const LANDING_HEEL_FLAT: CriterionDef = {
   id: 'heel_flat',
@@ -1087,9 +1091,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'seated_pike',
     name: 'Pike (zombie arms)',
     description:
-      'Seated pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. Wide fingers, pinkies slightly up, thumbs slightly down.',
+      `Seated pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. ${HAND_FINISH}`,
     bodyPosition:
-      'SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright and rounded hollow — not a fold over the legs, not sitting tall with a flat back. Shoulders shrug so the arms cover the ears. Arms reach straight forward; eyes look through the hands. Wide fingers, pinkies slightly up, thumbs slightly down.',
+      `SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright and rounded hollow — not a fold over the legs, not sitting tall with a flat back. Shoulders shrug so the arms cover the ears. Arms reach straight forward; eyes look through the hands. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -1098,10 +1102,10 @@ export const SHAPES: ShapeDef[] = [
       'Toes pointed. Straight knees. Legs glued.',
       'Torso upright and rounded hollow. Shoulders shrug.',
       'Arms covering the ears. Eyes looking through the hands.',
-      'Wide fingers — pinkies slightly up, thumbs slightly down.',
+      HAND_FINISH,
     ],
     coachNotes:
-      'Falling backward out of a cartwheel step-in, round-off, or handspring into this pike can be useful for training handspring connections. We do pike (zombie arms) to hollow (arms down) to arch (supine) over and over as a snap-open drill for handsprings and whips. Falling from a standing zombie into this seated pike is a good beginner shaping drill for future tumbling. Standing zombie is a different shape — this is the floor pike with the same arm idea.',
+      'Falling backward out of a cartwheel step-in, round-off, or handspring into this pike can be useful for training handspring connections. We do pike (zombie arms) to hollow (arms down) to arch (supine) over and over as a snap-open drill for handsprings and whips. Falling from a standing zombie into this seated pike is a good beginner shaping drill for future tumbling. Standing zombie is a different shape — this is the floor pike with the same arm idea. Same hand finish as standing zombie: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
     criteria: [
       {
         id: 'torso_upright_hollow',
@@ -2703,7 +2707,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Standing hollow with half-closed shoulders. Straight knees. Butt in. Armpits in front of the toes. Landing for cartwheel step-ins, round-offs, and handsprings.',
     bodyPosition:
-      'SIDE VIEW, standing. Hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of the toes — that keeps the hollow if the hips want to push into an arch. Feet together. Arms reach forward; shrug so the arms cover the ears. Eyes forward/down toward where you came from. Same idea as candlestick and front support, standing upright. Not arms overhead — arms up only when blocking into a skill above a round-off handspring series.',
+      `SIDE VIEW, standing. Hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of the toes — that keeps the hollow if the hips want to push into an arch. Feet together. Arms reach forward; shrug so the arms cover the ears. Eyes forward/down toward where you came from. Same idea as candlestick and front support, standing upright. Not arms overhead — arms up only when blocking into a skill above a round-off handspring series. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -2713,10 +2717,11 @@ export const SHAPES: ShapeDef[] = [
       'Butt in.',
       'Armpits in front of toes — that keeps the hollow if they push the hips into an arch.',
       'Eyes forward/down toward where you came from.',
+      HAND_FINISH,
       'SIDE VIEW, standing.',
     ],
     coachNotes:
-      'Verbal cues: hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of toes — use that if they are pushing the hips into an arch. Standing hollow with arms in front, shoulders shrugged so the arms cover the ears. Eyes look forward/down toward where they just came from — out of a cartwheel, round-off, handspring, or whip. Same idea as candlestick and front support, just standing upright. Helps get the chest up out of a round-off to a stand. Arms in front are where they can whip back to generate speed into a handspring or whip, and they speed rotation so the feet get in front — then we can keep momentum backwards with handspring connections. All round-offs and handsprings land here until the athlete is working skills above a round-off handspring series. Arms go up only when blocking into a higher skill. We train this shape on cartwheel step-ins before working round-offs. Usual cartwheels still finish in a landing lunge unless this landing is named.',
+      'Verbal cues: hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of toes — use that if they are pushing the hips into an arch. Standing hollow with arms in front, shoulders shrugged so the arms cover the ears. Eyes look forward/down toward where they just came from — out of a cartwheel, round-off, handspring, or whip. Same idea as candlestick and front support, just standing upright. Helps get the chest up out of a round-off to a stand. Arms in front are where they can whip back to generate speed into a handspring or whip, and they speed rotation so the feet get in front — then we can keep momentum backwards with handspring connections. All round-offs and handsprings land here until the athlete is working skills above a round-off handspring series. Arms go up only when blocking into a higher skill. We train this shape on cartwheel step-ins before working round-offs. Usual cartwheels still finish in a landing lunge unless this landing is named. Same hand finish as the seated pike with zombie arms: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
     criteria: [
       {
         // Hip–shoulder–elbow ~90° = half-closed (arms in front), not open ~170°.
@@ -2837,6 +2842,66 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // HANDS — push-through finish used on zombie, seated pike, and arm positions.
+  // ===========================================================================
+  {
+    id: 'hands_push_through',
+    name: 'Hands',
+    description:
+      'Gymnastics hand finish: pose as if you just pushed through an object. Wide fingers. Thumbs slightly down, pinkies slightly up. Used on zombie, seated pike with zombie arms, and every arm position.',
+    bodyPosition: `Close-up of the hands. ${HAND_FINISH} Palms face away, wrists extended, fingers fanned. Overlay this still on any arm drill.`,
+    category: 'static',
+    qualityThreshold: 55,
+    cameraView: 'any',
+    tips: [
+      HAND_FINISH,
+      'Looks like you just shoved something away.',
+      'Use this finish on zombie, seated pike, and every arm position.',
+    ],
+    coachNotes:
+      'This is the usual gymnastics hand finish. The seated pike with zombie arms has it. Standing zombie has it. All arm positions look nicer with it. Overlay the still on any arm drill — standing or lunge.',
+    criteria: [
+      {
+        id: 'push_through',
+        label: 'Pushed through',
+        kind: 'joint_angle',
+        points: [LM.LEFT_ELBOW, LM.LEFT_WRIST, LM.LEFT_INDEX],
+        targetMin: 70,
+        targetMax: 130,
+        tolerance: 18,
+        falloff: 50,
+        weight: 50,
+        feedbackLow: 'Push through — as if you just shoved an object.',
+        feedbackHigh: 'Keep the push — wrists extended, not floppy.',
+      },
+      {
+        id: 'wide_fingers',
+        label: 'Wide fingers',
+        kind: 'point_distance',
+        pair: [LM.LEFT_PINKY, LM.LEFT_THUMB],
+        targetMin: 0.03,
+        targetMax: 0.22,
+        tolerance: 0.02,
+        falloff: 0.12,
+        weight: 30,
+        feedbackLow: 'Spread the fingers wide.',
+        feedbackHigh: 'Keep them wide — not a tight blade.',
+      },
+      {
+        id: 'elbows',
+        label: 'Elbows straight',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 20,
+        feedbackLow: 'Straighten elbows so the push reads.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // SIDE PLANK
   // ===========================================================================
   {
@@ -2901,11 +2966,11 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: low V (back)',
     description: 'Standing low V with the arms reaching slightly back.',
     bodyPosition:
-      'Feet together, tall stand. Arms reach down and slightly back in a low V — not covering the ears, not a T. Elbows straight. Chest stays lifted.',
+      `Feet together, tall stand. Arms reach down and slightly back in a low V — not covering the ears, not a T. Elbows straight. Chest stays lifted. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
-    tips: ['Side view so we can see the arms going back.', 'Keep elbows straight.'],
+    tips: ['Side view so we can see the arms going back.', 'Keep elbows straight.', HAND_FINISH],
     criteria: [
       {
         id: 'elbows',
@@ -2960,11 +3025,11 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: front middle',
     description: 'Arms reach forward at about chest / shoulder height, together in front.',
     bodyPosition:
-      'Tall stand. Arms reach straight forward at middle height (not up by the ears, not down by the hips). Elbows straight. Hands together-ish in front of the chest.',
+      `Tall stand. Arms reach straight forward at middle height (not up by the ears, not down by the hips). Elbows straight. Hands together-ish in front of the chest. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
-    tips: ['Side view shows the forward reach best.'],
+    tips: ['Side view shows the forward reach best.', HAND_FINISH],
     criteria: [
       {
         id: 'forward',
@@ -3007,11 +3072,11 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: open shoulders',
     description: 'Same overhead line as FTOS — arms covering ears, hands to the ceiling.',
     bodyPosition:
-      'Arms by the ears, elbows straight, shoulders fully open, hands reaching to the ceiling. This is the same arm line used in FTOS, lunge, lever, and handstand.',
+      `Arms by the ears, elbows straight, shoulders fully open, hands reaching to the ceiling. This is the same arm line used in FTOS, lunge, lever, and handstand. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'any',
-    tips: ['Any facing. Cover the ears.'],
+    tips: ['Any facing. Cover the ears.', HAND_FINISH],
     criteria: [
       {
         id: 'shoulders',
@@ -3053,11 +3118,11 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: T',
     description: 'Arms straight out to the sides at shoulder height — a letter T.',
     bodyPosition:
-      'Face the camera. Arms reach straight out to both sides at shoulder height, elbows locked, wrists in line with the shoulders. Chest lifted. This is a T, not a high V and not overhead.',
+      `Face the camera. Arms reach straight out to both sides at shoulder height, elbows locked, wrists in line with the shoulders. Chest lifted. This is a T, not a high V and not overhead. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'front',
-    tips: ['FACE THE CAMERA so both arms show in the T.'],
+    tips: ['FACE THE CAMERA so both arms show in the T.', HAND_FINISH],
     criteria: [
       {
         id: 'left_t',
@@ -3131,11 +3196,11 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: high V, chest out',
     description: 'High V arms with the chest open — not covering the ears yet.',
     bodyPosition:
-      'Arms lift into a high V (wider than covering the ears). Chest is proud / open. Elbows straight. Head stays up. This is not FTOS — the arms stay in a V.',
+      `Arms lift into a high V (wider than covering the ears). Chest is proud / open. Elbows straight. Head stays up. This is not FTOS — the arms stay in a V. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'front',
-    tips: ['Face the camera. Chest out. High V, not arms by ears.'],
+    tips: ['Face the camera. Chest out. High V, not arms by ears.', HAND_FINISH],
     criteria: [
       {
         id: 'high_v',
@@ -3181,13 +3246,14 @@ export const SHAPES: ShapeDef[] = [
     name: 'Lunge · low V arms',
     description: 'Landing-lunge legs with low V arms back. Back heel flat, shorter stance.',
     bodyPosition:
-      'Same stance as the landing lunge: front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a low V slightly back. Side view.',
+      `Same stance as the landing lunge: front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a low V slightly back. Side view. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'Side view. Line from the back foot through the shoulders. Arms in a low V slightly back. Shorts can fake a bent back knee — we do not gate on that joint.',
+      HAND_FINISH,
     ],
     criteria: [
       {
@@ -3243,12 +3309,12 @@ export const SHAPES: ShapeDef[] = [
     name: 'Lunge · arms front middle',
     description: 'Landing-lunge legs with arms reaching forward at middle height. Back heel flat.',
     bodyPosition:
-      'Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms reach forward at chest height, elbows straight.',
+      `Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms reach forward at chest height, elbows straight. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
-    tips: ['Side view. Back heel flat. Shorter than a starting lunge. Arms forward, not up.'],
+    tips: ['Side view. Back heel flat. Shorter than a starting lunge. Arms forward, not up.', HAND_FINISH],
     criteria: [
       {
         id: 'front_knee',
@@ -3306,7 +3372,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Same position as the landing lunge — landing-lunge legs, arms by the ears. Same still. We keep this name so it sits with the other lunge arm drills.',
     bodyPosition:
-      'This is the landing lunge. Front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open. Same picture as Landing lunge.',
+      `This is the landing lunge. Front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open. Same picture as Landing lunge. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
@@ -3314,6 +3380,7 @@ export const SHAPES: ShapeDef[] = [
     tips: [
       'This is the landing lunge — same photo, same body.',
       'Open-shoulder arms. Back heel flat. Shorter than a starting lunge.',
+      HAND_FINISH,
     ],
     coachNotes:
       'This is the landing lunge. Same photo. We keep the name for the arm-positions test so it sits with low V, T, front middle, and high V on a lunge.',
@@ -3355,12 +3422,15 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Landing-lunge legs with arms in a T. Face the camera so both arms show. Back heel flat.',
     bodyPosition:
-      'Same stance as the landing lunge (back leg straight, back HEEL FLAT, shorter than a starting lunge) with arms straight out to the sides at shoulder height. Face the camera.',
+      `Same stance as the landing lunge (back leg straight, back HEEL FLAT, shorter than a starting lunge) with arms straight out to the sides at shoulder height. Face the camera. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'front',
     stanceAware: true,
-    tips: ['FACE THE CAMERA for the T. Back heel flat. Shorter than a starting lunge. Back leg still straight.'],
+    tips: [
+      'FACE THE CAMERA for the T. Back heel flat. Shorter than a starting lunge. Back leg still straight.',
+      HAND_FINISH,
+    ],
     criteria: [
       {
         id: 'front_knee',
@@ -3429,12 +3499,15 @@ export const SHAPES: ShapeDef[] = [
     name: 'Lunge · high V chest out',
     description: 'Landing-lunge legs with a high V and an open chest. Back heel flat, shorter stance.',
     bodyPosition:
-      'Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a high V (not covering the ears). Chest open.',
+      `Same stance as the landing lunge: back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms in a high V (not covering the ears). Chest open. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'any',
     stanceAware: true,
-    tips: ['High V, chest out — not arms by ears yet. Back heel flat. Shorter than a starting lunge.'],
+    tips: [
+      'High V, chest out — not arms by ears yet. Back heel flat. Shorter than a starting lunge.',
+      HAND_FINISH,
+    ],
     criteria: [
       {
         id: 'front_knee',

@@ -23,8 +23,9 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   candlestick: 'candlestick.jpg',
   hollow_arms_down: 'hollow_arms_down.jpg',
   hollow_arms_up: 'hollow_arms_up.jpg',
-  zombie: 'zombie.jpg',
-  seated_pike: 'pike_zombie_arms.jpg',
+  zombie: ['zombie.jpg', 'hands_push_through.jpg'],
+  seated_pike: ['pike_zombie_arms.jpg', 'hands_push_through.jpg'],
+  hands_push_through: 'hands_push_through.jpg',
   pike_open_shoulders: ['pike_open_shoulders.jpg', 'pike_open_shoulders_class.jpg'],
   tuck_open_shoulders: [
     'tuck_open_shoulders.jpg',
@@ -44,6 +45,9 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'tuck_open_shoulders.jpg': 'Close-up',
   'tuck_open_shoulders_b.jpg': 'Flexed feet',
   'tuck_open_shoulders_class.jpg': 'Class',
+  'zombie.jpg': 'Stand',
+  'pike_zombie_arms.jpg': 'Pike',
+  'hands_push_through.jpg': 'Hands',
 }
 
 export function shippedFileList(shapeId: string): string[] {
