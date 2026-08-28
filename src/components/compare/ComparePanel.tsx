@@ -1,24 +1,35 @@
 /**
  * Compare tab — side-by-side video study.
  * Reference video next to the athlete camera (live / delay cam / replay).
- * Full screen can split left/right or top/bottom: looping IG + delay/replay.
+ * Full screen covers the whole window: looping IG + delay/replay, left/right or top/bottom.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
+import { CompareSplitBar } from './CompareSplitBar'
 import { CompareLayoutContext, type CompareSplit } from './compareLayout'
 
 export function ComparePanel() {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('lr')
 
-  const grid =
-    fullscreen
-      ? split === 'tb'
-        ? 'grid h-full min-h-0 grid-rows-2 gap-1'
-        : 'grid h-full min-h-0 grid-cols-2 gap-1'
-      : 'grid gap-4 lg:grid-cols-2'
+  useEffect(() => {
+    if (!fullscreen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [fullscreen])
+
+  const grid = fullscreen
+    ? split === 'tb'
+      ? 'grid min-h-0 flex-1 grid-rows-2 gap-1'
+      : 'grid min-h-0 flex-1 grid-cols-2 gap-1'
+    : split === 'tb'
+      ? 'grid gap-4'
+      : 'grid gap-4 md:grid-cols-2'
 
   return (
     <CompareLayoutContext.Provider
@@ -27,67 +38,27 @@ export function ComparePanel() {
       <div
         className={
           fullscreen
-            ? 'fixed inset-0 z-[120] flex flex-col bg-black'
+            ? 'fixed inset-0 z-[250] flex h-[100dvh] w-screen flex-col bg-black'
             : 'flex flex-col gap-4'
         }
       >
         {!fullscreen && (
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
-            <strong className="text-[var(--text)]">Paste, rename, and tag here — it saves into the app.</strong>{' '}
-            Instagram, TikTok, and Facebook video URLs land in Compare. Full screen is a
-            split of the looping clip and your delay cam / replay — left/right or
-            top/bottom — with scrub on both.
+            <strong className="text-[var(--text)]">Full screen split is on both cards below.</strong>{' '}
+            Tap <strong className="text-[var(--text)]">Full screen with delay cam</strong> on the
+            reference, or <strong className="text-[var(--text)]">Full screen with reference</strong> on
+            the athlete camera. Left/right or top/bottom is the looping clip plus delay cam /
+            replay — scrub each side. Paste Instagram URLs here; they save into the app.
           </section>
         )}
         <div
           className={`flex shrink-0 flex-wrap items-center gap-2 ${
-            fullscreen ? 'bg-black/90 px-3 py-2 text-white' : ''
+            fullscreen ? 'bg-black px-3 py-2 text-white' : ''
           }`}
         >
-          <button
-            type="button"
-            onClick={() => setFullscreen(!fullscreen)}
-            className={
-              fullscreen
-                ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
-                : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm'
-            }
-          >
-            {fullscreen ? 'Exit full screen' : 'Full screen split'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSplit('lr')}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              split === 'lr'
-                ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                : fullscreen
-                  ? 'border border-white/20 text-white/80'
-                  : 'border border-[var(--panel-border)] text-[var(--muted)]'
-            }`}
-          >
-            Left / right
-          </button>
-          <button
-            type="button"
-            onClick={() => setSplit('tb')}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              split === 'tb'
-                ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                : fullscreen
-                  ? 'border border-white/20 text-white/80'
-                  : 'border border-[var(--panel-border)] text-[var(--muted)]'
-            }`}
-          >
-            Top / bottom
-          </button>
-          {fullscreen && (
-            <p className="text-xs text-white/70">
-              Looping reference + delay cam / replay. Scrub each side independently.
-            </p>
-          )}
+          <CompareSplitBar where={fullscreen ? 'overlay' : 'page'} />
         </div>
-        <div className={`min-h-0 flex-1 ${grid}`}>{/* keep both panes mounted */}
+        <div className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${grid}`}>
           <ReferencePane />
           <CameraPane />
         </div>

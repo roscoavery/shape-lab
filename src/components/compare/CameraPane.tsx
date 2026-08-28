@@ -24,6 +24,7 @@ import {
 import { createId } from '../../lib/storage'
 import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
+import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
 
 type Mode = 'live' | 'delay' | 'replay'
@@ -551,13 +552,16 @@ export function CameraPane() {
       className={
         fullscreen
           ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black p-1'
-          : 'relative flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+          : 'relative flex min-h-0 flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
       }
     >
       {!fullscreen && (
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Athlete camera</h2>
-        <span className="text-xs text-[var(--muted)]">live · delay cam · replay</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Athlete camera</h2>
+          <span className="text-xs text-[var(--muted)]">live · delay cam · replay</span>
+        </div>
+        <CompareSplitBar where="camera" />
       </div>
       )}
 

@@ -43,6 +43,7 @@ import { defaultSocialName } from '../../lib/socialUrls'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
+import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
@@ -734,9 +735,12 @@ export function ReferencePane() {
     >
       {!fullscreen && (
       <>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Reference video</h2>
-        <span className="text-xs text-[var(--muted)]">the technique to copy</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Reference video</h2>
+          <span className="text-xs text-[var(--muted)]">the technique to copy</span>
+        </div>
+        <CompareSplitBar where="reference" />
       </div>
 
       {/* Collection picker */}
