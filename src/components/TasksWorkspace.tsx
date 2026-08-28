@@ -400,6 +400,12 @@ export function TasksWorkspace({
                     </button>
                   </div>
 
+                  {fullscreen && (
+                    <div className="pointer-events-auto absolute inset-x-1 bottom-2 z-30 sm:bottom-3">
+                      <StillOverlayPicker photos={referencePhotos} onVideo />
+                    </div>
+                  )}
+
                   {onSkipNextTask && (
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 sm:right-3">
                       <NextTaskArrow onClick={onSkipNextTask} large={fullscreen} />

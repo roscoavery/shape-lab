@@ -438,4 +438,9 @@ export type ReferencePhoto = {
    * Missing or `coach` = glossary upload or other coach still — never overwrite shipped files.
    */
   library?: 'coach' | 'ig'
+  /**
+   * Display name when this still is not one of the scored library shapes
+   * (typed at Screenshot save time).
+   */
+  customName?: string
 }

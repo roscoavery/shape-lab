@@ -10,12 +10,15 @@ import { ReferencePane } from './ReferencePane'
 import { CompareSplitBar } from './CompareSplitBar'
 import { CompareLayoutContext, type CompareSplit } from './compareLayout'
 import { IgStillContext, type IgCropDraft } from './IgStillContext'
+import { StillOverlayPicker } from '../StillOverlayPicker'
+import type { ReferencePhoto } from '../../types'
 
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
+  referencePhotos: ReferencePhoto[]
 }
 
-export function ComparePanel({ onSaveIgStill }: Props) {
+export function ComparePanel({ onSaveIgStill, referencePhotos }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('lr')
 
@@ -63,8 +66,8 @@ export function ComparePanel({ onSaveIgStill }: Props) {
             the athlete camera. Left/right or top/bottom is the looping clip plus delay cam /
             replay — scrub each side. Paste Instagram URLs here; they save into the app.{' '}
             <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip or replay:
-            press one corner, drag to the opposite corner, tag the shape, and it lands in{' '}
-            <strong className="text-[var(--text)]">Learn → IG shapes</strong>.
+            press one corner, drag to the opposite corner, tag a listed shape or type a custom
+            name, and it lands in <strong className="text-[var(--text)]">Learn → IG shapes</strong>.
           </section>
         )}
         <div
@@ -77,6 +80,9 @@ export function ComparePanel({ onSaveIgStill }: Props) {
         <div className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${grid}`}>
           <ReferencePane />
           <CameraPane />
+        </div>
+        <div className={fullscreen ? 'shrink-0 bg-black px-2 pb-2' : ''}>
+          <StillOverlayPicker photos={referencePhotos} onVideo={fullscreen} compact={!fullscreen} />
         </div>
       </div>
     </CompareLayoutContext.Provider>

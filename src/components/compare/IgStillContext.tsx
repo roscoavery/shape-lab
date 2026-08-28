@@ -4,6 +4,7 @@ export type IgCropDraft = {
   dataUrl: string
   shapeId: string
   label?: string
+  customName?: string
 }
 
 type IgStillCtx = {

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
+import { useOverlayStill } from '../OverlayStillContext'
 
 const FRAME_STEP = 1 / 30
 const SPEEDS = [0.25, 0.5, 1] as const
@@ -49,6 +50,7 @@ function VideoWorkbenchInner({
   const [loop, setLoop] = useState(true)
   const [pointA, setPointA] = useState<number | null>(null)
   const [pointB, setPointB] = useState<number | null>(null)
+  const { selected: overlayStill, opacity: overlayOpacity } = useOverlayStill()
 
   useEffect(() => {
     const v = videoRef.current
@@ -159,6 +161,14 @@ function VideoWorkbenchInner({
           onPause={() => setPlaying(false)}
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
+        {overlayStill && overlayOpacity > 0.02 && (
+          <img
+            src={overlayStill.src}
+            alt=""
+            className="pointer-events-none absolute inset-0 z-[5] h-full w-full object-contain"
+            style={{ opacity: overlayOpacity }}
+          />
+        )}
         <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
       </div>
 

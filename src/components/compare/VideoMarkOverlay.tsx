@@ -5,7 +5,9 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { cropVideoFrame, type NormPt } from '../../lib/cropFrame'
+import { customShapeId } from '../../lib/igStills'
 import { learnLibraryShapes } from '../../lib/educationCopy'
+import { HScrollRow } from '../HScrollRow'
 import { useIgStillSave } from './IgStillContext'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
@@ -98,7 +100,9 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const [drawPts, setDrawPts] = useState<Pt[] | null>(null)
   const [cropPts, setCropPts] = useState<[Pt, Pt] | null>(null)
   const [pending, setPending] = useState<{ dataUrl: string } | null>(null)
-  const [shapeId, setShapeId] = useState(shapes[0]?.id ?? '')
+  const [shapeId, setShapeId] = useState('')
+  const [customName, setCustomName] = useState('')
+  const [shapeQuery, setShapeQuery] = useState('')
   const [label, setLabel] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -348,8 +352,9 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
 
   const savePending = () => {
     if (!pending) return
-    if (!shapeId) {
-      setError('Tag the crop with a shape first.')
+    const custom = customName.trim()
+    if (!custom && !shapeId) {
+      setError('Pick a listed shape, or type a custom name if it is not in the list.')
       return
     }
     if (!igSave) {
@@ -357,13 +362,25 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       return
     }
     try {
-      igSave.saveCrop({
-        dataUrl: pending.dataUrl,
-        shapeId,
-        label: label.trim() || undefined,
-      })
+      if (custom) {
+        igSave.saveCrop({
+          dataUrl: pending.dataUrl,
+          shapeId: customShapeId(custom),
+          customName: custom,
+          label: label.trim() || custom,
+        })
+      } else {
+        igSave.saveCrop({
+          dataUrl: pending.dataUrl,
+          shapeId,
+          label: label.trim() || undefined,
+        })
+      }
       setPending(null)
       setLabel('')
+      setCustomName('')
+      setShapeQuery('')
+      setShapeId('')
       setNotice('Saved to IG shapes — open Learn to see it, or overlay it on Tasks.')
       window.setTimeout(() => setNotice(null), 4000)
     } catch (err) {
@@ -434,35 +451,75 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         </p>
       )}
       {pending && (
-        <div className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[70%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl sm:inset-x-auto sm:right-1 sm:w-72">
+        <div className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[78%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Save to IG shapes
           </p>
           <img
             src={pending.dataUrl}
             alt="Crop preview"
-            className="mt-1 max-h-32 w-full rounded object-contain bg-black"
+            className="mt-1 max-h-28 w-full rounded bg-black object-contain"
           />
+          <p className="mt-2 text-[11px] text-white/80">
+            Scroll to the shape, or type a custom name if it is not listed.
+          </p>
+          <input
+            type="search"
+            value={shapeQuery}
+            onChange={(e) => setShapeQuery(e.target.value)}
+            placeholder="Search listed shapes…"
+            className="mt-1 w-full rounded-md border border-white/20 bg-[#121820] px-2 py-1 text-xs text-[var(--text)]"
+          />
+          <HScrollRow label="Listed shapes" className="mt-1.5">
+            {shapes
+              .filter((s) => {
+                const q = shapeQuery.trim().toLowerCase()
+                if (!q) return true
+                return `${s.name} ${s.id}`.toLowerCase().includes(q)
+              })
+              .map((s) => {
+                const on = !customName.trim() && shapeId === s.id
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    onClick={() => {
+                      setShapeId(s.id)
+                      setCustomName('')
+                      setError(null)
+                    }}
+                    className={`max-w-[9rem] shrink-0 snap-start truncate rounded-md px-2 py-1.5 text-left text-[11px] font-semibold ${
+                      on
+                        ? 'bg-[var(--accent)] text-[#06281f]'
+                        : 'border border-white/25 bg-black/50 text-white'
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                )
+              })}
+          </HScrollRow>
           <label className="mt-2 block text-[11px] text-[var(--muted)]">
-            Shape
-            <select
-              value={shapeId}
-              onChange={(e) => setShapeId(e.target.value)}
+            Custom name (if it is not in the list)
+            <input
+              value={customName}
+              onChange={(e) => {
+                setCustomName(e.target.value)
+                if (e.target.value.trim()) setShapeId('')
+                setError(null)
+              }}
+              placeholder="e.g. back walkover set, punch jump"
               className="mt-0.5 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1 text-xs text-[var(--text)]"
-            >
-              {shapes.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <label className="mt-1.5 block text-[11px] text-[var(--muted)]">
-            Label (optional)
+            Note (optional)
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. IG hollow, landing"
+              placeholder="e.g. landing, IG reel"
               className="mt-0.5 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1 text-xs text-[var(--text)]"
             />
           </label>
@@ -480,6 +537,8 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
               onClick={() => {
                 setPending(null)
                 setError(null)
+                setCustomName('')
+                setShapeQuery('')
               }}
               className="rounded-md border border-white/25 px-2.5 py-1 text-[11px] text-white"
             >

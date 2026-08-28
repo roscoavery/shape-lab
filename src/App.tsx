@@ -177,6 +177,7 @@ export default function App() {
       shapeId: draft.shapeId,
       athleteId: null,
       dataUrl: draft.dataUrl,
+      customName: draft.customName,
       label: draft.label,
       createdAt: new Date().toISOString(),
       library: 'ig',
@@ -604,7 +605,7 @@ export default function App() {
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>
           <CompareErrorBoundary>
-            <ComparePanel onSaveIgStill={saveIgStill} />
+            <ComparePanel onSaveIgStill={saveIgStill} referencePhotos={referencePhotos} />
           </CompareErrorBoundary>
         </div>
       )}

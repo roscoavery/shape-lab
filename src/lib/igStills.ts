@@ -12,6 +12,30 @@ export function isIgStill(photo: ReferencePhoto): boolean {
   return photo.library === 'ig'
 }
 
+/** Stable id for a typed shape name that is not in the scored library. */
+export function customShapeId(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 48)
+  return `custom_${slug || Date.now().toString(36)}`
+}
+
+export function igStillDisplayName(photo: ReferencePhoto): string {
+  const fromLib = getShape(photo.shapeId)?.name
+  if (fromLib) return fromLib
+  const custom = photo.customName?.trim()
+  if (custom) return custom
+  const label = photo.label?.trim()
+  if (label) return label
+  if (photo.shapeId.startsWith('custom_')) {
+    return photo.shapeId.slice('custom_'.length).replace(/_/g, ' ')
+  }
+  return photo.shapeId
+}
+
 export function listIgStills(photos: ReferencePhoto[]): ReferencePhoto[] {
   return photos.filter((p) => isIgStill(p) && isUsablePhotoSrc(p.dataUrl))
 }
@@ -55,7 +79,7 @@ export function listIgOverlayStills(photos: ReferencePhoto[]): OverlayStillOptio
   return listIgStills(photos).map((p) => ({
     id: p.id,
     shapeId: p.shapeId,
-    name: getShape(p.shapeId)?.name ?? p.shapeId,
+    name: igStillDisplayName(p),
     src: p.dataUrl,
     library: 'ig' as const,
     label: p.label,
@@ -74,7 +98,7 @@ export function groupIgStillsByShape(
   return [...map.entries()]
     .map(([shapeId, stills]) => ({
       shapeId,
-      name: getShape(shapeId)?.name ?? shapeId,
+      name: igStillDisplayName(stills[0]!) ?? getShape(shapeId)?.name ?? shapeId,
       stills,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
