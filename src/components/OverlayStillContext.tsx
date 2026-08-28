@@ -10,7 +10,7 @@ export type OverlayStillCtx = {
   selected: OverlayStillOption | null
   visible: boolean
   opacity: number
-  /** 0.18–1, portion of the video frame (or fullscreen stage) the still occupies. */
+  /** 0.05–1, portion of the video frame (or fullscreen stage) the still occupies. */
   scale: number
   /** Center of the still, 0–100% of the parent. */
   offsetX: number
@@ -64,7 +64,7 @@ export function OverlayStillProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setScale = useCallback((n: number) => {
-    setScaleState(clamp(n, 0.18, 1))
+    setScaleState(clamp(n, 0.05, 1))
   }, [])
 
   const setOffset = useCallback((x: number, y: number) => {

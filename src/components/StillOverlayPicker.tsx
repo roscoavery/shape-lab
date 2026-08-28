@@ -74,12 +74,52 @@ export function StillOverlayPicker({
     setMenuOpen(false)
   }
 
+  const pickNone = () => {
+    setSelected(null)
+    setMenuOpen(false)
+  }
+
   const dark = onVideo || rail
   const shell = dark
     ? 'rounded-xl border border-white/15 bg-black/55 p-2 shadow-lg backdrop-blur-md'
     : `rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] ${compact ? 'p-2' : 'p-3'}`
   const muted = dark ? 'text-white/70' : 'text-[var(--muted)]'
   const text = dark ? 'text-white' : 'text-[var(--text)]'
+
+  const noneThumb = (size: 'row' | 'film') => {
+    const on = selected == null
+    return (
+      <button
+        type="button"
+        role="option"
+        aria-selected={on}
+        onClick={pickNone}
+        className={`${
+          size === 'film'
+            ? 'w-[7.5rem] shrink-0 snap-start sm:w-36'
+            : 'w-[5.5rem] shrink-0 snap-start sm:w-24'
+        } overflow-hidden rounded-lg border text-left ${
+          on
+            ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]'
+            : dark || rail
+              ? 'border-white/20 hover:border-white/50'
+              : 'border-[var(--panel-border)] hover:border-[var(--accent-dim)]'
+        }`}
+        title="No shape overlay"
+      >
+        <span
+          className={`flex items-center justify-center bg-black/70 text-[11px] font-semibold uppercase tracking-wider ${
+            size === 'film' ? 'h-28 sm:h-32' : 'h-16 sm:h-[4.5rem]'
+          } ${on ? 'text-[var(--accent)]' : text}`}
+        >
+          None
+        </span>
+        <span className={`block truncate px-1 py-0.5 text-[9px] leading-tight ${text}`}>
+          No overlay
+        </span>
+      </button>
+    )
+  }
 
   const chip = (
     <button
@@ -100,7 +140,7 @@ export function StillOverlayPicker({
         />
       ) : (
         <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded bg-black/40 text-[10px] uppercase tracking-wide">
-          Still
+          None
         </span>
       )}
       <span className="min-w-0 flex-1 truncate">
@@ -108,7 +148,7 @@ export function StillOverlayPicker({
           ? visible
             ? selected.name
             : `${selected.name} · hidden`
-          : 'Shape overlay'}
+          : 'None'}
       </span>
       <span className={`shrink-0 text-[10px] uppercase tracking-wider ${muted}`}>
         {menuOpen ? 'Hide' : 'Open'}
@@ -193,9 +233,9 @@ export function StillOverlayPicker({
         <span className="w-10 shrink-0">Size</span>
         <input
           type="range"
-          min={0.18}
+          min={0.05}
           max={1}
-          step={0.02}
+          step={0.01}
           value={scale}
           onChange={(e) => setScale(Number(e.target.value))}
           className="min-w-0 flex-1 accent-[var(--accent)]"
@@ -279,6 +319,7 @@ export function StillOverlayPicker({
             />
           </div>
           <HScrollRow label={library === 'ig' ? 'IG shapes' : 'Shape library'} className="mt-2">
+            {noneThumb('film')}
             {filtered.map((s) => thumb(s, 'film'))}
           </HScrollRow>
           {filtered.length === 0 && (
@@ -335,6 +376,7 @@ export function StillOverlayPicker({
         }`}
       />
       <HScrollRow label={library === 'ig' ? 'IG shapes' : 'Shape library'} className="mt-1.5">
+        {noneThumb('row')}
         {filtered.map((s) => thumb(s, 'row'))}
       </HScrollRow>
       {filtered.length === 0 && (
