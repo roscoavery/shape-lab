@@ -220,7 +220,7 @@ export function StillCropEditor({
           {editing && (
             <p className="w-full text-[10px] leading-snug text-[var(--muted)]">
               Press one corner of what should stay on screen, drag to the opposite
-              corner. Empty sides of the photo stay out of the library and overlay.
+              corner. That clips the edges — the picture is not stretched.
             </p>
           )}
         </div>

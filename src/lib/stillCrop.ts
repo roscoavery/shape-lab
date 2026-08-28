@@ -46,18 +46,24 @@ export function cropFromCorners(
   return clampStillCrop({ x: x1, y: y1, w: Math.max(MIN, x2 - x1), h: Math.max(MIN, y2 - y1) })
 }
 
-/** CSS placement so the crop region fills its wrapper. */
-export function cropImageStyle(crop: StillCropRect): {
-  width: string
-  height: string
-  left: string
-  top: string
-} {
+/** `object-view-box` inset — clips the source, then object-fit can scale it uniformly. */
+export function cropViewBox(crop: StillCropRect): string {
   const c = clampStillCrop(crop)
-  return {
-    width: `${100 / c.w}%`,
-    height: `${100 / c.h}%`,
-    left: `${(-c.x / c.w) * 100}%`,
-    top: `${(-c.y / c.h) * 100}%`,
-  }
+  const top = c.y * 100
+  const right = (1 - c.x - c.w) * 100
+  const bottom = (1 - c.y - c.h) * 100
+  const left = c.x * 100
+  return `inset(${top}% ${right}% ${bottom}% ${left}%)`
+}
+
+/** Crop window aspect as `width / height` of the original pixels. */
+export function cropAspectRatio(
+  crop: StillCropRect,
+  natW: number,
+  natH: number,
+): string {
+  const c = clampStillCrop(crop)
+  const w = Math.max(1, c.w * natW)
+  const h = Math.max(1, c.h * natH)
+  return `${w} / ${h}`
 }
