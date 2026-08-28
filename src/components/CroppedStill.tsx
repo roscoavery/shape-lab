@@ -1,10 +1,11 @@
 /**
  * Still framed by Ryan's display crop. Original JPEG is never rewritten.
- * Crop only clips what sits outside the rectangle — the picture is never stretched.
+ * Crop clips pixels outside the rectangle. The remaining picture keeps its
+ * proportions — width and height are never scaled independently.
  */
 
-import { useState, type CSSProperties, type SyntheticEvent } from 'react'
-import { clampStillCrop, cropAspectRatio, cropViewBox } from '../lib/stillCrop'
+import { useEffect, useState } from 'react'
+import { cropSourcePixels, type StillCropRect } from '../lib/stillCrop'
 import { useStillCrop } from './StillCropContext'
 
 type Props = {
@@ -15,14 +16,24 @@ type Props = {
   onError?: () => void
 }
 
-function supportsObjectViewBox(): boolean {
-  return typeof CSS !== 'undefined' && CSS.supports('object-view-box', 'inset(10% 10% 10% 10%)')
-}
-
-function withContain(className: string): string {
-  return /\bobject-(contain|cover|none)\b/.test(className)
-    ? className.replace(/\bobject-cover\b/g, 'object-contain')
-    : `${className} object-contain`.trim()
+function clipToObjectUrl(
+  img: HTMLImageElement,
+  crop: StillCropRect,
+): Promise<string | null> {
+  const { sx, sy, sw, sh } = cropSourcePixels(crop, img.naturalWidth, img.naturalHeight)
+  const canvas = document.createElement('canvas')
+  canvas.width = sw
+  canvas.height = sh
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return Promise.resolve(null)
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+  return new Promise((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(blob ? URL.createObjectURL(blob) : null),
+      'image/jpeg',
+      0.92,
+    )
+  })
 }
 
 export function CroppedStill({
@@ -34,94 +45,59 @@ export function CroppedStill({
 }: Props) {
   const { cropFor } = useStillCrop()
   const crop = cropFor(stillId)
-  const [nat, setNat] = useState<{ w: number; h: number } | null>(null)
+  const [clipped, setClipped] = useState<string | null>(null)
 
-  const onLoad = (e: SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      setNat({ w: img.naturalWidth, h: img.naturalHeight })
+  const cropKey = crop ? `${crop.x}:${crop.y}:${crop.w}:${crop.h}` : ''
+
+  useEffect(() => {
+    if (!crop) {
+      setClipped(null)
+      return
     }
-  }
+    let objectUrl: string | null = null
+    let cancelled = false
+    setClipped(null)
+    const img = new Image()
+    img.onload = () => {
+      void clipToObjectUrl(img, crop).then((url) => {
+        if (cancelled) {
+          if (url) URL.revokeObjectURL(url)
+          return
+        }
+        if (!url) {
+          setClipped(src)
+          return
+        }
+        objectUrl = url
+        setClipped(url)
+      })
+    }
+    img.onerror = () => {
+      if (!cancelled) setClipped(src)
+    }
+    img.src = src
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [src, crop, cropKey])
 
-  if (!crop) {
+  if (crop && !clipped) {
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={onError}
-        onLoad={onLoad}
-        draggable={false}
+      <span
+        className={`inline-block bg-[#0d1218] ${className.replace(/\bobject-\w+\b/g, '')}`}
+        aria-hidden
       />
     )
   }
-
-  const c = clampStillCrop(crop)
-  const containClass = withContain(className)
-
-  if (supportsObjectViewBox()) {
-    const viewStyle = {
-      objectFit: 'contain',
-      objectViewBox: cropViewBox(c),
-    } as CSSProperties
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={containClass}
-        style={viewStyle}
-        onError={onError}
-        onLoad={onLoad}
-        draggable={false}
-      />
-    )
-  }
-
-  const boxClass = className
-    .replace(/\bobject-contain\b/g, '')
-    .replace(/\bobject-cover\b/g, '')
-    .replace(/\bobject-none\b/g, '')
-    .trim()
-  const aspect = nat ? cropAspectRatio(c, nat.w, nat.h) : `${c.w} / ${c.h}`
-  const packed =
-    /\bh-full\b/.test(className) ||
-    /\bmax-h-full\b/.test(className) ||
-    /\bh-\[/.test(className)
 
   return (
-    <span className={`inline-flex items-center justify-center overflow-hidden ${boxClass}`}>
-      <span
-        className="relative block max-h-full max-w-full overflow-hidden"
-        style={
-          packed
-            ? {
-                aspectRatio: aspect,
-                height: '100%',
-                width: 'auto',
-                maxWidth: '100%',
-              }
-            : {
-                aspectRatio: aspect,
-                width: '100%',
-                height: 'auto',
-                maxHeight: '100%',
-              }
-        }
-      >
-        <img
-          src={src}
-          alt={alt}
-          draggable={false}
-          onError={onError}
-          onLoad={onLoad}
-          className="absolute left-0 top-0 max-h-none max-w-none"
-          style={{
-            width: `${100 / c.w}%`,
-            height: 'auto',
-            transform: `translate(${-c.x * 100}%, ${-c.y * 100}%)`,
-          }}
-        />
-      </span>
-    </span>
+    <img
+      src={clipped ?? src}
+      alt={alt}
+      className={className}
+      onError={onError}
+      draggable={false}
+    />
   )
 }

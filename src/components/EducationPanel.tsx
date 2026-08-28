@@ -494,12 +494,12 @@ function ShapeLibrary({
                 onClick={() => onOpen(shape.id)}
                 className="flex h-full w-full gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 text-left transition hover:border-[var(--accent-dim)]"
               >
-                <div className="flex h-24 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
+                <div className="flex h-24 w-32 min-w-0 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
                   <ReferenceStill
                     shapeId={shape.id}
                     photos={referencePhotos}
                     alt=""
-                    className="max-h-full max-w-full object-contain"
+                    className="h-full w-full min-h-0 min-w-0 object-contain"
                   />
                 </div>
                 <div className="min-w-0 flex-1">

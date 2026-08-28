@@ -255,13 +255,13 @@ function PracticeGrid({
               className="flex w-full gap-3 text-left"
               onClick={() => onOpen(open ? null : s.shapeId)}
             >
-              <div className="flex h-28 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
+              <div className="flex h-28 w-36 min-w-0 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
                 {have && ref ? (
                   <ReferenceStill
                     shapeId={s.shapeId}
                     photos={photos}
                     alt=""
-                    className="max-h-full max-w-full object-contain"
+                    className="h-full w-full min-h-0 min-w-0 object-contain"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-[var(--warn)]">

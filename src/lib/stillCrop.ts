@@ -46,24 +46,17 @@ export function cropFromCorners(
   return clampStillCrop({ x: x1, y: y1, w: Math.max(MIN, x2 - x1), h: Math.max(MIN, y2 - y1) })
 }
 
-/** `object-view-box` inset — clips the source, then object-fit can scale it uniformly. */
-export function cropViewBox(crop: StillCropRect): string {
-  const c = clampStillCrop(crop)
-  const top = c.y * 100
-  const right = (1 - c.x - c.w) * 100
-  const bottom = (1 - c.y - c.h) * 100
-  const left = c.x * 100
-  return `inset(${top}% ${right}% ${bottom}% ${left}%)`
-}
-
-/** Crop window aspect as `width / height` of the original pixels. */
-export function cropAspectRatio(
+/** Pixel rectangle on a decoded image — clip only, never scale X/Y independently. */
+export function cropSourcePixels(
   crop: StillCropRect,
   natW: number,
   natH: number,
-): string {
+): { sx: number; sy: number; sw: number; sh: number } {
   const c = clampStillCrop(crop)
-  const w = Math.max(1, c.w * natW)
-  const h = Math.max(1, c.h * natH)
-  return `${w} / ${h}`
+  const sx = Math.min(natW - 1, Math.max(0, Math.round(c.x * natW)))
+  const sy = Math.min(natH - 1, Math.max(0, Math.round(c.y * natH)))
+  const sw = Math.min(natW - sx, Math.max(1, Math.round(c.w * natW)))
+  const sh = Math.min(natH - sy, Math.max(1, Math.round(c.h * natH)))
+  return { sx, sy, sw, sh }
 }
+
