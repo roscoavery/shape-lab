@@ -107,7 +107,9 @@ export function criterionHowToHit(c: CriterionDef): string[] {
 
 /** Full “how to hit this shape” bullet list for education pages. */
 export function howToHitShape(shape: ShapeDef): string[] {
-  const fromTips = shape.tips ?? []
+  const fromTips = (shape.tips ?? []).filter(
+    (t) => !/^(film|photograph|shoot|side view|front\.|standalone)/i.test(t.trim()),
+  )
   const fromCriteria = visibleCriteria(shape).flatMap((c) => {
     const cues = criterionHowToHit(c)
     if (cues.length === 0) return []
@@ -115,7 +117,6 @@ export function howToHitShape(shape: ShapeDef): string[] {
   })
   const seen = new Set<string>()
   const out: string[] = []
-  if (shape.bodyPosition) out.push(shape.bodyPosition)
   for (const line of [...fromTips, ...fromCriteria]) {
     const key = line.toLowerCase()
     if (seen.has(key)) continue

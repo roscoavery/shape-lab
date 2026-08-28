@@ -112,8 +112,8 @@ export function ComparePanel({
               corner, drag to the opposite corner, and it lands in{' '}
               <strong className="text-[var(--text)]">Learn → IG shapes</strong>
               {persistIgToApp
-                ? '. Ryan is selected, so that still is saved into the app — every link will have it.'
-                : '. Select the Ryan profile first if you want that still saved into the app for every browser and link.'}
+                ? '. Ryan is selected, so that still is saved into the app — every link will have it. Add or delete a Compare URL on this profile and it saves into the app the same way.'
+                : '. Select the Ryan profile first if you want that still — or a Compare URL add/delete — saved into the app for every browser and link.'}
             </section>
           )}
           {!fullscreen && (
@@ -123,7 +123,7 @@ export function ComparePanel({
           )}
           <div className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${grid}`}>
             <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-              <ReferencePane />
+          <ReferencePane persistToApp={persistIgToApp} />
             </div>
             <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
               <CameraPane />

@@ -23,6 +23,7 @@ export type LibraryBackup = {
   kind: 'shape-lab-library'
   version: 1
   exportedAt: string
+  managed?: boolean
   collections: Array<{
     id: string
     name: string
@@ -43,6 +44,7 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
     kind: 'shape-lab-library',
     version: 1,
     exportedAt: new Date().toISOString(),
+    managed: true,
     collections: collections.map((c) => ({
       id: c.id,
       name: c.name,
@@ -253,7 +255,6 @@ export async function mergeLibraryBackup(
     await putCollection(col)
   }
   persistLibraryMeta(coalesced)
-  void pushServerLibrary(coalesced)
   return { collections: coalesced, added, skipped }
 }
 
@@ -283,36 +284,104 @@ export async function pushServerLibrary(collections: RefCollection[]): Promise<v
   }
 }
 
-export function publishLibrary(collections: RefCollection[]): void {
+export function publishLibrary(
+  collections: RefCollection[],
+  persistToApp = false,
+): void {
   persistLibraryMeta(collections)
-  void pushServerLibrary(collections)
+  if (persistToApp) void pushServerLibrary(collections)
 }
 
-/** Merge this origin's IndexedDB with the shipped list and the on-disk library. */
+export function libraryIsManaged(backup: LibraryBackup | null): boolean {
+  if (!backup) return false
+  const extra = backup as LibraryBackup & { managed?: boolean }
+  return Boolean(extra.managed) || Boolean(backup.exportedAt)
+}
+
+function backupToCollections(backup: LibraryBackup): RefCollection[] {
+  return backup.collections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    createdAt: c.createdAt,
+    items: c.items
+      .filter((i) => i.kind !== 'file' || i.url)
+      .filter((i) => i.url)
+      .map((item) => ({
+        id: item.id,
+        kind:
+          item.kind === 'instagram' ||
+          item.kind === 'tiktok' ||
+          item.kind === 'facebook' ||
+          item.kind === 'url'
+            ? item.kind
+            : 'url',
+        name: item.name || item.url || 'Clip',
+        url: item.url,
+        keywords: parseKeywords(item.keywords),
+        createdAt: item.createdAt,
+      })),
+  }))
+}
+
+/** Replace IndexedDB collections with a backup (deletes stick). */
+export async function replaceLibraryFromBackup(
+  backup: LibraryBackup,
+): Promise<RefCollection[]> {
+  const existing = await getCollections()
+  const next = backupToCollections(backup)
+  const keep = new Set(next.map((c) => c.id))
+  for (const col of existing) {
+    if (!keep.has(col.id)) await deleteCollectionRecord(col.id)
+  }
+  for (const col of next) await putCollection(col)
+  persistLibraryMeta(next)
+  return next
+}
+
+/**
+ * Ryan / gym computer: the on-disk library is the source of truth (add + delete).
+ * Other profiles: hydrate gym URLs into this browser; do not overwrite the gym list.
+ */
 export async function syncLibraryWithServer(
   local: RefCollection[],
+  persistToApp = false,
 ): Promise<{ collections: RefCollection[]; pulled: number }> {
   const seed = shippedCompareLibrary()
   const server = await pullServerLibrary()
+
+  if (persistToApp) {
+    if (server && libraryIsManaged(server)) {
+      const collections = await replaceLibraryFromBackup(server)
+      return { collections, pulled: backupUrlCount(server) }
+    }
+    let collections = local
+    let pulled = 0
+    if (seed && backupUrlCount(seed) > 0) {
+      const merged = await mergeLibraryBackup(seed)
+      collections = merged.collections
+      pulled += merged.added
+    }
+    await pushServerLibrary(collections)
+    return { collections, pulled }
+  }
+
   let collections = local
   let pulled = 0
-
-  if (seed && backupUrlCount(seed) > 0) {
-    const merged = await mergeLibraryBackup(seed)
-    collections = merged.collections
-    pulled += merged.added
-  }
   if (server && backupUrlCount(server) > 0) {
     const merged = await mergeLibraryBackup(server)
     collections = merged.collections
     pulled += merged.added
+  } else if (seed && backupUrlCount(seed) > 0) {
+    const localUrls = local.reduce(
+      (n, c) => n + c.items.filter((i) => i.url).length,
+      0,
+    )
+    if (localUrls === 0) {
+      const merged = await mergeLibraryBackup(seed)
+      collections = merged.collections
+      pulled += merged.added
+    }
   }
-
-  const urlCount = collections.reduce(
-    (n, c) => n + c.items.filter((i) => i.kind !== 'file' && i.url).length,
-    0,
-  )
-  if (urlCount > 0) await pushServerLibrary(collections)
   return { collections, pulled }
 }
 

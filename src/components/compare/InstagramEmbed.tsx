@@ -6,12 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { socialOpenLabel, socialPlatform } from '../../lib/socialUrls'
-import {
-  fetchInstagramVideoBlob,
-  isQuotaError,
-  loadCachedInstagramBlob,
-} from '../../lib/igCache'
-import { putBlob } from '../../lib/clipStore'
+import { fetchInstagramVideoBlob, isQuotaError, loadCachedInstagramBlob } from '../../lib/igCache'
+import { deleteBlob, putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
 type Props = {
@@ -31,6 +27,7 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
   const [fromCache, setFromCache] = useState(false)
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!socialPlatform(url)) {
@@ -53,7 +50,7 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
 
     void (async () => {
       try {
-        if (itemId) {
+        if (itemId && retry === 0) {
           const cached = await loadCachedInstagramBlob(itemId)
           if (cancelled) return
           if (cached) {
@@ -106,7 +103,7 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [url, itemId])
+  }, [url, itemId, retry])
 
   if (!platform) {
     return (
@@ -130,14 +127,26 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
           {error ?? 'No playable video for that URL.'}
         </p>
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-[var(--accent)] underline"
-        >
-          {socialOpenLabel(platform)}
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (itemId) void deleteBlob(itemId)
+              setRetry((n) => n + 1)
+            }}
+            className="text-xs font-semibold text-[var(--accent)] hover:underline"
+          >
+            Try again
+          </button>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-[var(--accent)] underline"
+          >
+            {socialOpenLabel(platform)}
+          </a>
+        </div>
       </div>
     )
   }

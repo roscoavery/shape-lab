@@ -12,6 +12,7 @@ import {
 } from './educationCopy'
 import { SHAPES } from '../config/shapes'
 import { pickReferencePhoto } from './storage'
+import { defaultAthleteCopy } from './shapeCopy'
 import type { ReferencePhoto, ShapeDef } from '../types'
 
 export type QuizKind = 'describe' | 'picture'
@@ -78,6 +79,7 @@ export function buildShapeQuiz(
   photos: ReferencePhoto[],
   count = 10,
   pool: QuizPool = 'pathway',
+  athleteText?: (shape: ShapeDef) => string,
 ): QuizQuestion[] {
   const library = learnLibraryShapes()
   const arm = new Set(ARM_POSITION_SHAPE_IDS)
@@ -110,7 +112,7 @@ export function buildShapeQuiz(
       })
     } else if (di < describePool.length) {
       const shape = describePool[di++]!
-      const body = shape.bodyPosition?.trim() || shape.description
+      const body = (athleteText?.(shape) ?? defaultAthleteCopy(shape)).trim()
       const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
       questions.push({
         id: `desc_${shape.id}_${questions.length}`,

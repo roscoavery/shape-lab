@@ -24,6 +24,7 @@ import { TaskTrainer } from './components/TaskTrainer'
 import { Tasks2Panel } from './components/Tasks2Panel'
 import { TasksWorkspace, type TaskLiveUi } from './components/TasksWorkspace'
 import { OverlayStillProvider } from './components/OverlayStillContext'
+import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
@@ -372,6 +373,11 @@ export default function App() {
 
   return (
     <OverlayStillProvider>
+    <ShapeCopyProvider
+      canEdit={isRyanAthlete(
+        athletes.find((a) => a.id === activeAthleteId) ?? null,
+      )}
+    >
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -821,6 +827,7 @@ export default function App() {
         </div>
       )}
     </div>
+    </ShapeCopyProvider>
     </OverlayStillProvider>
   )
 }

@@ -14,7 +14,12 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 
 /** Community Cobalt APIs that currently accept unauthenticated requests. */
-const COBALT_APIS = ['https://cobaltapi.cjs.nz/']
+const COBALT_APIS = [
+  'https://api.cobalt.tools/',
+  'https://cobaltapi.cjs.nz/',
+  'https://co.wuk.sh/',
+  'https://cobalt-api.kwiatekmiki.com/',
+]
 
 const cache = new Map<string, { url: string; at: number }>()
 const CACHE_MS = 25 * 60 * 1000
@@ -105,7 +110,7 @@ export async function resolveSocialVideo(rawUrl: string): Promise<string | null>
   const pageUrl = canonicalSocialUrl(rawUrl)
   const hit = cache.get(pageUrl)
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.url
-  const direct = (await cobaltResolve(pageUrl)) ?? (await ytdlpResolve(pageUrl))
+  const direct = (await ytdlpResolve(pageUrl)) ?? (await cobaltResolve(pageUrl))
   if (!direct) return null
   cache.set(pageUrl, { url: direct, at: Date.now() })
   return direct

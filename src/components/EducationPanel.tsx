@@ -26,6 +26,8 @@ import { HitFolder } from './HitFolder'
 import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
 import { deleteReferencePhoto } from '../lib/storage'
 import { removeIgStill } from '../lib/igStillStore'
+import { useShapeCopy } from './ShapeCopyContext'
+import { ShapeCopyEditor } from './ShapeCopyEditor'
 
 type EduView =
   | { kind: 'home' }
@@ -59,6 +61,7 @@ export function EducationPanel({
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [hits, setHits] = useState<TaskCapture[]>([])
+  const { copyFor } = useShapeCopy()
 
   useEffect(() => {
     if (!athleteId) {
@@ -82,7 +85,8 @@ export function EducationPanel({
         const aliases = otherSamePositionIds(s.id)
           .map((id) => getShape(id)?.name ?? '')
           .join(' ')
-        const hay = `${s.name} ${s.description} ${s.category} ${aliases}`.toLowerCase()
+        const athlete = copyFor(s.id).athlete
+        const hay = `${s.name} ${athlete} ${s.description} ${s.category} ${aliases}`.toLowerCase()
         return hay.includes(q)
       })
       .sort((a, b) => {
@@ -94,7 +98,7 @@ export function EducationPanel({
         if (bi != null) return 1
         return a.name.localeCompare(b.name)
       })
-  }, [query, filter, pathwayIds, catalog])
+  }, [query, filter, pathwayIds, catalog, copyFor])
 
   const goHome = () => setView({ kind: 'home' })
   const goShapes = () => setView({ kind: 'shapes' })
@@ -112,9 +116,10 @@ export function EducationPanel({
           Education
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Study body positions and task pathways here first. When you are ready to
-          practice with scoring, open the <strong className="text-[var(--text)]">Tasks</strong>{' '}
-          tab and start the camera.
+          Study the tumbling notes for each shape here first. Camera angle and
+          scoring details stay with the app. When you are ready to practice,
+          open the <strong className="text-[var(--text)]">Tasks</strong> tab and
+          start the camera.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <NavChip
@@ -355,9 +360,10 @@ function HomeView({
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Multiple choice from the whole shape library — Tuck, Hands, Side plank, Superman,
-          the bridges, and the rest. Name the position from a description, or identify the
-          shape in a coach still. Landing lunge and Lunge · open shoulders are the same
-          position — the test treats them as one.
+          the bridges, and the rest. Name the position from the tumbling notes (what you
+          need to know), or identify the shape in a coach still. Camera and scoring
+          details stay out of the test. Landing lunge and Lunge · open shoulders are the
+          same position — the test treats them as one.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the test →
@@ -431,6 +437,7 @@ function ShapeLibrary({
   onOpen: (id: string) => void
   referencePhotos: ReferencePhoto[]
 }) {
+  const { copyFor } = useShapeCopy()
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -507,11 +514,8 @@ function ShapeLibrary({
                       Same position as {otherSamePositionIds(shape.id).map((id) => getShape(id)?.name ?? id).join(', ')}
                     </p>
                   )}
-                  <p className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">
-                    {shape.description}
-                  </p>
-                  <p className="mt-1 text-[10px] text-[var(--muted)]">
-                    Quality ≥ {shape.qualityThreshold}
+                  <p className="mt-1 line-clamp-3 text-xs leading-snug text-[var(--muted)]">
+                    {copyFor(shape.id).athlete}
                   </p>
                 </div>
               </button>
@@ -544,6 +548,7 @@ function ShapeDetail({
   onOpenTask: (taskId: string) => void
   onOpenShape: (shapeId: string) => void
 }) {
+  const { copyFor, canEdit } = useShapeCopy()
   const shape = getShape(shapeId)
   if (!shape) {
     return (
@@ -562,6 +567,8 @@ function ShapeDetail({
   const pathIdx = firstPathwayTaskIndex(shape.id)
   const pathTask = pathIdx != null ? CURRICULUM_TASKS[pathIdx] : null
   const igForShape = igStillsForShape(referencePhotos, shape.id)
+  const athleteCopy = copyFor(shape.id).athlete
+  const appCopy = copyFor(shape.id).app
 
   return (
     <article className="space-y-4">
@@ -605,16 +612,8 @@ function ShapeDetail({
                 . They share this still.
               </p>
             )}
-            <p className="mt-2 text-sm text-[var(--muted)]">{shape.description}</p>
-            {shape.bodyPosition && (
-              <p className="mt-3 text-sm leading-relaxed text-[var(--text)]">{shape.bodyPosition}</p>
-            )}
-            <div className="mt-3">
-              <ViewCallout shape={shape} />
-            </div>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Category: {shape.category} · Quality threshold:{' '}
-              <strong className="text-[var(--text)]">{shape.qualityThreshold}</strong>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
+              {athleteCopy}
             </p>
           </div>
         </div>
@@ -664,14 +663,19 @@ function ShapeDetail({
         </div>
       )}
 
-      {shape.coachNotes && (
+      <ShapeCopyEditor shapeId={shape.id} shapeName={shape.name} />
+
+      {canEdit && (
         <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            How we use this shape
+          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+            What the app knows
           </h4>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
-            {shape.coachNotes}
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted)]">
+            {appCopy}
           </p>
+          <div className="mt-3">
+            <ViewCallout shape={shape} />
+          </div>
         </div>
       )}
 
@@ -687,15 +691,15 @@ function ShapeDetail({
           </ul>
         ) : (
           <p className="text-sm text-[var(--muted)]">
-            No tips yet — add <code className="text-[var(--accent)]">tips</code> or feedback
-            strings in <code className="text-[var(--accent)]">shapes.ts</code>.
+            Use the notes above — hit the shape the way it looks in the coach still.
           </p>
         )}
       </div>
 
+      {canEdit && (
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Key criteria
+          Scoring criteria (app)
         </h4>
         <ul className="space-y-3">
           {criteria.map((c) => {
@@ -728,6 +732,7 @@ function ShapeDetail({
           })}
         </ul>
       </div>
+      )}
     </article>
   )
 }
@@ -821,6 +826,7 @@ function TaskDetail({
   onOpenShape: (shapeId: string) => void
   onOpenTask: (taskId: string) => void
 }) {
+  const { copyFor } = useShapeCopy()
   const task = getTask(taskId)
   if (!task) {
     return (
@@ -910,7 +916,9 @@ function TaskDetail({
                   </span>
                 </div>
                 {shape && (
-                  <p className="mt-1 text-sm text-[var(--muted)]">{shape.description}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {copyFor(shape.id).athlete}
+                  </p>
                 )}
                 {step.note && (
                   <p className="mt-2 rounded-md bg-[#121820] px-3 py-2 text-sm text-[var(--text)]">

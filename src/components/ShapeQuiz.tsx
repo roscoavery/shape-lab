@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildShapeQuiz, type QuizPool, type QuizQuestion } from '../lib/shapeQuiz'
+import { useShapeCopy } from './ShapeCopyContext'
 import type { ReferencePhoto } from '../types'
 
 type Props = {
@@ -9,11 +10,18 @@ type Props = {
 }
 
 export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) {
+  const { copyFor } = useShapeCopy()
   const [seed, setSeed] = useState(0)
   const questions = useMemo(
-    () => buildShapeQuiz(referencePhotos, pool === 'arm-positions' ? 10 : 12, pool),
+    () =>
+      buildShapeQuiz(
+        referencePhotos,
+        pool === 'arm-positions' ? 10 : 12,
+        pool,
+        (shape) => copyFor(shape.id).athlete,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [referencePhotos, seed, pool],
+    [referencePhotos, seed, pool, copyFor],
   )
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)

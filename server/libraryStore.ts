@@ -9,12 +9,12 @@ import type { IncomingMessage } from 'node:http'
 import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
 
 const FILE = path.join(process.cwd(), 'data', 'library.json')
-const SHIPPED = path.join(process.cwd(), 'src/config/compareLibrary.json')
 
 export type DiskLibrary = {
   kind: 'shape-lab-library'
   version: 1
   exportedAt: string
+  managed?: boolean
   collections: unknown[]
 }
 
@@ -127,6 +127,7 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
     kind: 'shape-lab-library',
     version: 1,
     exportedAt: new Date().toISOString(),
+    managed: true,
     collections,
   }
   fs.mkdirSync(path.dirname(FILE), { recursive: true })
@@ -136,12 +137,6 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
   }
   const text = JSON.stringify(next, null, 2) + '\n'
   fs.writeFileSync(FILE, text)
-  try {
-    fs.mkdirSync(path.dirname(SHIPPED), { recursive: true })
-    fs.writeFileSync(SHIPPED, text)
-  } catch {
-    // shipped copy is best-effort — data/library.json is the live list
-  }
   return next
 }
 

@@ -67,7 +67,11 @@ const SHAPE_TAG_SUGGESTIONS = [
 
 type OtherHit = { item: RefItem; collection: RefCollection }
 
-export function ReferencePane() {
+type Props = {
+  persistToApp?: boolean
+}
+
+export function ReferencePane({ persistToApp = false }: Props) {
   const [collections, setCollections] = useState<RefCollection[]>([])
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
@@ -104,12 +108,19 @@ export function ReferencePane() {
     setCachedIds(await listCachedIds(ids))
   }, [])
 
+  const persist = useCallback(
+    (list: RefCollection[]) => {
+      publishLibrary(list, persistToApp)
+    },
+    [persistToApp],
+  )
+
   useEffect(() => {
     void (async () => {
       try {
         let list = await getCollections()
         list = await restoreMetaIfIndexedDbEmpty(list)
-        const synced = await syncLibraryWithServer(list)
+        const synced = await syncLibraryWithServer(list, persistToApp)
         list = synced.collections
         if (list.length === 0) {
           const def: RefCollection = {
@@ -122,8 +133,8 @@ export function ReferencePane() {
           list = [def]
         }
         setCollections(list)
-        publishLibrary(list)
-        setActiveCollectionId(list[0].id)
+        persist(list)
+        setActiveCollectionId((id) => id ?? list[0]!.id)
         await refreshCachedIds(list)
         const urlCount = list.reduce(
           (n, c) => n + c.items.filter((i) => i.url).length,
@@ -131,7 +142,13 @@ export function ReferencePane() {
         )
         if (synced.pulled > 0) {
           setNotice(
-            `Loaded ${urlCount} saved reference${urlCount === 1 ? '' : 's'} into this app.`,
+            persistToApp
+              ? `Ryan profile: ${urlCount} reference${urlCount === 1 ? '' : 's'} saved in the app. Add or delete a URL here and every browser keeps it.`
+              : `Loaded ${urlCount} saved reference${urlCount === 1 ? '' : 's'} into this app.`,
+          )
+        } else if (persistToApp) {
+          setNotice(
+            'Ryan is selected — add or delete a URL here and it saves into the app for every browser.',
           )
         }
       } catch {
@@ -143,7 +160,7 @@ export function ReferencePane() {
     return () => {
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
-  }, [refreshCachedIds])
+  }, [refreshCachedIds, persistToApp, persist])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -180,7 +197,7 @@ export function ReferencePane() {
     await putCollection(next)
     setCollections((prev) => {
       const list = prev.map((c) => (c.id === next.id ? next : c))
-      publishLibrary(list)
+      persist(list)
       return list
     })
   }
@@ -197,7 +214,7 @@ export function ReferencePane() {
     await putCollection(col)
     setCollections((prev) => {
       const list = [...prev, col]
-      publishLibrary(list)
+      persist(list)
       return list
     })
     setActiveCollectionId(col.id)
@@ -210,7 +227,7 @@ export function ReferencePane() {
     await deleteCollection(activeCollection)
     const rest = collections.filter((c) => c.id !== activeCollection.id)
     setCollections(rest)
-    publishLibrary(rest)
+    persist(rest)
     setActiveCollectionId(rest[0]?.id ?? null)
     setActiveItemId(null)
     revokeSrc()
@@ -462,7 +479,7 @@ export function ReferencePane() {
       return
     }
     downloadBackupFile(collections)
-    publishLibrary(collections)
+    persist(collections)
     const n = collections.reduce(
       (sum, c) => sum + c.items.filter((i) => i.url).length,
       0,
@@ -493,6 +510,7 @@ export function ReferencePane() {
       const backup = parseLibraryBackup(await file.text())
       const { collections: next, added, skipped } = await mergeLibraryBackup(backup)
       setCollections(next)
+      persist(next)
       await refreshCachedIds(next)
       const urlsInFile = backupUrlCount(backup)
       setNotice(
