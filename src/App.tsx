@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Coach | Athletes | About
+ * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -29,6 +29,10 @@ import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
+import { ClassesPanel } from './components/classes/ClassesPanel'
+import { FeedPanel } from './components/feed/FeedPanel'
+import { GymLibraryProvider } from './lib/gymLibrary'
+import { ClipLoopsProvider } from './lib/clipLoops'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
@@ -421,6 +425,8 @@ export default function App() {
     <OverlayStillProvider>
     <ShapeCopyProvider canEdit={ryanEdit}>
     <StillCropProvider canEdit={ryanEdit}>
+    <GymLibraryProvider>
+    <ClipLoopsProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -439,6 +445,8 @@ export default function App() {
               ['homework', 'Homework'],
               ['learn', 'Learn'],
               ['compare', 'Compare'],
+              ['classes', 'Classes'],
+              ['feed', 'Feed'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
               ['about', 'About'],
@@ -689,6 +697,19 @@ export default function App() {
         </div>
       )}
 
+      {tab === 'classes' && (
+        <ClassesPanel
+          athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+        />
+      )}
+
+      {tab === 'feed' && (
+        <FeedPanel
+          athletes={athletes}
+          athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+        />
+      )}
+
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-3">
@@ -771,6 +792,18 @@ export default function App() {
               MediaPipe Pose in your browser — no paid APIs, no account required. Attempts,
               athlete profiles, curriculum progress, and reference photos stay on this device via
               localStorage.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
+              Classes and the gym feed
+            </h2>
+            <p className="mb-2">
+              <strong className="text-[var(--text)]">Classes</strong> saves named drill
+              collages (up to six gym URLs) with captions and A/B loops.{' '}
+              <strong className="text-[var(--text)]">Feed</strong> is the gym accomplishment
+              wall — coaches tag athletes, athletes tag their coach. Unlock a profile to
+              post. Ryan stays coach/admin.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -882,6 +915,8 @@ export default function App() {
         }}
       />
     )}
+    </ClipLoopsProvider>
+    </GymLibraryProvider>
     </StillCropProvider>
     </ShapeCopyProvider>
     </OverlayStillProvider>

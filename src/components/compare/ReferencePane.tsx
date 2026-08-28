@@ -1106,9 +1106,15 @@ export function ReferencePane({ gymEditor = false }: Props) {
           itemId={activeItem.id}
           onCached={markCached}
           fill={fullscreen}
+          persistUrl={activeItem.url}
         />
       ) : itemSrc ? (
-        <VideoWorkbench src={itemSrc} allowAbLoop fill={fullscreen} />
+        <VideoWorkbench
+          src={itemSrc}
+          allowAbLoop
+          fill={fullscreen}
+          persistUrl={activeItem?.url}
+        />
       ) : (
         <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
           {!libraryReady

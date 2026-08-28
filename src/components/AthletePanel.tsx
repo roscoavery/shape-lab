@@ -3,6 +3,7 @@ import type { Athlete } from '../types'
 import { createId } from '../lib/storage'
 import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
+import { isCoachProfile } from '../lib/profileRole'
 import {
   digitsOnlyPin,
   hashPasscode,
@@ -78,6 +79,7 @@ export function AthletePanel({
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       createdAt: new Date().toISOString(),
       passcodeHash,
+      role: 'athlete',
     }
     markProfileUnlocked(id)
     onChangeAthletes([...athletes, athlete])
@@ -152,7 +154,9 @@ export function AthletePanel({
 
   return (
     <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-      <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">Athlete profile</p>
+      <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
+        {active && isCoachProfile(active) ? 'Coach profile' : 'Athlete profile'}
+      </p>
       <select
         className="mb-3 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
         value={activeId ?? ''}
@@ -161,7 +165,7 @@ export function AthletePanel({
         <option value="">Select athlete…</option>
         {athletes.map((a) => (
           <option key={a.id} value={a.id}>
-            {a.name}
+            {isCoachProfile(a) ? `${a.name} · Coach` : `${a.name} · Athlete`}
             {a.instagramHandle ? ` (@${a.instagramHandle})` : ''}
           </option>
         ))}
@@ -273,9 +277,10 @@ export function AthletePanel({
       {saved && <p className="mt-2 text-[11px] text-[var(--accent)]">{saved}</p>}
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
         Each new profile sets a 4-digit passcode on Create. Unlock that profile
-        on any phone link or browser to see homework, hold times, Compare URLs,
-        and the video library. Ryan’s passcode is 2223. Creating the same name
-        again selects the existing profile. Ryan stays on the roster.
+        on any phone link or browser to see homework, hold times, the video
+        library, Classes collages, and the gym feed. Coach and athlete profiles
+        stay labeled. Ryan’s passcode is 2223 — that profile stays coach/admin.
+        Creating the same name again selects the existing profile.
       </p>
     </div>
   )

@@ -111,6 +111,11 @@ export function canonicalSocialUrl(url: string): string {
   return cleaned
 }
 
+/** Stable key for gym-wide A/B loop points on a pasted social / video URL. */
+export function clipLoopKey(url: string): string {
+  return socialVideoKey(url) ?? canonicalSocialUrl(url).replace(/\/+$/, '')
+}
+
 export function defaultSocialName(url: string): string {
   const ig = parseInstagramUrl(url)
   if (ig) return `IG ${ig.code}`

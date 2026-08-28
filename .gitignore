@@ -27,3 +27,5 @@ data/shape-copy.json
 data/still-crops.json
 data/athlete-videos.json
 data/athlete-video-blobs/
+data/feed-posts.json
+data/feed-blobs/

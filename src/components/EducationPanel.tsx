@@ -23,6 +23,7 @@ import { ViewCallout } from './ViewCallout'
 import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
+import { ReferenceFeed } from './learn/ReferenceFeed'
 import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
 import { deleteReferencePhoto } from '../lib/storage'
 import { removeIgStill } from '../lib/igStillStore'
@@ -41,6 +42,7 @@ type EduView =
   | { kind: 'hits' }
   | { kind: 'glossary' }
   | { kind: 'ig' }
+  | { kind: 'scroll' }
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -109,7 +111,7 @@ export function EducationPanel({
   const openTask = (taskId: string) => setView({ kind: 'task', taskId })
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className={`mx-auto space-y-4 ${view.kind === 'scroll' ? 'max-w-xl' : 'max-w-4xl'}`}>
       <header className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <p className="mb-1 text-xs uppercase tracking-wider text-[var(--muted)]">
           Learn without a camera
@@ -119,9 +121,11 @@ export function EducationPanel({
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Study the tumbling notes for each shape here first. Camera angle and
-          scoring details stay with the app. When you are ready to practice,
-          open the <strong className="text-[var(--text)]">Tasks</strong> tab and
-          start the camera.
+          scoring details stay with the app. Scroll the gym Instagram library under{' '}
+          <strong className="text-[var(--text)]">Reference scroll</strong>. When you
+          are ready to practice, open the{' '}
+          <strong className="text-[var(--text)]">Tasks</strong> tab and start the
+          camera.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <NavChip
@@ -155,6 +159,11 @@ export function EducationPanel({
             label="Arm positions"
           />
           <NavChip
+            active={view.kind === 'scroll'}
+            onClick={() => setView({ kind: 'scroll' })}
+            label="Reference scroll"
+          />
+          <NavChip
             active={view.kind === 'ig'}
             onClick={() => setView({ kind: 'ig' })}
             label="IG shapes"
@@ -179,6 +188,7 @@ export function EducationPanel({
           onHits={() => setView({ kind: 'hits' })}
           onGlossary={() => setView({ kind: 'glossary' })}
           onIg={() => setView({ kind: 'ig' })}
+          onScroll={() => setView({ kind: 'scroll' })}
           igCount={listIgStills(referencePhotos).length}
         />
       )}
@@ -219,6 +229,8 @@ export function EducationPanel({
           onOpenTask={openTask}
         />
       )}
+
+      {view.kind === 'scroll' && <ReferenceFeed />}
 
       {view.kind === 'glossary' && (
         <ShapeGlossary
@@ -294,6 +306,7 @@ function HomeView({
   onHits,
   onGlossary,
   onIg,
+  onScroll,
   igCount,
 }: {
   pathwayCount: number
@@ -306,6 +319,7 @@ function HomeView({
   onHits: () => void
   onGlossary: () => void
   onIg: () => void
+  onScroll: () => void
   igCount: number
 }) {
   return (
@@ -385,6 +399,20 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Test arm positions →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onScroll}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Reference scroll</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Doom-scroll the gym Instagram library from Compare. Set A/B loop points on
+          each clip — Classes and Compare keep those same points.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open scroll →
         </span>
       </button>
       <button

@@ -27,12 +27,16 @@ export function makeRyanProfile(): Athlete {
     id: RYAN_PROFILE_ID,
     name: RYAN_PROFILE_NAME,
     createdAt: '2024-01-01T00:00:00.000Z',
+    role: 'coach',
   }
 }
 
 /** Ryan first, never duplicated. Safe to run on every roster load. */
 export function ensureRyanInAthletes(list: Athlete[]): Athlete[] {
-  const ryan = findRyan(list) ?? makeRyanProfile()
+  const found = findRyan(list)
+  const ryan: Athlete = found
+    ? { ...found, role: 'coach' }
+    : makeRyanProfile()
   const rest = list.filter((a) => !isRyanAthlete(a))
   rest.sort((a, b) => a.name.localeCompare(b.name))
   return [ryan, ...rest]

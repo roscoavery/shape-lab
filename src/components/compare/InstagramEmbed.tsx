@@ -15,9 +15,28 @@ type Props = {
   itemId?: string
   onCached?: (itemId: string) => void
   fill?: boolean
+  persistUrl?: string
+  loopA?: number | null
+  loopB?: number | null
+  onAbChange?: (a: number | null, b: number | null) => void
+  compact?: boolean
+  quiet?: boolean
+  active?: boolean
 }
 
-export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
+export function InstagramEmbed({
+  url,
+  itemId,
+  onCached,
+  fill = false,
+  persistUrl,
+  loopA,
+  loopB,
+  onAbChange,
+  compact = false,
+  quiet = false,
+  active,
+}: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
   onCachedRef.current = onCached
@@ -115,7 +134,11 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
 
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
+      <div
+        className={`flex items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)] ${
+          fill ? 'h-full min-h-24' : 'h-48'
+        }`}
+      >
         Opening video…
       </div>
     )
@@ -161,8 +184,20 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
 
   return (
     <div className={fill ? 'flex h-full min-h-0 flex-col gap-0' : 'flex flex-col gap-2'}>
-      <VideoWorkbench src={src} allowAbLoop autoPlay fill={fill} />
-      {!fill && <p className="text-xs text-[var(--muted)]">{footer}</p>}
+      <VideoWorkbench
+        src={src}
+        allowAbLoop
+        autoPlay={active !== false}
+        fill={fill}
+        persistUrl={persistUrl ?? url}
+        loopA={loopA}
+        loopB={loopB}
+        onAbChange={onAbChange}
+        markup={!compact}
+        compact={compact}
+        active={active}
+      />
+      {!fill && !quiet && <p className="text-xs text-[var(--muted)]">{footer}</p>}
     </div>
   )
 }

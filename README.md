@@ -7,8 +7,10 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Grade gymnastics shapes from **0–100** with per-criterion scores
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
 - Run an ordered **athlete Tasks curriculum** (standalone holds 5s → 3s after mastery; sequences always 3s)
-- **Learn** shapes and pathways without a camera (Education tab)
+- **Learn** shapes and pathways without a camera, plus a **reference scroll** of the gym Instagram library
 - **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
+- **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split)
+- **Feed** accomplishment posts — coaches tag athletes, athletes tag their coach
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -178,6 +180,18 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 4. To keep a still of a shape in an IG clip: pause, tap **Screenshot**, drag from one corner of the crop to the other, tag the shape, Save. Open **Learn → IG shapes**. Overlay that still (or any coach still) on Tasks / Homework / Coach. In Compare full screen, open **Shape overlay** for a large filmstrip — pick **None** to clear it — drag the still over either video, and tap **×** to hide it. Size goes down to 5% of the stage so the still can sit as a small stamp.
 
 **Video library (Athletes tab):** clips from delay-cam Record, Compare replay, the handstand hold challenge, and Tasks 2 form-analysis replays. **Save to video library** on a hold or Tasks 2 replay files it there. Grouped by date. Playable on any phone link once that profile is unlocked.
+
+## Learn: reference scroll
+
+**Learn → Reference scroll** is a vertical snap through the same gym URL library as Compare. Names stay in sync: rename a clip in Compare, Save into the app, and the scroll shows the new name. **A** / **B** on a clip loops that phase and writes into `data/clip-loops.json` so Compare and Classes use the same points.
+
+## Classes (drill collages)
+
+**Classes** builds named boards of up to **six** gym-library clips. Each slot can have a caption (reps, a cue) and its own A/B loop. Save the collage so the class can open it later on any link. **Full screen** splits the window as evenly as it can for 1–6 videos (2×2 for four, 3×2 for six, last clip full-width when there are five). Unlock a profile to save. Ryan can edit or delete any collage.
+
+## Gym feed
+
+**Feed** is a simple accomplishment wall. Unlock a profile, pick a video, write a caption, and tag people. **Coach** profiles (Ryan is always coach/admin) tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). Posts live on this gym computer (`/api/feed`). Ryan keeps every existing admin edit in Compare, Learn copy, stills, and the URL library.
 
 ## First test: Handstand
 

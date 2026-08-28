@@ -17,6 +17,7 @@ import {
 import { createId } from './storage'
 import shippedLibrary from '../config/compareLibrary.json'
 import { loadCompareLibraries } from './compareLibraries'
+import { dispatchLibraryChanged } from './libraryEvents'
 
 export const LIBRARY_META_KEY = 'shape-lab.library-meta.v1'
 
@@ -279,6 +280,7 @@ export async function pushServerLibrary(collections: RefCollection[]): Promise<b
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collectionsToBackup(collections)),
     })
+    if (res.ok) dispatchLibraryChanged()
     return res.ok
   } catch {
     return false

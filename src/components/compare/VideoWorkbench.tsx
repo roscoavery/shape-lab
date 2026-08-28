@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
+import { useClipLoopsOptional } from '../../lib/clipLoops'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -22,6 +23,15 @@ type Props = {
   fill?: boolean
   /** Ghost still on this video (delay cam / replay). Off for the reference clip. */
   showStillOverlay?: boolean
+  /** Gym URL used to persist A/B points for every section. */
+  persistUrl?: string
+  loopA?: number | null
+  loopB?: number | null
+  onAbChange?: (a: number | null, b: number | null) => void
+  markup?: boolean
+  compact?: boolean
+  /** When set, play only while true (doom-scroll / collage). */
+  active?: boolean
 }
 
 function fmt(t: number): string {
@@ -42,21 +52,48 @@ function VideoWorkbenchInner({
   tailSeconds,
   fill = false,
   showStillOverlay = false,
+  persistUrl,
+  loopA,
+  loopB,
+  onAbChange,
+  markup = true,
+  compact = false,
+  active,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
+  const clipLoops = useClipLoopsOptional()
+  const stored = persistUrl && clipLoops ? clipLoops.getLoop(persistUrl) : null
   const [duration, setDuration] = useState(0)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState<number>(1)
   const [loop, setLoop] = useState(true)
-  const [pointA, setPointA] = useState<number | null>(null)
-  const [pointB, setPointB] = useState<number | null>(null)
+  const [pointA, setPointA] = useState<number | null>(() => loopA ?? stored?.a ?? null)
+  const [pointB, setPointB] = useState<number | null>(() => loopB ?? stored?.b ?? null)
 
   useEffect(() => {
     const v = videoRef.current
     if (v) v.playbackRate = speed
   }, [speed])
+
+  useEffect(() => {
+    if (loopA != null) setPointA(loopA)
+    if (loopB != null) setPointB(loopB)
+  }, [loopA, loopB])
+
+  useEffect(() => {
+    if (loopA != null || loopB != null || !stored) return
+    setPointA((p) => p ?? stored.a)
+    setPointB((p) => p ?? stored.b)
+  }, [stored, loopA, loopB])
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || active === undefined) return
+    if (active) void v.play().catch(() => {})
+    else v.pause()
+  }, [active])
 
   // Smooth slider + A/B loop enforcement via rAF
   useEffect(() => {
@@ -135,12 +172,16 @@ function VideoWorkbenchInner({
     }
   }
 
-  const markA = () => setPointA(videoRef.current?.currentTime ?? null)
-  const markB = () => setPointB(videoRef.current?.currentTime ?? null)
-  const clearAb = () => {
-    setPointA(null)
-    setPointB(null)
+  const publishAb = (a: number | null, b: number | null) => {
+    setPointA(a)
+    setPointB(b)
+    onAbChange?.(a, b)
+    if (persistUrl && clipLoops) clipLoops.setLoop(persistUrl, a, b)
   }
+
+  const markA = () => publishAb(videoRef.current?.currentTime ?? null, pointB)
+  const markB = () => publishAb(pointA, videoRef.current?.currentTime ?? null)
+  const clearAb = () => publishAb(null, null)
 
   const loopingAb = pointA !== null && pointB !== null && pointB > pointA
 
@@ -252,14 +293,14 @@ function VideoWorkbenchInner({
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
-        <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
+        {markup && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />}
       </div>
 
       <div className={fill ? 'shrink-0 bg-black px-2 py-1.5 text-white' : ''}>
         {transport}
       </div>
 
-      {!fill && (
+      {!fill && !compact && (
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
           <label className="flex items-center gap-1.5">
             <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />

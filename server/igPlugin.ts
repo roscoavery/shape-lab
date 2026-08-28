@@ -7,6 +7,19 @@ import {
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
+import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
+import {
+  deleteCollage,
+  readCollagesFile,
+  upsertCollage,
+  writeCollagesFile,
+} from './collageStore.ts'
+import {
+  addFeedPostFromBody,
+  deleteFeedPost,
+  postsForClient,
+  sendFeedFile,
+} from './feedStore.ts'
 import {
   addIgStillFromBody,
   deleteIgStill,
@@ -38,7 +51,11 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/shape-copy' &&
       path !== '/api/still-crops' &&
       path !== '/api/athlete-videos' &&
-      path !== '/api/athlete-video-file'
+      path !== '/api/athlete-video-file' &&
+      path !== '/api/clip-loops' &&
+      path !== '/api/collages' &&
+      path !== '/api/feed' &&
+      path !== '/api/feed-file'
     ) {
       next()
       return
@@ -168,6 +185,94 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         const id = url.searchParams.get('id') ?? ''
         if (!sendAthleteVideoFile(id, res)) {
           sendJson(res, 404, { error: 'Video file not found' })
+        }
+        return
+      }
+      if (path === '/api/clip-loops') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readClipLoopsFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeClipLoopsFile(JSON.parse(body)))
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/collages') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readCollagesFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeCollagesFile(JSON.parse(body)))
+          return
+        }
+        if (req.method === 'POST') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, upsertCollage(JSON.parse(body)))
+          return
+        }
+        if (req.method === 'DELETE') {
+          const id = url.searchParams.get('id') ?? ''
+          if (!deleteCollage(id)) {
+            sendJson(res, 404, { error: 'Collage not found' })
+            return
+          }
+          sendJson(res, 200, { ok: true })
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET, PUT, POST, or DELETE' })
+        return
+      }
+      if (path === '/api/feed') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, { kind: 'shape-lab-feed', posts: postsForClient() })
+          return
+        }
+        if (req.method === 'POST') {
+          const buf = await readRequestBuffer(req)
+          const taggedRaw = url.searchParams.get('taggedIds') ?? ''
+          const saved = addFeedPostFromBody({
+            id: url.searchParams.get('id') ?? '',
+            authorId: url.searchParams.get('authorId') ?? '',
+            caption: url.searchParams.get('caption') ?? '',
+            taggedIds: taggedRaw ? taggedRaw.split(',').map((s) => s.trim()).filter(Boolean) : [],
+            createdAt: url.searchParams.get('createdAt') ?? undefined,
+            mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
+            buf,
+          })
+          if (!saved) {
+            sendJson(res, 400, { error: 'Could not save that post.' })
+            return
+          }
+          sendJson(res, 200, {
+            ...saved,
+            url: `/api/feed-file?id=${encodeURIComponent(saved.id)}`,
+          })
+          return
+        }
+        if (req.method === 'DELETE') {
+          const id = url.searchParams.get('id') ?? ''
+          const actorId = url.searchParams.get('actorId') ?? ''
+          const admin = url.searchParams.get('admin') === '1'
+          if (!deleteFeedPost(id, actorId || undefined, admin)) {
+            sendJson(res, 404, { error: 'Post not found' })
+            return
+          }
+          sendJson(res, 200, { ok: true })
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+        return
+      }
+      if (path === '/api/feed-file') {
+        const id = url.searchParams.get('id') ?? ''
+        if (!sendFeedFile(id, res)) {
+          sendJson(res, 404, { error: 'Post video not found' })
         }
         return
       }
