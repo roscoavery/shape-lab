@@ -10,12 +10,14 @@ import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
 import {
+  collagesForOwner,
   deleteCollage,
   readCollagesFile,
   upsertCollage,
   writeCollagesFile,
 } from './collageStore.ts'
 import {
+  addCollageFeedPost,
   addFeedPostFromBody,
   deleteFeedPost,
   postsForClient,
@@ -218,7 +220,11 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       }
       if (path === '/api/collages') {
         if (req.method === 'GET') {
-          sendJson(res, 200, readCollagesFile())
+          const ownerId = url.searchParams.get('ownerId')
+          sendJson(res, 200, {
+            ...readCollagesFile(),
+            collages: collagesForOwner(ownerId),
+          })
           return
         }
         if (req.method === 'PUT') {
@@ -249,6 +255,36 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           return
         }
         if (req.method === 'POST') {
+          const ct = String(req.headers['content-type'] || '').toLowerCase()
+          if (ct.includes('json') || url.searchParams.get('kind') === 'collage') {
+            const body = JSON.parse(await readRequestBody(req)) as {
+              authorId?: string
+              caption?: string
+              taggedIds?: string[]
+              createdAt?: string
+              id?: string
+              collage?: unknown
+            }
+            const saved = addCollageFeedPost({
+              id: body.id ?? url.searchParams.get('id') ?? '',
+              authorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
+              caption: body.caption ?? url.searchParams.get('caption') ?? '',
+              taggedIds: Array.isArray(body.taggedIds)
+                ? body.taggedIds
+                : (url.searchParams.get('taggedIds') ?? '')
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+              createdAt: body.createdAt,
+              collage: body.collage,
+            })
+            if (!saved) {
+              sendJson(res, 400, { error: 'Could not share that collage.' })
+              return
+            }
+            sendJson(res, 200, { ...saved, url: '' })
+            return
+          }
           const buf = await readRequestBuffer(req)
           const taggedRaw = url.searchParams.get('taggedIds') ?? ''
           const saved = addFeedPostFromBody({

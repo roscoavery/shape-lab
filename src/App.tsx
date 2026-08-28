@@ -802,10 +802,11 @@ export default function App() {
             </h2>
             <p className="mb-2">
               <strong className="text-[var(--text)]">Classes</strong> saves named drill
-              collages (up to six gym URLs) with captions and A/B loops.{' '}
+              collages (up to six gym URLs) with captions and A/B loops into your class
+              library. Share a board to the gym feed so other coaches can save a copy.{' '}
               <strong className="text-[var(--text)]">Feed</strong> is the gym accomplishment
-              wall — coaches tag athletes, athletes tag their coach. Unlock a profile to
-              post. Ryan stays coach/admin.
+              wall — coaches tag athletes, athletes tag their coach — plus shared class
+              collages. Unlock a profile to post. Ryan stays coach/admin.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

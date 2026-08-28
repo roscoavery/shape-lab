@@ -9,8 +9,8 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Run an ordered **athlete Tasks curriculum** (standalone holds 5s → 3s after mastery; sequences always 3s)
 - **Learn** shapes and pathways without a camera, plus a **reference scroll** of the gym Instagram library
 - **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
-- **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split)
-- **Feed** accomplishment posts — coaches tag athletes, athletes tag their coach
+- **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split). Share a board to the gym feed so other coaches can save it into their class library.
+- **Feed** accomplishment posts and shared class collages — coaches tag athletes, athletes tag their coach
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -187,11 +187,11 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ## Classes (drill collages)
 
-**Classes** builds named boards of up to **six** gym-library clips. Each slot can have a caption (reps, a cue) and its own A/B loop. Save the collage so the class can open it later on any link. **Full screen** splits the window as evenly as it can for 1–6 videos (2×2 for four, 3×2 for six, last clip full-width when there are five). Unlock a profile to save. Ryan can edit or delete any collage.
+**Classes** builds named boards of up to **six** gym-library clips. Each slot can have a caption (reps, a cue) and its own A/B loop. New collages save into **your class library**. **Share to feed** posts that board so other coaches can **Save to my class library** and run it in class. Gym-wide boards (no personal owner) still show for everyone. **Full screen** splits the window as evenly as it can for 1–6 videos (2×2 for four, 3×2 for six, last clip full-width when there are five). Unlock a profile to save. Ryan can edit or delete any collage.
 
 ## Gym feed
 
-**Feed** is a simple accomplishment wall. Unlock a profile, pick a video, write a caption, and tag people. **Coach** profiles (Ryan is always coach/admin) tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). Posts live on this gym computer (`/api/feed`). Ryan keeps every existing admin edit in Compare, Learn copy, stills, and the URL library.
+**Feed** is a simple accomplishment wall. Unlock a profile, pick a video, write a caption, and tag people. **Coach** profiles (Ryan is always coach/admin) tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps every existing admin edit in Compare, Learn copy, stills, and the URL library.
 
 ## First test: Handstand
 

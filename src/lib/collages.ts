@@ -14,6 +14,16 @@ export type Collage = {
   createdAt: string
   updatedAt: string
   createdById: string
+  /** Personal library owner. Missing on gym-wide boards. */
+  ownerId?: string
+  copiedFromId?: string
+  slots: CollageSlot[]
+}
+
+export type CollageShare = {
+  sourceId: string
+  name: string
+  createdById: string
   slots: CollageSlot[]
 }
 
@@ -26,9 +36,10 @@ type CollagesFile = {
 
 export const MAX_COLLAGE_SLOTS = 6
 
-export async function listCollages(): Promise<Collage[]> {
+export async function listCollages(ownerId?: string | null): Promise<Collage[]> {
   try {
-    const res = await fetch('/api/collages')
+    const qs = ownerId ? `?ownerId=${encodeURIComponent(ownerId)}` : ''
+    const res = await fetch(`/api/collages${qs}`)
     if (!res.ok) return []
     const data = (await res.json()) as CollagesFile
     return Array.isArray(data.collages) ? data.collages : []
@@ -67,8 +78,43 @@ export function newCollage(createdById: string, name = 'New drill collage'): Col
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     createdById,
+    ownerId: createdById,
     slots: [],
   }
+}
+
+export function collageToShare(collage: Collage): CollageShare {
+  return {
+    sourceId: collage.id,
+    name: collage.name,
+    createdById: collage.createdById,
+    slots: collage.slots.map((s) => ({ ...s })),
+  }
+}
+
+export function collageFromShare(share: CollageShare, ownerId: string): Collage {
+  return {
+    id: createId('colg'),
+    name: share.name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdById: share.createdById || ownerId,
+    ownerId,
+    copiedFromId: share.sourceId || undefined,
+    slots: share.slots.map((s) => ({ ...s })),
+  }
+}
+
+export function isGymCollage(collage: Collage): boolean {
+  return !collage.ownerId
+}
+
+export function libraryHasShare(collages: Collage[], share: CollageShare, ownerId: string): boolean {
+  return collages.some(
+    (c) =>
+      c.ownerId === ownerId &&
+      (c.id === share.sourceId || (share.sourceId && c.copiedFromId === share.sourceId)),
+  )
 }
 
 export function evenGrid(count: number, landscape: boolean): { cols: number; rows: number } {

@@ -4,10 +4,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { GymClipPlayer } from '../GymClipPlayer'
+import { CollageStage } from './CollageStage'
 import {
-  evenGrid,
+  collageToShare,
+  isGymCollage,
   listCollages,
   MAX_COLLAGE_SLOTS,
   newCollage,
@@ -16,6 +16,7 @@ import {
   type Collage,
   type CollageSlot,
 } from '../../lib/collages'
+import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { isCoachProfile } from '../../lib/profileRole'
@@ -32,6 +33,8 @@ type Draft = {
   name: string
   createdById: string
   createdAt: string
+  ownerId?: string
+  copiedFromId?: string
   slots: CollageSlot[]
 }
 
@@ -46,12 +49,21 @@ export function ClassesPanel({ athlete }: Props) {
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [sharingId, setSharingId] = useState<string | null>(null)
+  const [shareCaption, setShareCaption] = useState('')
+  const [sharing, setSharing] = useState(false)
   const canEdit = Boolean(athlete)
   const admin = isCoachProfile(athlete)
 
   useEffect(() => {
-    void listCollages().then(setCollages)
-  }, [])
+    void listCollages(athlete?.id).then(setCollages)
+  }, [athlete?.id])
+
+  const gymBoards = useMemo(() => collages.filter(isGymCollage), [collages])
+  const myBoards = useMemo(
+    () => collages.filter((c) => athlete && c.ownerId === athlete.id),
+    [collages, athlete],
+  )
 
   const grouped = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -86,6 +98,7 @@ export function ClassesPanel({ athlete }: Props) {
       name: c.name,
       createdById: c.createdById,
       createdAt: c.createdAt,
+      ownerId: c.ownerId,
       slots: [],
     })
     setPlaying(null)
@@ -97,6 +110,8 @@ export function ClassesPanel({ athlete }: Props) {
       name: c.name,
       createdById: c.createdById,
       createdAt: c.createdAt,
+      ownerId: c.ownerId,
+      copiedFromId: c.copiedFromId,
       slots: c.slots.map((s) => ({ ...s })),
     })
     setPlaying(null)
@@ -150,6 +165,8 @@ export function ClassesPanel({ athlete }: Props) {
       createdAt: draft.createdAt,
       updatedAt: new Date().toISOString(),
       createdById: draft.createdById || athlete.id,
+      ownerId: draft.ownerId,
+      copiedFromId: draft.copiedFromId,
       slots: draft.slots,
     })
     setSaving(false)
@@ -160,12 +177,14 @@ export function ClassesPanel({ athlete }: Props) {
     setCollages((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)])
     setDraft(null)
     setPlaying(saved)
-    setNotice(`Saved “${saved.name}”. Every link can open this collage.`)
+    setNotice(
+      `Saved “${saved.name}” to your class library. Share it to the feed so other coaches can copy it.`,
+    )
   }
 
   const drop = async (c: Collage) => {
     if (!athlete) return
-    if (!admin && c.createdById !== athlete.id) return
+    if (!admin && c.ownerId !== athlete.id && c.createdById !== athlete.id) return
     if (!confirm(`Delete collage “${c.name}”?`)) return
     if (await removeCollage(c.id)) {
       setCollages((prev) => prev.filter((x) => x.id !== c.id))
@@ -173,6 +192,33 @@ export function ClassesPanel({ athlete }: Props) {
       if (draft?.id === c.id) setDraft(null)
     }
   }
+
+  const shareToFeed = async (c: Collage) => {
+    if (!athlete) {
+      setNotice('Unlock a profile to share a collage to the feed.')
+      return
+    }
+    setSharing(true)
+    const posted = await publishCollagePost({
+      authorId: athlete.id,
+      caption: shareCaption.trim() || `Class collage: ${c.name}`,
+      collage: collageToShare(c),
+    })
+    setSharing(false)
+    if (!posted) {
+      setNotice('Could not post that collage to the feed.')
+      return
+    }
+    setSharingId(null)
+    setShareCaption('')
+    setNotice(`Posted “${c.name}” to the gym feed. Other coaches can save it into their class library.`)
+  }
+
+  const canManage = (c: Collage) =>
+    Boolean(athlete && (admin || c.ownerId === athlete.id || c.createdById === athlete.id || !c.ownerId))
+
+  const canShare = (c: Collage) =>
+    Boolean(athlete && (admin || !c.ownerId || c.ownerId === athlete.id || c.createdById === athlete.id))
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -184,10 +230,10 @@ export function ClassesPanel({ athlete }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Build a board of up to six clips from the gym Compare library. Star favorite
           URLs, add a caption (reps, a cue). Set A/B on each video — those loop points
-          save with the collage and on the gym URL. Star a saved loop to keep that
-          section handy. Full screen splits the window as evenly as it can for how
-          many drills you picked. Names stay in sync: rename a clip in Compare and it
-          shows that name here.
+          save with the collage and on the gym URL. New boards land in{' '}
+          <strong className="text-[var(--text)]">your class library</strong>. Share one to
+          the gym feed so other coaches can save a copy and run it in class. Full screen
+          splits the window as evenly as it can for how many drills you picked.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -205,61 +251,66 @@ export function ClassesPanel({ athlete }: Props) {
         )}
       </section>
 
-      {collages.length > 0 && (
-        <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Saved collages
-          </h3>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-            {collages.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-[var(--text)]">{c.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {c.slots.length} video{c.slots.length === 1 ? '' : 's'} ·{' '}
-                      {c.slots.map((s) => nameForUrl(s.url)).join(', ')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlaying(c)
-                      setDraft(null)
-                      setFullscreen(false)
-                    }}
-                    className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
-                  >
-                    Play
-                  </button>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => editExisting(c)}
-                      className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {(admin || c.createdById === athlete?.id) && (
-                    <button
-                      type="button"
-                      onClick={() => void drop(c)}
-                      className="rounded-md px-2.5 py-1 text-xs text-[var(--bad)]"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {myBoards.length > 0 && (
+        <CollageList
+          title="My class library"
+          collages={myBoards}
+          nameForUrl={nameForUrl}
+          sharingId={sharingId}
+          shareCaption={shareCaption}
+          sharing={sharing}
+          canEdit={canEdit}
+          canShare={canShare}
+          canManage={canManage}
+          onPlay={(c) => {
+            setPlaying(c)
+            setDraft(null)
+            setFullscreen(false)
+          }}
+          onEdit={editExisting}
+          onDelete={(c) => void drop(c)}
+          onShareStart={(c) => {
+            setSharingId(c.id)
+            setShareCaption(`Class collage: ${c.name}`)
+          }}
+          onShareCancel={() => {
+            setSharingId(null)
+            setShareCaption('')
+          }}
+          onShareCaption={setShareCaption}
+          onShare={(c) => void shareToFeed(c)}
+        />
+      )}
+
+      {gymBoards.length > 0 && (
+        <CollageList
+          title="Gym boards"
+          collages={gymBoards}
+          nameForUrl={nameForUrl}
+          sharingId={sharingId}
+          shareCaption={shareCaption}
+          sharing={sharing}
+          canEdit={canEdit}
+          canShare={canShare}
+          canManage={canManage}
+          onPlay={(c) => {
+            setPlaying(c)
+            setDraft(null)
+            setFullscreen(false)
+          }}
+          onEdit={editExisting}
+          onDelete={(c) => void drop(c)}
+          onShareStart={(c) => {
+            setSharingId(c.id)
+            setShareCaption(`Class collage: ${c.name}`)
+          }}
+          onShareCancel={() => {
+            setSharingId(null)
+            setShareCaption('')
+          }}
+          onShareCaption={setShareCaption}
+          onShare={(c) => void shareToFeed(c)}
+        />
       )}
 
       {draft && (
@@ -428,95 +479,127 @@ export function ClassesPanel({ athlete }: Props) {
   )
 }
 
-function CollageStage({
-  collage,
+function CollageList({
+  title,
+  collages,
   nameForUrl,
-  fullscreen,
-  onFullscreen,
-  onClose,
-  onSlots,
+  sharingId,
+  shareCaption,
+  sharing,
   canEdit,
+  canShare,
+  canManage,
+  onPlay,
+  onEdit,
+  onDelete,
+  onShareStart,
+  onShareCancel,
+  onShareCaption,
+  onShare,
 }: {
-  collage: Collage
+  title: string
+  collages: Collage[]
   nameForUrl: (url: string) => string
-  fullscreen: boolean
-  onFullscreen: (v: boolean) => void
-  onClose: () => void
-  onSlots: (slots: CollageSlot[]) => void
+  sharingId: string | null
+  shareCaption: string
+  sharing: boolean
   canEdit: boolean
+  canShare: (c: Collage) => boolean
+  canManage: (c: Collage) => boolean
+  onPlay: (c: Collage) => void
+  onEdit: (c: Collage) => void
+  onDelete: (c: Collage) => void
+  onShareStart: (c: Collage) => void
+  onShareCancel: () => void
+  onShareCaption: (value: string) => void
+  onShare: (c: Collage) => void
 }) {
-  const landscape = typeof window !== 'undefined' && window.innerWidth > window.innerHeight
-  const { cols, rows } = evenGrid(collage.slots.length, landscape || fullscreen)
-  const body = (
-    <div
-      className={
-        fullscreen
-          ? 'fixed inset-0 z-[260] flex flex-col bg-black'
-          : 'overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-black'
-      }
-    >
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-2 text-white">
-        <h3 className="mr-auto text-sm font-semibold">{collage.name}</h3>
-        <button
-          type="button"
-          onClick={() => onFullscreen(!fullscreen)}
-          className="rounded-md border border-white/30 px-2 py-1 text-xs"
-        >
-          {fullscreen ? 'Exit full screen' : 'Full screen'}
-        </button>
-        <button type="button" onClick={onClose} className="rounded-md border border-white/30 px-2 py-1 text-xs">
-          Close
-        </button>
-      </div>
-      <div
-        className={`grid min-h-0 flex-1 gap-px bg-white/10 ${fullscreen ? 'h-full' : 'min-h-[420px]'}`}
-        style={{
-          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-        }}
-      >
-        {collage.slots.map((slot, i) => {
-          const spanLast = collage.slots.length === 5 && i === 4 && cols === 2
-          return (
-            <div
-              key={`${slot.url}-${i}`}
-              className="relative flex min-h-0 min-w-0 flex-col bg-black"
-              style={spanLast && cols === 2 ? { gridColumn: '1 / -1' } : undefined}
-            >
-              <div className="min-h-0 flex-1">
-                <GymClipPlayer
-                  url={slot.url}
-                  itemId={slot.clipId}
-                  fill
-                  persistUrl={slot.url}
-                  loopA={slot.loopA}
-                  loopB={slot.loopB}
-                  compact
-                  quiet
-                  onAbChange={
-                    canEdit
-                      ? (a, b) => {
-                          const slots = collage.slots.map((s, idx) =>
-                            idx === i ? { ...s, loopA: a, loopB: b } : s,
-                          )
-                          onSlots(slots)
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-2 py-2">
-                <p className="text-[11px] font-semibold text-white">{nameForUrl(slot.url)}</p>
-                {slot.caption ? (
-                  <p className="text-[12px] text-[var(--accent)]">{slot.caption}</p>
-                ) : null}
-              </div>
+  return (
+    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">{title}</h3>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {collages.map((c) => (
+          <li
+            key={c.id}
+            className="flex flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3"
+          >
+            <div>
+              <p className="font-semibold text-[var(--text)]">{c.name}</p>
+              <p className="text-xs text-[var(--muted)]">
+                {c.slots.length} video{c.slots.length === 1 ? '' : 's'} ·{' '}
+                {c.slots.map((s) => nameForUrl(s.url)).join(', ')}
+              </p>
+              {c.copiedFromId ? (
+                <p className="mt-1 text-[11px] text-[var(--accent)]">Saved from the gym feed</p>
+              ) : null}
             </div>
-          )
-        })}
-      </div>
-    </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onPlay(c)}
+                className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
+              >
+                Play
+              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(c)}
+                  className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+                >
+                  Edit
+                </button>
+              )}
+              {canShare(c) && sharingId !== c.id && (
+                <button
+                  type="button"
+                  onClick={() => onShareStart(c)}
+                  className="rounded-md border border-[var(--accent-dim)] px-2.5 py-1 text-xs text-[var(--accent)]"
+                >
+                  Share to feed
+                </button>
+              )}
+              {canManage(c) && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(c)}
+                  className="rounded-md px-2.5 py-1 text-xs text-[var(--bad)]"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+            {sharingId === c.id && (
+              <div className="space-y-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-2">
+                <textarea
+                  value={shareCaption}
+                  onChange={(e) => onShareCaption(e.target.value)}
+                  rows={2}
+                  placeholder="Note for other coaches — reps, station, cue"
+                  className="w-full rounded-md border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={sharing}
+                    onClick={() => onShare(c)}
+                    className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-50"
+                  >
+                    {sharing ? 'Posting…' : 'Post to feed'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onShareCancel}
+                    className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
-  if (fullscreen) return createPortal(body, document.body)
-  return body
 }

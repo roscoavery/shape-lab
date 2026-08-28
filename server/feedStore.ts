@@ -6,6 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { cleanCollageShare, type DiskCollageShare } from './collageStore.ts'
 
 const META = path.join(process.cwd(), 'data', 'feed-posts.json')
 const BLOBS = path.join(process.cwd(), 'data', 'feed-blobs')
@@ -20,7 +21,9 @@ export type DiskFeedPost = {
   taggedIds: string[]
   mime: string
   sizeBytes: number
-  file: string
+  file?: string
+  kind?: 'video' | 'collage'
+  collage?: DiskCollageShare
 }
 
 export type DiskFeed = {
@@ -59,7 +62,12 @@ export function readFeedFile(): DiskFeed {
     return {
       ...EMPTY,
       ...data,
-      posts: data.posts.filter((p) => p && typeof p.id === 'string' && typeof p.file === 'string'),
+      posts: data.posts.filter(
+        (p) =>
+          p &&
+          typeof p.id === 'string' &&
+          (p.kind === 'collage' ? Boolean(p.collage) : typeof p.file === 'string'),
+      ),
     }
   } catch {
     return { ...EMPTY }
@@ -82,7 +90,11 @@ export function postsForClient(): Array<DiskFeedPost & { url: string }> {
   return readFeedFile()
     .posts.slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((p) => ({ ...p, url: `/api/feed-file?id=${encodeURIComponent(p.id)}` }))
+    .map((p) => ({
+      ...p,
+      kind: p.kind === 'collage' || p.collage ? 'collage' : 'video',
+      url: p.file ? `/api/feed-file?id=${encodeURIComponent(p.id)}` : '',
+    }))
 }
 
 export function readRequestBuffer(
@@ -135,11 +147,13 @@ export function addFeedPostFromBody(params: {
     mime,
     sizeBytes: params.buf.length,
     file,
+    kind: 'video',
   }
   const others = readFeedFile().posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
+    if (!drop.file) continue
     try {
       fs.unlinkSync(path.join(BLOBS, drop.file))
     } catch {
@@ -157,20 +171,64 @@ export function deleteFeedPost(id: string, actorId?: string, actorIsAdmin?: bool
   const found = meta.posts.find((p) => p.id === sid)
   if (!found) return false
   if (!actorIsAdmin && actorId && found.authorId !== actorId) return false
-  try {
-    fs.unlinkSync(path.join(BLOBS, found.file))
-  } catch {
-    /* missing */
+  if (found.file) {
+    try {
+      fs.unlinkSync(path.join(BLOBS, found.file))
+    } catch {
+      /* missing */
+    }
   }
   writeMeta(meta.posts.filter((p) => p.id !== sid))
   return true
+}
+
+export function addCollageFeedPost(params: {
+  id: string
+  authorId: string
+  caption: string
+  taggedIds: string[]
+  createdAt?: string
+  collage: unknown
+}): DiskFeedPost | null {
+  const id = safeId(params.id)
+  const authorId = safeId(params.authorId)
+  const collage = cleanCollageShare(params.collage)
+  if (!id || !authorId || !collage) return null
+  const taggedIds = params.taggedIds
+    .map((x) => safeId(x))
+    .filter((x): x is string => Boolean(x))
+    .slice(0, 24)
+  const post: DiskFeedPost = {
+    id,
+    authorId,
+    caption: (params.caption || '').trim().slice(0, 280),
+    createdAt: params.createdAt || new Date().toISOString(),
+    taggedIds,
+    mime: 'application/json',
+    sizeBytes: 0,
+    kind: 'collage',
+    collage,
+  }
+  const others = readFeedFile().posts.filter((p) => p.id !== id)
+  const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const pruned = kept.slice(MAX_POSTS)
+  for (const drop of pruned) {
+    if (!drop.file) continue
+    try {
+      fs.unlinkSync(path.join(BLOBS, drop.file))
+    } catch {
+      /* missing */
+    }
+  }
+  writeMeta(kept.slice(0, MAX_POSTS))
+  return post
 }
 
 export function sendFeedFile(id: string, res: ServerResponse): boolean {
   const sid = safeId(id)
   if (!sid) return false
   const found = readFeedFile().posts.find((p) => p.id === sid)
-  if (!found) return false
+  if (!found || !found.file) return false
   const file = path.join(BLOBS, found.file)
   if (!fs.existsSync(file)) return false
   const buf = fs.readFileSync(file)
