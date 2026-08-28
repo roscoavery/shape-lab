@@ -465,6 +465,11 @@ export function HomeworkPanel({
   const addItem = () => {
     if (!athleteId || !addShapeId) return
     const target = Number(addTarget)
+    const defaultNotes =
+      addShapeId === 'rainbow_bridge'
+        ? 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
+        : ''
+    const notes = addNotes.trim() || defaultNotes
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
@@ -473,7 +478,7 @@ export function HomeworkPanel({
       ...(Number.isFinite(target) && target > 0
         ? { targetSeconds: target }
         : {}),
-      ...(addNotes.trim() ? { notes: addNotes.trim() } : {}),
+      ...(notes ? { notes } : {}),
       createdAt: new Date().toISOString(),
     }
     setItems(addHomeworkItem(item))

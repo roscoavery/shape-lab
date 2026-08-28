@@ -25,6 +25,7 @@ Included:
 - `mountain_climber.jpg`
 - `stand_clean.jpg`
 - `superman.jpg`
+- `rainbow_bridge.jpg`
 
 To add another still: drop a JPG in both folders, add the shape id in
 `src/lib/shippedRefs.ts` (`SHIPPED_FILES`).

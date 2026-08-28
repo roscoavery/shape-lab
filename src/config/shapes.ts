@@ -1547,7 +1547,120 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // BRIDGE
+  // RAINBOW BRIDGE — photographed teaching shape (not the leftover
+  // straight-leg `bridge` scaffold). Bent knees, feet flat and apart,
+  // hips high, arch spread until the shoulders are open.
+  // ===========================================================================
+  {
+    id: 'rainbow_bridge',
+    name: 'Rainbow Bridge',
+    description:
+      'Bent-knee rainbow bridge: feet flat and pointed straight, feet apart, hips up high. Spread the arch through every joint until the shoulders are open. Teaching shape for shoulder opening, bridge push-ups, back bends, hops, and rocks.',
+    bodyPosition:
+      'SIDE VIEW. Feet flat, toes pointed straight ahead, feet apart. Knees bent. Hips up high. Hands on the floor, fingers toward the feet, arms straight, shoulders stacked over the wrists. Head hangs between the arms. Evenly distribute the arch through the shoulders, spine, and hips until there is a good open-shoulder range — not a long, straight-leg competition bridge.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Film from the side so the rainbow and the open shoulder are obvious.',
+      'Feet flat, toes pointed straight, feet apart.',
+      'Bend the knees. Hips up high.',
+      'Spread the arch through every joint — do not dump it all into the low back.',
+      'Push the shoulders open over the hands. This is the range we are after.',
+    ],
+    coachNotes:
+      'Rainbow bridge is how we open shoulders. Feet flat and pointed straight, feet apart, bent knees, hips up high. Evenly distribute the arch between all possible joints until the athlete has a good open-shoulder range. We do bridge push-ups from this style, teach back bends from this style, and do bridge hops and bridge rocks from this bridge. It is not uncommon to see handsprings in the approximation/acquisition phase hit a position similar to this during flight to hands — it tends to be easier to flip faster than a longer and straighter-leg bridge shape.',
+    criteria: [
+      {
+        id: 'shoulders',
+        label: 'Shoulders open',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 145,
+        targetMax: 180,
+        tolerance: 12,
+        weight: 28,
+        feedbackLow: 'Push the shoulders open over the hands — that is the range we are after.',
+      },
+      {
+        id: 'elbows',
+        label: 'Elbows straight',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 12,
+        feedbackLow: 'Lock the arms — straight elbows, shoulders over the hands.',
+      },
+      {
+        id: 'arms_stacked',
+        label: 'Shoulders over hands',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        target: 0,
+        tolerance: 18,
+        falloff: 40,
+        weight: 10,
+        needsView: 'side',
+        feedbackHigh: 'Stack the shoulders over the hands.',
+      },
+      {
+        // Geometric shoulder–hip–knee: a high rainbow is a tighter V
+        // (hips to the ceiling). A sagging bridge opens toward 180°.
+        id: 'hips_high',
+        label: 'Hips up high',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 70,
+        targetMax: 125,
+        tolerance: 12,
+        weight: 18,
+        feedbackLow: 'Spread the arch through the whole spine — do not break only at the low back.',
+        feedbackHigh: 'Hips up high — push the hips to the ceiling.',
+      },
+      {
+        id: 'knees_bent',
+        label: 'Knees bent',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 88,
+        targetMax: 125,
+        tolerance: 10,
+        weight: 16,
+        feedbackLow: 'Keep the shins tall — this is not a squat.',
+        feedbackHigh: 'Bend the knees. Rainbow, not a long straight-leg bridge.',
+      },
+      {
+        id: 'feet_apart',
+        label: 'Feet apart',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0.14,
+        tolerance: 0.08,
+        falloff: 0.16,
+        weight: 10,
+        feedbackLow: 'Feet apart — not glued.',
+        feedbackHigh: 'Feet apart, not a straddle.',
+      },
+      {
+        id: 'feet_flat',
+        label: 'Feet flat, toes straight',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 16,
+        falloff: 35,
+        weight: 6,
+        needsView: 'side',
+        feedbackHigh: 'Feet flat, toes pointed straight ahead.',
+      },
+    ],
+  },
+
+  // ===========================================================================
+  // BRIDGE (scaffold leftover — straight-leg scoring, hidden from Learn.
+  // The photographed teaching shape is rainbow_bridge.)
   // ===========================================================================
   {
     id: 'bridge',

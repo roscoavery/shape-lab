@@ -17,6 +17,7 @@ export const HOMEWORK_SHAPE_IDS = [
   'hollow_arms_down',
   'hollow_arms_up',
   'superman',
+  'rainbow_bridge',
   'side_plank',
   'wall_handstand',
 ] as const
@@ -66,6 +67,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. Standing hollow, feet together. Arms in front, shoulders shrugged so the arms cover the ears. Eyes forward/down toward where they came from.',
   superman:
     'SIDE. Two athletes on the stomach. Chin up, straight arms behind the ears, open shoulders, straight knees off the mat, feet and ankles together.',
+  rainbow_bridge:
+    'SIDE. Rainbow bridge — not a straight-leg competition bridge. Feet flat, toes pointed straight ahead, feet apart, knees bent, hips up high, shoulders open over the hands. Head hangs between the arms.',
   side_plank: 'SIDE. Body in one line, hips up. One photo (either side is fine).',
   wall_handstand: 'SIDE. Stomach-to-wall preferred. Same stacked body as freestanding.',
 }

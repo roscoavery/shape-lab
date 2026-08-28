@@ -48,7 +48,7 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 ### Learn: shape library and tests
 
-**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, candlestick, Superman) plus homework that still needs a still (side plank, wall handstand). Unused scoring leftovers (generic lunge, seated pike, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
+**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, candlestick, Superman, Rainbow Bridge) plus homework that still needs a still (side plank, wall handstand). Unused scoring leftovers (generic lunge, seated pike, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
 Open **Learn → Shape test** for mixed multiple-choice. **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** covers low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **My shapes** shows the athlete’s own hit photos.
 
@@ -75,6 +75,7 @@ zombie.jpg
 mountain_climber.jpg
 stand_clean.jpg
 superman.jpg
+rainbow_bridge.jpg
 ```
 
 Curriculum order is edited in `src/config/curriculum.ts`.
@@ -101,6 +102,8 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 2. **Superman** — chin stays up with straight arms behind the ears; straight knees off the ground; feet and ankles together. Challenges open-shoulder angle while it strengthens a large portion of the posterior chain. Coach still: two athletes hitting the position (side view).
 3. **Side plank** — log left / right / both sides; per-side bests are tracked.
 4. **Wall handstand** — time + quality, same standards as freestanding.
+
+**Rainbow Bridge** is not one of those four auto drills. Assign it from Homework when you want it on camera: feet flat and pointed straight, feet apart, bent knees, hips up high, arch spread until the shoulders are open. That is the style used for bridge push-ups, back bends, hops, and rocks — and a shape athletes often hit in flight to hands on early handsprings. Coach still is on the card.
 
 On top of that, the **coach can assign** any shape from the library as homework, and the **athlete can self-select** drills too ("Coach assigns" / "Athlete picks" when adding).
 
