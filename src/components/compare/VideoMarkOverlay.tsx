@@ -70,6 +70,36 @@ function toPx(p: Pt, box: { left: number; top: number; width: number; height: nu
   return { x: box.left + p.x * box.width, y: box.top + p.y * box.height }
 }
 
+function lineDotRadius(boxWidth: number) {
+  const lw = Math.max(3, boxWidth * 0.006)
+  return Math.max(5, lw * 1.4)
+}
+
+/** Hit-test Line dots in screen pixels so a finished line can be selected and moved. */
+function hitLineDotIndex(
+  e: { clientX: number; clientY: number },
+  host: HTMLElement,
+  video: HTMLVideoElement | null,
+  pts: Pt[],
+): number {
+  if (pts.length === 0) return -1
+  const box = contentBox(video, host)
+  if (box.width < 2 || box.height < 2) return -1
+  const hr = host.getBoundingClientRect()
+  const hitR = Math.max(24, lineDotRadius(box.width) * 2.5)
+  let best = -1
+  let bestD = Infinity
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const q = toPx(pts[i]!, box)
+    const d = Math.hypot(e.clientX - (hr.left + q.x), e.clientY - (hr.top + q.y))
+    if (d <= hitR && d < bestD) {
+      best = i
+      bestD = d
+    }
+  }
+  return best
+}
+
 function drawArrowHead(
   ctx: CanvasRenderingContext2D,
   from: { x: number; y: number },
@@ -99,6 +129,8 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const [tool, setTool] = useState<MarkTool>('line')
   const [marks, setMarks] = useState<Mark[]>([])
   const [linePts, setLinePts] = useState<Pt[]>([])
+  const [selectedDot, setSelectedDot] = useState<number | null>(null)
+  const [cursor, setCursor] = useState('crosshair')
   const [arrowPts, setArrowPts] = useState<Pt[]>([])
   const [drawPts, setDrawPts] = useState<Pt[] | null>(null)
   const [cropPts, setCropPts] = useState<[Pt, Pt] | null>(null)
@@ -115,6 +147,11 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const arrowStartRef = useRef<Pt | null>(null)
   const cropDragRef = useRef(false)
   const cropStartRef = useRef<Pt | null>(null)
+  const linePtsRef = useRef(linePts)
+  linePtsRef.current = linePts
+  const selectedDotRef = useRef(selectedDot)
+  selectedDotRef.current = selectedDot
+  const draggingDotRef = useRef<number | null>(null)
   const toolRef = useRef(tool)
   toolRef.current = tool
   const mirrorRef = useRef(mirror)
@@ -185,6 +222,20 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
     }
     if (drawPts && drawPts.length) strokeLine(drawPts, DRAW)
     strokeLine(linePts, LINE, true)
+    if (selectedDot != null && linePts[selectedDot]) {
+      const q = toPx(linePts[selectedDot], box)
+      const r = Math.max(5, lw * 1.4)
+      ctx.beginPath()
+      ctx.arc(q.x, q.y, r * 1.9, 0, Math.PI * 2)
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = Math.max(2, lw * 0.5)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(q.x, q.y, r * 1.9, 0, Math.PI * 2)
+      ctx.strokeStyle = LINE
+      ctx.lineWidth = Math.max(1.5, lw * 0.35)
+      ctx.stroke()
+    }
     strokeLine(arrowPts, ARROW, true)
 
     if (cropPts) {
@@ -214,7 +265,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         ctx.fill()
       }
     }
-  }, [marks, linePts, drawPts, arrowPts, cropPts, videoRef])
+  }, [marks, linePts, selectedDot, drawPts, arrowPts, cropPts, videoRef])
 
   useEffect(() => {
     paint()
@@ -263,14 +314,51 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       setArrowPts([pt, pt])
       return
     }
-    setLinePts((prev) => (prev.length >= 3 ? [] : [...prev, pt]))
+    const hit = hitLineDotIndex(e, host, videoRef.current, linePtsRef.current)
+    if (hit >= 0) {
+      draggingDotRef.current = hit
+      selectedDotRef.current = hit
+      setSelectedDot(hit)
+      setCursor('grabbing')
+      return
+    }
+    setLinePts((prev) => {
+      if (prev.length >= 3) {
+        setSelectedDot(null)
+        selectedDotRef.current = null
+        return []
+      }
+      const next = [...prev, pt]
+      const idx = next.length - 1
+      selectedDotRef.current = idx
+      setSelectedDot(idx)
+      return next
+    })
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const host = hostRef.current
     if (!host) return
+    const dragIdx = draggingDotRef.current
+    if (dragIdx != null && toolRef.current === 'line') {
+      const pt = eventToNorm(e, host, videoRef.current)
+      if (!pt) return
+      e.preventDefault()
+      setLinePts((prev) => {
+        if (dragIdx < 0 || dragIdx >= prev.length) return prev
+        const next = [...prev]
+        next[dragIdx] = pt
+        return next
+      })
+      setCursor('grabbing')
+      return
+    }
     const pt = eventToNorm(e, host, videoRef.current)
     if (!pt) return
+    if (toolRef.current === 'line' && !drawingRef.current) {
+      const hover = hitLineDotIndex(e, host, videoRef.current, linePtsRef.current)
+      setCursor(hover >= 0 ? 'grab' : 'crosshair')
+    }
     if (cropDragRef.current && toolRef.current === 'crop') {
       const start = cropStartRef.current
       if (!start) return
@@ -300,6 +388,16 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       canvasRef.current?.releasePointerCapture(e.pointerId)
     } catch {
       /* already released */
+    }
+    if (draggingDotRef.current != null) {
+      draggingDotRef.current = null
+      const host = hostRef.current
+      const hover =
+        host && toolRef.current === 'line'
+          ? hitLineDotIndex(e, host, videoRef.current, linePtsRef.current)
+          : -1
+      setCursor(hover >= 0 ? 'grab' : 'crosshair')
+      return
     }
     if (cropDragRef.current && toolRef.current === 'crop') {
       cropDragRef.current = false
@@ -350,6 +448,10 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const clearAll = () => {
     setMarks([])
     setLinePts([])
+    setSelectedDot(null)
+    selectedDotRef.current = null
+    draggingDotRef.current = null
+    setCursor('crosshair')
     setArrowPts([])
     setDrawPts(null)
     drawingRef.current = false
@@ -420,6 +522,12 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         drawingRef.current = false
         arrowDragRef.current = false
         arrowStartRef.current = null
+        draggingDotRef.current = null
+        if (id !== 'line') {
+          setSelectedDot(null)
+          selectedDotRef.current = null
+        }
+        setCursor('crosshair')
         setDrawPts(null)
         resetCropDrag()
       }}
@@ -438,7 +546,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       <canvas
         ref={canvasRef}
         className="pointer-events-auto absolute inset-0 h-full w-full touch-none"
-        style={{ touchAction: 'none', cursor: 'crosshair', pointerEvents: pending ? 'none' : 'auto' }}
+        style={{ touchAction: 'none', cursor, pointerEvents: pending ? 'none' : 'auto' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -461,6 +569,11 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       {tool === 'crop' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Press one corner of the shape, drag to the opposite corner, then let go.
+        </p>
+      )}
+      {tool === 'line' && linePts.length > 0 && !pending && (
+        <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
+          Tap a Line dot to select it, then drag to move. A fourth tap on empty space clears the line.
         </p>
       )}
       {notice && (

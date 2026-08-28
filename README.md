@@ -175,7 +175,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 ### Recommended coach workflow
 
 1. Unlock **Ryan** (passcode 2223). Paste public Instagram, TikTok, or Facebook video URL(s) into a Compare collection. Add **keywords**, **Rename**, search, and reorder. Tap **Save into the app** so that named URL list is written into `data/library.json` / `src/config/compareLibrary.json` for **every** Preview, phone link, and browser — not only this tab. Adds and renames also auto-save; the button confirms. Hit **Save all in app** only if you also want the video files downloaded on this device. **Export library** is an extra JSON backup.
-2. Wait for it to load, then set **A** and **B** around the key phase and **Save loop** (name it if you want). Save another loop on the same clip for a different section. Tap the name you need that day. Slow to 0.25x or 0.5x. Pause, the playhead, and speed stay usable while Line is on.
+2. Wait for it to load, then set **A** and **B** around the key phase and **Save loop** (name it if you want). Save another loop on the same clip for a different section. Star the loops you cue often. Tap the name you need that day. Slow to 0.25x or 0.5x. Pause, the playhead, and speed stay usable while Line is on. In **Full screen with reference**, tap a finished Line dot to select it, then drag to move that point.
 3. On **either card** tap **Full screen with delay cam** / **Full screen with reference**. That opens **top / bottom** (reference starts larger). **Drag the bar between the two videos** to give reference or delay cam more of the window — the pictures stay `object-contain` and are not stretched. Switch to **Left / right** in the side rail if you want. Athlete performs with **Delay cam** at 6–20s. Tap **Record** after the skill to save that buffer into the profile’s video library, or **Replay last Ns** to pause, play, and scrub, then **Save in app** or **Save to Photos**.
 4. To keep a still of a shape in an IG clip: pause, tap **Screenshot**, drag from one corner of the crop to the other, tag the shape, Save. Open **Learn → IG shapes**. Overlay that still (or any coach still) on Tasks / Homework / Coach. In Compare full screen, open **Shape overlay** for a large filmstrip — pick **None** to clear it — drag the still over either video, and tap **×** to hide it. Size goes down to 5% of the stage so the still can sit as a small stamp.
 
@@ -183,7 +183,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ## Learn: reference scroll
 
-**Learn → Reference scroll** is a vertical snap through the same gym URL library as Compare. Names stay in sync: rename a clip in Compare, Save into the app, and the scroll shows the new name. **A** / **B** plus **Save loop** keeps up to eight named sections per clip in `data/clip-loops.json`. Compare and Classes share that list — pick the loop you need without wiping the others.
+**Learn → Reference scroll** is a vertical snap through the same gym URL library as Compare. Names stay in sync: rename a clip in Compare, Save into the app, and the scroll shows the new name. **A** / **B** plus **Save loop** keeps up to eight named sections per clip in `data/clip-loops.json`. Star a URL or a favorite loop (the gold star on the chip) so Compare, Learn, and Classes can filter to those. Compare and Classes share that list — pick the loop you need without wiping the others.
 
 ## Classes (drill collages)
 

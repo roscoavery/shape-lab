@@ -8,7 +8,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
+import { FavoriteStar } from '../FavoriteStar'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
+import { useFavoritesOptional } from '../../lib/favorites'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -63,9 +65,17 @@ function VideoWorkbenchInner({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
   const clipLoops = useClipLoopsOptional()
+  const favorites = useFavoritesOptional()
   const loopSet = persistUrl && clipLoops ? clipLoops.getSet(persistUrl) : null
   const stored = persistUrl && clipLoops ? clipLoops.getActive(persistUrl) : null
   const presets = loopSet?.presets ?? []
+  const orderedPresets = persistUrl && favorites
+    ? [...presets].sort((a, b) => {
+        const af = favorites.isLoopFavorite(persistUrl, a.id) ? 0 : 1
+        const bf = favorites.isLoopFavorite(persistUrl, b.id) ? 0 : 1
+        return af - bf
+      })
+    : presets
   const activeLoopId = loopSet?.activeId ?? null
   const [duration, setDuration] = useState(0)
   const [time, setTime] = useState(0)
@@ -347,7 +357,7 @@ function VideoWorkbenchInner({
           <span className={`text-[10px] font-semibold uppercase tracking-wider ${fill ? 'text-white/50' : 'text-[var(--muted)]'}`}>
             Saved loops
           </span>
-          {presets.map((p) =>
+          {orderedPresets.map((p) =>
             renameId === p.id ? (
               <input
                 key={p.id}
@@ -367,23 +377,47 @@ function VideoWorkbenchInner({
                 aria-label="Rename loop"
               />
             ) : (
-              <button
+              <span
                 key={p.id}
-                type="button"
-                onClick={() => applyPreset(p.id)}
-                className={
+                className={`inline-flex items-center overflow-hidden rounded-md ${
                   activeLoopId === p.id
                     ? fill
-                      ? 'rounded-md bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[#06281f]'
-                      : 'rounded-md bg-[var(--accent-dim)] px-2 py-0.5 text-xs font-semibold text-white'
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'bg-[var(--accent-dim)] text-white'
                     : fill
-                      ? 'rounded-md border border-white/30 px-2 py-0.5 text-xs text-white/80 hover:text-white'
-                      : 'rounded-md border border-[var(--panel-border)] px-2 py-0.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
-                }
-                title={`${fmt(p.a)}s–${fmt(p.b)}s`}
+                      ? 'border border-white/30 text-white/80'
+                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                }`}
               >
-                {p.name}
-              </button>
+                {persistUrl && favorites && (
+                  <FavoriteStar
+                    compact
+                    fill={fill && activeLoopId !== p.id}
+                    on={favorites.isLoopFavorite(persistUrl, p.id)}
+                    onClick={() => favorites.toggleLoopFavorite(persistUrl, p.id)}
+                    className={activeLoopId === p.id ? 'text-[#06281f]' : ''}
+                    label={
+                      favorites.isLoopFavorite(persistUrl, p.id)
+                        ? `Unfavorite loop ${p.name}`
+                        : `Favorite loop ${p.name}`
+                    }
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => applyPreset(p.id)}
+                  className={`px-2 py-0.5 text-xs ${
+                    activeLoopId === p.id
+                      ? 'font-semibold'
+                      : fill
+                        ? 'hover:text-white'
+                        : 'hover:text-[var(--text)]'
+                  }`}
+                  title={`${fmt(p.a)}s–${fmt(p.b)}s`}
+                >
+                  {p.name}
+                </button>
+              </span>
             ),
           )}
           {activeLoopId && persistUrl && (
@@ -404,7 +438,10 @@ function VideoWorkbenchInner({
                 type="button"
                 onClick={() => {
                   const next = presets.find((p) => p.id !== activeLoopId)
-                  clipLoops?.removePreset(persistUrl, activeLoopId)
+                  if (persistUrl && activeLoopId) {
+                    favorites?.unfavoriteLoop(persistUrl, activeLoopId)
+                    clipLoops?.removePreset(persistUrl, activeLoopId)
+                  }
                   if (next) {
                     setPointA(next.a)
                     setPointB(next.b)

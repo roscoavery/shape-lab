@@ -41,7 +41,9 @@ import {
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
 import { createId } from '../../lib/storage'
-import { defaultSocialName } from '../../lib/socialUrls'
+import { defaultSocialName, clipLoopKey } from '../../lib/socialUrls'
+import { useFavorites } from '../../lib/favorites'
+import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
@@ -74,6 +76,7 @@ type Props = {
 }
 
 export function ReferencePane({ gymEditor = false }: Props) {
+  const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
@@ -82,6 +85,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   const [urlInput, setUrlInput] = useState('')
   const [keywordInput, setKeywordInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -559,18 +563,30 @@ export function ReferencePane({ gymEditor = false }: Props) {
     }
   }
 
-  const currentHits = (activeCollection?.items ?? []).filter((item) =>
-    itemMatchesQuery(item, searchQuery),
-  )
-  const otherHits: OtherHit[] = searching
-    ? collections
-        .filter((c) => c.id !== activeCollectionId)
-        .flatMap((collection) =>
-          collection.items
-            .filter((item) => itemMatchesQuery(item, searchQuery))
-            .map((item) => ({ item, collection })),
-        )
-    : []
+  const itemFavoriteKey = (item: RefItem) =>
+    item.url ? clipLoopKey(item.url) : `item:${item.id}`
+
+  const currentHits = (activeCollection?.items ?? []).filter((item) => {
+    if (!itemMatchesQuery(item, searchQuery)) return false
+    if (onlyFavorites && !favorites.isUrlFavorite(itemFavoriteKey(item))) return false
+    return true
+  })
+  const otherHits: OtherHit[] =
+    searching || onlyFavorites
+      ? collections
+          .filter((c) => c.id !== activeCollectionId)
+          .flatMap((collection) =>
+            collection.items
+              .filter((item) => {
+                if (!itemMatchesQuery(item, searchQuery)) return false
+                if (onlyFavorites && !favorites.isUrlFavorite(itemFavoriteKey(item))) {
+                  return false
+                }
+                return true
+              })
+              .map((item) => ({ item, collection })),
+          )
+      : []
   const matchCount = currentHits.length + otherHits.length
   const q = searchQuery.trim()
 
@@ -705,6 +721,16 @@ export function ReferencePane({ gymEditor = false }: Props) {
           </form>
         ) : (
           <>
+            <FavoriteStar
+              compact
+              on={favorites.isUrlFavorite(itemFavoriteKey(item))}
+              onClick={() => favorites.toggleUrlFavorite(itemFavoriteKey(item))}
+              label={
+                favorites.isUrlFavorite(itemFavoriteKey(item))
+                  ? `Unfavorite ${item.name}`
+                  : `Favorite ${item.name}`
+              }
+            />
             <button
               type="button"
               onClick={() => void selectItem(item, opts.collection)}
@@ -806,6 +832,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
             >
               {(activeCollection?.items ?? []).map((item) => (
                 <option key={item.id} value={item.id} className="text-black">
+                  {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
                   {item.name}
                 </option>
               ))}
@@ -917,6 +944,19 @@ export function ReferencePane({ gymEditor = false }: Props) {
           className={`${inputCls} min-w-0 flex-1`}
           aria-label="Search saved references by name, URL, or keyword"
         />
+        <button
+          type="button"
+          aria-pressed={onlyFavorites}
+          onClick={() => setOnlyFavorites((v) => !v)}
+          className={
+            onlyFavorites
+              ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+              : `${btnCls} text-[var(--muted)]`
+          }
+          title="Show starred URLs"
+        >
+          {onlyFavorites ? '★ Favorites' : '☆ Favorites'}
+        </button>
         {q ? (
           <button
             type="button"
@@ -1021,7 +1061,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
         video with that tag, including clips in other collections. Public
         videos download into this app the first time they play — or hit Save
         all in app. Drag or use ↑↓ to reorder (not while searching). Rename
-        or tap Tags anytime. The named URL list (and keywords) saves into the
+        or tap Tags anytime. Star a URL or a saved A/B loop to find it later —
+        Favorites filters this list. The named URL list (and keywords) saves into the
         app so later previews still have it. Export library is an extra JSON
         backup.
       </p>
@@ -1056,6 +1097,14 @@ export function ReferencePane({ gymEditor = false }: Props) {
               {' — reorder is paused while you search'}
             </p>
           )}
+          {onlyFavorites && !searching && (
+            <p className="text-xs text-[var(--muted)]">
+              {matchCount} favorite URL{matchCount === 1 ? '' : 's'}
+              {otherHits.length
+                ? ` · ${otherHits.length} from other collections`
+                : ''}
+            </p>
+          )}
           {currentHits.length > 0 && (
             <ul className="flex flex-col gap-1">
               {currentHits.map((item, index) =>
@@ -1086,6 +1135,13 @@ export function ReferencePane({ gymEditor = false }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {onlyFavorites && currentHits.length === 0 && otherHits.length === 0 && (
+        <p className="text-sm text-[var(--muted)]">
+          No favorite URLs yet. Tap the star next to a clip, then open Favorites to
+          jump back to it.
+        </p>
       )}
 
       {searching && currentHits.length === 0 && otherHits.length === 0 && (

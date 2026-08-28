@@ -8,6 +8,7 @@ import {
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
+import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
 import {
   deleteCollage,
   readCollagesFile,
@@ -53,6 +54,7 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/athlete-videos' &&
       path !== '/api/athlete-video-file' &&
       path !== '/api/clip-loops' &&
+      path !== '/api/favorites' &&
       path !== '/api/collages' &&
       path !== '/api/feed' &&
       path !== '/api/feed-file'
@@ -196,6 +198,19 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         if (req.method === 'PUT') {
           const body = await readRequestBody(req)
           sendJson(res, 200, writeClipLoopsFile(JSON.parse(body)))
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/favorites') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readFavoritesFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeFavoritesFile(JSON.parse(body)))
           return
         }
         sendJson(res, 405, { error: 'Use GET or PUT' })

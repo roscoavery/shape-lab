@@ -33,6 +33,7 @@ import { ClassesPanel } from './components/classes/ClassesPanel'
 import { FeedPanel } from './components/feed/FeedPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
+import { FavoritesProvider } from './lib/favorites'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
@@ -427,6 +428,7 @@ export default function App() {
     <StillCropProvider canEdit={ryanEdit}>
     <GymLibraryProvider>
     <ClipLoopsProvider>
+    <FavoritesProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -915,6 +917,7 @@ export default function App() {
         }}
       />
     )}
+    </FavoritesProvider>
     </ClipLoopsProvider>
     </GymLibraryProvider>
     </StillCropProvider>

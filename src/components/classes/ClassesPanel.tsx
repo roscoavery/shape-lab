@@ -19,6 +19,8 @@ import {
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { isCoachProfile } from '../../lib/profileRole'
+import { useFavorites } from '../../lib/favorites'
+import { FavoriteStar } from '../FavoriteStar'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -35,11 +37,13 @@ type Draft = {
 
 export function ClassesPanel({ athlete }: Props) {
   const { clips, collections, loading, nameForUrl } = useGymLibrary()
+  const favorites = useFavorites()
   const [collages, setCollages] = useState<Collage[]>([])
   const [draft, setDraft] = useState<Draft | null>(null)
   const [playing, setPlaying] = useState<Collage | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [filter, setFilter] = useState('')
+  const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const canEdit = Boolean(athlete)
@@ -55,14 +59,21 @@ export function ClassesPanel({ athlete }: Props) {
       .map((col) => ({
         id: col.id,
         name: col.name,
-        items: col.items.filter((i) => {
-          if (!i.url) return false
-          if (!q) return true
-          return `${i.name} ${col.name} ${(i.keywords ?? []).join(' ')}`.toLowerCase().includes(q)
-        }),
+        items: col.items
+          .filter((i) => {
+            if (!i.url) return false
+            if (onlyFavorites && !favorites.isUrlFavorite(i.url)) return false
+            if (!q) return true
+            return `${i.name} ${col.name} ${(i.keywords ?? []).join(' ')}`.toLowerCase().includes(q)
+          })
+          .sort((a, b) => {
+            const af = a.url && favorites.isUrlFavorite(a.url) ? 0 : 1
+            const bf = b.url && favorites.isUrlFavorite(b.url) ? 0 : 1
+            return af - bf
+          }),
       }))
       .filter((c) => c.items.length > 0)
-  }, [collections, filter])
+  }, [collections, filter, onlyFavorites, favorites])
 
   const startNew = () => {
     if (!athlete) {
@@ -171,11 +182,12 @@ export function ClassesPanel({ athlete }: Props) {
         </p>
         <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Collages</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Build a board of up to six clips from the gym Compare library. Add a caption
-          (reps, a cue). Set A/B on each video — those loop points save with the
-          collage and on the gym URL. Full screen splits the window as evenly as it
-          can for how many drills you picked. Names stay in sync: rename a clip in
-          Compare and it shows that name here.
+          Build a board of up to six clips from the gym Compare library. Star favorite
+          URLs, add a caption (reps, a cue). Set A/B on each video — those loop points
+          save with the collage and on the gym URL. Star a saved loop to keep that
+          section handy. Full screen splits the window as evenly as it can for how
+          many drills you picked. Names stay in sync: rename a clip in Compare and it
+          shows that name here.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -267,7 +279,38 @@ export function ClassesPanel({ athlete }: Props) {
             placeholder="Search the gym library"
             className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           />
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={!onlyFavorites}
+              onClick={() => setOnlyFavorites(false)}
+              className={
+                !onlyFavorites
+                  ? 'rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white'
+                  : 'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs text-[var(--muted)]'
+              }
+            >
+              All URLs
+            </button>
+            <button
+              type="button"
+              aria-pressed={onlyFavorites}
+              onClick={() => setOnlyFavorites(true)}
+              className={
+                onlyFavorites
+                  ? 'rounded-md bg-[#f5d76e] px-2.5 py-1 text-xs font-semibold text-[#06281f]'
+                  : 'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs text-[var(--muted)]'
+              }
+            >
+              ★ Favorites
+            </button>
+          </div>
           {loading && <p className="mt-2 text-xs text-[var(--muted)]">Loading gym URLs…</p>}
+          {onlyFavorites && grouped.length === 0 && (
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              No favorite URLs yet. Star clips here or in Compare.
+            </p>
+          )}
           <div className="mt-3 max-h-72 space-y-3 overflow-y-auto">
             {grouped.map((col) => (
               <div key={col.id}>
@@ -280,7 +323,17 @@ export function ClassesPanel({ athlete }: Props) {
                     const on = selected(item.url)
                     const clip = clips.find((c) => isSameReferenceUrl(c.url, item.url!))
                     return (
-                      <li key={item.id}>
+                      <li key={item.id} className="flex items-center gap-1">
+                        <FavoriteStar
+                          compact
+                          on={favorites.isUrlFavorite(item.url!)}
+                          onClick={() => favorites.toggleUrlFavorite(item.url!)}
+                          label={
+                            favorites.isUrlFavorite(item.url!)
+                              ? `Unfavorite ${item.name}`
+                              : `Favorite ${item.name}`
+                          }
+                        />
                         <button
                           type="button"
                           onClick={() =>
@@ -296,7 +349,7 @@ export function ClassesPanel({ athlete }: Props) {
                               },
                             )
                           }
-                          className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
+                          className={`flex min-w-0 flex-1 items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
                             on
                               ? 'bg-[var(--accent-dim)] font-semibold text-white'
                               : 'bg-[#0d1218] text-[var(--text)]'
