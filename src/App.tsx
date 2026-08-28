@@ -23,6 +23,9 @@ import { ShapeSelector } from './components/ShapeSelector'
 import { TaskTrainer } from './components/TaskTrainer'
 import { Tasks2Panel } from './components/Tasks2Panel'
 import { TasksWorkspace, type TaskLiveUi } from './components/TasksWorkspace'
+import { OverlayStillProvider } from './components/OverlayStillContext'
+import { StillOverlayPicker } from './components/StillOverlayPicker'
+import type { IgCropDraft } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
@@ -44,6 +47,7 @@ import {
   loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
+  saveReferencePhoto,
   saveSettings,
   saveTab,
   type AppTab,
@@ -166,6 +170,22 @@ export default function App() {
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
+
+  const saveIgStill = useCallback((draft: IgCropDraft) => {
+    const photo: ReferencePhoto = {
+      id: createId('ig'),
+      shapeId: draft.shapeId,
+      athleteId: null,
+      dataUrl: draft.dataUrl,
+      label: draft.label,
+      createdAt: new Date().toISOString(),
+      library: 'ig',
+    }
+    setReferencePhotos((prev) => [photo, ...prev.filter((p) => p.id !== photo.id)])
+    void saveReferencePhoto(photo).catch(() => {
+      /* kept in memory; Learn still shows it this session */
+    })
+  }, [])
 
   useEffect(() => {
     if (!activeAthleteId) {
@@ -330,6 +350,7 @@ export default function App() {
   )
 
   return (
+    <OverlayStillProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -531,6 +552,7 @@ export default function App() {
               score={score}
             />
             {cameraControls}
+            <StillOverlayPicker photos={referencePhotos} compact />
             {camera.error && (
               <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
                 {camera.error}
@@ -582,7 +604,7 @@ export default function App() {
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>
           <CompareErrorBoundary>
-            <ComparePanel />
+            <ComparePanel onSaveIgStill={saveIgStill} />
           </CompareErrorBoundary>
         </div>
       )}
@@ -602,6 +624,7 @@ export default function App() {
               score={score}
             />
             {cameraControls}
+            <StillOverlayPicker photos={referencePhotos} compact />
             {camera.error && (
               <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
                 {camera.error}
@@ -760,5 +783,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </OverlayStillProvider>
   )
 }

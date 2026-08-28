@@ -85,11 +85,14 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
       label: shape?.name ?? shapeId,
       notes: notes.trim() || undefined,
       createdAt: new Date().toISOString(),
+      library: 'coach',
     }
     await saveReferencePhoto(photo)
     onReferencesChange([
       photo,
-      ...referencePhotos.filter((p) => !(p.shapeId === shapeId && p.athleteId == null)),
+      ...referencePhotos.filter(
+        (p) => p.library === 'ig' || !(p.shapeId === shapeId && p.athleteId == null),
+      ),
     ])
     setFlash(`Saved reference for ${shape?.name ?? shapeId}`)
     window.setTimeout(() => setFlash(null), 2500)

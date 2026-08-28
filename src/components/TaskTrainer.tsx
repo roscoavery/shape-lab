@@ -830,12 +830,15 @@ export function TaskTrainer({
         dataUrl,
         label: `${stepShape.name} (shared)`,
         createdAt: new Date().toISOString(),
+        library: 'coach',
       }
       await saveReferencePhoto(photo)
       onReferencesChange([
         photo,
         ...referencePhotos.filter(
-          (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
+          (p) =>
+            p.library === 'ig' ||
+            !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
         ),
       ])
       setFlash('Shared reference saved')

@@ -465,17 +465,31 @@ export function loadReferencePhotos(): ReferencePhoto[] {
 }
 
 export function saveReferencePhotos(photos: ReferencePhoto[]) {
-  writeJson(REFS_KEY, photos)
+  try {
+    writeJson(REFS_KEY, photos)
+  } catch {
+    throw new Error('Storage is full. Delete some IG stills in Learn → IG shapes.')
+  }
 }
 
 export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
   const all = loadReferencePhotos()
-  // Replace any existing photo for same shape + athlete scope
-  const filtered = all.filter(
-    (p) => !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId),
-  )
-  filtered.unshift(photo)
-  saveReferencePhotos(filtered.slice(0, 120))
+  let next: ReferencePhoto[]
+  if (photo.library === 'ig') {
+    // Keep every IG crop. Never replace a coach still.
+    next = [photo, ...all.filter((p) => p.id !== photo.id)]
+  } else {
+    next = [
+      photo,
+      ...all.filter((p) => {
+        if (p.library === 'ig') return true
+        return !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId)
+      }),
+    ]
+  }
+  const ig = next.filter((p) => p.library === 'ig')
+  const other = next.filter((p) => p.library !== 'ig')
+  saveReferencePhotos([...ig.slice(0, 80), ...other.slice(0, 80)])
 }
 
 export async function deleteReferencePhoto(id: string): Promise<void> {

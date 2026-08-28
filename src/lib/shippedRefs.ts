@@ -123,6 +123,7 @@ export function pickCoachStill(
     (p) =>
       p.shapeId === shapeId &&
       p.athleteId == null &&
+      p.library !== 'ig' &&
       isUsablePhotoSrc(p.dataUrl) &&
       p.dataUrl.startsWith('data:image') &&
       !p.id.startsWith('hitref_'),

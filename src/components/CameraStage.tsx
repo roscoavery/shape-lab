@@ -13,6 +13,7 @@ import {
   type JointDrawMode,
 } from '../lib/skeleton'
 import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
+import { useOverlayStill } from './OverlayStillContext'
 
 type Props = {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -111,6 +112,7 @@ export function CameraStage({
   fill = false,
 }: Props) {
   const localHoldRef = useRef<number | null>(null)
+  const { selected, opacity } = useOverlayStill()
 
   useEffect(() => {
     localHoldRef.current = holdSeconds
@@ -277,6 +279,14 @@ export function CameraStage({
         <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-1 text-xs text-[var(--accent)]">
           Demo pose (no camera)
         </div>
+      )}
+      {selected && opacity > 0.02 && (
+        <img
+          src={selected.src}
+          alt=""
+          className="pointer-events-none absolute inset-0 z-[12] h-full w-full object-contain"
+          style={{ opacity }}
+        />
       )}
       {overlay}
     </div>

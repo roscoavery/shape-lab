@@ -132,6 +132,7 @@ export function hasCoachReference(photos: ReferencePhoto[], shapeId: string): bo
       (p) =>
         p.shapeId === shapeId &&
         p.athleteId == null &&
+        p.library !== 'ig' &&
         typeof p.dataUrl === 'string' &&
         p.dataUrl.startsWith('data:image'),
     )

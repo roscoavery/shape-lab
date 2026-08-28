@@ -4,13 +4,18 @@
  * Full screen covers the whole window: looping IG + delay/replay, left/right or top/bottom.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
 import { CompareSplitBar } from './CompareSplitBar'
 import { CompareLayoutContext, type CompareSplit } from './compareLayout'
+import { IgStillContext, type IgCropDraft } from './IgStillContext'
 
-export function ComparePanel() {
+type Props = {
+  onSaveIgStill: (draft: IgCropDraft) => void
+}
+
+export function ComparePanel({ onSaveIgStill }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('lr')
 
@@ -23,6 +28,13 @@ export function ComparePanel() {
     }
   }, [fullscreen])
 
+  const saveCrop = useCallback(
+    (draft: IgCropDraft) => {
+      onSaveIgStill(draft)
+    },
+    [onSaveIgStill],
+  )
+
   const grid = fullscreen
     ? split === 'tb'
       ? 'grid min-h-0 flex-1 grid-rows-2 gap-1'
@@ -32,6 +44,7 @@ export function ComparePanel() {
       : 'grid gap-4 md:grid-cols-2'
 
   return (
+    <IgStillContext.Provider value={{ saveCrop }}>
     <CompareLayoutContext.Provider
       value={{ fullscreen, split, setFullscreen, setSplit }}
     >
@@ -48,7 +61,10 @@ export function ComparePanel() {
             Tap <strong className="text-[var(--text)]">Full screen with delay cam</strong> on the
             reference, or <strong className="text-[var(--text)]">Full screen with reference</strong> on
             the athlete camera. Left/right or top/bottom is the looping clip plus delay cam /
-            replay — scrub each side. Paste Instagram URLs here; they save into the app.
+            replay — scrub each side. Paste Instagram URLs here; they save into the app.{' '}
+            <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip or replay:
+            press one corner, drag to the opposite corner, tag the shape, and it lands in{' '}
+            <strong className="text-[var(--text)]">Learn → IG shapes</strong>.
           </section>
         )}
         <div
@@ -64,5 +80,6 @@ export function ComparePanel() {
         </div>
       </div>
     </CompareLayoutContext.Provider>
+    </IgStillContext.Provider>
   )
 }

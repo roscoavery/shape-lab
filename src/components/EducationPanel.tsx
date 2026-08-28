@@ -23,6 +23,8 @@ import { ViewCallout } from './ViewCallout'
 import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
+import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
+import { deleteReferencePhoto } from '../lib/storage'
 
 type EduView =
   | { kind: 'home' }
@@ -33,6 +35,7 @@ type EduView =
   | { kind: 'quiz'; pool?: 'pathway' | 'arm-positions' }
   | { kind: 'hits' }
   | { kind: 'glossary' }
+  | { kind: 'ig' }
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -142,6 +145,11 @@ export function EducationPanel({
             label="Arm positions"
           />
           <NavChip
+            active={view.kind === 'ig'}
+            onClick={() => setView({ kind: 'ig' })}
+            label="IG shapes"
+          />
+          <NavChip
             active={view.kind === 'hits'}
             onClick={() => setView({ kind: 'hits' })}
             label="My shapes"
@@ -160,6 +168,8 @@ export function EducationPanel({
           onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
           onHits={() => setView({ kind: 'hits' })}
           onGlossary={() => setView({ kind: 'glossary' })}
+          onIg={() => setView({ kind: 'ig' })}
+          igCount={listIgStills(referencePhotos).length}
         />
       )}
 
@@ -215,6 +225,13 @@ export function EducationPanel({
         />
       )}
 
+      {view.kind === 'ig' && (
+        <IgShapesLibrary
+          referencePhotos={referencePhotos}
+          onReferencesChange={onReferencesChange}
+        />
+      )}
+
       {view.kind === 'hits' && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           {!athleteId ? (
@@ -265,6 +282,8 @@ function HomeView({
   onArmQuiz,
   onHits,
   onGlossary,
+  onIg,
+  igCount,
 }: {
   pathwayCount: number
   shapeCount: number
@@ -275,6 +294,8 @@ function HomeView({
   onArmQuiz: () => void
   onHits: () => void
   onGlossary: () => void
+  onIg: () => void
+  igCount: number
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -349,6 +370,20 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Test arm positions →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onIg}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Crops from Compare. Screenshot a looping Instagram clip or replay — press one
+          corner, drag to the opposite corner — and the still lands here. {igCount} saved.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open IG shapes →
         </span>
       </button>
       <button
@@ -518,6 +553,7 @@ function ShapeDetail({
   const onPath = pathwayIds.has(shape.id)
   const pathIdx = firstPathwayTaskIndex(shape.id)
   const pathTask = pathIdx != null ? CURRICULUM_TASKS[pathIdx] : null
+  const igForShape = igStillsForShape(referencePhotos, shape.id)
 
   return (
     <article className="space-y-4">
@@ -603,6 +639,24 @@ function ShapeDetail({
           />
         </div>
       </div>
+
+      {igForShape.length > 0 && (
+        <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+            IG shapes
+          </h4>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {igForShape.map((still) => (
+              <img
+                key={still.id}
+                src={still.dataUrl}
+                alt={still.label ?? shape.name}
+                className="max-h-48 w-full rounded-md bg-[#0d1218] object-contain"
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {shape.coachNotes && (
         <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -899,5 +953,75 @@ function TaskDetail({
         )}
       </div>
     </article>
+  )
+}
+
+function IgShapesLibrary({
+  referencePhotos,
+  onReferencesChange,
+}: {
+  referencePhotos: ReferencePhoto[]
+  onReferencesChange: (photos: ReferencePhoto[]) => void
+}) {
+  const groups = groupIgStillsByShape(referencePhotos)
+  const total = groups.reduce((n, g) => n + g.stills.length, 0)
+
+  const remove = async (id: string) => {
+    await deleteReferencePhoto(id)
+    onReferencesChange(referencePhotos.filter((p) => p.id !== id))
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+        <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+          These stills are cropped from Compare — looping Instagram clips, uploaded
+          reference video, or athlete replay. They do not replace the coach stills in
+          Shape library. On Tasks, Homework, or Coach, pick any of these (or any coach
+          still) as a ghost overlay on the camera.
+        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          {total === 0
+            ? 'None saved yet. Open Compare, pause the clip, tap Screenshot, press one corner of the shape, and drag to the opposite corner.'
+            : `${total} still${total === 1 ? '' : 's'} in ${groups.length} shape${groups.length === 1 ? '' : 's'}.`}
+        </p>
+      </div>
+
+      {groups.map((group) => (
+        <div
+          key={group.shapeId}
+          className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+        >
+          <h4 className="mb-3 text-sm font-semibold text-[var(--text)]">{group.name}</h4>
+          <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {group.stills.map((still) => (
+              <li
+                key={still.id}
+                className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0d1218]"
+              >
+                <img
+                  src={still.dataUrl}
+                  alt={still.label ?? group.name}
+                  className="max-h-48 w-full object-contain"
+                />
+                <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                  <p className="min-w-0 truncate text-[11px] text-[var(--muted)]">
+                    {still.label || group.name}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void remove(still.id)}
+                    className="shrink-0 text-[11px] text-[var(--bad)] hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
   )
 }

@@ -432,4 +432,10 @@ export type ReferencePhoto = {
   /** Extra coach notes entered when the picture was uploaded. */
   notes?: string
   createdAt: string
+  /**
+   * Where the still came from.
+   * `ig` = cropped from a Compare / Instagram clip (IG shapes library).
+   * Missing or `coach` = glossary upload or other coach still — never overwrite shipped files.
+   */
+  library?: 'coach' | 'ig'
 }

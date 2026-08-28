@@ -159,7 +159,7 @@ function VideoWorkbenchInner({
           onPause={() => setPlaying(false)}
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
-        <VideoMarkOverlay videoRef={videoRef} />
+        <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
       </div>
 
       <input

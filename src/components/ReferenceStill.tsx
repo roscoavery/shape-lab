@@ -13,6 +13,8 @@ type Props = {
   className?: string
   /** Compact thumbnail vs full still. */
   emptyLabel?: string
+  /** Render this specific still (IG crop) instead of the coach picture. */
+  photo?: ReferencePhoto | null
 }
 
 /**
@@ -25,6 +27,7 @@ export function ReferenceStill({
   alt = '',
   className = 'h-full w-full object-cover',
   emptyLabel = 'No photo yet',
+  photo = null,
 }: Props) {
   const coach = pickCoachStill(photos, shapeId)
   const candidates = useMemo(() => {
@@ -32,11 +35,12 @@ export function ReferenceStill({
     const add = (u?: string | null) => {
       if (u && isUsablePhotoSrc(u) && !list.includes(u)) list.push(u)
     }
+    if (photo?.dataUrl) add(photo.dataUrl)
     if (coach?.dataUrl?.startsWith('data:image')) add(coach.dataUrl)
     for (const u of shippedStillCandidates(shapeId)) add(u)
     if (coach?.dataUrl && !coach.dataUrl.startsWith('data:image')) add(coach.dataUrl)
     return list
-  }, [shapeId, coach?.dataUrl])
+  }, [shapeId, coach?.dataUrl, photo?.dataUrl])
 
   const [index, setIndex] = useState(0)
   useEffect(() => {

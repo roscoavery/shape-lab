@@ -1,13 +1,16 @@
 /**
- * Coach markup on a Compare video: 3-dot connected arrows, freehand draw, two-tap arrows.
- * Arrow: press, drag, let go — the arrowhead is where you release.
+ * Coach markup on a Compare video: 3-dot connected arrows, freehand draw, drag arrows,
+ * and Screenshot crop (press one corner, drag to the opposite corner).
  */
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { cropVideoFrame, type NormPt } from '../../lib/cropFrame'
+import { learnLibraryShapes } from '../../lib/educationCopy'
+import { useIgStillSave } from './IgStillContext'
 
-export type MarkTool = 'line' | 'draw' | 'arrow'
+export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
-type Pt = { x: number; y: number }
+type Pt = NormPt
 
 type DrawStroke = { kind: 'draw'; points: Pt[] }
 type ArrowMark = { kind: 'arrow'; a: Pt; b: Pt }
@@ -16,6 +19,7 @@ type Mark = DrawStroke | ArrowMark
 const LINE = '#f5d76e'
 const DRAW = '#7dd3c7'
 const ARROW = '#ff8a6b'
+const CROP = '#9ecbff'
 
 function contentBox(video: HTMLVideoElement | null, host: HTMLElement): {
   left: number
@@ -78,22 +82,38 @@ function drawArrowHead(
 
 type Props = {
   videoRef: { current: HTMLVideoElement | null }
+  /** True when the <video> is CSS-mirrored. */
+  mirror?: boolean
 }
 
-export function VideoMarkOverlay({ videoRef }: Props) {
+export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const igSave = useIgStillSave()
+  const shapes = learnLibraryShapes()
   const [tool, setTool] = useState<MarkTool>('line')
   const [marks, setMarks] = useState<Mark[]>([])
   const [linePts, setLinePts] = useState<Pt[]>([])
   const [arrowPts, setArrowPts] = useState<Pt[]>([])
   const [drawPts, setDrawPts] = useState<Pt[] | null>(null)
+  const [cropPts, setCropPts] = useState<[Pt, Pt] | null>(null)
+  const [pending, setPending] = useState<{ dataUrl: string } | null>(null)
+  const [shapeId, setShapeId] = useState(shapes[0]?.id ?? '')
+  const [label, setLabel] = useState('')
+  const [notice, setNotice] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const drawingRef = useRef(false)
   const drawPtsRef = useRef<Pt[] | null>(null)
   const arrowDragRef = useRef(false)
   const arrowStartRef = useRef<Pt | null>(null)
+  const cropDragRef = useRef(false)
+  const cropStartRef = useRef<Pt | null>(null)
   const toolRef = useRef(tool)
   toolRef.current = tool
+  const mirrorRef = useRef(mirror)
+  mirrorRef.current = mirror
+  const pendingRef = useRef(pending)
+  pendingRef.current = pending
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current
@@ -159,7 +179,35 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     if (drawPts && drawPts.length) strokeLine(drawPts, DRAW)
     strokeLine(linePts, LINE, true)
     strokeLine(arrowPts, ARROW, true)
-  }, [marks, linePts, drawPts, arrowPts, videoRef])
+
+    if (cropPts) {
+      const a = toPx(cropPts[0], box)
+      const b = toPx(cropPts[1], box)
+      const x = Math.min(a.x, b.x)
+      const y = Math.min(a.y, b.y)
+      const rw = Math.abs(b.x - a.x)
+      const rh = Math.abs(b.y - a.y)
+      ctx.fillStyle = 'rgba(8, 12, 18, 0.45)'
+      ctx.fillRect(box.left, box.top, box.width, box.height)
+      ctx.clearRect(x, y, rw, rh)
+      ctx.strokeStyle = CROP
+      ctx.lineWidth = Math.max(2, lw * 0.7)
+      ctx.setLineDash([7, 5])
+      ctx.strokeRect(x, y, rw, rh)
+      ctx.setLineDash([])
+      const cr = Math.max(4, lw)
+      for (const p of [a, b]) {
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, cr, 0, Math.PI * 2)
+        ctx.fillStyle = '#fff'
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, cr * 0.55, 0, Math.PI * 2)
+        ctx.fillStyle = CROP
+        ctx.fill()
+      }
+    }
+  }, [marks, linePts, drawPts, arrowPts, cropPts, videoRef])
 
   useEffect(() => {
     paint()
@@ -173,7 +221,14 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     return () => ro.disconnect()
   }, [paint])
 
+  const resetCropDrag = () => {
+    cropDragRef.current = false
+    cropStartRef.current = null
+    setCropPts(null)
+  }
+
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (pendingRef.current) return
     const host = hostRef.current
     if (!host) return
     const pt = eventToNorm(e, host, videoRef.current)
@@ -181,6 +236,14 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     e.preventDefault()
     e.stopPropagation()
     canvasRef.current?.setPointerCapture(e.pointerId)
+    if (toolRef.current === 'crop') {
+      videoRef.current?.pause()
+      cropDragRef.current = true
+      cropStartRef.current = pt
+      setCropPts([pt, pt])
+      setError(null)
+      return
+    }
     if (toolRef.current === 'draw') {
       drawingRef.current = true
       drawPtsRef.current = [pt]
@@ -201,6 +264,13 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     if (!host) return
     const pt = eventToNorm(e, host, videoRef.current)
     if (!pt) return
+    if (cropDragRef.current && toolRef.current === 'crop') {
+      const start = cropStartRef.current
+      if (!start) return
+      e.preventDefault()
+      setCropPts([start, pt])
+      return
+    }
     if (arrowDragRef.current && toolRef.current === 'arrow') {
       const start = arrowStartRef.current
       if (!start) return
@@ -219,6 +289,25 @@ export function VideoMarkOverlay({ videoRef }: Props) {
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    if (cropDragRef.current && toolRef.current === 'crop') {
+      cropDragRef.current = false
+      const host = hostRef.current
+      const start = cropStartRef.current
+      cropStartRef.current = null
+      const pt = host ? eventToNorm(e, host, videoRef.current) : null
+      const end = pt ?? cropPts?.[1] ?? start
+      setCropPts(null)
+      if (start && end) {
+        const dataUrl = cropVideoFrame(videoRef.current, start, end, mirrorRef.current)
+        if (!dataUrl) {
+          setError('Crop was too small, or this video cannot be captured. Pause a saved clip and try again.')
+          return
+        }
+        setPending({ dataUrl })
+        setError(null)
+      }
+      return
+    }
     if (arrowDragRef.current && toolRef.current === 'arrow') {
       arrowDragRef.current = false
       const host = hostRef.current
@@ -254,9 +343,35 @@ export function VideoMarkOverlay({ videoRef }: Props) {
     drawPtsRef.current = null
     arrowDragRef.current = false
     arrowStartRef.current = null
+    resetCropDrag()
   }
 
-  const btn = (id: MarkTool, label: string) => (
+  const savePending = () => {
+    if (!pending) return
+    if (!shapeId) {
+      setError('Tag the crop with a shape first.')
+      return
+    }
+    if (!igSave) {
+      setError('Could not save — reopen the Compare tab.')
+      return
+    }
+    try {
+      igSave.saveCrop({
+        dataUrl: pending.dataUrl,
+        shapeId,
+        label: label.trim() || undefined,
+      })
+      setPending(null)
+      setLabel('')
+      setNotice('Saved to IG shapes — open Learn to see it, or overlay it on Tasks.')
+      window.setTimeout(() => setNotice(null), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save that still.')
+    }
+  }
+
+  const btn = (id: MarkTool, labelText: string) => (
     <button
       type="button"
       onClick={() => {
@@ -266,6 +381,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
         arrowDragRef.current = false
         arrowStartRef.current = null
         setDrawPts(null)
+        resetCropDrag()
       }}
       className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
         tool === id
@@ -273,7 +389,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
           : 'border border-white/30 bg-black/55 text-white'
       }`}
     >
-      {label}
+      {labelText}
     </button>
   )
 
@@ -282,7 +398,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
       <canvas
         ref={canvasRef}
         className="pointer-events-auto absolute inset-0 h-full w-full touch-none"
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'none', cursor: tool === 'crop' ? 'crosshair' : 'crosshair' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -293,6 +409,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
         {btn('line', 'Line')}
         {btn('draw', 'Draw')}
         {btn('arrow', 'Arrow')}
+        {btn('crop', 'Screenshot')}
         <button
           type="button"
           onClick={clearAll}
@@ -301,6 +418,76 @@ export function VideoMarkOverlay({ videoRef }: Props) {
           Clear
         </button>
       </div>
+      {tool === 'crop' && !pending && (
+        <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
+          Press one corner of the shape, drag to the opposite corner, then let go.
+        </p>
+      )}
+      {notice && (
+        <p className="pointer-events-none absolute inset-x-2 bottom-2 z-30 rounded-md bg-[#102820] px-2 py-1.5 text-center text-[11px] font-medium text-[var(--accent)]">
+          {notice}
+        </p>
+      )}
+      {error && !pending && (
+        <p className="pointer-events-none absolute inset-x-2 bottom-2 z-30 rounded-md bg-[#2a1518] px-2 py-1.5 text-center text-[11px] text-[var(--bad)]">
+          {error}
+        </p>
+      )}
+      {pending && (
+        <div className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[70%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl sm:inset-x-auto sm:right-1 sm:w-72">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Save to IG shapes
+          </p>
+          <img
+            src={pending.dataUrl}
+            alt="Crop preview"
+            className="mt-1 max-h-32 w-full rounded object-contain bg-black"
+          />
+          <label className="mt-2 block text-[11px] text-[var(--muted)]">
+            Shape
+            <select
+              value={shapeId}
+              onChange={(e) => setShapeId(e.target.value)}
+              className="mt-0.5 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1 text-xs text-[var(--text)]"
+            >
+              {shapes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="mt-1.5 block text-[11px] text-[var(--muted)]">
+            Label (optional)
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. IG hollow, landing"
+              className="mt-0.5 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1 text-xs text-[var(--text)]"
+            />
+          </label>
+          {error && <p className="mt-1 text-[11px] text-[var(--bad)]">{error}</p>}
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={savePending}
+              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-[#06281f]"
+            >
+              Save to IG library
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPending(null)
+                setError(null)
+              }}
+              className="rounded-md border border-white/25 px-2.5 py-1 text-[11px] text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

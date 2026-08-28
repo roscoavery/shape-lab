@@ -10,7 +10,9 @@ import { CameraStage } from './CameraStage'
 import { HitCheckOverlay } from './HitCheckOverlay'
 import { ReferenceStill } from './ReferenceStill'
 import { ShapeStillStrip } from './ShapeStillStrip'
+import { StillOverlayPicker } from './StillOverlayPicker'
 import { TaskDelayCam } from './TaskDelayCam'
+import { useOverlayStill } from './OverlayStillContext'
 
 export type TaskLiveKind = 'looking' | 'close' | 'holding' | 'gotit'
 
@@ -122,6 +124,7 @@ export function TasksWorkspace({
     else setLocalFullscreen(value)
   }
   const [hitBurst, setHitBurst] = useState(0)
+  const { selected: overlayStill } = useOverlayStill()
   const [hitKind, setHitKind] = useState<'hit' | 'gotit'>('hit')
   const wasReady = useRef(false)
   const wasGotit = useRef(false)
@@ -188,6 +191,9 @@ export function TasksWorkspace({
     }
   }, [fullscreen])
 
+  const pipShapeName = overlayStill?.name ?? shape.name
+  const pipLibrary = overlayStill?.library === 'ig' ? 'IG still' : 'Coach still'
+
   const pipReference = (
     <div
       className={
@@ -203,28 +209,40 @@ export function TasksWorkspace({
             : 'px-3 py-1.5 text-[10px] text-[var(--muted)]'
         }`}
       >
-        {fullscreen ? `Still — ${shape.name}` : `Coach still — ${shape.name}`}
+        {fullscreen ? `${pipLibrary} — ${pipShapeName}` : `${pipLibrary} — ${pipShapeName}`}
       </p>
       <div className="relative">
-        <ReferenceStill
-          shapeId={shape.id}
-          photos={referencePhotos}
-          alt={shape.name}
-          className={
-            fullscreen
-              ? 'max-h-36 w-full object-contain sm:max-h-44'
-              : 'max-h-56 w-full object-contain sm:max-h-64'
-          }
-          emptyLabel={`No coach still for ${shape.name} yet`}
-        />
+        {overlayStill ? (
+          <img
+            src={overlayStill.src}
+            alt={pipShapeName}
+            className={
+              fullscreen
+                ? 'max-h-36 w-full object-contain sm:max-h-44'
+                : 'max-h-56 w-full object-contain sm:max-h-64'
+            }
+          />
+        ) : (
+          <ReferenceStill
+            shapeId={shape.id}
+            photos={referencePhotos}
+            alt={shape.name}
+            className={
+              fullscreen
+                ? 'max-h-36 w-full object-contain sm:max-h-44'
+                : 'max-h-56 w-full object-contain sm:max-h-64'
+            }
+            emptyLabel={`No coach still for ${shape.name} yet`}
+          />
+        )}
         <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-          {shape.name}
+          {pipShapeName}
         </span>
       </div>
       {!fullscreen && (
         <p className="px-3 py-1 text-[10px] leading-snug text-[var(--muted)]">
-          Picture of this shape, not a photo match. If we are asking for a lever or a mountain
-          climber, this still is that shape — not a lunge.
+          Picture of this shape, not a photo match. Pick any still from the shape library or IG
+          shapes below to overlay it on the camera.
         </p>
       )}
     </div>
@@ -401,6 +419,7 @@ export function TasksWorkspace({
 
         <div className={`flex min-w-0 flex-col gap-2 ${fullscreen ? 'pointer-events-none' : ''}`}>
           {pipReference}
+          {!fullscreen && <StillOverlayPicker photos={referencePhotos} compact />}
 
           {hitPreviewUrl && !fullscreen && (
             <div className="overflow-hidden rounded-lg border border-[var(--good)]/40 bg-black/40">
