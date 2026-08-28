@@ -16,6 +16,7 @@ import {
 } from './clipStore'
 import { createId } from './storage'
 import shippedLibrary from '../config/compareLibrary.json'
+import { loadCompareLibraries } from './compareLibraries'
 
 export const LIBRARY_META_KEY = 'shape-lab.library-meta.v1'
 
@@ -338,9 +339,17 @@ export async function replaceLibraryFromBackup(
   return next
 }
 
+export function backupFromRosterLibraries(): LibraryBackup | null {
+  const map = loadCompareLibraries()
+  const collections = Object.values(map).flat()
+  if (!collections.some((c) => c.items.some((i) => i.url))) return null
+  return collectionsToBackup(collections)
+}
+
 /**
- * Ryan / gym computer: the on-disk library is the source of truth (add + delete).
- * Other profiles: hydrate gym URLs into this browser; do not overwrite the gym list.
+ * Ryan / gym computer: merge this browser + disk + roster extras, then push.
+ * Never replace a larger local library with a smaller server copy.
+ * Everyone else: take the gym library from the server so every link matches.
  */
 export async function syncLibraryWithServer(
   local: RefCollection[],
@@ -348,21 +357,27 @@ export async function syncLibraryWithServer(
 ): Promise<{ collections: RefCollection[]; pulled: number }> {
   const seed = shippedCompareLibrary()
   const server = await pullServerLibrary()
+  const roster = backupFromRosterLibraries()
+
+  const mergeIn = async (backup: LibraryBackup | null): Promise<number> => {
+    if (!backup || backupUrlCount(backup) === 0) return 0
+    const merged = await mergeLibraryBackup(backup)
+    return merged.added
+  }
 
   if (persistToApp) {
-    if (server && libraryIsManaged(server)) {
-      const collections = await replaceLibraryFromBackup(server)
-      return { collections, pulled: backupUrlCount(server) }
-    }
-    let collections = local
     let pulled = 0
-    if (seed && backupUrlCount(seed) > 0) {
-      const merged = await mergeLibraryBackup(seed)
-      collections = merged.collections
-      pulled += merged.added
-    }
+    pulled += await mergeIn(server)
+    pulled += await mergeIn(seed)
+    pulled += await mergeIn(roster)
+    const collections = await getCollections()
     await pushServerLibrary(collections)
     return { collections, pulled }
+  }
+
+  if (server && backupUrlCount(server) > 0 && libraryIsManaged(server)) {
+    const collections = await replaceLibraryFromBackup(server)
+    return { collections, pulled: backupUrlCount(server) }
   }
 
   let collections = local

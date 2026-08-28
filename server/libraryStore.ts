@@ -9,6 +9,7 @@ import type { IncomingMessage } from 'node:http'
 import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
 
 const FILE = path.join(process.cwd(), 'data', 'library.json')
+const SHIPPED = path.join(process.cwd(), 'src/config/compareLibrary.json')
 
 export type DiskLibrary = {
   kind: 'shape-lab-library'
@@ -137,6 +138,11 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
   }
   const text = JSON.stringify(next, null, 2) + '\n'
   fs.writeFileSync(FILE, text)
+  try {
+    fs.writeFileSync(SHIPPED, text)
+  } catch {
+    /* shipped copy is optional in a packed preview */
+  }
   return next
 }
 

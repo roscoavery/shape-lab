@@ -35,7 +35,8 @@ import {
   downloadBackupFile,
   mergeLibraryBackup,
   parseLibraryBackup,
-  publishLibrary,
+  persistLibraryMeta,
+  pushServerLibrary,
   restoreMetaIfIndexedDbEmpty,
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
@@ -46,9 +47,6 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
-import { loadCompareLibraries, saveAthleteCompareLibrary } from '../../lib/compareLibraries'
-import { pushServerRoster } from '../../lib/rosterSync'
-import { RYAN_PROFILE_ID } from '../../lib/ryanProfile'
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
@@ -71,11 +69,11 @@ const SHAPE_TAG_SUGGESTIONS = [
 type OtherHit = { item: RefItem; collection: RefCollection }
 
 type Props = {
-  persistToApp?: boolean
-  athleteId?: string | null
+  /** Ryan: this browser can write the gym Compare library for every link. */
+  gymEditor?: boolean
 }
 
-export function ReferencePane({ persistToApp = false, athleteId = null }: Props) {
+export function ReferencePane({ gymEditor = false }: Props) {
   const [collections, setCollections] = useState<RefCollection[]>([])
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
@@ -96,6 +94,7 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
   )
   const [dragId, setDragId] = useState<string | null>(null)
   const [libraryReady, setLibraryReady] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const { fullscreen, refRail } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -114,50 +113,41 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
 
   const persist = useCallback(
     (list: RefCollection[]) => {
-      publishLibrary(list, persistToApp && athleteId === RYAN_PROFILE_ID)
-      if (athleteId) {
-        saveAthleteCompareLibrary(athleteId, list)
-        void pushServerRoster()
+      persistLibraryMeta(list)
+      if (gymEditor) {
+        setSaveState('dirty')
+        void pushServerLibrary(list).then(() => setSaveState('saved'))
       }
     },
-    [persistToApp, athleteId],
+    [gymEditor],
   )
+
+  const saveIntoApp = async () => {
+    if (!gymEditor) return
+    setSaveState('saving')
+    setError(null)
+    try {
+      await pushServerLibrary(collections)
+      persistLibraryMeta(collections)
+      setSaveState('saved')
+      const n = collections.reduce((sum, c) => sum + c.items.filter((i) => i.url).length, 0)
+      setNotice(
+        `Saved ${n} URL${n === 1 ? '' : 's'} into the app. Every link and browser will see this library.`,
+      )
+    } catch {
+      setSaveState('dirty')
+      setError('Could not save the library into the app — try again.')
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
-    const load = async (fromRosterEvent = false) => {
+    const load = async () => {
       try {
         let list = await getCollections()
-        if (!fromRosterEvent) {
-          list = await restoreMetaIfIndexedDbEmpty(list)
-          const synced = await syncLibraryWithServer(
-            list,
-            persistToApp && athleteId === RYAN_PROFILE_ID,
-          )
-          list = synced.collections
-        }
-        const fromRoster = athleteId ? (loadCompareLibraries()[athleteId] ?? []) : []
-        if (athleteId) {
-          const mine = list.filter((c) => c.athleteId === athleteId)
-          const legacy =
-            athleteId === RYAN_PROFILE_ID ? list.filter((c) => !c.athleteId) : []
-          const rosterUrls = fromRoster.reduce(
-            (n, c) => n + c.items.filter((i) => i.url).length,
-            0,
-          )
-          const mineUrls = mine.reduce((n, c) => n + c.items.filter((i) => i.url).length, 0)
-          if (rosterUrls > mineUrls) {
-            for (const c of fromRoster) await putCollection(c)
-            list = fromRoster
-          } else if (mine.length > 0) {
-            list = mine
-          } else if (fromRoster.length > 0) {
-            for (const c of fromRoster) await putCollection(c)
-            list = fromRoster
-          } else {
-            list = legacy
-          }
-        }
+        list = await restoreMetaIfIndexedDbEmpty(list)
+        const synced = await syncLibraryWithServer(list, gymEditor)
+        list = synced.collections
         let createdEmpty = false
         if (list.length === 0) {
           const def: RefCollection = {
@@ -165,7 +155,6 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
             name: 'My references',
             items: [],
             createdAt: new Date().toISOString(),
-            athleteId: athleteId ?? undefined,
           }
           await putCollection(def)
           list = [def]
@@ -173,7 +162,7 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
         }
         if (cancelled) return
         setCollections(list)
-        if (!createdEmpty) persist(list)
+        if (!createdEmpty && gymEditor) persist(list)
         setActiveCollectionId((id) =>
           id && list.some((c) => c.id === id) ? id : list[0]!.id,
         )
@@ -182,11 +171,15 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
           (n, c) => n + c.items.filter((i) => i.url).length,
           0,
         )
-        if (!fromRosterEvent && persistToApp) {
+        if (gymEditor) {
           setNotice(
             urlCount > 0
-              ? `This profile: ${urlCount} reference${urlCount === 1 ? '' : 's'} saved in the app. Add or delete a URL here and every browser keeps it.`
-              : 'This profile is unlocked — add or delete a URL here and it saves into the app for every browser.',
+              ? `${urlCount} reference${urlCount === 1 ? '' : 's'} in the gym library. Add, rename, or reorder, then Save into the app so every link keeps it.`
+              : 'This is Ryan’s gym library. Add URLs and Save into the app so every browser has them.',
+          )
+        } else if (urlCount > 0) {
+          setNotice(
+            `${urlCount} gym reference${urlCount === 1 ? '' : 's'} loaded. Unlock Ryan to add or rename URLs for every link.`,
           )
         }
       } catch {
@@ -198,16 +191,11 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
       }
     }
     void load()
-    const onRoster = () => {
-      void load(true)
-    }
-    window.addEventListener('shape-lab-roster-applied', onRoster)
     return () => {
       cancelled = true
-      window.removeEventListener('shape-lab-roster-applied', onRoster)
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
-  }, [refreshCachedIds, persistToApp, persist, athleteId])
+  }, [refreshCachedIds, persist, gymEditor])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -257,7 +245,6 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
       name,
       items: [],
       createdAt: new Date().toISOString(),
-      athleteId: athleteId ?? undefined,
     }
     await putCollection(col)
     setCollections((prev) => {
@@ -439,6 +426,9 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
       ...collection,
       items: collection.items.map((i) => (i.id === item.id ? { ...i, name } : i)),
     })
+    if (gymEditor) {
+      setNotice('Renamed. Save into the app so every link and browser keeps this name.')
+    }
   }
 
   const commitTags = async (item: RefItem, collection = activeCollection) => {
@@ -936,7 +926,25 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
             Clear
           </button>
         ) : null}
-        {allSocialItems.length > 0 && (
+        {gymEditor && (
+          <button
+            type="button"
+            onClick={() => void saveIntoApp()}
+            disabled={saveState === 'saving'}
+            className={
+              saveState === 'dirty'
+                ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+                : `${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`
+            }
+            title="Write this URL list into the app so every phone link and browser sees it"
+          >
+            {saveState === 'saving'
+              ? 'Saving library…'
+              : saveState === 'saved'
+                ? 'Saved into the app'
+                : 'Save into the app'}
+          </button>
+        )}
           <button
             type="button"
             onClick={() => void saveAllInApp()}
@@ -950,7 +958,6 @@ export function ReferencePane({ persistToApp = false, athleteId = null }: Props)
                 ? 'All videos in app'
                 : `Save all in app (${uncachedSocial.length})`}
           </button>
-        )}
         <button
           type="button"
           onClick={exportLibrary}

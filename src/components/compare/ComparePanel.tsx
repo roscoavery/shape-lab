@@ -21,6 +21,7 @@ import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import type { ReferencePhoto } from '../../types'
+import { isRyanName } from '../../lib/ryanProfile'
 
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
@@ -120,9 +121,9 @@ export function ComparePanel({
               <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip: press one
               corner, drag to the opposite corner, and it lands in{' '}
               <strong className="text-[var(--text)]">Learn → IG shapes</strong>
-              {persistIgToApp
-                ? '. This profile is unlocked, so Compare URLs and stills save into the app for every link.'
-                : '. Unlock the athlete profile first if you want Compare URLs saved into the app for every browser and link.'}
+              {isRyanName(athleteName)
+                ? '. Ryan is unlocked — Compare URLs save into the gym library. After you add or rename, tap Save into the app so every link and browser has them.'
+                : '. Unlock Ryan to save Compare URLs into the app for every browser and link. Anyone can watch the gym library.'}
             </section>
           )}
           {!fullscreen && (
@@ -136,7 +137,7 @@ export function ComparePanel({
                 className="min-h-0 overflow-hidden"
                 style={{ flex: `${tbRatio} 1 0%` }}
               >
-                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+                <ReferencePane gymEditor={isRyanName(athleteName)} />
               </div>
               <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} />
               <div
@@ -152,7 +153,7 @@ export function ComparePanel({
                 className="min-h-0 min-w-0 overflow-hidden"
                 style={{ flex: `${lrRatio} 1 0%` }}
               >
-                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+                <ReferencePane gymEditor={isRyanName(athleteName)} />
               </div>
               <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} />
               <div
@@ -173,7 +174,7 @@ export function ComparePanel({
               }`}
             >
               <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+                <ReferencePane gymEditor={isRyanName(athleteName)} />
               </div>
               <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
                 <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
