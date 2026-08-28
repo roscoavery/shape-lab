@@ -1659,8 +1659,128 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // LONG BRIDGE — straight-leg teaching shape after rainbow shoulders open.
+  // Class talk-through lives in Tasks 2. Photograph is the chin-to-chest hold.
+  // ===========================================================================
+  {
+    id: 'long_bridge',
+    name: 'Long Bridge',
+    description:
+      'Straight-leg long bridge: legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Work this after the shoulders open on a rainbow bridge. A slightly less arched version of this is the flight-to-hands shape in a back handspring.',
+    bodyPosition:
+      'SIDE VIEW. Straight legs together. Fingers pointed toward the feet. Push through the toes with the heels flat on the mat. Arms in close by the ears, covering the ears. Neutral head, then chin to chest. Longer and straighter than a rainbow — not a tight bent-knee arch.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Only after the shoulders already open on a rainbow bridge.',
+      'Film from the side.',
+      'Feet together. Straight legs if you can.',
+      'Pushing through your toes. Heels flat on the mat.',
+      'Arms in close by the ears. Chin to chest.',
+    ],
+    coachNotes:
+      'Athletes should only work long bridge if their shoulders already open on a rainbow bridge. Class talk-through: lie on your back and bridge up on 3. 1, 2, 3, bridge up. Can you get your feet together. Straight legs if you can. Pushing through your toes. Heels flat on the mat. Arms in close by the ears — snapshot — and go chin to chest and hold for 5, 4, 3, 2 — snapshot — come down, rock it out (tucked, hugging the knees). A position like this, very slightly less arched, should eventually happen mid back handspring during flight to hands.',
+    criteria: [
+      {
+        id: 'shoulders',
+        label: 'Shoulders open / arms by ears',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 24,
+        feedbackLow: 'Arms in close by the ears — push the shoulders open.',
+      },
+      {
+        id: 'elbows',
+        label: 'Elbows straight',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 10,
+        feedbackLow: 'Lock the arms — fingers toward the feet.',
+      },
+      {
+        id: 'ears_covered',
+        label: 'Arms covering ears',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ELBOW, LM.LEFT_EAR],
+        target: 0,
+        tolerance: 0.12,
+        falloff: 0.22,
+        weight: 10,
+        feedbackHigh: 'Arms in close by the ears.',
+      },
+      {
+        id: 'knees',
+        label: 'Legs straight',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 16,
+        feedbackLow: 'Straight legs if you can.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Feet together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.06,
+        falloff: 0.18,
+        weight: 12,
+        feedbackHigh: 'Feet together.',
+      },
+      {
+        id: 'heels_flat',
+        label: 'Heels flat, push through toes',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HEEL, LM.LEFT_FOOT_INDEX],
+        target: 0,
+        tolerance: 14,
+        falloff: 35,
+        weight: 10,
+        needsView: 'side',
+        feedbackHigh: 'Pushing through your toes. Heels flat on the mat.',
+      },
+      {
+        // Longer, flatter rainbow than the bent-knee teaching bridge.
+        id: 'hips_long',
+        label: 'Long arch / hips up',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 95,
+        targetMax: 155,
+        tolerance: 12,
+        weight: 10,
+        feedbackLow: 'Lengthen the bridge — do not sit in a tight rainbow.',
+        feedbackHigh: 'Hips up — keep the long arch, do not sag.',
+      },
+      {
+        id: 'chin_to_chest',
+        label: 'Chin to chest',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.NOSE],
+        targetMin: 0,
+        targetMax: 28,
+        tolerance: 12,
+        falloff: 40,
+        weight: 8,
+        needsView: 'side',
+        feedbackHigh: 'Chin to chest — look toward the hands.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // BRIDGE (scaffold leftover — straight-leg scoring, hidden from Learn.
-  // The photographed teaching shape is rainbow_bridge.)
+  // Photographed teaching shapes: rainbow_bridge, then long_bridge.)
   // ===========================================================================
   {
     id: 'bridge',

@@ -19,6 +19,8 @@ export type FlowBeat = {
   pauseMs?: number
   /** Grab a snapshot this many ms after the line starts (class “2”). */
   snapshotAtMs?: number
+  /** Label on the snapshot strip (e.g. Long bridge vs Chin to chest). */
+  snapLabel?: string
   /** Hunt this many ms for the highest-scoring frame (handstand / FTOS). */
   snapshotBestMs?: number
   /** Ignore the first part of a best-window (kick-up, walking in). */
@@ -372,6 +374,54 @@ function mcHsFiveReps(): FlowBeat[] {
   return beats
 }
 
+/** Class long-bridge talk-through. Two stills: before chin to chest, then after. */
+function longBridgeClass(): FlowBeat[] {
+  return [
+    {
+      speak: 'Lie on your back. Bridge up on 3.',
+      shapeId: 'long_bridge',
+      pauseMs: 400,
+    },
+    { speak: '1.', pauseMs: 350 },
+    { speak: '2.', pauseMs: 350 },
+    {
+      speak: '3. Bridge up.',
+      pauseMs: 900,
+      replayStart: true,
+    },
+    { speak: 'Can you get your feet together.', pauseMs: 550 },
+    { speak: 'Straight legs if you can.', pauseMs: 550 },
+    {
+      speak: 'Pushing through your toes. Heels flat on the mat.',
+      pauseMs: 550,
+    },
+    {
+      speak: 'Arms in close by the ears.',
+      pauseMs: 500,
+      snapshotAtMs: 280,
+      snapLabel: 'Long bridge',
+    },
+    {
+      speak: 'And go chin to chest.',
+      pauseMs: 450,
+    },
+    { speak: 'Hold for 5.', pauseMs: 280 },
+    { speak: '4.', pauseMs: 280 },
+    { speak: '3.', pauseMs: 280 },
+    {
+      speak: '2.',
+      pauseMs: 400,
+      snapshotAtMs: 120,
+      snapLabel: 'Chin to chest',
+    },
+    {
+      speak: 'Come down. Rock it out.',
+      pauseMs: 800,
+      replayEnd: true,
+    },
+  ]
+}
+
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
@@ -471,6 +521,21 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     ],
     reviewShapeIds: ['handstand'],
     beats: [],
+  },
+  {
+    id: 'flow_long_bridge',
+    name: 'Long Bridge',
+    nickname: 'Long bridge',
+    description:
+      'Class talk-through. Only after rainbow-bridge shoulders are open. Lie on your back, bridge up on 3, feet together, straight legs, heels flat, arms by the ears, chin to chest, hold, come down and rock it out. Two snapshots: one before chin to chest, one after. Not a gate.',
+    previewSpeak:
+      'This is a long bridge. Work this after your shoulders already open on a rainbow bridge.',
+    setupSpeak: 'Lie on your back. We will bridge up on 3.',
+    setupExtraSpeak:
+      'If the shoulders are not open on a rainbow yet, stay on rainbow bridge. A slightly less arched version of this long shape is what we want mid back handspring, flight to hands.',
+    setupShapeId: 'long_bridge',
+    previewShapes: [{ shapeId: 'long_bridge', label: 'Long' }],
+    beats: longBridgeClass(),
   },
 ]
 

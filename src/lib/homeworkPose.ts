@@ -72,11 +72,8 @@ function kneeAngleDeg(lm: Landmark[]): number | null {
   return (Math.acos(cos) * 180) / Math.PI
 }
 
-/**
- * Side-view rainbow bridge: hands and feet on the floor, hips the peak,
- * knees bent. Standing, hollow, and handstand must not pass this check.
- */
-export function poseLooksRainbowBridge(lm: Landmark[] | null | undefined): boolean {
+/** Hands and feet down, hips the peak of a back-bridge arch. */
+function poseLooksBridgeSupport(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
   const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
   const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
@@ -87,13 +84,29 @@ export function poseLooksRainbowBridge(lm: Landmark[] | null | undefined): boole
   // Hands and feet both down: similar height, not a handstand or a stand.
   if (Math.abs(wr.y - ank.y) > 0.28) return false
   const supportY = Math.max(wr.y, ank.y)
-  // Hips are the peak of the rainbow (smaller y = higher on screen).
+  // Hips are the peak (smaller y = higher on screen).
   if (supportY - hip.y < 0.12) return false
   // Some arch: hips above the shoulders.
   if (hip.y > sh.y - 0.02) return false
+  return true
+}
 
-  const kneeA = kneeAngleDeg(lm)
+/**
+ * Side-view rainbow bridge: hands and feet on the floor, hips the peak,
+ * knees bent. Standing, hollow, and handstand must not pass this check.
+ */
+export function poseLooksRainbowBridge(lm: Landmark[] | null | undefined): boolean {
+  if (!poseLooksBridgeSupport(lm)) return false
+  const kneeA = kneeAngleDeg(lm!)
   if (kneeA != null && (kneeA < 68 || kneeA > 158)) return false
+  return true
+}
+
+/** Straight-leg long bridge — same support as rainbow, knees open. */
+export function poseLooksLongBridge(lm: Landmark[] | null | undefined): boolean {
+  if (!poseLooksBridgeSupport(lm)) return false
+  const kneeA = kneeAngleDeg(lm!)
+  if (kneeA != null && kneeA < 145) return false
   return true
 }
 
@@ -110,6 +123,9 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'rainbow_bridge') {
     return poseLooksRainbowBridge(lm) || overall >= 32
+  }
+  if (shapeId === 'long_bridge') {
+    return poseLooksLongBridge(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand') {
     if (overall >= 32) return true

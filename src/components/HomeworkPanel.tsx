@@ -468,7 +468,9 @@ export function HomeworkPanel({
     const defaultNotes =
       addShapeId === 'rainbow_bridge'
         ? 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
-        : ''
+        : addShapeId === 'long_bridge'
+          ? 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
+          : ''
     const notes = addNotes.trim() || defaultNotes
     const item: HomeworkItem = {
       id: createId('hw'),

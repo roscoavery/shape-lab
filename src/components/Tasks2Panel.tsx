@@ -373,6 +373,7 @@ export function Tasks2Panel({
       frozen?: ScoreResult,
       blobOverride?: Blob | null,
       rep?: number,
+      snapLabel?: string,
     ): Promise<SnapView | null> => {
       if (!athleteId) return null
       const shape = getShape(shapeId)
@@ -388,7 +389,7 @@ export function Tasks2Panel({
               athleteId,
               taskId: seq.id,
               shapeId,
-              shapeName: shape?.name ?? shapeId,
+              shapeName: snapLabel ?? shape?.name ?? shapeId,
               kind: 'snapshot',
               createdAt: new Date().toISOString(),
               holdSeconds: 0,
@@ -401,7 +402,7 @@ export function Tasks2Panel({
       }
       const view: SnapView = {
         shapeId,
-        shapeName: shape?.name ?? shapeId,
+        shapeName: snapLabel ?? shape?.name ?? shapeId,
         overall: live.overall,
         cues: writtenCues(live, shapeId, shapeId === 'handstand' ? 6 : 3),
         captureId: blob ? captureId : null,
@@ -994,6 +995,7 @@ export function Tasks2Panel({
               undefined,
               null,
               beat.rep,
+              beat.snapLabel,
             )
             if (view) collected.push(view)
           })
@@ -1619,7 +1621,9 @@ export function Tasks2Panel({
                   ? 'Each hold — highlighted is your longest. Tap to watch. Stills map the playhead, not a grade.'
                   : seq.id === 'flow_mc_hs_5reps'
                   ? 'Handstand 1–5 — tap to jump in the replay'
-                  : seq.reviewShapeIds?.includes('handstand')
+                  : seq.id === 'flow_long_bridge'
+                    ? 'Two stills — long bridge, then chin to chest'
+                    : seq.reviewShapeIds?.includes('handstand')
                     ? 'Handstand snapshot — tap to jump in the replay'
                     : 'Snapshots — tap to jump in the replay'}
               </p>

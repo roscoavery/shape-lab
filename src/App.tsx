@@ -726,7 +726,10 @@ export default function App() {
               <strong className="text-[var(--text)]">MC HS LV LG</strong>, and{' '}
               <strong className="text-[var(--text)]">MC HS LG (Assisted)</strong> — a spotted
               handstand with a coach, friend, or parent — and{' '}
-              <strong className="text-[var(--text)]">MC HS 5 reps</strong>. The assisted run grades the{' '}
+              <strong className="text-[var(--text)]">MC HS 5 reps</strong>, and{' '}
+              <strong className="text-[var(--text)]">Long Bridge</strong> — the class
+              talk-through after rainbow shoulders are open (two snapshots: before chin
+              to chest, then after). The assisted run grades the{' '}
               <strong className="text-[var(--text)]">handstand only</strong>; five-reps grades each
               kick, numbered 1–5, assisted or not. The replay is
               mountain climber through landing lunge. After you clean, you get a

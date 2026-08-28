@@ -169,7 +169,8 @@ const SCAFFOLD_SHAPE_IDS = new Set([
 
 /**
  * Positions shown in Learn → Shape library: the pathway, homework, and
- * extras Ryan photographed (zombie, candlestick, Superman, Rainbow Bridge).
+ * extras Ryan photographed (zombie, candlestick, Superman, Rainbow Bridge,
+ * Long Bridge).
  * Arm-position drills live in the Arm positions test, not as a second empty catalog.
  */
 export function isLearnLibraryShape(id: string): boolean {
