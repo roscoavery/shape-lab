@@ -16,6 +16,13 @@ import {
 } from './igStillDisk.ts'
 import { readShapeCopyFile, writeShapeCopyFile } from './shapeCopyStore.ts'
 import { readStillCropFile, writeStillCropFile } from './stillCropStore.ts'
+import {
+  addAthleteVideoFromBody,
+  deleteAthleteVideo,
+  readRequestBuffer,
+  sendAthleteVideoFile,
+  videosForClient,
+} from './athleteVideoDisk.ts'
 
 function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
   server.middlewares.use(async (req, res, next) => {
@@ -29,7 +36,9 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/ig-stills' &&
       path !== '/api/ig-still-file' &&
       path !== '/api/shape-copy' &&
-      path !== '/api/still-crops'
+      path !== '/api/still-crops' &&
+      path !== '/api/athlete-videos' &&
+      path !== '/api/athlete-video-file'
     ) {
       next()
       return
@@ -106,6 +115,60 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           return
         }
         sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/athlete-videos') {
+        if (req.method === 'GET') {
+          const athleteId = url.searchParams.get('athleteId') ?? ''
+          const videos = videosForClient(athleteId || undefined).map((v) => ({
+            ...v,
+            url: `/api/athlete-video-file?id=${encodeURIComponent(v.id)}`,
+          }))
+          sendJson(res, 200, { kind: 'shape-lab-athlete-videos', videos })
+          return
+        }
+        if (req.method === 'POST') {
+          const buf = await readRequestBuffer(req)
+          const saved = addAthleteVideoFromBody({
+            id: url.searchParams.get('id') ?? '',
+            athleteId: url.searchParams.get('athleteId') ?? '',
+            name: url.searchParams.get('name') ?? 'Clip',
+            source: url.searchParams.get('source') ?? 'compare-replay',
+            createdAt: url.searchParams.get('createdAt') ?? undefined,
+            durationSec: url.searchParams.get('durationSec')
+              ? Number(url.searchParams.get('durationSec'))
+              : null,
+            mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
+            buf,
+          })
+          if (!saved) {
+            sendJson(res, 400, { error: 'Could not save that video.' })
+            return
+          }
+          sendJson(res, 200, {
+            ...saved,
+            url: `/api/athlete-video-file?id=${encodeURIComponent(saved.id)}`,
+          })
+          return
+        }
+        if (req.method === 'DELETE') {
+          const id = url.searchParams.get('id') ?? ''
+          const athleteId = url.searchParams.get('athleteId') ?? ''
+          if (!deleteAthleteVideo(id, athleteId || undefined)) {
+            sendJson(res, 404, { error: 'Video not found' })
+            return
+          }
+          sendJson(res, 200, { ok: true })
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+        return
+      }
+      if (path === '/api/athlete-video-file') {
+        const id = url.searchParams.get('id') ?? ''
+        if (!sendAthleteVideoFile(id, res)) {
+          sendJson(res, 404, { error: 'Video file not found' })
+        }
         return
       }
       if (path === '/api/library') {

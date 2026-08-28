@@ -22,6 +22,7 @@ import {
   saveVideoToDevice,
   type SaveVideoResult,
 } from '../lib/saveMedia'
+import { uploadAthleteVideo } from '../lib/athleteVideoStore'
 import { scoreShape } from '../lib/scoring'
 import {
   drawGradeHud,
@@ -44,6 +45,7 @@ type Props = {
   compact?: boolean
   /** When false, overlay file is encoded only after you tap Prepare save. */
   encodeOnReady?: boolean
+  athleteId?: string | null
 }
 
 export function HoldReplayPlayer({
@@ -58,6 +60,7 @@ export function HoldReplayPlayer({
   clipId = null,
   compact = false,
   encodeOnReady = false,
+  athleteId = null,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -377,6 +380,33 @@ export function HoldReplayPlayer({
               ? `Preparing video file… ${Math.round(prep * 100)}%`
               : 'Save video to Photos'}
         </button>
+        {athleteId && (
+          <button
+            type="button"
+            disabled={!blob || busy}
+            onClick={() => {
+              if (!blob || !athleteId) return
+              void uploadAthleteVideo({
+                athleteId,
+                blob,
+                name: filename.replace(/\.(webm|mp4)$/i, ''),
+                source: 'hold',
+                durationSec: holdSeconds,
+              })
+                .then(() => {
+                  setFlash('Saved into this profile’s video library.')
+                  window.setTimeout(() => setFlash(null), 4000)
+                })
+                .catch(() => {
+                  setFlash('Could not save into the video library.')
+                  window.setTimeout(() => setFlash(null), 4000)
+                })
+            }}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+          >
+            Save to video library
+          </button>
+        )}
         {busy && (
           <span className="text-[11px] text-[var(--muted)]">
             Burning the one-line overlay, stopwatch, and live score into the file.

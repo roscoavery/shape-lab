@@ -28,6 +28,7 @@ import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
+import { uploadAthleteVideo } from '../../lib/athleteVideoStore'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -58,7 +59,12 @@ function pickDelayMime(): string | null {
   )
 }
 
-export function CameraPane() {
+type CameraPaneProps = {
+  athleteId?: string | null
+  onLibrarySaved?: () => void
+}
+
+export function CameraPane({ athleteId = null, onLibrarySaved }: CameraPaneProps) {
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -105,6 +111,7 @@ export function CameraPane() {
   const [clipSrc, setClipSrc] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const [replayBuilding, setReplayBuilding] = useState(false)
+  const [librarySaving, setLibrarySaving] = useState(false)
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
   const [delayTime, setDelayTime] = useState(0)
   const [delayDuration, setDelayDuration] = useState(0)
@@ -430,6 +437,17 @@ export function CameraPane() {
           setTimeout(() => setFlash(null), 2500)
         })
         .catch(() => setError('Could not save the clip — device storage may be full.'))
+      if (athleteId) {
+        void uploadAthleteVideo({
+          athleteId,
+          blob,
+          name: meta.name,
+          source: 'compare-replay',
+          durationSec: meta.durationSec,
+        })
+          .then(() => onLibrarySaved?.())
+          .catch(() => {})
+      }
     }
     attemptStartRef.current = performance.now()
     rec.start()
@@ -490,6 +508,42 @@ export function CameraPane() {
     }
   }
 
+  const recordAfterSkill = async () => {
+    if (!running || librarySaving) return
+    if (!athleteId) {
+      setError('Unlock an athlete profile first — Record saves into that video library.')
+      return
+    }
+    setLibrarySaving(true)
+    setError(null)
+    try {
+      const capturedFor = (performance.now() - rollingStartRef.current) / 1000
+      const blob = await flushRollingBlob()
+      if (streamRef.current) startRolling()
+      if (!blob || blob.size < 1500 || capturedFor < 1.2) {
+        setError(
+          `Keep the camera on for a couple of seconds, then tap Record. That saves what just happened.`,
+        )
+        return
+      }
+      const shown = Math.max(1, Math.round(Math.min(delaySec, capturedFor)))
+      const saved = await uploadAthleteVideo({
+        athleteId,
+        blob,
+        name: `Delay cam ${shown}s · ${new Date().toLocaleTimeString()}`,
+        source: 'delay-record',
+        durationSec: shown,
+      })
+      onLibrarySaved?.()
+      setFlash(`Saved to video library: ${saved.name}`)
+      window.setTimeout(() => setFlash(null), 2800)
+    } catch {
+      setError('Could not save that recording into the video library.')
+    } finally {
+      setLibrarySaving(false)
+    }
+  }
+
   const saveReplayToApp = () => {
     const blob = replayBlobRef.current
     if (!blob) {
@@ -512,6 +566,20 @@ export function CameraPane() {
         setTimeout(() => setFlash(null), 2500)
       })
       .catch(() => setError('Could not save the clip — device storage may be full.'))
+    if (athleteId) {
+      void uploadAthleteVideo({
+        athleteId,
+        blob,
+        name: meta.name,
+        source: 'compare-replay',
+        durationSec: delaySec,
+      })
+        .then(() => {
+          onLibrarySaved?.()
+          setFlash(`Saved to video library: ${meta.name}`)
+        })
+        .catch(() => {})
+    }
   }
 
   const downloadReplay = () => {
@@ -607,6 +675,19 @@ export function CameraPane() {
         }
       >
         {replayBuilding ? 'Opening replay…' : `Replay last ${delaySec}s`}
+      </button>
+      <button
+        type="button"
+        disabled={!running || librarySaving}
+        title="Save the delay-cam buffer that just happened into this athlete’s video library"
+        onClick={() => void recordAfterSkill()}
+        className={
+          rail
+            ? 'rounded-lg bg-[var(--bad)] px-2 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40'
+            : 'rounded-lg border border-[var(--bad)]/60 px-3 py-1.5 text-sm font-semibold text-[var(--bad)] disabled:opacity-40'
+        }
+      >
+        {librarySaving ? 'Saving…' : 'Record'}
       </button>
       <label className={`flex items-center gap-1.5 ${rail ? 'text-[11px] text-white/75' : 'text-sm text-[var(--muted)]'}`}>
         <input
@@ -725,6 +806,17 @@ export function CameraPane() {
           <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-[var(--accent)]">
             {delaySec}s behind live
           </div>
+        )}
+        {mode === 'delay' && running && fullscreen && (
+          <button
+            type="button"
+            disabled={librarySaving}
+            title="Save the delay-cam buffer that just happened into this athlete’s video library"
+            onClick={() => void recordAfterSkill()}
+            className="absolute bottom-3 right-3 z-[15] rounded-full bg-[var(--bad)] px-4 py-2 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+          >
+            {librarySaving ? 'Saving…' : 'Record'}
+          </button>
         )}
         {recording && (
           <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded bg-black/70 px-2 py-1 text-xs text-[var(--bad)]">

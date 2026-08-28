@@ -17,6 +17,8 @@ export type DiskRoster = {
   homeworkLogs: unknown[]
   taskProgress: Record<string, unknown>
   flowProgress: Record<string, unknown>
+  attempts?: unknown[]
+  compareLibraries?: Record<string, unknown>
 }
 
 const EMPTY: DiskRoster = {
@@ -42,9 +44,12 @@ export function readRosterFile(): DiskRoster {
       ...data,
       athletes: Array.isArray(data.athletes) ? data.athletes : [],
       homework: Array.isArray(data.homework) ? data.homework : [],
-      homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
-      taskProgress: data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
-      flowProgress: data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
+    homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
+    taskProgress: data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
+    flowProgress: data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
+    attempts: Array.isArray(data.attempts) ? data.attempts : [],
+    compareLibraries:
+      data.compareLibraries && typeof data.compareLibraries === 'object' ? data.compareLibraries : {},
     }
   } catch {
     return { ...EMPTY }
@@ -66,6 +71,11 @@ export function writeRosterFile(data: unknown): DiskRoster {
     homeworkLogs: Array.isArray(parsed.homeworkLogs) ? parsed.homeworkLogs.slice(0, 1000) : [],
     taskProgress: parsed.taskProgress && typeof parsed.taskProgress === 'object' ? parsed.taskProgress : {},
     flowProgress: parsed.flowProgress && typeof parsed.flowProgress === 'object' ? parsed.flowProgress : {},
+    attempts: Array.isArray(parsed.attempts) ? parsed.attempts.slice(0, 2000) : [],
+    compareLibraries:
+      parsed.compareLibraries && typeof parsed.compareLibraries === 'object'
+        ? parsed.compareLibraries
+        : {},
   }
   fs.mkdirSync(path.dirname(FILE), { recursive: true })
   fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')

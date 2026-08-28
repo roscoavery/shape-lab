@@ -33,6 +33,8 @@ export type RefCollection = {
   name: string
   items: RefItem[]
   createdAt: string
+  /** Profile that owns this Compare URL list. Missing = legacy gym library. */
+  athleteId?: string
 }
 
 export type RecordedClip = {

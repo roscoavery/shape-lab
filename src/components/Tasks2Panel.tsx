@@ -17,6 +17,7 @@ import {
   snapshotCanvas,
 } from '../lib/captureStore'
 import { videoFileName } from '../lib/flowShare'
+import { uploadAthleteVideo } from '../lib/athleteVideoStore'
 import {
   formatSeconds,
   runHandstandHoldSession,
@@ -1188,6 +1189,22 @@ export function Tasks2Panel({
     window.setTimeout(() => setFlash(null), 5000)
   }
 
+  const saveLibraryOffer = async () => {
+    if (!deviceSave || !athleteId) return
+    try {
+      await uploadAthleteVideo({
+        athleteId,
+        blob: deviceSave.blob,
+        name: deviceSave.label,
+        source: seq.mode === 'hs-hold' ? 'hold' : 'tasks2',
+      })
+      setFlash('Saved into this profile’s video library.')
+    } catch {
+      setFlash('Could not save into the video library.')
+    }
+    window.setTimeout(() => setFlash(null), 5000)
+  }
+
   useEffect(() => {
     if (phase !== 'replay' && phase !== 'review') return
     if (!report?.holdAttempts?.length) return
@@ -1521,13 +1538,24 @@ export function Tasks2Panel({
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               {deviceSave && !holdMode && (
-                <button
-                  type="button"
-                  onClick={() => void saveDeviceOffer()}
-                  className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
-                >
-                  Save {deviceSave.label} to Photos / Files
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void saveDeviceOffer()}
+                    className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                  >
+                    Save {deviceSave.label} to Photos / Files
+                  </button>
+                  {athleteId && (
+                    <button
+                      type="button"
+                      onClick={() => void saveLibraryOffer()}
+                      className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
+                    >
+                      Save to video library
+                    </button>
+                  )}
+                </>
               )}
               <button
                 type="button"
@@ -1597,6 +1625,7 @@ export function Tasks2Panel({
                   (activeClipId && getRememberedBlob(activeClipId)?.type) || 'video/mp4',
                   report.holdAttempts?.find((h) => h.clipId === activeClipId)?.index,
                 )}
+                athleteId={athleteId}
               />
             </div>
           ) : replayUrl ? (
@@ -1737,6 +1766,7 @@ export function Tasks2Panel({
                             getRememberedBlob(h.clipId)?.type || 'video/mp4',
                             h.index,
                           )}
+                          athleteId={athleteId}
                         />
                       </div>
                     ) : still?.url ? (
@@ -1912,6 +1942,15 @@ export function Tasks2Panel({
               >
                 Save video to Photos / Files
               </button>
+              {athleteId && (
+                <button
+                  type="button"
+                  onClick={() => void saveLibraryOffer()}
+                  className="mt-2 ml-2 rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+                >
+                  Save to video library
+                </button>
+              )}
             </div>
           )}
           <div className="mt-3">

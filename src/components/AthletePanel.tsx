@@ -3,6 +3,7 @@ import type { Athlete } from '../types'
 import { createId } from '../lib/storage'
 import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
+import { hashPasscode, markProfileUnlocked, passcodeLooksOk } from '../lib/athletePasscode'
 
 type Props = {
   athletes: Athlete[]
@@ -19,6 +20,8 @@ export function AthletePanel({
 }: Props) {
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
+  const [passcode, setPasscode] = useState('')
+  const [passcodeAgain, setPasscodeAgain] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
 
   const active = athletes.find((a) => a.id === activeId) ?? null
@@ -27,7 +30,7 @@ export function AthletePanel({
     setHandle(active?.instagramHandle ?? '')
   }, [active?.id, active?.instagramHandle])
 
-  const add = () => {
+  const add = async () => {
     const trimmed = name.trim()
     if (!trimmed) return
     const existing = athletes.find(
@@ -48,17 +51,33 @@ export function AthletePanel({
       window.setTimeout(() => setSaved(null), 2800)
       return
     }
+    if (!passcodeLooksOk(passcode)) {
+      setSaved('Set a passcode of at least 4 characters so this profile can open on any link.')
+      window.setTimeout(() => setSaved(null), 3200)
+      return
+    }
+    if (passcode !== passcodeAgain) {
+      setSaved('Those passcodes do not match.')
+      window.setTimeout(() => setSaved(null), 2800)
+      return
+    }
+    const id = createId('ath')
+    const passcodeHash = await hashPasscode(id, passcode)
     const athlete: Athlete = {
-      id: createId('ath'),
+      id,
       name: trimmed,
       instagramHandle: normalizeInstagramHandle(handle) || undefined,
       createdAt: new Date().toISOString(),
+      passcodeHash,
     }
+    markProfileUnlocked(id)
     const next = [...athletes, athlete]
     onChangeAthletes(next)
     onSelect(athlete.id)
     setName('')
     setHandle(athlete.instagramHandle ?? '')
+    setPasscode('')
+    setPasscodeAgain('')
   }
 
   const saveHandle = () => {
@@ -108,12 +127,12 @@ export function AthletePanel({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') add()
+              if (e.key === 'Enter') void add()
             }}
           />
           <button
             type="button"
-            onClick={add}
+            onClick={() => void add()}
             className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-sm font-medium text-white"
           >
             Create
@@ -127,8 +146,27 @@ export function AthletePanel({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               if (active) saveHandle()
-              else add()
+              else void add()
             }
+          }}
+        />
+        <input
+          type="password"
+          autoComplete="new-password"
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          placeholder="Passcode (required · 4+ characters)"
+          value={passcode}
+          onChange={(e) => setPasscode(e.target.value)}
+        />
+        <input
+          type="password"
+          autoComplete="new-password"
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          placeholder="Type passcode again"
+          value={passcodeAgain}
+          onChange={(e) => setPasscodeAgain(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void add()
           }}
         />
       </div>
@@ -169,12 +207,10 @@ export function AthletePanel({
       )}
       {saved && <p className="mt-1 text-[11px] text-[var(--accent)]">{saved}</p>}
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
-        Profiles save on this gym computer and on the Shape Lab server, so a
-        new phone link still has your roster. Ryan is always in the list. While
-        Ryan is selected, IG shapes from Compare save into the app — every
-        browser and link sees them. Other profiles keep crops on this device
-        only. Creating the same name again selects the existing profile instead
-        of duplicating it.
+        Each profile has a passcode. Unlock it on any phone link or browser to
+        see homework, hold times, Compare URLs, and the video library saved to
+        that athlete. Creating the same name again selects the existing profile
+        instead of duplicating it. Ryan stays on the roster.
       </p>
     </div>
   )

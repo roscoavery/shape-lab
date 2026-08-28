@@ -1,7 +1,8 @@
 /**
  * Compare tab — side-by-side video study.
  * Reference video next to the athlete camera (live / delay cam / replay).
- * Full screen defaults to top/bottom with a larger reference and a hideable side rail.
+ * Full screen defaults to top/bottom; drag the middle border to give
+ * reference or delay cam more of the window (videos stay object-contain).
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -9,6 +10,7 @@ import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
 import { CompareSplitBar } from './CompareSplitBar'
 import { CompareChromeRail } from './CompareChromeRail'
+import { CompareSplitDivider } from './CompareSplitDivider'
 import {
   CompareLayoutContext,
   type CompareFocus,
@@ -17,18 +19,23 @@ import {
 import { IgStillContext, type IgCropDraft } from './IgStillContext'
 import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
+import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import type { ReferencePhoto } from '../../types'
 
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
   referencePhotos: ReferencePhoto[]
   persistIgToApp?: boolean
+  athleteId?: string | null
+  athleteName?: string | null
 }
 
 export function ComparePanel({
   onSaveIgStill,
   referencePhotos,
   persistIgToApp = false,
+  athleteId = null,
+  athleteName = null,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -36,6 +43,9 @@ export function ComparePanel({
   const [chromeOpen, setChromeOpen] = useState(true)
   const [camRail, setCamRail] = useState<HTMLElement | null>(null)
   const [refRail, setRefRail] = useState<HTMLElement | null>(null)
+  const [tbRatio, setTbRatio] = useState(0.64)
+  const [lrRatio, setLrRatio] = useState(0.5)
+  const [libraryTick, setLibraryTick] = useState(0)
 
   useEffect(() => {
     if (!fullscreen) return
@@ -66,28 +76,27 @@ export function ComparePanel({
       chromeOpen,
       camRail,
       refRail,
+      tbRatio,
+      lrRatio,
       setFullscreen,
       setSplit,
       setFocus,
       setChromeOpen,
       setCamRail,
       setRefRail,
+      setTbRatio,
+      setLrRatio,
     }),
-    [fullscreen, split, focus, chromeOpen, camRail, refRail],
+    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio],
   )
 
   const showRef = focus !== 'cam'
   const showCam = focus !== 'ref'
+  const splitScreen = fullscreen && focus === 'split'
 
-  const grid = fullscreen
-    ? focus !== 'split'
-      ? 'grid min-h-0 flex-1 grid-cols-1'
-      : split === 'tb'
-        ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1.55fr)_minmax(0,0.85fr)] gap-0'
-        : 'grid min-h-0 flex-1 grid-cols-2 gap-0'
-    : split === 'tb'
-      ? 'grid gap-4'
-      : 'grid gap-4 md:grid-cols-2'
+  const onLibrarySaved = useCallback(() => {
+    setLibraryTick((n) => n + 1)
+  }, [])
 
   return (
     <IgStillContext.Provider value={{ saveCrop, persistToApp: persistIgToApp }}>
@@ -104,17 +113,16 @@ export function ComparePanel({
           {!fullscreen && (
             <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
               <strong className="text-[var(--text)]">Full screen split is on both cards below.</strong>{' '}
-              Tap <strong className="text-[var(--text)]">Full screen with delay cam</strong> on the
-              reference, or <strong className="text-[var(--text)]">Full screen with reference</strong> on
-              the athlete camera. Full screen opens top / bottom — reference on top, larger, flush
-              against the delay cam. Controls sit on the side. Pick a still from the large
-              filmstrip, drag it over either video, and tap × on it when you are done.{' '}
+              It opens top / bottom. Drag the bar between the videos so the
+              reference or delay cam takes more of the window — the pictures are
+              not stretched. On delay cam, tap <strong className="text-[var(--text)]">Record</strong> after
+              the skill; that clip lands in this profile’s video library.{' '}
               <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip: press one
               corner, drag to the opposite corner, and it lands in{' '}
               <strong className="text-[var(--text)]">Learn → IG shapes</strong>
               {persistIgToApp
-                ? '. Ryan is selected, so that still is saved into the app — every link will have it. Add or delete a Compare URL on this profile and it saves into the app the same way.'
-                : '. Select the Ryan profile first if you want that still — or a Compare URL add/delete — saved into the app for every browser and link.'}
+                ? '. This profile is unlocked, so Compare URLs and stills save into the app for every link.'
+                : '. Unlock the athlete profile first if you want Compare URLs saved into the app for every browser and link.'}
             </section>
           )}
           {!fullscreen && (
@@ -122,16 +130,65 @@ export function ComparePanel({
               <CompareSplitBar where="page" />
             </div>
           )}
-          <div className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${grid}`}>
-            <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-          <ReferencePane persistToApp={persistIgToApp} />
+          {splitScreen && split === 'tb' ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div
+                className="min-h-0 overflow-hidden"
+                style={{ flex: `${tbRatio} 1 0%` }}
+              >
+                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+              </div>
+              <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} />
+              <div
+                className="min-h-0 overflow-hidden"
+                style={{ flex: `${1 - tbRatio} 1 0%` }}
+              >
+                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+              </div>
             </div>
-            <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-              <CameraPane />
+          ) : splitScreen && split === 'lr' ? (
+            <div className="flex min-h-0 flex-1 flex-row">
+              <div
+                className="min-h-0 min-w-0 overflow-hidden"
+                style={{ flex: `${lrRatio} 1 0%` }}
+              >
+                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+              </div>
+              <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} />
+              <div
+                className="min-h-0 min-w-0 overflow-hidden"
+                style={{ flex: `${1 - lrRatio} 1 0%` }}
+              >
+                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${
+                fullscreen
+                  ? 'grid min-h-0 flex-1 grid-cols-1'
+                  : split === 'tb'
+                    ? 'grid gap-4'
+                    : 'grid gap-4 md:grid-cols-2'
+              }`}
+            >
+              <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
+                <ReferencePane persistToApp={persistIgToApp} athleteId={athleteId} />
+              </div>
+              <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
+                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+              </div>
+            </div>
+          )}
           {!fullscreen && (
             <StillOverlayPicker photos={referencePhotos} compact />
+          )}
+          {!fullscreen && (
+            <VideoLibraryPanel
+              athleteId={athleteId}
+              athleteName={athleteName}
+              refreshKey={libraryTick}
+            />
           )}
         </div>
         {fullscreen && (

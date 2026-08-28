@@ -46,6 +46,9 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
+import { loadCompareLibraries, saveAthleteCompareLibrary } from '../../lib/compareLibraries'
+import { pushServerRoster } from '../../lib/rosterSync'
+import { RYAN_PROFILE_ID } from '../../lib/ryanProfile'
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
@@ -69,9 +72,10 @@ type OtherHit = { item: RefItem; collection: RefCollection }
 
 type Props = {
   persistToApp?: boolean
+  athleteId?: string | null
 }
 
-export function ReferencePane({ persistToApp = false }: Props) {
+export function ReferencePane({ persistToApp = false, athleteId = null }: Props) {
   const [collections, setCollections] = useState<RefCollection[]>([])
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
@@ -110,57 +114,100 @@ export function ReferencePane({ persistToApp = false }: Props) {
 
   const persist = useCallback(
     (list: RefCollection[]) => {
-      publishLibrary(list, persistToApp)
+      publishLibrary(list, persistToApp && athleteId === RYAN_PROFILE_ID)
+      if (athleteId) {
+        saveAthleteCompareLibrary(athleteId, list)
+        void pushServerRoster()
+      }
     },
-    [persistToApp],
+    [persistToApp, athleteId],
   )
 
   useEffect(() => {
-    void (async () => {
+    let cancelled = false
+    const load = async (fromRosterEvent = false) => {
       try {
         let list = await getCollections()
-        list = await restoreMetaIfIndexedDbEmpty(list)
-        const synced = await syncLibraryWithServer(list, persistToApp)
-        list = synced.collections
+        if (!fromRosterEvent) {
+          list = await restoreMetaIfIndexedDbEmpty(list)
+          const synced = await syncLibraryWithServer(
+            list,
+            persistToApp && athleteId === RYAN_PROFILE_ID,
+          )
+          list = synced.collections
+        }
+        const fromRoster = athleteId ? (loadCompareLibraries()[athleteId] ?? []) : []
+        if (athleteId) {
+          const mine = list.filter((c) => c.athleteId === athleteId)
+          const legacy =
+            athleteId === RYAN_PROFILE_ID ? list.filter((c) => !c.athleteId) : []
+          const rosterUrls = fromRoster.reduce(
+            (n, c) => n + c.items.filter((i) => i.url).length,
+            0,
+          )
+          const mineUrls = mine.reduce((n, c) => n + c.items.filter((i) => i.url).length, 0)
+          if (rosterUrls > mineUrls) {
+            for (const c of fromRoster) await putCollection(c)
+            list = fromRoster
+          } else if (mine.length > 0) {
+            list = mine
+          } else if (fromRoster.length > 0) {
+            for (const c of fromRoster) await putCollection(c)
+            list = fromRoster
+          } else {
+            list = legacy
+          }
+        }
+        let createdEmpty = false
         if (list.length === 0) {
           const def: RefCollection = {
             id: createId('col'),
             name: 'My references',
             items: [],
             createdAt: new Date().toISOString(),
+            athleteId: athleteId ?? undefined,
           }
           await putCollection(def)
           list = [def]
+          createdEmpty = true
         }
+        if (cancelled) return
         setCollections(list)
-        persist(list)
-        setActiveCollectionId((id) => id ?? list[0]!.id)
+        if (!createdEmpty) persist(list)
+        setActiveCollectionId((id) =>
+          id && list.some((c) => c.id === id) ? id : list[0]!.id,
+        )
         await refreshCachedIds(list)
         const urlCount = list.reduce(
           (n, c) => n + c.items.filter((i) => i.url).length,
           0,
         )
-        if (synced.pulled > 0) {
+        if (!fromRosterEvent && persistToApp) {
           setNotice(
-            persistToApp
-              ? `Ryan profile: ${urlCount} reference${urlCount === 1 ? '' : 's'} saved in the app. Add or delete a URL here and every browser keeps it.`
-              : `Loaded ${urlCount} saved reference${urlCount === 1 ? '' : 's'} into this app.`,
-          )
-        } else if (persistToApp) {
-          setNotice(
-            'Ryan is selected — add or delete a URL here and it saves into the app for every browser.',
+            urlCount > 0
+              ? `This profile: ${urlCount} reference${urlCount === 1 ? '' : 's'} saved in the app. Add or delete a URL here and every browser keeps it.`
+              : 'This profile is unlocked — add or delete a URL here and it saves into the app for every browser.',
           )
         }
       } catch {
-        setError('IndexedDB is unavailable in this browser — collections cannot be saved.')
+        if (!cancelled) {
+          setError('IndexedDB is unavailable in this browser — collections cannot be saved.')
+        }
       } finally {
-        setLibraryReady(true)
+        if (!cancelled) setLibraryReady(true)
       }
-    })()
+    }
+    void load()
+    const onRoster = () => {
+      void load(true)
+    }
+    window.addEventListener('shape-lab-roster-applied', onRoster)
     return () => {
+      cancelled = true
+      window.removeEventListener('shape-lab-roster-applied', onRoster)
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
-  }, [refreshCachedIds, persistToApp, persist])
+  }, [refreshCachedIds, persistToApp, persist, athleteId])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -210,6 +257,7 @@ export function ReferencePane({ persistToApp = false }: Props) {
       name,
       items: [],
       createdAt: new Date().toISOString(),
+      athleteId: athleteId ?? undefined,
     }
     await putCollection(col)
     setCollections((prev) => {

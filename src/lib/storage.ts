@@ -46,6 +46,12 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+function pushRosterSoon() {
+  void import('./rosterSync')
+    .then((m) => m.pushServerRoster())
+    .catch(() => {})
+}
+
 export function loadAthletes(): Athlete[] {
   return readJson<Athlete[]>(ATHLETES_KEY, [])
 }
@@ -125,6 +131,7 @@ export function loadAllTaskProgress(): Record<string, AthleteTaskProgress> {
 
 export function saveAllTaskProgress(map: Record<string, AthleteTaskProgress>) {
   writeJson(PROGRESS_KEY, map)
+  pushRosterSoon()
 }
 
 export function loadTaskProgress(athleteId: string): AthleteTaskProgress {
@@ -217,6 +224,7 @@ export function saveFlowProgress(progress: FlowProgress) {
   const all = readJson<Record<string, FlowProgress>>(FLOW_PROGRESS_KEY, {})
   all[progress.athleteId] = { ...progress, updatedAt: new Date().toISOString() }
   writeJson(FLOW_PROGRESS_KEY, all)
+  pushRosterSoon()
 }
 
 export function recordFlowCompletion(athleteId: string, sequenceId: string): FlowProgress {
@@ -352,6 +360,7 @@ export function loadAllHomework(): HomeworkItem[] {
 
 export function saveAllHomework(items: HomeworkItem[]) {
   writeJson(HOMEWORK_KEY, items)
+  pushRosterSoon()
 }
 
 /** Auto items first (in AUTO_HOMEWORK_DEFS order), then added items by date. */
@@ -461,6 +470,7 @@ export function addHomeworkLog(log: HomeworkLog): void {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
   all.unshift(log)
   writeJson(HOMEWORK_LOGS_KEY, all.slice(0, 1000))
+  pushRosterSoon()
 }
 
 // ---------------------------------------------------------------------------

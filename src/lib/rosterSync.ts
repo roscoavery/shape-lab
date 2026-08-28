@@ -3,7 +3,7 @@
  * trycloudflare / Preview origin still has Ryan's roster.
  */
 
-import type { Athlete, AthleteTaskProgress, FlowProgress, HomeworkItem, HomeworkLog } from '../types'
+import type { Athlete, AthleteTaskProgress, FlowProgress, HomeworkItem, HomeworkLog, AttemptRecord } from '../types'
 import {
   loadActiveAthleteId,
   loadAllHomework,
@@ -16,8 +16,12 @@ import {
   saveAthletes,
   saveFlowProgress,
   loadFlowProgress,
+  loadAttempts,
+  saveAttempts,
 } from './storage'
 import { ensureRyanInAthletes } from './ryanProfile'
+import { loadCompareLibraries, saveCompareLibraries, type CompareLibraries } from './compareLibraries'
+import type { RefCollection } from './clipStore'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -29,6 +33,8 @@ export type RosterBackup = {
   homeworkLogs: HomeworkLog[]
   taskProgress: Record<string, AthleteTaskProgress>
   flowProgress: Record<string, FlowProgress>
+  attempts?: AttemptRecord[]
+  compareLibraries?: Record<string, RefCollection[]>
 }
 
 function isAthlete(x: unknown): x is Athlete {
@@ -52,8 +58,18 @@ function mergeAthletes(local: Athlete[], remote: Athlete[]): Athlete[] {
     }
     const newer =
       (a.createdAt || '') >= (keep.createdAt || '')
-        ? { ...keep, ...a, id: keep.id }
-        : { ...a, ...keep, id: keep.id }
+        ? {
+            ...keep,
+            ...a,
+            id: keep.id,
+            passcodeHash: a.passcodeHash || keep.passcodeHash,
+          }
+        : {
+            ...a,
+            ...keep,
+            id: keep.id,
+            passcodeHash: keep.passcodeHash || a.passcodeHash,
+          }
     byId.delete(keep.id)
     byId.set(newer.id, newer)
     byName.set(nameKey, newer)
@@ -84,6 +100,8 @@ export function localRosterSnapshot(): RosterBackup {
     homeworkLogs: loadHomeworkLogs(),
     taskProgress: loadAllTaskProgress(),
     flowProgress,
+    attempts: loadAttempts(),
+    compareLibraries: loadCompareLibraries(),
   }
 }
 
@@ -109,6 +127,23 @@ export function applyRosterSnapshot(data: RosterBackup): {
   const flow = { ...data.flowProgress }
   for (const p of Object.values(flow)) {
     if (p && typeof p === 'object' && 'athleteId' in p) saveFlowProgress(p as FlowProgress)
+  }
+  if (Array.isArray(data.attempts) && data.attempts.length > 0) {
+    saveAttempts(
+      mergeById(loadAttempts(), data.attempts).sort((a, b) => b.savedAt.localeCompare(a.savedAt)),
+    )
+  }
+  if (data.compareLibraries && typeof data.compareLibraries === 'object') {
+    const local = loadCompareLibraries()
+    const merged: CompareLibraries = { ...local }
+    for (const [id, cols] of Object.entries(data.compareLibraries)) {
+      if (!id || !Array.isArray(cols)) continue
+      merged[id] = cols
+    }
+    saveCompareLibraries(merged)
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('shape-lab-roster-applied'))
   }
   const active =
     (data.activeAthleteId && athletes.some((a) => a.id === data.activeAthleteId)

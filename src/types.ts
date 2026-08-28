@@ -181,6 +181,8 @@ export type Athlete = {
   /** Instagram username without @. Used for Story captions and tagging Ryan. */
   instagramHandle?: string
   createdAt: string
+  /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
+  passcodeHash?: string
 }
 
 export type CriterionScore = {

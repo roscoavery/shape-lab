@@ -27,6 +27,8 @@ import { OverlayStillProvider } from './components/OverlayStillContext'
 import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
+import { UnlockAthleteModal } from './components/UnlockAthleteModal'
+import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
@@ -61,6 +63,7 @@ import {
   subscribeIgStills,
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
+import { isProfileUnlocked } from './lib/athletePasscode'
 import type {
   AppSettings,
   Athlete,
@@ -77,9 +80,10 @@ export default function App() {
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
-  const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
-    loadActiveAthleteId(),
-  )
+  const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
+    const id = loadActiveAthleteId()
+    return id && isProfileUnlocked(id) ? id : null
+  })
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
@@ -100,6 +104,10 @@ export default function App() {
   const [holdClock, setHoldClock] = useState<number | null>(null)
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
+  const [athleteGate, setAthleteGate] = useState<{
+    athlete: Athlete
+    mode: 'unlock' | 'set'
+  } | null>(null)
 
   useEffect(() => {
     const unsub = subscribeIgStills((ig) => {
@@ -134,6 +142,23 @@ export default function App() {
     setAthletes(ensureRyanInAthletes(next))
   }, [])
 
+  const requestSelectAthlete = useCallback(
+    (id: string | null) => {
+      if (!id) {
+        setActiveAthleteId(null)
+        return
+      }
+      const a = athletes.find((x) => x.id === id)
+      if (!a) return
+      if (isProfileUnlocked(a.id)) {
+        setActiveAthleteId(id)
+        return
+      }
+      setAthleteGate({ athlete: a, mode: a.passcodeHash ? 'unlock' : 'set' })
+    },
+    [athletes],
+  )
+
   const rosterReadyRef = useRef(false)
 
   useEffect(() => {
@@ -155,8 +180,21 @@ export default function App() {
       if (cancelled) return
       rosterReadyRef.current = true
       if (synced.athletes.length > 0) {
-        setAthletes(ensureRyanInAthletes(synced.athletes))
-        setActiveAthleteId(synced.activeAthleteId)
+        const next = ensureRyanInAthletes(synced.athletes)
+        setAthletes(next)
+        const chosen =
+          next.find((a) => a.id === synced.activeAthleteId) ?? next[0] ?? null
+        if (!chosen) {
+          setActiveAthleteId(null)
+        } else if (isProfileUnlocked(chosen.id)) {
+          setActiveAthleteId(chosen.id)
+        } else {
+          setActiveAthleteId(null)
+          setAthleteGate({
+            athlete: chosen,
+            mode: chosen.passcodeHash ? 'unlock' : 'set',
+          })
+        }
       } else {
         setAthletes((prev) => ensureRyanInAthletes(prev))
       }
@@ -195,11 +233,11 @@ export default function App() {
 
   const saveIgStill = useCallback((draft: IgCropDraft) => {
     const athlete = athletes.find((a) => a.id === activeAthleteId) ?? null
-    const persistToApp = isRyanAthlete(athlete)
+    const persistToApp = Boolean(athlete)
     const photo: ReferencePhoto = {
       id: createId('ig'),
       shapeId: draft.shapeId,
-      athleteId: persistToApp ? athlete?.id ?? null : null,
+      athleteId: athlete?.id ?? null,
       dataUrl: draft.dataUrl,
       customName: draft.customName,
       label: draft.label,
@@ -264,6 +302,7 @@ export default function App() {
     setAttempts((prev) => [record, ...prev].slice(0, 500))
     setSaveFlash(`Saved ${shape.name} — score ${score.overall}`)
     setTimeout(() => setSaveFlash(null), 2500)
+    if (rosterReadyRef.current) void pushServerRoster()
   }
 
   const cameraControls = (
@@ -453,7 +492,7 @@ export default function App() {
               athletes={athletes}
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
-              onSelect={setActiveAthleteId}
+              onSelect={requestSelectAthlete}
             />
             <TaskTrainer
               athleteId={activeAthleteId}
@@ -523,7 +562,7 @@ export default function App() {
               athletes={athletes}
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
-              onSelect={setActiveAthleteId}
+              onSelect={requestSelectAthlete}
             />
             <Tasks2Panel
               athleteId={activeAthleteId}
@@ -574,7 +613,7 @@ export default function App() {
                 athletes={athletes}
                 activeId={activeAthleteId}
                 onChangeAthletes={setAthleteRoster}
-                onSelect={setActiveAthleteId}
+                onSelect={requestSelectAthlete}
               />
               <HomeworkPanel
                 athleteId={activeAthleteId}
@@ -629,9 +668,7 @@ export default function App() {
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
-          persistIgToApp={isRyanAthlete(
-            athletes.find((a) => a.id === activeAthleteId) ?? null,
-          )}
+          persistIgToApp={Boolean(activeAthleteId)}
           onReferencesChange={setReferencePhotos}
         />
       )}
@@ -642,9 +679,9 @@ export default function App() {
             <ComparePanel
               onSaveIgStill={saveIgStill}
               referencePhotos={referencePhotos}
-              persistIgToApp={isRyanAthlete(
-                athletes.find((a) => a.id === activeAthleteId) ?? null,
-              )}
+              persistIgToApp={Boolean(activeAthleteId)}
+              athleteId={activeAthleteId}
+              athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
             />
           </CompareErrorBoundary>
         </div>
@@ -695,7 +732,7 @@ export default function App() {
               athletes={athletes}
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
-              onSelect={setActiveAthleteId}
+              onSelect={requestSelectAthlete}
             />
             <SequencePanel
               currentShapeId={shape.id}
@@ -712,9 +749,13 @@ export default function App() {
             athletes={athletes}
             activeId={activeAthleteId}
             onChangeAthletes={setAthleteRoster}
-            onSelect={setActiveAthleteId}
+            onSelect={requestSelectAthlete}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
+          <VideoLibraryPanel
+            athleteId={activeAthleteId}
+            athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+          />
           <CoachInbox athletes={athletes} />
         </div>
       )}
@@ -829,6 +870,22 @@ export default function App() {
         </div>
       )}
     </div>
+    {athleteGate && (
+      <UnlockAthleteModal
+        athlete={athleteGate.athlete}
+        mode={athleteGate.mode}
+        onCancel={() => setAthleteGate(null)}
+        onUnlocked={(a) => {
+          setActiveAthleteId(a.id)
+          setAthleteGate(null)
+        }}
+        onSetPasscode={(a, passcodeHash) => {
+          setAthleteRoster(
+            athletes.map((row) => (row.id === a.id ? { ...row, passcodeHash } : row)),
+          )
+        }}
+      />
+    )}
     </StillCropProvider>
     </ShapeCopyProvider>
     </OverlayStillProvider>
