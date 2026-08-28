@@ -79,7 +79,7 @@ type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   cameraRunning: boolean
   stream: MediaStream | null
-  onEnsureCamera?: () => void
+  onEnsureCamera?: () => void | Promise<void>
   onCue?: (line: string | null) => void
   onPreviewItems?: (items: { shapeId: string; label: string }[] | null) => void
   onHitPreview?: (blob: Blob) => void
@@ -715,8 +715,8 @@ export function Tasks2Panel({
   const startSequence = useCallback(
     async (seqRun: FlowSequence) => {
       if (!athleteId) {
-        setFlash('Select or create an athlete first.')
-        window.setTimeout(() => setFlash(null), 2500)
+        setFlash('Select or create an athlete first — then tap Start.')
+        window.setTimeout(() => setFlash(null), 5000)
         return
       }
       onVoiceEnabledChange?.(true)
@@ -732,10 +732,10 @@ export function Tasks2Panel({
       revokeClipUrls()
       setPhase('preview')
       setBeatIndex(-1)
-      setCue('Starting camera…')
+      setCue('Starting camera… Allow it if Safari asks.')
       setFlash(null)
       onRequestFullscreen?.()
-      onEnsureCamera?.()
+      const camP = Promise.resolve(onEnsureCamera?.())
 
       for (const s of snapsRef.current) {
         if (s.url) URL.revokeObjectURL(s.url)
@@ -746,16 +746,30 @@ export function Tasks2Panel({
       setSeekTo(null)
 
       try {
-        for (let i = 0; i < 50 && !streamRef.current; i++) {
-          await wait(100)
+        try {
+          await camP
+        } catch (err) {
+          setCue('Camera did not start.')
+          setFlash(
+            err instanceof Error
+              ? err.message
+              : 'Allow the camera, then tap Start again.',
+          )
+          window.setTimeout(() => setFlash(null), 8000)
+          setPhase('idle')
+          return
+        }
+        const deadline = Date.now() + 45_000
+        while (!streamRef.current && Date.now() < deadline) {
+          await wait(200)
           if (!alive()) return
+          setCue('Allow the camera if Safari asks — waiting…')
         }
         if (!streamRef.current) {
+          setCue('Camera did not start.')
+          setFlash('Allow the camera in Safari, then tap Start again. Stay on this page.')
+          window.setTimeout(() => setFlash(null), 8000)
           setPhase('idle')
-          setCue('')
-          setFlash('Camera did not start. Allow camera, then tap Start again.')
-          window.setTimeout(() => setFlash(null), 4000)
-          onExitFullscreen?.()
           return
         }
         if (seqRun.mode !== 'hs-hold') {
@@ -1230,6 +1244,11 @@ export function Tasks2Panel({
       {!busy && phase !== 'replay' && (
         <button
           type="button"
+          onPointerDown={(e) => {
+            if (e.button !== 0) return
+            unlockSpeech()
+            void onEnsureCamera?.()
+          }}
           onClick={() => void startSequence(seq)}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
         >
@@ -1347,6 +1366,11 @@ export function Tasks2Panel({
               Exit full screen
             </button>
           </div>
+          {(flash || cameraError) && (
+            <p className="mt-2 text-[12px] font-semibold leading-snug text-[#f07178]">
+              {flash || cameraError}
+            </p>
+          )}
         </div>
       )}
 

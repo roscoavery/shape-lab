@@ -34,6 +34,7 @@ export function usePoseCamera(): PoseCameraState {
   const [landmarks, setLandmarks] = useState<Landmark[] | null>(null)
   const [fps, setFps] = useState(0)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const startLockRef = useRef<Promise<void> | null>(null)
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -85,65 +86,92 @@ export function usePoseCamera(): PoseCameraState {
   }, [])
 
   const start = useCallback(async () => {
-    setError(null)
-    try {
-      // Open the camera on the tap first. Waiting on the pose model before
-      // getUserMedia lets iOS drop the user gesture, and min width/height
-      // rejects many phone cameras (OverconstrainedError).
-      const attempts: MediaStreamConstraints[] = [
-        {
-          audio: false,
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-        },
-        { audio: false, video: { facingMode: 'user' } },
-        { audio: false, video: true },
-      ]
-      let stream: MediaStream | null = null
-      let lastErr: unknown = null
-      for (const constraints of attempts) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints)
-          break
-        } catch (err) {
-          lastErr = err
-        }
-      }
-      if (!stream) {
-        throw lastErr instanceof Error
-          ? lastErr
-          : new Error('Could not access camera. Allow camera permission and use HTTPS.')
-      }
-      streamRef.current = stream
-      setStream(stream)
-      hintMotion(stream)
-      const video = videoRef.current
-      if (!video) throw new Error('Video element missing')
-      video.srcObject = stream
-      await video.play()
+    if (streamRef.current && videoRef.current?.srcObject === streamRef.current) {
       setRunning(true)
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        void loop()
-      })
+      setError(null)
+      return
+    }
+    if (startLockRef.current) return startLockRef.current
+
+    const run = (async () => {
+      setError(null)
       try {
-        await getPoseLandmarker()
-        setReady(true)
+        // getUserMedia must be the first await after the tap on iPad Safari.
+        const attempts: MediaStreamConstraints[] = [
+          {
+            audio: false,
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          },
+          { audio: false, video: { facingMode: 'user' } },
+          { audio: false, video: true },
+        ]
+        let media: MediaStream | null = null
+        let lastErr: unknown = null
+        for (const constraints of attempts) {
+          try {
+            media = await navigator.mediaDevices.getUserMedia(constraints)
+            break
+          } catch (err) {
+            lastErr = err
+          }
+        }
+        if (!media) {
+          throw lastErr instanceof Error
+            ? lastErr
+            : new Error('Could not access camera. Allow camera, then tap Start again.')
+        }
+        streamRef.current = media
+        setStream(media)
+        hintMotion(media)
+
+        let video = videoRef.current
+        for (let i = 0; i < 40 && !video; i++) {
+          await new Promise((r) => window.setTimeout(r, 50))
+          video = videoRef.current
+        }
+        if (!video) {
+          throw new Error('Camera view is not on screen. Stay on Tasks 2 and tap Start again.')
+        }
+        video.setAttribute('playsinline', 'true')
+        video.setAttribute('webkit-playsinline', 'true')
+        video.muted = true
+        video.srcObject = media
+        try {
+          await video.play()
+        } catch {
+          await new Promise((r) => window.setTimeout(r, 120))
+          await video.play()
+        }
+        setRunning(true)
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(() => {
+          void loop()
+        })
+        try {
+          await getPoseLandmarker()
+          setReady(true)
+        } catch (err) {
+          console.warn(err)
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Camera is on, but pose scoring could not load. Try again on a stronger connection.',
+          )
+        }
       } catch (err) {
-        console.warn(err)
-        setError(
+        const msg =
           err instanceof Error
             ? err.message
-            : 'Camera is on, but pose scoring could not load. Try again on a stronger connection.',
-        )
+            : 'Could not access camera. Allow camera permission and use HTTPS.'
+        setError(msg)
+        setRunning(false)
+        throw err instanceof Error ? err : new Error(msg)
+      } finally {
+        startLockRef.current = null
       }
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'Could not access camera. Allow camera permission and use HTTPS or localhost.'
-      setError(msg)
-      setRunning(false)
-    }
+    })()
+    startLockRef.current = run
+    return run
   }, [loop])
 
   useEffect(() => () => stop(), [stop])

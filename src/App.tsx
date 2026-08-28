@@ -404,9 +404,7 @@ export default function App() {
               videoRef={camera.videoRef}
               canvasRef={camera.canvasRef}
               cameraRunning={camera.running}
-              onEnsureCamera={() => {
-                if (!camera.running) void camera.start()
-              }}
+              onEnsureCamera={() => camera.start()}
               onHitPreview={(blob) => {
                 setHitPreviewUrl((prev) => {
                   if (prev) URL.revokeObjectURL(prev)
@@ -470,9 +468,7 @@ export default function App() {
               canvasRef={camera.canvasRef}
               cameraRunning={camera.running}
               stream={camera.stream}
-              onEnsureCamera={() => {
-                if (!camera.running) void camera.start()
-              }}
+              onEnsureCamera={() => camera.start()}
               onCue={setFlowCue}
               onPreviewItems={setFlowPreview}
               onRequestFullscreen={() => setCamFullscreen(true)}

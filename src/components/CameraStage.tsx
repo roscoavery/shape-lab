@@ -303,7 +303,7 @@ export function CameraStage({
           : 'rounded-xl border border-[var(--panel-border)]'
       } ${className}`}
     >
-      <video ref={videoRef} className="hidden" playsInline muted />
+      <video ref={videoRef} className="hidden" playsInline muted autoPlay />
       <canvas
         ref={canvasRef}
         className={`block bg-[#0a0e12] ${fill ? 'h-full w-full object-contain' : 'h-auto w-full'}`}
