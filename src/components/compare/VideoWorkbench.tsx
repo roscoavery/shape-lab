@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { VideoMarkOverlay } from './VideoMarkOverlay'
 
 const FRAME_STEP = 1 / 30
 const SPEEDS = [0.25, 0.5, 1] as const
@@ -144,7 +145,7 @@ function VideoWorkbenchInner({
 
   return (
     <div className={`flex flex-col gap-2 ${fill ? 'h-full min-h-0' : ''}`}>
-      <div className={`overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fill ? 'min-h-0 flex-1' : ''}`}>
+      <div className={`relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fill ? 'min-h-0 flex-1' : ''}`}>
         <video
           ref={videoRef}
           src={src}
@@ -158,6 +159,7 @@ function VideoWorkbenchInner({
           onPause={() => setPlaying(false)}
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
+        <VideoMarkOverlay videoRef={videoRef} />
       </div>
 
       <input
