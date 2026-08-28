@@ -46,7 +46,18 @@ const EMPTY: DiskClipLoops = {
 }
 
 export function loopKey(url: string): string {
-  return socialVideoKey(url) ?? canonicalSocialUrl(url).replace(/\/+$/, '')
+  const trimmed = url.trim()
+  if (/^(instagram|tiktok|facebook):/i.test(trimmed)) return trimmed.toLowerCase()
+  return socialVideoKey(trimmed) ?? canonicalSocialUrl(trimmed).replace(/\/+$/, '')
+}
+
+function migrateLoopKey(rawKey: string): string {
+  const key = loopKey(rawKey) || rawKey
+  if (key.startsWith('null') && key.length > 4) {
+    const rest = key.slice(4)
+    if (/^[a-z0-9_-]+$/i.test(rest)) return `instagram:${rest.toLowerCase()}`
+  }
+  return key
 }
 
 function cleanPreset(raw: unknown, index: number): ClipLoopPreset | null {
@@ -112,7 +123,7 @@ export function readClipLoopsFile(): DiskClipLoops {
     for (const [rawKey, value] of Object.entries(data.loops)) {
       const entry = normalizeLoopEntry(value)
       if (!entry) continue
-      loops[loopKey(rawKey) || rawKey] = entry
+      loops[migrateLoopKey(rawKey)] = entry
     }
     return { ...EMPTY, ...data, loops }
   } catch {
@@ -129,7 +140,7 @@ export function writeClipLoopsFile(data: unknown): DiskClipLoops {
   for (const [rawKey, value] of Object.entries(parsed.loops)) {
     const entry = normalizeLoopEntry(value)
     if (!entry) continue
-    loops[loopKey(rawKey) || rawKey] = entry
+    loops[migrateLoopKey(rawKey)] = entry
   }
   const next: DiskClipLoops = {
     kind: 'shape-lab-clip-loops',

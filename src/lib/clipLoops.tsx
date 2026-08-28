@@ -106,7 +106,7 @@ async function pullLoops(): Promise<Record<string, ClipLoopSet>> {
     const out: Record<string, ClipLoopSet> = {}
     for (const [key, value] of Object.entries(data.loops)) {
       const entry = normalizeEntry(value)
-      if (entry) out[key] = entry
+      if (entry) out[clipLoopKey(key)] = entry
     }
     return out
   } catch {

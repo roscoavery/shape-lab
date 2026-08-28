@@ -113,7 +113,13 @@ export function canonicalSocialUrl(url: string): string {
 
 /** Stable key for gym-wide A/B loop points on a pasted social / video URL. */
 export function clipLoopKey(url: string): string {
-  return socialVideoKey(url) ?? canonicalSocialUrl(url).replace(/\/+$/, '')
+  const trimmed = url.trim()
+  if (/^(instagram|tiktok|facebook):/i.test(trimmed)) return trimmed.toLowerCase()
+  // Old server rewrite of instagram:code → origin "null" + code
+  if (/^null[a-z0-9_-]+$/i.test(trimmed)) {
+    return `instagram:${trimmed.slice(4).toLowerCase()}`
+  }
+  return socialVideoKey(trimmed) ?? canonicalSocialUrl(trimmed).replace(/\/+$/, '')
 }
 
 export function defaultSocialName(url: string): string {

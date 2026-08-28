@@ -182,9 +182,6 @@ function VideoWorkbenchInner({
     setPointA(a)
     setPointB(b)
     onAbChange?.(a, b)
-    if (persistUrl && clipLoops && a !== null && b !== null && b > a && activeLoopId) {
-      clipLoops.updateActive(persistUrl, a, b)
-    }
   }
 
   const markA = () => publishAb(videoRef.current?.currentTime ?? null, pointB)
@@ -310,6 +307,20 @@ function VideoWorkbenchInner({
                 title="Keep this A/B as another saved loop on this clip"
               >
                 Save loop
+              </button>
+            )}
+            {persistUrl && activeLoopId && loopingAb && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (pointA === null || pointB === null || !(pointB > pointA)) return
+                  clipLoops?.updateActive(persistUrl, pointA, pointB)
+                  setLoopNotice('Updated the selected loop. Other saved loops are unchanged.')
+                }}
+                className={btn}
+                title="Write the current A/B into the selected saved loop"
+              >
+                Update loop
               </button>
             )}
           </>
