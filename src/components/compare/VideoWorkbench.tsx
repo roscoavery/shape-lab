@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
-import { useClipLoopsOptional } from '../../lib/clipLoops'
+import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -63,7 +63,10 @@ function VideoWorkbenchInner({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
   const clipLoops = useClipLoopsOptional()
-  const stored = persistUrl && clipLoops ? clipLoops.getLoop(persistUrl) : null
+  const loopSet = persistUrl && clipLoops ? clipLoops.getSet(persistUrl) : null
+  const stored = persistUrl && clipLoops ? clipLoops.getActive(persistUrl) : null
+  const presets = loopSet?.presets ?? []
+  const activeLoopId = loopSet?.activeId ?? null
   const [duration, setDuration] = useState(0)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -71,6 +74,9 @@ function VideoWorkbenchInner({
   const [loop, setLoop] = useState(true)
   const [pointA, setPointA] = useState<number | null>(() => loopA ?? stored?.a ?? null)
   const [pointB, setPointB] = useState<number | null>(() => loopB ?? stored?.b ?? null)
+  const [renameId, setRenameId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [loopNotice, setLoopNotice] = useState<string | null>(null)
 
   useEffect(() => {
     const v = videoRef.current
@@ -176,12 +182,58 @@ function VideoWorkbenchInner({
     setPointA(a)
     setPointB(b)
     onAbChange?.(a, b)
-    if (persistUrl && clipLoops) clipLoops.setLoop(persistUrl, a, b)
+    if (persistUrl && clipLoops && a !== null && b !== null && b > a && activeLoopId) {
+      clipLoops.updateActive(persistUrl, a, b)
+    }
   }
 
   const markA = () => publishAb(videoRef.current?.currentTime ?? null, pointB)
   const markB = () => publishAb(pointA, videoRef.current?.currentTime ?? null)
-  const clearAb = () => publishAb(null, null)
+  const clearAb = () => {
+    setPointA(null)
+    setPointB(null)
+    onAbChange?.(null, null)
+    if (persistUrl && clipLoops) clipLoops.selectPreset(persistUrl, null)
+  }
+
+  const applyPreset = (id: string) => {
+    if (!persistUrl || !clipLoops) return
+    const preset = presets.find((p) => p.id === id)
+    if (!preset) return
+    clipLoops.selectPreset(persistUrl, id)
+    setPointA(preset.a)
+    setPointB(preset.b)
+    onAbChange?.(preset.a, preset.b)
+    const v = videoRef.current
+    if (v) {
+      v.currentTime = preset.a
+      setTime(preset.a)
+    }
+  }
+
+  const saveLoop = () => {
+    if (!persistUrl || !clipLoops) return
+    if (pointA === null || pointB === null || !(pointB > pointA)) {
+      setLoopNotice('Set A then B first, then save that section.')
+      return
+    }
+    if (presets.length >= MAX_LOOP_PRESETS) {
+      setLoopNotice(`This clip already has ${MAX_LOOP_PRESETS} saved loops. Delete one to add another.`)
+      return
+    }
+    const saved = clipLoops.saveNewPreset(persistUrl, pointA, pointB)
+    setLoopNotice(
+      saved
+        ? `Saved ${saved.name}. Tap a name to switch loops.`
+        : `This clip already has ${MAX_LOOP_PRESETS} saved loops.`,
+    )
+  }
+
+  const commitRename = () => {
+    if (!persistUrl || !clipLoops || !renameId) return
+    clipLoops.renamePreset(persistUrl, renameId, renameDraft)
+    setRenameId(null)
+  }
 
   const loopingAb = pointA !== null && pointB !== null && pointB > pointA
 
@@ -250,6 +302,16 @@ function VideoWorkbenchInner({
                 Clear A/B
               </button>
             )}
+            {persistUrl && (
+              <button
+                type="button"
+                onClick={saveLoop}
+                className={btn}
+                title="Keep this A/B as another saved loop on this clip"
+              >
+                Save loop
+              </button>
+            )}
           </>
         )}
         <span className={`tabular-nums text-xs ${fill ? 'text-white/70' : 'text-[var(--muted)]'}`}>
@@ -269,6 +331,91 @@ function VideoWorkbenchInner({
           ))}
         </span>
       </div>
+      {persistUrl && allowAbLoop && presets.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span className={`text-[10px] font-semibold uppercase tracking-wider ${fill ? 'text-white/50' : 'text-[var(--muted)]'}`}>
+            Saved loops
+          </span>
+          {presets.map((p) =>
+            renameId === p.id ? (
+              <input
+                key={p.id}
+                value={renameDraft}
+                autoFocus
+                onChange={(e) => setRenameDraft(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename()
+                  if (e.key === 'Escape') setRenameId(null)
+                }}
+                className={`w-28 rounded-md px-1.5 py-0.5 text-xs ${
+                  fill
+                    ? 'border border-white/30 bg-white/10 text-white'
+                    : 'border border-[var(--panel-border)] bg-[#0d1218]'
+                }`}
+                aria-label="Rename loop"
+              />
+            ) : (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                className={
+                  activeLoopId === p.id
+                    ? fill
+                      ? 'rounded-md bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[#06281f]'
+                      : 'rounded-md bg-[var(--accent-dim)] px-2 py-0.5 text-xs font-semibold text-white'
+                    : fill
+                      ? 'rounded-md border border-white/30 px-2 py-0.5 text-xs text-white/80 hover:text-white'
+                      : 'rounded-md border border-[var(--panel-border)] px-2 py-0.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
+                }
+                title={`${fmt(p.a)}s–${fmt(p.b)}s`}
+              >
+                {p.name}
+              </button>
+            ),
+          )}
+          {activeLoopId && persistUrl && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const p = presets.find((x) => x.id === activeLoopId)
+                  if (!p) return
+                  setRenameId(p.id)
+                  setRenameDraft(p.name)
+                }}
+                className={`text-[11px] ${fill ? 'text-white/50 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = presets.find((p) => p.id !== activeLoopId)
+                  clipLoops?.removePreset(persistUrl, activeLoopId)
+                  if (next) {
+                    setPointA(next.a)
+                    setPointB(next.b)
+                    onAbChange?.(next.a, next.b)
+                  } else {
+                    setPointA(null)
+                    setPointB(null)
+                    onAbChange?.(null, null)
+                  }
+                }}
+                className={`text-[11px] ${fill ? 'text-white/50 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--bad)]'}`}
+                title="Delete the selected saved loop. Other loops stay."
+              >
+                Delete loop
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {loopNotice && (
+        <p className={`mt-1 text-[11px] ${fill ? 'text-white/70' : 'text-[var(--muted)]'}`}>{loopNotice}</p>
+      )}
     </div>
   )
 
