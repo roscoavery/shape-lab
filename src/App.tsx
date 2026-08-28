@@ -729,7 +729,8 @@ export default function App() {
               <strong className="text-[var(--text)]">MC HS 5 reps</strong>, and{' '}
               <strong className="text-[var(--text)]">Long Bridge</strong> — the class
               talk-through after rainbow shoulders are open (two snapshots: before chin
-              to chest, then after). The assisted run grades the{' '}
+              to chest, then after) — and <strong className="text-[var(--text)]">Pike → Hollow → Arch</strong>,
+              the snap-open drill for handsprings and whips. The assisted run grades the{' '}
               <strong className="text-[var(--text)]">handstand only</strong>; five-reps grades each
               kick, numbered 1–5, assisted or not. The replay is
               mountain climber through landing lunge. After you clean, you get a

@@ -110,6 +110,22 @@ export function poseLooksLongBridge(lm: Landmark[] | null | undefined): boolean 
   return true
 }
 
+/** Seated pike with zombie arms — hips and feet on the floor, torso up. */
+export function poseLooksSeatedPike(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.08)
+  if (!hip || !sh || !ank) return false
+  // Sitting: hips and ankles near the same height (both on the floor).
+  if (Math.abs(hip.y - ank.y) > 0.22) return false
+  // Torso up: shoulders clearly above the hips.
+  if (hip.y - sh.y < 0.1) return false
+  const kneeA = kneeAngleDeg(lm)
+  if (kneeA != null && kneeA < 145) return false
+  return true
+}
+
 export function homeworkLooksReady(
   shapeId: string,
   lm: Landmark[] | null | undefined,
@@ -126,6 +142,9 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'long_bridge') {
     return poseLooksLongBridge(lm) || overall >= 32
+  }
+  if (shapeId === 'seated_pike') {
+    return poseLooksSeatedPike(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand') {
     if (overall >= 32) return true

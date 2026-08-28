@@ -22,6 +22,7 @@ Included:
 - `hollow_arms_down.jpg`
 - `hollow_arms_up.jpg`
 - `zombie.jpg`
+- `pike_zombie_arms.jpg`
 - `mountain_climber.jpg`
 - `stand_clean.jpg`
 - `superman.jpg`

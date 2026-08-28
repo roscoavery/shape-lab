@@ -19,6 +19,7 @@ export const HOMEWORK_SHAPE_IDS = [
   'superman',
   'rainbow_bridge',
   'long_bridge',
+  'seated_pike',
   'side_plank',
   'wall_handstand',
 ] as const
@@ -66,6 +67,8 @@ const SHOTS: Record<string, string> = {
     'SIDE. Same hollow, arms glued by the ears. Only after a proper 1-minute arms-down hold.',
   zombie:
     'SIDE. Standing hollow, feet together. Arms in front, shoulders shrugged so the arms cover the ears. Eyes forward/down toward where they came from.',
+  seated_pike:
+    'SIDE or 3/4. Sitting. Pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. Wide fingers, pinkies slightly up, thumbs slightly down.',
   superman:
     'SIDE. Two athletes on the stomach. Chin up, straight arms behind the ears, open shoulders, straight knees off the mat, feet and ankles together.',
   rainbow_bridge:

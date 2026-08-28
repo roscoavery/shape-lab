@@ -422,6 +422,55 @@ function longBridgeClass(): FlowBeat[] {
   ]
 }
 
+/** Snap-open drill: pike (zombie arms) → hollow arms down → arch (supine). */
+function pikeHollowArchClass(): FlowBeat[] {
+  return [
+    {
+      speak: 'Sit in a pike. Zombie arms.',
+      shapeId: 'seated_pike',
+      pauseMs: 400,
+      replayStart: true,
+    },
+    {
+      speak: 'Toes pointed. Straight knees.',
+      pauseMs: 450,
+    },
+    {
+      speak: 'Torso upright and rounded hollow. Shoulders shrug. Arms covering the ears. Eyes looking through the hands.',
+      pauseMs: 500,
+      snapshotAtMs: 400,
+      snapLabel: 'Pike (zombie arms)',
+    },
+    {
+      speak: 'Snap to hollow. Arms down.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 550,
+    },
+    {
+      speak: 'Hold.',
+      pauseMs: 400,
+      snapshotAtMs: 180,
+      snapLabel: 'Hollow (arms down)',
+    },
+    {
+      speak: 'Arch. On your back.',
+      shapeId: 'arch',
+      pauseMs: 550,
+    },
+    {
+      speak: 'Hold.',
+      pauseMs: 400,
+      snapshotAtMs: 180,
+      snapLabel: 'Arch (supine)',
+    },
+    {
+      speak: 'That is the snap open. Go again when you are ready.',
+      pauseMs: 700,
+      replayEnd: true,
+    },
+  ]
+}
+
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
@@ -536,6 +585,24 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     setupShapeId: 'long_bridge',
     previewShapes: [{ shapeId: 'long_bridge', label: 'Long' }],
     beats: longBridgeClass(),
+  },
+  {
+    id: 'flow_pike_hollow_arch',
+    name: 'Pike → Hollow → Arch',
+    nickname: 'Snap open',
+    description:
+      'Class snap-open drill for handsprings and whips. Pike with zombie arms, snap to hollow arms down, then arch on the back. Repeat with Go again. Falling from a standing zombie into this pike is a beginner shaping drill. Not a gate.',
+    previewSpeak:
+      'Pike, hollow, arch. Snap open for handsprings and whips. Go again as many times as you want.',
+    setupSpeak: 'Side view. Sit in a pike with zombie arms.',
+    setupExtraSpeak:
+      'Falling from a standing zombie into this pike is a good beginner shaping drill. Round-off or handspring to this shape helps handspring connections.',
+    setupShapeId: 'seated_pike',
+    previewShapes: [
+      { shapeId: 'seated_pike', label: 'Pike' },
+      { shapeId: 'hollow_arms_down', label: 'Hollow' },
+    ],
+    beats: pikeHollowArchClass(),
   },
 ]
 

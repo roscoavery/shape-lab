@@ -24,6 +24,7 @@ export const SHIPPED_FILES: Record<string, string> = {
   hollow_arms_down: 'hollow_arms_down.jpg',
   hollow_arms_up: 'hollow_arms_up.jpg',
   zombie: 'zombie.jpg',
+  seated_pike: 'pike_zombie_arms.jpg',
   mountain_climber: 'mountain_climber.jpg',
   superman: 'superman.jpg',
   rainbow_bridge: 'rainbow_bridge.jpg',

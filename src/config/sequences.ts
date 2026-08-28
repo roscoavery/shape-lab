@@ -75,11 +75,12 @@ export const SEQUENCES: SequenceDef[] = [
   },
   {
     id: 'pike_hollow_arch',
-    name: 'Pike → Hollow → Arch',
-    description: 'Core shape chain on the floor.',
+    name: 'Pike (zombie arms) → Hollow (arms down) → Arch (supine)',
+    description:
+      'Snap-open drill for handsprings and whips. Repeat pike with zombie arms, hollow arms down, then arch on the back. Falling from a standing zombie into this pike is a beginner shaping drill. Round-off or handspring to this pike helps handspring connections.',
     steps: [
       { shapeId: 'seated_pike', holdSeconds: 2 },
-      { shapeId: 'hollow_arms_up', holdSeconds: 2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
     ],
   },
@@ -90,7 +91,7 @@ export const SEQUENCES: SequenceDef[] = [
     steps: [
       { shapeId: 'seated_pike', holdSeconds: 1.5 },
       { shapeId: 'tucked_handstand', holdSeconds: 1.5 },
-      { shapeId: 'hollow_arms_up', holdSeconds: 2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
     ],
   },

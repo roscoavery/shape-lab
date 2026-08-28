@@ -1623,6 +1623,8 @@ export function Tasks2Panel({
                   ? 'Handstand 1–5 — tap to jump in the replay'
                   : seq.id === 'flow_long_bridge'
                     ? 'Two stills — long bridge, then chin to chest'
+                    : seq.id === 'flow_pike_hollow_arch'
+                    ? 'Three stills — pike, hollow, arch'
                     : seq.reviewShapeIds?.includes('handstand')
                     ? 'Handstand snapshot — tap to jump in the replay'
                     : 'Snapshots — tap to jump in the replay'}
