@@ -1,7 +1,6 @@
 /**
- * Coach markup on a Compare video: 3-dot connected lines, freehand draw, arrows.
- * First three taps of Line drop dots and connect them; the fourth tap clears
- * that chain so you can mark again. Draw and arrows stay until Clear.
+ * Coach markup on a Compare video: 3-dot connected arrows, freehand draw, two-tap arrows.
+ * Line: tap, tap+line, tap+line; the next tap only clears; the tap after that starts over.
  */
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
@@ -87,7 +86,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
   const [tool, setTool] = useState<MarkTool>('line')
   const [marks, setMarks] = useState<Mark[]>([])
   const [linePts, setLinePts] = useState<Pt[]>([])
-  const [arrowStart, setArrowStart] = useState<Pt | null>(null)
+  const [arrowPts, setArrowPts] = useState<Pt[]>([])
   const [drawPts, setDrawPts] = useState<Pt[] | null>(null)
   const drawingRef = useRef(false)
   const drawPtsRef = useRef<Pt[] | null>(null)
@@ -156,9 +155,9 @@ export function VideoMarkOverlay({ videoRef }: Props) {
       else strokeLine([m.a, m.b], ARROW, true)
     }
     if (drawPts && drawPts.length) strokeLine(drawPts, DRAW)
-    strokeLine(linePts, LINE)
-    if (arrowStart) strokeLine([arrowStart], ARROW)
-  }, [marks, linePts, drawPts, arrowStart, videoRef])
+    strokeLine(linePts, LINE, true)
+    strokeLine(arrowPts, ARROW, true)
+  }, [marks, linePts, drawPts, arrowPts, videoRef])
 
   useEffect(() => {
     paint()
@@ -187,16 +186,10 @@ export function VideoMarkOverlay({ videoRef }: Props) {
       return
     }
     if (toolRef.current === 'arrow') {
-      if (!arrowStart) {
-        setArrowStart(pt)
-      } else {
-        const start = arrowStart
-        setMarks((prev) => [...prev, { kind: 'arrow', a: start, b: pt }])
-        setArrowStart(null)
-      }
+      setArrowPts((prev) => (prev.length >= 2 ? [] : [...prev, pt]))
       return
     }
-    setLinePts((prev) => (prev.length >= 3 ? [pt] : [...prev, pt]))
+    setLinePts((prev) => (prev.length >= 3 ? [] : [...prev, pt]))
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -228,7 +221,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
   const clearAll = () => {
     setMarks([])
     setLinePts([])
-    setArrowStart(null)
+    setArrowPts([])
     setDrawPts(null)
     drawingRef.current = false
     drawPtsRef.current = null
@@ -239,7 +232,7 @@ export function VideoMarkOverlay({ videoRef }: Props) {
       type="button"
       onClick={() => {
         setTool(id)
-        setArrowStart(null)
+        setArrowPts([])
         drawingRef.current = false
         setDrawPts(null)
       }}

@@ -141,7 +141,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 - **Live** — plain camera view (no pose detection needed here), mirror toggle.
 - **Delay cam** — adjustable **6–20s** delay (MediaRecorder timeslice chunks fed into a MediaSource buffer playing behind live). The athlete performs, then watches themselves N seconds later without touching the device. Needs a browser where MediaRecorder and MediaSource share a codec (Chrome / Edge / Firefox).
-- **Replay last Ns** — tap **Replay last 6s** (or whatever the buffer slider is set to) to open a real player of that stretch: pause, play, scrub, slow-mo. **Line / Draw / Arrow** on the video: Line drops three connected dots (fourth tap clears and starts again); Draw is freehand; Arrow is two taps. **Clear** wipes marks. The same markup is on the looping reference, including full-screen split. **Save in app** keeps it in Recorded attempts (IndexedDB). **Save to device** downloads the file.
+- **Replay last Ns** — tap **Replay last 6s** (or whatever the buffer slider is set to) to open a real player of that stretch: pause, play, scrub, slow-mo. **Line / Draw / Arrow** on the video: Line is tap (dot), tap (dot + arrow line), tap (dot + arrow line); the next tap only clears; the tap after that starts over. Draw is freehand. Arrow is two taps, then a clear tap, then start over. **Clear** wipes marks. The same markup is on the looping reference, including full-screen split. **Save in app** keeps it in Recorded attempts (IndexedDB). **Save to device** downloads the file.
 - **Record** — optional longer attempt capture; the last 12 clips are kept in the app (oldest pruned).
 
 ### Recommended coach workflow
