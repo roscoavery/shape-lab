@@ -25,6 +25,9 @@ Included:
 - `pike_zombie_arms.jpg`
 - `pike_open_shoulders.jpg`
 - `pike_open_shoulders_class.jpg`
+- `tuck_open_shoulders.jpg`
+- `tuck_open_shoulders_b.jpg`
+- `tuck_open_shoulders_class.jpg`
 - `mountain_climber.jpg`
 - `stand_clean.jpg`
 - `superman.jpg`

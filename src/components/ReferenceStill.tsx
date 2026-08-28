@@ -106,7 +106,7 @@ export function CoachStillGallery({
     )
   }
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className={`grid gap-2 ${stills.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
       {stills.map((p) => (
         <figure key={p.id} className="overflow-hidden rounded-md bg-[#0d1218]">
           <ReferenceStill

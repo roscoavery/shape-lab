@@ -471,6 +471,121 @@ function pikeHollowArchClass(): FlowBeat[] {
   ]
 }
 
+/** Pike (open shoulders) → seated tuck → hollow → arch. */
+function pikeTuckHollowArchClass(): FlowBeat[] {
+  return [
+    {
+      speak: 'Sit in a pike. Arms up by the ears. Shoulders open.',
+      shapeId: 'pike_open_shoulders',
+      pauseMs: 450,
+      replayStart: true,
+    },
+    {
+      speak: 'Legs together. Knees straight. Toes pointed.',
+      pauseMs: 450,
+      snapshotAtMs: 300,
+      snapLabel: 'Pike (open shoulders)',
+    },
+    {
+      speak: 'Bend the knees. Pull the feet in. That is a tuck.',
+      shapeId: 'tuck_open_shoulders',
+      pauseMs: 500,
+    },
+    {
+      speak:
+        'Flex the feet. Keep reaching arms behind the ears. Slightly rounded hollow back.',
+      pauseMs: 500,
+      snapshotAtMs: 350,
+      snapLabel: 'Tuck',
+    },
+    {
+      speak: 'Hollow. Arms down.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 550,
+    },
+    {
+      speak: 'Hold.',
+      pauseMs: 400,
+      snapshotAtMs: 180,
+      snapLabel: 'Hollow (arms down)',
+    },
+    {
+      speak: 'Arch. On your back.',
+      shapeId: 'arch',
+      pauseMs: 550,
+    },
+    {
+      speak: 'Hold.',
+      pauseMs: 400,
+      snapshotAtMs: 180,
+      snapLabel: 'Arch (supine)',
+    },
+    {
+      speak: 'Pike, tuck, hollow, arch. Go again when you are ready.',
+      pauseMs: 700,
+      replayEnd: true,
+    },
+  ]
+}
+
+/** Lemon squeezes: hollow → seated tuck, repeatedly. */
+function lemonSqueezesClass(): FlowBeat[] {
+  return [
+    {
+      speak: 'Lie in a hollow. Arms down.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 450,
+      replayStart: true,
+    },
+    {
+      speak: 'Lower back flat. That is hollow.',
+      pauseMs: 450,
+      snapshotAtMs: 280,
+      snapLabel: 'Hollow',
+    },
+    {
+      speak: 'Squeeze to a tuck. Pull the feet in.',
+      shapeId: 'tuck_open_shoulders',
+      pauseMs: 500,
+    },
+    {
+      speak:
+        'Flex the feet. Keep reaching arms behind the ears. Slightly rounded hollow back.',
+      pauseMs: 500,
+      snapshotAtMs: 350,
+      snapLabel: 'Tuck',
+    },
+    {
+      speak: 'Back to hollow.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 500,
+    },
+    {
+      speak: 'Squeeze to a tuck.',
+      shapeId: 'tuck_open_shoulders',
+      pauseMs: 500,
+    },
+    {
+      speak: 'Back to hollow.',
+      shapeId: 'hollow_arms_down',
+      pauseMs: 500,
+    },
+    {
+      speak: 'Squeeze to a tuck. Flex the feet. Keep reaching.',
+      shapeId: 'tuck_open_shoulders',
+      pauseMs: 550,
+      snapshotAtMs: 320,
+      snapLabel: 'Tuck (squeeze)',
+    },
+    {
+      speak:
+        'That is lemon squeezes. Hollow to tuck, over and over. Go again when you are ready.',
+      pauseMs: 700,
+      replayEnd: true,
+    },
+  ]
+}
+
 export const FLOW_SEQUENCES: FlowSequence[] = [
   {
     id: 'flow_hs_right',
@@ -603,6 +718,43 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       { shapeId: 'hollow_arms_down', label: 'Hollow' },
     ],
     beats: pikeHollowArchClass(),
+  },
+  {
+    id: 'flow_pike_tuck_hollow_arch',
+    name: 'Pike → Tuck → Hollow → Arch',
+    nickname: 'Pike tuck hollow arch',
+    description:
+      'Class chain: open-shoulder pike, pull into the seated tuck (flexed feet, arms behind the ears, slightly rounded hollow), then hollow arms down, then arch. Open-shoulder pike into this tuck is how we teach arms behind the ears while pulling for a back tuck. The torso usually rounds more on a back tuck or a tucked candle. Not a gate.',
+    previewSpeak:
+      'Pike, tuck, hollow, arch. Arms stay behind the ears when you pull the tuck.',
+    setupSpeak: 'Side view. Sit in a pike with arms up by the ears.',
+    setupExtraSpeak:
+      'From the pike, bend the knees and pull the feet in. Flex the feet. Keep reaching. That is the tuck we want before a back tuck.',
+    setupShapeId: 'pike_open_shoulders',
+    previewShapes: [
+      { shapeId: 'pike_open_shoulders', label: 'Pike' },
+      { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
+      { shapeId: 'hollow_arms_down', label: 'Hollow' },
+    ],
+    beats: pikeTuckHollowArchClass(),
+  },
+  {
+    id: 'flow_lemon_squeezes',
+    name: 'Lemon squeezes',
+    nickname: 'Lemon squeezes',
+    description:
+      'Class talk-through. From a hollow, squeeze into the seated open-shoulder tuck — feet in, feet flexed, arms still reaching behind the ears — then back to hollow. Repeat. Not a gate.',
+    previewSpeak:
+      'Lemon squeezes. Hollow to tuck, hollow to tuck. Keep reaching when you squeeze.',
+    setupSpeak: 'Side view. Start in a hollow, arms down.',
+    setupExtraSpeak:
+      'When you squeeze, pull the feet in, flex them, and keep the arms behind the ears. Slightly rounded hollow back.',
+    setupShapeId: 'hollow_arms_down',
+    previewShapes: [
+      { shapeId: 'hollow_arms_down', label: 'Hollow' },
+      { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
+    ],
+    beats: lemonSqueezesClass(),
   },
 ]
 

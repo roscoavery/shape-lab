@@ -110,6 +110,30 @@ export function poseLooksLongBridge(lm: Landmark[] | null | undefined): boolean 
   return true
 }
 
+/**
+ * Seated open-shoulder tuck — sitting on the glutes, knees pulled in,
+ * at least one arm reaching up. Not a seated pike (straight knees) and
+ * not a lying hollow (torso flat).
+ */
+export function poseLooksSeatedTuck(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  if (!hip || !sh) return false
+  // Sitting: shoulders clearly above the hips (not a hollow on the back).
+  if (hip.y - sh.y < 0.08) return false
+  const hipA = hipAngleDeg(lm)
+  if (hipA != null && hipA > 125) return false
+  const kneeA = kneeAngleDeg(lm)
+  if (kneeA != null && (kneeA < 25 || kneeA > 125)) return false
+  const leftWr = lm[LM.LEFT_WRIST]
+  const rightWr = lm[LM.RIGHT_WRIST]
+  const armUp =
+    (visOk(leftWr, 0.1) && leftWr.y < sh.y - 0.05) ||
+    (visOk(rightWr, 0.1) && rightWr.y < sh.y - 0.05)
+  return armUp
+}
+
 /** Seated pike with zombie arms — hips and feet on the floor, torso up. */
 export function poseLooksSeatedPike(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
@@ -145,6 +169,9 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'seated_pike' || shapeId === 'pike_open_shoulders') {
     return poseLooksSeatedPike(lm) || overall >= 32
+  }
+  if (shapeId === 'tuck_open_shoulders') {
+    return poseLooksSeatedTuck(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand') {
     if (overall >= 32) return true

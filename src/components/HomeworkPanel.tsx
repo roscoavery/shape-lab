@@ -474,6 +474,8 @@ export function HomeworkPanel({
             ? 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Pinkies slightly up, thumbs slightly down. Snap-open drill: pike → hollow arms down → arch (supine).'
             : addShapeId === 'pike_open_shoulders'
               ? 'Arms up by the ears, shoulders open. Legs together, knees straight, toes pointed. Pike–tuck–hollow–arch; rock back to candlestick; pike–tuck for arms behind the ears on a back tuck.'
+              : addShapeId === 'tuck_open_shoulders'
+                ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
           : ''
     const notes = addNotes.trim() || defaultNotes
     const item: HomeworkItem = {

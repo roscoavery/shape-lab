@@ -1321,6 +1321,127 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // TUCK (OPEN SHOULDERS) — seated tuck pulled in from an open-shoulder pike.
+  // Three stills: close-up, flexed feet, class line. Not a tucked handstand.
+  // ===========================================================================
+  {
+    id: 'tuck_open_shoulders',
+    name: 'Tuck',
+    description:
+      'Seated tuck pulled in from an open-shoulder pike: knees bent, feet in, feet flexed, arms still reaching behind the ears, slightly rounded hollow back. Used in pike–tuck–hollow–arch, lemon squeezes (hollow ↔ tuck), and teaching the tucked candle / back tuck.',
+    bodyPosition:
+      'SIDE or 3/4, sitting on the glutes. From an open-shoulder pike, bend the knees and pull the feet in. Feet flexed (toes to the shins), not pointed. Keep reaching the arms behind the ears — shoulders open, fingers to the ceiling. Slightly rounded hollow back. The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'From an open-shoulder pike: bend the knees and pull the feet in.',
+      'Flex the feet — toes to the shins, not pointed.',
+      'Keep reaching. Arms behind the ears, shoulders open.',
+      'Slightly rounded hollow back. The torso rounds more on a back tuck or a tucked candle.',
+    ],
+    coachNotes:
+      'We do pike, tuck, hollow, arch as a sequence frequently. Lemon squeezes move from a hollow into this tuck repeatedly. Three stills: a close-up of the line, a flexed-feet view, and a class line of the same shape. This is not a tucked handstand.',
+    criteria: [
+      {
+        id: 'torso_hollow',
+        label: 'Slightly rounded hollow',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 50,
+        targetMax: 95,
+        tolerance: 12,
+        falloff: 40,
+        weight: 16,
+        feedbackLow: 'Round the hollow a little — sit on the glutes, not a sit-up.',
+        feedbackHigh: 'Stay in the seated tuck — do not rock all the way to a candle yet.',
+      },
+      {
+        id: 'knees',
+        label: 'Knees bent / feet in',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 40,
+        targetMax: 95,
+        tolerance: 12,
+        falloff: 40,
+        weight: 20,
+        feedbackLow: 'Pull the feet in — bend the knees from the pike.',
+        feedbackHigh: 'Keep the tuck — knees in, not a pike.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Feet together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.08,
+        falloff: 0.2,
+        weight: 8,
+        feedbackHigh: 'Feet glued together.',
+      },
+      {
+        id: 'feet_flexed',
+        label: 'Feet flexed',
+        kind: 'joint_angle',
+        points: [LM.LEFT_KNEE, LM.LEFT_ANKLE, LM.LEFT_FOOT_INDEX],
+        targetMin: 70,
+        targetMax: 115,
+        tolerance: 12,
+        falloff: 40,
+        weight: 10,
+        feedbackLow: 'Flex the feet — toes to the shins.',
+        feedbackHigh: 'Flex, do not point.',
+      },
+      {
+        id: 'open_shoulders',
+        label: 'Shoulders open / arms up',
+        kind: 'joint_angle',
+        points: L_SHOULDER,
+        targetMin: 145,
+        targetMax: 180,
+        tolerance: 12,
+        weight: 22,
+        feedbackLow: 'Keep reaching — arms behind the ears.',
+      },
+      {
+        id: 'arms_vertical',
+        label: 'Arms to the ceiling',
+        kind: 'segment_vs_vertical',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        target: 0,
+        tolerance: 18,
+        falloff: 40,
+        weight: 12,
+        needsView: 'side',
+        feedbackHigh: 'Reach straight up — arms covering the ears.',
+      },
+      {
+        id: 'elbows',
+        label: 'Elbows straight',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 10,
+        feedbackLow: 'Straighten elbows.',
+      },
+      {
+        id: 'ears_covered',
+        label: 'Arms covering ears',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ELBOW, LM.LEFT_EAR],
+        target: 0,
+        tolerance: 0.12,
+        falloff: 0.22,
+        weight: 10,
+        feedbackHigh: 'Cover the ears — keep the arms behind them.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // HOLLOW (ARMS UP) — progression after a proper 1-minute arms-down hold
   // ===========================================================================
   {

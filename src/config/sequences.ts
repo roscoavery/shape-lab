@@ -88,12 +88,27 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'pike_tuck_hollow_arch',
     name: 'Pike (open shoulders) → Tuck → Hollow → Arch',
     description:
-      'Open-shoulder pike into a tuck is how we teach arms behind the ears while pulling for a back tuck. Then hollow and arch. Repeat as a floor chain.',
+      'Open-shoulder pike into a seated tuck is how we teach arms behind the ears while pulling for a back tuck. Then hollow and arch. Repeat as a floor chain.',
     steps: [
       { shapeId: 'pike_open_shoulders', holdSeconds: 1.5 },
-      { shapeId: 'tucked_handstand', holdSeconds: 1.5 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.5 },
       { shapeId: 'hollow_arms_down', holdSeconds: 2 },
       { shapeId: 'arch', holdSeconds: 2 },
+    ],
+  },
+  {
+    id: 'lemon_squeezes',
+    name: 'Lemon squeezes (hollow ↔ tuck)',
+    description:
+      'From a hollow, squeeze into the seated open-shoulder tuck — feet in, feet flexed, arms still reaching behind the ears — then back to hollow. Repeat.',
+    steps: [
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.2 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 1.2 },
+      { shapeId: 'hollow_arms_down', holdSeconds: 1.5 },
     ],
   },
   {
