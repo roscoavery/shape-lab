@@ -101,20 +101,30 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Shape glossary</p>
         <h3 className="mt-1 text-xl font-semibold">One clear picture per shape</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Upload a single coach still for each practiced shape (with any extra notes). Extra
-          shapes you will not score on camera live in their own folder — add a photo and write
-          what you want athletes to know.
+          Every still you sent is stored in the app (pathway, hollows, zombie, candlestick).
+          Extra is for learn-only positions with a picture. Arm-position drills are in the
+          Arm positions test — they are not extra photo asks.
         </p>
         <p className="mt-2 text-sm">
-          <span className="font-semibold text-[var(--accent)]">{missing.length}</span>
-          <span className="text-[var(--muted)]"> still need a stored reference.</span>
+          {missing.length === 0 ? (
+            <span className="text-[var(--good)]">Every practiced shape has a stored coach photo.</span>
+          ) : (
+            <>
+              <span className="font-semibold text-[var(--accent)]">{missing.length}</span>
+              <span className="text-[var(--muted)]">
+                {' '}
+                homework still{missing.length === 1 ? '' : 's'} without a picture yet
+                {missing.length ? ` (${missing.map((s) => s.name).join(', ')})` : ''}.
+              </span>
+            </>
+          )}
         </p>
         <div className="mt-4 flex flex-wrap gap-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-1">
           {(
             [
               ['needed', `Need photos (${missing.length})`],
               ['practice', 'Practiced shapes'],
-              ['extra', `Extra shapes (${builtinExtra.length + extras.length})`],
+              ['extra', `Learn-only (${builtinExtra.length + extras.length})`],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -350,11 +360,11 @@ function ExtraFolder({
 
       <section>
         <h4 className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
-          Library extras (not scored in Tasks)
+          Learn-only stills (not scored in Tasks)
         </h4>
         <p className="mb-3 text-xs text-[var(--muted)]">
-          These exist in the shape library for learning only. Attach a photo and notes the same
-          way — they will not appear as camera tasks.
+          Positions you photographed that are not on the Tasks pathway — they stay in the
+          library for learning. Attach a replacement still if you get a clearer shot.
         </p>
         <ul className="grid gap-3 sm:grid-cols-2">
           {builtin.map((s) => {

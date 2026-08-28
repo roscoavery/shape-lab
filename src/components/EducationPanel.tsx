@@ -5,13 +5,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { CURRICULUM_TASKS, getTask } from '../config/curriculum'
-import { getShape, SHAPES } from '../config/shapes'
+import { getShape } from '../config/shapes'
 import {
   criterionHowToHit,
   curriculumShapeIds,
   firstPathwayTaskIndex,
   formatCriterionTarget,
   howToHitShape,
+  learnLibraryShapes,
   otherSamePositionIds,
   visibleCriteria,
 } from '../lib/educationCopy'
@@ -62,29 +63,32 @@ export function EducationPanel({
   }, [athleteId, view.kind])
 
   const pathwayIds = useMemo(() => curriculumShapeIds(), [])
+  const catalog = useMemo(() => learnLibraryShapes(), [])
 
   const filteredShapes = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return SHAPES.filter((s) => {
-      const inPathway = pathwayIds.has(s.id)
-      if (filter === 'pathway' && !inPathway) return false
-      if (filter === 'other' && inPathway) return false
-      if (!q) return true
-      const aliases = otherSamePositionIds(s.id)
-        .map((id) => getShape(id)?.name ?? '')
-        .join(' ')
-      const hay = `${s.name} ${s.description} ${s.category} ${aliases}`.toLowerCase()
-      return hay.includes(q)
-    }).sort((a, b) => {
-      // Pathway shapes first (by curriculum order), then alphabetical
-      const ai = firstPathwayTaskIndex(a.id)
-      const bi = firstPathwayTaskIndex(b.id)
-      if (ai != null && bi != null) return ai - bi
-      if (ai != null) return -1
-      if (bi != null) return 1
-      return a.name.localeCompare(b.name)
-    })
-  }, [query, filter, pathwayIds])
+    return catalog
+      .filter((s) => {
+        const inPathway = pathwayIds.has(s.id)
+        if (filter === 'pathway' && !inPathway) return false
+        if (filter === 'other' && inPathway) return false
+        if (!q) return true
+        const aliases = otherSamePositionIds(s.id)
+          .map((id) => getShape(id)?.name ?? '')
+          .join(' ')
+        const hay = `${s.name} ${s.description} ${s.category} ${aliases}`.toLowerCase()
+        return hay.includes(q)
+      })
+      .sort((a, b) => {
+        // Pathway shapes first (by curriculum order), then alphabetical
+        const ai = firstPathwayTaskIndex(a.id)
+        const bi = firstPathwayTaskIndex(b.id)
+        if (ai != null && bi != null) return ai - bi
+        if (ai != null) return -1
+        if (bi != null) return 1
+        return a.name.localeCompare(b.name)
+      })
+  }, [query, filter, pathwayIds, catalog])
 
   const goHome = () => setView({ kind: 'home' })
   const goShapes = () => setView({ kind: 'shapes' })
@@ -148,7 +152,7 @@ export function EducationPanel({
       {view.kind === 'home' && (
         <HomeView
           pathwayCount={pathwayIds.size}
-          shapeCount={SHAPES.length}
+          shapeCount={catalog.length}
           taskCount={CURRICULUM_TASKS.length}
           onShapes={goShapes}
           onPathways={goPathways}
@@ -281,8 +285,9 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape library</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Browse {shapeCount} shapes — cues, key criteria, quality threshold, and
-          reference photos when available. {pathwayCount} are on the athlete pathway.
+          Browse {shapeCount} positions with the coach stills you shared, plus
+          homework. {pathwayCount} are on the athlete pathway. Arm drills live in
+          the Arm positions test, not as empty library cards.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Browse shapes →
@@ -403,7 +408,7 @@ function ShapeLibrary({
             [
               ['all', 'All'],
               ['pathway', 'On pathway'],
-              ['other', 'Extra'],
+              ['other', 'Homework & extras'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -423,7 +428,8 @@ function ShapeLibrary({
       </div>
 
       <p className="text-xs text-[var(--muted)]">
-        {shapes.length} shape{shapes.length === 1 ? '' : 's'}
+        {shapes.length} shape{shapes.length === 1 ? '' : 's'}. Empty thumbnails are
+        homework without a still yet — every picture you sent is in this list.
       </p>
 
       <ul className="grid gap-3 sm:grid-cols-2">

@@ -81,10 +81,7 @@ export function buildShapeQuiz(
 ): QuizQuestion[] {
   const pathway = curriculumShapeIds()
   const arm = new Set(ARM_POSITION_SHAPE_IDS)
-  const wanted =
-    pool === 'arm-positions'
-      ? arm
-      : new Set([...pathway, ...ARM_POSITION_SHAPE_IDS])
+  const wanted = pool === 'arm-positions' ? arm : pathway
   const poolShapes = SHAPES.filter((s) => wanted.has(s.id))
   const source = uniquePositions(poolShapes.length >= 4 ? poolShapes : SHAPES)
   const withPhoto = source.filter((s) => Boolean(pickReferencePhoto(photos, s.id, null)?.dataUrl))

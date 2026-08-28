@@ -4,7 +4,7 @@
  */
 
 import { CURRICULUM_TASKS } from '../config/curriculum'
-import { getShape } from '../config/shapes'
+import { getShape, SHAPES } from '../config/shapes'
 import type { CriterionDef, ShapeDef } from '../types'
 
 /**
@@ -151,6 +151,36 @@ export const ARM_POSITION_SHAPE_IDS: string[] = [
   'lunge_arms_t',
   'lunge_arms_high_v',
 ]
+
+/**
+ * Original scoring leftovers that never got a coach still. They stay in
+ * shapes.ts for sequences / homework assignment, but they are not empty
+ * cards in Learn → Shape library.
+ */
+const SCAFFOLD_SHAPE_IDS = new Set([
+  'lunge',
+  'seated_pike',
+  'arch',
+  'bridge',
+  'tucked_handstand',
+  'piked_handstand',
+  'l_handstand',
+])
+
+/**
+ * Positions shown in Learn → Shape library: the pathway, homework, and
+ * extras Ryan photographed (zombie, candlestick). Arm-position drills live
+ * in the Arm positions test, not as a second empty catalog.
+ */
+export function isLearnLibraryShape(id: string): boolean {
+  if (SCAFFOLD_SHAPE_IDS.has(id)) return false
+  if (ARM_POSITION_SHAPE_IDS.includes(id)) return false
+  return Boolean(getShape(id))
+}
+
+export function learnLibraryShapes(): ShapeDef[] {
+  return SHAPES.filter((s) => isLearnLibraryShape(s.id))
+}
 
 /** Task index (0-based) where a shape first appears in the pathway, or null. */
 export function firstPathwayTaskIndex(shapeId: string): number | null {

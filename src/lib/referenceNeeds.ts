@@ -5,7 +5,7 @@
 
 import { CURRICULUM_TASKS } from '../config/curriculum'
 import { SHAPES, getShape } from '../config/shapes'
-import { curriculumShapeIds } from './educationCopy'
+import { curriculumShapeIds, isLearnLibraryShape } from './educationCopy'
 import {
   pickCoachStill,
   SHIPPED_REFERENCE_IDS,
@@ -114,10 +114,12 @@ function shotFallback(s: ShapeDef): string {
   return `${view} One clear still of the finished position.`
 }
 
-/** Built-in library shapes that are not practiced on camera (learn-only). */
+/** Built-in library extras that are not practiced on camera (learn-only). */
 export function builtinExtraShapes(): ShapeDef[] {
   const practiced = practicedShapeIds()
-  return SHAPES.filter((s) => !practiced.has(s.id)).sort((a, b) => a.name.localeCompare(b.name))
+  return SHAPES.filter((s) => isLearnLibraryShape(s.id) && !practiced.has(s.id)).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )
 }
 
 /**

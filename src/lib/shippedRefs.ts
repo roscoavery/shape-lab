@@ -16,6 +16,8 @@ export const SHIPPED_FILES: Record<string, string> = {
   lunge_land: 'lunge_land.jpg',
   // Same body position as landing lunge — keep the arm-drill name, share the still.
   lunge_arms_open: 'lunge_land.jpg',
+  // Same overhead line as FTOS — keep the arm-drill name, share the still.
+  arms_open_shoulders: 'feet_together_open_shoulders.jpg',
   c_shape: 'c_shape.jpg',
   handstand: 'handstand.jpg',
   candlestick: 'candlestick.jpg',
