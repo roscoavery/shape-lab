@@ -146,7 +146,7 @@ Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBr
 
 1. Open the **Learn** tab.
 2. **Shape glossary** — one stored coach photo per practiced shape. **Need photos** lists exactly what to shoot (view + body). Upload the picture and type extra notes in the same form. **Extra shapes** is a folder for positions you will not score on camera: library extras (pike, bridge, tucked HS, …) plus any shape you add yourself (name, body position, camera hint, notes, photo).
-3. **Shape library** — browse all scored shapes.
+3. **Shape library** — browse all scored shapes. On the Ryan profile, **Crop display** on a coach still sets the borders used everywhere in the app (library cards, overlay, Tasks). Original JPEGs are not rewritten.
 4. **IG shapes library** — stills cropped from Compare. On a looping Instagram clip or replay, tap **Screenshot**, press one corner of the shape, drag to the opposite corner, tag a listed shape or type a **custom name** if it is not in the list, and Save. Select the **Ryan** profile first if you want that still saved **into the app** (this gym computer) so every browser and phone link still has it. Other profiles keep crops on this device only. These never replace shipped coach stills. On **Tasks**, **Homework**, **Coach**, or **Compare**, **Still overlay** lets you scroll left/right through Shape library or IG shapes and put any picture on the live camera or Compare video (opacity slider).
 5. **Task pathways** — walk the curriculum in order.
 6. **Shape test** — multiple choice from descriptions or pictures.
@@ -154,7 +154,7 @@ Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBr
 
 ## Compare (video study tab)
 
-Side-by-side technique study: a **reference video** (the technique to copy) next to the **athlete camera** (live view, delay cam, or recorded replay). Stacks vertically on phones. **Full screen split** shows only the looping reference plus your delay cam / replay — pick **left / right** or **top / bottom**. Scrub the loop and the delay/replay independently. Everything is stored on this device (IndexedDB — video blobs are too big for localStorage).
+Side-by-side technique study: a **reference video** (the technique to copy) next to the **athlete camera** (live view, delay cam, or recorded replay). Stacks vertically on phones. **Full screen with reference** opens **top / bottom** by default — reference on top and larger, delay cam flush underneath with no gap between the two. Hide the side rail for a clean split. Shape overlay opens as a **large filmstrip** (not a tiny list); the selected still floats over both videos so you can drag it anywhere, then tap **×** to hide it.
 
 ### The Instagram constraint (honest version)
 
@@ -173,8 +173,8 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 1. Paste public Instagram, TikTok, or Facebook video URL(s) into a Compare collection (e.g. "Back handspring refs"). Add **keywords** for the shape, then **Rename**, **search**, and **reorder** the list. That named URL list saves into the app. Hit **Save all in app** so the video files stay on this device. **Export library** if you also want a JSON backup.
 2. Wait for it to load, then set an A/B loop around the key phase; slow to 0.5x.
-3. On **either card** tap **Full screen with delay cam** / **Full screen with reference**, then **Left / right** or **Top / bottom**. That is only the looping clip plus delay cam or replay, with scrub on both. Athlete performs with **Delay cam** at 6–20s. Tap **Replay last Ns** to pause, play, and scrub that buffer, then **Save in app** or **Save to Photos**.
-4. To keep a still of a shape in an IG clip: pause, tap **Screenshot**, drag from one corner of the crop to the other, tag the shape, Save. Open **Learn → IG shapes**. Overlay that still (or any coach still) on Tasks / Homework / Coach.
+3. On **either card** tap **Full screen with delay cam** / **Full screen with reference**. That opens **top / bottom** (reference larger, no gap). Switch to **Left / right** in the side rail if you want. Athlete performs with **Delay cam** at 6–20s. Tap **Replay last Ns** to pause, play, and scrub that buffer, then **Save in app** or **Save to Photos**.
+4. To keep a still of a shape in an IG clip: pause, tap **Screenshot**, drag from one corner of the crop to the other, tag the shape, Save. Open **Learn → IG shapes**. Overlay that still (or any coach still) on Tasks / Homework / Coach. In Compare full screen, open **Shape overlay** for a large filmstrip, drag the still over either video, and tap **×** to hide it.
 
 ## First test: Handstand
 

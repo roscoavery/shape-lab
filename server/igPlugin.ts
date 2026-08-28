@@ -15,6 +15,7 @@ import {
   stillsForClient,
 } from './igStillDisk.ts'
 import { readShapeCopyFile, writeShapeCopyFile } from './shapeCopyStore.ts'
+import { readStillCropFile, writeStillCropFile } from './stillCropStore.ts'
 
 function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
   server.middlewares.use(async (req, res, next) => {
@@ -27,7 +28,8 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/roster' &&
       path !== '/api/ig-stills' &&
       path !== '/api/ig-still-file' &&
-      path !== '/api/shape-copy'
+      path !== '/api/shape-copy' &&
+      path !== '/api/still-crops'
     ) {
       next()
       return
@@ -86,6 +88,20 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         if (req.method === 'PUT') {
           const body = await readRequestBody(req)
           const saved = writeShapeCopyFile(JSON.parse(body))
+          sendJson(res, 200, saved)
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/still-crops') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readStillCropFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          const saved = writeStillCropFile(JSON.parse(body))
           sendJson(res, 200, saved)
           return
         }

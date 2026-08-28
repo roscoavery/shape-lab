@@ -1,19 +1,23 @@
 /**
- * Ghost still on a video: object-contain (never crops), scalable, draggable to a corner.
- * Compare fullscreen uses FloatingStillOverlay instead so the still can travel across both panes.
+ * Shape overlay that sits on the whole Compare fullscreen stage —
+ * drag it over either video, park it off to the side, hide it when you are done.
  */
 
 import { useRef, type PointerEvent } from 'react'
 import { CroppedStill } from './CroppedStill'
 import { useOverlayStill } from './OverlayStillContext'
 
-type Props = {
-  /** Compare delay-cam / homework camera. */
-  className?: string
-}
-
-export function DraggableStillOverlay({ className = '' }: Props) {
-  const { selected, visible, opacity, scale, offsetX, offsetY, setOffset } = useOverlayStill()
+export function FloatingStillOverlay() {
+  const {
+    selected,
+    visible,
+    opacity,
+    scale,
+    offsetX,
+    offsetY,
+    setOffset,
+    setVisible,
+  } = useOverlayStill()
   const drag = useRef<{
     pointerId: number
     startX: number
@@ -24,7 +28,19 @@ export function DraggableStillOverlay({ className = '' }: Props) {
     height: number
   } | null>(null)
 
-  if (!selected || !visible || opacity < 0.02) return null
+  if (!selected) return null
+
+  if (!visible || opacity < 0.02) {
+    return (
+      <button
+        type="button"
+        onClick={() => setVisible(true)}
+        className="pointer-events-auto absolute bottom-3 right-3 z-[22] rounded-full border border-white/25 bg-black/70 px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-black/85"
+      >
+        Show {selected.name}
+      </button>
+    )
+  }
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     const parent = e.currentTarget.parentElement
@@ -60,27 +76,42 @@ export function DraggableStillOverlay({ className = '' }: Props) {
   return (
     <div
       role="img"
-      aria-label={`${selected.name} overlay — drag to move`}
+      aria-label={`${selected.name} overlay — drag anywhere, hide when done`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      className={`absolute z-[12] cursor-grab touch-none active:cursor-grabbing ${className}`}
+      className="pointer-events-auto absolute z-[18] cursor-grab touch-none active:cursor-grabbing"
       style={{
         left: `${offsetX}%`,
         top: `${offsetY}%`,
         width: `${scale * 100}%`,
         height: `${scale * 100}%`,
         transform: 'translate(-50%, -50%)',
-        opacity,
       }}
     >
-      <CroppedStill
-        src={selected.src}
-        stillId={selected.photoId}
-        alt=""
-        className="h-full w-full object-contain"
-      />
+      <div className="relative h-full w-full" style={{ opacity }}>
+        <CroppedStill
+          src={selected.src}
+          stillId={selected.photoId}
+          alt=""
+          className="h-full w-full object-contain"
+        />
+      </div>
+      <button
+        type="button"
+        aria-label="Hide overlay"
+        onPointerDown={(e) => {
+          e.stopPropagation()
+        }}
+        onClick={(e) => {
+          e.stopPropagation()
+          setVisible(false)
+        }}
+        className="absolute -right-1 -top-1 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/85 text-sm font-semibold text-white shadow-md ring-1 ring-white/30 hover:bg-black"
+      >
+        ×
+      </button>
     </div>
   )
 }

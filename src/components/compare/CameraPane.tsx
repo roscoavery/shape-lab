@@ -692,7 +692,7 @@ export function CameraPane() {
         className={
           mode === 'replay' && clipSrc
             ? 'pointer-events-none absolute h-px w-px overflow-hidden opacity-0'
-            : `relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fullscreen ? 'min-h-0 flex-1' : ''}`
+            : `relative overflow-hidden bg-black ${fullscreen ? 'min-h-0 flex-1' : 'rounded-lg border border-[var(--panel-border)]'}`
         }
       >
         <video
@@ -732,7 +732,7 @@ export function CameraPane() {
             REC {recSeconds}s
           </div>
         )}
-        {mode !== 'replay' && <DraggableStillOverlay />}
+        {mode !== 'replay' && !fullscreen && <DraggableStillOverlay />}
       </div>
 
       {/* Replay of the last N seconds (or a saved attempt) */}
@@ -759,7 +759,7 @@ export function CameraPane() {
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
               fill={fullscreen}
-              showStillOverlay
+              showStillOverlay={!fullscreen}
             />
             <div className="flex flex-wrap items-center gap-2">
               <button

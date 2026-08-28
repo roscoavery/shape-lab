@@ -22,7 +22,7 @@ const noop = () => {}
 
 export const CompareLayoutContext = createContext<CompareLayoutValue>({
   fullscreen: false,
-  split: 'lr',
+  split: 'tb',
   focus: 'split',
   chromeOpen: true,
   camRail: null,

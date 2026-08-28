@@ -6,6 +6,8 @@ import {
   shippedStillCandidates,
 } from '../lib/shippedRefs'
 import type { ReferencePhoto } from '../types'
+import { CroppedStill } from './CroppedStill'
+import { StillCropEditor } from './StillCropEditor'
 
 type Props = {
   shapeId: string
@@ -59,9 +61,12 @@ export function ReferenceStill({
     )
   }
 
+  const stillId = photo?.id ?? pickCoachStill(photos, shapeId)?.id ?? `default_${shapeId}_0`
+
   return (
-    <img
+    <CroppedStill
       src={src}
+      stillId={stillId}
       alt={alt}
       className={className}
       onError={() => setIndex((i) => i + 1)}
@@ -76,12 +81,15 @@ export function CoachStillGallery({
   alt = '',
   emptyLabel = 'No photo yet',
   imgClass = 'max-h-80 w-full object-contain',
+  allowCrop = false,
 }: {
   shapeId: string
   photos: ReferencePhoto[]
   alt?: string
   emptyLabel?: string
   imgClass?: string
+  /** Ryan: set display borders without rewriting the original JPEG. */
+  allowCrop?: boolean
 }) {
   const shipped = makeShippedPhotos(shapeId)
   const one = pickCoachStill(photos, shapeId)
@@ -94,7 +102,9 @@ export function CoachStillGallery({
     )
   }
   if (stills.length === 1) {
-    return (
+    return allowCrop ? (
+      <StillCropEditor photo={stills[0]!} alt={alt} imgClass={imgClass} />
+    ) : (
       <ReferenceStill
         shapeId={shapeId}
         photos={photos}
@@ -107,23 +117,27 @@ export function CoachStillGallery({
   }
   return (
     <div className={`grid gap-2 ${stills.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-      {stills.map((p) => (
-        <figure key={p.id} className="overflow-hidden rounded-md bg-[#0d1218]">
-          <ReferenceStill
-            shapeId={shapeId}
-            photos={photos}
-            photo={p}
-            alt={p.label ? `${alt} — ${p.label}` : alt}
-            className={imgClass}
-            emptyLabel={emptyLabel}
-          />
-          {p.label && (
-            <figcaption className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
-              {p.label}
-            </figcaption>
-          )}
-        </figure>
-      ))}
+      {stills.map((p) =>
+        allowCrop ? (
+          <StillCropEditor key={p.id} photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
+        ) : (
+          <figure key={p.id} className="overflow-hidden rounded-md bg-[#0d1218]">
+            <ReferenceStill
+              shapeId={shapeId}
+              photos={photos}
+              photo={p}
+              alt={p.label ? `${alt} — ${p.label}` : alt}
+              className={imgClass}
+              emptyLabel={emptyLabel}
+            />
+            {p.label && (
+              <figcaption className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                {p.label}
+              </figcaption>
+            )}
+          </figure>
+        ),
+      )}
     </div>
   )
 }

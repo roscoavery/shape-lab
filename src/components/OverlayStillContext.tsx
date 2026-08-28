@@ -8,14 +8,16 @@ import type { OverlayStillOption } from '../lib/igStills'
 
 export type OverlayStillCtx = {
   selected: OverlayStillOption | null
+  visible: boolean
   opacity: number
-  /** 0.18–1, portion of the video frame the still occupies. */
+  /** 0.18–1, portion of the video frame (or fullscreen stage) the still occupies. */
   scale: number
-  /** Center of the still, 0–100% of the video frame. */
+  /** Center of the still, 0–100% of the parent. */
   offsetX: number
   offsetY: number
   menuOpen: boolean
   setSelected: (still: OverlayStillOption | null) => void
+  setVisible: (on: boolean) => void
   setOpacity: (n: number) => void
   setScale: (n: number) => void
   setOffset: (x: number, y: number) => void
@@ -28,12 +30,14 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 
 const FALLBACK: OverlayStillCtx = {
   selected: null,
+  visible: true,
   opacity: 0.35,
   scale: 0.42,
   offsetX: 82,
   offsetY: 18,
   menuOpen: false,
   setSelected: () => {},
+  setVisible: () => {},
   setOpacity: () => {},
   setScale: () => {},
   setOffset: () => {},
@@ -42,6 +46,7 @@ const FALLBACK: OverlayStillCtx = {
 
 export function OverlayStillProvider({ children }: { children: ReactNode }) {
   const [selected, setSelectedState] = useState<OverlayStillOption | null>(null)
+  const [visible, setVisible] = useState(true)
   const [opacity, setOpacity] = useState(0.45)
   const [scale, setScaleState] = useState(0.42)
   const [offsetX, setOffsetX] = useState(82)
@@ -50,7 +55,12 @@ export function OverlayStillProvider({ children }: { children: ReactNode }) {
 
   const setSelected = useCallback((still: OverlayStillOption | null) => {
     setSelectedState(still)
-    if (still) setMenuOpen(false)
+    if (still) {
+      setVisible(true)
+      setMenuOpen(false)
+    } else {
+      setVisible(false)
+    }
   }, [])
 
   const setScale = useCallback((n: number) => {
@@ -65,18 +75,20 @@ export function OverlayStillProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       selected,
+      visible,
       opacity,
       scale,
       offsetX,
       offsetY,
       menuOpen,
       setSelected,
+      setVisible,
       setOpacity,
       setScale,
       setOffset,
       setMenuOpen,
     }),
-    [selected, opacity, scale, offsetX, offsetY, menuOpen, setSelected, setScale, setOffset],
+    [selected, visible, opacity, scale, offsetX, offsetY, menuOpen, setSelected, setScale, setOffset],
   )
   return (
     <OverlayStillContext.Provider value={value}>{children}</OverlayStillContext.Provider>

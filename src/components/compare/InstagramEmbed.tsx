@@ -160,7 +160,7 @@ export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
         : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public videos only.'
 
   return (
-    <div className={fill ? 'flex h-full min-h-0 flex-col gap-1' : 'flex flex-col gap-2'}>
+    <div className={fill ? 'flex h-full min-h-0 flex-col gap-0' : 'flex flex-col gap-2'}>
       <VideoWorkbench src={src} allowAbLoop autoPlay fill={fill} />
       {!fill && <p className="text-xs text-[var(--muted)]">{footer}</p>}
     </div>

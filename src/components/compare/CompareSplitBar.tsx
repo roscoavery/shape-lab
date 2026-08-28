@@ -30,6 +30,7 @@ export function CompareSplitBar({ where }: { where: Where }) {
   }
 
   const enterFull = () => {
+    setSplit('tb')
     setFocus('split')
     setChromeOpen(true)
     setFullscreen(true)

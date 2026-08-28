@@ -28,6 +28,8 @@ import { deleteReferencePhoto } from '../lib/storage'
 import { removeIgStill } from '../lib/igStillStore'
 import { useShapeCopy } from './ShapeCopyContext'
 import { ShapeCopyEditor } from './ShapeCopyEditor'
+import { StillCropEditor } from './StillCropEditor'
+import { CroppedStill } from './CroppedStill'
 
 type EduView =
   | { kind: 'home' }
@@ -642,6 +644,7 @@ function ShapeDetail({
           alt={`${shape.name} reference`}
           emptyLabel="No coach still for this shape yet"
           imgClass="max-h-80 w-full object-contain"
+          allowCrop={canEdit}
         />
       </div>
 
@@ -651,14 +654,24 @@ function ShapeDetail({
             IG shapes
           </h4>
           <div className="grid gap-2 sm:grid-cols-2">
-            {igForShape.map((still) => (
-              <img
-                key={still.id}
-                src={still.dataUrl}
-                alt={still.label ?? shape.name}
-                className="max-h-48 w-full rounded-md bg-[#0d1218] object-contain"
-              />
-            ))}
+            {igForShape.map((still) =>
+              canEdit ? (
+                <StillCropEditor
+                  key={still.id}
+                  photo={still}
+                  alt={still.label ?? shape.name}
+                  imgClass="max-h-48 w-full object-contain"
+                />
+              ) : (
+                <CroppedStill
+                  key={still.id}
+                  src={still.dataUrl}
+                  stillId={still.id}
+                  alt={still.label ?? shape.name}
+                  className="max-h-48 w-full rounded-md bg-[#0d1218] object-contain"
+                />
+              ),
+            )}
           </div>
         </div>
       )}
@@ -1023,8 +1036,9 @@ function IgShapesLibrary({
                 key={still.id}
                 className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0d1218]"
               >
-                <img
+                <CroppedStill
                   src={still.dataUrl}
+                  stillId={still.id}
                   alt={still.label ?? group.name}
                   className="max-h-48 w-full object-contain"
                 />

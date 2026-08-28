@@ -9,6 +9,7 @@ import type { Landmark, ReferencePhoto, ScoreResult, ShapeDef } from '../types'
 import { CameraStage } from './CameraStage'
 import { HitCheckOverlay } from './HitCheckOverlay'
 import { ReferenceStill } from './ReferenceStill'
+import { CroppedStill } from './CroppedStill'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { StillOverlayPicker } from './StillOverlayPicker'
 import { TaskDelayCam } from './TaskDelayCam'
@@ -213,8 +214,9 @@ export function TasksWorkspace({
       </p>
       <div className="relative">
         {overlayStill ? (
-          <img
+          <CroppedStill
             src={overlayStill.src}
+            stillId={overlayStill.photoId}
             alt={pipShapeName}
             className={
               fullscreen

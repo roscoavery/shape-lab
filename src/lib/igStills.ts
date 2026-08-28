@@ -49,6 +49,8 @@ export function igStillsForShape(
 
 export type OverlayStillOption = {
   id: string
+  /** ReferencePhoto.id — display crop lookup. */
+  photoId: string
   shapeId: string
   name: string
   src: string
@@ -67,6 +69,7 @@ export function listCoachOverlayStills(photos: ReferencePhoto[]): OverlayStillOp
       if (!src || !isUsablePhotoSrc(src)) continue
       out.push({
         id: `coach:${s.id}:${coach!.id}`,
+        photoId: coach!.id,
         shapeId: s.id,
         name: s.name,
         src,
@@ -81,6 +84,7 @@ export function listCoachOverlayStills(photos: ReferencePhoto[]): OverlayStillOp
 export function listIgOverlayStills(photos: ReferencePhoto[]): OverlayStillOption[] {
   return listIgStills(photos).map((p) => ({
     id: p.id,
+    photoId: p.id,
     shapeId: p.shapeId,
     name: igStillDisplayName(p),
     src: p.dataUrl,

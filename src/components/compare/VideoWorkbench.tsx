@@ -194,7 +194,7 @@ function VideoWorkbenchInner({
   )
 
   return (
-    <div className={`flex flex-col gap-2 ${fill ? 'h-full min-h-0' : ''}`}>
+    <div className={`flex flex-col ${fill ? 'h-full min-h-0 gap-0' : 'gap-2'}`}>
       <div className={`relative overflow-hidden bg-black ${fill ? 'min-h-0 flex-1' : 'rounded-lg border border-[var(--panel-border)]'}`}>
         <video
           ref={videoRef}
@@ -209,7 +209,7 @@ function VideoWorkbenchInner({
           onPause={() => setPlaying(false)}
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
-        {showStillOverlay && <DraggableStillOverlay />}
+        {showStillOverlay && !fill && <DraggableStillOverlay />}
         <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
         {fill && (
           <div className="absolute inset-x-0 bottom-0 z-[8] bg-gradient-to-t from-black/80 to-transparent p-2 pt-8 text-white">

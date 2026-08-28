@@ -1,7 +1,7 @@
 /**
  * Compare tab — side-by-side video study.
  * Reference video next to the athlete camera (live / delay cam / replay).
- * Full screen is a clean split with a hideable side rail for overlay, layout, and camera.
+ * Full screen defaults to top/bottom with a larger reference and a hideable side rail.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -16,6 +16,7 @@ import {
 } from './compareLayout'
 import { IgStillContext, type IgCropDraft } from './IgStillContext'
 import { StillOverlayPicker } from '../StillOverlayPicker'
+import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import type { ReferencePhoto } from '../../types'
 
 type Props = {
@@ -30,7 +31,7 @@ export function ComparePanel({
   persistIgToApp = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
-  const [split, setSplit] = useState<CompareSplit>('lr')
+  const [split, setSplit] = useState<CompareSplit>('tb')
   const [focus, setFocus] = useState<CompareFocus>('split')
   const [chromeOpen, setChromeOpen] = useState(true)
   const [camRail, setCamRail] = useState<HTMLElement | null>(null)
@@ -82,8 +83,8 @@ export function ComparePanel({
     ? focus !== 'split'
       ? 'grid min-h-0 flex-1 grid-cols-1'
       : split === 'tb'
-        ? 'grid min-h-0 flex-1 grid-rows-2 gap-px'
-        : 'grid min-h-0 flex-1 grid-cols-2 gap-px'
+        ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1.55fr)_minmax(0,0.85fr)] gap-0'
+        : 'grid min-h-0 flex-1 grid-cols-2 gap-0'
     : split === 'tb'
       ? 'grid gap-4'
       : 'grid gap-4 md:grid-cols-2'
@@ -105,9 +106,9 @@ export function ComparePanel({
               <strong className="text-[var(--text)]">Full screen split is on both cards below.</strong>{' '}
               Tap <strong className="text-[var(--text)]">Full screen with delay cam</strong> on the
               reference, or <strong className="text-[var(--text)]">Full screen with reference</strong> on
-              the athlete camera. In full screen, controls sit on the side — hide them for a clean
-              split, then pull the menu back to pick a still, shrink it, and drag it to a corner.
-              You can also make just the reference or just the delay cam fill the window.{' '}
+              the athlete camera. Full screen opens top / bottom — reference on top, larger, flush
+              against the delay cam. Controls sit on the side. Pick a still from the large
+              filmstrip, drag it over either video, and tap × on it when you are done.{' '}
               <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip: press one
               corner, drag to the opposite corner, and it lands in{' '}
               <strong className="text-[var(--text)]">Learn → IG shapes</strong>
@@ -133,6 +134,11 @@ export function ComparePanel({
             <StillOverlayPicker photos={referencePhotos} compact />
           )}
         </div>
+        {fullscreen && (
+          <div className="pointer-events-none absolute inset-0 z-[18]">
+            <FloatingStillOverlay />
+          </div>
+        )}
       </div>
     </CompareLayoutContext.Provider>
     </IgStillContext.Provider>

@@ -2,9 +2,12 @@
  * Pick a still from the coach shape library or the IG shapes library
  * and use it as a ghost overlay on the live camera / Compare video.
  * Collapsed by default — open to choose, then the menu hides so the video stays clean.
+ * In Compare fullscreen the library opens as a large filmstrip over the split,
+ * not a cramped list in the side rail.
  */
 
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   listCoachOverlayStills,
   listIgOverlayStills,
@@ -12,6 +15,7 @@ import {
 } from '../lib/igStills'
 import type { ReferencePhoto } from '../types'
 import { HScrollRow } from './HScrollRow'
+import { CroppedStill } from './CroppedStill'
 import { useOverlayStill } from './OverlayStillContext'
 
 type Props = {
@@ -32,10 +36,12 @@ export function StillOverlayPicker({
 }: Props) {
   const {
     selected,
+    visible,
     opacity,
     scale,
     menuOpen,
     setSelected,
+    setVisible,
     setOpacity,
     setScale,
     setOffset,
@@ -64,6 +70,7 @@ export function StillOverlayPicker({
     }
     setSelected(still)
     if (opacity < 0.08) setOpacity(0.45)
+    setVisible(true)
     setMenuOpen(false)
   }
 
@@ -85,8 +92,9 @@ export function StillOverlayPicker({
       }`}
     >
       {selected ? (
-        <img
+        <CroppedStill
           src={selected.src}
+          stillId={selected.photoId}
           alt=""
           className="h-8 w-10 shrink-0 rounded object-contain bg-black"
         />
@@ -96,7 +104,11 @@ export function StillOverlayPicker({
         </span>
       )}
       <span className="min-w-0 flex-1 truncate">
-        {selected ? selected.name : 'Shape overlay'}
+        {selected
+          ? visible
+            ? selected.name
+            : `${selected.name} · hidden`
+          : 'Shape overlay'}
       </span>
       <span className={`shrink-0 text-[10px] uppercase tracking-wider ${muted}`}>
         {menuOpen ? 'Hide' : 'Open'}
@@ -104,17 +116,13 @@ export function StillOverlayPicker({
     </button>
   )
 
-  if (!menuOpen) {
-    return <div className={rail ? '' : ''}>{chip}</div>
-  }
-
   const tabBtn = (id: 'coach' | 'ig', label: string) => (
     <button
       type="button"
       onClick={() => setLibrary(id)}
       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
         library === id
-          ? dark
+          ? dark || rail
             ? 'bg-white text-black'
             : 'bg-[var(--accent-dim)] text-white'
           : muted
@@ -124,7 +132,7 @@ export function StillOverlayPicker({
     </button>
   )
 
-  const thumb = (still: OverlayStillOption) => {
+  const thumb = (still: OverlayStillOption, size: 'row' | 'film') => {
     const on = selected?.id === still.id
     return (
       <button
@@ -134,22 +142,25 @@ export function StillOverlayPicker({
         aria-selected={on}
         onClick={() => pick(still)}
         className={`${
-          rail ? 'flex w-full gap-2 p-1' : 'w-[5.5rem] shrink-0 snap-start sm:w-24'
+          size === 'film'
+            ? 'w-[7.5rem] shrink-0 snap-start sm:w-36'
+            : 'w-[5.5rem] shrink-0 snap-start sm:w-24'
         } overflow-hidden rounded-lg border text-left ${
           on
             ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]'
-            : dark
+            : dark || rail
               ? 'border-white/20 hover:border-white/50'
               : 'border-[var(--panel-border)] hover:border-[var(--accent-dim)]'
         }`}
         title={still.label ? `${still.name} — ${still.label}` : still.name}
       >
-        <img
+        <CroppedStill
           src={still.src}
+          stillId={still.photoId}
           alt=""
           className={
-            rail
-              ? 'h-12 w-16 shrink-0 bg-black object-contain'
+            size === 'film'
+              ? 'h-28 w-full bg-black object-contain sm:h-32'
               : 'h-16 w-full bg-black object-contain sm:h-[4.5rem]'
           }
         />
@@ -162,53 +173,8 @@ export function StillOverlayPicker({
     )
   }
 
-  return (
-    <div className={shell}>
-      <div className="flex items-center justify-between gap-2">
-        <p className={`text-[10px] font-semibold uppercase tracking-wider ${muted}`}>
-          Shape overlay
-        </p>
-        <button
-          type="button"
-          onClick={() => setMenuOpen(false)}
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            dark ? 'bg-white/15 text-white' : 'border border-[var(--panel-border)]'
-          }`}
-        >
-          Close
-        </button>
-      </div>
-      <div className={`mt-1.5 flex gap-1 ${dark ? '' : ''}`}>
-        {tabBtn('coach', 'Library')}
-        {tabBtn('ig', ig.length ? `IG (${ig.length})` : 'IG')}
-      </div>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search a shape…"
-        className={`mt-1.5 w-full rounded-lg px-2 py-1 text-xs ${
-          dark
-            ? 'border border-white/20 bg-black/40 text-white placeholder:text-white/40'
-            : 'border border-[var(--panel-border)] bg-[#0d1218] text-[var(--text)]'
-        }`}
-      />
-      {rail ? (
-        <div className="mt-1.5 flex max-h-52 flex-col gap-1 overflow-y-auto">
-          {filtered.map(thumb)}
-        </div>
-      ) : (
-        <HScrollRow label={library === 'ig' ? 'IG shapes' : 'Shape library'} className="mt-1.5">
-          {filtered.map(thumb)}
-        </HScrollRow>
-      )}
-      {filtered.length === 0 && (
-        <p className={`mt-1 text-[11px] ${muted}`}>
-          {library === 'ig'
-            ? 'No IG crops yet. On Compare, tap Screenshot and drag one corner to the other.'
-            : 'No coach stills match that search.'}
-        </p>
-      )}
+  const controls = (
+    <>
       <label className={`mt-2 flex items-center gap-2 text-[11px] ${muted}`}>
         <span className="w-10 shrink-0">Fade</span>
         <input
@@ -239,24 +205,33 @@ export function StillOverlayPicker({
       </label>
       {selected && (
         <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setVisible(!visible)}
+              className={`rounded-full px-2 py-0.5 text-[10px] ${
+                dark || rail ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'
+              }`}
+            >
+              {visible ? 'Hide overlay' : 'Show overlay'}
+            </button>
           <button
             type="button"
-            onClick={() => setOffset(82, 16)}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
+            onClick={() => setOffset(88, 22)}
+            className={`rounded-full px-2 py-0.5 text-[10px] ${dark || rail ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
           >
             Top right
           </button>
           <button
             type="button"
-            onClick={() => setOffset(18, 16)}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
+            onClick={() => setOffset(12, 22)}
+            className={`rounded-full px-2 py-0.5 text-[10px] ${dark || rail ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
           >
             Top left
           </button>
           <button
             type="button"
             onClick={() => setOffset(50, 50)}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
+            className={`rounded-full px-2 py-0.5 text-[10px] ${dark || rail ? 'bg-white/10 text-white' : 'border border-[var(--panel-border)]'}`}
           >
             Center
           </button>
@@ -269,6 +244,107 @@ export function StillOverlayPicker({
           </button>
         </div>
       )}
+    </>
+  )
+
+  if (!menuOpen) {
+    return <div>{chip}</div>
+  }
+
+  if (rail) {
+    const sheet = (
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[280] p-2 sm:p-3">
+        <div className="pointer-events-auto mx-auto max-w-[90rem] rounded-2xl border border-white/20 bg-[#0b0f14]/92 p-3 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
+              Shape overlay — tap a still, then drag it anywhere
+            </p>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold text-white"
+            >
+              Close
+            </button>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {tabBtn('coach', 'Library')}
+            {tabBtn('ig', ig.length ? `IG (${ig.length})` : 'IG')}
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search a shape…"
+              className="min-w-[10rem] flex-1 rounded-lg border border-white/20 bg-black/40 px-2 py-1 text-xs text-white placeholder:text-white/40"
+            />
+          </div>
+          <HScrollRow label={library === 'ig' ? 'IG shapes' : 'Shape library'} className="mt-2">
+            {filtered.map((s) => thumb(s, 'film'))}
+          </HScrollRow>
+          {filtered.length === 0 && (
+            <p className="mt-1 text-[11px] text-white/70">
+              {library === 'ig'
+                ? 'No IG crops yet. On Compare, tap Screenshot and drag one corner to the other.'
+                : 'No coach stills match that search.'}
+            </p>
+          )}
+          {controls}
+          <p className="mt-1.5 text-[10px] leading-snug text-white/55">
+            The still floats over both videos. Drag it off to the side, or tap × on it to hide.
+          </p>
+        </div>
+      </div>
+    )
+    return (
+      <>
+        {chip}
+        {typeof document !== 'undefined' ? createPortal(sheet, document.body) : sheet}
+      </>
+    )
+  }
+
+  return (
+    <div className={shell}>
+      <div className="flex items-center justify-between gap-2">
+        <p className={`text-[10px] font-semibold uppercase tracking-wider ${muted}`}>
+          Shape overlay
+        </p>
+        <button
+          type="button"
+          onClick={() => setMenuOpen(false)}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            dark ? 'bg-white/15 text-white' : 'border border-[var(--panel-border)]'
+          }`}
+        >
+          Close
+        </button>
+      </div>
+      <div className="mt-1.5 flex gap-1">
+        {tabBtn('coach', 'Library')}
+        {tabBtn('ig', ig.length ? `IG (${ig.length})` : 'IG')}
+      </div>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search a shape…"
+        className={`mt-1.5 w-full rounded-lg px-2 py-1 text-xs ${
+          dark
+            ? 'border border-white/20 bg-black/40 text-white placeholder:text-white/40'
+            : 'border border-[var(--panel-border)] bg-[#0d1218] text-[var(--text)]'
+        }`}
+      />
+      <HScrollRow label={library === 'ig' ? 'IG shapes' : 'Shape library'} className="mt-1.5">
+        {filtered.map((s) => thumb(s, 'row'))}
+      </HScrollRow>
+      {filtered.length === 0 && (
+        <p className={`mt-1 text-[11px] ${muted}`}>
+          {library === 'ig'
+            ? 'No IG crops yet. On Compare, tap Screenshot and drag one corner to the other.'
+            : 'No coach stills match that search.'}
+        </p>
+      )}
+      {controls}
       <p className={`mt-1.5 text-[10px] leading-snug ${muted}`}>
         Drag the still on the video to park it in a corner. Close this menu when you are set.
       </p>
