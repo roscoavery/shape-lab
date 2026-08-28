@@ -9,6 +9,7 @@ export type IgCropDraft = {
 
 type IgStillCtx = {
   saveCrop: (draft: IgCropDraft) => void
+  persistToApp: boolean
 }
 
 export const IgStillContext = createContext<IgStillCtx | null>(null)

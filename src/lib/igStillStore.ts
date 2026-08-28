@@ -1,7 +1,6 @@
 /**
- * IG shape crops — IndexedDB, not localStorage.
- * Data URLs are too big to pack into the coach-still localStorage blob;
- * writing that key can fail quietly and Learn never sees the crop.
+ * IG shape crops — IndexedDB on this device, plus the gym-computer copy
+ * when the Ryan profile saves (POST /api/ig-stills).
  */
 
 import type { ReferencePhoto } from '../types'
@@ -61,6 +60,24 @@ export function mergeIgStills(
   return [...ig, ...leftoverIg, ...coach]
 }
 
+function unionIgLists(local: ReferencePhoto[], remote: ReferencePhoto[]): ReferencePhoto[] {
+  const map = new Map<string, ReferencePhoto>()
+  for (const p of local) map.set(p.id, p)
+  for (const p of remote) {
+    const prev = map.get(p.id)
+    map.set(p.id, {
+      ...prev,
+      ...p,
+      persistedToApp: true,
+      dataUrl: prev?.dataUrl?.startsWith('data:') ? prev.dataUrl : p.dataUrl,
+    })
+  }
+  return [...map.values()]
+    .filter((p) => p && p.library === 'ig' && typeof p.dataUrl === 'string')
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .slice(0, MAX_IG)
+}
+
 async function loadAllFromDb(): Promise<ReferencePhoto[]> {
   const db = await openDb()
   const tx = db.transaction(STORE, 'readonly')
@@ -71,23 +88,35 @@ async function loadAllFromDb(): Promise<ReferencePhoto[]> {
     .slice(0, MAX_IG)
 }
 
-export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
+async function pullServerIgStills(): Promise<ReferencePhoto[]> {
   try {
-    memory = await loadAllFromDb()
+    const res = await fetch('/api/ig-stills')
+    if (!res.ok) return []
+    const data = (await res.json()) as { stills?: ReferencePhoto[] }
+    if (!Array.isArray(data.stills)) return []
+    return data.stills.map((p) => ({ ...p, library: 'ig' as const, persistedToApp: true }))
   } catch {
-    memory = memory.filter((p) => p.library === 'ig')
+    return []
   }
+}
+
+export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
+  let local: ReferencePhoto[] = []
+  try {
+    local = await loadAllFromDb()
+  } catch {
+    local = memory.filter((p) => p.library === 'ig')
+  }
+  const remote = await pullServerIgStills()
+  memory = unionIgLists(local, remote)
   emit()
   return memory
 }
 
-export async function addIgStill(photo: ReferencePhoto): Promise<void> {
-  const next: ReferencePhoto = { ...photo, library: 'ig' }
-  memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
-  emit()
+async function writeLocal(photo: ReferencePhoto): Promise<void> {
   const db = await openDb()
   const tx = db.transaction(STORE, 'readwrite')
-  tx.objectStore(STORE).put(next)
+  tx.objectStore(STORE).put(photo)
   const extra = memory.slice(MAX_IG)
   for (const old of extra) tx.objectStore(STORE).delete(old.id)
   await new Promise<void>((resolve, reject) => {
@@ -97,15 +126,64 @@ export async function addIgStill(photo: ReferencePhoto): Promise<void> {
   })
 }
 
-export async function removeIgStill(id: string): Promise<void> {
+async function postServerStill(photo: ReferencePhoto): Promise<ReferencePhoto | null> {
+  if (!photo.dataUrl.startsWith('data:image')) return { ...photo, persistedToApp: true }
+  try {
+    const res = await fetch('/api/ig-stills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(photo),
+    })
+    if (!res.ok) return null
+    const saved = (await res.json()) as ReferencePhoto
+    return { ...photo, ...saved, library: 'ig', persistedToApp: true }
+  } catch {
+    return null
+  }
+}
+
+export async function addIgStill(
+  photo: ReferencePhoto,
+  opts?: { persistToApp?: boolean },
+): Promise<ReferencePhoto> {
+  let next: ReferencePhoto = { ...photo, library: 'ig' }
+  memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
+  emit()
+  await writeLocal(next)
+  if (opts?.persistToApp) {
+    const saved = await postServerStill(next)
+    if (saved) {
+      next = saved
+      memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
+      emit()
+    }
+  }
+  return next
+}
+
+export async function removeIgStill(
+  id: string,
+  opts?: { fromApp?: boolean },
+): Promise<void> {
   memory = memory.filter((p) => p.id !== id)
   emit()
-  const db = await openDb()
-  const tx = db.transaction(STORE, 'readwrite')
-  tx.objectStore(STORE).delete(id)
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error ?? new Error('Could not delete IG still'))
-    tx.onabort = () => reject(tx.error ?? new Error('Could not delete IG still'))
-  })
+  try {
+    const db = await openDb()
+    const tx = db.transaction(STORE, 'readwrite')
+    tx.objectStore(STORE).delete(id)
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error ?? new Error('Could not delete IG still'))
+      tx.onabort = () => reject(tx.error ?? new Error('Could not delete IG still'))
+    })
+  } catch {
+    /* IndexedDB down — memory already dropped it */
+  }
+  if (opts?.fromApp) {
+    try {
+      await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    } catch {
+      /* server down */
+    }
+  }
 }

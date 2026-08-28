@@ -42,6 +42,7 @@ type Props = {
   referencePhotos: ReferencePhoto[]
   athleteId: string | null
   athleteName?: string | null
+  persistIgToApp?: boolean
   onReferencesChange: (photos: ReferencePhoto[]) => void
 }
 
@@ -51,6 +52,7 @@ export function EducationPanel({
   referencePhotos,
   athleteId,
   athleteName,
+  persistIgToApp = false,
   onReferencesChange,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'home' })
@@ -230,6 +232,7 @@ export function EducationPanel({
         <IgShapesLibrary
           referencePhotos={referencePhotos}
           onReferencesChange={onReferencesChange}
+          persistIgToApp={persistIgToApp}
         />
       )}
 
@@ -383,7 +386,8 @@ function HomeView({
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Crops from Compare. Screenshot a looping Instagram clip or replay — press one
-          corner, drag to the opposite corner — and the still lands here. {igCount} saved.
+          corner, drag to the opposite corner — and the still lands here. Select Ryan
+          before you save if you want it in the app on every link. {igCount} saved.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Open IG shapes →
@@ -960,17 +964,22 @@ function TaskDetail({
 function IgShapesLibrary({
   referencePhotos,
   onReferencesChange,
+  persistIgToApp,
 }: {
   referencePhotos: ReferencePhoto[]
   onReferencesChange: (photos: ReferencePhoto[]) => void
+  persistIgToApp: boolean
 }) {
   const groups = groupIgStillsByShape(referencePhotos)
   const total = groups.reduce((n, g) => n + g.stills.length, 0)
 
-  const remove = async (id: string) => {
-    await removeIgStill(id)
-    await deleteReferencePhoto(id)
-    onReferencesChange(referencePhotos.filter((p) => p.id !== id))
+  const remove = async (still: ReferencePhoto) => {
+    if (still.persistedToApp && !persistIgToApp) return
+    await removeIgStill(still.id, {
+      fromApp: persistIgToApp && Boolean(still.persistedToApp),
+    })
+    await deleteReferencePhoto(still.id)
+    onReferencesChange(referencePhotos.filter((p) => p.id !== still.id))
   }
 
   return (
@@ -981,7 +990,10 @@ function IgShapesLibrary({
           These stills are cropped from Compare — looping Instagram clips, uploaded
           reference video, or athlete replay. They do not replace the coach stills in
           Shape library. On Tasks, Homework, or Coach, pick any of these (or any coach
-          still) as a ghost overlay on the camera.
+          still) as a ghost overlay on the camera. Stills saved while the{' '}
+          <strong className="text-[var(--text)]">Ryan</strong> profile is selected are
+          stored on this gym computer, so a new browser or phone link still has them.
+          Other profiles keep crops on this device only.
         </p>
         <p className="mt-2 text-sm text-[var(--muted)]">
           {total === 0
@@ -1010,11 +1022,18 @@ function IgShapesLibrary({
                 <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                   <p className="min-w-0 truncate text-[11px] text-[var(--muted)]">
                     {still.label || group.name}
+                    {still.persistedToApp ? ' · In the app' : ''}
                   </p>
                   <button
                     type="button"
-                    onClick={() => void remove(still.id)}
-                    className="shrink-0 text-[11px] text-[var(--bad)] hover:underline"
+                    onClick={() => void remove(still)}
+                    disabled={Boolean(still.persistedToApp && !persistIgToApp)}
+                    className="shrink-0 text-[11px] text-[var(--bad)] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                    title={
+                      still.persistedToApp && !persistIgToApp
+                        ? 'Select Ryan to remove an app still from every link'
+                        : 'Delete'
+                    }
                   >
                     Delete
                   </button>

@@ -443,4 +443,8 @@ export type ReferencePhoto = {
    * (typed at Screenshot save time).
    */
   customName?: string
+  /**
+   * Written to the Shape Lab server (Ryan profile). Shows on every browser / link.
+   */
+  persistedToApp?: boolean
 }

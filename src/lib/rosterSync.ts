@@ -17,6 +17,7 @@ import {
   saveFlowProgress,
   loadFlowProgress,
 } from './storage'
+import { ensureRyanInAthletes } from './ryanProfile'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -69,8 +70,8 @@ function mergeById<T extends { id: string }>(local: T[], remote: T[]): T[] {
 }
 
 export function localRosterSnapshot(): RosterBackup {
-  const athletes = mergeAthletes([], loadAthletes())
-  if (athletes.length !== loadAthletes().length) saveAthletes(athletes)
+  const athletes = ensureRyanInAthletes(mergeAthletes([], loadAthletes()))
+  if (JSON.stringify(athletes) !== JSON.stringify(loadAthletes())) saveAthletes(athletes)
   const flowProgress: Record<string, FlowProgress> = {}
   for (const a of athletes) flowProgress[a.id] = loadFlowProgress(a.id)
   return {
@@ -90,7 +91,7 @@ export function applyRosterSnapshot(data: RosterBackup): {
   athletes: Athlete[]
   activeAthleteId: string | null
 } {
-  const athletes = mergeAthletes(loadAthletes(), data.athletes.filter(isAthlete))
+  const athletes = ensureRyanInAthletes(mergeAthletes(loadAthletes(), data.athletes.filter(isAthlete)))
   saveAthletes(athletes)
   const homework = mergeById(loadAllHomework(), Array.isArray(data.homework) ? data.homework : [])
   saveAllHomework(homework)

@@ -58,6 +58,7 @@ import {
   mergeIgStills,
   subscribeIgStills,
 } from './lib/igStillStore'
+import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import type {
   AppSettings,
   Athlete,
@@ -73,7 +74,7 @@ export default function App() {
   const [tab, setTab] = useState<AppTab>(() => loadTab())
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
-  const [athletes, setAthletes] = useState<Athlete[]>(() => loadAthletes())
+  const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() =>
     loadActiveAthleteId(),
   )
@@ -127,6 +128,10 @@ export default function App() {
     score.holdReady ? qualityThreshold : 101,
   )
 
+  const setAthleteRoster = useCallback((next: Athlete[]) => {
+    setAthletes(ensureRyanInAthletes(next))
+  }, [])
+
   const rosterReadyRef = useRef(false)
 
   useEffect(() => {
@@ -148,8 +153,10 @@ export default function App() {
       if (cancelled) return
       rosterReadyRef.current = true
       if (synced.athletes.length > 0) {
-        setAthletes(synced.athletes)
+        setAthletes(ensureRyanInAthletes(synced.athletes))
         setActiveAthleteId(synced.activeAthleteId)
+      } else {
+        setAthletes((prev) => ensureRyanInAthletes(prev))
       }
     })
     return () => {
@@ -185,18 +192,21 @@ export default function App() {
   }
 
   const saveIgStill = useCallback((draft: IgCropDraft) => {
+    const athlete = athletes.find((a) => a.id === activeAthleteId) ?? null
+    const persistToApp = isRyanAthlete(athlete)
     const photo: ReferencePhoto = {
       id: createId('ig'),
       shapeId: draft.shapeId,
-      athleteId: null,
+      athleteId: persistToApp ? athlete?.id ?? null : null,
       dataUrl: draft.dataUrl,
       customName: draft.customName,
       label: draft.label,
       createdAt: new Date().toISOString(),
       library: 'ig',
+      persistedToApp: persistToApp,
     }
-    void addIgStill(photo)
-  }, [])
+    void addIgStill(photo, { persistToApp })
+  }, [activeAthleteId, athletes])
 
   useEffect(() => {
     if (!activeAthleteId) {
@@ -434,7 +444,7 @@ export default function App() {
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
-              onChangeAthletes={setAthletes}
+              onChangeAthletes={setAthleteRoster}
               onSelect={setActiveAthleteId}
             />
             <TaskTrainer
@@ -504,7 +514,7 @@ export default function App() {
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
-              onChangeAthletes={setAthletes}
+              onChangeAthletes={setAthleteRoster}
               onSelect={setActiveAthleteId}
             />
             <Tasks2Panel
@@ -585,7 +595,7 @@ export default function App() {
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
-              onChangeAthletes={setAthletes}
+              onChangeAthletes={setAthleteRoster}
               onSelect={setActiveAthleteId}
             />
             <HomeworkPanel
@@ -608,6 +618,9 @@ export default function App() {
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+          persistIgToApp={isRyanAthlete(
+            athletes.find((a) => a.id === activeAthleteId) ?? null,
+          )}
           onReferencesChange={setReferencePhotos}
         />
       )}
@@ -615,7 +628,13 @@ export default function App() {
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>
           <CompareErrorBoundary>
-            <ComparePanel onSaveIgStill={saveIgStill} referencePhotos={referencePhotos} />
+            <ComparePanel
+              onSaveIgStill={saveIgStill}
+              referencePhotos={referencePhotos}
+              persistIgToApp={isRyanAthlete(
+                athletes.find((a) => a.id === activeAthleteId) ?? null,
+              )}
+            />
           </CompareErrorBoundary>
         </div>
       )}
@@ -663,7 +682,7 @@ export default function App() {
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
-              onChangeAthletes={setAthletes}
+              onChangeAthletes={setAthleteRoster}
               onSelect={setActiveAthleteId}
             />
             <SequencePanel
@@ -680,7 +699,7 @@ export default function App() {
           <AthletePanel
             athletes={athletes}
             activeId={activeAthleteId}
-            onChangeAthletes={setAthletes}
+            onChangeAthletes={setAthleteRoster}
             onSelect={setActiveAthleteId}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />

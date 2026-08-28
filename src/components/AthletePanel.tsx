@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Athlete } from '../types'
 import { createId } from '../lib/storage'
 import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
+import { isRyanAthlete } from '../lib/ryanProfile'
 
 type Props = {
   athletes: Athlete[]
@@ -71,6 +72,12 @@ export function AthletePanel({
   }
 
   const remove = (id: string) => {
+    const target = athletes.find((a) => a.id === id)
+    if (target && isRyanAthlete(target)) {
+      setSaved('Ryan stays on the roster — that profile is how IG shapes save into the app.')
+      window.setTimeout(() => setSaved(null), 3200)
+      return
+    }
     const next = athletes.filter((a) => a.id !== id)
     onChangeAthletes(next)
     if (activeId === id) onSelect(next[0]?.id ?? null)
@@ -149,16 +156,25 @@ export function AthletePanel({
             type="button"
             className="text-xs text-[var(--bad)] underline"
             onClick={() => remove(active.id)}
+            disabled={isRyanAthlete(active)}
+            title={
+              isRyanAthlete(active)
+                ? 'Ryan stays on the roster so IG shapes can save into the app'
+                : 'Delete this profile'
+            }
           >
-            Delete profile
+            {isRyanAthlete(active) ? 'Ryan stays on the roster' : 'Delete profile'}
           </button>
         </div>
       )}
       {saved && <p className="mt-1 text-[11px] text-[var(--accent)]">{saved}</p>}
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
         Profiles save on this gym computer and on the Shape Lab server, so a
-        new phone link still has your roster. Creating the same name again
-        selects the existing profile instead of duplicating it.
+        new phone link still has your roster. Ryan is always in the list. While
+        Ryan is selected, IG shapes from Compare save into the app — every
+        browser and link sees them. Other profiles keep crops on this device
+        only. Creating the same name again selects the existing profile instead
+        of duplicating it.
       </p>
     </div>
   )

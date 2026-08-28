@@ -7,6 +7,13 @@ import {
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
+import {
+  addIgStillFromBody,
+  deleteIgStill,
+  readRequestBodyLimited,
+  sendIgStillFile,
+  stillsForClient,
+} from './igStillDisk.ts'
 
 function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
   server.middlewares.use(async (req, res, next) => {
@@ -16,13 +23,45 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/ig-resolve' &&
       path !== '/api/ig-media' &&
       path !== '/api/library' &&
-      path !== '/api/roster'
+      path !== '/api/roster' &&
+      path !== '/api/ig-stills' &&
+      path !== '/api/ig-still-file'
     ) {
       next()
       return
     }
     try {
       const url = new URL(raw, 'http://127.0.0.1')
+      if (path === '/api/ig-stills') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, { kind: 'shape-lab-ig-stills', stills: stillsForClient() })
+          return
+        }
+        if (req.method === 'POST') {
+          const body = await readRequestBodyLimited(req)
+          const saved = addIgStillFromBody(JSON.parse(body))
+          sendJson(res, 200, saved)
+          return
+        }
+        if (req.method === 'DELETE') {
+          const id = url.searchParams.get('id') ?? ''
+          if (!deleteIgStill(id)) {
+            sendJson(res, 404, { error: 'Still not found' })
+            return
+          }
+          sendJson(res, 200, { ok: true })
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+        return
+      }
+      if (path === '/api/ig-still-file') {
+        const id = url.searchParams.get('id') ?? ''
+        if (!sendIgStillFile(id, res)) {
+          sendJson(res, 404, { error: 'Still file not found' })
+        }
+        return
+      }
       if (path === '/api/roster') {
         if (req.method === 'GET') {
           sendJson(res, 200, readRosterFile())

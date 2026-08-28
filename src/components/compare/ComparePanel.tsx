@@ -16,9 +16,14 @@ import type { ReferencePhoto } from '../../types'
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
   referencePhotos: ReferencePhoto[]
+  persistIgToApp?: boolean
 }
 
-export function ComparePanel({ onSaveIgStill, referencePhotos }: Props) {
+export function ComparePanel({
+  onSaveIgStill,
+  referencePhotos,
+  persistIgToApp = false,
+}: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('lr')
 
@@ -47,7 +52,7 @@ export function ComparePanel({ onSaveIgStill, referencePhotos }: Props) {
       : 'grid gap-4 md:grid-cols-2'
 
   return (
-    <IgStillContext.Provider value={{ saveCrop }}>
+    <IgStillContext.Provider value={{ saveCrop, persistToApp: persistIgToApp }}>
     <CompareLayoutContext.Provider
       value={{ fullscreen, split, setFullscreen, setSplit }}
     >
@@ -67,7 +72,10 @@ export function ComparePanel({ onSaveIgStill, referencePhotos }: Props) {
             replay — scrub each side. Paste Instagram URLs here; they save into the app.{' '}
             <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip or replay:
             press one corner, drag to the opposite corner, tag a listed shape or type a custom
-            name, and it lands in <strong className="text-[var(--text)]">Learn → IG shapes</strong>.
+            name, and it lands in <strong className="text-[var(--text)]">Learn → IG shapes</strong>
+            {persistIgToApp
+              ? '. Ryan is selected, so that still is saved into the app — every link will have it.'
+              : '. Select the Ryan profile first if you want that still saved into the app for every browser and link.'}
           </section>
         )}
         <div

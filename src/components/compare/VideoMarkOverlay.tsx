@@ -11,6 +11,7 @@ import { learnLibraryShapes } from '../../lib/educationCopy'
 import { createId } from '../../lib/storage'
 import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
+import { useIgStillSave } from './IgStillContext'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
@@ -91,6 +92,7 @@ type Props = {
 }
 
 export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
+  const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const shapes = learnLibraryShapes()
@@ -365,38 +367,48 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       setError('Pick a listed shape, or type a custom name if it is not in the list.')
       return
     }
-    const photo: ReferencePhoto = custom
-      ? {
-          id: createId('ig'),
-          shapeId: customShapeId(custom),
-          athleteId: null,
-          dataUrl: pending.dataUrl,
-          customName: custom,
-          label: label.trim() || custom,
-          createdAt: new Date().toISOString(),
-          library: 'ig',
-        }
-      : {
-          id: createId('ig'),
-          shapeId: listed,
-          athleteId: null,
-          dataUrl: pending.dataUrl,
-          label: label.trim() || undefined,
-          createdAt: new Date().toISOString(),
-          library: 'ig',
-        }
-    try {
+    const shapeKey = custom ? customShapeId(custom) : listed
+    if (igSave) {
+      igSave.saveCrop({
+        dataUrl: pending.dataUrl,
+        shapeId: shapeKey,
+        customName: custom || undefined,
+        label: label.trim() || custom || undefined,
+      })
+    } else {
+      const photo: ReferencePhoto = custom
+        ? {
+            id: createId('ig'),
+            shapeId: shapeKey,
+            athleteId: null,
+            dataUrl: pending.dataUrl,
+            customName: custom,
+            label: label.trim() || custom,
+            createdAt: new Date().toISOString(),
+            library: 'ig',
+          }
+        : {
+            id: createId('ig'),
+            shapeId: listed,
+            athleteId: null,
+            dataUrl: pending.dataUrl,
+            label: label.trim() || undefined,
+            createdAt: new Date().toISOString(),
+            library: 'ig',
+          }
       void addIgStill(photo)
-      setPending(null)
-      setLabel('')
-      setCustomName('')
-      setShapeQuery('')
-      setShapeId('')
-      setNotice('Saved to IG shapes — open Learn to see it, or overlay it on Tasks.')
-      window.setTimeout(() => setNotice(null), 4000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save that still.')
     }
+    setPending(null)
+    setLabel('')
+    setCustomName('')
+    setShapeQuery('')
+    setShapeId('')
+    setNotice(
+      igSave?.persistToApp
+        ? 'Saved into the app — every browser and link will have this still.'
+        : 'Saved to IG shapes on this device. Select Ryan to save into the app for every link.',
+    )
+    window.setTimeout(() => setNotice(null), 4000)
   }
 
   const btn = (id: MarkTool, labelText: string) => (
