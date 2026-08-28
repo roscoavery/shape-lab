@@ -63,7 +63,7 @@ import {
   subscribeIgStills,
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
-import { isProfileUnlocked } from './lib/athletePasscode'
+import { isProfileUnlocked, withRyanPasscode } from './lib/athletePasscode'
 import type {
   AppSettings,
   Athlete,
@@ -104,10 +104,7 @@ export default function App() {
   const [holdClock, setHoldClock] = useState<number | null>(null)
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
-  const [athleteGate, setAthleteGate] = useState<{
-    athlete: Athlete
-    mode: 'unlock' | 'set'
-  } | null>(null)
+  const [athleteGate, setAthleteGate] = useState<Athlete | null>(null)
 
   useEffect(() => {
     const unsub = subscribeIgStills((ig) => {
@@ -154,7 +151,11 @@ export default function App() {
         setActiveAthleteId(id)
         return
       }
-      setAthleteGate({ athlete: a, mode: a.passcodeHash ? 'unlock' : 'set' })
+      if (a.passcodeHash) {
+        setAthleteGate(a)
+        return
+      }
+      setActiveAthleteId(id)
     },
     [athletes],
   )
@@ -176,28 +177,29 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    void syncRosterWithServer().then((synced) => {
+    void syncRosterWithServer().then(async (synced) => {
       if (cancelled) return
       rosterReadyRef.current = true
-      if (synced.athletes.length > 0) {
-        const next = ensureRyanInAthletes(synced.athletes)
-        setAthletes(next)
-        const chosen =
-          next.find((a) => a.id === synced.activeAthleteId) ?? next[0] ?? null
-        if (!chosen) {
-          setActiveAthleteId(null)
-        } else if (isProfileUnlocked(chosen.id)) {
-          setActiveAthleteId(chosen.id)
-        } else {
-          setActiveAthleteId(null)
-          setAthleteGate({
-            athlete: chosen,
-            mode: chosen.passcodeHash ? 'unlock' : 'set',
-          })
-        }
-      } else {
-        setAthletes((prev) => ensureRyanInAthletes(prev))
+      const raw =
+        synced.athletes.length > 0
+          ? ensureRyanInAthletes(synced.athletes)
+          : ensureRyanInAthletes(loadAthletes())
+      const next = await withRyanPasscode(raw)
+      if (cancelled) return
+      setAthletes(next)
+      if (synced.athletes.length === 0) return
+      const chosen =
+        next.find((a) => a.id === synced.activeAthleteId) ?? next[0] ?? null
+      if (!chosen) {
+        setActiveAthleteId(null)
+        return
       }
+      if (isProfileUnlocked(chosen.id)) {
+        setActiveAthleteId(chosen.id)
+        return
+      }
+      setActiveAthleteId(null)
+      if (chosen.passcodeHash) setAthleteGate(chosen)
     })
     return () => {
       cancelled = true
@@ -872,17 +874,11 @@ export default function App() {
     </div>
     {athleteGate && (
       <UnlockAthleteModal
-        athlete={athleteGate.athlete}
-        mode={athleteGate.mode}
+        athlete={athleteGate}
         onCancel={() => setAthleteGate(null)}
         onUnlocked={(a) => {
           setActiveAthleteId(a.id)
           setAthleteGate(null)
-        }}
-        onSetPasscode={(a, passcodeHash) => {
-          setAthleteRoster(
-            athletes.map((row) => (row.id === a.id ? { ...row, passcodeHash } : row)),
-          )
         }}
       />
     )}

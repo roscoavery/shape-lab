@@ -1,55 +1,37 @@
 /**
- * Unlock or set an athlete passcode before the profile (and its library) loads.
+ * Unlock an athlete profile that already has a 4-digit passcode.
+ * New athletes set the PIN on the create form — this modal does not invent one.
  */
 
 import { useState } from 'react'
 import type { Athlete } from '../types'
-import {
-  hashPasscode,
-  markProfileUnlocked,
-  passcodeLooksOk,
-} from '../lib/athletePasscode'
+import { digitsOnlyPin, hashPasscode, markProfileUnlocked } from '../lib/athletePasscode'
 
 type Props = {
   athlete: Athlete
-  mode: 'unlock' | 'set'
   onCancel: () => void
   onUnlocked: (athlete: Athlete) => void
-  onSetPasscode: (athlete: Athlete, passcodeHash: string) => void
 }
 
-export function UnlockAthleteModal({
-  athlete,
-  mode,
-  onCancel,
-  onUnlocked,
-  onSetPasscode,
-}: Props) {
+export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
   const [code, setCode] = useState('')
-  const [again, setAgain] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const submit = async () => {
     setError(null)
-    if (!passcodeLooksOk(code)) {
-      setError('Use at least 4 characters.')
+    if (!athlete.passcodeHash) {
+      setError('This profile does not have a passcode yet. Set one when you create it.')
+      return
+    }
+    if (!code.trim()) {
+      setError('Enter this profile’s 4-digit passcode.')
       return
     }
     setBusy(true)
     try {
       const hash = await hashPasscode(athlete.id, code)
-      if (mode === 'set') {
-        if (code !== again) {
-          setError('Those passcodes do not match.')
-          return
-        }
-        onSetPasscode(athlete, hash)
-        markProfileUnlocked(athlete.id)
-        onUnlocked({ ...athlete, passcodeHash: hash })
-        return
-      }
-      if (!athlete.passcodeHash || hash !== athlete.passcodeHash) {
+      if (hash !== athlete.passcodeHash) {
         setError('That passcode does not match this profile.')
         return
       }
@@ -64,46 +46,30 @@ export function UnlockAthleteModal({
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 shadow-2xl">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          {mode === 'set' ? 'Set passcode' : 'Unlock profile'}
+          Unlock profile
         </p>
         <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{athlete.name}</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          {mode === 'set'
-            ? 'This passcode opens the profile from any phone link or browser. Homework, hold times, Compare URLs, and the video library stay with it.'
-            : 'Enter the passcode for this profile to load its homework, hold times, Compare URLs, and video library.'}
+          Enter the 4-digit passcode set when this profile was created. That loads
+          homework, hold times, Compare URLs, and the video library on this link.
         </p>
         <label className="mt-4 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Passcode
+            4-digit passcode
           </span>
           <input
             type="password"
-            autoComplete="off"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={4}
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(digitsOnlyPin(e.target.value))}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void submit()
             }}
-            className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+            className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm tracking-[0.35em] text-[var(--text)]"
           />
         </label>
-        {mode === 'set' && (
-          <label className="mt-3 block">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Type it again
-            </span>
-            <input
-              type="password"
-              autoComplete="off"
-              value={again}
-              onChange={(e) => setAgain(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void submit()
-              }}
-              className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
-            />
-          </label>
-        )}
         {error && <p className="mt-2 text-[12px] text-[var(--bad)]">{error}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -112,7 +78,7 @@ export function UnlockAthleteModal({
             disabled={busy}
             className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f] disabled:opacity-50"
           >
-            {busy ? 'Checking…' : mode === 'set' ? 'Save passcode' : 'Unlock'}
+            {busy ? 'Checking…' : 'Unlock'}
           </button>
           <button
             type="button"
