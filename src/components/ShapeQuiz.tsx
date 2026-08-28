@@ -11,7 +11,7 @@ type Props = {
 export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) {
   const [seed, setSeed] = useState(0)
   const questions = useMemo(
-    () => buildShapeQuiz(referencePhotos, pool === 'arm-positions' ? 10 : 8, pool),
+    () => buildShapeQuiz(referencePhotos, pool === 'arm-positions' ? 10 : 12, pool),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [referencePhotos, seed, pool],
   )

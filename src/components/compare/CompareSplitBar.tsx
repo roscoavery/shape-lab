@@ -9,7 +9,8 @@ import { useCompareLayout, type CompareSplit } from './compareLayout'
 type Where = 'page' | 'reference' | 'camera' | 'overlay'
 
 export function CompareSplitBar({ where }: { where: Where }) {
-  const { fullscreen, split, setFullscreen, setSplit } = useCompareLayout()
+  const { fullscreen, split, setFullscreen, setSplit, setFocus, setChromeOpen } =
+    useCompareLayout()
   if (fullscreen && where !== 'overlay') return null
 
   const enter =
@@ -21,31 +22,36 @@ export function CompareSplitBar({ where }: { where: Where }) {
 
   const pick = (next: CompareSplit) => {
     setSplit(next)
-    if (where === 'reference' || where === 'camera') setFullscreen(true)
+    setFocus('split')
+    if (where === 'reference' || where === 'camera') {
+      setChromeOpen(true)
+      setFullscreen(true)
+    }
   }
 
-  const onSurface = where === 'overlay' || fullscreen
-  const idleBtn = onSurface
-    ? 'border border-white/25 text-white/80'
-    : 'border border-[var(--panel-border)] text-[var(--muted)]'
+  const enterFull = () => {
+    setFocus('split')
+    setChromeOpen(true)
+    setFullscreen(true)
+  }
+
+  if (where === 'overlay') return null
+
+  const idleBtn = 'border border-[var(--panel-border)] text-[var(--muted)]'
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
-        onClick={() => setFullscreen(!fullscreen)}
-        className={
-          fullscreen
-            ? 'rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]'
-            : 'rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]'
-        }
+        onClick={enterFull}
+        className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
       >
-        {fullscreen ? 'Exit full screen' : enter}
+        {enter}
       </button>
       <button
         type="button"
         onClick={() => pick('lr')}
-        className={`rounded-lg px-3 py-2 text-sm ${
+        className={`rounded-full px-2.5 py-1.5 text-xs ${
           split === 'lr' ? 'bg-[var(--accent-dim)] font-semibold text-white' : idleBtn
         }`}
       >
@@ -54,15 +60,15 @@ export function CompareSplitBar({ where }: { where: Where }) {
       <button
         type="button"
         onClick={() => pick('tb')}
-        className={`rounded-lg px-3 py-2 text-sm ${
+        className={`rounded-full px-2.5 py-1.5 text-xs ${
           split === 'tb' ? 'bg-[var(--accent-dim)] font-semibold text-white' : idleBtn
         }`}
       >
         Top / bottom
       </button>
-      {(where === 'overlay' || where === 'page') && (
-        <p className={`text-xs ${onSurface ? 'text-white/70' : 'text-[var(--muted)]'}`}>
-          Looping reference + delay cam or replay. Scrub each side.
+      {where === 'page' && (
+        <p className="text-[11px] text-[var(--muted)]">
+          Looping reference + delay cam. Hide the side menu in full screen for a clean split.
         </p>
       )}
     </div>

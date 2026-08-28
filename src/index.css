@@ -11,7 +11,7 @@
   --warn: #f0b429;
   --bad: #f07178;
   --good: #2dd4a8;
-  font-family: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
   line-height: 1.45;

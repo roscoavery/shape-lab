@@ -19,7 +19,6 @@ import { SHAPES, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
-import { StillOverlayPicker } from './StillOverlayPicker'
 import {
   DEFAULT_FORM_STANDARD,
   HOLLOW_PROGRESS_TARGET_SECONDS,
@@ -719,9 +718,6 @@ export function HomeworkPanel({
               )}
             </div>
           )}
-          <div className="mb-2">
-            <StillOverlayPicker photos={referencePhotos} compact />
-          </div>
           {activeItem.shapeId === 'side_plank' && (
             <div className="mb-2 flex items-center gap-1 text-xs">
               <span className="mr-1 text-[var(--muted)]">Side:</span>

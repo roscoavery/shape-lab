@@ -13,7 +13,7 @@ import {
   type JointDrawMode,
 } from '../lib/skeleton'
 import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
-import { useOverlayStill } from './OverlayStillContext'
+import { DraggableStillOverlay } from './DraggableStillOverlay'
 
 type Props = {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -39,6 +39,8 @@ type Props = {
   className?: string
   /** Fill the parent instead of sizing to the video aspect. */
   fill?: boolean
+  /** Cap the camera so homework / coach lists stay usable. */
+  compact?: boolean
 }
 
 function criterionLandmarks(c: CriterionDef, all: CriterionDef[]): number[] {
@@ -110,9 +112,9 @@ export function CameraStage({
   jointMode = 'split',
   className = '',
   fill = false,
+  compact = false,
 }: Props) {
   const localHoldRef = useRef<number | null>(null)
-  const { selected, opacity } = useOverlayStill()
 
   useEffect(() => {
     localHoldRef.current = holdSeconds
@@ -258,13 +260,21 @@ export function CameraStage({
       className={`relative w-full overflow-hidden bg-black shadow-lg ${
         fill
           ? 'h-full rounded-none border-0'
-          : 'rounded-xl border border-[var(--panel-border)]'
+          : compact
+            ? 'max-h-[min(38vh,280px)] rounded-2xl border border-[var(--panel-border)]'
+            : 'rounded-2xl border border-[var(--panel-border)]'
       } ${className}`}
     >
       <video ref={videoRef} className="hidden" playsInline muted autoPlay />
       <canvas
         ref={canvasRef}
-        className={`block bg-[#0a0e12] ${fill ? 'h-full w-full object-contain' : 'h-auto w-full'}`}
+        className={`block bg-[#0a0e12] ${
+          fill
+            ? 'h-full w-full object-contain'
+            : compact
+              ? 'mx-auto max-h-[min(38vh,280px)] w-full object-contain'
+              : 'h-auto w-full'
+        }`}
       />
       {!running && !demoMode && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0a0e12]/90 p-6 text-center">
@@ -280,14 +290,7 @@ export function CameraStage({
           Demo pose (no camera)
         </div>
       )}
-      {selected && opacity > 0.02 && (
-        <img
-          src={selected.src}
-          alt=""
-          className="pointer-events-none absolute inset-0 z-[12] h-full w-full object-contain"
-          style={{ opacity }}
-        />
-      )}
+      <DraggableStillOverlay />
       {overlay}
     </div>
   )

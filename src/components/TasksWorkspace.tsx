@@ -401,7 +401,7 @@ export function TasksWorkspace({
                   </div>
 
                   {fullscreen && (
-                    <div className="pointer-events-auto absolute inset-x-1 bottom-2 z-30 sm:bottom-3">
+                    <div className="pointer-events-auto absolute bottom-3 right-2 z-30 w-[min(16rem,70vw)] sm:bottom-4 sm:right-3">
                       <StillOverlayPicker photos={referencePhotos} onVideo />
                     </div>
                   )}

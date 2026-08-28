@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   deleteBlob,
   deleteCollection,
@@ -87,7 +88,7 @@ export function ReferencePane() {
   )
   const [dragId, setDragId] = useState<string | null>(null)
   const [libraryReady, setLibraryReady] = useState(false)
-  const { fullscreen } = useCompareLayout()
+  const { fullscreen, refRail } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -729,10 +730,33 @@ export function ReferencePane() {
     <section
       className={
         fullscreen
-          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black p-1'
-          : 'flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black'
+          : 'flex flex-col gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
       }
     >
+      {fullscreen && refRail
+        ? createPortal(
+            <select
+              value={activeItemId ?? ''}
+              onChange={(e) => {
+                const id = e.target.value
+                const item =
+                  collections.flatMap((c) => c.items).find((i) => i.id === id) ??
+                  activeCollection?.items.find((i) => i.id === id)
+                if (item) void selectItem(item)
+              }}
+              className="w-full rounded-lg bg-white/10 px-2 py-1.5 text-[11px] text-white"
+              aria-label="Reference clip"
+            >
+              {(activeCollection?.items ?? []).map((item) => (
+                <option key={item.id} value={item.id} className="text-black">
+                  {item.name}
+                </option>
+              ))}
+            </select>,
+            refRail,
+          )
+        : null}
       {!fullscreen && (
       <>
       <div className="flex flex-col gap-2">

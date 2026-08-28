@@ -6,7 +6,7 @@
 import {
   ARM_POSITION_SHAPE_IDS,
   canonicalSamePositionId,
-  curriculumShapeIds,
+  learnLibraryShapes,
   samePositionDisplayName,
   samePositionGroup,
 } from './educationCopy'
@@ -70,19 +70,19 @@ function uniquePositions(source: ShapeDef[]): ShapeDef[] {
 export type QuizPool = 'pathway' | 'arm-positions'
 
 /**
- * Build a quiz from pathway shapes (falls back to the full library).
+ * Build a quiz from the Learn shape library (falls back to the full catalog).
  * Picture questions only appear when a reference photo exists.
  * Arm-positions pool covers standing + lunge arm shapes parked out of Tasks.
  */
 export function buildShapeQuiz(
   photos: ReferencePhoto[],
-  count = 8,
+  count = 10,
   pool: QuizPool = 'pathway',
 ): QuizQuestion[] {
-  const pathway = curriculumShapeIds()
+  const library = learnLibraryShapes()
   const arm = new Set(ARM_POSITION_SHAPE_IDS)
-  const wanted = pool === 'arm-positions' ? arm : pathway
-  const poolShapes = SHAPES.filter((s) => wanted.has(s.id))
+  const poolShapes =
+    pool === 'arm-positions' ? SHAPES.filter((s) => arm.has(s.id)) : library
   const source = uniquePositions(poolShapes.length >= 4 ? poolShapes : SHAPES)
   const withPhoto = source.filter((s) => Boolean(pickReferencePhoto(photos, s.id, null)?.dataUrl))
 

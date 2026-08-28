@@ -354,9 +354,10 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Multiple choice: name the position from a body-position description, or identify
-          the shape in a reference photo. Landing lunge and Lunge · open shoulders are the
-          same position — the test treats them as one.
+          Multiple choice from the whole shape library — Tuck, Hands, Side plank, Superman,
+          the bridges, and the rest. Name the position from a description, or identify the
+          shape in a coach still. Landing lunge and Lunge · open shoulders are the same
+          position — the test treats them as one.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the test →
@@ -484,12 +485,12 @@ function ShapeLibrary({
                 onClick={() => onOpen(shape.id)}
                 className="flex h-full w-full gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 text-left transition hover:border-[var(--accent-dim)]"
               >
-                <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#0d1218]">
+                <div className="flex h-24 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
                   <ReferenceStill
                     shapeId={shape.id}
                     photos={referencePhotos}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="max-h-full max-w-full object-contain"
                   />
                 </div>
                 <div className="min-w-0 flex-1">

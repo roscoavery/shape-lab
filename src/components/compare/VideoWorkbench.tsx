@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
-import { useOverlayStill } from '../OverlayStillContext'
+import { DraggableStillOverlay } from '../DraggableStillOverlay'
 
 const FRAME_STEP = 1 / 30
 const SPEEDS = [0.25, 0.5, 1] as const
@@ -21,6 +21,8 @@ type Props = {
   /** Loop/scrub only the last N seconds of the file (delay-cam buffer). */
   tailSeconds?: number
   fill?: boolean
+  /** Ghost still on this video (delay cam / replay). Off for the reference clip. */
+  showStillOverlay?: boolean
 }
 
 function fmt(t: number): string {
@@ -40,6 +42,7 @@ function VideoWorkbenchInner({
   autoPlay = false,
   tailSeconds,
   fill = false,
+  showStillOverlay = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -50,7 +53,6 @@ function VideoWorkbenchInner({
   const [loop, setLoop] = useState(true)
   const [pointA, setPointA] = useState<number | null>(null)
   const [pointB, setPointB] = useState<number | null>(null)
-  const { selected: overlayStill, opacity: overlayOpacity } = useOverlayStill()
 
   useEffect(() => {
     const v = videoRef.current
@@ -145,33 +147,8 @@ function VideoWorkbenchInner({
   const btn =
     'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-sm hover:bg-[#243040]'
 
-  return (
-    <div className={`flex flex-col gap-2 ${fill ? 'h-full min-h-0' : ''}`}>
-      <div className={`relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fill ? 'min-h-0 flex-1' : ''}`}>
-        <video
-          ref={videoRef}
-          src={src}
-          loop={loop && pointB === null}
-          muted
-          playsInline
-          preload="auto"
-          onLoadedMetadata={onLoadedMetadata}
-          onDurationChange={onDurationChange}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
-        />
-        {overlayStill && overlayOpacity > 0.02 && (
-          <img
-            src={overlayStill.src}
-            alt=""
-            className="pointer-events-none absolute inset-0 z-[5] h-full w-full object-contain"
-            style={{ opacity: overlayOpacity }}
-          />
-        )}
-        <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
-      </div>
-
+  const transport = (
+    <>
       <input
         type="range"
         min={0}
@@ -213,7 +190,37 @@ function VideoWorkbenchInner({
           ))}
         </span>
       </div>
+    </>
+  )
 
+  return (
+    <div className={`flex flex-col gap-2 ${fill ? 'h-full min-h-0' : ''}`}>
+      <div className={`relative overflow-hidden bg-black ${fill ? 'min-h-0 flex-1' : 'rounded-lg border border-[var(--panel-border)]'}`}>
+        <video
+          ref={videoRef}
+          src={src}
+          loop={loop && pointB === null}
+          muted
+          playsInline
+          preload="auto"
+          onLoadedMetadata={onLoadedMetadata}
+          onDurationChange={onDurationChange}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
+        />
+        {showStillOverlay && <DraggableStillOverlay />}
+        <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />
+        {fill && (
+          <div className="absolute inset-x-0 bottom-0 z-[8] bg-gradient-to-t from-black/80 to-transparent p-2 pt-8 text-white">
+            {transport}
+          </div>
+        )}
+      </div>
+
+      {!fill && transport}
+
+      {!fill && (
       <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
         <label className="flex items-center gap-1.5">
           <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
@@ -253,6 +260,7 @@ function VideoWorkbenchInner({
           </span>
         )}
       </div>
+      )}
     </div>
   )
 }

@@ -559,8 +559,30 @@ export default function App() {
       )}
 
       {tab === 'homework' && (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="flex flex-col gap-3">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
+          <div className="order-2 flex flex-col gap-3 lg:order-1">
+            <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+              <AthletePanel
+                athletes={athletes}
+                activeId={activeAthleteId}
+                onChangeAthletes={setAthleteRoster}
+                onSelect={setActiveAthleteId}
+              />
+              <HomeworkPanel
+                athleteId={activeAthleteId}
+                score={score}
+                currentShapeId={shape.id}
+                onRequestShape={onJumpToShape}
+                timingActive={timingActive}
+                voiceEnabled={settings.voiceEnabled}
+                referencePhotos={referencePhotos}
+                landmarks={activeLandmarks}
+                onEnsureCamera={() => camera.start()}
+              />
+            </div>
+          </div>
+
+          <div className="order-1 flex flex-col gap-3 lg:order-2 lg:sticky lg:top-3">
             <CameraStage
               videoRef={camera.videoRef}
               canvasRef={camera.canvasRef}
@@ -571,6 +593,7 @@ export default function App() {
               demoMode={!camera.running && demoLandmarks !== null}
               shape={shape}
               score={score}
+              compact
             />
             {cameraControls}
             <StillOverlayPicker photos={referencePhotos} compact />
@@ -588,26 +611,6 @@ export default function App() {
               onResetTimer={hold.reset}
               onSave={saveAttempt}
               canSave={Boolean(activeAthleteId)}
-            />
-          </div>
-
-          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
-            <AthletePanel
-              athletes={athletes}
-              activeId={activeAthleteId}
-              onChangeAthletes={setAthleteRoster}
-              onSelect={setActiveAthleteId}
-            />
-            <HomeworkPanel
-              athleteId={activeAthleteId}
-              score={score}
-              currentShapeId={shape.id}
-              onRequestShape={onJumpToShape}
-              timingActive={timingActive}
-              voiceEnabled={settings.voiceEnabled}
-              referencePhotos={referencePhotos}
-              landmarks={activeLandmarks}
-              onEnsureCamera={() => camera.start()}
             />
           </div>
         </div>
@@ -640,7 +643,7 @@ export default function App() {
       )}
 
       {tab === 'coach' && (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-3">
             <CameraStage
               videoRef={camera.videoRef}
@@ -652,6 +655,7 @@ export default function App() {
               demoMode={!camera.running && demoLandmarks !== null}
               shape={shape}
               score={score}
+              compact
             />
             {cameraControls}
             <StillOverlayPicker photos={referencePhotos} compact />

@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   addClip,
   deleteClip,
@@ -26,6 +27,7 @@ import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
+import { DraggableStillOverlay } from '../DraggableStillOverlay'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -69,7 +71,7 @@ export function CameraPane() {
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen } = useCompareLayout()
+  const { fullscreen, camRail } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -543,16 +545,133 @@ export function CameraPane() {
   // UI
   // -------------------------------------------------------------------------
 
-  const btnCls =
-    'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]'
+  const rail = Boolean(fullscreen && camRail)
+  const btnCls = rail
+    ? 'rounded-lg bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/16'
+    : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]'
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
+
+  const cameraChrome = (
+    <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
+      {!running ? (
+        <button
+          type="button"
+          onClick={() => void startCamera()}
+          className={
+            rail
+              ? 'rounded-lg bg-white px-2 py-1.5 text-[11px] font-semibold text-black'
+              : 'rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]'
+          }
+        >
+          Start camera
+        </button>
+      ) : (
+        <button type="button" onClick={stopCamera} className={btnCls}>
+          Stop camera
+        </button>
+      )}
+      <div className={`flex gap-1 ${rail ? 'rounded-lg bg-black/30 p-0.5' : 'rounded-lg border border-[var(--panel-border)] p-0.5'}`}>
+        {(
+          [
+            ['live', 'Live'],
+            ['delay', 'Delay cam'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setMode(id)}
+            disabled={!running}
+            className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-40 ${
+              mode === id
+                ? rail
+                  ? 'bg-white font-semibold text-black'
+                  : 'bg-[var(--accent-dim)] font-semibold text-white'
+                : rail
+                  ? 'text-white/70'
+                  : 'text-[var(--muted)] hover:text-[var(--text)]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        disabled={!running || replayBuilding}
+        onClick={() => void openBufferReplay()}
+        className={
+          rail
+            ? 'rounded-lg bg-white/15 px-2 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40'
+            : 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40'
+        }
+      >
+        {replayBuilding ? 'Opening replay…' : `Replay last ${delaySec}s`}
+      </button>
+      <label className={`flex items-center gap-1.5 ${rail ? 'text-[11px] text-white/75' : 'text-sm text-[var(--muted)]'}`}>
+        <input
+          type="checkbox"
+          checked={mirror}
+          onChange={(e) => setMirror(e.target.checked)}
+        />
+        Mirror
+      </label>
+      {running && (
+        <label className={`flex items-center gap-2 ${rail ? 'text-[11px] text-white/75' : 'text-sm text-[var(--muted)]'}`}>
+          Delay
+          <input
+            type="range"
+            min={DELAY_MIN}
+            max={DELAY_MAX}
+            step={1}
+            value={delaySec}
+            onChange={(e) => setDelaySec(Number(e.target.value))}
+            className="min-w-0 flex-1 accent-[var(--accent)]"
+          />
+          <span className="tabular-nums">{delaySec}s</span>
+        </label>
+      )}
+      {mode === 'delay' && running && (
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0.1, delayDuration)}
+            step={0.05}
+            value={Math.min(delayTime, delayDuration || delayTime)}
+            onChange={(e) => {
+              const t = Number(e.target.value)
+              delayFollowRef.current = false
+              const v = delayVideoRef.current
+              if (v) {
+                v.pause()
+                v.currentTime = t
+              }
+              setDelayTime(t)
+            }}
+            className="min-w-0 flex-1"
+            aria-label="Scrub delay cam"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              delayFollowRef.current = true
+            }}
+            className={btnCls}
+          >
+            Live delay
+          </button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <section
       className={
         fullscreen
-          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black p-1'
-          : 'relative flex min-h-0 flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black'
+          : 'relative flex min-h-0 flex-col gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
       }
     >
       {!fullscreen && (
@@ -565,92 +684,8 @@ export function CameraPane() {
       </div>
       )}
 
-      {/* Top controls */}
-      <div className="flex flex-wrap items-center gap-2">
-        {!running ? (
-          <button
-            type="button"
-            onClick={() => void startCamera()}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
-          >
-            Start camera
-          </button>
-        ) : (
-          <button type="button" onClick={stopCamera} className={btnCls}>
-            Stop camera
-          </button>
-        )}
-        <div className="flex gap-1 rounded-lg border border-[var(--panel-border)] p-0.5">
-          {(
-            [
-              ['live', 'Live'],
-              ['delay', 'Delay cam'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setMode(id)}
-              disabled={!running}
-              className={`rounded-md px-2.5 py-1 text-sm disabled:opacity-40 ${
-                mode === id
-                  ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                  : 'text-[var(--muted)] hover:text-[var(--text)]'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={!running || replayBuilding}
-          onClick={() => void openBufferReplay()}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40"
-        >
-          {replayBuilding ? 'Opening replay…' : `Replay last ${delaySec}s`}
-        </button>
-        <label className="flex items-center gap-1.5 text-sm text-[var(--muted)]">
-          <input
-            type="checkbox"
-            checked={mirror}
-            onChange={(e) => setMirror(e.target.checked)}
-          />
-          Mirror
-        </label>
-        {fullscreen && running && (
-          <label className="flex items-center gap-2 text-xs text-white/80">
-            Delay
-            <input
-              type="range"
-              min={DELAY_MIN}
-              max={DELAY_MAX}
-              step={1}
-              value={delaySec}
-              onChange={(e) => setDelaySec(Number(e.target.value))}
-              className="w-24 accent-[var(--accent)]"
-            />
-            <span className="tabular-nums">{delaySec}s</span>
-          </label>
-        )}
-      </div>
-
-      {/* Buffer / delay length — used by delay cam and Replay */}
-      {running && !fullscreen && (
-        <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
-          {mode === 'delay' ? 'Delay' : 'Replay buffer'}
-          <input
-            type="range"
-            min={DELAY_MIN}
-            max={DELAY_MAX}
-            step={1}
-            value={delaySec}
-            onChange={(e) => setDelaySec(Number(e.target.value))}
-            className="flex-1 accent-[var(--accent)]"
-          />
-          <span className="w-10 tabular-nums text-[var(--text)]">{delaySec}s</span>
-        </label>
-      )}
+      {!fullscreen && cameraChrome}
+      {rail && camRail ? createPortal(cameraChrome, camRail) : null}
 
       {/* Video area — live video stays mounted (even during replay) so the stream keeps running */}
       <div
@@ -697,40 +732,8 @@ export function CameraPane() {
             REC {recSeconds}s
           </div>
         )}
+        {mode !== 'replay' && <DraggableStillOverlay />}
       </div>
-
-      {mode === 'delay' && running && (
-        <div className="flex items-center gap-2 px-1">
-          <input
-            type="range"
-            min={0}
-            max={Math.max(0.1, delayDuration)}
-            step={0.05}
-            value={Math.min(delayTime, delayDuration || delayTime)}
-            onChange={(e) => {
-              const t = Number(e.target.value)
-              delayFollowRef.current = false
-              const v = delayVideoRef.current
-              if (v) {
-                v.pause()
-                v.currentTime = t
-              }
-              setDelayTime(t)
-            }}
-            className="min-w-0 flex-1"
-            aria-label="Scrub delay cam"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              delayFollowRef.current = true
-            }}
-            className="shrink-0 rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
-          >
-            Live delay
-          </button>
-        </div>
-      )}
 
       {/* Replay of the last N seconds (or a saved attempt) */}
       {mode === 'replay' &&
@@ -756,6 +759,7 @@ export function CameraPane() {
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
               fill={fullscreen}
+              showStillOverlay
             />
             <div className="flex flex-wrap items-center gap-2">
               <button
