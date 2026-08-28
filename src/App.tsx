@@ -47,12 +47,17 @@ import {
   loadTaskProgress,
   saveActiveAthleteId,
   saveAthletes,
-  saveReferencePhoto,
   saveSettings,
   saveTab,
   type AppTab,
 } from './lib/storage'
 import { localRosterSnapshot, pushServerRoster, syncRosterWithServer } from './lib/rosterSync'
+import {
+  addIgStill,
+  hydrateIgStills,
+  mergeIgStills,
+  subscribeIgStills,
+} from './lib/igStillStore'
 import type {
   AppSettings,
   Athlete,
@@ -92,6 +97,14 @@ export default function App() {
   const [holdClock, setHoldClock] = useState<number | null>(null)
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    const unsub = subscribeIgStills((ig) => {
+      setReferencePhotos((prev) => mergeIgStills(prev, ig))
+    })
+    void hydrateIgStills()
+    return unsub
+  }, [])
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
@@ -182,10 +195,7 @@ export default function App() {
       createdAt: new Date().toISOString(),
       library: 'ig',
     }
-    setReferencePhotos((prev) => [photo, ...prev.filter((p) => p.id !== photo.id)])
-    void saveReferencePhoto(photo).catch(() => {
-      /* kept in memory; Learn still shows it this session */
-    })
+    void addIgStill(photo)
   }, [])
 
   useEffect(() => {

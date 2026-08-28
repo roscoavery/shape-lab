@@ -6,9 +6,11 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { cropVideoFrame, type NormPt } from '../../lib/cropFrame'
 import { customShapeId } from '../../lib/igStills'
+import { addIgStill } from '../../lib/igStillStore'
 import { learnLibraryShapes } from '../../lib/educationCopy'
+import { createId } from '../../lib/storage'
+import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
-import { useIgStillSave } from './IgStillContext'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
@@ -91,7 +93,6 @@ type Props = {
 export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const igSave = useIgStillSave()
   const shapes = learnLibraryShapes()
   const [tool, setTool] = useState<MarkTool>('line')
   const [marks, setMarks] = useState<Mark[]>([])
@@ -293,6 +294,11 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    try {
+      canvasRef.current?.releasePointerCapture(e.pointerId)
+    } catch {
+      /* already released */
+    }
     if (cropDragRef.current && toolRef.current === 'crop') {
       cropDragRef.current = false
       const host = hostRef.current
@@ -308,6 +314,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
           return
         }
         setPending({ dataUrl })
+        setShapeId((id) => id || shapes[0]?.id || '')
         setError(null)
       }
       return
@@ -353,29 +360,33 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const savePending = () => {
     if (!pending) return
     const custom = customName.trim()
-    if (!custom && !shapeId) {
+    const listed = shapeId
+    if (!custom && !listed) {
       setError('Pick a listed shape, or type a custom name if it is not in the list.')
       return
     }
-    if (!igSave) {
-      setError('Could not save — reopen the Compare tab.')
-      return
-    }
-    try {
-      if (custom) {
-        igSave.saveCrop({
-          dataUrl: pending.dataUrl,
+    const photo: ReferencePhoto = custom
+      ? {
+          id: createId('ig'),
           shapeId: customShapeId(custom),
+          athleteId: null,
+          dataUrl: pending.dataUrl,
           customName: custom,
           label: label.trim() || custom,
-        })
-      } else {
-        igSave.saveCrop({
+          createdAt: new Date().toISOString(),
+          library: 'ig',
+        }
+      : {
+          id: createId('ig'),
+          shapeId: listed,
+          athleteId: null,
           dataUrl: pending.dataUrl,
-          shapeId,
           label: label.trim() || undefined,
-        })
-      }
+          createdAt: new Date().toISOString(),
+          library: 'ig',
+        }
+    try {
+      void addIgStill(photo)
       setPending(null)
       setLabel('')
       setCustomName('')
@@ -415,7 +426,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       <canvas
         ref={canvasRef}
         className="pointer-events-auto absolute inset-0 h-full w-full touch-none"
-        style={{ touchAction: 'none', cursor: tool === 'crop' ? 'crosshair' : 'crosshair' }}
+        style={{ touchAction: 'none', cursor: 'crosshair', pointerEvents: pending ? 'none' : 'auto' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -451,7 +462,11 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         </p>
       )}
       {pending && (
-        <div className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[78%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl">
+        <div
+          className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[78%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Save to IG shapes
           </p>

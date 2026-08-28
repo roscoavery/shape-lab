@@ -25,6 +25,7 @@ import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
 import { deleteReferencePhoto } from '../lib/storage'
+import { removeIgStill } from '../lib/igStillStore'
 
 type EduView =
   | { kind: 'home' }
@@ -967,6 +968,7 @@ function IgShapesLibrary({
   const total = groups.reduce((n, g) => n + g.stills.length, 0)
 
   const remove = async (id: string) => {
+    await removeIgStill(id)
     await deleteReferencePhoto(id)
     onReferencesChange(referencePhotos.filter((p) => p.id !== id))
   }
