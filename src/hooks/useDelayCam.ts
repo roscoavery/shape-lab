@@ -43,6 +43,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
 
   const [buffering, setBuffering] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const restartingRef = useRef(false)
 
   useEffect(() => {
     delaySecRef.current = delaySec
@@ -62,45 +63,63 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   }, [])
 
   const startRolling = useCallback(
-    (live: MediaStream) => {
-      const mime = pickDelayMime()
-      if (!mime) return
-      const existing = rollingRecorderRef.current
-      if (existing && existing.state !== 'inactive') return
-      rollingMimeRef.current = mime
-      rollingChunksRef.current = []
-      rollingStartRef.current = performance.now()
-      rollingGenRef.current += 1
-      const gen = rollingGenRef.current
-      const rec = new MediaRecorder(live, { mimeType: mime })
-      rollingRecorderRef.current = rec
-      rec.ondataavailable = (e) => {
-        if (gen !== rollingGenRef.current) return
-        if (!e.data || e.data.size === 0) return
-        rollingChunksRef.current.push(e.data)
-        if (delayMediaSourceRef.current) {
-          void e.data.arrayBuffer().then((buf) => {
-            delayQueueRef.current.push(buf)
-            pumpDelayQueue()
-          })
+    (live: MediaStream): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const mime = pickDelayMime()
+        if (!mime) {
+          resolve(false)
+          return
         }
-      }
-      rec.onstop = () => {
-        const waiter = flushWaiterRef.current
-        flushWaiterRef.current = null
-        const parts = rollingChunksRef.current
-        const blob =
-          parts.length > 0
-            ? new Blob(parts, { type: rec.mimeType || rollingMimeRef.current })
-            : null
-        if (waiter) waiter(blob && blob.size > 500 ? blob : null)
-      }
-      try {
-        rec.start(200)
-      } catch (err) {
-        rollingRecorderRef.current = null
-        setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
-      }
+        const existing = rollingRecorderRef.current
+        if (existing && existing.state !== 'inactive') {
+          resolve(true)
+          return
+        }
+        rollingMimeRef.current = mime
+        rollingChunksRef.current = []
+        rollingStartRef.current = performance.now()
+        rollingGenRef.current += 1
+        const gen = rollingGenRef.current
+        const rec = new MediaRecorder(live, { mimeType: mime })
+        rollingRecorderRef.current = rec
+        let settled = false
+        const done = (ok: boolean) => {
+          if (settled) return
+          settled = true
+          resolve(ok)
+        }
+        rec.onstart = () => done(true)
+        rec.ondataavailable = (e) => {
+          if (gen !== rollingGenRef.current) return
+          if (!e.data || e.data.size === 0) return
+          rollingChunksRef.current.push(e.data)
+          if (delayMediaSourceRef.current) {
+            void e.data.arrayBuffer().then((buf) => {
+              delayQueueRef.current.push(buf)
+              pumpDelayQueue()
+            })
+          }
+        }
+        rec.onstop = () => {
+          const waiter = flushWaiterRef.current
+          flushWaiterRef.current = null
+          const parts = rollingChunksRef.current
+          const blob =
+            parts.length > 0
+              ? new Blob(parts, { type: rec.mimeType || rollingMimeRef.current })
+              : null
+          if (waiter) waiter(blob && blob.size > 500 ? blob : null)
+        }
+        try {
+          rec.start(200)
+        } catch (err) {
+          rollingRecorderRef.current = null
+          setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
+          done(false)
+          return
+        }
+        window.setTimeout(() => done(true), 700)
+      })
     },
     [pumpDelayQueue],
   )
@@ -122,7 +141,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
 
   /** Clear the run buffer and start a fresh recording (Tasks 2 sequence start). */
   const restartRolling = useCallback(
-    (live: MediaStream | null) => {
+    async (live: MediaStream | null): Promise<boolean> => {
+      restartingRef.current = true
       const rec = rollingRecorderRef.current
       rollingRecorderRef.current = null
       flushWaiterRef.current = null
@@ -132,13 +152,20 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
       if (rec && rec.state !== 'inactive') {
         rec.ondataavailable = null
         rec.onstop = null
+        rec.onstart = null
         try {
           rec.stop()
         } catch {
           /* already stopping */
         }
+        await new Promise<void>((r) => window.setTimeout(r, 220))
       }
-      if (live) startRolling(live)
+      try {
+        if (!live) return false
+        return await startRolling(live)
+      } finally {
+        restartingRef.current = false
+      }
     },
     [startRolling],
   )
@@ -257,18 +284,26 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     }, 400)
   }, [pumpDelayQueue])
 
+  // Start rolling when the camera comes on. Do NOT stop/restart when the
+  // overlay canvas stream replaces the raw camera — that used to wipe the
+  // buffer mid-sequence and the replay began in passé.
   useEffect(() => {
+    if (restartingRef.current) return
     if (!enabled || !stream) {
       stopDelay()
       stopRolling()
       return
     }
-    startRolling(stream)
-    return () => {
+    void startRolling(stream)
+  }, [enabled, stream, startRolling, stopDelay, stopRolling])
+
+  useEffect(
+    () => () => {
       stopDelay()
       stopRolling()
-    }
-  }, [enabled, stream, startRolling, stopDelay, stopRolling])
+    },
+    [stopDelay, stopRolling],
+  )
 
   const capturedSec = () => (performance.now() - rollingStartRef.current) / 1000
 

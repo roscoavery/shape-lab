@@ -18,9 +18,10 @@ type Props = {
   url: string
   itemId?: string
   onCached?: (itemId: string) => void
+  fill?: boolean
 }
 
-export function InstagramEmbed({ url, itemId, onCached }: Props) {
+export function InstagramEmbed({ url, itemId, onCached, fill = false }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
   onCachedRef.current = onCached
@@ -150,9 +151,9 @@ export function InstagramEmbed({ url, itemId, onCached }: Props) {
         : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public videos only.'
 
   return (
-    <div className="flex flex-col gap-2">
-      <VideoWorkbench src={src} allowAbLoop autoPlay />
-      <p className="text-xs text-[var(--muted)]">{footer}</p>
+    <div className={fill ? 'flex h-full min-h-0 flex-col gap-1' : 'flex flex-col gap-2'}>
+      <VideoWorkbench src={src} allowAbLoop autoPlay fill={fill} />
+      {!fill && <p className="text-xs text-[var(--muted)]">{footer}</p>}
     </div>
   )
 }

@@ -29,6 +29,24 @@ export function AthletePanel({
   const add = () => {
     const trimmed = name.trim()
     if (!trimmed) return
+    const existing = athletes.find(
+      (a) => a.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    )
+    if (existing) {
+      onSelect(existing.id)
+      setName('')
+      if (handle.trim()) {
+        const instagramHandle = normalizeInstagramHandle(handle) || existing.instagramHandle
+        if (instagramHandle !== existing.instagramHandle) {
+          onChangeAthletes(
+            athletes.map((a) => (a.id === existing.id ? { ...a, instagramHandle } : a)),
+          )
+        }
+      }
+      setSaved(`${existing.name} is already on this gym computer — selected.`)
+      window.setTimeout(() => setSaved(null), 2800)
+      return
+    }
     const athlete: Athlete = {
       id: createId('ath'),
       name: trimmed,
@@ -138,8 +156,9 @@ export function AthletePanel({
       )}
       {saved && <p className="mt-1 text-[11px] text-[var(--accent)]">{saved}</p>}
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
-        Attach an Instagram handle so Story captions tag the right person. Instagram will not
-        let a website post the Story for you — we prepare the video and caption, then you post.
+        Profiles save on this gym computer and on the Shape Lab server, so a
+        new phone link still has your roster. Creating the same name again
+        selects the existing profile instead of duplicating it.
       </p>
     </div>
   )

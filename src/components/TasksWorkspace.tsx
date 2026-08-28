@@ -322,6 +322,7 @@ export function TasksWorkspace({
               shape={shape}
               score={score}
               burnInHud={flowMode}
+              jointMode={flowMode ? 'merged' : 'split'}
               holdSeconds={holdSeconds}
               holdSecondsRef={holdSecondsRef}
               fill={fullscreen}

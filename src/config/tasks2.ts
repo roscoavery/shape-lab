@@ -80,6 +80,7 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
       pauseMs: 300,
       snapshotBestMs: 2800,
       snapshotMinMs: 700,
+      replayStart: true,
     },
     {
       speak: `Take your ${cartwheel} leg to a passé and hold for 3.`,
@@ -93,7 +94,6 @@ function hsProgression(side: 'left' | 'right'): FlowBeat[] {
       shapeId: 'lunge_start',
       stance: side,
       pauseMs: 250,
-      replayStart: true,
     },
     { speak: 'Hold for 3.', pauseMs: 350 },
     { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },
@@ -143,6 +143,7 @@ function hsNonCartwheel(): FlowBeat[] {
       pauseMs: 300,
       snapshotBestMs: 2800,
       snapshotMinMs: 700,
+      replayStart: true,
     },
     {
       speak: 'Take your non cartwheel leg to a passé and hold for 3.',
@@ -156,7 +157,6 @@ function hsNonCartwheel(): FlowBeat[] {
       shapeId: 'lunge_start',
       stance: 'left',
       pauseMs: 250,
-      replayStart: true,
     },
     { speak: 'Hold for 3.', pauseMs: 350 },
     { speak: '2.', pauseMs: 400, snapshotAtMs: 120 },

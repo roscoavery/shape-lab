@@ -24,6 +24,7 @@ import {
 import { createId } from '../../lib/storage'
 import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
+import { useCompareLayout } from './compareLayout'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -66,6 +67,8 @@ export function CameraPane() {
   const delayTimerRef = useRef<number>(0)
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
+  const delayFollowRef = useRef(true)
+  const { fullscreen } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -100,10 +103,30 @@ export function CameraPane() {
   const [flash, setFlash] = useState<string | null>(null)
   const [replayBuilding, setReplayBuilding] = useState(false)
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
+  const [delayTime, setDelayTime] = useState(0)
+  const [delayDuration, setDelayDuration] = useState(0)
+
+  const prevFullscreenRef = useRef(false)
+  useEffect(() => {
+    if (fullscreen && !prevFullscreenRef.current && running) setMode('delay')
+    prevFullscreenRef.current = fullscreen
+  }, [fullscreen, running])
 
   useEffect(() => {
-    delaySecRef.current = delaySec
-  }, [delaySec])
+    if (mode !== 'delay') return
+    let raf = 0
+    const tick = () => {
+      const v = delayVideoRef.current
+      if (v) {
+        setDelayTime(v.currentTime)
+        if (Number.isFinite(v.duration) && v.duration > 0) setDelayDuration(v.duration)
+        else if (v.buffered.length > 0) setDelayDuration(v.buffered.end(v.buffered.length - 1))
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [mode])
 
   const pumpDelayQueue = useCallback(() => {
     const sb = delaySourceBufferRef.current
@@ -284,7 +307,7 @@ export function CameraPane() {
         return
       }
       setDelayBuffering(false)
-      if (v.paused || Math.abs(v.currentTime - target) > 0.75) {
+      if (delayFollowRef.current && (v.paused || Math.abs(v.currentTime - target) > 0.75)) {
         v.currentTime = target
         void v.play().catch(() => {})
       }
@@ -524,11 +547,19 @@ export function CameraPane() {
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
 
   return (
-    <section className="relative flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <section
+      className={
+        fullscreen
+          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black p-1'
+          : 'relative flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+      }
+    >
+      {!fullscreen && (
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Athlete camera</h2>
         <span className="text-xs text-[var(--muted)]">live · delay cam · replay</span>
       </div>
+      )}
 
       {/* Top controls */}
       <div className="flex flex-wrap items-center gap-2">
@@ -583,10 +614,25 @@ export function CameraPane() {
           />
           Mirror
         </label>
+        {fullscreen && running && (
+          <label className="flex items-center gap-2 text-xs text-white/80">
+            Delay
+            <input
+              type="range"
+              min={DELAY_MIN}
+              max={DELAY_MAX}
+              step={1}
+              value={delaySec}
+              onChange={(e) => setDelaySec(Number(e.target.value))}
+              className="w-24 accent-[var(--accent)]"
+            />
+            <span className="tabular-nums">{delaySec}s</span>
+          </label>
+        )}
       </div>
 
       {/* Buffer / delay length — used by delay cam and Replay */}
-      {running && (
+      {running && !fullscreen && (
         <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
           {mode === 'delay' ? 'Delay' : 'Replay buffer'}
           <input
@@ -607,14 +653,14 @@ export function CameraPane() {
         className={
           mode === 'replay' && clipSrc
             ? 'pointer-events-none absolute h-px w-px overflow-hidden opacity-0'
-            : 'relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black'
+            : `relative overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fullscreen ? 'min-h-0 flex-1' : ''}`
         }
       >
         <video
           ref={liveVideoRef}
           muted
           playsInline
-          className={`max-h-[420px] w-full object-contain ${mirrorCls} ${
+          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirrorCls} ${
             mode === 'delay' ? 'hidden' : ''
           }`}
         />
@@ -622,7 +668,7 @@ export function CameraPane() {
           ref={delayVideoRef}
           muted
           playsInline
-          className={`max-h-[420px] w-full object-contain ${mirrorCls} ${
+          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirrorCls} ${
             mode === 'delay' ? '' : 'hidden'
           }`}
         />
@@ -649,10 +695,43 @@ export function CameraPane() {
         )}
       </div>
 
+      {mode === 'delay' && running && (
+        <div className="flex items-center gap-2 px-1">
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0.1, delayDuration)}
+            step={0.05}
+            value={Math.min(delayTime, delayDuration || delayTime)}
+            onChange={(e) => {
+              const t = Number(e.target.value)
+              delayFollowRef.current = false
+              const v = delayVideoRef.current
+              if (v) {
+                v.pause()
+                v.currentTime = t
+              }
+              setDelayTime(t)
+            }}
+            className="min-w-0 flex-1"
+            aria-label="Scrub delay cam"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              delayFollowRef.current = true
+            }}
+            className="shrink-0 rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
+          >
+            Live delay
+          </button>
+        </div>
+      )}
+
       {/* Replay of the last N seconds (or a saved attempt) */}
       {mode === 'replay' &&
         (clipSrc ? (
-          <div className="flex flex-col gap-2">
+          <div className={`flex flex-col gap-2 ${fullscreen ? 'min-h-0 flex-1' : ''}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-[var(--text)]">
                 {replayTailSec
@@ -672,6 +751,7 @@ export function CameraPane() {
               mirror={mirror}
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
+              fill={fullscreen}
             />
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -698,6 +778,7 @@ export function CameraPane() {
         ))}
 
       {/* Record controls */}
+      {!fullscreen && (
       <div className="flex flex-wrap items-center gap-2">
         {!recording ? (
           <button
@@ -722,6 +803,7 @@ export function CameraPane() {
           in the app
         </span>
       </div>
+      )}
 
       {flash && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
@@ -735,7 +817,7 @@ export function CameraPane() {
       )}
 
       {/* Clip list */}
-      {clips.length > 0 && (
+      {!fullscreen && clips.length > 0 && (
         <div>
           <h3 className="mb-1 text-sm font-semibold text-[var(--muted)]">Recorded attempts</h3>
           <ul className="flex max-h-36 flex-col gap-1 overflow-y-auto panel-scroll">

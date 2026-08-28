@@ -26,7 +26,6 @@ import { scoreShape } from '../lib/scoring'
 import {
   drawGradeHud,
   drawPoseOverlay,
-  loadJointDrawMode,
   overlayLineColor,
   saveJointDrawMode,
   type JointDrawMode,
@@ -62,7 +61,7 @@ export function HoldReplayPlayer({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [mode, setMode] = useState<JointDrawMode>(loadJointDrawMode)
+  const [mode, setMode] = useState<JointDrawMode>('merged')
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -162,6 +161,7 @@ export function HoldReplayPlayer({
     video.addEventListener('play', onPlay)
     video.addEventListener('pause', onPause)
     raf = requestAnimationFrame(paint)
+    void video.play().catch(() => {})
     return () => {
       cancelAnimationFrame(raf)
       video.removeEventListener('loadedmetadata', onMeta)
@@ -235,18 +235,60 @@ export function HoldReplayPlayer({
   }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, encodeOnReady, runEncode])
 
   const save = async () => {
-    const fileBlob = prepared
-    if (!fileBlob || busy) {
-      setFlash('Wait until the video file is ready, then tap Save again.')
-      return
-    }
     setSaving(true)
-    const ext = extForVideoType(fileBlob.type || filename)
-    const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-    const result: SaveVideoResult = await saveVideoToDevice(fileBlob, name)
-    setFlash(saveResultMessage(result))
-    setSaving(false)
-    window.setTimeout(() => setFlash(null), 5000)
+    setFlash(null)
+    try {
+      let fileBlob = prepared
+      if (!fileBlob) {
+        if (!blob) {
+          setFlash('Clip is still loading — wait a moment, then tap Save again.')
+          return
+        }
+        const key = burnedOverlayKey(clipId, mode, mirror)
+        const cached = getBurnedOverlay(key)
+        if (cached) {
+          fileBlob = cached
+          setPrepared(cached)
+        } else {
+          setBusy(true)
+          const out = await burnOverlayVideo({
+            source: blob,
+            track,
+            mode,
+            mirror,
+            holdSeconds,
+            clockOffsetSec,
+            cancelled: () => false,
+            onProgress: (p) => setPrep(p),
+          })
+          rememberBurnedOverlay(key, out)
+          setPrepared(out)
+          setPrep(1)
+          fileBlob = out
+        }
+      }
+      const ext = extForVideoType(fileBlob.type || filename)
+      const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
+      const result: SaveVideoResult = await saveVideoToDevice(fileBlob, name)
+      setFlash(saveResultMessage(result))
+    } catch (err) {
+      const raw = blob
+      if (raw) {
+        const ext = extForVideoType(raw.type || filename)
+        const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
+        const result: SaveVideoResult = await saveVideoToDevice(raw, name)
+        setFlash(
+          saveResultMessage(result) ||
+            (err instanceof Error ? err.message : 'Saved the camera clip without overlay.'),
+        )
+      } else {
+        setFlash('Could not save that hold clip.')
+      }
+    } finally {
+      setBusy(false)
+      setSaving(false)
+      window.setTimeout(() => setFlash(null), 5000)
+    }
   }
 
   return (
@@ -323,19 +365,9 @@ export function HoldReplayPlayer({
           : 'Left and right drawn separately. Use this if you filmed from the front.'}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {!prepared && !busy ? (
-          <button
-            type="button"
-            disabled={!blob}
-            onClick={() => void runEncode()}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm disabled:opacity-50"
-          >
-            Prepare save file
-          </button>
-        ) : null}
         <button
           type="button"
-          disabled={!prepared || busy || saving}
+          disabled={!blob || busy || saving}
           onClick={() => void save()}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
         >
@@ -343,11 +375,11 @@ export function HoldReplayPlayer({
             ? 'Opening share…'
             : busy
               ? `Preparing video file… ${Math.round(prep * 100)}%`
-              : 'Save video to Photos / Files'}
+              : 'Save video to Photos'}
         </button>
         {busy && (
           <span className="text-[11px] text-[var(--muted)]">
-            Save stays off until this overlay is burned into the file — not a link.
+            Burning the one-line overlay, stopwatch, and live score into the file.
           </span>
         )}
       </div>

@@ -6,6 +6,7 @@ import {
   sendJson,
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
+import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 
 function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
   server.middlewares.use(async (req, res, next) => {
@@ -14,13 +15,28 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
     if (
       path !== '/api/ig-resolve' &&
       path !== '/api/ig-media' &&
-      path !== '/api/library'
+      path !== '/api/library' &&
+      path !== '/api/roster'
     ) {
       next()
       return
     }
     try {
       const url = new URL(raw, 'http://127.0.0.1')
+      if (path === '/api/roster') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readRosterFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          const saved = writeRosterFile(JSON.parse(body))
+          sendJson(res, 200, saved)
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
       if (path === '/api/library') {
         if (req.method === 'GET') {
           sendJson(res, 200, readLibraryFile())

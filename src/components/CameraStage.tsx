@@ -6,6 +6,12 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
+import {
+  drawGradeHud,
+  drawPoseOverlay,
+  overlayLineColor,
+  type JointDrawMode,
+} from '../lib/skeleton'
 import type { CriterionDef, Landmark, ScoreResult, ShapeDef } from '../types'
 
 type Props = {
@@ -27,6 +33,8 @@ type Props = {
   /** Hold-challenge stopwatch burned in next to the live score. */
   holdSeconds?: number | null
   holdSecondsRef?: { current: number | null }
+  /** merged = one side-view line (Tasks 2 hold). split = left and right. */
+  jointMode?: JointDrawMode
   className?: string
   /** Fill the parent instead of sizing to the video aspect. */
   fill?: boolean
@@ -84,72 +92,6 @@ const ANGLE_READOUTS: { label: string; points: [number, number, number]; color: 
   { label: 'R knee', points: [LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE], color: '#c4a5ff' },
 ]
 
-function scoreFill(n: number): string {
-  if (n >= 85) return '#2dd4a8'
-  if (n >= 70) return '#5ec2a8'
-  if (n >= 50) return '#e4c35a'
-  return '#f07178'
-}
-
-function formatHoldClock(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const sec = seconds - m * 60
-  if (m > 0) return `${m}:${sec.toFixed(1).padStart(4, '0')}`
-  return `${sec.toFixed(1)}s`
-}
-
-function drawGradeHud(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  overall: number,
-  label: string,
-  holdSeconds?: number | null,
-) {
-  const cx = width / 2
-  const y = height * 0.025
-  const scoreText = String(overall)
-  const scorePx = Math.max(40, Math.round(width * 0.072))
-  const labelPx = Math.max(13, Math.round(width * 0.022))
-  const clockPx = Math.max(18, Math.round(width * 0.038))
-  const clockText = holdSeconds != null ? formatHoldClock(holdSeconds) : null
-  ctx.save()
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
-  const scoreW = ctx.measureText(scoreText).width
-  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
-  const labelW = ctx.measureText(label).width
-  let clockW = 0
-  if (clockText) {
-    ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
-    clockW = ctx.measureText(clockText).width
-  }
-  const boxW = Math.max(scoreW, labelW, clockW) + width * 0.05
-  const boxH = scorePx + labelPx + (clockText ? clockPx + height * 0.012 : 0) + height * 0.035
-  const x0 = cx - boxW / 2
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.58)'
-  if (typeof ctx.roundRect === 'function') {
-    ctx.beginPath()
-    ctx.roundRect(x0, y, boxW, boxH, Math.max(10, width * 0.012))
-    ctx.fill()
-  } else {
-    ctx.fillRect(x0, y, boxW, boxH)
-  }
-  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
-  ctx.fillStyle = scoreFill(overall)
-  ctx.fillText(scoreText, cx, y + height * 0.008)
-  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
-  ctx.fillStyle = 'rgba(255,255,255,0.88)'
-  ctx.fillText(label, cx, y + scorePx + height * 0.01)
-  if (clockText) {
-    ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
-    ctx.fillStyle = '#f0b429'
-    ctx.fillText(clockText, cx, y + scorePx + labelPx + height * 0.018)
-  }
-  ctx.restore()
-}
-
 export function CameraStage({
   videoRef,
   canvasRef,
@@ -164,6 +106,7 @@ export function CameraStage({
   burnInHud = false,
   holdSeconds = null,
   holdSecondsRef,
+  jointMode = 'split',
   className = '',
   fill = false,
 }: Props) {
@@ -223,56 +166,69 @@ export function CameraStage({
       }
 
       if (landmarks) {
-        ctx.lineJoin = 'round'
-        ctx.lineCap = 'round'
-        for (const [a, b] of POSE_EDGES) {
-          const A = landmarks[a]
-          const B = landmarks[b]
-          if (!A || !B) continue
-          if ((A.visibility ?? 1) < VISIBILITY_DRAW || (B.visibility ?? 1) < VISIBILITY_DRAW) continue
-          const color = edgeTint(a, b, shape, score)
-          ctx.lineWidth = Math.max(5, canvas.width * 0.006)
-          ctx.strokeStyle = color
-          ctx.beginPath()
-          ctx.moveTo(A.x * canvas.width, A.y * canvas.height)
-          ctx.lineTo(B.x * canvas.width, B.y * canvas.height)
-          ctx.stroke()
-        }
-
-        for (const lm of landmarks) {
-          if ((lm.visibility ?? 1) < VISIBILITY_DRAW) continue
-          ctx.beginPath()
-          ctx.fillStyle = '#ffffff'
-          ctx.arc(
-            lm.x * canvas.width,
-            lm.y * canvas.height,
-            Math.max(4, canvas.width * 0.006),
-            0,
-            Math.PI * 2,
-          )
-          ctx.fill()
-        }
-
-        if (showAngles) {
+        if (jointMode === 'merged') {
           ctx.restore()
+          drawPoseOverlay(ctx, landmarks, {
+            width: canvas.width,
+            height: canvas.height,
+            mirror,
+            mode: 'merged',
+            showAngles,
+            lineColor: overlayLineColor(score),
+          })
           ctx.save()
-          ctx.font = `600 ${Math.max(12, canvas.width * 0.018)}px sans-serif`
-          ctx.textAlign = 'left'
-          for (const readout of ANGLE_READOUTS) {
-            const ang = jointAngle(landmarks, ...readout.points)
-            if (ang === null) continue
-            const joint = landmarks[readout.points[1]]
-            if (!joint || (joint.visibility ?? 1) < VISIBILITY_DRAW) continue
-            let x = joint.x * canvas.width
-            let y = joint.y * canvas.height
-            if (mirror) x = canvas.width - x
-            ctx.fillStyle = 'rgba(0,0,0,0.55)'
-            const text = `${readout.label} ${Math.round(ang)}°`
-            const pad = 4
-            const w = ctx.measureText(text).width
-            ctx.fillRect(x + 8 - pad, y - 16 - pad, w + pad * 2, 18 + pad)
-            ctx.fillStyle = readout.color
-            ctx.fillText(text, x + 8, y - 4)
+        } else {
+          ctx.lineJoin = 'round'
+          ctx.lineCap = 'round'
+          for (const [a, b] of POSE_EDGES) {
+            const A = landmarks[a]
+            const B = landmarks[b]
+            if (!A || !B) continue
+            if ((A.visibility ?? 1) < VISIBILITY_DRAW || (B.visibility ?? 1) < VISIBILITY_DRAW) continue
+            const color = edgeTint(a, b, shape, score)
+            ctx.lineWidth = Math.max(5, canvas.width * 0.006)
+            ctx.strokeStyle = color
+            ctx.beginPath()
+            ctx.moveTo(A.x * canvas.width, A.y * canvas.height)
+            ctx.lineTo(B.x * canvas.width, B.y * canvas.height)
+            ctx.stroke()
+          }
+
+          for (const lm of landmarks) {
+            if ((lm.visibility ?? 1) < VISIBILITY_DRAW) continue
+            ctx.beginPath()
+            ctx.fillStyle = '#ffffff'
+            ctx.arc(
+              lm.x * canvas.width,
+              lm.y * canvas.height,
+              Math.max(4, canvas.width * 0.006),
+              0,
+              Math.PI * 2,
+            )
+            ctx.fill()
+          }
+
+          if (showAngles) {
+            ctx.restore()
+            ctx.save()
+            ctx.font = `600 ${Math.max(12, canvas.width * 0.018)}px sans-serif`
+            ctx.textAlign = 'left'
+            for (const readout of ANGLE_READOUTS) {
+              const ang = jointAngle(landmarks, ...readout.points)
+              if (ang === null) continue
+              const joint = landmarks[readout.points[1]]
+              if (!joint || (joint.visibility ?? 1) < VISIBILITY_DRAW) continue
+              let x = joint.x * canvas.width
+              let y = joint.y * canvas.height
+              if (mirror) x = canvas.width - x
+              ctx.fillStyle = 'rgba(0,0,0,0.55)'
+              const text = `${readout.label} ${Math.round(ang)}°`
+              const pad = 4
+              const w = ctx.measureText(text).width
+              ctx.fillRect(x + 8 - pad, y - 16 - pad, w + pad * 2, 18 + pad)
+              ctx.fillStyle = readout.color
+              ctx.fillText(text, x + 8, y - 4)
+            }
           }
         }
       }
@@ -293,7 +249,7 @@ export function CameraStage({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud, holdSecondsRef])
+  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud, holdSecondsRef, jointMode])
 
   return (
     <div

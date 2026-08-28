@@ -1,0 +1,115 @@
+{
+  "kind": "shape-lab-roster",
+  "version": 1,
+  "exportedAt": "2026-08-28T06:01:43.590Z",
+  "athletes": [
+    {
+      "id": "ath_mt9tj1tv_1vr1ec",
+      "name": "Test",
+      "createdAt": "2026-08-26T08:14:51.139Z"
+    }
+  ],
+  "activeAthleteId": "ath_mt9tj1tv_1vr1ec",
+  "homework": [
+    {
+      "id": "hw_mt9jiahb_8sijyq",
+      "athleteId": "ath_mt91oaiv_nyw9y7",
+      "shapeId": "hollow_arms_down",
+      "source": "auto",
+      "autoKey": "hollow",
+      "targetSeconds": 60,
+      "notes": "Lower back pressed to the floor, arms by sides, legs tight. At 60s quality hold, level up to arms up.",
+      "createdAt": "2026-08-26T03:34:19.535Z"
+    },
+    {
+      "id": "hw_mt9jiahb_d7ffaw",
+      "athleteId": "ath_mt91oaiv_nyw9y7",
+      "shapeId": "superman",
+      "source": "auto",
+      "autoKey": "superman",
+      "targetSeconds": 30,
+      "notes": "Straight arms behind ears, chin off chest, straight knees off the floor, feet & ankles together, toes pointed.",
+      "createdAt": "2026-08-26T03:34:19.535Z"
+    },
+    {
+      "id": "hw_mt9jiahb_mivzsq",
+      "athleteId": "ath_mt91oaiv_nyw9y7",
+      "shapeId": "side_plank",
+      "source": "auto",
+      "autoKey": "side_plank",
+      "targetSeconds": 30,
+      "notes": "Train BOTH sides — log left and right separately.",
+      "createdAt": "2026-08-26T03:34:19.535Z"
+    },
+    {
+      "id": "hw_mt9jiahb_mn0uiq",
+      "athleteId": "ath_mt91oaiv_nyw9y7",
+      "shapeId": "wall_handstand",
+      "source": "auto",
+      "autoKey": "wall_handstand",
+      "targetSeconds": 30,
+      "notes": "Stomach-to-wall preferred. Same body standards as freestanding.",
+      "createdAt": "2026-08-26T03:34:19.535Z"
+    },
+    {
+      "id": "hw_mt9tj1u0_uihhny",
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "shapeId": "hollow_arms_down",
+      "source": "auto",
+      "autoKey": "hollow",
+      "targetSeconds": 60,
+      "notes": "Start in a pike and inch back until the lower back is flat. Compress the low back, then let the feet lift. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears.",
+      "createdAt": "2026-08-26T08:14:51.144Z"
+    },
+    {
+      "id": "hw_mt9tj1u0_gpwuch",
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "shapeId": "superman",
+      "source": "auto",
+      "autoKey": "superman",
+      "targetSeconds": 30,
+      "notes": "Straight arms behind ears, chin off chest, straight knees off the floor, feet & ankles together, toes pointed.",
+      "createdAt": "2026-08-26T08:14:51.144Z"
+    },
+    {
+      "id": "hw_mt9tj1u0_35ny1f",
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "shapeId": "side_plank",
+      "source": "auto",
+      "autoKey": "side_plank",
+      "targetSeconds": 30,
+      "notes": "Train BOTH sides — log left and right separately.",
+      "createdAt": "2026-08-26T08:14:51.144Z"
+    },
+    {
+      "id": "hw_mt9tj1u0_0jvtkg",
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "shapeId": "wall_handstand",
+      "source": "auto",
+      "autoKey": "wall_handstand",
+      "targetSeconds": 30,
+      "notes": "Stomach-to-wall preferred. Same body standards as freestanding.",
+      "createdAt": "2026-08-26T08:14:51.144Z"
+    }
+  ],
+  "homeworkLogs": [],
+  "taskProgress": {
+    "ath_mt91oaiv_nyw9y7": {
+      "athleteId": "ath_mt91oaiv_nyw9y7",
+      "completions": {
+        "task_stand_clean": 1
+      },
+      "currentTaskId": "task_ftos",
+      "assignedTaskIds": null,
+      "updatedAt": "2026-08-26T07:00:22.248Z"
+    }
+  },
+  "flowProgress": {
+    "ath_mt9tj1tv_1vr1ec": {
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "completions": {},
+      "currentId": "flow_hs_right",
+      "updatedAt": "2026-08-28T06:01:43.585Z"
+    }
+  }
+}

@@ -7,10 +7,9 @@
  *
  * Two ways to log a session:
  *  - CAMERA (primary, encouraged): live scoring with two timers — total hold
- *    vs "proper" hold (score at/above the form standard, default 85). While
- *    form falls below the standard the panel speaks the main correction
- *    (useSpeechCoach, ~4s throttle) and records a breakdown event (when,
- *    which criterion, coach cue) into the log for later review.
+ *    vs "proper" hold (score at/above the form standard). Clock starts when
+ *    you actually hit the shape. Voice stays quiet (about every 20s, only on
+ *    a real miss). Breakdowns still save for later review.
  *  - MANUAL (secondary): type a hold time with an editable date — flagged
  *    with method: 'manual' and shown with a badge (no proper-hold data).
  */
@@ -34,11 +33,13 @@ import {
   removeHomeworkItem,
   updateHomeworkItem,
 } from '../lib/storage'
+import { homeworkLooksReady } from '../lib/homeworkPose'
 import type {
   HomeworkBreakdown,
   HomeworkItem,
   HomeworkLog,
   HomeworkSource,
+  Landmark,
   ReferencePhoto,
   ScoreResult,
 } from '../types'
@@ -51,12 +52,18 @@ type Props = {
   /** Shape the camera is currently scoring (App state) */
   currentShapeId: string
   /** Ask App to switch camera scoring to this shape */
-  onRequestShape: (shapeId: string) => void
+  onRequestShape: (
+    shapeId: string,
+    stance?: 'left' | 'right' | 'auto',
+    opts?: { profileOk?: boolean },
+  ) => void
   /** Whether pose timing is accumulating (camera or demo active) */
   timingActive: boolean
   /** Speak form tips during camera sessions */
   voiceEnabled: boolean
   referencePhotos: ReferencePhoto[]
+  landmarks?: Landmark[] | null
+  onEnsureCamera?: () => void | Promise<void>
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -174,6 +181,8 @@ export function HomeworkPanel({
   timingActive,
   voiceEnabled,
   referencePhotos,
+  landmarks = null,
+  onEnsureCamera,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -191,10 +200,24 @@ export function HomeworkPanel({
   const [manualSide, setManualSide] = useState<PlankSide>('left')
   // Live breakdown count for the session box
   const [breakdownCount, setBreakdownCount] = useState(0)
+  const [watchRunning, setWatchRunning] = useState(false)
+  const [watchMs, setWatchMs] = useState(0)
+  const [watchOffer, setWatchOffer] = useState<number | null>(null)
+  const watchStartRef = useRef<number | null>(null)
+  const watchAccRef = useRef(0)
 
   const breakdownsRef = useRef<HomeworkBreakdown[]>([])
   const wasProperRef = useRef(false)
   const lastEncourageAtRef = useRef(0)
+
+  useEffect(() => {
+    if (!watchRunning) return
+    const id = window.setInterval(() => {
+      const start = watchStartRef.current ?? performance.now()
+      setWatchMs(watchAccRef.current + (performance.now() - start))
+    }, 80)
+    return () => window.clearInterval(id)
+  }, [watchRunning])
 
   // Load (and auto-seed) homework whenever the athlete changes
   useEffect(() => {
@@ -229,7 +252,14 @@ export function HomeworkPanel({
   // global quality threshold used elsewhere in the app.
   const sessionTiming =
     timingActive && activeItem !== null && currentShapeId === activeItem.shapeId
-  const hold = useHoldTimer(sessionTiming, score.overall, standard)
+  const inShape =
+    Boolean(activeItem) &&
+    homeworkLooksReady(activeItem!.shapeId, landmarks, score.overall)
+  const hold = useHoldTimer(
+    sessionTiming && inShape,
+    inShape ? Math.max(score.overall, 10) : 0,
+    standard,
+  )
   const properHoldSeconds = hold.qualityHoldSeconds
 
   const { speak, reset: resetSpeech, supported: speechSupported } =
@@ -238,19 +268,11 @@ export function HomeworkPanel({
   // Verbal tips + breakdown capture while holding
   useEffect(() => {
     if (!sessionTiming) return
-    if (score.overall >= standard) {
+    if (score.holdReady || score.overall >= standard) {
       wasProperRef.current = true
-      // Occasional encouragement while form is good (~every 12s of hold)
-      if (
-        hold.totalHoldSeconds > 3 &&
-        hold.totalHoldSeconds - lastEncourageAtRef.current >= 12
-      ) {
-        lastEncourageAtRef.current = hold.totalHoldSeconds
-        speak('Good hold — keep breathing.')
-      }
       return
     }
-    // Form fell below the standard: record one breakdown per drop
+    if (!inShape) return
     if (wasProperRef.current && hold.totalHoldSeconds > 0.5) {
       wasProperRef.current = false
       const visible = score.criteria.filter((c) => !c.id.startsWith('_'))
@@ -268,11 +290,16 @@ export function HomeworkPanel({
         setBreakdownCount(breakdownsRef.current.length)
       }
     }
-    // Speak the current main correction to pull form back (4s throttle in hook)
-    if (score.overall > 5 && score.mainCorrection) {
-      speak(score.mainCorrection)
-    }
-  }, [sessionTiming, score, standard, hold.totalHoldSeconds, speak])
+    if (!inShape) return
+    if (hold.totalHoldSeconds < 4) return
+    const now = Date.now()
+    if (now - lastEncourageAtRef.current < 20000) return
+    if (score.overall >= 48) return
+    const cue = score.mainCorrection
+    if (!cue || cue.toLowerCase().includes('excellent')) return
+    lastEncourageAtRef.current = now
+    speak(cue)
+  }, [sessionTiming, score, standard, hold.totalHoldSeconds, speak, inShape])
 
   const showFlash = (msg: string) => {
     setFlash(msg)
@@ -290,9 +317,10 @@ export function HomeworkPanel({
   const startItem = (item: HomeworkItem) => {
     setActiveItemId(item.id)
     setManualItemId(null)
-    onRequestShape(item.shapeId)
+    onRequestShape(item.shapeId, 'auto', { profileOk: true })
     resetSession()
     resetSpeech()
+    void onEnsureCamera?.()
   }
 
   const stopItem = () => {
@@ -337,9 +365,54 @@ export function HomeworkPanel({
     setManualSide('left')
   }
 
-  const logManual = (item: HomeworkItem) => {
-    if (!athleteId) return
+  const startWatch = () => {
+    watchStartRef.current = performance.now()
+    setWatchRunning(true)
+    setWatchOffer(null)
+  }
+
+  const stopWatch = () => {
+    const start = watchStartRef.current
+    if (start != null) watchAccRef.current += performance.now() - start
+    watchStartRef.current = null
+    setWatchRunning(false)
+    const secs = watchAccRef.current / 1000
+    setWatchMs(watchAccRef.current)
+    setWatchOffer(secs)
+    setManualSeconds(String(Math.round(secs * 10) / 10))
+    if (!manualItemId && items[0]) setManualItemId(items[0].id)
+  }
+
+  const resetWatch = () => {
+    watchStartRef.current = watchRunning ? performance.now() : null
+    watchAccRef.current = 0
+    setWatchMs(0)
+    setWatchOffer(null)
+  }
+
+  const logWatchTime = () => {
+    const item = items.find((i) => i.id === manualItemId) ?? items[0]
+    if (!item) {
+      showFlash('Select a drill to log this time on.')
+      return
+    }
+    if (watchOffer == null || watchOffer <= 0) {
+      showFlash('Start and stop the stopwatch first.')
+      return
+    }
     const secs = Number(manualSeconds)
+    if (!Number.isFinite(secs) || secs <= 0) {
+      showFlash('Enter the hold time in seconds.')
+      return
+    }
+    logManual(item, secs)
+    resetWatch()
+    setWatchOffer(null)
+  }
+
+  const logManual = (item: HomeworkItem, secondsOverride?: number) => {
+    if (!athleteId) return
+    const secs = secondsOverride ?? Number(manualSeconds)
     if (!Number.isFinite(secs) || secs <= 0) {
       showFlash('Enter the hold time in seconds.')
       return
@@ -437,11 +510,81 @@ export function HomeworkPanel({
           Drill library &amp; lifetime progress
         </h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          4 automatic drills for every athlete, plus coach-assigned and
-          athlete-picked shapes. Train with the camera for form-checked
-          &ldquo;proper hold&rdquo; time and spoken tips — or log a time
-          manually if no camera is handy.
+          Camera train starts the timer when you actually hit the shape. Voice stays
+          quiet until a real miss. Or use the stopwatch and log that time (or type one).
         </p>
+      </div>
+
+      <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+          Stopwatch
+        </p>
+        <p className="mt-1 text-3xl font-black tabular-nums text-[var(--text)]">
+          {formatSeconds(watchMs / 1000)}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {!watchRunning ? (
+            <button
+              type="button"
+              onClick={startWatch}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            >
+              Start
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={stopWatch}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            >
+              Stop
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={resetWatch}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+          >
+            Reset
+          </button>
+        </div>
+        {watchOffer != null && watchOffer > 0 && (
+          <div className="mt-3 space-y-2 border-t border-[var(--panel-border)] pt-2">
+            <p className="text-sm text-[var(--text)]">
+              Stopped at {formatSeconds(watchOffer)}. Log that time, or type a different one.
+            </p>
+            <select
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
+              value={manualItemId ?? items[0]?.id ?? ''}
+              onChange={(e) => setManualItemId(e.target.value)}
+            >
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {getShape(i.shapeId)?.name ?? i.shapeId}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                className="w-28 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm tabular-nums"
+                value={manualSeconds}
+                onChange={(e) => setManualSeconds(e.target.value)}
+                aria-label="Seconds to log"
+              />
+              <span className="text-xs text-[var(--muted)]">seconds</span>
+              <button
+                type="button"
+                onClick={logWatchTime}
+                className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                Log time
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Active camera session */}
@@ -454,8 +597,10 @@ export function HomeworkPanel({
             <p className="text-xs text-[var(--muted)]">
               {currentShapeId === activeShape.id
                 ? sessionTiming
-                  ? 'Camera scoring live'
-                  : 'Start the camera (or a demo) to time the hold'
+                  ? inShape
+                    ? 'In the shape — clock is running'
+                    : 'Camera on — clock starts when you hit the shape'
+                  : 'Allow the camera if Safari asks'
                 : 'Switching camera to this shape…'}
             </p>
           </div>

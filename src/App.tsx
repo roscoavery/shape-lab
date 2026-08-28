@@ -48,6 +48,7 @@ import {
   saveTab,
   type AppTab,
 } from './lib/storage'
+import { localRosterSnapshot, pushServerRoster, syncRosterWithServer } from './lib/rosterSync'
 import type {
   AppSettings,
   Athlete,
@@ -109,15 +110,35 @@ export default function App() {
     score.holdReady ? qualityThreshold : 101,
   )
 
+  const rosterReadyRef = useRef(false)
+
   useEffect(() => {
     saveAthletes(athletes)
-    // Every athlete always has the 4 automatic homework drills
     for (const a of athletes) ensureAutoHomework(a.id)
+    if (rosterReadyRef.current && athletes.length > 0) {
+      void pushServerRoster(localRosterSnapshot())
+    }
   }, [athletes])
 
   useEffect(() => {
     saveActiveAthleteId(activeAthleteId)
-  }, [activeAthleteId])
+    if (rosterReadyRef.current && athletes.length > 0) void pushServerRoster()
+  }, [activeAthleteId, athletes.length])
+
+  useEffect(() => {
+    let cancelled = false
+    void syncRosterWithServer().then((synced) => {
+      if (cancelled) return
+      rosterReadyRef.current = true
+      if (synced.athletes.length > 0) {
+        setAthletes(synced.athletes)
+        setActiveAthleteId(synced.activeAthleteId)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     saveSettings(settings)
@@ -542,6 +563,8 @@ export default function App() {
               timingActive={timingActive}
               voiceEnabled={settings.voiceEnabled}
               referencePhotos={referencePhotos}
+              landmarks={activeLandmarks}
+              onEnsureCamera={() => camera.start()}
             />
           </div>
         </div>

@@ -43,6 +43,7 @@ import { defaultSocialName } from '../../lib/socialUrls'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
+import { useCompareLayout } from './compareLayout'
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
@@ -85,6 +86,7 @@ export function ReferencePane() {
   )
   const [dragId, setDragId] = useState<string | null>(null)
   const [libraryReady, setLibraryReady] = useState(false)
+  const { fullscreen } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -723,7 +725,15 @@ export function ReferencePane() {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <section
+      className={
+        fullscreen
+          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black p-1'
+          : 'flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+      }
+    >
+      {!fullscreen && (
+      <>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Reference video</h2>
         <span className="text-xs text-[var(--muted)]">the technique to copy</span>
@@ -984,15 +994,20 @@ export function ReferencePane() {
         </p>
       )}
 
+      </>
+      )}
+
       {/* Player */}
+      <div className={fullscreen ? 'min-h-0 flex-1' : ''}>
       {activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
           itemId={activeItem.id}
           onCached={markCached}
+          fill={fullscreen}
         />
       ) : itemSrc ? (
-        <VideoWorkbench src={itemSrc} allowAbLoop />
+        <VideoWorkbench src={itemSrc} allowAbLoop fill={fullscreen} />
       ) : (
         <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
           {!libraryReady
@@ -1004,6 +1019,7 @@ export function ReferencePane() {
               : 'Add a reference video to this collection'}
         </div>
       )}
+      </div>
     </section>
   )
 }

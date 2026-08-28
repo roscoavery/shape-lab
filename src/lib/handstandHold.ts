@@ -194,7 +194,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       if (!recorder || !lm || lm.length < 33) return
       const t = (performance.now() - recStart) / 1000
       const last = poseTrack[poseTrack.length - 1]
-      if (last && t - last.t < 0.1) return
+      if (last && t - last.t < 0.05) return
       poseTrack.push({ t, lm: cloneLandmarks(lm) })
     }
 

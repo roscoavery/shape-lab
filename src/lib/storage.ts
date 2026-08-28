@@ -276,11 +276,15 @@ export function flowHistoryForSequence(
 export const HOLLOW_PROGRESS_TARGET_SECONDS = 60
 
 /** Default form standard: score required for "proper hold" time. */
-export const DEFAULT_FORM_STANDARD = 85
+export const DEFAULT_FORM_STANDARD = 75
 
 /** Effective form standard for a homework item (item override or default). */
-export function formStandardFor(item: Pick<HomeworkItem, 'formStandard'>): number {
-  return item.formStandard ?? DEFAULT_FORM_STANDARD
+export function formStandardFor(
+  item: Pick<HomeworkItem, 'formStandard' | 'shapeId'>,
+): number {
+  if (item.formStandard != null) return item.formStandard
+  if (item.shapeId.startsWith('hollow')) return 58
+  return DEFAULT_FORM_STANDARD
 }
 
 /**

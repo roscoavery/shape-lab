@@ -706,7 +706,7 @@ export function Tasks2Panel({
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Switch Side view or Front overlay, then Save the video file to Photos / Files. Snapshots jump the playhead — they are not grades.`,
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. One line down the body, stopwatch, and live score are on the video. Save video to Photos.`,
       )
     },
     [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
@@ -772,17 +772,17 @@ export function Tasks2Panel({
           setPhase('idle')
           return
         }
-        if (seqRun.mode !== 'hs-hold') {
+        if (seqRun.mode !== 'hs-hold' && !seqRun.beats.some((b) => b.replayStart)) {
           for (let i = 0; i < 12 && !overlayStreamRef.current; i++) {
             await wait(80)
             if (!alive()) return
           }
           try {
-            delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+            await delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
           } catch (err) {
             console.warn('[tasks2] delay cam', err)
             try {
-              delay.restartRolling(streamRef.current)
+              await delay.restartRolling(streamRef.current)
             } catch {
               /* sequence can still run without a replay buffer */
             }
@@ -948,7 +948,19 @@ export function Tasks2Panel({
           })
         }
         if (beat.replayStart) {
-          delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+          const live = overlayStreamRef.current ?? streamRef.current
+          try {
+            await delay.restartRolling(live)
+          } catch (err) {
+            console.warn('[tasks2] replay start', err)
+            try {
+              await delay.restartRolling(streamRef.current)
+            } catch {
+              /* keep going — grades still save */
+            }
+          }
+          await wait(180)
+          if (!alive()) return
           for (const s of collected) {
             s.atSec = undefined
           }

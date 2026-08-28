@@ -18,6 +18,7 @@ type Props = {
   autoPlay?: boolean
   /** Loop/scrub only the last N seconds of the file (delay-cam buffer). */
   tailSeconds?: number
+  fill?: boolean
 }
 
 function fmt(t: number): string {
@@ -36,6 +37,7 @@ function VideoWorkbenchInner({
   allowAbLoop = false,
   autoPlay = false,
   tailSeconds,
+  fill = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -141,8 +143,8 @@ function VideoWorkbenchInner({
     'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-sm hover:bg-[#243040]'
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black">
+    <div className={`flex flex-col gap-2 ${fill ? 'h-full min-h-0' : ''}`}>
+      <div className={`overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black ${fill ? 'min-h-0 flex-1' : ''}`}>
         <video
           ref={videoRef}
           src={src}
@@ -154,7 +156,7 @@ function VideoWorkbenchInner({
           onDurationChange={onDurationChange}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          className={`max-h-[420px] w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
+          className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
       </div>
 
