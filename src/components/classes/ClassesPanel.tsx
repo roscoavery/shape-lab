@@ -1,12 +1,15 @@
 /**
  * Classes — named drill collages of up to 6 gym-library clips.
- * Captions and A/B loops save with the collage. Full screen splits evenly.
+ * Edit a saved board to change each panel's video (the same clip can be on
+ * more than one tile). Duplicate makes a personal copy.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CollageStage } from './CollageStage'
+import { CollageClipPicker } from './CollageClipPicker'
 import {
   collageToShare,
+  duplicateCollage,
   isGymCollage,
   listCollages,
   MAX_COLLAGE_SLOTS,
@@ -38,6 +41,17 @@ type Draft = {
   slots: CollageSlot[]
 }
 
+function clipToSlot(clip: GymClip, keep?: CollageSlot): CollageSlot {
+  const same = keep ? isSameReferenceUrl(keep.url, clip.url) : false
+  return {
+    clipId: clip.id,
+    url: clip.url,
+    caption: keep?.caption ?? '',
+    loopA: same ? keep?.loopA ?? null : null,
+    loopB: same ? keep?.loopB ?? null : null,
+  }
+}
+
 export function ClassesPanel({ athlete }: Props) {
   const { clips, collections, loading, nameForUrl } = useGymLibrary()
   const favorites = useFavorites()
@@ -52,12 +66,17 @@ export function ClassesPanel({ athlete }: Props) {
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [shareCaption, setShareCaption] = useState('')
   const [sharing, setSharing] = useState(false)
+  const editorRef = useRef<HTMLElement | null>(null)
   const canEdit = Boolean(athlete)
   const admin = isCoachProfile(athlete)
 
   useEffect(() => {
     void listCollages(athlete?.id).then(setCollages)
   }, [athlete?.id])
+
+  useEffect(() => {
+    if (draft) editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [draft?.id])
 
   const gymBoards = useMemo(() => collages.filter(isGymCollage), [collages])
   const myBoards = useMemo(
@@ -87,6 +106,11 @@ export function ClassesPanel({ athlete }: Props) {
       .filter((c) => c.items.length > 0)
   }, [collections, filter, onlyFavorites, favorites])
 
+  const closePlay = () => {
+    setPlaying(null)
+    setFullscreen(false)
+  }
+
   const startNew = () => {
     if (!athlete) {
       setNotice('Unlock a profile to save a named collage.')
@@ -101,7 +125,7 @@ export function ClassesPanel({ athlete }: Props) {
       ownerId: c.ownerId,
       slots: [],
     })
-    setPlaying(null)
+    closePlay()
   }
 
   const editExisting = (c: Collage) => {
@@ -114,38 +138,86 @@ export function ClassesPanel({ athlete }: Props) {
       copiedFromId: c.copiedFromId,
       slots: c.slots.map((s) => ({ ...s })),
     })
-    setPlaying(null)
+    closePlay()
+    setNotice(`Editing “${c.name}”. Each tile has its own video — the same clip can be on more than one.`)
   }
 
-  const toggleClip = (clip: GymClip) => {
-    if (!draft) return
+  const duplicateExisting = (c: Collage) => {
+    if (!athlete) {
+      setNotice('Unlock a profile to duplicate a collage.')
+      return
+    }
+    const copy = duplicateCollage(
+      c,
+      athlete.id,
+      collages.map((board) => board.name),
+    )
+    setDraft({
+      id: copy.id,
+      name: copy.name,
+      createdById: copy.createdById,
+      createdAt: copy.createdAt,
+      ownerId: copy.ownerId,
+      copiedFromId: copy.copiedFromId,
+      slots: copy.slots.map((s) => ({ ...s })),
+    })
+    closePlay()
+    setNotice(`Copy of “${c.name}”. Change any panel, then save.`)
+  }
+
+  const addClip = (clip: GymClip) => {
     setDraft((prev) => {
       if (!prev) return prev
-      const existing = prev.slots.find((s) => isSameReferenceUrl(s.url, clip.url))
-      if (existing) {
-        return { ...prev, slots: prev.slots.filter((s) => s.url !== existing.url) }
-      }
       if (prev.slots.length >= MAX_COLLAGE_SLOTS) {
         setNotice(`A collage can hold ${MAX_COLLAGE_SLOTS} videos.`)
         return prev
       }
-      return {
-        ...prev,
-        slots: [
-          ...prev.slots,
-          {
-            clipId: clip.id,
-            url: clip.url,
-            caption: '',
-            loopA: null,
-            loopB: null,
-          },
-        ],
-      }
+      return { ...prev, slots: [...prev.slots, clipToSlot(clip)] }
     })
   }
 
-  const selected = (url: string) => Boolean(draft?.slots.some((s) => isSameReferenceUrl(s.url, url)))
+  const setSlotClip = (index: number, clip: GymClip) => {
+    setDraft((prev) => {
+      if (!prev || index < 0 || index >= prev.slots.length) return prev
+      const slots = prev.slots.map((s, i) => (i === index ? clipToSlot(clip, s) : s))
+      return { ...prev, slots }
+    })
+  }
+
+  const duplicateSlot = (index: number) => {
+    setDraft((prev) => {
+      if (!prev) return prev
+      if (prev.slots.length >= MAX_COLLAGE_SLOTS) {
+        setNotice(`A collage can hold ${MAX_COLLAGE_SLOTS} videos.`)
+        return prev
+      }
+      const slot = prev.slots[index]
+      if (!slot) return prev
+      const slots = prev.slots.slice()
+      slots.splice(index + 1, 0, { ...slot })
+      return { ...prev, slots }
+    })
+  }
+
+  const moveSlot = (index: number, dir: -1 | 1) => {
+    setDraft((prev) => {
+      if (!prev) return prev
+      const j = index + dir
+      if (j < 0 || j >= prev.slots.length) return prev
+      const slots = prev.slots.slice()
+      const swap = slots[index]
+      slots[index] = slots[j]
+      slots[j] = swap
+      return { ...prev, slots }
+    })
+  }
+
+  const removeSlot = (index: number) => {
+    setDraft((prev) => {
+      if (!prev) return prev
+      return { ...prev, slots: prev.slots.filter((_, i) => i !== index) }
+    })
+  }
 
   const persist = async () => {
     if (!draft || !athlete) return
@@ -177,9 +249,7 @@ export function ClassesPanel({ athlete }: Props) {
     setCollages((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)])
     setDraft(null)
     setPlaying(saved)
-    setNotice(
-      `Saved “${saved.name}” to your class library. Share it to the feed so other coaches can copy it.`,
-    )
+    setNotice(`Saved “${saved.name}”. In the board, each panel can pick its own video.`)
   }
 
   const drop = async (c: Collage) => {
@@ -188,7 +258,7 @@ export function ClassesPanel({ athlete }: Props) {
     if (!confirm(`Delete collage “${c.name}”?`)) return
     if (await removeCollage(c.id)) {
       setCollages((prev) => prev.filter((x) => x.id !== c.id))
-      if (playing?.id === c.id) setPlaying(null)
+      if (playing?.id === c.id) closePlay()
       if (draft?.id === c.id) setDraft(null)
     }
   }
@@ -220,6 +290,43 @@ export function ClassesPanel({ athlete }: Props) {
   const canShare = (c: Collage) =>
     Boolean(athlete && (admin || !c.ownerId || c.ownerId === athlete.id || c.createdById === athlete.id))
 
+  const persistPlayingSlots = (slots: CollageSlot[]) => {
+    if (!playing) return
+    const next = { ...playing, slots, updatedAt: new Date().toISOString() }
+    setPlaying(next)
+    void saveCollage(next).then((saved) => {
+      if (saved) setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
+    })
+  }
+
+  const listProps = {
+    nameForUrl,
+    sharingId,
+    shareCaption,
+    sharing,
+    canEdit,
+    canShare,
+    canManage,
+    onPlay: (c: Collage) => {
+      setPlaying(c)
+      setDraft(null)
+      setFullscreen(false)
+    },
+    onEdit: editExisting,
+    onDuplicate: duplicateExisting,
+    onDelete: (c: Collage) => void drop(c),
+    onShareStart: (c: Collage) => {
+      setSharingId(c.id)
+      setShareCaption(`Class collage: ${c.name}`)
+    },
+    onShareCancel: () => {
+      setSharingId(null)
+      setShareCaption('')
+    },
+    onShareCaption: setShareCaption,
+    onShare: (c: Collage) => void shareToFeed(c),
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
@@ -228,13 +335,10 @@ export function ClassesPanel({ athlete }: Props) {
         </p>
         <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Collages</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Build a board of up to six clips from the gym Compare library. Star favorite
-          URLs, add a caption (reps, a cue). Set A/B on each video — those loop points
-          save with the collage and on the gym URL. Full screen is just the videos,
-          tiles sharing an edge (two clips sit flush; four is a 2×2). Tap Controls
-          or Escape for export. Export records a chosen number of seconds of the
-          looping board. Share one to the gym feed so other coaches can save a copy
-          and run it in class.
+          Build a board of up to six clips. The same video can sit on more than one
+          tile. After you save, each panel has its own video menu (not in full
+          screen). Edit changes the board; Duplicate copies it into your class
+          library.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -252,72 +356,16 @@ export function ClassesPanel({ athlete }: Props) {
         )}
       </section>
 
-      {myBoards.length > 0 && (
-        <CollageList
-          title="My class library"
-          collages={myBoards}
-          nameForUrl={nameForUrl}
-          sharingId={sharingId}
-          shareCaption={shareCaption}
-          sharing={sharing}
-          canEdit={canEdit}
-          canShare={canShare}
-          canManage={canManage}
-          onPlay={(c) => {
-            setPlaying(c)
-            setDraft(null)
-            setFullscreen(false)
-          }}
-          onEdit={editExisting}
-          onDelete={(c) => void drop(c)}
-          onShareStart={(c) => {
-            setSharingId(c.id)
-            setShareCaption(`Class collage: ${c.name}`)
-          }}
-          onShareCancel={() => {
-            setSharingId(null)
-            setShareCaption('')
-          }}
-          onShareCaption={setShareCaption}
-          onShare={(c) => void shareToFeed(c)}
-        />
-      )}
-
-      {gymBoards.length > 0 && (
-        <CollageList
-          title="Gym boards"
-          collages={gymBoards}
-          nameForUrl={nameForUrl}
-          sharingId={sharingId}
-          shareCaption={shareCaption}
-          sharing={sharing}
-          canEdit={canEdit}
-          canShare={canShare}
-          canManage={canManage}
-          onPlay={(c) => {
-            setPlaying(c)
-            setDraft(null)
-            setFullscreen(false)
-          }}
-          onEdit={editExisting}
-          onDelete={(c) => void drop(c)}
-          onShareStart={(c) => {
-            setSharingId(c.id)
-            setShareCaption(`Class collage: ${c.name}`)
-          }}
-          onShareCancel={() => {
-            setSharingId(null)
-            setShareCaption('')
-          }}
-          onShareCaption={setShareCaption}
-          onShare={(c) => void shareToFeed(c)}
-        />
-      )}
-
       {draft && (
-        <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <h3 className="text-sm font-semibold text-[var(--text)]">
-            {draft.slots.length}/{MAX_COLLAGE_SLOTS} selected
+        <section
+          ref={editorRef}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            {collages.some((c) => c.id === draft.id) ? 'Edit collage' : 'New collage'}
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-[var(--text)]">
+            {draft.slots.length}/{MAX_COLLAGE_SLOTS} panels
           </h3>
           <input
             value={draft.name}
@@ -325,6 +373,77 @@ export function ClassesPanel({ athlete }: Props) {
             placeholder="Collage name — e.g. Monday whip drills"
             className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           />
+
+          {draft.slots.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {draft.slots.map((slot, i) => (
+                <li
+                  key={`draft-slot-${i}`}
+                  className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2"
+                >
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold text-[var(--muted)]">
+                      Panel {i + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => moveSlot(i, -1)}
+                      disabled={i === 0}
+                      className="rounded-md border border-[var(--panel-border)] px-2 py-0.5 text-xs disabled:opacity-30"
+                    >
+                      Up
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveSlot(i, 1)}
+                      disabled={i === draft.slots.length - 1}
+                      className="rounded-md border border-[var(--panel-border)] px-2 py-0.5 text-xs disabled:opacity-30"
+                    >
+                      Down
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => duplicateSlot(i)}
+                      className="rounded-md border border-[var(--panel-border)] px-2 py-0.5 text-xs"
+                    >
+                      Same video again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSlot(i)}
+                      className="rounded-md px-2 py-0.5 text-xs text-[var(--bad)]"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <CollageClipPicker
+                    url={slot.url}
+                    clipId={slot.clipId}
+                    clips={clips}
+                    onPick={(clip) => setSlotClip(i, clip)}
+                  />
+                  <input
+                    value={slot.caption}
+                    onChange={(e) => {
+                      const caption = e.target.value
+                      setDraft({
+                        ...draft,
+                        slots: draft.slots.map((s, idx) =>
+                          idx === i ? { ...s, caption } : s,
+                        ),
+                      })
+                    }}
+                    placeholder="Caption — e.g. 8 reps · snap the whip"
+                    className="mt-2 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Add a panel — you can add the same clip more than once
+          </p>
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -372,7 +491,9 @@ export function ClassesPanel({ athlete }: Props) {
                 <ul className="space-y-1">
                   {col.items.map((item) => {
                     if (!item.url) return null
-                    const on = selected(item.url)
+                    const used = draft.slots.filter((s) =>
+                      isSameReferenceUrl(s.url, item.url!),
+                    ).length
                     const clip = clips.find((c) => isSameReferenceUrl(c.url, item.url!))
                     return (
                       <li key={item.id} className="flex items-center gap-1">
@@ -389,7 +510,7 @@ export function ClassesPanel({ athlete }: Props) {
                         <button
                           type="button"
                           onClick={() =>
-                            toggleClip(
+                            addClip(
                               clip ?? {
                                 id: item.id,
                                 name: item.name,
@@ -402,13 +523,15 @@ export function ClassesPanel({ athlete }: Props) {
                             )
                           }
                           className={`flex min-w-0 flex-1 items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
-                            on
+                            used
                               ? 'bg-[var(--accent-dim)] font-semibold text-white'
                               : 'bg-[#0d1218] text-[var(--text)]'
                           }`}
                         >
                           <span className="truncate">{item.name}</span>
-                          <span className="shrink-0 text-[11px] opacity-80">{on ? 'Added' : 'Add'}</span>
+                          <span className="shrink-0 text-[11px] opacity-80">
+                            {used ? `Add again (${used})` : 'Add'}
+                          </span>
                         </button>
                       </li>
                     )
@@ -417,25 +540,6 @@ export function ClassesPanel({ athlete }: Props) {
               </div>
             ))}
           </div>
-          {draft.slots.map((slot, i) => (
-            <label key={`${slot.url}-${i}`} className="mt-3 block">
-              <span className="text-[11px] font-semibold text-[var(--muted)]">
-                Caption on {nameForUrl(slot.url)}
-              </span>
-              <input
-                value={slot.caption}
-                onChange={(e) => {
-                  const caption = e.target.value
-                  setDraft({
-                    ...draft,
-                    slots: draft.slots.map((s, idx) => (idx === i ? { ...s, caption } : s)),
-                  })
-                }}
-                placeholder="e.g. 8 reps · snap the whip"
-                className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-              />
-            </label>
-          ))}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -443,7 +547,11 @@ export function ClassesPanel({ athlete }: Props) {
               disabled={saving}
               className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save collage'}
+              {saving
+                ? 'Saving…'
+                : collages.some((c) => c.id === draft.id)
+                  ? 'Save changes'
+                  : 'Save collage'}
             </button>
             <button
               type="button"
@@ -456,24 +564,24 @@ export function ClassesPanel({ athlete }: Props) {
         </section>
       )}
 
+      {myBoards.length > 0 && (
+        <CollageList title="My class library" collages={myBoards} {...listProps} />
+      )}
+      {gymBoards.length > 0 && (
+        <CollageList title="Gym boards" collages={gymBoards} {...listProps} />
+      )}
+
       {playing && (
         <CollageStage
           collage={playing}
           nameForUrl={nameForUrl}
           fullscreen={fullscreen}
           onFullscreen={setFullscreen}
-          onClose={() => {
-            setPlaying(null)
-            setFullscreen(false)
-          }}
-          onSlots={(slots) => {
-            const next = { ...playing, slots }
-            setPlaying(next)
-            void saveCollage(next).then((saved) => {
-              if (saved) setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
-            })
-          }}
+          onClose={closePlay}
+          onSlots={canEdit ? persistPlayingSlots : undefined}
           canEdit={canEdit}
+          onEditVideos={canEdit ? () => editExisting(playing) : undefined}
+          onDuplicate={canEdit ? () => duplicateExisting(playing) : undefined}
         />
       )}
     </div>
@@ -492,6 +600,7 @@ function CollageList({
   canManage,
   onPlay,
   onEdit,
+  onDuplicate,
   onDelete,
   onShareStart,
   onShareCancel,
@@ -509,6 +618,7 @@ function CollageList({
   canManage: (c: Collage) => boolean
   onPlay: (c: Collage) => void
   onEdit: (c: Collage) => void
+  onDuplicate: (c: Collage) => void
   onDelete: (c: Collage) => void
   onShareStart: (c: Collage) => void
   onShareCancel: () => void
@@ -531,7 +641,9 @@ function CollageList({
                 {c.slots.map((s) => nameForUrl(s.url)).join(', ')}
               </p>
               {c.copiedFromId ? (
-                <p className="mt-1 text-[11px] text-[var(--accent)]">Saved from the gym feed</p>
+                <p className="mt-1 text-[11px] text-[var(--accent)]">
+                  {c.ownerId ? 'Copy in your class library' : 'Saved from the gym feed'}
+                </p>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -549,6 +661,15 @@ function CollageList({
                   className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
                 >
                   Edit
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => onDuplicate(c)}
+                  className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+                >
+                  Duplicate
                 </button>
               )}
               {canShare(c) && sharingId !== c.id && (

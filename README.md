@@ -188,7 +188,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ## Classes (drill collages)
 
-**Classes** builds named boards of up to **six** gym-library clips. Each slot can have a caption (reps, a cue) and its own A/B loop. New collages save into **your class library**. **Share to feed** posts that board so other coaches can **Save to my class library** and run it in class. Gym-wide boards (no personal owner) still show for everyone. **Full screen** packs the clips so their frames share an edge (2×2 for four). Controls stay off until you tap **Controls** or press Escape. **Export** records a chosen number of seconds of the looping board to a file. Unlock a profile to save. Ryan can edit or delete any collage.
+**Classes** builds named boards of up to **six** gym-library clips. The same video can occupy more than one tile. Each slot has its own clip menu while the board is open (not in full screen). **Edit** changes a saved board; **Duplicate** copies it into your class library. Each slot can have a caption and its own A/B loop. **Share to feed** posts that board so other coaches can **Save to my class library**. Gym-wide boards (no personal owner) still show for everyone. **Full screen** packs the clips so their frames share an edge. Controls stay off until you tap **Controls** or press Escape. **Export** records a chosen number of seconds of the looping board to a file. Unlock a profile to save. Ryan can edit or delete any collage.
 
 ## Gym feed
 

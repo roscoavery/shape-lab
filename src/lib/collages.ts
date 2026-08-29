@@ -83,6 +83,37 @@ export function newCollage(createdById: string, name = 'New drill collage'): Col
   }
 }
 
+export function unusedCopyName(base: string, existing: string[]): string {
+  const root = base.trim() || 'Collage'
+  const taken = new Set(existing.map((n) => n.trim().toLowerCase()))
+  let name = `${root} copy`
+  let n = 2
+  while (taken.has(name.toLowerCase())) {
+    name = `${root} copy ${n}`
+    n += 1
+  }
+  return name
+}
+
+/** Personal copy with a new id. Captions and A/B loops come along. */
+export function duplicateCollage(
+  collage: Collage,
+  ownerId: string,
+  existingNames: string[],
+): Collage {
+  const now = new Date().toISOString()
+  return {
+    id: createId('colg'),
+    name: unusedCopyName(collage.name, existingNames),
+    createdAt: now,
+    updatedAt: now,
+    createdById: ownerId,
+    ownerId,
+    copiedFromId: collage.id,
+    slots: collage.slots.map((s) => ({ ...s })),
+  }
+}
+
 export function collageToShare(collage: Collage): CollageShare {
   return {
     sourceId: collage.id,

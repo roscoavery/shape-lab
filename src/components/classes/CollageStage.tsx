@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GymClipPlayer } from '../GymClipPlayer'
+import { CollageClipPicker } from './CollageClipPicker'
 import { evenGrid, type Collage, type CollageSlot } from '../../lib/collages'
+import { useGymLibrary } from '../../lib/gymLibrary'
 import {
   clampExportSeconds,
   collageExportFilename,
@@ -19,6 +21,8 @@ export function CollageStage({
   onClose,
   onSlots,
   canEdit,
+  onEditVideos,
+  onDuplicate,
 }: {
   collage: Collage
   nameForUrl: (url: string) => string
@@ -27,7 +31,10 @@ export function CollageStage({
   onClose: () => void
   onSlots?: (slots: CollageSlot[]) => void
   canEdit: boolean
+  onEditVideos?: () => void
+  onDuplicate?: () => void
 }) {
+  const { clips } = useGymLibrary()
   const gridRef = useRef<HTMLDivElement | null>(null)
   const cancelRef = useRef(false)
   const [chrome, setChrome] = useState(!fullscreen)
@@ -189,6 +196,24 @@ export function CollageStage({
           >
             Export
           </button>
+          {onEditVideos && (
+            <button
+              type="button"
+              onClick={onEditVideos}
+              className="rounded-md border border-white/30 px-2 py-1 text-xs"
+            >
+              Edit videos
+            </button>
+          )}
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="rounded-md border border-white/30 px-2 py-1 text-xs"
+            >
+              Duplicate
+            </button>
+          )}
           {fullscreen && (
             <button
               type="button"
@@ -231,15 +256,32 @@ export function CollageStage({
     >
       {collage.slots.map((slot, i) => {
         const spanLast = collage.slots.length === 5 && i === 4 && cols === 2
+        const assignClip = (clip: { id: string; url: string }) => {
+          if (!onSlots) return
+          const same = slot.url === clip.url
+          onSlots(
+            collage.slots.map((s, idx) =>
+              idx === i
+                ? {
+                    ...s,
+                    clipId: clip.id,
+                    url: clip.url,
+                    loopA: same ? s.loopA : null,
+                    loopB: same ? s.loopB : null,
+                  }
+                : s,
+            ),
+          )
+        }
         return (
           <div
-            key={`${slot.url}-${i}`}
+            key={`slot-${i}`}
             className="relative min-h-0 min-w-0 overflow-hidden bg-black"
             style={spanLast ? { gridColumn: '1 / -1' } : undefined}
           >
             <GymClipPlayer
               url={slot.url}
-              itemId={slot.clipId}
+              itemId={slot.clipId || `${collage.id}-${i}`}
               fill
               persistUrl={slot.url}
               loopA={slot.loopA}
@@ -259,8 +301,18 @@ export function CollageStage({
               }
             />
             {!cinema && (
-              <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-2 py-2">
-                <p className="text-[11px] font-semibold text-white">{nameForUrl(slot.url)}</p>
+              <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
+                {canEdit && onSlots ? (
+                  <CollageClipPicker
+                    url={slot.url}
+                    clipId={slot.clipId}
+                    clips={clips}
+                    compact
+                    onPick={assignClip}
+                  />
+                ) : (
+                  <p className="text-[11px] font-semibold text-white">{nameForUrl(slot.url)}</p>
+                )}
                 {slot.caption ? (
                   <p className="text-[12px] text-[var(--accent)]">{slot.caption}</p>
                 ) : null}

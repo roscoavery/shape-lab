@@ -812,9 +812,10 @@ export default function App() {
             <p className="mb-2">
               <strong className="text-[var(--text)]">Classes</strong> saves named drill
               collages (up to six gym URLs) with captions and A/B loops into your class
-              library. Full screen is the videos only, tiles sharing an edge. Tap
-              Controls for export. Export saves a chosen number of seconds of that
-              board.
+              library. After a board is saved, Edit (or the menu on each panel)
+              changes which video plays there — the same clip can be on more than
+              one tile. Duplicate copies a board into your class library. Full
+              screen is the videos only, tiles sharing an edge.
               Share a board to the gym feed so other coaches can save a copy.{' '}
               <strong className="text-[var(--text)]">Feed</strong> is the gym wall —
               a thought, a hit video, or a shared class collage. Video is optional.
