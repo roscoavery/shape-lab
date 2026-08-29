@@ -25,8 +25,10 @@ import {
   addHomeworkItem,
   addHomeworkLog,
   createId,
+  dedupeHomeworkItems,
   ensureAutoHomework,
   formStandardFor,
+  homeworkDedupeKey,
   loadHomeworkLogs,
   logProperHoldSeconds,
   progressHollowHomework,
@@ -235,6 +237,8 @@ export function HomeworkPanel({
     setManualItemId(null)
   }, [athleteId])
 
+  const visibleItems = useMemo(() => dedupeHomeworkItems(items), [items])
+
   const logsByItem = useMemo(() => {
     const map = new Map<string, HomeworkLog[]>()
     for (const l of logs) {
@@ -381,7 +385,7 @@ export function HomeworkPanel({
     setWatchMs(watchAccRef.current)
     setWatchOffer(secs)
     setManualSeconds(String(Math.round(secs * 10) / 10))
-    if (!manualItemId && items[0]) setManualItemId(items[0].id)
+    if (!manualItemId && visibleItems[0]) setManualItemId(visibleItems[0].id)
   }
 
   const resetWatch = () => {
@@ -392,7 +396,7 @@ export function HomeworkPanel({
   }
 
   const logWatchTime = () => {
-    const item = items.find((i) => i.id === manualItemId) ?? items[0]
+    const item = visibleItems.find((i) => i.id === manualItemId) ?? visibleItems[0]
     if (!item) {
       showFlash('Select a drill to log this time on.')
       return
@@ -463,6 +467,11 @@ export function HomeworkPanel({
 
   const addItem = () => {
     if (!athleteId || !addShapeId) return
+    const probe = { athleteId, shapeId: addShapeId, source: addSource, id: '', createdAt: '' }
+    if (visibleItems.some((h) => homeworkDedupeKey(h) === homeworkDedupeKey(probe))) {
+      showFlash('That drill is already on this homework list.')
+      return
+    }
     const target = Number(addTarget)
     const defaultNotes =
       addShapeId === 'rainbow_bridge'
@@ -573,10 +582,10 @@ export function HomeworkPanel({
             </p>
             <select
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
-              value={manualItemId ?? items[0]?.id ?? ''}
+              value={manualItemId ?? visibleItems[0]?.id ?? ''}
               onChange={(e) => setManualItemId(e.target.value)}
             >
-              {items.map((i) => (
+              {visibleItems.map((i) => (
                 <option key={i.id} value={i.id}>
                   {getShape(i.shapeId)?.name ?? i.shapeId}
                 </option>
@@ -765,7 +774,7 @@ export function HomeworkPanel({
 
       {/* Homework items */}
       <div className="space-y-2">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
           const properValues = itemLogs

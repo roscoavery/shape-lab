@@ -1,6 +1,6 @@
 /**
- * Coach markup on a Compare video: 3-dot connected arrows, freehand draw, drag arrows,
- * and Screenshot crop (press one corner, drag to the opposite corner).
+ * Coach markup on a Compare video: tap-tap Line, smooth freehand Draw,
+ * press-drag Arrow (head where you let go), and Screenshot crop.
  */
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
@@ -18,8 +18,15 @@ export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 type Pt = NormPt
 
 type DrawStroke = { kind: 'draw'; points: Pt[] }
-type ArrowMark = { kind: 'arrow'; a: Pt; b: Pt }
+type ArrowMark = { kind: 'arrow'; points: Pt[] }
 type Mark = DrawStroke | ArrowMark
+
+function appendIfMoved(pts: Pt[], pt: Pt, min = 0.0018): Pt[] {
+  const last = pts[pts.length - 1]
+  if (last && Math.hypot(pt.x - last.x, pt.y - last.y) < min) return pts
+  pts.push(pt)
+  return pts
+}
 
 const LINE = '#f5d76e'
 const DRAW = '#7dd3c7'
@@ -144,7 +151,8 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   const drawingRef = useRef(false)
   const drawPtsRef = useRef<Pt[] | null>(null)
   const arrowDragRef = useRef(false)
-  const arrowStartRef = useRef<Pt | null>(null)
+  const arrowPtsRef = useRef<Pt[]>([])
+  const paintFrameRef = useRef(0)
   const cropDragRef = useRef(false)
   const cropStartRef = useRef<Pt | null>(null)
   const linePtsRef = useRef(linePts)
@@ -180,29 +188,45 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
     const box = contentBox(videoRef.current, host)
     const lw = Math.max(3, box.width * 0.006)
 
-    const strokeLine = (pts: Pt[], color: string, arrows = false) => {
+    const strokeSmooth = (pts: Pt[], color: string, arrowEnd = false) => {
       if (pts.length === 0) return
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
       ctx.strokeStyle = color
       ctx.fillStyle = color
       ctx.lineWidth = lw
-      if (pts.length > 1) {
+      const px = pts.map((p) => toPx(p, box))
+      if (px.length === 1) {
         ctx.beginPath()
-        const a = toPx(pts[0]!, box)
-        ctx.moveTo(a.x, a.y)
-        for (let i = 1; i < pts.length; i++) {
-          const p = toPx(pts[i]!, box)
-          ctx.lineTo(p.x, p.y)
-        }
-        ctx.stroke()
-        if (arrows) {
-          for (let i = 1; i < pts.length; i++) {
-            drawArrowHead(ctx, toPx(pts[i - 1]!, box), toPx(pts[i]!, box), lw * 4)
-          }
-        }
+        ctx.arc(px[0]!.x, px[0]!.y, lw / 2, 0, Math.PI * 2)
+        ctx.fill()
+        return
       }
+      ctx.beginPath()
+      ctx.moveTo(px[0]!.x, px[0]!.y)
+      if (px.length === 2) {
+        ctx.lineTo(px[1]!.x, px[1]!.y)
+      } else {
+        for (let i = 1; i < px.length - 1; i++) {
+          const a = px[i]!
+          const b = px[i + 1]!
+          ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2)
+        }
+        const last = px[px.length - 1]!
+        ctx.lineTo(last.x, last.y)
+      }
+      ctx.stroke()
+      if (arrowEnd && px.length >= 2) {
+        const from = px[px.length - 2]!
+        const to = px[px.length - 1]!
+        drawArrowHead(ctx, from, to, lw * 5.2)
+      }
+    }
+
+    const strokeLineDots = (pts: Pt[], color: string) => {
+      strokeSmooth(pts, color, false)
       const r = Math.max(5, lw * 1.4)
+      ctx.fillStyle = color
       for (const p of pts) {
         const q = toPx(p, box)
         ctx.beginPath()
@@ -216,12 +240,15 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       }
     }
 
+    const liveDraw = drawPtsRef.current ?? drawPts
+    const liveArrow = arrowPtsRef.current.length ? arrowPtsRef.current : arrowPts
+
     for (const m of marks) {
-      if (m.kind === 'draw') strokeLine(m.points, DRAW)
-      else strokeLine([m.a, m.b], ARROW, true)
+      if (m.kind === 'draw') strokeSmooth(m.points, DRAW)
+      else strokeSmooth(m.points, ARROW, true)
     }
-    if (drawPts && drawPts.length) strokeLine(drawPts, DRAW)
-    strokeLine(linePts, LINE, true)
+    if (liveDraw && liveDraw.length) strokeSmooth(liveDraw, DRAW)
+    strokeLineDots(linePts, LINE)
     if (selectedDot != null && linePts[selectedDot]) {
       const q = toPx(linePts[selectedDot], box)
       const r = Math.max(5, lw * 1.4)
@@ -236,7 +263,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       ctx.lineWidth = Math.max(1.5, lw * 0.35)
       ctx.stroke()
     }
-    strokeLine(arrowPts, ARROW, true)
+    if (liveArrow.length) strokeSmooth(liveArrow, ARROW, true)
 
     if (cropPts) {
       const a = toPx(cropPts[0], box)
@@ -265,11 +292,25 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         ctx.fill()
       }
     }
-  }, [marks, linePts, selectedDot, drawPts, arrowPts, cropPts, videoRef])
+  }, [marks, linePts, selectedDot, cropPts, drawPts, arrowPts, videoRef])
+
+  const schedulePaint = useCallback(() => {
+    if (paintFrameRef.current) return
+    paintFrameRef.current = window.requestAnimationFrame(() => {
+      paintFrameRef.current = 0
+      paint()
+    })
+  }, [paint])
 
   useEffect(() => {
     paint()
   }, [paint])
+
+  useEffect(() => {
+    return () => {
+      if (paintFrameRef.current) window.cancelAnimationFrame(paintFrameRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const host = hostRef.current
@@ -306,12 +347,14 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       drawingRef.current = true
       drawPtsRef.current = [pt]
       setDrawPts([pt])
+      schedulePaint()
       return
     }
     if (toolRef.current === 'arrow') {
       arrowDragRef.current = true
-      arrowStartRef.current = pt
-      setArrowPts([pt, pt])
+      arrowPtsRef.current = [pt]
+      setArrowPts([pt])
+      schedulePaint()
       return
     }
     const hit = hitLineDotIndex(e, host, videoRef.current, linePtsRef.current)
@@ -367,19 +410,31 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       return
     }
     if (arrowDragRef.current && toolRef.current === 'arrow') {
-      const start = arrowStartRef.current
-      if (!start) return
       e.preventDefault()
-      setArrowPts([start, pt])
+      const native = e.nativeEvent
+      const events =
+        typeof native.getCoalescedEvents === 'function' ? native.getCoalescedEvents() : [native]
+      const pts = arrowPtsRef.current.length ? arrowPtsRef.current : [pt]
+      for (const ev of events) {
+        const p = eventToNorm(ev, host, videoRef.current)
+        if (p) appendIfMoved(pts, p)
+      }
+      arrowPtsRef.current = pts
+      schedulePaint()
       return
     }
     if (!drawingRef.current || toolRef.current !== 'draw') return
     e.preventDefault()
-    setDrawPts((prev) => {
-      const next = prev ? [...prev, pt] : [pt]
-      drawPtsRef.current = next
-      return next
-    })
+    const native = e.nativeEvent
+    const events =
+      typeof native.getCoalescedEvents === 'function' ? native.getCoalescedEvents() : [native]
+    const pts = drawPtsRef.current ? drawPtsRef.current : [pt]
+    for (const ev of events) {
+      const p = eventToNorm(ev, host, videoRef.current)
+      if (p) appendIfMoved(pts, p)
+    }
+    drawPtsRef.current = pts
+    schedulePaint()
   }
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -422,17 +477,18 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
     if (arrowDragRef.current && toolRef.current === 'arrow') {
       arrowDragRef.current = false
       const host = hostRef.current
-      const start = arrowStartRef.current
-      arrowStartRef.current = null
       const pt = host ? eventToNorm(e, host, videoRef.current) : null
-      const end = pt ?? arrowPts[1] ?? start
-      if (start && end) {
-        const dist = Math.hypot(end.x - start.x, end.y - start.y)
-        if (dist > 0.012) {
-          setMarks((m) => [...m, { kind: 'arrow', a: start, b: end }])
+      const pts = [...(arrowPtsRef.current.length ? arrowPtsRef.current : [])]
+      if (pt) appendIfMoved(pts, pt)
+      arrowPtsRef.current = []
+      setArrowPts([])
+      if (pts.length >= 2) {
+        const a = pts[0]!
+        const b = pts[pts.length - 1]!
+        if (Math.hypot(b.x - a.x, b.y - a.y) > 0.012) {
+          setMarks((m) => [...m, { kind: 'arrow', points: pts }])
         }
       }
-      setArrowPts([])
       return
     }
     if (!drawingRef.current) return
@@ -457,7 +513,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
     drawingRef.current = false
     drawPtsRef.current = null
     arrowDragRef.current = false
-    arrowStartRef.current = null
+    arrowPtsRef.current = []
     resetCropDrag()
   }
 
@@ -521,7 +577,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
         setArrowPts([])
         drawingRef.current = false
         arrowDragRef.current = false
-        arrowStartRef.current = null
+        arrowPtsRef.current = []
         draggingDotRef.current = null
         if (id !== 'line') {
           setSelectedDot(null)
@@ -574,6 +630,16 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
       {tool === 'line' && linePts.length > 0 && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Tap a Line dot to select it, then drag to move. A fourth tap on empty space clears the line.
+        </p>
+      )}
+      {tool === 'draw' && !pending && (
+        <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
+          Press and drag — a smooth stroke, not a line of dots.
+        </p>
+      )}
+      {tool === 'arrow' && !pending && (
+        <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
+          Press, draw the path, let go — the arrowhead lands where you release.
         </p>
       )}
       {notice && (

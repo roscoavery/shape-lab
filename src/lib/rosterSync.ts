@@ -119,8 +119,8 @@ export function applyRosterSnapshot(data: RosterBackup): {
 } {
   const athletes = ensureRyanInAthletes(mergeAthletes(loadAthletes(), data.athletes.filter(isAthlete)))
   saveAthletes(athletes)
-  const homework = mergeById(loadAllHomework(), Array.isArray(data.homework) ? data.homework : [])
-  saveAllHomework(homework)
+  const incomingHomework = Array.isArray(data.homework) ? data.homework : []
+  saveAllHomework(mergeById(loadAllHomework(), incomingHomework))
   const logs = mergeById(
     loadHomeworkLogs(),
     Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
@@ -130,6 +130,8 @@ export function applyRosterSnapshot(data: RosterBackup): {
   } catch {
     /* quota */
   }
+  // Remote logs may still point at leftover copy ids — collapse onto the kept cards.
+  saveAllHomework(loadAllHomework().concat(incomingHomework))
   const taskProgress = { ...data.taskProgress, ...loadAllTaskProgress() }
   saveAllTaskProgress(taskProgress)
   const flow = { ...data.flowProgress }

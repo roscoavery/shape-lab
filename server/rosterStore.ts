@@ -56,6 +56,49 @@ export function readRosterFile(): DiskRoster {
   }
 }
 
+function homeworkDedupeKey(item: { athleteId?: string; shapeId?: string; autoKey?: string }): string {
+  const aid = item.athleteId || '_'
+  const sid = item.shapeId || ''
+  if (
+    item.autoKey === 'hollow' ||
+    sid === 'hollow' ||
+    sid === 'hollow_arms_down' ||
+    sid === 'hollow_arms_up'
+  ) {
+    return `${aid}::hollow`
+  }
+  return `${aid}::${sid}`
+}
+
+/** One card per athlete + drill so a Safari remount cannot stack copies on disk. */
+function dedupeHomework(list: unknown[]): unknown[] {
+  const best = new Map<string, Record<string, unknown>>()
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object') continue
+    const item = raw as Record<string, unknown>
+    const key = homeworkDedupeKey({
+      athleteId: typeof item.athleteId === 'string' ? item.athleteId : '',
+      shapeId: typeof item.shapeId === 'string' ? item.shapeId : '',
+      autoKey: typeof item.autoKey === 'string' ? item.autoKey : undefined,
+    })
+    const keep = best.get(key)
+    if (!keep) {
+      best.set(key, item)
+      continue
+    }
+    const preferAuto =
+      item.source === 'auto' && keep.source !== 'auto'
+        ? item
+        : keep.source === 'auto' && item.source !== 'auto'
+          ? keep
+          : String(keep.createdAt ?? '') <= String(item.createdAt ?? '')
+            ? keep
+            : item
+    best.set(key, preferAuto)
+  }
+  return [...best.values()]
+}
+
 export function writeRosterFile(data: unknown): DiskRoster {
   const parsed = data as DiskRoster
   if (!parsed || parsed.kind !== 'shape-lab-roster' || !Array.isArray(parsed.athletes)) {
@@ -67,7 +110,7 @@ export function writeRosterFile(data: unknown): DiskRoster {
     exportedAt: new Date().toISOString(),
     athletes: parsed.athletes,
     activeAthleteId: parsed.activeAthleteId ?? null,
-    homework: Array.isArray(parsed.homework) ? parsed.homework : [],
+    homework: Array.isArray(parsed.homework) ? dedupeHomework(parsed.homework) : [],
     homeworkLogs: Array.isArray(parsed.homeworkLogs) ? parsed.homeworkLogs.slice(0, 1000) : [],
     taskProgress: parsed.taskProgress && typeof parsed.taskProgress === 'object' ? parsed.taskProgress : {},
     flowProgress: parsed.flowProgress && typeof parsed.flowProgress === 'object' ? parsed.flowProgress : {},

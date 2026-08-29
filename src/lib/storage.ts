@@ -345,6 +345,69 @@ export const AUTO_HOMEWORK_DEFS: {
   },
 ]
 
+function inferAutoKey(item: HomeworkItem): string | undefined {
+  if (item.autoKey && AUTO_HOMEWORK_DEFS.some((d) => d.autoKey === item.autoKey)) {
+    return item.autoKey
+  }
+  if (
+    item.shapeId === 'hollow' ||
+    item.shapeId === 'hollow_arms_down' ||
+    item.shapeId === 'hollow_arms_up'
+  ) {
+    return 'hollow'
+  }
+  return AUTO_HOMEWORK_DEFS.find((d) => d.shapeId === item.shapeId)?.autoKey
+}
+
+/** One card per athlete + drill. Safari / Strict Mode used to keep seeding extras. */
+export function homeworkDedupeKey(
+  item: Pick<HomeworkItem, 'athleteId' | 'shapeId'> &
+    Partial<Pick<HomeworkItem, 'autoKey' | 'source'>>,
+): string {
+  const aid = item.athleteId || '_'
+  const auto = inferAutoKey(item as HomeworkItem)
+  if (auto === 'hollow' || item.autoKey === 'hollow') return `${aid}::hollow`
+  return `${aid}::${item.shapeId}`
+}
+
+function preferHomeworkItem(a: HomeworkItem, b: HomeworkItem): HomeworkItem {
+  if (a.source === 'auto' && b.source !== 'auto') return a
+  if (b.source === 'auto' && a.source !== 'auto') return b
+  return a.createdAt <= b.createdAt ? a : b
+}
+
+export function dedupeHomeworkItems(items: HomeworkItem[]): HomeworkItem[] {
+  const best = new Map<string, HomeworkItem>()
+  for (const raw of items) {
+    const item =
+      raw.source === 'auto' && !raw.autoKey && inferAutoKey(raw)
+        ? { ...raw, autoKey: inferAutoKey(raw) }
+        : raw
+    const key = homeworkDedupeKey(item)
+    const keep = best.get(key)
+    best.set(key, keep ? preferHomeworkItem(keep, item) : item)
+  }
+  return [...best.values()]
+}
+
+/** Point leftover session logs at the card we kept when collapsing copies. */
+function remapOrphanHomeworkLogs(before: HomeworkItem[], after: HomeworkItem[]) {
+  const kept = new Set(after.map((i) => i.id))
+  const dest = new Map(after.map((i) => [homeworkDedupeKey(i), i.id]))
+  const from = new Map(before.map((i) => [i.id, homeworkDedupeKey(i)]))
+  const logs = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  let changed = false
+  const next = logs.map((l) => {
+    if (kept.has(l.homeworkId)) return l
+    const key = from.get(l.homeworkId)
+    const id = key ? dest.get(key) : undefined
+    if (!id) return l
+    changed = true
+    return { ...l, homeworkId: id }
+  })
+  if (changed) writeJson(HOMEWORK_LOGS_KEY, next)
+}
+
 export function loadAllHomework(): HomeworkItem[] {
   const items = readJson<HomeworkItem[]>(HOMEWORK_KEY, [])
   let changed = false
@@ -353,13 +416,28 @@ export function loadAllHomework(): HomeworkItem[] {
       item.shapeId = 'hollow_arms_up'
       changed = true
     }
+    if (item.source === 'auto') {
+      const key = inferAutoKey(item)
+      if (key && item.autoKey !== key) {
+        item.autoKey = key
+        changed = true
+      }
+    }
   }
-  if (changed) saveAllHomework(items)
-  return items
+  const deduped = dedupeHomeworkItems(items)
+  if (changed || deduped.length !== items.length) {
+    remapOrphanHomeworkLogs(items, deduped)
+    writeJson(HOMEWORK_KEY, deduped)
+    pushRosterSoon()
+    return deduped
+  }
+  return deduped
 }
 
 export function saveAllHomework(items: HomeworkItem[]) {
-  writeJson(HOMEWORK_KEY, items)
+  const cleaned = dedupeHomeworkItems(items)
+  remapOrphanHomeworkLogs(items, cleaned)
+  writeJson(HOMEWORK_KEY, cleaned)
   pushRosterSoon()
 }
 
@@ -381,9 +459,10 @@ function sortHomework(items: HomeworkItem[]): HomeworkItem[] {
 export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
   const all = loadAllHomework()
   const mine = all.filter((h) => h.athleteId === athleteId)
-  const missing = AUTO_HOMEWORK_DEFS.filter(
-    (d) => !mine.some((h) => h.source === 'auto' && h.autoKey === d.autoKey),
+  const covered = new Set(
+    mine.map((h) => inferAutoKey(h)).filter((k): k is string => Boolean(k)),
   )
+  const missing = AUTO_HOMEWORK_DEFS.filter((d) => !covered.has(d.autoKey))
   let changed = false
   let next = mine
   if (missing.length > 0) {
@@ -411,13 +490,18 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
       }
     }
   }
-  if (changed) saveAllHomework(all)
-  return sortHomework(next)
+  const cleaned = dedupeHomeworkItems(all)
+  if (changed || cleaned.length !== all.length) saveAllHomework(cleaned)
+  return sortHomework(cleaned.filter((h) => h.athleteId === athleteId))
 }
 
 /** Add a coach- or athlete-selected homework item; returns the athlete's list. */
 export function addHomeworkItem(item: HomeworkItem): HomeworkItem[] {
   const all = loadAllHomework()
+  const key = homeworkDedupeKey(item)
+  if (all.some((h) => h.athleteId === item.athleteId && homeworkDedupeKey(h) === key)) {
+    return sortHomework(all.filter((h) => h.athleteId === item.athleteId))
+  }
   all.push(item)
   saveAllHomework(all)
   return sortHomework(all.filter((h) => h.athleteId === item.athleteId))
