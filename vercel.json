@@ -7,7 +7,7 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/[[...path]].ts": {
+    "api/[[...path]].js": {
       "includeFiles": "{data/**,src/config/compareLibrary.json}",
       "maxDuration": 60
     }
