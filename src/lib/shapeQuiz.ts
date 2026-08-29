@@ -95,7 +95,7 @@ const EXTRA_LEAKS: Record<string, string[]> = {
   stand_clean: ['stand clean'],
   pike_zombie: ['pike with zombie arms', 'seated pike'],
   pike_open: ['pike with open shoulders'],
-  wall_handstand: ['wall handstand'],
+  wall_handstand: ['wall handstand', 'Handstand at the wall', 'handstand at the wall'],
   tucked_handstand: ['tucked handstand'],
   piked_handstand: ['piked handstand'],
   l_handstand: ['L handstand'],
@@ -185,9 +185,18 @@ export function quizDescribeBody(
   ]
   for (const raw of candidates) {
     const cleaned = stripAnswerLeaks(raw, shape)
-    if (cleaned.length >= 40) return cleaned
+    if (cleaned.length >= 40 && !promptStillNamesAnswer(cleaned, shape)) return cleaned
   }
-  return stripAnswerLeaks(candidates.find((c) => c.trim()) ?? '', shape)
+  const fallback = stripAnswerLeaks(candidates.find((c) => c.trim()) ?? '', shape)
+  return fallback
+}
+
+function promptStillNamesAnswer(text: string, shape: ShapeDef): boolean {
+  for (const phrase of leakPhrasesFor(shape)) {
+    if (TOO_GENERIC.has(phrase.toLowerCase()) || phrase.length < 4) continue
+    if (new RegExp(`\\b${escapeRegExp(phrase)}\\b`, 'i').test(text)) return true
+  }
+  return false
 }
 
 export const QUIZ_FORMATS: { id: QuizFormat; title: string; blurb: string }[] = [
