@@ -312,6 +312,14 @@ export function AthletePanel({
             >
               {isRyanAthlete(active) ? 'Ryan stays on the roster' : 'Delete profile'}
             </button>
+            <button
+              type="button"
+              className="text-xs text-[var(--muted)] underline"
+              onClick={() => onSelect(null)}
+              title="Lock this profile. Selecting it again will ask for the passcode."
+            >
+              Lock profile
+            </button>
           </div>
         </div>
       )}
@@ -322,9 +330,10 @@ export function AthletePanel({
         library, Classes collages, and the gym feed. Pick <strong>Coach</strong> to
         make a coach profile — they can explore the tools, build collages, answer
         Research, and keep their own Compare collections. They cannot edit Ryan’s
-        gym collections, shape descriptions, or picture sizes. Ryan’s passcode is
-        2223 — that profile stays gym admin. Creating the same name again selects
-        the existing profile.
+        gym collections, shape descriptions, or picture sizes. Selecting Ryan
+        always asks for his passcode — a shared link does not open gym admin by
+        tapping the name. Only one profile stays unlocked in this tab. Creating
+        the same name again selects the existing profile.
       </p>
     </div>
   )

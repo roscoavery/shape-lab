@@ -1,14 +1,18 @@
 /**
- * 4-digit passcode for athlete profiles. Hash is stored on the roster
+ * 4-digit passcode for profiles. Hash is stored on the roster
  * (any browser / link); the plaintext never leaves the device.
+ *
+ * Only one profile is unlocked per tab. Switching to Ryan (or any other
+ * passcode profile) always asks for that code — a shared link cannot open
+ * gym admin by tapping the name.
  */
 
 import type { Athlete } from '../types'
-import { findRyan } from './ryanProfile'
+import { findRyan, isRyanAthlete } from './ryanProfile'
 
-const UNLOCKED_KEY = 'shape-lab.unlockedProfiles.v1'
+const UNLOCKED_KEY = 'shape-lab.unlockedProfile.v2'
 
-/** Coach profile PIN — same on every link once the hash is on the roster. */
+/** Coach / gym-admin PIN — same on every link once the hash is on the roster. */
 export const RYAN_PASSCODE = '2223'
 
 function bytesToHex(buf: ArrayBuffer): string {
@@ -31,6 +35,18 @@ export function passcodeLooksOk(passcode: string): boolean {
   return /^\d{4}$/.test(passcode.trim())
 }
 
+export function profileNeedsPasscode(athlete: Athlete | null | undefined): boolean {
+  if (!athlete) return false
+  if (isRyanAthlete(athlete)) return true
+  return Boolean(athlete.passcodeHash)
+}
+
+export async function expectedPasscodeHash(athlete: Athlete): Promise<string | null> {
+  if (athlete.passcodeHash) return athlete.passcodeHash
+  if (isRyanAthlete(athlete)) return hashPasscode(athlete.id, RYAN_PASSCODE)
+  return null
+}
+
 export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> {
   const ryan = findRyan(athletes)
   if (!ryan) return athletes
@@ -39,29 +55,34 @@ export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> 
   return athletes.map((a) => (a.id === ryan.id ? { ...a, passcodeHash: hash } : a))
 }
 
-function readUnlocked(): string[] {
+function readUnlockedId(): string | null {
   try {
     const raw = sessionStorage.getItem(UNLOCKED_KEY)
-    if (!raw) return []
+    if (!raw) return null
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+    return typeof parsed === 'string' && parsed ? parsed : null
   } catch {
-    return []
+    return null
   }
 }
 
-export function isProfileUnlocked(athleteId: string): boolean {
-  return readUnlocked().includes(athleteId)
+export function unlockedProfileId(): string | null {
+  return readUnlockedId()
 }
 
+export function isProfileUnlocked(athleteId: string): boolean {
+  return readUnlockedId() === athleteId
+}
+
+/** Unlock this profile and lock every other one in this tab. */
 export function markProfileUnlocked(athleteId: string): void {
-  const next = [...new Set([...readUnlocked(), athleteId])]
-  sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify(next))
+  sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify(athleteId))
 }
 
 export function lockProfile(athleteId: string): void {
-  sessionStorage.setItem(
-    UNLOCKED_KEY,
-    JSON.stringify(readUnlocked().filter((id) => id !== athleteId)),
-  )
+  if (readUnlockedId() === athleteId) sessionStorage.removeItem(UNLOCKED_KEY)
+}
+
+export function lockAllProfiles(): void {
+  sessionStorage.removeItem(UNLOCKED_KEY)
 }

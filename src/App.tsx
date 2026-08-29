@@ -70,7 +70,13 @@ import {
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { isCoachProfile, isGymAdmin } from './lib/profileRole'
-import { isProfileUnlocked, withRyanPasscode } from './lib/athletePasscode'
+import {
+  isProfileUnlocked,
+  lockAllProfiles,
+  profileNeedsPasscode,
+  unlockedProfileId,
+  withRyanPasscode,
+} from './lib/athletePasscode'
 import type {
   AppSettings,
   Athlete,
@@ -149,19 +155,23 @@ export default function App() {
   const requestSelectAthlete = useCallback(
     (id: string | null) => {
       if (!id) {
+        lockAllProfiles()
         setActiveAthleteId(null)
+        setAthleteGate(null)
         return
       }
       const a = athletes.find((x) => x.id === id)
       if (!a) return
       if (isProfileUnlocked(a.id)) {
         setActiveAthleteId(id)
+        setAthleteGate(null)
         return
       }
-      if (a.passcodeHash) {
+      if (profileNeedsPasscode(a)) {
         setAthleteGate(a)
         return
       }
+      lockAllProfiles()
       setActiveAthleteId(id)
     },
     [athletes],
@@ -194,19 +204,15 @@ export default function App() {
       const next = await withRyanPasscode(raw)
       if (cancelled) return
       setAthletes(next)
-      if (synced.athletes.length === 0) return
-      const chosen =
-        next.find((a) => a.id === synced.activeAthleteId) ?? next[0] ?? null
-      if (!chosen) {
-        setActiveAthleteId(null)
-        return
-      }
-      if (isProfileUnlocked(chosen.id)) {
-        setActiveAthleteId(chosen.id)
+      // A shared link must not open Ryan just because the gym last had him
+      // selected. Restore only a profile this tab already unlocked.
+      const unlocked = unlockedProfileId()
+      if (unlocked && next.some((a) => a.id === unlocked)) {
+        setActiveAthleteId(unlocked)
         return
       }
       setActiveAthleteId(null)
-      if (chosen.passcodeHash) setAthleteGate(chosen)
+      setAthleteGate(null)
     })
     return () => {
       cancelled = true
@@ -950,6 +956,7 @@ export default function App() {
         onUnlocked={(a) => {
           setActiveAthleteId(a.id)
           setAthleteGate(null)
+          void withRyanPasscode(athletes).then(setAthleteRoster)
         }}
       />
     )}

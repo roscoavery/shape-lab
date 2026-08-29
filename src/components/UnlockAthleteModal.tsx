@@ -1,11 +1,17 @@
 /**
- * Unlock an athlete profile that already has a 4-digit passcode.
- * New athletes set the PIN on the create form — this modal does not invent one.
+ * Unlock a profile that already has a 4-digit passcode.
+ * Ryan / gym admin always requires 2223 — tapping the name is not enough.
  */
 
 import { useState } from 'react'
 import type { Athlete } from '../types'
-import { digitsOnlyPin, hashPasscode, markProfileUnlocked } from '../lib/athletePasscode'
+import {
+  digitsOnlyPin,
+  expectedPasscodeHash,
+  hashPasscode,
+  markProfileUnlocked,
+} from '../lib/athletePasscode'
+import { isRyanAthlete } from '../lib/ryanProfile'
 
 type Props = {
   athlete: Athlete
@@ -17,10 +23,12 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const admin = isRyanAthlete(athlete)
 
   const submit = async () => {
     setError(null)
-    if (!athlete.passcodeHash) {
+    const expected = await expectedPasscodeHash(athlete)
+    if (!expected) {
       setError('This profile does not have a passcode yet. Set one when you create it.')
       return
     }
@@ -31,7 +39,7 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
     setBusy(true)
     try {
       const hash = await hashPasscode(athlete.id, code)
-      if (hash !== athlete.passcodeHash) {
+      if (hash !== expected) {
         setError('That passcode does not match this profile.')
         return
       }
@@ -46,13 +54,13 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 shadow-2xl">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          Unlock profile
+          {admin ? 'Unlock gym admin' : 'Unlock profile'}
         </p>
         <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{athlete.name}</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Enter the 4-digit passcode set when this profile was created. That loads
-          homework, hold times, the gym Compare library, your collections if you
-          are a coach, and the video library on this link.
+          {admin
+            ? 'This is Ryan’s gym admin profile. A shared link does not open it by tapping the name — enter the 4-digit passcode. Other coaches stay in their own profiles.'
+            : 'Enter the 4-digit passcode set when this profile was created. That loads homework, hold times, Compare, and the video library on this link. Only one profile stays unlocked at a time.'}
         </p>
         <label className="mt-4 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
