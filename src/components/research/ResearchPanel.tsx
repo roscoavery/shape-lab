@@ -332,7 +332,7 @@ function CollectForm({
   if (!athlete) {
     return (
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-4 text-sm text-[var(--muted)]">
-        Unlock a profile on Athletes to log an observation. Findings below stay readable.
+        Unlock a profile on Profiles to log an observation. Findings below stay readable.
       </section>
     )
   }

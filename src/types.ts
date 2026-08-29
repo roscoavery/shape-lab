@@ -183,7 +183,7 @@ export type Athlete = {
   createdAt: string
   /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
   passcodeHash?: string
-  /** Coach vs athlete. Ryan is always coach/admin. */
+  /** Coach vs athlete. Ryan is always coach and gym admin. */
   role?: 'coach' | 'athlete'
 }
 

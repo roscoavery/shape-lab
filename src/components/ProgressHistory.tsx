@@ -22,7 +22,7 @@ export function ProgressHistory({ attempts, athleteId }: Props) {
     <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">Progress history</p>
       {!athleteId && (
-        <p className="text-sm text-[var(--muted)]">Select an athlete to see their history.</p>
+        <p className="text-sm text-[var(--muted)]">Select a profile to see their history.</p>
       )}
       {athleteId && filtered.length === 0 && (
         <p className="text-sm text-[var(--muted)]">No saved attempts yet. Hit “Save attempt” after a hold.</p>

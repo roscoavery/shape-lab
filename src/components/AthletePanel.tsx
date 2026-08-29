@@ -26,6 +26,7 @@ export function AthletePanel({
 }: Props) {
   const [name, setName] = useState('')
   const [newHandle, setNewHandle] = useState('')
+  const [newRole, setNewRole] = useState<'athlete' | 'coach'>('athlete')
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
   const [handle, setHandle] = useState('')
@@ -79,7 +80,7 @@ export function AthletePanel({
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       createdAt: new Date().toISOString(),
       passcodeHash,
-      role: 'athlete',
+      role: newRole,
     }
     markProfileUnlocked(id)
     onChangeAthletes([...athletes, athlete])
@@ -88,7 +89,13 @@ export function AthletePanel({
     setNewHandle('')
     setPasscode('')
     setPasscodeAgain('')
-    flash(`${athlete.name} is ready. Use that 4-digit passcode on any link.`)
+    setNewRole('athlete')
+    flash(
+      newRole === 'coach'
+        ? `${athlete.name} is ready as a coach. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
+        : `${athlete.name} is ready. Use that 4-digit passcode on any link.`,
+      newRole === 'coach' ? 4200 : 2800,
+    )
   }
 
   const saveHandle = () => {
@@ -155,14 +162,14 @@ export function AthletePanel({
   return (
     <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
-        {active && isCoachProfile(active) ? 'Coach profile' : 'Athlete profile'}
+        {active && isCoachProfile(active) ? 'Coach profile' : 'Profile'}
       </p>
       <select
         className="mb-3 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
         value={activeId ?? ''}
         onChange={(e) => onSelect(e.target.value || null)}
       >
-        <option value="">Select athlete…</option>
+        <option value="">Select profile…</option>
         {athletes.map((a) => (
           <option key={a.id} value={a.id}>
             {isCoachProfile(a) ? `${a.name} · Coach` : `${a.name} · Athlete`}
@@ -172,9 +179,35 @@ export function AthletePanel({
       </select>
 
       <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        New athlete
+        New profile
       </p>
       <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            aria-pressed={newRole === 'athlete'}
+            onClick={() => setNewRole('athlete')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              newRole === 'athlete'
+                ? 'border-[var(--accent)] bg-[var(--accent-dim)] text-white'
+                : 'border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Athlete
+          </button>
+          <button
+            type="button"
+            aria-pressed={newRole === 'coach'}
+            onClick={() => setNewRole('coach')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              newRole === 'coach'
+                ? 'border-[var(--accent)] bg-[var(--accent-dim)] text-white'
+                : 'border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Coach
+          </button>
+        </div>
         <div className="flex gap-2">
           <input
             className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
@@ -204,6 +237,14 @@ export function AthletePanel({
             if (e.key === 'Enter') void add()
           }}
         />
+        {newRole === 'coach' && (
+          <p className="text-[11px] leading-snug text-[var(--muted)]">
+            Coaches unlock to use Compare, Classes, Feed, and Research. Paste
+            Instagram URLs into your own collections — they show on this profile
+            only. Ryan’s gym collections, shape descriptions, and picture sizes
+            stay as he left them.
+          </p>
+        )}
       </div>
 
       {active && !active.passcodeHash && (
@@ -278,9 +319,12 @@ export function AthletePanel({
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
         Each new profile sets a 4-digit passcode on Create. Unlock that profile
         on any phone link or browser to see homework, hold times, the video
-        library, Classes collages, and the gym feed. Coach and athlete profiles
-        stay labeled. Ryan’s passcode is 2223 — that profile stays coach/admin.
-        Creating the same name again selects the existing profile.
+        library, Classes collages, and the gym feed. Pick <strong>Coach</strong> to
+        make a coach profile — they can explore the tools, build collages, answer
+        Research, and keep their own Compare collections. They cannot edit Ryan’s
+        gym collections, shape descriptions, or picture sizes. Ryan’s passcode is
+        2223 — that profile stays gym admin. Creating the same name again selects
+        the existing profile.
       </p>
     </div>
   )

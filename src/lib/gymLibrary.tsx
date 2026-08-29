@@ -12,6 +12,7 @@ import {
   shippedCompareLibrary,
   type LibraryBackup,
 } from './libraryBackup'
+import { pullCoachLibrary } from './coachLibrary'
 import { clipLoopKey, socialPlatform } from './socialUrls'
 import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
 export type GymClip = {
@@ -47,7 +48,7 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
             ? item.kind
             : platform ?? 'url',
         collectionId: col.id,
-        collectionName: col.name,
+        collectionName: col.athleteId ? `${col.name} (mine)` : col.name,
         keywords: item.keywords,
       })
     }
@@ -66,7 +67,13 @@ type GymLibraryValue = {
 
 const GymLibraryContext = createContext<GymLibraryValue | null>(null)
 
-export function GymLibraryProvider({ children }: { children: ReactNode }) {
+export function GymLibraryProvider({
+  children,
+  profileId = null,
+}: {
+  children: ReactNode
+  profileId?: string | null
+}) {
   const [backup, setBackup] = useState<LibraryBackup | null>(() => shippedCompareLibrary())
   const [loading, setLoading] = useState(true)
 
@@ -74,16 +81,21 @@ export function GymLibraryProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       const server = await pullServerLibrary()
-      if (server && server.collections.length > 0) {
-        setBackup(server)
-        return
-      }
-      const seed = shippedCompareLibrary()
-      if (seed) setBackup(seed)
+      const personal = profileId ? await pullCoachLibrary(profileId) : null
+      const gym =
+        server && server.collections.length > 0 ? server : shippedCompareLibrary()
+      if (!gym && !personal) return
+      setBackup({
+        kind: 'shape-lab-library',
+        version: 1,
+        exportedAt: personal?.exportedAt || gym?.exportedAt || new Date().toISOString(),
+        managed: true,
+        collections: [...(gym?.collections ?? []), ...(personal?.collections ?? [])],
+      })
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [profileId])
 
   useEffect(() => {
     void refresh()

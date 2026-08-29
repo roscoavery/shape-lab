@@ -50,7 +50,7 @@ export function ReferenceFeed() {
   if (clips.length === 0) {
     return (
       <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
-        No gym URLs yet. Unlock Ryan, paste clips in Compare, then Save into the app.
+        No gym URLs yet. Unlock Ryan to paste clips into the gym library, or unlock a coach profile to add URLs in your own collections.
       </p>
     )
   }

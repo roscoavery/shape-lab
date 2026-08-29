@@ -6,6 +6,7 @@ import {
   sendJson,
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
+import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
@@ -62,7 +63,8 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/collages' &&
       path !== '/api/feed' &&
       path !== '/api/feed-file' &&
-      path !== '/api/research'
+      path !== '/api/research' &&
+      path !== '/api/coach-library'
     ) {
       next()
       return
@@ -374,6 +376,24 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           const body = await readRequestBody(req)
           const saved = writeLibraryFile(JSON.parse(body))
           sendJson(res, 200, saved)
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/coach-library') {
+        const athleteId = url.searchParams.get('athleteId') ?? ''
+        if (!athleteId) {
+          sendJson(res, 400, { error: 'Missing athleteId' })
+          return
+        }
+        if (req.method === 'GET') {
+          sendJson(res, 200, readCoachLibrary(athleteId))
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeCoachLibrary(athleteId, JSON.parse(body)))
           return
         }
         sendJson(res, 405, { error: 'Use GET or PUT' })

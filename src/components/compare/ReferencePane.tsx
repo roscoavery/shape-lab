@@ -40,6 +40,11 @@ import {
   restoreMetaIfIndexedDbEmpty,
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
+import {
+  attachPersonalCollections,
+  isGymCollection,
+  pushCoachLibrary,
+} from '../../lib/coachLibrary'
 import { createId } from '../../lib/storage'
 import { defaultSocialName, clipLoopKey } from '../../lib/socialUrls'
 import { useFavorites } from '../../lib/favorites'
@@ -73,9 +78,16 @@ type OtherHit = { item: RefItem; collection: RefCollection }
 type Props = {
   /** Ryan: this browser can write the gym Compare library for every link. */
   gymEditor?: boolean
+  /** Other coaches: write collections tagged to this profile only. */
+  personalEditor?: boolean
+  profileId?: string | null
 }
 
-export function ReferencePane({ gymEditor = false }: Props) {
+export function ReferencePane({
+  gymEditor = false,
+  personalEditor = false,
+  profileId = null,
+}: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null)
@@ -115,17 +127,30 @@ export function ReferencePane({ gymEditor = false }: Props) {
     setCachedIds(await listCachedIds(ids))
   }, [])
 
+  const canEditLibrary = gymEditor || personalEditor
+
+  const canEditCollection = (col: RefCollection | null) => {
+    if (!col) return false
+    if (gymEditor && isGymCollection(col)) return true
+    if (personalEditor && profileId && col.athleteId === profileId) return true
+    return false
+  }
+
   const persist = useCallback(
     (list: RefCollection[]) => {
-      persistLibraryMeta(list)
+      persistLibraryMeta(list.filter(isGymCollection))
       if (gymEditor) {
         setSaveState('dirty')
         void pushServerLibrary(list).then((ok) => {
           setSaveState(ok ? 'saved' : 'dirty')
         })
       }
+      if (personalEditor && profileId) {
+        const personal = list.filter((c) => c.athleteId === profileId)
+        void pushCoachLibrary(profileId, personal)
+      }
     },
-    [gymEditor],
+    [gymEditor, personalEditor, profileId],
   )
 
   const saveIntoApp = async () => {
@@ -133,9 +158,9 @@ export function ReferencePane({ gymEditor = false }: Props) {
     setSaveState('saving')
     setError(null)
     try {
-      const ok = await pushServerLibrary(collections)
+      const ok = await pushServerLibrary(collections.filter(isGymCollection))
       if (!ok) throw new Error('library put failed')
-      persistLibraryMeta(collections)
+      persistLibraryMeta(collections.filter(isGymCollection))
       setSaveState('saved')
       const n = collections.reduce((sum, c) => sum + c.items.filter((i) => i.url).length, 0)
       setNotice(
@@ -153,37 +178,55 @@ export function ReferencePane({ gymEditor = false }: Props) {
       try {
         let list = await getCollections()
         list = await restoreMetaIfIndexedDbEmpty(list)
-        const synced = await syncLibraryWithServer(list, gymEditor)
-        list = synced.collections
+        const synced = await syncLibraryWithServer(list, gymEditor, profileId)
+        list = synced.collections.filter(
+          (c) => isGymCollection(c) || (profileId != null && c.athleteId === profileId),
+        )
+        if (personalEditor && profileId) {
+          list = await attachPersonalCollections(list, profileId)
+        }
         if (list.length === 0) {
           const def: RefCollection = {
             id: createId('col'),
             name: 'My references',
             items: [],
             createdAt: new Date().toISOString(),
+            ...(personalEditor && profileId ? { athleteId: profileId } : {}),
           }
           await putCollection(def)
           list = [def]
+          if (personalEditor && profileId) persist([def])
         }
         if (cancelled) return
         setCollections(list)
+        const firstWritable =
+          list.find((c) => (personalEditor ? c.athleteId === profileId : isGymCollection(c))) ??
+          list[0]
         setActiveCollectionId((id) =>
-          id && list.some((c) => c.id === id) ? id : list[0]!.id,
+          id && list.some((c) => c.id === id) ? id : firstWritable?.id ?? list[0]!.id,
         )
         await refreshCachedIds(list)
-        const urlCount = list.reduce(
-          (n, c) => n + c.items.filter((i) => i.url).length,
-          0,
-        )
+        const gymCount = list
+          .filter(isGymCollection)
+          .reduce((n, c) => n + c.items.filter((i) => i.url).length, 0)
+        const mineCount = list
+          .filter((c) => c.athleteId === profileId)
+          .reduce((n, c) => n + c.items.filter((i) => i.url).length, 0)
         if (gymEditor) {
           setNotice(
-            urlCount > 0
-              ? `${urlCount} reference${urlCount === 1 ? '' : 's'} in the gym library. Add, rename, or reorder, then Save into the app so every link keeps it.`
+            gymCount > 0
+              ? `${gymCount} reference${gymCount === 1 ? '' : 's'} in the gym library. Add, rename, or reorder, then Save into the app so every link keeps it.`
               : 'This is Ryan’s gym library. Add URLs and Save into the app so every browser has them.',
           )
-        } else if (urlCount > 0) {
+        } else if (personalEditor) {
           setNotice(
-            `${urlCount} gym reference${urlCount === 1 ? '' : 's'} loaded. Unlock Ryan to add or rename URLs for every link.`,
+            mineCount > 0
+              ? `${gymCount} gym clip${gymCount === 1 ? '' : 's'} (watch only) · ${mineCount} in your collections. New URLs save on this profile — they do not change Ryan’s library.`
+              : `${gymCount} gym clip${gymCount === 1 ? '' : 's'} (watch only). Create a collection or paste a URL to start yours. Ryan’s gym list stays as he left it.`,
+          )
+        } else if (gymCount > 0) {
+          setNotice(
+            `${gymCount} gym reference${gymCount === 1 ? '' : 's'} loaded. Coaches add URLs in their own collections. Unlock Ryan to edit the gym library.`,
           )
         }
       } catch {
@@ -199,7 +242,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
       cancelled = true
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
-  }, [refreshCachedIds, persist, gymEditor])
+  }, [refreshCachedIds, persist, gymEditor, personalEditor, profileId])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -233,6 +276,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const updateCollection = async (next: RefCollection) => {
+    if (!canEditCollection(next)) return
     await putCollection(next)
     setCollections((prev) => {
       const list = prev.map((c) => (c.id === next.id ? next : c))
@@ -242,6 +286,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const addCollection = async () => {
+    if (!canEditLibrary) return
     const name = newCollectionName.trim()
     if (!name) return
     const col: RefCollection = {
@@ -249,6 +294,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
       name,
       items: [],
       createdAt: new Date().toISOString(),
+      ...(personalEditor && profileId ? { athleteId: profileId } : {}),
     }
     await putCollection(col)
     setCollections((prev) => {
@@ -261,7 +307,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const removeCollection = async () => {
-    if (!activeCollection) return
+    if (!activeCollection || !canEditCollection(activeCollection)) return
     if (!confirm(`Delete collection "${activeCollection.name}" and its saved videos?`)) return
     await deleteCollection(activeCollection)
     const rest = collections.filter((c) => c.id !== activeCollection.id)
@@ -274,8 +320,38 @@ export function ReferencePane({ gymEditor = false }: Props) {
     await refreshCachedIds(rest)
   }
 
+  const ensureWritableCollection = async (): Promise<RefCollection | null> => {
+    if (canEditCollection(activeCollection)) return activeCollection
+    if (!personalEditor || !profileId) return null
+    const mine = collections.find((c) => c.athleteId === profileId)
+    if (mine) {
+      setActiveCollectionId(mine.id)
+      setNotice(
+        'Gym collections stay as Ryan left them. This clip went into your collection.',
+      )
+      return mine
+    }
+    const col: RefCollection = {
+      id: createId('col'),
+      name: 'My references',
+      items: [],
+      createdAt: new Date().toISOString(),
+      athleteId: profileId,
+    }
+    await putCollection(col)
+    setCollections((prev) => {
+      const list = [...prev, col]
+      persist(list)
+      return list
+    })
+    setActiveCollectionId(col.id)
+    setNotice('Started your collection. Ryan’s gym list is unchanged.')
+    return col
+  }
+
   const addUrl = async () => {
-    if (!activeCollection) return
+    const writable = await ensureWritableCollection()
+    if (!writable) return
     const urls = urlInput
       .split(/[\s,]+/)
       .map((u) => u.trim())
@@ -290,7 +366,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
     setNotice(null)
 
     const keywords = parseKeywords(keywordInput)
-    const nextItems = activeCollection.items.map((i) => ({ ...i }))
+    const nextItems = writable.items.map((i) => ({ ...i }))
     const items: RefItem[] = []
     let skipped = 0
     let taggedExisting = 0
@@ -342,7 +418,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
       return
     }
     await updateCollection({
-      ...activeCollection,
+      ...writable,
       items: [...items, ...nextItems],
     })
     setUrlInput('')
@@ -363,7 +439,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const addFile = async (file: File) => {
-    if (!activeCollection) return
+    const writable = await ensureWritableCollection()
+    if (!writable) return
     setError(null)
     const keywords = parseKeywords(keywordInput)
     const item: RefItem = {
@@ -380,8 +457,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
       return
     }
     await updateCollection({
-      ...activeCollection,
-      items: [item, ...activeCollection.items],
+      ...writable,
+      items: [item, ...writable.items],
     })
     setKeywordInput('')
     setCachedIds((prev) => new Set(prev).add(item.id))
@@ -389,7 +466,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const removeItem = async (item: RefItem, collection = activeCollection) => {
-    if (!collection) return
+    if (!collection || !canEditCollection(collection)) return
     await deleteBlob(item.id)
     await updateCollection({
       ...collection,
@@ -432,6 +509,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
     })
     if (gymEditor) {
       setNotice('Renamed. Save into the app so every link and browser keeps this name.')
+    } else if (personalEditor) {
+      setNotice('Renamed. This name stays on your profile — not Ryan’s gym library.')
     }
   }
 
@@ -453,7 +532,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const persistOrder = async (nextItems: RefItem[]) => {
-    if (!activeCollection) return
+    if (!activeCollection || !canEditCollection(activeCollection)) return
     if (nextItems === activeCollection.items) return
     await updateCollection({ ...activeCollection, items: nextItems })
   }
@@ -516,18 +595,25 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const exportLibrary = () => {
-    if (collections.every((c) => c.items.length === 0)) {
+    const exportCols = gymEditor
+      ? collections.filter(isGymCollection)
+      : personalEditor && profileId
+        ? collections.filter((c) => c.athleteId === profileId)
+        : collections
+    if (exportCols.every((c) => c.items.length === 0)) {
       setNotice('Nothing to export yet — add URLs first.')
       return
     }
-    downloadBackupFile(collections)
+    downloadBackupFile(exportCols)
     persist(collections)
-    const n = collections.reduce(
-      (sum, c) => sum + c.items.filter((i) => i.url).length,
+    const n = exportCols.reduce(
+      (sum, c) => c.items.filter((i) => i.url).length + sum,
       0,
     )
     setNotice(
-      `Downloaded a backup of ${n} saved URL${n === 1 ? '' : 's'}. Keep that JSON file — it outlives any tunnel link.`,
+      personalEditor
+        ? `Downloaded a backup of ${n} URL${n === 1 ? '' : 's'} from your collections.`
+        : `Downloaded a backup of ${n} saved URL${n === 1 ? '' : 's'}. Keep that JSON file — it outlives any tunnel link.`,
     )
   }
 
@@ -546,14 +632,37 @@ export function ReferencePane({ gymEditor = false }: Props) {
   }
 
   const importLibraryFile = async (file: File) => {
+    if (!canEditLibrary) return
     setError(null)
     setNotice(null)
     try {
       const backup = parseLibraryBackup(await file.text())
-      const { collections: next, added, skipped } = await mergeLibraryBackup(backup)
-      setCollections(next)
-      persist(next)
-      await refreshCachedIds(next)
+      const incoming =
+        personalEditor && profileId
+          ? {
+              ...backup,
+              collections: backup.collections.map((c) => ({
+                ...c,
+                id: createId('col'),
+                athleteId: profileId,
+              })),
+            }
+          : {
+              ...backup,
+              collections: backup.collections.map((c) => {
+                const { athleteId: _drop, ...rest } = c
+                void _drop
+                return rest
+              }),
+            }
+      const { collections: next, added, skipped } = await mergeLibraryBackup(incoming)
+      const visible =
+        personalEditor && profileId
+          ? await attachPersonalCollections(next.filter(isGymCollection), profileId)
+          : next.filter(isGymCollection)
+      setCollections(visible)
+      persist(visible)
+      await refreshCachedIds(visible)
       const urlsInFile = backupUrlCount(backup)
       setNotice(
         `Imported ${added} URL${added === 1 ? '' : 's'} (${urlsInFile} in file, ${skipped} skipped as duplicates or files). Hit Save all in app to download the videos.`,
@@ -778,6 +887,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
                 </span>
               )}
             </button>
+            {canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startRename(item)}
@@ -786,6 +896,8 @@ export function ReferencePane({ gymEditor = false }: Props) {
             >
               Rename
             </button>
+            )}
+            {canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startTags(item)}
@@ -794,8 +906,10 @@ export function ReferencePane({ gymEditor = false }: Props) {
             >
               Tags
             </button>
+            )}
           </>
         )}
+        {canEditCollection(opts.collection) && (
         <button
           type="button"
           onClick={() => void removeItem(item, opts.collection)}
@@ -804,6 +918,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
         >
           ✕
         </button>
+        )}
       </li>
     )
   }
@@ -863,23 +978,46 @@ export function ReferencePane({ gymEditor = false }: Props) {
           className={inputCls}
           aria-label="Collection"
         >
-          {collections.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({c.items.length})
-            </option>
-          ))}
+          {collections.some(isGymCollection) && (
+            <optgroup label="Gym (Ryan)">
+              {collections.filter(isGymCollection).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.items.length})
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {collections.some((c) => c.athleteId === profileId) && (
+            <optgroup label="Your collections">
+              {collections
+                .filter((c) => c.athleteId === profileId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.items.length})
+                  </option>
+                ))}
+            </optgroup>
+          )}
         </select>
+        {canEditLibrary && (
+        <>
         <input
           value={newCollectionName}
           onChange={(e) => setNewCollectionName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void addCollection()}
-          placeholder="New collection name"
+          placeholder={personalEditor ? 'New collection (yours)' : 'New collection name'}
           className={`${inputCls} w-40`}
         />
         <button type="button" onClick={() => void addCollection()} className={btnCls}>
           + Collection
         </button>
-        {collections.length > 1 && (
+        </>
+        )}
+        {activeCollection &&
+          canEditCollection(activeCollection) &&
+          (activeCollection.athleteId
+            ? true
+            : gymEditor && collections.filter(isGymCollection).length > 1) && (
           <button
             type="button"
             onClick={() => void removeCollection()}
@@ -891,6 +1029,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
       </div>
 
       {/* Add reference */}
+      {canEditLibrary && (
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={urlInput}
@@ -935,6 +1074,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
           }}
         />
       </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -1006,6 +1146,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
         >
           Export library
         </button>
+        {canEditLibrary && (
         <button
           type="button"
           onClick={() => importInputRef.current?.click()}
@@ -1014,6 +1155,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
         >
           Import
         </button>
+        )}
         <button
           type="button"
           onClick={() => void copyAllUrls()}
@@ -1062,9 +1204,13 @@ export function ReferencePane({ gymEditor = false }: Props) {
         videos download into this app the first time they play — or hit Save
         all in app. Drag or use ↑↓ to reorder (not while searching). Rename
         or tap Tags anytime. Star a URL or a saved A/B loop to find it later —
-        Favorites filters this list. The named URL list (and keywords) saves into the
-        app so later previews still have it. Export library is an extra JSON
-        backup.
+        Favorites filters this list.{' '}
+        {gymEditor
+          ? 'The named gym URL list saves into the app so later previews still have it.'
+          : personalEditor
+            ? 'Your collections save on this profile only. Gym collections stay as Ryan left them — you can watch them, not edit names, sizes, or the gym list.'
+            : 'Anyone can watch the gym library. Coaches add URLs in their own collections. Unlock Ryan to edit the gym list, shape descriptions, or picture sizes.'}{' '}
+        Export library is an extra JSON backup.
       </p>
 
       {error && (
@@ -1112,7 +1258,7 @@ export function ReferencePane({ gymEditor = false }: Props) {
                   collection: activeCollection,
                   index,
                   total: currentHits.length,
-                  allowReorder: !searching,
+                  allowReorder: !searching && canEditCollection(activeCollection),
                 }),
               )}
             </ul>

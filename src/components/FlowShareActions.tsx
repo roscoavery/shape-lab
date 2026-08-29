@@ -44,7 +44,7 @@ export function FlowShareActions({ report, athlete, onUpdated, compact }: Props)
     const next = markFlowSharedWithCoach(report.id)
     if (next) {
       onUpdated?.(next)
-      note('Marked for Ryan. Open Athletes to see the coach inbox. Also download and DM the video if you are not on this same device.')
+      note('Marked for Ryan. Open Profiles to see the coach inbox. Also download and DM the video if you are not on this same device.')
     } else {
       note('Could not mark this run.')
     }

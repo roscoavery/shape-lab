@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Research | Coach | Athletes | About
+ * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Research | Coach | Profiles | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -69,6 +69,7 @@ import {
   subscribeIgStills,
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
+import { isCoachProfile, isGymAdmin } from './lib/profileRole'
 import { isProfileUnlocked, withRyanPasscode } from './lib/athletePasscode'
 import type {
   AppSettings,
@@ -422,12 +423,15 @@ export default function App() {
   const ryanEdit = isRyanAthlete(
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
+  const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
+  const personalCompare =
+    Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
 
   return (
     <OverlayStillProvider>
     <ShapeCopyProvider canEdit={ryanEdit}>
     <StillCropProvider canEdit={ryanEdit}>
-    <GymLibraryProvider>
+    <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
     <ClipLoopsProvider>
     <FavoritesProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
@@ -452,7 +456,7 @@ export default function App() {
               ['feed', 'Feed'],
               ['research', 'Research'],
               ['coach', 'Coach'],
-              ['history', 'Athletes'],
+              ['history', 'Profiles'],
               ['about', 'About'],
             ] as const
           ).map(([id, label]) => (
@@ -682,7 +686,7 @@ export default function App() {
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
-          persistIgToApp={Boolean(activeAthleteId)}
+          persistIgToApp={ryanEdit}
           onReferencesChange={setReferencePhotos}
         />
       )}
@@ -693,9 +697,11 @@ export default function App() {
             <ComparePanel
               onSaveIgStill={saveIgStill}
               referencePhotos={referencePhotos}
-              persistIgToApp={Boolean(activeAthleteId)}
+              persistIgToApp={ryanEdit}
               athleteId={activeAthleteId}
               athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+              gymEditor={ryanEdit}
+              personalEditor={personalCompare}
             />
           </CompareErrorBoundary>
         </div>
@@ -820,7 +826,10 @@ export default function App() {
               <strong className="text-[var(--text)]">Feed</strong> is the gym wall —
               a thought, a hit video, or a shared class collage. Video is optional.
               Coaches tag athletes, athletes tag their coach. Unlock a profile to post.
-              Ryan stays coach/admin.
+              Fellow coaches create a coach profile on Profiles, keep their own Compare
+              collections, and use Classes, Feed, and Research. Ryan stays gym admin —
+              only that profile edits the shared Compare library, shape descriptions,
+              and picture sizes.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

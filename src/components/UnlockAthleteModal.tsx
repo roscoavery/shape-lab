@@ -51,7 +51,8 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
         <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{athlete.name}</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Enter the 4-digit passcode set when this profile was created. That loads
-          homework, hold times, Compare URLs, and the video library on this link.
+          homework, hold times, the gym Compare library, your collections if you
+          are a coach, and the video library on this link.
         </p>
         <label className="mt-4 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">

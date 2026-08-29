@@ -19,7 +19,7 @@ import {
   saveCollage,
   type Collage,
 } from '../../lib/collages'
-import { isCoachProfile, roleLabel } from '../../lib/profileRole'
+import { isCoachProfile, isGymAdmin, roleLabel } from '../../lib/profileRole'
 import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { CollageStage } from '../classes/CollageStage'
@@ -41,7 +41,8 @@ export function FeedPanel({ athletes, athlete }: Props) {
   const [previewFull, setPreviewFull] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const admin = isCoachProfile(athlete)
+  const coach = isCoachProfile(athlete)
+  const gymAdmin = isGymAdmin(athlete)
   const ryan = findRyan(athletes)
   const { nameForUrl } = useGymLibrary()
 
@@ -141,9 +142,9 @@ export function FeedPanel({ athletes, athlete }: Props) {
 
   const drop = async (post: FeedPost) => {
     if (!athlete) return
-    if (!admin && post.authorId !== athlete.id) return
+    if (!gymAdmin && post.authorId !== athlete.id) return
     if (!confirm('Remove this post from the gym feed?')) return
-    if (await removeFeedPost(post.id, athlete.id, admin)) {
+    if (await removeFeedPost(post.id, athlete.id, gymAdmin)) {
       setPosts((prev) => prev.filter((p) => p.id !== post.id))
     }
   }
@@ -158,15 +159,14 @@ export function FeedPanel({ athletes, athlete }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Post a thought, a clip of a hit, or a class collage from Classes. Video is
           optional. Coaches tag athletes. Athletes tag their coach. Other coaches can
-          save a shared collage into their own class library. Ryan stays the gym
-          coach/admin.
+          save a shared collage into their own class library. Ryan stays gym admin.
         </p>
       </section>
 
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
         {!athlete ? (
           <p className="text-sm text-[var(--muted)]">
-            Unlock a profile on Athletes to post. Anyone can still watch the feed.
+            Unlock a profile on Profiles to post. Anyone can still watch the feed.
             Coaches unlock to save a shared collage into Classes.
           </p>
         ) : (
@@ -185,7 +185,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder={
-                admin
+                coach
                   ? 'A thought, a hit, or a note about class. Video is optional. Tag the athlete below.'
                   : 'A thought or what you hit. Video is optional. Ryan is tagged as coach unless you change it.'
               }
@@ -207,7 +207,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
             {tagChoices.length > 0 && (
               <div>
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {admin ? 'Tag athletes' : 'Tag coach'}
+                  {coach ? 'Tag athletes' : 'Tag coach'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {tagChoices.map((a) => {
@@ -279,7 +279,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
                         : ''}
                     </p>
                   </div>
-                  {(admin || post.authorId === athlete?.id) && (
+                  {(gymAdmin || post.authorId === athlete?.id) && (
                     <button
                       type="button"
                       onClick={() => void drop(post)}

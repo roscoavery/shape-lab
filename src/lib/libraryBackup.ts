@@ -30,6 +30,8 @@ export type LibraryBackup = {
     id: string
     name: string
     createdAt: string
+    /** Profile that owns this list. Missing = gym / Ryan library. */
+    athleteId?: string
     items: Array<{
       id: string
       kind: RefItem['kind']
@@ -51,6 +53,7 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
       id: c.id,
       name: c.name,
       createdAt: c.createdAt,
+      ...(c.athleteId ? { athleteId: c.athleteId } : {}),
       items: c.items.map((i) => ({
         id: i.id,
         kind: i.kind,
@@ -144,7 +147,7 @@ export function coalesceCollections(
 ): RefCollection[] {
   const groups = new Map<string, RefCollection[]>()
   for (const col of collections) {
-    const key = col.name.trim().toLowerCase() || col.id
+    const key = `${col.athleteId ?? 'gym'}::${col.name.trim().toLowerCase() || col.id}`
     const list = groups.get(key) ?? []
     list.push(col)
     groups.set(key, list)
@@ -176,6 +179,7 @@ export function coalesceCollections(
     }
     out.push({
       ...primary,
+      athleteId: primary.athleteId,
       items: items.map((i) =>
         i.keywords && i.keywords.length ? i : { ...i, keywords: undefined },
       ),
@@ -192,14 +196,25 @@ export async function mergeLibraryBackup(
   let skipped = 0
 
   for (const incoming of backup.collections) {
-    let target = collections.find((c) => c.id === incoming.id)
-    if (!target) target = collections.find((c) => c.name === incoming.name)
+    const owner = incoming.athleteId ?? ''
+    let target = collections.find(
+      (c) => c.id === incoming.id && (c.athleteId ?? '') === owner,
+    )
+    if (!target) {
+      target = collections.find(
+        (c) => c.name === incoming.name && (c.athleteId ?? '') === owner,
+      )
+    }
     if (!target) {
       target = {
-        id: incoming.id || createId('col'),
+        id:
+          incoming.id && !collections.some((c) => c.id === incoming.id)
+            ? incoming.id
+            : createId('col'),
         name: incoming.name || 'Imported',
         items: [],
         createdAt: incoming.createdAt || new Date().toISOString(),
+        ...(incoming.athleteId ? { athleteId: incoming.athleteId } : {}),
       }
       collections.push(target)
     }
@@ -275,10 +290,11 @@ export async function pullServerLibrary(): Promise<LibraryBackup | null> {
 
 export async function pushServerLibrary(collections: RefCollection[]): Promise<boolean> {
   try {
+    const gym = collections.filter((c) => !c.athleteId)
     const res = await fetch('/api/library', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(collectionsToBackup(collections)),
+      body: JSON.stringify(collectionsToBackup(gym)),
     })
     if (res.ok) dispatchLibraryChanged()
     return res.ok
@@ -306,6 +322,7 @@ function backupToCollections(backup: LibraryBackup): RefCollection[] {
     id: c.id,
     name: c.name,
     createdAt: c.createdAt,
+    ...(c.athleteId ? { athleteId: c.athleteId } : {}),
     items: c.items
       .filter((i) => i.kind !== 'file' || i.url)
       .filter((i) => i.url)
@@ -341,6 +358,30 @@ export async function replaceLibraryFromBackup(
   return next
 }
 
+/** Replace gym collections from a backup; keep this profile’s personal lists. */
+export async function replaceGymKeepPersonal(
+  backup: LibraryBackup,
+  profileId: string | null,
+): Promise<RefCollection[]> {
+  const existing = await getCollections()
+  const personal = profileId
+    ? existing.filter((c) => c.athleteId === profileId)
+    : []
+  const gym = backupToCollections(backup).map((c) => {
+    const { athleteId: _drop, ...rest } = c
+    void _drop
+    return rest
+  })
+  const keep = new Set([...gym.map((c) => c.id), ...personal.map((c) => c.id)])
+  for (const col of existing) {
+    if (!keep.has(col.id)) await deleteCollectionRecord(col.id)
+  }
+  for (const col of gym) await putCollection(col)
+  for (const col of personal) await putCollection(col)
+  persistLibraryMeta(gym)
+  return [...gym, ...personal]
+}
+
 export function backupFromRosterLibraries(): LibraryBackup | null {
   const map = loadCompareLibraries()
   const collections = Object.values(map).flat()
@@ -349,17 +390,18 @@ export function backupFromRosterLibraries(): LibraryBackup | null {
 }
 
 /**
- * Ryan / gym computer: merge this browser + disk + roster extras, then push.
+ * Ryan / gym computer: merge this browser + disk, then push gym collections only.
  * Never replace a larger local library with a smaller server copy.
+ * Never fold a coach’s personal lists into the gym file.
  * Everyone else: take the gym library from the server so every link matches.
  */
 export async function syncLibraryWithServer(
   local: RefCollection[],
   persistToApp = false,
+  profileId: string | null = null,
 ): Promise<{ collections: RefCollection[]; pulled: number }> {
   const seed = shippedCompareLibrary()
   const server = await pullServerLibrary()
-  const roster = backupFromRosterLibraries()
 
   const mergeIn = async (backup: LibraryBackup | null): Promise<number> => {
     if (!backup || backupUrlCount(backup) === 0) return 0
@@ -371,8 +413,8 @@ export async function syncLibraryWithServer(
     let pulled = 0
     pulled += await mergeIn(server)
     pulled += await mergeIn(seed)
-    pulled += await mergeIn(roster)
-    const collections = await getCollections()
+    const all = await getCollections()
+    const collections = all.filter((c) => !c.athleteId)
     // Only push when this browser added URLs the gym file did not have.
     // Never auto-publish a stale tab's names over a newer saved library.
     if (pulled > 0) await pushServerLibrary(collections)
@@ -380,8 +422,13 @@ export async function syncLibraryWithServer(
   }
 
   if (server && backupUrlCount(server) > 0 && libraryIsManaged(server)) {
-    const collections = await replaceLibraryFromBackup(server)
-    return { collections, pulled: backupUrlCount(server) }
+    const collections = await replaceGymKeepPersonal(server, profileId)
+    return {
+      collections: collections.filter(
+        (c) => !c.athleteId || (profileId != null && c.athleteId === profileId),
+      ),
+      pulled: backupUrlCount(server),
+    }
   }
 
   let collections = local

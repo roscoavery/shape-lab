@@ -21,7 +21,6 @@ import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import type { ReferencePhoto } from '../../types'
-import { isRyanName } from '../../lib/ryanProfile'
 
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
@@ -29,6 +28,8 @@ type Props = {
   persistIgToApp?: boolean
   athleteId?: string | null
   athleteName?: string | null
+  gymEditor?: boolean
+  personalEditor?: boolean
 }
 
 export function ComparePanel({
@@ -37,6 +38,8 @@ export function ComparePanel({
   persistIgToApp = false,
   athleteId = null,
   athleteName = null,
+  gymEditor = false,
+  personalEditor = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -121,9 +124,11 @@ export function ComparePanel({
               <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip: press one
               corner, drag to the opposite corner, and it lands in{' '}
               <strong className="text-[var(--text)]">Learn → IG shapes</strong>
-              {isRyanName(athleteName)
-                ? '. Ryan is unlocked — Compare URLs save into the gym library. After you add or rename, tap Save into the app so every link and browser has them.'
-                : '. Unlock Ryan to save Compare URLs into the app for every browser and link. Anyone can watch the gym library.'}
+              {gymEditor
+                ? '. Ryan is unlocked — gym Compare URLs save into the shared library. After you add or rename, tap Save into the app so every link and browser has them.'
+                : personalEditor
+                  ? '. Your Compare collections save on this profile only (Instagram URLs included). Gym collections stay as Ryan left them — watch, don’t edit. Shape descriptions and picture sizes stay Ryan-only.'
+                  : '. Anyone can watch the gym library. Unlock a coach profile to add URLs in your own collections, or unlock Ryan to edit the gym list.'}
             </section>
           )}
           {!fullscreen && (
@@ -137,7 +142,12 @@ export function ComparePanel({
                 className="min-h-0 overflow-hidden"
                 style={{ flex: `${tbRatio} 1 0%` }}
               >
-                <ReferencePane gymEditor={isRyanName(athleteName)} />
+                <ReferencePane
+                  key={athleteId ?? 'none'}
+                  gymEditor={gymEditor}
+                  personalEditor={personalEditor}
+                  profileId={athleteId}
+                />
               </div>
               <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} />
               <div
@@ -153,7 +163,12 @@ export function ComparePanel({
                 className="min-h-0 min-w-0 overflow-hidden"
                 style={{ flex: `${lrRatio} 1 0%` }}
               >
-                <ReferencePane gymEditor={isRyanName(athleteName)} />
+                <ReferencePane
+                  key={athleteId ?? 'none'}
+                  gymEditor={gymEditor}
+                  personalEditor={personalEditor}
+                  profileId={athleteId}
+                />
               </div>
               <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} />
               <div
@@ -174,7 +189,12 @@ export function ComparePanel({
               }`}
             >
               <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-                <ReferencePane gymEditor={isRyanName(athleteName)} />
+                <ReferencePane
+                  key={athleteId ?? 'none'}
+                  gymEditor={gymEditor}
+                  personalEditor={personalEditor}
+                  profileId={athleteId}
+                />
               </div>
               <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
                 <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />

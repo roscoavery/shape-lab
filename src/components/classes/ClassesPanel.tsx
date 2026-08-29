@@ -22,7 +22,7 @@ import {
 import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl } from '../../lib/clipStore'
-import { isCoachProfile } from '../../lib/profileRole'
+import { isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import type { Athlete } from '../../types'
@@ -68,7 +68,7 @@ export function ClassesPanel({ athlete }: Props) {
   const [sharing, setSharing] = useState(false)
   const editorRef = useRef<HTMLElement | null>(null)
   const canEdit = Boolean(athlete)
-  const admin = isCoachProfile(athlete)
+  const gymAdmin = isGymAdmin(athlete)
 
   useEffect(() => {
     void listCollages(athlete?.id).then(setCollages)
@@ -254,7 +254,8 @@ export function ClassesPanel({ athlete }: Props) {
 
   const drop = async (c: Collage) => {
     if (!athlete) return
-    if (!admin && c.ownerId !== athlete.id && c.createdById !== athlete.id) return
+    if (isGymCollage(c) && !gymAdmin) return
+    if (!isGymCollage(c) && c.ownerId !== athlete.id && c.createdById !== athlete.id) return
     if (!confirm(`Delete collage “${c.name}”?`)) return
     if (await removeCollage(c.id)) {
       setCollages((prev) => prev.filter((x) => x.id !== c.id))
@@ -284,11 +285,14 @@ export function ClassesPanel({ athlete }: Props) {
     setNotice(`Posted “${c.name}” to the gym feed. Other coaches can save it into their class library.`)
   }
 
-  const canManage = (c: Collage) =>
-    Boolean(athlete && (admin || c.ownerId === athlete.id || c.createdById === athlete.id || !c.ownerId))
+  const canManage = (c: Collage) => {
+    if (!athlete) return false
+    if (isGymCollage(c)) return gymAdmin
+    return c.ownerId === athlete.id || c.createdById === athlete.id
+  }
 
   const canShare = (c: Collage) =>
-    Boolean(athlete && (admin || !c.ownerId || c.ownerId === athlete.id || c.createdById === athlete.id))
+    Boolean(athlete && (gymAdmin || !c.ownerId || c.ownerId === athlete.id || c.createdById === athlete.id))
 
   const persistPlayingSlots = (slots: CollageSlot[]) => {
     if (!playing) return
