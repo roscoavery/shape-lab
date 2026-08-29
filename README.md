@@ -188,7 +188,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ## Classes (drill collages)
 
-**Classes** builds named boards of up to **six** gym-library clips (plus a coach’s own Compare URLs). The same video can occupy more than one tile. Each slot has its own clip menu while the board is open (not in full screen). **Edit** changes a saved board; **Duplicate** copies it into your class library. Each slot can have a caption and its own A/B loop. **Share to feed** posts that board so other coaches can **Save to my class library**. Gym-wide boards (no personal owner) still show for everyone — only Ryan can edit or delete those. Unlock a profile to save. Fellow coaches edit their own boards.
+**Classes** builds named boards of up to **six** gym-library clips (plus a coach’s own Compare URLs). The same video can occupy more than one tile. Each slot has its own clip menu while the board is open (not in full screen). **Edit** changes a saved board; **Duplicate** copies it into your class library. Each slot can have a caption and its own A/B loop. **Share to feed** posts that board so other coaches can **Save to my class library**. Gym-wide boards (no personal owner) still show for everyone — only Ryan can edit or delete those. **Full screen** packs the clips so their frames share an edge. Unlock a profile to save. Fellow coaches edit their own boards.
 
 ## Gym feed
 
