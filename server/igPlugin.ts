@@ -26,6 +26,8 @@ import {
   sendFeedFile,
 } from './feedStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
+import { readSocialFile, writeSocialFile } from './socialStore.ts'
+import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
 import {
   addIgStillFromBody,
   deleteIgStill,
@@ -64,6 +66,8 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/feed' &&
       path !== '/api/feed-file' &&
       path !== '/api/research' &&
+      path !== '/api/social' &&
+      path !== '/api/discuss' &&
       path !== '/api/coach-library'
     ) {
       next()
@@ -355,6 +359,32 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         if (req.method === 'PUT') {
           const body = await readRequestBody(req)
           sendJson(res, 200, writeResearchFile(JSON.parse(body)))
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/social') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readSocialFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeSocialFile(JSON.parse(body)))
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
+        return
+      }
+      if (path === '/api/discuss') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readDiscussFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeDiscussFile(JSON.parse(body)))
           return
         }
         sendJson(res, 405, { error: 'Use GET or PUT' })

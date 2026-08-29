@@ -7,11 +7,12 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Grade gymnastics shapes from **0–100** with per-criterion scores
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
 - Run an ordered **athlete Tasks curriculum** (standalone holds 5s → 3s after mastery; sequences always 3s)
-- **Learn** shapes and pathways without a camera, plus a **reference scroll** of the gym Instagram library
+- **Learn** shapes and pathways without a camera, plus **tumbling physics** (inertia, angular momentum, moment of inertia) and a **reference scroll** of the gym Instagram library
 - **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
 - **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split). Share a board to the gym feed so other coaches can save it into their class library.
 - **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach
-- **Research** gym studies (laterality, standing-full mats, reasons, fear) with counts and correlations — n is this gym
+- **Network** follow people on this gym, message them (optional clip URL), and a **coach lounge** for tumbling philosophy
+- **Research** gym studies (laterality, standing-full mats, reasons, fear) with counts and correlations, plus a digest of lounge threads — n is this gym
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -152,8 +153,9 @@ Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBr
 3. **Shape library** — browse all scored shapes. On the Ryan profile, **Crop display** on a coach still sets the borders used everywhere in the app (library cards, overlay, Tasks). Original JPEGs are not rewritten.
 4. **IG shapes library** — stills cropped from Compare. On a looping Instagram clip or replay, tap **Screenshot**, press one corner of the shape, drag to the opposite corner, tag a listed shape or type a **custom name** if it is not in the list, and Save. Select the **Ryan** profile first if you want that still saved **into the app** (this gym computer) so every browser and phone link still has it. Other profiles keep crops on this device only. These never replace shipped coach stills. On **Tasks**, **Homework**, **Coach**, or **Compare**, **Still overlay** lets you scroll left/right through Shape library or IG shapes and put any picture on the live camera or Compare video (opacity slider).
 5. **Task pathways** — walk the curriculum in order.
-6. **Shape test** — multiple choice from descriptions or pictures.
-7. **My shapes** — the athlete’s own hit photos.
+6. **Tumbling physics** — inertia, angular momentum, moment of inertia, speeding and slowing rotation, the round-off → back handspring arm drop (shrink I so the feet can get in front), and why layouts expose a weak set. Written for coaches, in gym language.
+7. **Shape test** — multiple choice from descriptions or pictures.
+8. **My shapes** — the athlete’s own hit photos.
 
 ## Compare (video study tab)
 
@@ -194,6 +196,12 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 **Feed** is a gym wall. Unlock a profile, write a caption, optionally attach a video, and tag people. A thought does not need a clip. **Coach** profiles tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps gym-admin edits: the shared Compare library, Learn shape copy, still crops / picture sizes. Other coaches keep their own Compare collections and class boards.
 
+## Network
+
+**Network** is follow, message, and the coach lounge on this gym computer (`/api/social`, `/api/discuss`). Unlock a profile to follow someone, send a direct message, or paste a public video URL in a thread.
+
+**Coach lounge** is for coach profiles only. Threads are tagged (round-off to back handspring, tuck vs layout, set and snap, twist, power, standing, fear, physics, other). Each post has a **why** box — the gym reason, not just the slogan — so Research can count what coaches argue about and how they justify it. Athletes see a lock note in the lounge; the digest on Research is readable without unlocking.
+
 ## Research
 
 **Research** is how this gym gathers tumbling data with the scientific method: a question, a stated hypothesis, one observation per athlete, then counts and crosstabs. Studies shipped now:
@@ -203,7 +211,7 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 - **Why people tumble** — reasons they pick for themselves.
 - **Fear and mental blocks** — whether they have felt fear tumbling, had a block, and whether that block followed an emotional shutdown. Not a clinical screen.
 
-**Correlations** are HTML tables (hand × twist, front foot × twist, front foot × skate, twist × double, twist × triple, and fear × twist when the same athlete is in both studies). They do not claim causes. **Ideas** is an inbox for future questions (cheer, acro, more tumbling philosophy) until they become a study. Findings are readable without unlocking a profile; logging needs one. Coaches can see who is in a sample. Data lives on this gym computer (`/api/research`, `data/research.json`).
+**Correlations** are HTML tables (hand × twist, front foot × twist, front foot × skate, twist × double, twist × triple, and fear × twist when the same athlete is in both studies). They do not claim causes. **Ideas** is an inbox for future questions (cheer, acro, more tumbling philosophy) until they become a study. **Lounge** is a digest of coach-lounge threads: counts by topic, who posted, how many posts have a written why, and recent titles with reasoning samples. Findings are readable without unlocking a profile; logging needs one. Coaches can see who is in a sample. Data lives on this gym computer (`/api/research`, `data/research.json`). Lounge posts live in `data/discuss.json` (gitignored, like research).
 
 ## First test: Handstand
 
@@ -260,8 +268,10 @@ src/
   lib/shapeQuiz.ts       Learn tab multiple-choice shape test
   components/HitFolder.tsx  athlete hit photos grouped by shape
   components/ShapeQuiz.tsx
-  components/EducationPanel.tsx  Learn tab (shapes, quiz, my shapes, pathways)
-  App.tsx                main UI (Tasks | Homework | Learn | Compare | Coach | Profiles | About)
+  components/EducationPanel.tsx  Learn tab (shapes, quiz, physics, my shapes, pathways)
+  components/learn/PhysicsLessons.tsx  tumbling physics lessons
+  components/network/NetworkPanel.tsx  follow, DMs, coach lounge
+  App.tsx                main UI (Tasks | Homework | Learn | Compare | Feed | Network | Research | Coach | Profiles | About)
 public/references/       optional default coach photos
 ```
 

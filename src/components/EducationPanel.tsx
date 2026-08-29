@@ -31,6 +31,7 @@ import { useShapeCopy } from './ShapeCopyContext'
 import { ShapeCopyEditor } from './ShapeCopyEditor'
 import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
+import { PhysicsLessons } from './learn/PhysicsLessons'
 
 type EduView =
   | { kind: 'home' }
@@ -43,6 +44,7 @@ type EduView =
   | { kind: 'glossary' }
   | { kind: 'ig' }
   | { kind: 'scroll' }
+  | { kind: 'physics' }
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -121,7 +123,10 @@ export function EducationPanel({
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Study the tumbling notes for each shape here first. Camera angle and
-          scoring details stay with the app. Scroll the gym Instagram library under{' '}
+          scoring details stay with the app. Open{' '}
+          <strong className="text-[var(--text)]">Tumbling physics</strong> for
+          inertia, angular momentum, and why a small arm drop after a round-off
+          can get the feet in front. Scroll the gym Instagram library under{' '}
           <strong className="text-[var(--text)]">Reference scroll</strong>. When you
           are ready to practice, open the{' '}
           <strong className="text-[var(--text)]">Tasks</strong> tab and start the
@@ -142,6 +147,11 @@ export function EducationPanel({
             active={view.kind === 'pathways' || view.kind === 'task'}
             onClick={goPathways}
             label="Task pathways"
+          />
+          <NavChip
+            active={view.kind === 'physics'}
+            onClick={() => setView({ kind: 'physics' })}
+            label="Tumbling physics"
           />
           <NavChip
             active={view.kind === 'glossary'}
@@ -189,6 +199,7 @@ export function EducationPanel({
           onGlossary={() => setView({ kind: 'glossary' })}
           onIg={() => setView({ kind: 'ig' })}
           onScroll={() => setView({ kind: 'scroll' })}
+          onPhysics={() => setView({ kind: 'physics' })}
           igCount={listIgStills(referencePhotos).length}
         />
       )}
@@ -220,6 +231,8 @@ export function EducationPanel({
       {view.kind === 'pathways' && (
         <PathwayList onOpen={openTask} onOpenShape={openShape} />
       )}
+
+      {view.kind === 'physics' && <PhysicsLessons />}
 
       {view.kind === 'task' && (
         <TaskDetail
@@ -307,6 +320,7 @@ function HomeView({
   onGlossary,
   onIg,
   onScroll,
+  onPhysics,
   igCount,
 }: {
   pathwayCount: number
@@ -320,6 +334,7 @@ function HomeView({
   onGlossary: () => void
   onIg: () => void
   onScroll: () => void
+  onPhysics: () => void
   igCount: number
 }) {
   return (
@@ -351,6 +366,21 @@ function HomeView({
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           View pathway →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onPhysics}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Tumbling physics</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Inertia, angular momentum, moment of inertia — and why arms come in
+          after a round-off so the feet can get in front for the handspring.
+          Layouts expose a weak set because a long body has more I to turn.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open physics →
         </span>
       </button>
       <button

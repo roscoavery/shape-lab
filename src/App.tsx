@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Research | Coach | Profiles | About
+ * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Network | Research | Coach | Profiles | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -31,6 +31,7 @@ import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
 import { FeedPanel } from './components/feed/FeedPanel'
+import { NetworkPanel } from './components/network/NetworkPanel'
 import { ResearchPanel } from './components/research/ResearchPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
@@ -467,6 +468,7 @@ export default function App() {
               ['compare', 'Compare'],
               ['classes', 'Classes'],
               ['feed', 'Feed'],
+              ['network', 'Network'],
               ['research', 'Research'],
               ['coach', 'Coach'],
               ['history', 'Profiles'],
@@ -733,6 +735,13 @@ export default function App() {
         />
       )}
 
+      {tab === 'network' && (
+        <NetworkPanel
+          athletes={athletes}
+          athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+        />
+      )}
+
       {tab === 'research' && (
         <ResearchPanel
           athletes={athletes}
@@ -840,9 +849,20 @@ export default function App() {
               a thought, a hit video, or a shared class collage. Video is optional.
               Coaches tag athletes, athletes tag their coach. Unlock a profile to post.
               Fellow coaches create a coach profile on Profiles, keep their own Compare
-              collections, and use Classes, Feed, and Research. Ryan stays gym admin —
+              collections, and use Classes, Feed, Network, and Research. Ryan stays gym admin —
               only that profile edits the shared Compare library, shape descriptions,
               and picture sizes.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Network</h2>
+            <p>
+              <strong className="text-[var(--text)]">Network</strong> is follow, message, and
+              the coach lounge. Unlock a profile to follow someone on this gym, send a
+              direct message, or paste a public clip URL. The lounge is coaches only —
+              tumbling philosophies, tagged by topic, with a “why I coach it this way”
+              box so Research can count what people argue about. Athletes can read the
+              digest on Research; posting stays in the lounge.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -853,8 +873,9 @@ export default function App() {
               Laterality (hand, front foot, twist, doubles, triples, skate stance),
               panel-mat layers on a first standing full, why people tumble, and fear /
               mental blocks. Correlations are crosstabs, not causes. n is this gym.
-              Dump future study ideas in the inbox. Unlock a profile to log; anyone can
-              read findings.
+              Dump future study ideas in the inbox. The lounge digest counts coach
+              threads by topic, who posted, and how often they wrote their reasoning.
+              Unlock a profile to log studies; anyone can read findings.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -867,7 +888,10 @@ export default function App() {
               Take a <strong className="text-[var(--text)]">Shape test</strong>, review{' '}
               <strong className="text-[var(--text)]">My shapes</strong>, and keep one coach photo
               per position in the <strong className="text-[var(--text)]">Glossary</strong> (plus an
-              Extra folder for shapes you will not practice on camera).
+              Extra folder for shapes you will not practice on camera).{' '}
+              <strong className="text-[var(--text)]">Tumbling physics</strong> covers inertia,
+              angular momentum, moment of inertia, speeding and slowing rotation, the
+              round-off to back handspring arm drop, and why layouts expose a weak set.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

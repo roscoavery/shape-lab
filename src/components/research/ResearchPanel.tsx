@@ -37,12 +37,16 @@ import {
   type Crosstab,
 } from '../../lib/researchStats'
 import { isCoachProfile } from '../../lib/profileRole'
+import { loadDiscuss, type DiscussFile } from '../../lib/discuss'
+import { discussDigest } from '../../lib/discussStats'
+import { discussTopicById } from '../../config/discussTopics'
 
 type View =
   | { page: 'list' }
   | { page: 'study'; id: string }
   | { page: 'correlations' }
   | { page: 'ideas' }
+  | { page: 'lounge' }
 
 type Props = {
   athletes: Athlete[]
@@ -51,6 +55,7 @@ type Props = {
 
 export function ResearchPanel({ athletes, athlete }: Props) {
   const [file, setFile] = useState<ResearchFile | null>(null)
+  const [discuss, setDiscuss] = useState<DiscussFile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<View>({ page: 'list' })
 
@@ -59,10 +64,24 @@ export function ResearchPanel({ athletes, athlete }: Props) {
     void loadResearch().then((next) => {
       if (!cancelled) setFile(next)
     })
+    void loadDiscuss().then((next) => {
+      if (!cancelled) setDiscuss(next)
+    })
     return () => {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (view.page !== 'lounge') return
+    let cancelled = false
+    void loadDiscuss().then((next) => {
+      if (!cancelled) setDiscuss(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [view.page])
 
   const persist = async (next: ResearchFile): Promise<boolean> => {
     const saved = await saveResearch(next)
@@ -99,7 +118,8 @@ export function ResearchPanel({ athletes, athlete }: Props) {
           Ask a question, state what we think, log what this gym actually does, then look
           at the counts. n is this gym — not a world census, and not a cause. Anyone can
           read findings. Unlock a profile to log. Coaches log for any athlete; athletes
-          log for themselves.
+          log for themselves. The lounge digest counts what coaches argue about and how
+          often they wrote the “why.”
         </p>
         <div className="mt-3 flex flex-wrap gap-1">
           {(
@@ -107,12 +127,14 @@ export function ResearchPanel({ athletes, athlete }: Props) {
               ['list', 'Studies'],
               ['correlations', 'Correlations'],
               ['ideas', 'Ideas'],
+              ['lounge', 'Lounge'],
             ] as const
           ).map(([id, label]) => {
             const on =
               (id === 'list' && (view.page === 'list' || view.page === 'study')) ||
               (id === 'correlations' && view.page === 'correlations') ||
-              (id === 'ideas' && view.page === 'ideas')
+              (id === 'ideas' && view.page === 'ideas') ||
+              (id === 'lounge' && view.page === 'lounge')
             return (
               <button
                 key={id}
@@ -123,7 +145,9 @@ export function ResearchPanel({ athletes, athlete }: Props) {
                       ? { page: 'list' }
                       : id === 'correlations'
                         ? { page: 'correlations' }
-                        : { page: 'ideas' },
+                        : id === 'ideas'
+                          ? { page: 'ideas' }
+                          : { page: 'lounge' },
                   )
                 }
                 className={`rounded-md px-3 py-1.5 text-sm ${
@@ -167,6 +191,9 @@ export function ResearchPanel({ athletes, athlete }: Props) {
       )}
       {view.page === 'ideas' && (
         <IdeasPage file={file} athlete={athlete} athletes={athletes} onSave={persist} />
+      )}
+      {view.page === 'lounge' && (
+        <LoungeDigestPage athletes={athletes} discuss={discuss} />
       )}
     </div>
   )
@@ -686,6 +713,150 @@ function WhoLogged({
         </ul>
       )}
     </section>
+  )
+}
+
+function LoungeDigestPage({
+  athletes,
+  discuss,
+}: {
+  athletes: Athlete[]
+  discuss: DiscussFile | null
+}) {
+  if (!discuss) {
+    return (
+      <p className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-8 text-center text-sm text-[var(--muted)]">
+        Loading lounge digest…
+      </p>
+    )
+  }
+
+  const digest = discussDigest(discuss)
+  const nameOf = (id: string) => athletes.find((a) => a.id === id)?.name ?? id
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+        <h3 className="text-lg font-semibold text-[var(--text)]">Coach lounge digest</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+          Counts from Network → Coach lounge. Posting stays there (coach profiles only).
+          This page is the research cut: topics, who wrote, and how often they explained
+          why they coach it that way. Anyone can read it.
+        </p>
+        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Threads" value={digest.threadCount} />
+          <Stat label="Posts" value={digest.postCount} />
+          <Stat label="Coaches" value={digest.coachCount} />
+          <Stat
+            label="With a why"
+            value={digest.withReasoning}
+            hint={
+              digest.postCount
+                ? `${digest.withReasoning} of ${digest.postCount} posts`
+                : undefined
+            }
+          />
+        </dl>
+      </section>
+
+      {digest.threadCount === 0 ? (
+        <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
+          No lounge threads yet. Coaches start them on Network → Coach lounge.
+        </p>
+      ) : (
+        <>
+          <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+            <h4 className="text-sm font-semibold text-[var(--text)]">By topic</h4>
+            <ul className="mt-3 space-y-2">
+              {digest.byTopic.map((row) => (
+                <li
+                  key={row.topicId}
+                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--panel-border)] pb-2 text-sm last:border-0 last:pb-0"
+                >
+                  <span className="text-[var(--text)]">{row.name}</span>
+                  <span className="text-[11px] text-[var(--muted)]">
+                    {row.threads} thread{row.threads === 1 ? '' : 's'} · {row.posts}{' '}
+                    post{row.posts === 1 ? '' : 's'} · {row.coaches} coach
+                    {row.coaches === 1 ? '' : 'es'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+            <h4 className="text-sm font-semibold text-[var(--text)]">Who posted</h4>
+            <ul className="mt-3 space-y-2">
+              {digest.voices.map((v) => (
+                <li
+                  key={v.authorId}
+                  className="flex flex-wrap items-baseline justify-between gap-2 text-sm"
+                >
+                  <span className="text-[var(--text)]">{nameOf(v.authorId)}</span>
+                  <span className="text-[11px] text-[var(--muted)]">
+                    {v.posts} post{v.posts === 1 ? '' : 's'} · {v.topics.join(', ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+            <h4 className="text-sm font-semibold text-[var(--text)]">Recent threads</h4>
+            <ul className="mt-3 space-y-3">
+              {digest.recent.map((thread) => {
+                const sample = thread.posts.find((p) => p.reasoning.trim()) ?? thread.posts[0]
+                return (
+                  <li
+                    key={thread.id}
+                    className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                      {discussTopicById(thread.topicId)?.name ?? thread.topicId}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-[var(--text)]">{thread.title}</p>
+                    <p className="mt-1 text-[11px] text-[var(--muted)]">
+                      {thread.posts.length} post{thread.posts.length === 1 ? '' : 's'} · last{' '}
+                      {nameOf(thread.posts.at(-1)?.authorId ?? thread.authorId)}
+                    </p>
+                    {sample?.reasoning ? (
+                      <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
+                        <span className="font-semibold text-[var(--accent)]">Why: </span>
+                        {sample.reasoning}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[12px] italic text-[var(--muted)]">
+                        No reasoning written on this thread yet.
+                      </p>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </>
+      )}
+    </div>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: number
+  hint?: string
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+        {label}
+      </dt>
+      <dd className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</dd>
+      {hint && <p className="mt-0.5 text-[10px] text-[var(--muted)]">{hint}</p>}
+    </div>
   )
 }
 
