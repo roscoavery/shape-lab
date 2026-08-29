@@ -443,10 +443,7 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           sendJson(res, 200, postedBy ? { postedBy } : {})
           return
         }
-        const [direct, postedBy] = await Promise.all([
-          resolveSocialVideo(page),
-          lookupPostedBy(page),
-        ])
+        const direct = await resolveSocialVideo(page)
         if (!direct) {
           sendJson(res, 422, {
             error:
@@ -454,6 +451,7 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           })
           return
         }
+        const postedBy = await lookupPostedBy(page)
         sendJson(res, 200, {
           videoUrl: `/api/ig-media?src=${encodeURIComponent(direct)}`,
           ...(postedBy ? { postedBy } : {}),

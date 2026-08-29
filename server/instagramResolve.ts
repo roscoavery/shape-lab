@@ -26,7 +26,7 @@ const COBALT_APIS = [
   'https://cobalt-api.kwiatekmiki.com/',
 ]
 
-const cache = new Map<string, { url: string; at: number }>()
+const cache = new Map<string, { url: string; at: number; postedBy?: string | null }>()
 const CACHE_MS = 25 * 60 * 1000
 
 export function isResolvableVideoUrl(url: string): boolean {
@@ -36,6 +36,63 @@ export function isResolvableVideoUrl(url: string): boolean {
 /** @deprecated use isResolvableVideoUrl */
 export function isInstagramUrl(url: string): boolean {
   return socialPlatform(url) === 'instagram'
+}
+
+function handleFromField(raw: string | null | undefined): string | null {
+  const h = normalizeSocialHandle(raw)
+  if (!h || /^\d+$/.test(h) || h.length < 2) return null
+  const lower = h.toLowerCase()
+  if (lower === 'na' || lower === 'none' || lower === 'null') return null
+  return h
+}
+
+type YtHit = { url: string | null; postedBy: string | null }
+
+function spawnYtdlp(cmd: string, args: string[]): Promise<YtHit> {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
+    let out = ''
+    const kill = setTimeout(() => {
+      child.kill('SIGKILL')
+      resolve({ url: null, postedBy: null })
+    }, 25_000)
+    child.stdout.on('data', (d: Buffer) => {
+      out += d.toString('utf8')
+    })
+    child.on('error', () => {
+      clearTimeout(kill)
+      resolve({ url: null, postedBy: null })
+    })
+    child.on('close', (code) => {
+      clearTimeout(kill)
+      if (code !== 0) {
+        resolve({ url: null, postedBy: null })
+        return
+      }
+      let url: string | null = null
+      let postedBy: string | null = null
+      for (const line of out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)) {
+        if (/^https?:\/\//.test(line)) url = line
+        else postedBy = postedBy ?? handleFromField(line)
+      }
+      resolve({ url, postedBy })
+    })
+  })
+}
+
+async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
+  const args = ['-f', 'b', '-g', '--print', '%(channel)s', '--no-warnings', '--no-playlist', pageUrl]
+  const first = await spawnYtdlp('yt-dlp', args)
+  if (first.url || first.postedBy) return first
+  return spawnYtdlp('python3', ['-m', 'yt_dlp', ...args])
+}
+
+async function ytdlpPostedBy(pageUrl: string): Promise<string | null> {
+  const args = ['--print', '%(channel)s', '--skip-download', '--no-warnings', '--no-playlist', pageUrl]
+  const first = await spawnYtdlp('yt-dlp', args)
+  if (first.postedBy) return first.postedBy
+  const second = await spawnYtdlp('python3', ['-m', 'yt_dlp', ...args])
+  return second.postedBy
 }
 
 async function cobaltResolve(pageUrl: string): Promise<string | null> {
@@ -74,40 +131,6 @@ async function cobaltResolve(pageUrl: string): Promise<string | null> {
     }
   }
   return null
-}
-
-function spawnResolve(cmd: string, args: string[]): Promise<string | null> {
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
-    let out = ''
-    const kill = setTimeout(() => {
-      child.kill('SIGKILL')
-      resolve(null)
-    }, 25_000)
-    child.stdout.on('data', (d: Buffer) => {
-      out += d.toString('utf8')
-    })
-    child.on('error', () => {
-      clearTimeout(kill)
-      resolve(null)
-    })
-    child.on('close', (code) => {
-      clearTimeout(kill)
-      const line = out
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .find((l) => /^https?:\/\//.test(l))
-      resolve(code === 0 && line ? line : null)
-    })
-  })
-}
-
-async function ytdlpResolve(pageUrl: string): Promise<string | null> {
-  const args = ['-f', 'b', '-g', '--no-warnings', '--no-playlist', pageUrl]
-  return (
-    (await spawnResolve('yt-dlp', args)) ??
-    (await spawnResolve('python3', ['-m', 'yt_dlp', ...args]))
-  )
 }
 
 async function fetchText(url: string, ms = 6000): Promise<string | null> {
@@ -153,11 +176,18 @@ async function htmlPostedBy(pageUrl: string): Promise<string | null> {
   return null
 }
 
-/** Who originally posted the public clip — from the URL, oEmbed, or the page. */
+/** Who originally posted the public clip — URL, yt-dlp channel, oEmbed, or the page. */
 export async function lookupPostedBy(rawUrl: string): Promise<string | null> {
   const fromUrl = postedByFromUrl(rawUrl)
   if (fromUrl) return fromUrl
   const pageUrl = canonicalSocialUrl(rawUrl)
+  const hit = cache.get(pageUrl)
+  if (hit?.postedBy) return hit.postedBy
+  const fromYt = await ytdlpPostedBy(pageUrl)
+  if (fromYt) {
+    if (hit) hit.postedBy = fromYt
+    return fromYt
+  }
   const platform = socialPlatform(pageUrl)
   if (platform === 'instagram') {
     return (await oembedPostedBy(pageUrl)) ?? (await htmlPostedBy(pageUrl))
@@ -173,9 +203,10 @@ export async function resolveSocialVideo(rawUrl: string): Promise<string | null>
   const pageUrl = canonicalSocialUrl(rawUrl)
   const hit = cache.get(pageUrl)
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.url
-  const direct = (await ytdlpResolve(pageUrl)) ?? (await cobaltResolve(pageUrl))
+  const yt = await ytdlpResolve(pageUrl)
+  const direct = yt.url ?? (await cobaltResolve(pageUrl))
   if (!direct) return null
-  cache.set(pageUrl, { url: direct, at: Date.now() })
+  cache.set(pageUrl, { url: direct, at: Date.now(), postedBy: yt.postedBy })
   return direct
 }
 
