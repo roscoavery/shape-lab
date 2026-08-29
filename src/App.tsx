@@ -885,8 +885,11 @@ export default function App() {
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Learn</strong> tab to study shapes
               (cues, criteria, reference photos) and the full task pathway before practicing.
-              Take a <strong className="text-[var(--text)]">Shape test</strong>, review{' '}
-              <strong className="text-[var(--text)]">My shapes</strong>, and keep one coach photo
+              Take a <strong className="text-[var(--text)]">Shape test</strong> (pictures,
+              descriptions, or both — notes do not name the answer) or the{' '}
+              <strong className="text-[var(--text)]">Physics test</strong> — when you
+              finish, you see the score and every miss with the correct answer.
+              Review <strong className="text-[var(--text)]">My shapes</strong>, and keep one coach photo
               per position in the <strong className="text-[var(--text)]">Glossary</strong> (plus an
               Extra folder for shapes you will not practice on camera).{' '}
               <strong className="text-[var(--text)]">Tumbling physics</strong> covers inertia,

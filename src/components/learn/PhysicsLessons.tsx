@@ -5,7 +5,11 @@
 import { useState } from 'react'
 import { PHYSICS_LESSONS } from '../../config/tumblingPhysics'
 
-export function PhysicsLessons() {
+type Props = {
+  onTakeTest?: () => void
+}
+
+export function PhysicsLessons({ onTakeTest }: Props) {
   const [openId, setOpenId] = useState<string | null>(PHYSICS_LESSONS[0]?.id ?? null)
   const open = PHYSICS_LESSONS.find((l) => l.id === openId) ?? PHYSICS_LESSONS[0]
 
@@ -45,6 +49,15 @@ export function PhysicsLessons() {
             </span>
             <span className="mt-1 block">{open.gym}</span>
           </p>
+          {onTakeTest && (
+            <button
+              type="button"
+              onClick={onTakeTest}
+              className="mt-4 rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-sm font-medium text-white"
+            >
+              Physics in tumbling test →
+            </button>
+          )}
         </article>
       )}
     </div>

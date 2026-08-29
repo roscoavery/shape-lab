@@ -32,6 +32,7 @@ import { ShapeCopyEditor } from './ShapeCopyEditor'
 import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
 import { PhysicsLessons } from './learn/PhysicsLessons'
+import { PhysicsQuiz } from './learn/PhysicsQuiz'
 
 type EduView =
   | { kind: 'home' }
@@ -40,6 +41,7 @@ type EduView =
   | { kind: 'pathways' }
   | { kind: 'task'; taskId: string }
   | { kind: 'quiz'; pool?: 'pathway' | 'arm-positions' }
+  | { kind: 'physicsQuiz' }
   | { kind: 'hits' }
   | { kind: 'glossary' }
   | { kind: 'ig' }
@@ -126,7 +128,12 @@ export function EducationPanel({
           scoring details stay with the app. Open{' '}
           <strong className="text-[var(--text)]">Tumbling physics</strong> for
           inertia, angular momentum, and why a small arm drop after a round-off
-          can get the feet in front. Scroll the gym Instagram library under{' '}
+          can get the feet in front, then take the{' '}
+          <strong className="text-[var(--text)]">Physics test</strong>. The{' '}
+          <strong className="text-[var(--text)]">Shape test</strong> can be
+          pictures, descriptions, or both — written notes do not name the answer.
+          After any test you see your score and every miss with the right answer.
+          Scroll the gym Instagram library under{' '}
           <strong className="text-[var(--text)]">Reference scroll</strong>. When you
           are ready to practice, open the{' '}
           <strong className="text-[var(--text)]">Tasks</strong> tab and start the
@@ -169,6 +176,11 @@ export function EducationPanel({
             label="Arm positions"
           />
           <NavChip
+            active={view.kind === 'physicsQuiz'}
+            onClick={() => setView({ kind: 'physicsQuiz' })}
+            label="Physics test"
+          />
+          <NavChip
             active={view.kind === 'scroll'}
             onClick={() => setView({ kind: 'scroll' })}
             label="Reference scroll"
@@ -200,6 +212,7 @@ export function EducationPanel({
           onIg={() => setView({ kind: 'ig' })}
           onScroll={() => setView({ kind: 'scroll' })}
           onPhysics={() => setView({ kind: 'physics' })}
+          onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
           igCount={listIgStills(referencePhotos).length}
         />
       )}
@@ -232,7 +245,9 @@ export function EducationPanel({
         <PathwayList onOpen={openTask} onOpenShape={openShape} />
       )}
 
-      {view.kind === 'physics' && <PhysicsLessons />}
+      {view.kind === 'physics' && (
+        <PhysicsLessons onTakeTest={() => setView({ kind: 'physicsQuiz' })} />
+      )}
 
       {view.kind === 'task' && (
         <TaskDetail
@@ -259,6 +274,8 @@ export function EducationPanel({
           onExit={goHome}
         />
       )}
+
+      {view.kind === 'physicsQuiz' && <PhysicsQuiz onExit={goHome} />}
 
       {view.kind === 'ig' && (
         <IgShapesLibrary
@@ -321,6 +338,7 @@ function HomeView({
   onIg,
   onScroll,
   onPhysics,
+  onPhysicsQuiz,
   igCount,
 }: {
   pathwayCount: number
@@ -335,6 +353,7 @@ function HomeView({
   onIg: () => void
   onScroll: () => void
   onPhysics: () => void
+  onPhysicsQuiz: () => void
   igCount: number
 }) {
   return (
@@ -385,6 +404,22 @@ function HomeView({
       </button>
       <button
         type="button"
+        onClick={onPhysicsQuiz}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Physics in tumbling test</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Twelve questions from the physics notes: inertia, angular momentum,
+          moment of inertia, speeding and slowing rotation, the round-off arm
+          drop, and why layouts expose a weak set. When you finish, you see the
+          score and every miss with the right answer and why.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Take the physics test →
+        </span>
+      </button>
+      <button
+        type="button"
         onClick={onGlossary}
         className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
       >
@@ -405,11 +440,11 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Multiple choice from the whole shape library — Tuck, Hands, Side plank, Superman,
-          the bridges, and the rest. Name the position from the tumbling notes (what you
-          need to know), or identify the shape in a coach still. Camera and scoring
-          details stay out of the test. Landing lunge and Lunge · open shoulders are the
-          same position — the test treats them as one.
+          Pick pictures (name what you see), descriptions (name what is being
+          described), or both together. Written notes do not say the shape’s name.
+          Landing lunge and Lunge · open shoulders are the same position — the test
+          treats them as one. When you finish, you see your score and every miss
+          with the correct name.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the test →
@@ -425,7 +460,8 @@ function HomeView({
           Low V, front middle, open shoulders, T, and high V — standing and on a
           landing lunge. Finish the hands as if they just pushed through an object
           (wide fingers, thumbs slightly down, pinkies slightly up). These are not a
-          Tasks gate right now; study them here.
+          Tasks gate right now; study them here. Score and misses show when you
+          finish, same as the shape test.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Test arm positions →

@@ -7,7 +7,7 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - Grade gymnastics shapes from **0–100** with per-criterion scores
 - Track **total hold time** vs **quality hold time** (only while above a score threshold)
 - Run an ordered **athlete Tasks curriculum** (standalone holds 5s → 3s after mastery; sequences always 3s)
-- **Learn** shapes and pathways without a camera, plus **tumbling physics** (inertia, angular momentum, moment of inertia) and a **reference scroll** of the gym Instagram library
+- **Learn** shapes and pathways without a camera, **tumbling physics** plus a **physics test**, and a **reference scroll** of the gym Instagram library
 - **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
 - **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split). Share a board to the gym feed so other coaches can save it into their class library.
 - **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach
@@ -54,7 +54,7 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 **Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, Superman, Rainbow Bridge, Long Bridge, Side plank) plus homework that still needs a still (wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
-Open **Learn → Shape test** for mixed multiple-choice. **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** covers low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **My shapes** shows the athlete’s own hit photos.
+Open **Learn → Shape test** and pick **Pictures** (name the still), **Descriptions** (name the body notes), or **Pictures and descriptions**. Description prompts have the shape’s name taken out so the question cannot read “this is a tuck.” **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** uses the same picture / description / mixed choice for low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **Learn → Physics test** is twelve questions from the tumbling-physics notes (inertia, angular momentum, moment of inertia, the round-off arm drop, tuck vs layout). When any of those tests finish, you see the score and every miss with the correct answer (and a why on the physics test). **My shapes** shows the athlete’s own hit photos.
 
 You do **not** need to match a coach still to move on. Scoring grades the **written body position**, not a pixel match to the photo. On **starting lunge and landing lunge**, the app first recognizes a good lunge (legs 85%+). Open shoulders do **not** block that. Then we **count 3, 2, 1** out loud and snapshot the best open in that window. **Passé** passes on stance leg + passé knee; open shoulders are graded, not required. **Low V lunge** looks for the line from the back foot to the shoulders plus arms in a low V slightly back — shorts that fake a bent back knee do not block the pass. You also do **not** need to film from the same angle as a reference photo. Joint angles grade from any facing. Side-view shapes (lunges, lever, C) are scored in profile — you do not need to face the camera, and a guessed “front” label will not fail the pose. Standalone FTOS is easiest from the front; **sequence FTOS stays in profile**. T arms still need a front view. Lunges/levers auto-detect left vs right foot forward unless the task specifies a side.
 
@@ -154,8 +154,9 @@ Data lives in `src/lib/storage.ts` (`HomeworkItem` / `HomeworkLog` / `HomeworkBr
 4. **IG shapes library** — stills cropped from Compare. On a looping Instagram clip or replay, tap **Screenshot**, press one corner of the shape, drag to the opposite corner, tag a listed shape or type a **custom name** if it is not in the list, and Save. Select the **Ryan** profile first if you want that still saved **into the app** (this gym computer) so every browser and phone link still has it. Other profiles keep crops on this device only. These never replace shipped coach stills. On **Tasks**, **Homework**, **Coach**, or **Compare**, **Still overlay** lets you scroll left/right through Shape library or IG shapes and put any picture on the live camera or Compare video (opacity slider).
 5. **Task pathways** — walk the curriculum in order.
 6. **Tumbling physics** — inertia, angular momentum, moment of inertia, speeding and slowing rotation, the round-off → back handspring arm drop (shrink I so the feet can get in front), and why layouts expose a weak set. Written for coaches, in gym language.
-7. **Shape test** — multiple choice from descriptions or pictures.
-8. **My shapes** — the athlete’s own hit photos.
+7. **Physics test** — twelve questions from those notes. Finish and you see the score, every miss with the right answer, and why.
+8. **Shape test** — pick pictures, descriptions, or both. Descriptions do not name the answer. Finish and you see the score and every miss with the correct name.
+9. **My shapes** — the athlete’s own hit photos.
 
 ## Compare (video study tab)
 
@@ -270,6 +271,7 @@ src/
   components/ShapeQuiz.tsx
   components/EducationPanel.tsx  Learn tab (shapes, quiz, physics, my shapes, pathways)
   components/learn/PhysicsLessons.tsx  tumbling physics lessons
+  components/learn/PhysicsQuiz.tsx  physics-in-tumbling test
   components/network/NetworkPanel.tsx  follow, DMs, coach lounge
   App.tsx                main UI (Tasks | Homework | Learn | Compare | Feed | Network | Research | Coach | Profiles | About)
 public/references/       optional default coach photos

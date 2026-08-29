@@ -1,6 +1,6 @@
 /**
  * Multiple-choice shape quiz for the Learn tab.
- * Mix of "name this description" and "name this picture" questions.
+ * Pictures, descriptions, or mixed — descriptions never name the answer.
  */
 
 import {
@@ -10,12 +10,15 @@ import {
   samePositionDisplayName,
   samePositionGroup,
 } from './educationCopy'
-import { SHAPES } from '../config/shapes'
+import { SHAPES, getShape } from '../config/shapes'
 import { pickReferencePhoto } from './storage'
-import { defaultAthleteCopy } from './shapeCopy'
+import { athleteFacingText, defaultAthleteCopy } from './shapeCopy'
 import type { ReferencePhoto, ShapeDef } from '../types'
 
 export type QuizKind = 'describe' | 'picture'
+
+/** How the shape test is built: stills, body notes, or both. */
+export type QuizFormat = 'picture' | 'describe' | 'mixed'
 
 export type QuizChoice = { id: string; label: string }
 
@@ -70,6 +73,141 @@ function uniquePositions(source: ShapeDef[]): ShapeDef[] {
 
 export type QuizPool = 'pathway' | 'arm-positions'
 
+const TOO_GENERIC = new Set(['hands', 'arch', 'c', 't', 'l'])
+
+/** Extra phrases that name the answer beyond the official card title. */
+const EXTRA_LEAKS: Record<string, string[]> = {
+  c_shape: ['C shape', 'tumbling C', 'C-shape'],
+  mountain_climber: ['mountain climber'],
+  superman: ['Superman hold', 'prone Superman', 'Superman'],
+  candlestick: ['candlestick', 'tucked candle'],
+  zombie: ['zombie'],
+  side_plank: ['side plank'],
+  rainbow_bridge: ['Rainbow Bridge'],
+  long_bridge: ['Long Bridge'],
+  hollow_arms_up: ['hollow body hold', 'hollow arms-up', 'hollow arms up', 'hollow'],
+  hollow_arms_down: ['hollow body hold', 'hollow arms-down', 'hollow arms down', 'hollow'],
+  tuck: ['tuck', 'tucked'],
+  hands_push_through: ['Hands pose', 'Close-up of the hands'],
+  lunge_land: ['Landing lunge'],
+  lunge_start_open: ['Starting lunge'],
+  ftos: ['feet together, open shoulders', 'FTOS'],
+  stand_clean: ['stand clean'],
+  pike_zombie: ['pike with zombie arms', 'seated pike'],
+  pike_open: ['pike with open shoulders'],
+  wall_handstand: ['wall handstand'],
+  tucked_handstand: ['tucked handstand'],
+  piked_handstand: ['piked handstand'],
+  l_handstand: ['L handstand'],
+}
+
+function expandName(name: string): string[] {
+  const out = [name]
+  const noParen = name.replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+  if (noParen && noParen !== name) out.push(noParen)
+  const noArms = name.replace(/^Arms:\s*/i, '').trim()
+  if (noArms && noArms !== name) out.push(noArms)
+  const noDot = name.replace(/\s*·\s*/g, ' ').trim()
+  if (noDot && noDot !== name) out.push(noDot)
+  return out
+}
+
+function leakPhrasesFor(shape: ShapeDef): string[] {
+  const raw: string[] = []
+  raw.push(...expandName(shape.name))
+  raw.push(...expandName(samePositionDisplayName(shape.id)))
+  for (const id of samePositionGroup(shape.id)) {
+    const other = getShape(id)
+    if (other) raw.push(...expandName(other.name))
+  }
+  raw.push(...(EXTRA_LEAKS[shape.id] ?? []))
+  const uniq = [...new Set(raw.map((s) => s.trim()).filter(Boolean))]
+  return uniq.sort((a, b) => b.length - a.length)
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+}
+
+function tidyPrompt(text: string): string {
+  let out = text
+    .replace(/\bthis is the same (?:shape|picture|position) as\.?/gi, '')
+    .replace(/\bthe same (?:shape|picture|position) as\.?/gi, '')
+    .replace(/\b(a|an|the)\s+is\b/gi, '')
+    .replace(/^[:.\-–—]+\s*/g, '')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,;:])/g, '$1')
+    .replace(/\s+\/\s+/g, ' / ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  out = out.replace(/\s+as\.\s*$/i, '.')
+  if (/^as if\b/i.test(out)) out = `Pose ${out}`
+  if (out) out = out.charAt(0).toUpperCase() + out.slice(1)
+  return out
+}
+
+/** Drop the answer’s name so the prompt cannot read “this is a tuck.” */
+export function stripAnswerLeaks(text: string, shape: ShapeDef): string {
+  let out = text
+  for (const phrase of leakPhrasesFor(shape)) {
+    const key = phrase.toLowerCase()
+    if (TOO_GENERIC.has(key) || phrase.length < 3) {
+      out = out.replace(new RegExp(`^${escapeRegExp(phrase)}\\s*[:.—–-]+\\s*`, 'i'), '')
+      out = out.replace(
+        new RegExp(`\\b(?:a|an|the)\\s+${escapeRegExp(phrase)}\\s+is\\b`, 'gi'),
+        'this position is',
+      )
+      continue
+    }
+    out = out.replace(new RegExp(`\\b${escapeRegExp(phrase)}\\b`, 'gi'), '')
+  }
+  return tidyPrompt(athleteFacingText(out))
+}
+
+/**
+ * Body-position notes for a describe question. Prefer what the body is doing,
+ * never the card title or coach notes that name the shape.
+ */
+export function quizDescribeBody(
+  shape: ShapeDef,
+  athleteText?: string,
+): string {
+  const tips = (shape.tips ?? []).filter(
+    (t) => !/^(film|photograph|shoot|side view|front\.|standalone)/i.test(t.trim()),
+  )
+  const candidates = [
+    shape.bodyPosition ?? '',
+    shape.description,
+    ...tips,
+    athleteText ?? '',
+    defaultAthleteCopy(shape),
+  ]
+  for (const raw of candidates) {
+    const cleaned = stripAnswerLeaks(raw, shape)
+    if (cleaned.length >= 40) return cleaned
+  }
+  return stripAnswerLeaks(candidates.find((c) => c.trim()) ?? '', shape)
+}
+
+export const QUIZ_FORMATS: { id: QuizFormat; title: string; blurb: string }[] = [
+  {
+    id: 'picture',
+    title: 'Pictures',
+    blurb: 'Name what you see. Coach stills only — no written notes.',
+  },
+  {
+    id: 'describe',
+    title: 'Descriptions',
+    blurb: 'Name what is being described. Body position only — the notes do not say the shape’s name.',
+  },
+  {
+    id: 'mixed',
+    title: 'Pictures and descriptions',
+    blurb: 'Both together. Some questions are stills, some are notes.',
+  },
+]
+
 /**
  * Build a quiz from the Learn shape library (falls back to the full catalog).
  * Picture questions only appear when a reference photo exists.
@@ -80,6 +218,7 @@ export function buildShapeQuiz(
   count = 10,
   pool: QuizPool = 'pathway',
   athleteText?: (shape: ShapeDef) => string,
+  format: QuizFormat = 'mixed',
 ): QuizQuestion[] {
   const library = learnLibraryShapes()
   const arm = new Set(ARM_POSITION_SHAPE_IDS)
@@ -87,15 +226,22 @@ export function buildShapeQuiz(
     pool === 'arm-positions' ? SHAPES.filter((s) => arm.has(s.id)) : library
   const source = uniquePositions(poolShapes.length >= 4 ? poolShapes : SHAPES)
   const withPhoto = source.filter((s) => Boolean(pickReferencePhoto(photos, s.id, null)?.dataUrl))
+  const withDescribe = source.filter((s) => quizDescribeBody(s, athleteText?.(s)).length >= 30)
 
-  const describePool = shuffle(source)
-  const picturePool = shuffle(withPhoto)
+  const describePool = shuffle(format === 'picture' ? [] : withDescribe)
+  const picturePool = shuffle(format === 'describe' ? [] : withPhoto)
   const questions: QuizQuestion[] = []
   let di = 0
   let pi = 0
 
+  const wantPictureAt = (n: number) => {
+    if (format === 'picture') return true
+    if (format === 'describe') return false
+    return n % 2 === 1 && pi < picturePool.length
+  }
+
   while (questions.length < count && (di < describePool.length || pi < picturePool.length)) {
-    const wantPicture = questions.length % 2 === 1 && pi < picturePool.length
+    const wantPicture = wantPictureAt(questions.length) && pi < picturePool.length
     if (wantPicture) {
       const shape = picturePool[pi++]!
       const photo = pickReferencePhoto(photos, shape.id, null)
@@ -105,23 +251,37 @@ export function buildShapeQuiz(
         id: `pic_${shape.id}_${questions.length}`,
         kind: 'picture',
         shapeId: shape.id,
-        prompt: 'What shape is this?',
+        prompt: 'What position is this?',
         photoUrl: photo.dataUrl,
         choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })
     } else if (di < describePool.length) {
       const shape = describePool[di++]!
-      const body = (athleteText?.(shape) ?? defaultAthleteCopy(shape)).trim()
+      const body = quizDescribeBody(shape, athleteText?.(shape))
+      if (body.length < 30) continue
       const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
       questions.push({
         id: `desc_${shape.id}_${questions.length}`,
         kind: 'describe',
         shapeId: shape.id,
-        prompt: body
-          ? `Which shape is this?\n\n${body}`
-          : 'Which shape is being described?',
+        prompt: `Which position is being described?\n\n${body}`,
         photoUrl: null,
+        choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
+        answerId: shape.id,
+      })
+    } else if (pi < picturePool.length) {
+      // Mixed ran out of descriptions; fill remaining with pictures.
+      const shape = picturePool[pi++]!
+      const photo = pickReferencePhoto(photos, shape.id, null)
+      if (!photo?.dataUrl) continue
+      const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
+      questions.push({
+        id: `pic_${shape.id}_${questions.length}`,
+        kind: 'picture',
+        shapeId: shape.id,
+        prompt: 'What position is this?',
+        photoUrl: photo.dataUrl,
         choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })

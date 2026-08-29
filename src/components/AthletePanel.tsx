@@ -241,7 +241,7 @@ export function AthletePanel({
         />
         {newRole === 'coach' && (
           <p className="text-[11px] leading-snug text-[var(--muted)]">
-            Coaches unlock to use Compare, Classes, Feed, and Research. Paste
+            Coaches unlock to use Compare, Classes, Feed, Network, and Research. Paste
             Instagram URLs into your own collections — they show on this profile
             only. Ryan’s gym collections, shape descriptions, and picture sizes
             stay as he left them.
