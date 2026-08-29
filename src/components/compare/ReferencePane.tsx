@@ -363,7 +363,6 @@ export function ReferencePane({
       return
     }
     setError(null)
-    setNotice(null)
 
     const keywords = parseKeywords(keywordInput)
     const nextItems = writable.items.map((i) => ({ ...i }))
