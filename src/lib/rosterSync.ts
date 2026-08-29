@@ -56,28 +56,29 @@ function mergeAthletes(local: Athlete[], remote: Athlete[]): Athlete[] {
       byName.set(nameKey, a)
       return
     }
-    const role: Athlete['role'] =
-      a.role === 'coach' || keep.role === 'coach'
-        ? 'coach'
-        : a.role === 'athlete' || keep.role === 'athlete'
-          ? 'athlete'
-          : a.role || keep.role
-    const newer =
-      (a.createdAt || '') >= (keep.createdAt || '')
-        ? {
-            ...keep,
-            ...a,
-            id: keep.id,
-            passcodeHash: a.passcodeHash || keep.passcodeHash,
-            role,
-          }
-        : {
-            ...a,
-            ...keep,
-            id: keep.id,
-            passcodeHash: keep.passcodeHash || a.passcodeHash,
-            role,
-          }
+    const newerWins = (a.createdAt || '') >= (keep.createdAt || '')
+    const role: Athlete['role'] = newerWins
+      ? a.role || keep.role
+      : keep.role || a.role
+    const newer = newerWins
+      ? {
+          ...keep,
+          ...a,
+          id: keep.id,
+          passcodeHash: a.passcodeHash || keep.passcodeHash,
+          gymName: a.gymName || keep.gymName,
+          childName: a.childName || keep.childName,
+          role,
+        }
+      : {
+          ...a,
+          ...keep,
+          id: keep.id,
+          passcodeHash: keep.passcodeHash || a.passcodeHash,
+          gymName: keep.gymName || a.gymName,
+          childName: keep.childName || a.childName,
+          role,
+        }
     byId.delete(keep.id)
     byId.set(newer.id, newer)
     byName.set(nameKey, newer)

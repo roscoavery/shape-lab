@@ -429,16 +429,16 @@ function CollageFeedCard({
 }
 
 function RoleBadge({ athlete }: { athlete: Athlete | null }) {
-  const coach = isCoachProfile(athlete)
+  const staff = isCoachProfile(athlete)
   return (
     <span
       className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-        coach
+        staff
           ? 'bg-[var(--accent-dim)] text-white'
           : 'border border-[var(--panel-border)] text-[var(--muted)]'
       }`}
     >
-      {coach ? 'Coach' : 'Athlete'}
+      {roleLabel(athlete)}
     </span>
   )
 }

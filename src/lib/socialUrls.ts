@@ -42,18 +42,41 @@ export function socialPlatform(url: string): SocialPlatform | null {
   return null
 }
 
+const IG_RESERVED = new Set([
+  'p',
+  'reel',
+  'reels',
+  'tv',
+  'stories',
+  'share',
+  'explore',
+  'accounts',
+  'directory',
+  'legal',
+])
+
 export function parseInstagramUrl(
   url: string,
-): { type: 'p' | 'reel' | 'tv'; code: string } | null {
+): { type: 'p' | 'reel' | 'tv'; code: string; username?: string } | null {
+  const withUser = url.match(
+    /instagr(?:am\.com|\.am)\/([A-Za-z0-9._]+)\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
+  )
+  if (withUser && !IG_RESERVED.has(withUser[1]!.toLowerCase())) {
+    const raw = withUser[2]!.toLowerCase()
+    const type = raw === 'reels' ? 'reel' : (raw as 'p' | 'reel' | 'tv')
+    return { type, code: withUser[3]!, username: withUser[1] }
+  }
   const m = url.match(
     /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
   )
   if (!m) return null
-  const type = m[1].toLowerCase() === 'reels' ? 'reel' : (m[1].toLowerCase() as 'p' | 'reel' | 'tv')
-  return { type, code: m[2] }
+  const type = m[1]!.toLowerCase() === 'reels' ? 'reel' : (m[1]!.toLowerCase() as 'p' | 'reel' | 'tv')
+  return { type, code: m[2]! }
 }
 
-export function parseTikTokUrl(url: string): { id: string } | null {
+export function parseTikTokUrl(url: string): { id: string; username?: string } | null {
+  const named = url.match(/tiktok\.com\/@([A-Za-z0-9._]+)\/video\/(\d+)/i)
+  if (named) return { id: named[2]!, username: named[1] }
   const video = url.match(/tiktok\.com\/(?:@[^/]+\/)?video\/(\d+)/i) || url.match(/\/v\/(\d+)/i)
   if (video) return { id: video[1]! }
   const short = url.match(/(?:vm|vt|www)\.tiktok\.com\/(?:t\/)?([A-Za-z0-9]+)/i)
@@ -61,6 +84,21 @@ export function parseTikTokUrl(url: string): { id: string } | null {
   const t = url.match(/tiktok\.com\/t\/([A-Za-z0-9]+)/i)
   if (t) return { id: t[1]! }
   return null
+}
+
+/** Instagram / TikTok handle of the account that posted the clip, when the URL has it. */
+export function postedByFromUrl(url: string): string | null {
+  const ig = parseInstagramUrl(url)
+  if (ig?.username) return ig.username
+  const tt = parseTikTokUrl(url)
+  if (tt?.username) return tt.username
+  return null
+}
+
+export function normalizeSocialHandle(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const h = raw.trim().replace(/^@+/, '').replace(/[^a-zA-Z0-9._]/g, '')
+  return h || null
 }
 
 export function parseFacebookUrl(url: string): { id: string } | null {
@@ -122,11 +160,19 @@ export function clipLoopKey(url: string): string {
   return socialVideoKey(trimmed) ?? canonicalSocialUrl(trimmed).replace(/\/+$/, '')
 }
 
+export function socialProfileUrl(handle: string, platform: SocialPlatform | null): string {
+  const h = normalizeSocialHandle(handle)
+  if (!h) return ''
+  if (platform === 'tiktok') return `https://www.tiktok.com/@${h}`
+  if (platform === 'facebook') return `https://www.facebook.com/${h}`
+  return `https://www.instagram.com/${h}/`
+}
+
 export function defaultSocialName(url: string): string {
   const ig = parseInstagramUrl(url)
-  if (ig) return `IG ${ig.code}`
+  if (ig) return ig.username ? `@${ig.username}` : `IG ${ig.code}`
   const tt = parseTikTokUrl(url)
-  if (tt) return `TikTok ${tt.id}`
+  if (tt) return tt.username ? `@${tt.username}` : `TikTok ${tt.id}`
   const fb = parseFacebookUrl(url)
   if (fb) return `Facebook ${fb.id}`
   return url

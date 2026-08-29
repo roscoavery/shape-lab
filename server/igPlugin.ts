@@ -2,6 +2,7 @@ import type { Plugin, ViteDevServer } from 'vite'
 import {
   isResolvableVideoUrl,
   proxyInstagramMedia,
+  lookupPostedBy,
   resolveSocialVideo,
   sendJson,
 } from './instagramResolve.ts'
@@ -437,7 +438,15 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           })
           return
         }
-        const direct = await resolveSocialVideo(page)
+        if (url.searchParams.get('meta') === '1') {
+          const postedBy = await lookupPostedBy(page)
+          sendJson(res, 200, postedBy ? { postedBy } : {})
+          return
+        }
+        const [direct, postedBy] = await Promise.all([
+          resolveSocialVideo(page),
+          lookupPostedBy(page),
+        ])
         if (!direct) {
           sendJson(res, 422, {
             error:
@@ -447,6 +456,7 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         }
         sendJson(res, 200, {
           videoUrl: `/api/ig-media?src=${encodeURIComponent(direct)}`,
+          ...(postedBy ? { postedBy } : {}),
         })
         return
       }

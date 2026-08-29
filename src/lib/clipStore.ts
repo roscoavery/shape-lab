@@ -25,6 +25,8 @@ export type RefItem = {
   url?: string
   /** Shape / skill tags so one search lists every video with that shape. */
   keywords?: string[]
+  /** Instagram / TikTok handle of the account that originally posted the clip. */
+  postedBy?: string
   createdAt: string
 }
 
@@ -257,6 +259,7 @@ export function itemMatchesQuery(item: RefItem, query: string): boolean {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   if (item.name.toLowerCase().includes(needle)) return true
+  if (item.postedBy?.toLowerCase().includes(needle)) return true
   if (item.url?.toLowerCase().includes(needle)) return true
   const key = item.url ? socialVideoKey(item.url) : null
   if (key?.toLowerCase().includes(needle)) return true

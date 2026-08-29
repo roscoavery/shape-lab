@@ -5,8 +5,13 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { socialOpenLabel, socialPlatform } from '../../lib/socialUrls'
-import { fetchInstagramVideoBlob, isQuotaError, loadCachedInstagramBlob } from '../../lib/igCache'
+import {
+  postedByFromUrl,
+  socialOpenLabel,
+  socialPlatform,
+  socialProfileUrl,
+} from '../../lib/socialUrls'
+import { fetchInstagramVideo, isQuotaError, loadCachedInstagramBlob } from '../../lib/igCache'
 import { deleteBlob, putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
@@ -16,6 +21,9 @@ type Props = {
   onCached?: (itemId: string) => void
   fill?: boolean
   persistUrl?: string
+  /** Instagram / TikTok handle of the original poster. */
+  postedBy?: string | null
+  onPostedBy?: (handle: string) => void
   loopA?: number | null
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
@@ -31,6 +39,8 @@ export function InstagramEmbed({
   onCached,
   fill = false,
   persistUrl,
+  postedBy,
+  onPostedBy,
   loopA,
   loopB,
   onAbChange,
@@ -49,6 +59,9 @@ export function InstagramEmbed({
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
+  const [resolvedBy, setResolvedBy] = useState<string | null>(null)
+  const onPostedByRef = useRef(onPostedBy)
+  onPostedByRef.current = onPostedBy
 
   useEffect(() => {
     if (!socialPlatform(url)) {
@@ -68,6 +81,7 @@ export function InstagramEmbed({
     setFromCache(false)
     setSaved(false)
     setQuotaWarn(false)
+    setResolvedBy(null)
 
     void (async () => {
       try {
@@ -83,13 +97,27 @@ export function InstagramEmbed({
             setSrc(objectUrl)
             setFromCache(true)
             setLoading(false)
+            if (!postedBy && !postedByFromUrl(url)) {
+              void fetch(`/api/ig-resolve?url=${encodeURIComponent(url)}&meta=1`)
+                .then((r) => r.json() as Promise<{ postedBy?: string }>)
+                .then((data) => {
+                  if (cancelled || !data.postedBy) return
+                  setResolvedBy(data.postedBy)
+                  onPostedByRef.current?.(data.postedBy)
+                })
+                .catch(() => {})
+            }
             return
           }
         }
 
-        const blob = await fetchInstagramVideoBlob(url)
+        const { blob, postedBy: found } = await fetchInstagramVideo(url)
         if (cancelled) {
           return
+        }
+        if (found) {
+          setResolvedBy(found)
+          onPostedByRef.current?.(found)
         }
         if (itemId) {
           try {
@@ -194,6 +222,11 @@ export function InstagramEmbed({
         autoPlay={active !== false}
         fill={fill}
         persistUrl={persistUrl ?? url}
+        credit={postedBy || resolvedBy || postedByFromUrl(url)}
+        creditHref={socialProfileUrl(
+          postedBy || resolvedBy || postedByFromUrl(url) || '',
+          platform,
+        )}
         loopA={loopA}
         loopB={loopB}
         onAbChange={onAbChange}

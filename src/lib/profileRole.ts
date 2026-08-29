@@ -1,16 +1,31 @@
 import type { Athlete } from '../types'
 import { isRyanAthlete } from './ryanProfile'
 
-export type ProfileRole = 'coach' | 'athlete'
+export type ProfileKind = 'gym_owner' | 'coach' | 'athlete' | 'parent'
 
-export function profileRole(athlete: Athlete | null | undefined): ProfileRole {
-  if (!athlete) return 'athlete'
-  if (isRyanAthlete(athlete)) return 'coach'
-  return athlete.role === 'coach' ? 'coach' : 'athlete'
+export const PROFILE_KINDS: { id: ProfileKind; label: string }[] = [
+  { id: 'gym_owner', label: 'Gym owner' },
+  { id: 'coach', label: 'Coach' },
+  { id: 'athlete', label: 'Athlete' },
+  { id: 'parent', label: 'Parent' },
+]
+
+export type ProfileRole = ProfileKind
+
+export function isProfileKind(value: unknown): value is ProfileKind {
+  return value === 'gym_owner' || value === 'coach' || value === 'athlete' || value === 'parent'
 }
 
+export function profileRole(athlete: Athlete | null | undefined): ProfileKind {
+  if (!athlete) return 'athlete'
+  if (isRyanAthlete(athlete)) return 'coach'
+  return isProfileKind(athlete.role) ? athlete.role : 'athlete'
+}
+
+/** Coaches and gym owners — Compare collections, lounge, class boards. */
 export function isCoachProfile(athlete: Athlete | null | undefined): boolean {
-  return profileRole(athlete) === 'coach'
+  const role = profileRole(athlete)
+  return role === 'coach' || role === 'gym_owner'
 }
 
 /** Ryan only — gym Compare library, shape copy, still crops, gym collages. */
@@ -19,5 +34,20 @@ export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
 }
 
 export function roleLabel(athlete: Athlete | null | undefined): string {
-  return isCoachProfile(athlete) ? 'Coach' : 'Athlete'
+  if (isRyanAthlete(athlete)) return 'Gym admin'
+  const found = PROFILE_KINDS.find((k) => k.id === profileRole(athlete))
+  return found?.label ?? 'Athlete'
+}
+
+export function roleHint(kind: ProfileKind): string {
+  switch (kind) {
+    case 'gym_owner':
+      return 'Gym owners unlock Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections — they stay on this profile. Ryan’s gym list stays as he left it.'
+    case 'coach':
+      return 'Coaches unlock to use Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections — they show on this profile only. Ryan’s gym collections, shape descriptions, and picture sizes stay as he left them.'
+    case 'parent':
+      return 'Parents unlock to follow their athlete, watch Compare, and use Homework / Learn. Name the athlete you came with so coaches know who you belong to.'
+    default:
+      return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember.'
+  }
 }

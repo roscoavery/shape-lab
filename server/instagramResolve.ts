@@ -8,7 +8,12 @@
 import { spawn } from 'node:child_process'
 import { Readable } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
+import {
+  canonicalSocialUrl,
+  normalizeSocialHandle,
+  postedByFromUrl,
+  socialPlatform,
+} from '../src/lib/socialUrls.ts'
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -103,6 +108,64 @@ async function ytdlpResolve(pageUrl: string): Promise<string | null> {
     (await spawnResolve('yt-dlp', args)) ??
     (await spawnResolve('python3', ['-m', 'yt_dlp', ...args]))
   )
+}
+
+async function fetchText(url: string, ms = 6000): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/json' },
+      signal: AbortSignal.timeout(ms),
+      redirect: 'follow',
+    })
+    if (!res.ok) return null
+    return await res.text()
+  } catch {
+    return null
+  }
+}
+
+async function oembedPostedBy(pageUrl: string): Promise<string | null> {
+  const body = await fetchText(
+    `https://www.instagram.com/oembed/?url=${encodeURIComponent(pageUrl)}&omitscript=true`,
+    5000,
+  )
+  if (!body) return null
+  try {
+    const data = JSON.parse(body) as { author_url?: string; author_name?: string }
+    const fromUrl = data.author_url?.match(/instagram\.com\/([A-Za-z0-9._]+)/i)?.[1]
+    return normalizeSocialHandle(fromUrl ?? data.author_name ?? null)
+  } catch {
+    return null
+  }
+}
+
+async function htmlPostedBy(pageUrl: string): Promise<string | null> {
+  const html = await fetchText(pageUrl, 6000)
+  if (!html) return null
+  const owner = html.match(/"owner"\s*:\s*\{[^}]{0,240}"username"\s*:\s*"([A-Za-z0-9._]+)"/)
+  if (owner) return normalizeSocialHandle(owner[1])
+  const user = html.match(/"username"\s*:\s*"([A-Za-z0-9._]+)"/)
+  if (user) return normalizeSocialHandle(user[1])
+  const og = html.match(/content="(?:Watch )?@?([A-Za-z0-9._]+) on Instagram/i)
+  if (og) return normalizeSocialHandle(og[1])
+  const tt = html.match(/tiktok\.com\/@([A-Za-z0-9._]+)/i)
+  if (tt) return normalizeSocialHandle(tt[1])
+  return null
+}
+
+/** Who originally posted the public clip — from the URL, oEmbed, or the page. */
+export async function lookupPostedBy(rawUrl: string): Promise<string | null> {
+  const fromUrl = postedByFromUrl(rawUrl)
+  if (fromUrl) return fromUrl
+  const pageUrl = canonicalSocialUrl(rawUrl)
+  const platform = socialPlatform(pageUrl)
+  if (platform === 'instagram') {
+    return (await oembedPostedBy(pageUrl)) ?? (await htmlPostedBy(pageUrl))
+  }
+  if (platform === 'tiktok' || platform === 'facebook') {
+    return htmlPostedBy(pageUrl)
+  }
+  return null
 }
 
 export async function resolveSocialVideo(rawUrl: string): Promise<string | null> {

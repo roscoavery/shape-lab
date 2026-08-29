@@ -46,7 +46,7 @@ import {
   pushCoachLibrary,
 } from '../../lib/coachLibrary'
 import { createId } from '../../lib/storage'
-import { defaultSocialName, clipLoopKey } from '../../lib/socialUrls'
+import { defaultSocialName, clipLoopKey, postedByFromUrl } from '../../lib/socialUrls'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
@@ -404,6 +404,7 @@ export function ReferencePane({
         })() : defaultSocialName(url),
         url,
         ...(keywords.length ? { keywords } : {}),
+        ...(postedByFromUrl(url) ? { postedBy: postedByFromUrl(url)! } : {}),
         createdAt: new Date().toISOString(),
       })
     }
@@ -853,6 +854,11 @@ export function ReferencePane({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{item.name}</span>
+                {(item.postedBy || (item.url && postedByFromUrl(item.url))) && (
+                  <span className="block truncate text-[10px] text-[var(--muted)]">
+                    @{item.postedBy || postedByFromUrl(item.url!)}
+                  </span>
+                )}
                 {opts.collection.id !== activeCollectionId ? (
                   <span className="block truncate text-[10px] text-[var(--muted)]">
                     in {opts.collection.name}
@@ -1306,6 +1312,17 @@ export function ReferencePane({
           url={activeItem.url}
           itemId={activeItem.id}
           onCached={markCached}
+          postedBy={activeItem.postedBy || postedByFromUrl(activeItem.url)}
+          onPostedBy={(handle) => {
+            if (!activeCollection) return
+            if (activeItem.postedBy === handle) return
+            void updateCollection({
+              ...activeCollection,
+              items: activeCollection.items.map((i) =>
+                i.id === activeItem.id ? { ...i, postedBy: handle } : i,
+              ),
+            })
+          }}
           fill={fullscreen}
           persistUrl={activeItem.url}
         />

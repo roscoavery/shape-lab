@@ -38,6 +38,7 @@ export type LibraryBackup = {
       name: string
       url?: string
       keywords?: string[]
+      postedBy?: string
       createdAt: string
     }>
   }>
@@ -60,6 +61,7 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
         name: i.name,
         url: i.url,
         ...(i.keywords && i.keywords.length ? { keywords: i.keywords } : {}),
+        ...(i.postedBy ? { postedBy: i.postedBy } : {}),
         createdAt: i.createdAt,
       })),
     })),
@@ -172,6 +174,7 @@ export function coalesceCollections(
         if (match) {
           match.name = preferName(match.name, item.name)
           match.keywords = mergeKeywords(match.keywords, item.keywords)
+          if (!match.postedBy && item.postedBy) match.postedBy = item.postedBy
         } else {
           items.push({ ...item, keywords: item.keywords ? [...item.keywords] : undefined })
         }
@@ -237,6 +240,7 @@ export async function mergeLibraryBackup(
         const renamed = preferName(match.name, item.name || '')
         if (renamed !== match.name) match.name = renamed
         match.keywords = mergeKeywords(match.keywords, parseKeywords(item.keywords))
+        if (!match.postedBy && item.postedBy) match.postedBy = item.postedBy
         skipped += 1
         continue
       }
@@ -252,6 +256,7 @@ export async function mergeLibraryBackup(
         name: item.name || item.url,
         url: item.url,
         keywords: parseKeywords(item.keywords),
+        postedBy: item.postedBy,
         createdAt: item.createdAt || new Date().toISOString(),
       }
       target.items = [...target.items, next]
@@ -338,6 +343,7 @@ function backupToCollections(backup: LibraryBackup): RefCollection[] {
         name: item.name || item.url || 'Clip',
         url: item.url,
         keywords: parseKeywords(item.keywords),
+        postedBy: item.postedBy,
         createdAt: item.createdAt,
       })),
   }))

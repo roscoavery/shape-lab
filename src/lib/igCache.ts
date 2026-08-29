@@ -13,9 +13,11 @@ export function isQuotaError(err: unknown): boolean {
   )
 }
 
-export async function fetchInstagramVideoBlob(pageUrl: string): Promise<Blob> {
+export async function fetchInstagramVideo(
+  pageUrl: string,
+): Promise<{ blob: Blob; postedBy?: string }> {
   const res = await fetch(`/api/ig-resolve?url=${encodeURIComponent(pageUrl)}`)
-  const data = (await res.json()) as { videoUrl?: string; error?: string }
+  const data = (await res.json()) as { videoUrl?: string; error?: string; postedBy?: string }
   if (!res.ok || !data.videoUrl) {
     throw new Error(
       data.error ??
@@ -26,7 +28,11 @@ export async function fetchInstagramVideoBlob(pageUrl: string): Promise<Blob> {
   if (!videoRes.ok) {
     throw new Error('Could not download that video.')
   }
-  return videoRes.blob()
+  return { blob: await videoRes.blob(), postedBy: data.postedBy }
+}
+
+export async function fetchInstagramVideoBlob(pageUrl: string): Promise<Blob> {
+  return (await fetchInstagramVideo(pageUrl)).blob
 }
 
 /** Resolve + download + store. No-ops if this item is already cached. */

@@ -31,6 +31,9 @@ type Props = {
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
   markup?: boolean
+  /** Original poster handle, shown on the picture (e.g. Instagram @name). */
+  credit?: string | null
+  creditHref?: string | null
   compact?: boolean
   /** Video only — no transport, markup, or padding. Used for collage cinema mode. */
   bare?: boolean
@@ -61,6 +64,8 @@ function VideoWorkbenchInner({
   loopB,
   onAbChange,
   markup = true,
+  credit = null,
+  creditHref = null,
   compact = false,
   bare = false,
   active,
@@ -492,6 +497,27 @@ function VideoWorkbenchInner({
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
         {markup && !bare && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />}
+        {credit && !bare && (
+          creditHref ? (
+            <a
+              href={creditHref}
+              target="_blank"
+              rel="noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="pointer-events-auto absolute bottom-2 left-2 z-20 max-w-[80%] truncate rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-white no-underline shadow-sm"
+              title={`Originally posted by @${credit.replace(/^@/, '')}`}
+            >
+              @{credit.replace(/^@/, '')}
+            </a>
+          ) : (
+            <span
+              className="pointer-events-none absolute bottom-2 left-2 z-20 max-w-[80%] truncate rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-white shadow-sm"
+              title={`Originally posted by @${credit.replace(/^@/, '')}`}
+            >
+              @{credit.replace(/^@/, '')}
+            </span>
+          )
+        )}
       </div>
 
       {!bare && (

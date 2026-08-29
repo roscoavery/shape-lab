@@ -183,8 +183,15 @@ export type Athlete = {
   createdAt: string
   /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
   passcodeHash?: string
-  /** Coach vs athlete. Ryan is always coach and gym admin. */
-  role?: 'coach' | 'athlete'
+  /**
+   * Who this profile is. Ryan is always gym admin (treated as coach).
+   * Gym owners and coaches can keep their own Compare collections.
+   */
+  role?: 'gym_owner' | 'coach' | 'athlete' | 'parent'
+  /** Gym they own, coach at, or train at. */
+  gymName?: string
+  /** Parent profiles: the athlete they came for. */
+  childName?: string
 }
 
 export type CriterionScore = {

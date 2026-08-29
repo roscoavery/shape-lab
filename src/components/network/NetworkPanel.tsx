@@ -229,6 +229,10 @@ function PeoplePage({
                 </span>
               </p>
               <p className="text-[11px] text-[var(--muted)]">
+                {[person.gymName, person.childName ? `athlete ${person.childName}` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {person.gymName || person.childName ? ' · ' : ''}
                 {followerCount(social, person.id)} follower
                 {followerCount(social, person.id) === 1 ? '' : 's'} · following{' '}
                 {followingCount(social, person.id)}

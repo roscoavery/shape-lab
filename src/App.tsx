@@ -865,8 +865,9 @@ export default function App() {
               <strong className="text-[var(--text)]">Feed</strong> is the gym wall —
               a thought, a hit video, or a shared class collage. Video is optional.
               Coaches tag athletes, athletes tag their coach. Unlock a profile to post.
-              Fellow coaches create a coach profile on Profiles, keep their own Compare
-              collections, and use Classes, Feed, Network, and Research. Ryan stays gym admin —
+              Fellow coaches and gym owners create a profile on Profiles (gym owner, coach,
+              athlete, or parent), keep their own Compare collections, and use Classes, Feed,
+              Network, and Research. Ryan stays gym admin —
               only that profile edits the shared Compare library, shape descriptions,
               and picture sizes. The first <strong className="text-[var(--text)]">Tasks</strong>{' '}
               tab and <strong className="text-[var(--text)]">Coach</strong> stay hidden unless

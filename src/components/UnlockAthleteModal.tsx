@@ -12,6 +12,7 @@ import {
   markProfileUnlocked,
 } from '../lib/athletePasscode'
 import { isRyanAthlete } from '../lib/ryanProfile'
+import { roleLabel } from '../lib/profileRole'
 
 type Props = {
   athlete: Athlete
@@ -57,6 +58,11 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
           {admin ? 'Unlock gym admin' : 'Unlock profile'}
         </p>
         <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{athlete.name}</h3>
+        <p className="text-xs text-[var(--muted)]">
+          {roleLabel(athlete)}
+          {athlete.gymName ? ` · ${athlete.gymName}` : ''}
+          {athlete.childName ? ` · athlete ${athlete.childName}` : ''}
+        </p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           {admin
             ? 'This is Ryan’s gym admin profile. A shared link does not open it by tapping the name — enter the 4-digit passcode. Other coaches stay in their own profiles.'
