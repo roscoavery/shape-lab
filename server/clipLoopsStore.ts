@@ -4,11 +4,10 @@
  * Shared by Learn scroll, Compare, and Classes collages.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import { canonicalSocialUrl, socialVideoKey } from '../src/lib/socialUrls.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'clip-loops.json')
+const FILE = 'data/clip-loops.json'
 export const MAX_LOOP_PRESETS = 8
 
 export type ClipLoopPreset = {
@@ -113,25 +112,21 @@ export function normalizeLoopEntry(value: unknown): ClipLoopSet | null {
   }
 }
 
-export function readClipLoopsFile(): DiskClipLoops {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskClipLoops
-    if (!data || data.kind !== 'shape-lab-clip-loops' || !data.loops || typeof data.loops !== 'object') {
-      return { ...EMPTY }
-    }
-    const loops: Record<string, ClipLoopSet> = {}
-    for (const [rawKey, value] of Object.entries(data.loops)) {
-      const entry = normalizeLoopEntry(value)
-      if (!entry) continue
-      loops[migrateLoopKey(rawKey)] = entry
-    }
-    return { ...EMPTY, ...data, loops }
-  } catch {
+export async function readClipLoopsFile(): Promise<DiskClipLoops> {
+  const data = await readJson<DiskClipLoops>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-clip-loops' || !data.loops || typeof data.loops !== 'object') {
     return { ...EMPTY }
   }
+  const loops: Record<string, ClipLoopSet> = {}
+  for (const [rawKey, value] of Object.entries(data.loops)) {
+    const entry = normalizeLoopEntry(value)
+    if (!entry) continue
+    loops[migrateLoopKey(rawKey)] = entry
+  }
+  return { ...EMPTY, ...data, loops }
 }
 
-export function writeClipLoopsFile(data: unknown): DiskClipLoops {
+export async function writeClipLoopsFile(data: unknown): Promise<DiskClipLoops> {
   const parsed = data as DiskClipLoops
   if (!parsed || parsed.kind !== 'shape-lab-clip-loops' || !parsed.loops || typeof parsed.loops !== 'object') {
     throw new Error('Invalid clip-loops payload')
@@ -148,7 +143,6 @@ export function writeClipLoopsFile(data: unknown): DiskClipLoops {
     exportedAt: new Date().toISOString(),
     loops,
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

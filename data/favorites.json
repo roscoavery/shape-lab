@@ -1,7 +1,21 @@
 {
   "kind": "shape-lab-favorites",
   "version": 1,
-  "exportedAt": "",
-  "urls": [],
-  "loops": {}
+  "exportedAt": "2026-08-29T05:36:45.379Z",
+  "urls": [
+    "instagram:db8wmq9gprg",
+    "instagram:dcpdqyun4ni",
+    "instagram:dcmu9awpq2a",
+    "instagram:dftlnjyqi_j",
+    "instagram:dblqlgdxaou",
+    "instagram:dbxgajyty4i",
+    "instagram:dcilpyzikni",
+    "instagram:dy2jbfhpqyf",
+    "instagram:dmgalhrvrww"
+  ],
+  "loops": {
+    "instagram:db8wmq9gprg": [
+      "loop_mtdga64k_j9bog6"
+    ]
+  }
 }

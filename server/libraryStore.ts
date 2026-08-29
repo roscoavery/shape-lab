@@ -7,8 +7,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { IncomingMessage } from 'node:http'
 import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'library.json')
+const FILE = 'data/library.json'
 const SHIPPED = path.join(process.cwd(), 'src/config/compareLibrary.json')
 
 export type DiskLibrary = {
@@ -26,16 +27,23 @@ const EMPTY: DiskLibrary = {
   collections: [],
 }
 
-export function readLibraryFile(): DiskLibrary {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskLibrary
-    if (!data || data.kind !== 'shape-lab-library' || !Array.isArray(data.collections)) {
-      return { ...EMPTY }
-    }
+export async function readLibraryFile(): Promise<DiskLibrary> {
+  const data = await readJson<DiskLibrary>(FILE, { ...EMPTY })
+  if (data && data.kind === 'shape-lab-library' && Array.isArray(data.collections) && data.collections.length) {
     return data
-  } catch {
-    return { ...EMPTY }
   }
+  try {
+    const shipped = JSON.parse(fs.readFileSync(SHIPPED, 'utf8')) as DiskLibrary
+    if (shipped && shipped.kind === 'shape-lab-library' && Array.isArray(shipped.collections)) {
+      return shipped
+    }
+  } catch {
+    /* optional seed */
+  }
+  if (data && data.kind === 'shape-lab-library' && Array.isArray(data.collections)) {
+    return data
+  }
+  return { ...EMPTY }
 }
 
 function itemUrlKey(url: string): string {
@@ -212,13 +220,12 @@ function unionCollections(existingRaw: unknown[], incomingRaw: unknown[]): DiskC
   return cleanCollections(result)
 }
 
-export function writeLibraryFile(data: unknown): DiskLibrary {
+export async function writeLibraryFile(data: unknown): Promise<DiskLibrary> {
   const parsed = data as DiskLibrary
   if (!parsed || parsed.kind !== 'shape-lab-library' || !Array.isArray(parsed.collections)) {
     throw new Error('Invalid library payload')
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  const existing = readLibraryFile()
+  const existing = await readLibraryFile()
   const collections = unionCollections(existing.collections, parsed.collections)
   const next: DiskLibrary = {
     kind: 'shape-lab-library',
@@ -230,12 +237,12 @@ export function writeLibraryFile(data: unknown): DiskLibrary {
   if (JSON.stringify(existing.collections) === JSON.stringify(next.collections)) {
     return existing
   }
-  const text = JSON.stringify(next, null, 2) + '\n'
-  fs.writeFileSync(FILE, text)
+  await writeJson(FILE, next)
   try {
-    fs.writeFileSync(SHIPPED, text)
+    fs.mkdirSync(path.dirname(SHIPPED), { recursive: true })
+    fs.writeFileSync(SHIPPED, JSON.stringify(next, null, 2) + '\n')
   } catch {
-    /* shipped copy is optional in a packed preview */
+    /* shipped copy is optional on Vercel */
   }
   return next
 }

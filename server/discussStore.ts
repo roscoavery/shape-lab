@@ -2,11 +2,10 @@
  * Coach lounge threads. JSON on disk. Tagged so Research can count them.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import { DISCUSS_TOPICS } from '../src/config/discussTopics.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'discuss.json')
+const FILE = 'data/discuss.json'
 const TOPIC_IDS = new Set(DISCUSS_TOPICS.map((t) => t.id))
 
 export type DiskDiscussPost = {
@@ -114,23 +113,18 @@ function sanitizeDiscuss(data: DiskDiscuss): DiskDiscuss {
   }
 }
 
-export function readDiscussFile(): DiskDiscuss {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskDiscuss
-    if (!data || data.kind !== 'shape-lab-discuss') return { ...EMPTY }
-    return sanitizeDiscuss(data)
-  } catch {
-    return { ...EMPTY }
-  }
+export async function readDiscussFile(): Promise<DiskDiscuss> {
+  const data = await readJson<DiskDiscuss>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-discuss') return { ...EMPTY }
+  return sanitizeDiscuss(data)
 }
 
-export function writeDiscussFile(data: unknown): DiskDiscuss {
+export async function writeDiscussFile(data: unknown): Promise<DiskDiscuss> {
   const parsed = data as DiskDiscuss
   if (!parsed || parsed.kind !== 'shape-lab-discuss') {
     throw new Error('Invalid discuss payload')
   }
   const next = { ...sanitizeDiscuss(parsed), exportedAt: new Date().toISOString() }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

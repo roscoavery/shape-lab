@@ -3,10 +3,9 @@
  * Ryan edits these in Learn; every browser hydrates them.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'shape-copy.json')
+const FILE = 'data/shape-copy.json'
 
 export type ShapeCopyFields = { athlete: string; app: string }
 
@@ -24,19 +23,15 @@ const EMPTY: ShapeCopyFile = {
   shapes: {},
 }
 
-export function readShapeCopyFile(): ShapeCopyFile {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as ShapeCopyFile
-    if (!data || data.kind !== 'shape-lab-shape-copy' || typeof data.shapes !== 'object') {
-      return { ...EMPTY }
-    }
-    return data
-  } catch {
+export async function readShapeCopyFile(): Promise<ShapeCopyFile> {
+  const data = await readJson<ShapeCopyFile>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-shape-copy' || typeof data.shapes !== 'object') {
     return { ...EMPTY }
   }
+  return data
 }
 
-export function writeShapeCopyFile(data: unknown): ShapeCopyFile {
+export async function writeShapeCopyFile(data: unknown): Promise<ShapeCopyFile> {
   const parsed = data as Partial<ShapeCopyFile>
   const shapes: Record<string, ShapeCopyFields> = {}
   const incoming = parsed.shapes && typeof parsed.shapes === 'object' ? parsed.shapes : {}
@@ -53,7 +48,6 @@ export function writeShapeCopyFile(data: unknown): ShapeCopyFile {
     updatedAt: new Date().toISOString(),
     shapes,
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

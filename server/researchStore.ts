@@ -3,10 +3,9 @@
  * JSON on disk. One observation per athlete per study.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'research.json')
+const FILE = 'data/research.json'
 
 export type DiskAnswer = string | string[] | number
 
@@ -135,18 +134,14 @@ function dedupeObservations(list: DiskObservation[]): DiskObservation[] {
   return [...byKey.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-export function readResearchFile(): DiskResearch {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskResearch
-    if (!data || data.kind !== 'shape-lab-research') return { ...EMPTY }
-    return writeShape({
-      observations: Array.isArray(data.observations) ? data.observations : [],
-      ideas: Array.isArray(data.ideas) ? data.ideas : [],
-      exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
-    })
-  } catch {
-    return { ...EMPTY }
-  }
+export async function readResearchFile(): Promise<DiskResearch> {
+  const data = await readJson<DiskResearch>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-research') return { ...EMPTY }
+  return writeShape({
+    observations: Array.isArray(data.observations) ? data.observations : [],
+    ideas: Array.isArray(data.ideas) ? data.ideas : [],
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
+  })
 }
 
 function writeShape(input: {
@@ -170,14 +165,13 @@ function writeShape(input: {
   }
 }
 
-export function writeResearchFile(raw: unknown): DiskResearch {
+export async function writeResearchFile(raw: unknown): Promise<DiskResearch> {
   const body = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const next = writeShape({
     observations: Array.isArray(body.observations) ? body.observations : [],
     ideas: Array.isArray(body.ideas) ? body.ideas : [],
     exportedAt: new Date().toISOString(),
   })
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

@@ -3,11 +3,10 @@
  * These never write into the gym library.json file. Ryan’s gym list stays separate.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'coach-libraries.json')
+const FILE = 'data/coach-libraries.json'
 
 export type DiskCoachItem = {
   id: string
@@ -132,38 +131,32 @@ function emptyLibrary(athleteId: string): DiskCoachLibrary {
   return { ...EMPTY_LIB, collections: [] }
 }
 
-export function readCoachLibrariesFile(): DiskCoachLibraries {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskCoachLibraries
-    if (
-      !data ||
-      data.kind !== 'shape-lab-coach-libraries' ||
-      !data.byAthleteId ||
-      typeof data.byAthleteId !== 'object'
-    ) {
-      return { ...EMPTY, byAthleteId: {} }
-    }
-    return data
-  } catch {
+export async function readCoachLibrariesFile(): Promise<DiskCoachLibraries> {
+  const data = await readJson<DiskCoachLibraries>(FILE, { ...EMPTY, byAthleteId: {} })
+  if (
+    !data ||
+    data.kind !== 'shape-lab-coach-libraries' ||
+    !data.byAthleteId ||
+    typeof data.byAthleteId !== 'object'
+  ) {
     return { ...EMPTY, byAthleteId: {} }
   }
+  return data
 }
 
-function writeFile(next: DiskCoachLibraries): DiskCoachLibraries {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  const text = JSON.stringify(next, null, 2) + '\n'
-  fs.writeFileSync(FILE, text)
+async function writeFile(next: DiskCoachLibraries): Promise<DiskCoachLibraries> {
+  await writeJson(FILE, next)
   return next
 }
 
-export function readCoachLibrary(athleteId: string): DiskCoachLibrary {
+export async function readCoachLibrary(athleteId: string): Promise<DiskCoachLibrary> {
   const id = safeId(athleteId)
   if (!id) return emptyLibrary('')
-  const file = readCoachLibrariesFile()
+  const file = await readCoachLibrariesFile()
   return file.byAthleteId[id] ?? emptyLibrary(id)
 }
 
-export function writeCoachLibrary(athleteId: string, data: unknown): DiskCoachLibrary {
+export async function writeCoachLibrary(athleteId: string, data: unknown): Promise<DiskCoachLibrary> {
   const id = safeId(athleteId)
   if (!id) throw new Error('Missing athleteId')
   const parsed = data as { kind?: unknown; collections?: unknown[] }
@@ -180,13 +173,13 @@ export function writeCoachLibrary(athleteId: string, data: unknown): DiskCoachLi
     managed: true,
     collections,
   }
-  const file = readCoachLibrariesFile()
+  const file = await readCoachLibrariesFile()
   const next: DiskCoachLibraries = {
     kind: 'shape-lab-coach-libraries',
     version: 1,
     exportedAt: nextLib.exportedAt,
     byAthleteId: { ...file.byAthleteId, [id]: nextLib },
   }
-  writeFile(next)
+  await writeFile(next)
   return nextLib
 }

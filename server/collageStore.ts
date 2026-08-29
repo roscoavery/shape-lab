@@ -2,10 +2,9 @@
  * Named drill collages (up to 6 gym-library clips) with captions and A/B loops.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'collages.json')
+const FILE = 'data/collages.json'
 const MAX_SLOTS = 6
 const MAX_COLLAGES = 80
 
@@ -115,29 +114,25 @@ export function cleanCollageShare(raw: unknown): DiskCollageShare | null {
   }
 }
 
-export function collagesForOwner(ownerId?: string | null): DiskCollage[] {
-  const all = readCollagesFile().collages
+export async function collagesForOwner(ownerId?: string | null): Promise<DiskCollage[]> {
+  const all = (await readCollagesFile()).collages
   if (!ownerId) return all.filter((c) => !c.ownerId)
   return all.filter((c) => !c.ownerId || c.ownerId === ownerId)
 }
 
-export function readCollagesFile(): DiskCollages {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskCollages
-    if (!data || data.kind !== 'shape-lab-collages' || !Array.isArray(data.collages)) {
-      return { ...EMPTY }
-    }
-    return {
-      ...EMPTY,
-      ...data,
-      collages: data.collages.map(cleanCollage).filter((c): c is DiskCollage => Boolean(c)),
-    }
-  } catch {
+export async function readCollagesFile(): Promise<DiskCollages> {
+  const data = await readJson<DiskCollages>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-collages' || !Array.isArray(data.collages)) {
     return { ...EMPTY }
+  }
+  return {
+    ...EMPTY,
+    ...data,
+    collages: data.collages.map(cleanCollage).filter((c): c is DiskCollage => Boolean(c)),
   }
 }
 
-export function writeCollagesFile(data: unknown): DiskCollages {
+export async function writeCollagesFile(data: unknown): Promise<DiskCollages> {
   const parsed = data as DiskCollages
   if (!parsed || parsed.kind !== 'shape-lab-collages' || !Array.isArray(parsed.collages)) {
     throw new Error('Invalid collages payload')
@@ -153,17 +148,16 @@ export function writeCollagesFile(data: unknown): DiskCollages {
     exportedAt: new Date().toISOString(),
     collages,
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }
 
-export function upsertCollage(raw: unknown): DiskCollage {
+export async function upsertCollage(raw: unknown): Promise<DiskCollage> {
   const collage = cleanCollage(raw)
   if (!collage) throw new Error('Invalid collage')
-  const current = readCollagesFile()
+  const current = await readCollagesFile()
   const rest = current.collages.filter((c) => c.id !== collage.id)
-  const next = writeCollagesFile({
+  const next = await writeCollagesFile({
     kind: 'shape-lab-collages',
     version: 1,
     exportedAt: '',
@@ -174,10 +168,10 @@ export function upsertCollage(raw: unknown): DiskCollage {
   return saved
 }
 
-export function deleteCollage(id: string): boolean {
-  const current = readCollagesFile()
+export async function deleteCollage(id: string): Promise<boolean> {
+  const current = await readCollagesFile()
   const next = current.collages.filter((c) => c.id !== id)
   if (next.length === current.collages.length) return false
-  writeCollagesFile({ ...current, collages: next })
+  await writeCollagesFile({ ...current, collages: next })
   return true
 }

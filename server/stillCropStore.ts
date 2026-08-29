@@ -3,10 +3,9 @@
  * Ryan sets borders in Learn; every browser hydrates them.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'still-crops.json')
+const FILE = 'data/still-crops.json'
 
 export type StillCropRect = { x: number; y: number; w: number; h: number }
 
@@ -40,25 +39,21 @@ function parseRect(value: unknown): StillCropRect | null {
   return { x: cx, y: cy, w: cw, h: ch }
 }
 
-export function readStillCropFile(): StillCropFile {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as StillCropFile
-    if (!data || data.kind !== 'shape-lab-still-crops' || typeof data.crops !== 'object') {
-      return { ...EMPTY }
-    }
-    const crops: Record<string, StillCropRect> = {}
-    for (const [id, rect] of Object.entries(data.crops)) {
-      if (!id) continue
-      const parsed = parseRect(rect)
-      if (parsed) crops[id] = parsed
-    }
-    return { ...data, crops }
-  } catch {
+export async function readStillCropFile(): Promise<StillCropFile> {
+  const data = await readJson<StillCropFile>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-still-crops' || typeof data.crops !== 'object') {
     return { ...EMPTY }
   }
+  const crops: Record<string, StillCropRect> = {}
+  for (const [id, rect] of Object.entries(data.crops)) {
+    if (!id) continue
+    const parsed = parseRect(rect)
+    if (parsed) crops[id] = parsed
+  }
+  return { ...data, crops }
 }
 
-export function writeStillCropFile(data: unknown): StillCropFile {
+export async function writeStillCropFile(data: unknown): Promise<StillCropFile> {
   const parsed = data as Partial<StillCropFile>
   const crops: Record<string, StillCropRect> = {}
   const incoming = parsed.crops && typeof parsed.crops === 'object' ? parsed.crops : {}
@@ -73,7 +68,6 @@ export function writeStillCropFile(data: unknown): StillCropFile {
     updatedAt: new Date().toISOString(),
     crops,
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(out, null, 2) + '\n')
+  await writeJson(FILE, out)
   return out
 }

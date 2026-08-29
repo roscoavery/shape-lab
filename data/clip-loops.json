@@ -1,6 +1,43 @@
 {
   "kind": "shape-lab-clip-loops",
   "version": 1,
-  "exportedAt": "",
-  "loops": {}
+  "exportedAt": "2026-08-29T05:56:01.041Z",
+  "loops": {
+    "instagram:db8wmq9gprg": {
+      "presets": [
+        {
+          "id": "loop_mtdga64k_j9bog6",
+          "name": "Loop 1",
+          "a": 0.423141,
+          "b": 3.940474,
+          "updatedAt": "2026-08-29T03:27:40.258Z"
+        }
+      ],
+      "activeId": "loop_mtdga64k_j9bog6"
+    },
+    "instagram:db-5w5ipifu": {
+      "presets": [
+        {
+          "id": "loop_mtdp943o_vas6yh",
+          "name": "whip whip connection",
+          "a": 3.232554,
+          "b": 6.599553,
+          "updatedAt": "2026-08-29T01:26:13.764Z"
+        }
+      ],
+      "activeId": "loop_mtdp943o_vas6yh"
+    },
+    "instagram:dryibomeq6r": {
+      "presets": [
+        {
+          "id": "loop_mtdpa261_meqkyw",
+          "name": "whip full connection",
+          "a": 2.550887,
+          "b": 4.938598,
+          "updatedAt": "2026-08-29T01:26:57.913Z"
+        }
+      ],
+      "activeId": "loop_mtdpa261_meqkyw"
+    }
+  }
 }

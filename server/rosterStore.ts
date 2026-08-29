@@ -4,18 +4,15 @@
  * wipe everyone else.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import {
   mergeRosterLists,
   rosterListsFromUnknown,
   type ProfileHint,
   type RosterLists,
 } from './rosterMerge.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'roster.json')
-const COACH_LIBS = path.join(process.cwd(), 'data', 'coach-libraries.json')
-const DISCUSS = path.join(process.cwd(), 'data', 'discuss.json')
+const FILE = 'data/roster.json'
 
 export type DiskRoster = {
   kind: 'shape-lab-roster'
@@ -72,75 +69,64 @@ function nameFromCollection(title: string): string | null {
   return cut
 }
 
-function profileHints(): Record<string, ProfileHint> {
+async function profileHints(): Promise<Record<string, ProfileHint>> {
   const hints: Record<string, ProfileHint> = {}
-  try {
-    const data = JSON.parse(fs.readFileSync(COACH_LIBS, 'utf8')) as {
-      byAthleteId?: Record<string, { collections?: { name?: string }[] }>
-    }
-    for (const [id, lib] of Object.entries(data.byAthleteId ?? {})) {
-      const title = lib.collections?.find((c) => c.name)?.name ?? ''
-      const name = nameFromCollection(title)
-      if (name) hints[id] = { name, role: 'coach' }
-    }
-  } catch {
-    /* optional file */
+  const coach = await readJson<{
+    byAthleteId?: Record<string, { collections?: { name?: string }[] }>
+  }>('data/coach-libraries.json', {})
+  for (const [id, lib] of Object.entries(coach.byAthleteId ?? {})) {
+    const title = lib.collections?.find((c) => c.name)?.name ?? ''
+    const name = nameFromCollection(title)
+    if (name) hints[id] = { name, role: 'coach' }
   }
-  try {
-    const data = JSON.parse(fs.readFileSync(DISCUSS, 'utf8')) as {
-      threads?: { authorId?: string }[]
-    }
-    for (const thread of data.threads ?? []) {
-      const id = thread.authorId
-      if (!id) continue
-      hints[id] = { name: hints[id]?.name ?? '', role: 'coach' }
-    }
-  } catch {
-    /* optional file */
+  const discuss = await readJson<{ threads?: { authorId?: string }[] }>('data/discuss.json', {})
+  for (const thread of discuss.threads ?? []) {
+    const id = thread.authorId
+    if (!id) continue
+    hints[id] = { name: hints[id]?.name ?? '', role: 'coach' }
   }
   if (!hints.ath_mtdrh90l_rhmvsa?.name) hints.ath_mtdrh90l_rhmvsa = { name: 'Jordan', role: 'coach' }
   if (!hints.ath_maya_test?.name) hints.ath_maya_test = { name: 'Maya', role: 'coach' }
   return hints
 }
 
-function readRawRoster(): DiskRoster {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskRoster
-    if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) {
-      return { ...EMPTY }
-    }
-    return {
-      ...EMPTY,
-      ...data,
-      athletes: Array.isArray(data.athletes) ? data.athletes : [],
-      homework: Array.isArray(data.homework) ? data.homework : [],
-      homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
-      taskProgress:
-        data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
-      flowProgress:
-        data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
-      attempts: Array.isArray(data.attempts) ? data.attempts : [],
-      compareLibraries:
-        data.compareLibraries && typeof data.compareLibraries === 'object'
-          ? data.compareLibraries
-          : {},
-      removedAthleteIds: Array.isArray(data.removedAthleteIds) ? data.removedAthleteIds : [],
-    }
-  } catch {
+async function readRawRoster(): Promise<DiskRoster> {
+  const data = await readJson<DiskRoster>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) {
     return { ...EMPTY }
+  }
+  return {
+    ...EMPTY,
+    ...data,
+    athletes: Array.isArray(data.athletes) ? data.athletes : [],
+    homework: Array.isArray(data.homework) ? data.homework : [],
+    homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
+    taskProgress:
+      data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
+    flowProgress:
+      data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
+    attempts: Array.isArray(data.attempts) ? data.attempts : [],
+    compareLibraries:
+      data.compareLibraries && typeof data.compareLibraries === 'object'
+        ? data.compareLibraries
+        : {},
+    removedAthleteIds: Array.isArray(data.removedAthleteIds) ? data.removedAthleteIds : [],
   }
 }
 
-function persistMerged(lists: RosterLists): DiskRoster {
+async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
   const next = listsToDisk(lists)
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }
 
-export function readRosterFile(): DiskRoster {
-  const onDisk = readRawRoster()
-  const merged = mergeRosterLists(rosterListsFromUnknown(EMPTY), rosterListsFromUnknown(onDisk), profileHints())
+export async function readRosterFile(): Promise<DiskRoster> {
+  const onDisk = await readRawRoster()
+  const merged = mergeRosterLists(
+    rosterListsFromUnknown(EMPTY),
+    rosterListsFromUnknown(onDisk),
+    await profileHints(),
+  )
   const sameAthletes = JSON.stringify(onDisk.athletes) === JSON.stringify(merged.athletes)
   const sameRemoved =
     JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
@@ -150,15 +136,15 @@ export function readRosterFile(): DiskRoster {
   return listsToDisk(merged, onDisk.exportedAt)
 }
 
-export function writeRosterFile(data: unknown): DiskRoster {
+export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
   const parsed = data as DiskRoster
   if (!parsed || parsed.kind !== 'shape-lab-roster' || !Array.isArray(parsed.athletes)) {
     throw new Error('Invalid roster payload')
   }
   const merged = mergeRosterLists(
-    rosterListsFromUnknown(readRawRoster()),
+    rosterListsFromUnknown(await readRawRoster()),
     rosterListsFromUnknown(parsed),
-    profileHints(),
+    await profileHints(),
   )
   return persistMerged(merged)
 }

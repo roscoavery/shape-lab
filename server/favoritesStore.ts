@@ -3,11 +3,10 @@
  * Shared by Compare, Learn scroll, and Classes.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import { loopKey } from './clipLoopsStore.ts'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'favorites.json')
+const FILE = 'data/favorites.json'
 
 export type DiskFavorites = {
   kind: 'shape-lab-favorites'
@@ -68,23 +67,19 @@ function cleanLoops(raw: unknown): Record<string, string[]> {
   return out
 }
 
-export function readFavoritesFile(): DiskFavorites {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskFavorites
-    if (!data || data.kind !== 'shape-lab-favorites') return { ...EMPTY }
-    return {
-      kind: 'shape-lab-favorites',
-      version: 1,
-      exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
-      urls: cleanKeys(data.urls),
-      loops: cleanLoops(data.loops),
-    }
-  } catch {
-    return { ...EMPTY }
+export async function readFavoritesFile(): Promise<DiskFavorites> {
+  const data = await readJson<DiskFavorites>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-favorites') return { ...EMPTY }
+  return {
+    kind: 'shape-lab-favorites',
+    version: 1,
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
+    urls: cleanKeys(data.urls),
+    loops: cleanLoops(data.loops),
   }
 }
 
-export function writeFavoritesFile(data: unknown): DiskFavorites {
+export async function writeFavoritesFile(data: unknown): Promise<DiskFavorites> {
   const parsed = data as DiskFavorites
   if (!parsed || parsed.kind !== 'shape-lab-favorites') {
     throw new Error('Invalid favorites payload')
@@ -96,7 +91,6 @@ export function writeFavoritesFile(data: unknown): DiskFavorites {
     urls: cleanKeys(parsed.urls),
     loops: cleanLoops(parsed.loops),
   }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

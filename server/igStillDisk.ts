@@ -3,12 +3,11 @@
  * Blobs live in data/ig-blobs/; metadata in data/ig-stills.json.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
-const META = path.join(process.cwd(), 'data/ig-stills.json')
-const BLOBS = path.join(process.cwd(), 'data/ig-blobs')
+const META = 'data/ig-stills.json'
+const blobRel = (file: string) => `data/ig-blobs/${file}`
 const MAX_STILLS = 80
 const MAX_BYTES = 6 * 1024 * 1024
 
@@ -65,36 +64,31 @@ function parseDataUrl(dataUrl: string): { type: string; buf: Buffer } | null {
   return { type, buf }
 }
 
-export function readIgStillMeta(): DiskIgLibrary {
-  try {
-    const data = JSON.parse(fs.readFileSync(META, 'utf8')) as DiskIgLibrary
-    if (!data || data.kind !== 'shape-lab-ig-stills' || !Array.isArray(data.stills)) {
-      return { ...EMPTY }
-    }
-    return {
-      ...EMPTY,
-      ...data,
-      stills: data.stills.filter((s) => s && typeof s.id === 'string' && typeof s.file === 'string'),
-    }
-  } catch {
+export async function readIgStillMeta(): Promise<DiskIgLibrary> {
+  const data = await readJson<DiskIgLibrary>(META, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-ig-stills' || !Array.isArray(data.stills)) {
     return { ...EMPTY }
+  }
+  return {
+    ...EMPTY,
+    ...data,
+    stills: data.stills.filter((s) => s && typeof s.id === 'string' && typeof s.file === 'string'),
   }
 }
 
-function writeMeta(stills: DiskIgStill[]): DiskIgLibrary {
+async function writeMeta(stills: DiskIgStill[]): Promise<DiskIgLibrary> {
   const next: DiskIgLibrary = {
     kind: 'shape-lab-ig-stills',
     version: 1,
     exportedAt: new Date().toISOString(),
     stills: stills.slice(0, MAX_STILLS),
   }
-  fs.mkdirSync(path.dirname(META), { recursive: true })
-  fs.writeFileSync(META, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(META, next)
   return next
 }
 
-export function stillsForClient(): Array<Record<string, unknown>> {
-  return readIgStillMeta().stills.map((s) => ({
+export async function stillsForClient(): Promise<Array<Record<string, unknown>>> {
+  return (await readIgStillMeta()).stills.map((s) => ({
     id: s.id,
     shapeId: s.shapeId,
     athleteId: s.athleteId,
@@ -107,7 +101,7 @@ export function stillsForClient(): Array<Record<string, unknown>> {
   }))
 }
 
-export function addIgStillFromBody(body: unknown): Record<string, unknown> {
+export async function addIgStillFromBody(body: unknown): Promise<Record<string, unknown>> {
   if (!body || typeof body !== 'object') throw new Error('Invalid still')
   const p = body as Record<string, unknown>
   const id = typeof p.id === 'string' ? safeId(p.id) : null
@@ -118,9 +112,8 @@ export function addIgStillFromBody(body: unknown): Record<string, unknown> {
   if (!parsed) throw new Error('Still needs a data:image payload')
   const { ext, type } = mimeToExt(parsed.type)
   const file = `${id}${ext}`
-  fs.mkdirSync(BLOBS, { recursive: true })
-  fs.writeFileSync(path.join(BLOBS, file), parsed.buf)
-  const meta = readIgStillMeta()
+  await writeBin(blobRel(file), parsed.buf, type)
+  const meta = await readIgStillMeta()
   const row: DiskIgStill = {
     id,
     shapeId,
@@ -132,8 +125,7 @@ export function addIgStillFromBody(body: unknown): Record<string, unknown> {
     file,
   }
   const stills = [row, ...meta.stills.filter((s) => s.id !== id)].slice(0, MAX_STILLS)
-  writeMeta(stills)
-  void type
+  await writeMeta(stills)
   return {
     ...row,
     persistedToApp: true,
@@ -141,30 +133,25 @@ export function addIgStillFromBody(body: unknown): Record<string, unknown> {
   }
 }
 
-export function deleteIgStill(idRaw: string): boolean {
+export async function deleteIgStill(idRaw: string): Promise<boolean> {
   const id = safeId(idRaw)
   if (!id) return false
-  const meta = readIgStillMeta()
+  const meta = await readIgStillMeta()
   const row = meta.stills.find((s) => s.id === id)
   if (!row) return false
-  writeMeta(meta.stills.filter((s) => s.id !== id))
-  try {
-    fs.unlinkSync(path.join(BLOBS, row.file))
-  } catch {
-    /* already gone */
-  }
+  await writeMeta(meta.stills.filter((s) => s.id !== id))
+  await removeFile(blobRel(row.file))
   return true
 }
 
-export function sendIgStillFile(idRaw: string, res: ServerResponse): boolean {
+export async function sendIgStillFile(idRaw: string, res: ServerResponse): Promise<boolean> {
   const id = safeId(idRaw)
   if (!id) return false
-  const row = readIgStillMeta().stills.find((s) => s.id === id)
+  const row = (await readIgStillMeta()).stills.find((s) => s.id === id)
   if (!row) return false
-  const file = path.join(BLOBS, row.file)
-  if (!fs.existsSync(file)) return false
+  const buf = await readBin(blobRel(row.file))
+  if (!buf) return false
   const { type } = mimeToExt(row.file)
-  const buf = fs.readFileSync(file)
   res.statusCode = 200
   res.setHeader('Content-Type', type)
   res.setHeader('Cache-Control', 'public, max-age=86400')

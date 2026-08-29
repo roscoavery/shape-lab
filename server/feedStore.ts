@@ -3,13 +3,12 @@
  * Blobs in data/feed-blobs/; metadata in data/feed-posts.json.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { cleanCollageShare, type DiskCollageShare } from './collageStore.ts'
+import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
-const META = path.join(process.cwd(), 'data', 'feed-posts.json')
-const BLOBS = path.join(process.cwd(), 'data', 'feed-blobs')
+const META = 'data/feed-posts.json'
+const blobRel = (file: string) => `data/feed-blobs/${file}`
 const MAX_POSTS = 200
 const MAX_BYTES = 48 * 1024 * 1024
 export const CAPTION_MAX = 800
@@ -54,41 +53,36 @@ function extForMime(mime: string): string {
   return '.webm'
 }
 
-export function readFeedFile(): DiskFeed {
-  try {
-    const data = JSON.parse(fs.readFileSync(META, 'utf8')) as DiskFeed
-    if (!data || data.kind !== 'shape-lab-feed' || !Array.isArray(data.posts)) {
-      return { ...EMPTY }
-    }
-    return {
-      ...EMPTY,
-      ...data,
-      posts: data.posts.filter((p) => {
-        if (!p || typeof p.id !== 'string') return false
-        if (p.kind === 'collage' || p.collage) return Boolean(p.collage)
-        if (p.kind === 'text') return Boolean((p.caption || '').trim())
-        return typeof p.file === 'string'
-      }),
-    }
-  } catch {
+export async function readFeedFile(): Promise<DiskFeed> {
+  const data = await readJson<DiskFeed>(META, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-feed' || !Array.isArray(data.posts)) {
     return { ...EMPTY }
+  }
+  return {
+    ...EMPTY,
+    ...data,
+    posts: data.posts.filter((p) => {
+      if (!p || typeof p.id !== 'string') return false
+      if (p.kind === 'collage' || p.collage) return Boolean(p.collage)
+      if (p.kind === 'text') return Boolean((p.caption || '').trim())
+      return typeof p.file === 'string'
+    }),
   }
 }
 
-function writeMeta(posts: DiskFeedPost[]): DiskFeed {
+async function writeMeta(posts: DiskFeedPost[]): Promise<DiskFeed> {
   const next: DiskFeed = {
     kind: 'shape-lab-feed',
     version: 1,
     exportedAt: new Date().toISOString(),
     posts,
   }
-  fs.mkdirSync(path.dirname(META), { recursive: true })
-  fs.writeFileSync(META, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(META, next)
   return next
 }
 
-export function postsForClient(): Array<DiskFeedPost & { url: string }> {
-  return readFeedFile()
+export async function postsForClient(): Promise<Array<DiskFeedPost & { url: string }>> {
+  return (await readFeedFile())
     .posts.slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map((p) => ({
@@ -124,7 +118,7 @@ export function readRequestBuffer(
   })
 }
 
-export function addFeedPostFromBody(params: {
+export async function addFeedPostFromBody(params: {
   id: string
   authorId: string
   caption: string
@@ -132,14 +126,13 @@ export function addFeedPostFromBody(params: {
   createdAt?: string
   mime: string
   buf: Buffer
-}): DiskFeedPost | null {
+}): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
   if (!id || !authorId || !params.buf.length || params.buf.length > MAX_BYTES) return null
   const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  fs.mkdirSync(BLOBS, { recursive: true })
-  fs.writeFileSync(path.join(BLOBS, file), params.buf)
+  await writeBin(blobRel(file), params.buf, mime)
   const taggedIds = params.taggedIds
     .map((x) => safeId(x))
     .filter((x): x is string => Boolean(x))
@@ -155,47 +148,41 @@ export function addFeedPostFromBody(params: {
     file,
     kind: 'video',
   }
-  const others = readFeedFile().posts.filter((p) => p.id !== id)
+  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
     if (!drop.file) continue
-    try {
-      fs.unlinkSync(path.join(BLOBS, drop.file))
-    } catch {
-      /* missing */
-    }
+    await removeFile(blobRel(drop.file))
   }
-  writeMeta(kept.slice(0, MAX_POSTS))
+  await writeMeta(kept.slice(0, MAX_POSTS))
   return post
 }
 
-export function deleteFeedPost(id: string, actorId?: string, actorIsAdmin?: boolean): boolean {
+export async function deleteFeedPost(
+  id: string,
+  actorId?: string,
+  actorIsAdmin?: boolean,
+): Promise<boolean> {
   const sid = safeId(id)
   if (!sid) return false
-  const meta = readFeedFile()
+  const meta = await readFeedFile()
   const found = meta.posts.find((p) => p.id === sid)
   if (!found) return false
   if (!actorIsAdmin && actorId && found.authorId !== actorId) return false
-  if (found.file) {
-    try {
-      fs.unlinkSync(path.join(BLOBS, found.file))
-    } catch {
-      /* missing */
-    }
-  }
-  writeMeta(meta.posts.filter((p) => p.id !== sid))
+  if (found.file) await removeFile(blobRel(found.file))
+  await writeMeta(meta.posts.filter((p) => p.id !== sid))
   return true
 }
 
-export function addCollageFeedPost(params: {
+export async function addCollageFeedPost(params: {
   id: string
   authorId: string
   caption: string
   taggedIds: string[]
   createdAt?: string
   collage: unknown
-}): DiskFeedPost | null {
+}): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
   const collage = cleanCollageShare(params.collage)
@@ -215,28 +202,24 @@ export function addCollageFeedPost(params: {
     kind: 'collage',
     collage,
   }
-  const others = readFeedFile().posts.filter((p) => p.id !== id)
+  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
     if (!drop.file) continue
-    try {
-      fs.unlinkSync(path.join(BLOBS, drop.file))
-    } catch {
-      /* missing */
-    }
+    await removeFile(blobRel(drop.file))
   }
-  writeMeta(kept.slice(0, MAX_POSTS))
+  await writeMeta(kept.slice(0, MAX_POSTS))
   return post
 }
 
-export function addTextFeedPost(params: {
+export async function addTextFeedPost(params: {
   id: string
   authorId: string
   caption: string
   taggedIds: string[]
   createdAt?: string
-}): DiskFeedPost | null {
+}): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
   const caption = (params.caption || '').trim().slice(0, CAPTION_MAX)
@@ -255,29 +238,24 @@ export function addTextFeedPost(params: {
     sizeBytes: 0,
     kind: 'text',
   }
-  const others = readFeedFile().posts.filter((p) => p.id !== id)
+  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
     if (!drop.file) continue
-    try {
-      fs.unlinkSync(path.join(BLOBS, drop.file))
-    } catch {
-      /* missing */
-    }
+    await removeFile(blobRel(drop.file))
   }
-  writeMeta(kept.slice(0, MAX_POSTS))
+  await writeMeta(kept.slice(0, MAX_POSTS))
   return post
 }
 
-export function sendFeedFile(id: string, res: ServerResponse): boolean {
+export async function sendFeedFile(id: string, res: ServerResponse): Promise<boolean> {
   const sid = safeId(id)
   if (!sid) return false
-  const found = readFeedFile().posts.find((p) => p.id === sid)
+  const found = (await readFeedFile()).posts.find((p) => p.id === sid)
   if (!found || !found.file) return false
-  const file = path.join(BLOBS, found.file)
-  if (!fs.existsSync(file)) return false
-  const buf = fs.readFileSync(file)
+  const buf = await readBin(blobRel(found.file))
+  if (!buf) return false
   res.statusCode = 200
   res.setHeader('Content-Type', found.mime || 'video/webm')
   res.setHeader('Content-Length', String(buf.length))

@@ -2,10 +2,9 @@
  * Follows and direct messages. JSON on disk, gym-wide.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readJson, writeJson } from './persist.ts'
 
-const FILE = path.join(process.cwd(), 'data', 'social.json')
+const FILE = 'data/social.json'
 
 export type DiskFollow = {
   followerId: string
@@ -152,23 +151,18 @@ function sanitizeSocial(data: DiskSocial): DiskSocial {
   }
 }
 
-export function readSocialFile(): DiskSocial {
-  try {
-    const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskSocial
-    if (!data || data.kind !== 'shape-lab-social') return { ...EMPTY }
-    return sanitizeSocial(data)
-  } catch {
-    return { ...EMPTY }
-  }
+export async function readSocialFile(): Promise<DiskSocial> {
+  const data = await readJson<DiskSocial>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-social') return { ...EMPTY }
+  return sanitizeSocial(data)
 }
 
-export function writeSocialFile(data: unknown): DiskSocial {
+export async function writeSocialFile(data: unknown): Promise<DiskSocial> {
   const parsed = data as DiskSocial
   if (!parsed || parsed.kind !== 'shape-lab-social') {
     throw new Error('Invalid social payload')
   }
   const next = { ...sanitizeSocial(parsed), exportedAt: new Date().toISOString() }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(FILE, next)
   return next
 }

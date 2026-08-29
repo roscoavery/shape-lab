@@ -3,12 +3,11 @@
  * metadata in data/athlete-videos.json. Playable from any Preview / phone link.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
-const META = path.join(process.cwd(), 'data', 'athlete-videos.json')
-const BLOBS = path.join(process.cwd(), 'data', 'athlete-video-blobs')
+const META = 'data/athlete-videos.json'
+const blobRel = (file: string) => `data/athlete-video-blobs/${file}`
 const MAX_PER_ATHLETE = 40
 const MAX_BYTES = 48 * 1024 * 1024
 
@@ -66,36 +65,31 @@ function extForMime(mime: string): string {
   return '.webm'
 }
 
-export function readAthleteVideoMeta(): DiskAthleteVideoLibrary {
-  try {
-    const data = JSON.parse(fs.readFileSync(META, 'utf8')) as DiskAthleteVideoLibrary
-    if (!data || data.kind !== 'shape-lab-athlete-videos' || !Array.isArray(data.videos)) {
-      return { ...EMPTY }
-    }
-    return {
-      ...EMPTY,
-      ...data,
-      videos: data.videos.filter((v) => v && typeof v.id === 'string' && typeof v.file === 'string'),
-    }
-  } catch {
+export async function readAthleteVideoMeta(): Promise<DiskAthleteVideoLibrary> {
+  const data = await readJson<DiskAthleteVideoLibrary>(META, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-athlete-videos' || !Array.isArray(data.videos)) {
     return { ...EMPTY }
+  }
+  return {
+    ...EMPTY,
+    ...data,
+    videos: data.videos.filter((v) => v && typeof v.id === 'string' && typeof v.file === 'string'),
   }
 }
 
-function writeMeta(videos: DiskAthleteVideo[]): DiskAthleteVideoLibrary {
+async function writeMeta(videos: DiskAthleteVideo[]): Promise<DiskAthleteVideoLibrary> {
   const next: DiskAthleteVideoLibrary = {
     kind: 'shape-lab-athlete-videos',
     version: 1,
     exportedAt: new Date().toISOString(),
     videos,
   }
-  fs.mkdirSync(path.dirname(META), { recursive: true })
-  fs.writeFileSync(META, JSON.stringify(next, null, 2) + '\n')
+  await writeJson(META, next)
   return next
 }
 
-export function videosForClient(athleteId?: string): DiskAthleteVideo[] {
-  const all = readAthleteVideoMeta().videos
+export async function videosForClient(athleteId?: string): Promise<DiskAthleteVideo[]> {
+  const all = (await readAthleteVideoMeta()).videos
   const list = athleteId ? all.filter((v) => v.athleteId === athleteId) : all
   return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
@@ -121,7 +115,7 @@ export function readRequestBuffer(
   })
 }
 
-export function addAthleteVideoFromBody(params: {
+export async function addAthleteVideoFromBody(params: {
   id: string
   athleteId: string
   name: string
@@ -130,7 +124,7 @@ export function addAthleteVideoFromBody(params: {
   durationSec?: number | null
   mime: string
   buf: Buffer
-}): DiskAthleteVideo | null {
+}): Promise<DiskAthleteVideo | null> {
   const id = safeId(params.id)
   const athleteId = safeId(params.athleteId)
   if (!id || !athleteId || !params.buf.length || params.buf.length > MAX_BYTES) return null
@@ -139,8 +133,7 @@ export function addAthleteVideoFromBody(params: {
     : 'compare-replay'
   const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  fs.mkdirSync(BLOBS, { recursive: true })
-  fs.writeFileSync(path.join(BLOBS, file), params.buf)
+  await writeBin(blobRel(file), params.buf, mime)
   const video: DiskAthleteVideo = {
     id,
     athleteId,
@@ -155,47 +148,38 @@ export function addAthleteVideoFromBody(params: {
     mime,
     file,
   }
-  const meta = readAthleteVideoMeta()
+  const meta = await readAthleteVideoMeta()
   const others = meta.videos.filter((v) => v.id !== id)
   const mine = others.filter((v) => v.athleteId === athleteId)
   const rest = others.filter((v) => v.athleteId !== athleteId)
   const kept = [video, ...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pruned = kept.slice(MAX_PER_ATHLETE)
   for (const drop of pruned) {
-    try {
-      fs.unlinkSync(path.join(BLOBS, drop.file))
-    } catch {
-      /* missing */
-    }
+    await removeFile(blobRel(drop.file))
   }
-  writeMeta([...kept.slice(0, MAX_PER_ATHLETE), ...rest])
+  await writeMeta([...kept.slice(0, MAX_PER_ATHLETE), ...rest])
   return video
 }
 
-export function deleteAthleteVideo(id: string, athleteId?: string): boolean {
+export async function deleteAthleteVideo(id: string, athleteId?: string): Promise<boolean> {
   const sid = safeId(id)
   if (!sid) return false
-  const meta = readAthleteVideoMeta()
+  const meta = await readAthleteVideoMeta()
   const found = meta.videos.find((v) => v.id === sid)
   if (!found) return false
   if (athleteId && found.athleteId !== athleteId) return false
-  try {
-    fs.unlinkSync(path.join(BLOBS, found.file))
-  } catch {
-    /* missing */
-  }
-  writeMeta(meta.videos.filter((v) => v.id !== sid))
+  await removeFile(blobRel(found.file))
+  await writeMeta(meta.videos.filter((v) => v.id !== sid))
   return true
 }
 
-export function sendAthleteVideoFile(id: string, res: ServerResponse): boolean {
+export async function sendAthleteVideoFile(id: string, res: ServerResponse): Promise<boolean> {
   const sid = safeId(id)
   if (!sid) return false
-  const found = readAthleteVideoMeta().videos.find((v) => v.id === sid)
+  const found = (await readAthleteVideoMeta()).videos.find((v) => v.id === sid)
   if (!found) return false
-  const file = path.join(BLOBS, found.file)
-  if (!fs.existsSync(file)) return false
-  const buf = fs.readFileSync(file)
+  const buf = await readBin(blobRel(found.file))
+  if (!buf) return false
   res.statusCode = 200
   res.setHeader('Content-Type', found.mime || 'video/webm')
   res.setHeader('Content-Length', String(buf.length))

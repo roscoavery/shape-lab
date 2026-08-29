@@ -34,13 +34,55 @@ Allow camera permission when the browser asks. Click **Start camera**.
 2. Note the Network URL Vite prints (e.g. `http://192.168.x.x:43127`).
 3. Open that URL on your phone.
 
-**Camera note:** Browsers require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) for `getUserMedia`. `localhost` works on the computer. Over a LAN IP, many phones block the camera on plain `http`. Use the **permanent gym link** below (HTTPS) on phones.
+**Camera note:** Browsers require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) for `getUserMedia`. `localhost` works on the computer. Over a LAN IP, many phones block the camera on plain `http`. Use the **Vercel production URL** (HTTPS) on phones.
 
-## Permanent gym link (named Cloudflare tunnel)
+## Permanent gym link (Vercel)
 
-`*.trycloudflare.com` hostnames are one-shot: they die when the process dies and cannot be restored. A **named** tunnel keeps the same HTTPS URL (for example `https://gym.yourdomain.com`) as long as the gym computer is on.
+This is the link that **stays the same** after updates. Do not text Cursor Preview or `*.trycloudflare.com` to the gym — those die.
 
-This Cursor cloud VM is **not** 24/7. Run the tunnel on the gym PC that already runs `npm run dev`.
+After the first deploy, the production URL looks like:
+
+`https://shape-lab-….vercel.app`
+
+Save that URL. Later pushes to `main` (GitHub connected, or `npx vercel --prod`) update **the same address**.
+
+### Claim the project (once)
+
+If this repo was first published with a claimable Vercel deploy, open the **claim URL** printed at deploy time, sign in with your Vercel account, and connect [github.com/roscoavery/shape-lab](https://github.com/roscoavery/shape-lab). After that, every `git push` to `main` ships to the same `*.vercel.app` hostname.
+
+### Env vars on Vercel
+
+| Variable | Required | What it does |
+| --- | --- | --- |
+| `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster, Compare library, feed, stills, and videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Without it, writes live only in a warm function (`/tmp`) and disappear on cold start. |
+
+How to add it:
+
+1. Vercel project → **Storage** → create a **Blob** store.
+2. Copy `BLOB_READ_WRITE_TOKEN` into the project **Environment Variables** (Production).
+3. Redeploy.
+
+No other secrets are required. Instagram / TikTok resolve uses public Cobalt instances (yt-dlp is not available on Vercel).
+
+Hobby plan upload cap is about **4.5 MB** per request — keep athlete/feed clips short on the public URL.
+
+### Update the live site from Cursor
+
+```bash
+git add -A && git commit -m "Describe the change" && git push
+```
+
+If GitHub is connected to the Vercel project, that push is enough. Otherwise:
+
+```bash
+npx vercel --prod --yes
+```
+
+### Gym computer (local Cloudflare tunnel)
+
+`*.trycloudflare.com` hostnames are one-shot. A **named** tunnel is only needed if you want phones to hit the gym PC instead of Vercel. The gym PC must stay on.
+
+This Cursor cloud VM is **not** 24/7.
 
 ### What you need once
 
