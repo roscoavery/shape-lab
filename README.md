@@ -40,15 +40,18 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 This is the link that **stays the same** after updates. Do not text Cursor Preview or `*.trycloudflare.com` to the gym — those die.
 
-After the first deploy, the production URL looks like:
+The lasting gym URL is **not** Cursor Preview and **not** a `*.trycloudflare.com` tunnel.
 
-`https://shape-lab-….vercel.app`
+You get it here:
 
-Save that URL. Later pushes to `main` (GitHub connected, or `npx vercel --prod`) update **the same address**.
+1. Open the **claim link** from the latest deploy message (Vercel → Claim deployment).
+2. Sign in (GitHub is fine).
+3. On the project page, copy **Production** — it looks like `https://shape-lab-….vercel.app`.
+4. Text **that** hostname to the gym. Later deploys keep the same address.
 
 ### Claim the project (once)
 
-If this repo was first published with a claimable Vercel deploy, open the **claim URL** printed at deploy time, sign in with your Vercel account, and connect [github.com/roscoavery/shape-lab](https://github.com/roscoavery/shape-lab). After that, every `git push` to `main` ships to the same `*.vercel.app` hostname.
+Sign in with the claim URL, then in the Vercel project connect [github.com/roscoavery/shape-lab](https://github.com/roscoavery/shape-lab) (push this repo there if that GitHub copy is behind). After that, every `git push` to `main` ships to the same `*.vercel.app` hostname.
 
 ### Env vars on Vercel
 
