@@ -13,6 +13,7 @@ type Props = {
   onAbChange?: (a: number | null, b: number | null) => void
   compact?: boolean
   quiet?: boolean
+  bare?: boolean
 }
 
 export function GymClipPlayer({
@@ -26,6 +27,7 @@ export function GymClipPlayer({
   onAbChange,
   compact = false,
   quiet = false,
+  bare = false,
 }: Props) {
   const social = socialPlatform(url)
   if (social) {
@@ -41,6 +43,7 @@ export function GymClipPlayer({
         compact={compact}
         quiet={quiet}
         active={active}
+        bare={bare}
       />
     )
   }
@@ -54,8 +57,9 @@ export function GymClipPlayer({
       loopA={loopA}
       loopB={loopB}
       onAbChange={onAbChange}
-      markup={!compact}
+      markup={!compact && !bare}
       compact={compact}
+      bare={bare}
       active={active}
     />
   )

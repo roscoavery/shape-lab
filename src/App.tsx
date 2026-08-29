@@ -803,7 +803,9 @@ export default function App() {
             <p className="mb-2">
               <strong className="text-[var(--text)]">Classes</strong> saves named drill
               collages (up to six gym URLs) with captions and A/B loops into your class
-              library. Share a board to the gym feed so other coaches can save a copy.{' '}
+              library. Full screen can hide chrome so a 4-clip board is four equal
+              tiles, and Export saves a chosen number of seconds of that board.
+              Share a board to the gym feed so other coaches can save a copy.{' '}
               <strong className="text-[var(--text)]">Feed</strong> is the gym accomplishment
               wall — coaches tag athletes, athletes tag their coach — plus shared class
               collages. Unlock a profile to post. Ryan stays coach/admin.

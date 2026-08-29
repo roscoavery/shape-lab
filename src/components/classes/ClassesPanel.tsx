@@ -230,10 +230,10 @@ export function ClassesPanel({ athlete }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Build a board of up to six clips from the gym Compare library. Star favorite
           URLs, add a caption (reps, a cue). Set A/B on each video — those loop points
-          save with the collage and on the gym URL. New boards land in{' '}
-          <strong className="text-[var(--text)]">your class library</strong>. Share one to
-          the gym feed so other coaches can save a copy and run it in class. Full screen
-          splits the window as evenly as it can for how many drills you picked.
+          save with the collage and on the gym URL. Full screen hides chrome so the
+          tiles sit flush (a 4-clip board is four equal quarters). Export records a
+          chosen number of seconds of the looping board. Share one to the gym feed so
+          other coaches can save a copy and run it in class.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button

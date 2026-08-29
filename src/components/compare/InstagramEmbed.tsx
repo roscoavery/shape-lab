@@ -22,6 +22,7 @@ type Props = {
   compact?: boolean
   quiet?: boolean
   active?: boolean
+  bare?: boolean
 }
 
 export function InstagramEmbed({
@@ -36,6 +37,7 @@ export function InstagramEmbed({
   compact = false,
   quiet = false,
   active,
+  bare = false,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -193,8 +195,9 @@ export function InstagramEmbed({
         loopA={loopA}
         loopB={loopB}
         onAbChange={onAbChange}
-        markup={!compact}
+        markup={!compact && !bare}
         compact={compact}
+        bare={bare}
         active={active}
       />
       {!fill && !quiet && <p className="text-xs text-[var(--muted)]">{footer}</p>}

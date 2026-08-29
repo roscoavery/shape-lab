@@ -32,6 +32,8 @@ type Props = {
   onAbChange?: (a: number | null, b: number | null) => void
   markup?: boolean
   compact?: boolean
+  /** Video only — no transport, markup, or padding. Used for collage cinema mode. */
+  bare?: boolean
   /** When set, play only while true (doom-scroll / collage). */
   active?: boolean
 }
@@ -60,6 +62,7 @@ function VideoWorkbenchInner({
   onAbChange,
   markup = true,
   compact = false,
+  bare = false,
   active,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -488,12 +491,14 @@ function VideoWorkbenchInner({
           className={`${fill ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
-        {markup && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />}
+        {markup && !bare && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />}
       </div>
 
-      <div className={fill ? 'shrink-0 bg-black px-2 py-1.5 text-white' : ''}>
-        {transport}
-      </div>
+      {!bare && (
+        <div className={fill ? 'shrink-0 bg-black px-2 py-1.5 text-white' : ''}>
+          {transport}
+        </div>
+      )}
 
       {!fill && !compact && (
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
