@@ -3,7 +3,7 @@ import type { Athlete } from '../types'
 import { createId } from '../lib/storage'
 import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
-import { isCoachProfile } from '../lib/profileRole'
+import { isCoachProfile, profileRole, roleLabel } from '../lib/profileRole'
 import {
   digitsOnlyPin,
   hashPasscode,
@@ -57,11 +57,12 @@ export function AthletePanel({
       (a) => a.name.trim().toLowerCase() === trimmed.toLowerCase(),
     )
     if (existing) {
-      onSelect(existing.id)
-      setName('')
-      setPasscode('')
-      setPasscodeAgain('')
-      flash(`${existing.name} is already on this gym computer — selected.`)
+      flash(
+        newRole !== profileRole(existing)
+          ? `${existing.name} is already on this gym as ${roleLabel(existing)}. Use a different name to create a ${newRole} profile. That name was not overwritten.`
+          : `${existing.name} is already on this gym computer. Unlock that profile with its own passcode — Create does not make a second one.`,
+        5200,
+      )
       return
     }
     if (!passcodeLooksOk(passcode)) {
@@ -72,6 +73,7 @@ export function AthletePanel({
       flash('Those passcodes do not match.')
       return
     }
+    const role = newRole
     const id = createId('ath')
     const passcodeHash = await hashPasscode(id, passcode)
     const athlete: Athlete = {
@@ -80,7 +82,7 @@ export function AthletePanel({
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       createdAt: new Date().toISOString(),
       passcodeHash,
-      role: newRole,
+      role,
     }
     markProfileUnlocked(id)
     onChangeAthletes([...athletes, athlete])
@@ -91,10 +93,10 @@ export function AthletePanel({
     setPasscodeAgain('')
     setNewRole('athlete')
     flash(
-      newRole === 'coach'
+      role === 'coach'
         ? `${athlete.name} is ready as a coach. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
         : `${athlete.name} is ready. Use that 4-digit passcode on any link.`,
-      newRole === 'coach' ? 4200 : 2800,
+      role === 'coach' ? 4200 : 2800,
     )
   }
 

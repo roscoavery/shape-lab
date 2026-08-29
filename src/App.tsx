@@ -161,7 +161,14 @@ export default function App() {
         return
       }
       const a = athletes.find((x) => x.id === id)
-      if (!a) return
+      if (!a) {
+        // Brand-new profile: roster state may not have re-rendered yet.
+        if (isProfileUnlocked(id)) {
+          setActiveAthleteId(id)
+          setAthleteGate(null)
+        }
+        return
+      }
       if (isProfileUnlocked(a.id)) {
         setActiveAthleteId(id)
         setAthleteGate(null)

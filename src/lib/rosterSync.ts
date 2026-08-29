@@ -56,6 +56,12 @@ function mergeAthletes(local: Athlete[], remote: Athlete[]): Athlete[] {
       byName.set(nameKey, a)
       return
     }
+    const role: Athlete['role'] =
+      a.role === 'coach' || keep.role === 'coach'
+        ? 'coach'
+        : a.role === 'athlete' || keep.role === 'athlete'
+          ? 'athlete'
+          : a.role || keep.role
     const newer =
       (a.createdAt || '') >= (keep.createdAt || '')
         ? {
@@ -63,12 +69,14 @@ function mergeAthletes(local: Athlete[], remote: Athlete[]): Athlete[] {
             ...a,
             id: keep.id,
             passcodeHash: a.passcodeHash || keep.passcodeHash,
+            role,
           }
         : {
             ...a,
             ...keep,
             id: keep.id,
             passcodeHash: keep.passcodeHash || a.passcodeHash,
+            role,
           }
     byId.delete(keep.id)
     byId.set(newer.id, newer)
