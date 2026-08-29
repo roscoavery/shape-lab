@@ -16,6 +16,7 @@ await esbuild.build({
   platform: 'node',
   format: 'esm',
   target: 'node20',
+  minify: true,
   logLevel: 'info',
 })
 
