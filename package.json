@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host --port 43127",
     "build": "tsc -b && vite build",
+    "build:api": "node scripts/bundle-api.mjs",
     "lint": "oxlint",
     "preview": "vite preview --host --port 43127",
     "share": "node scripts/share.mjs",
@@ -23,6 +24,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "esbuild": "^0.28.2",
     "oxlint": "^1.79.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

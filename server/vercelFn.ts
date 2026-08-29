@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { handleShapeLabApi } from '../server/apiHandler.ts'
-import { sendJson } from '../server/instagramResolve.ts'
+import { handleShapeLabApi } from './apiHandler.ts'
+import { sendJson } from './instagramResolve.ts'
 
 export const config = {
   api: {
