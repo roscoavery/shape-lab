@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Coach | Athletes | About
+ * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Research | Coach | Athletes | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -31,6 +31,7 @@ import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
 import { FeedPanel } from './components/feed/FeedPanel'
+import { ResearchPanel } from './components/research/ResearchPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
 import { FavoritesProvider } from './lib/favorites'
@@ -449,6 +450,7 @@ export default function App() {
               ['compare', 'Compare'],
               ['classes', 'Classes'],
               ['feed', 'Feed'],
+              ['research', 'Research'],
               ['coach', 'Coach'],
               ['history', 'Athletes'],
               ['about', 'About'],
@@ -712,6 +714,13 @@ export default function App() {
         />
       )}
 
+      {tab === 'research' && (
+        <ResearchPanel
+          athletes={athletes}
+          athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+        />
+      )}
+
       {tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-3">
@@ -806,9 +815,22 @@ export default function App() {
               library. Full screen can hide chrome so a 4-clip board is four equal
               tiles, and Export saves a chosen number of seconds of that board.
               Share a board to the gym feed so other coaches can save a copy.{' '}
-              <strong className="text-[var(--text)]">Feed</strong> is the gym accomplishment
-              wall — coaches tag athletes, athletes tag their coach — plus shared class
-              collages. Unlock a profile to post. Ryan stays coach/admin.
+              <strong className="text-[var(--text)]">Feed</strong> is the gym wall —
+              a thought, a hit video, or a shared class collage. Video is optional.
+              Coaches tag athletes, athletes tag their coach. Unlock a profile to post.
+              Ryan stays coach/admin.
+            </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Research</h2>
+            <p>
+              <strong className="text-[var(--text)]">Research</strong> uses the scientific
+              method on this gym’s tumbling: a question, a hypothesis, a log, then counts.
+              Laterality (hand, front foot, twist, doubles, triples, skate stance),
+              panel-mat layers on a first standing full, why people tumble, and fear /
+              mental blocks. Correlations are crosstabs, not causes. n is this gym.
+              Dump future study ideas in the inbox. Unlock a profile to log; anyone can
+              read findings.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

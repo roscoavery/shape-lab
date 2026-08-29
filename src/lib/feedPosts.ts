@@ -1,6 +1,8 @@
 import { createId } from './storage'
 import type { CollageShare } from './collages'
 
+export const FEED_CAPTION_MAX = 800
+
 export type FeedPost = {
   id: string
   authorId: string
@@ -10,7 +12,7 @@ export type FeedPost = {
   mime: string
   sizeBytes: number
   url: string
-  kind?: 'video' | 'collage'
+  kind?: 'video' | 'collage' | 'text'
   collage?: CollageShare
 }
 
@@ -36,7 +38,7 @@ export async function publishFeedPost(params: {
   const qs = new URLSearchParams({
     id,
     authorId: params.authorId,
-    caption: params.caption.slice(0, 280),
+    caption: params.caption.slice(0, FEED_CAPTION_MAX),
     taggedIds: params.taggedIds.join(','),
     mime,
     createdAt: new Date().toISOString(),
@@ -62,17 +64,43 @@ export async function publishCollagePost(params: {
 }): Promise<FeedPost | null> {
   const id = createId('post')
   try {
-            const res = await fetch('/api/feed?kind=collage', {
+    const res = await fetch('/api/feed?kind=collage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         kind: 'collage',
         id,
         authorId: params.authorId,
-        caption: params.caption.slice(0, 280),
+        caption: params.caption.slice(0, FEED_CAPTION_MAX),
         taggedIds: params.taggedIds ?? [],
         createdAt: new Date().toISOString(),
         collage: params.collage,
+      }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as FeedPost
+  } catch {
+    return null
+  }
+}
+
+export async function publishTextPost(params: {
+  authorId: string
+  caption: string
+  taggedIds: string[]
+}): Promise<FeedPost | null> {
+  const id = createId('post')
+  try {
+    const res = await fetch('/api/feed?kind=text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'text',
+        id,
+        authorId: params.authorId,
+        caption: params.caption.slice(0, FEED_CAPTION_MAX),
+        taggedIds: params.taggedIds,
+        createdAt: new Date().toISOString(),
       }),
     })
     if (!res.ok) return null

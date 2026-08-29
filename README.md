@@ -10,7 +10,8 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - **Learn** shapes and pathways without a camera, plus a **reference scroll** of the gym Instagram library
 - **Compare** reference videos side-by-side with a delay cam, attempt recording, and frame-by-frame replay
 - **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split). Share a board to the gym feed so other coaches can save it into their class library.
-- **Feed** accomplishment posts and shared class collages — coaches tag athletes, athletes tag their coach
+- **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach
+- **Research** gym studies (laterality, standing-full mats, reasons, fear) with counts and correlations — n is this gym
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**
@@ -191,7 +192,18 @@ You do **not** need to screen-record every reference. Upload a file only when yo
 
 ## Gym feed
 
-**Feed** is a simple accomplishment wall. Unlock a profile, pick a video, write a caption, and tag people. **Coach** profiles (Ryan is always coach/admin) tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps every existing admin edit in Compare, Learn copy, stills, and the URL library.
+**Feed** is a gym wall. Unlock a profile, write a caption, optionally attach a video, and tag people. A thought does not need a clip. **Coach** profiles (Ryan is always coach/admin) tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps every existing admin edit in Compare, Learn copy, stills, and the URL library.
+
+## Research
+
+**Research** is how this gym gathers tumbling data with the scientific method: a question, a stated hypothesis, one observation per athlete, then counts and crosstabs. Studies shipped now:
+
+- **Laterality** — dominant hand, foot in front when tumbling, twist left vs right, whether they can twist both ways, double full and triple (and which way), whether they also skate and which foot is in front. One form so those fields can be correlated.
+- **Standing full · panel mats** — how many layers they could back tuck up when they first got a standing full (0 is floor).
+- **Why people tumble** — reasons they pick for themselves.
+- **Fear and mental blocks** — whether they have felt fear tumbling, had a block, and whether that block followed an emotional shutdown. Not a clinical screen.
+
+**Correlations** are HTML tables (hand × twist, front foot × twist, front foot × skate, twist × double, twist × triple, and fear × twist when the same athlete is in both studies). They do not claim causes. **Ideas** is an inbox for future questions (cheer, acro, more tumbling philosophy) until they become a study. Findings are readable without unlocking a profile; logging needs one. Coaches can see who is in a sample. Data lives on this gym computer (`/api/research`, `data/research.json`).
 
 ## First test: Handstand
 

@@ -1,5 +1,5 @@
 /**
- * Gym feed posts: accomplishment videos with author + tags.
+ * Gym feed posts: videos, caption-only thoughts, and shared collages.
  * Blobs in data/feed-blobs/; metadata in data/feed-posts.json.
  */
 
@@ -12,6 +12,7 @@ const META = path.join(process.cwd(), 'data', 'feed-posts.json')
 const BLOBS = path.join(process.cwd(), 'data', 'feed-blobs')
 const MAX_POSTS = 200
 const MAX_BYTES = 48 * 1024 * 1024
+export const CAPTION_MAX = 800
 
 export type DiskFeedPost = {
   id: string
@@ -22,7 +23,7 @@ export type DiskFeedPost = {
   mime: string
   sizeBytes: number
   file?: string
-  kind?: 'video' | 'collage'
+  kind?: 'video' | 'collage' | 'text'
   collage?: DiskCollageShare
 }
 
@@ -62,12 +63,12 @@ export function readFeedFile(): DiskFeed {
     return {
       ...EMPTY,
       ...data,
-      posts: data.posts.filter(
-        (p) =>
-          p &&
-          typeof p.id === 'string' &&
-          (p.kind === 'collage' ? Boolean(p.collage) : typeof p.file === 'string'),
-      ),
+      posts: data.posts.filter((p) => {
+        if (!p || typeof p.id !== 'string') return false
+        if (p.kind === 'collage' || p.collage) return Boolean(p.collage)
+        if (p.kind === 'text') return Boolean((p.caption || '').trim())
+        return typeof p.file === 'string'
+      }),
     }
   } catch {
     return { ...EMPTY }
@@ -92,7 +93,12 @@ export function postsForClient(): Array<DiskFeedPost & { url: string }> {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map((p) => ({
       ...p,
-      kind: p.kind === 'collage' || p.collage ? 'collage' : 'video',
+      kind:
+        p.kind === 'collage' || p.collage
+          ? 'collage'
+          : p.kind === 'text' || (!p.file && (p.caption || '').trim())
+            ? 'text'
+            : 'video',
       url: p.file ? `/api/feed-file?id=${encodeURIComponent(p.id)}` : '',
     }))
 }
@@ -141,7 +147,7 @@ export function addFeedPostFromBody(params: {
   const post: DiskFeedPost = {
     id,
     authorId,
-    caption: (params.caption || '').trim().slice(0, 280),
+    caption: (params.caption || '').trim().slice(0, CAPTION_MAX),
     createdAt: params.createdAt || new Date().toISOString(),
     taggedIds,
     mime,
@@ -201,13 +207,53 @@ export function addCollageFeedPost(params: {
   const post: DiskFeedPost = {
     id,
     authorId,
-    caption: (params.caption || '').trim().slice(0, 280),
+    caption: (params.caption || '').trim().slice(0, CAPTION_MAX),
     createdAt: params.createdAt || new Date().toISOString(),
     taggedIds,
     mime: 'application/json',
     sizeBytes: 0,
     kind: 'collage',
     collage,
+  }
+  const others = readFeedFile().posts.filter((p) => p.id !== id)
+  const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const pruned = kept.slice(MAX_POSTS)
+  for (const drop of pruned) {
+    if (!drop.file) continue
+    try {
+      fs.unlinkSync(path.join(BLOBS, drop.file))
+    } catch {
+      /* missing */
+    }
+  }
+  writeMeta(kept.slice(0, MAX_POSTS))
+  return post
+}
+
+export function addTextFeedPost(params: {
+  id: string
+  authorId: string
+  caption: string
+  taggedIds: string[]
+  createdAt?: string
+}): DiskFeedPost | null {
+  const id = safeId(params.id)
+  const authorId = safeId(params.authorId)
+  const caption = (params.caption || '').trim().slice(0, CAPTION_MAX)
+  if (!id || !authorId || !caption) return null
+  const taggedIds = params.taggedIds
+    .map((x) => safeId(x))
+    .filter((x): x is string => Boolean(x))
+    .slice(0, 24)
+  const post: DiskFeedPost = {
+    id,
+    authorId,
+    caption,
+    createdAt: params.createdAt || new Date().toISOString(),
+    taggedIds,
+    mime: 'text/plain',
+    sizeBytes: 0,
+    kind: 'text',
   }
   const others = readFeedFile().posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))

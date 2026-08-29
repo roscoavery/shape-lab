@@ -5,8 +5,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import {
+  FEED_CAPTION_MAX,
   listFeedPosts,
   publishFeedPost,
+  publishTextPost,
   removeFeedPost,
   type FeedPost,
 } from '../../lib/feedPosts'
@@ -82,21 +84,27 @@ export function FeedPanel({ athletes, athlete }: Props) {
       setError('Unlock a profile to post.')
       return
     }
-    if (!file) {
-      setError('Pick a video of the skill first.')
+    if (!file && !caption.trim()) {
+      setError('Write a caption, or attach a video.')
       return
     }
     setBusy(true)
     setError(null)
-    const posted = await publishFeedPost({
-      authorId: athlete.id,
-      caption: caption.trim(),
-      taggedIds: tagged,
-      blob: file,
-    })
+    const posted = file
+      ? await publishFeedPost({
+          authorId: athlete.id,
+          caption: caption.trim(),
+          taggedIds: tagged,
+          blob: file,
+        })
+      : await publishTextPost({
+          authorId: athlete.id,
+          caption: caption.trim(),
+          taggedIds: tagged,
+        })
     setBusy(false)
     if (!posted) {
-      setError('Could not post that video. Try a shorter clip.')
+      setError(file ? 'Could not post that video. Try a shorter clip.' : 'Could not post that.')
       return
     }
     setPosts((prev) => [posted, ...prev])
@@ -148,9 +156,10 @@ export function FeedPanel({ athletes, athlete }: Props) {
         </p>
         <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Accomplishments</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Post a clip of a hit, or share a class collage from Classes. Coaches tag
-          athletes. Athletes tag their coach. Other coaches can save a shared collage
-          into their own class library. Ryan stays the gym coach/admin.
+          Post a thought, a clip of a hit, or a class collage from Classes. Video is
+          optional. Coaches tag athletes. Athletes tag their coach. Other coaches can
+          save a shared collage into their own class library. Ryan stays the gym
+          coach/admin.
         </p>
       </section>
 
@@ -177,18 +186,24 @@ export function FeedPanel({ athletes, athlete }: Props) {
               onChange={(e) => setCaption(e.target.value)}
               placeholder={
                 admin
-                  ? 'What did they hit? Or share a collage from Classes. Tag the athlete below.'
-                  : 'What did you hit? Ryan is tagged as coach unless you change it.'
+                  ? 'A thought, a hit, or a note about class. Video is optional. Tag the athlete below.'
+                  : 'A thought or what you hit. Video is optional. Ryan is tagged as coach unless you change it.'
               }
               rows={3}
+              maxLength={FEED_CAPTION_MAX}
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             />
-            <input
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-xs text-[var(--muted)]"
-            />
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Video (optional)
+              </span>
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/*"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-xs text-[var(--muted)]"
+              />
+            </label>
             {tagChoices.length > 0 && (
               <div>
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -231,8 +246,8 @@ export function FeedPanel({ athletes, athlete }: Props) {
 
       {posts.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
-          No posts yet. First hit of the day can live here — or share a class collage
-          from Classes.
+          No posts yet. A thought, a first hit of the day, or a class collage from
+          Classes can live here.
         </p>
       ) : (
         <ul className="space-y-4">
@@ -253,7 +268,11 @@ export function FeedPanel({ athletes, athlete }: Props) {
                       {author?.name ?? 'Unknown profile'}
                     </p>
                     <p className="text-[11px] text-[var(--muted)]">
-                      {post.kind === 'collage' ? 'Shared a class collage · ' : ''}
+                      {post.kind === 'collage'
+                        ? 'Shared a class collage · '
+                        : post.kind === 'text'
+                          ? 'Thought · '
+                          : ''}
                       {new Date(post.createdAt).toLocaleString()}
                       {taggedPeople.length > 0
                         ? ` · with ${taggedPeople.map((a) => a.name).join(', ')}`
@@ -292,16 +311,24 @@ export function FeedPanel({ athletes, athlete }: Props) {
                     }}
                     onSave={() => void saveSharedCollage(post)}
                   />
-                ) : (
+                ) : post.url && post.kind !== 'text' ? (
                   <video
                     src={post.url}
                     controls
                     playsInline
                     className="max-h-[520px] w-full bg-black object-contain"
                   />
-                )}
+                ) : null}
                 {post.caption && (
-                  <p className="px-4 py-3 text-sm leading-relaxed text-[var(--text)]">{post.caption}</p>
+                  <p
+                    className={`px-4 py-3 text-sm leading-relaxed text-[var(--text)] ${
+                      post.kind === 'text' || (!post.url && post.kind !== 'collage')
+                        ? 'text-base'
+                        : ''
+                    }`}
+                  >
+                    {post.caption}
+                  </p>
                 )}
                 {taggedPeople.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-4 pb-3">

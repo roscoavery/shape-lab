@@ -538,6 +538,7 @@ export const APP_TABS = [
   'compare',
   'classes',
   'feed',
+  'research',
   'coach',
   'history',
   'about',

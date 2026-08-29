@@ -19,10 +19,12 @@ import {
 import {
   addCollageFeedPost,
   addFeedPostFromBody,
+  addTextFeedPost,
   deleteFeedPost,
   postsForClient,
   sendFeedFile,
 } from './feedStore.ts'
+import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import {
   addIgStillFromBody,
   deleteIgStill,
@@ -59,7 +61,8 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
       path !== '/api/favorites' &&
       path !== '/api/collages' &&
       path !== '/api/feed' &&
-      path !== '/api/feed-file'
+      path !== '/api/feed-file' &&
+      path !== '/api/research'
     ) {
       next()
       return
@@ -256,8 +259,13 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
         }
         if (req.method === 'POST') {
           const ct = String(req.headers['content-type'] || '').toLowerCase()
-          if (ct.includes('json') || url.searchParams.get('kind') === 'collage') {
+          if (
+            ct.includes('json') ||
+            url.searchParams.get('kind') === 'collage' ||
+            url.searchParams.get('kind') === 'text'
+          ) {
             const body = JSON.parse(await readRequestBody(req)) as {
+              kind?: string
               authorId?: string
               caption?: string
               taggedIds?: string[]
@@ -265,16 +273,33 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
               id?: string
               collage?: unknown
             }
+            const taggedIds = Array.isArray(body.taggedIds)
+              ? body.taggedIds
+              : (url.searchParams.get('taggedIds') ?? '')
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+            const kind = body.kind ?? url.searchParams.get('kind') ?? ''
+            if (kind === 'text') {
+              const saved = addTextFeedPost({
+                id: body.id ?? url.searchParams.get('id') ?? '',
+                authorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
+                caption: body.caption ?? url.searchParams.get('caption') ?? '',
+                taggedIds,
+                createdAt: body.createdAt,
+              })
+              if (!saved) {
+                sendJson(res, 400, { error: 'Write a caption to post without a video.' })
+                return
+              }
+              sendJson(res, 200, { ...saved, url: '' })
+              return
+            }
             const saved = addCollageFeedPost({
               id: body.id ?? url.searchParams.get('id') ?? '',
               authorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
               caption: body.caption ?? url.searchParams.get('caption') ?? '',
-              taggedIds: Array.isArray(body.taggedIds)
-                ? body.taggedIds
-                : (url.searchParams.get('taggedIds') ?? '')
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
+              taggedIds,
               createdAt: body.createdAt,
               collage: body.collage,
             })
@@ -318,6 +343,19 @@ function attach(server: { middlewares: ViteDevServer['middlewares'] }) {
           return
         }
         sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+        return
+      }
+      if (path === '/api/research') {
+        if (req.method === 'GET') {
+          sendJson(res, 200, readResearchFile())
+          return
+        }
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req)
+          sendJson(res, 200, writeResearchFile(JSON.parse(body)))
+          return
+        }
+        sendJson(res, 405, { error: 'Use GET or PUT' })
         return
       }
       if (path === '/api/feed-file') {
