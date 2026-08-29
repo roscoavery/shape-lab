@@ -7,7 +7,9 @@
     "dev": "vite --host --port 43127",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview --host --port 43127"
+    "preview": "vite preview --host --port 43127",
+    "share": "node scripts/share.mjs",
+    "share:quick": "node scripts/share.mjs --quick"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

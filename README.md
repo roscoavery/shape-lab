@@ -34,11 +34,67 @@ Allow camera permission when the browser asks. Click **Start camera**.
 2. Note the Network URL Vite prints (e.g. `http://192.168.x.x:43127`).
 3. Open that URL on your phone.
 
-**Camera note:** Browsers require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) for `getUserMedia`. `localhost` works on the computer. Over a LAN IP, many phones block the camera on plain `http`. Options:
+**Camera note:** Browsers require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) for `getUserMedia`. `localhost` works on the computer. Over a LAN IP, many phones block the camera on plain `http`. Use the **permanent gym link** below (HTTPS) on phones.
 
-- Use the computer’s webcam first to test scoring.
-- Tunnel with something like [ngrok](https://ngrok.com/) / Cloudflare Tunnel for HTTPS on your phone.
-- Or serve with HTTPS locally (advanced).
+## Permanent gym link (named Cloudflare tunnel)
+
+`*.trycloudflare.com` hostnames are one-shot: they die when the process dies and cannot be restored. A **named** tunnel keeps the same HTTPS URL (for example `https://gym.yourdomain.com`) as long as the gym computer is on.
+
+This Cursor cloud VM is **not** 24/7. Run the tunnel on the gym PC that already runs `npm run dev`.
+
+### What you need once
+
+1. A free [Cloudflare account](https://dash.cloudflare.com/sign-up).
+2. A **domain on Cloudflare** (buy one, or point an existing domain’s nameservers at Cloudflare). Cloudflare will not give a stable public hostname without a domain.
+
+### Dashboard (once)
+
+1. Open [Networking → Tunnels](https://one.dash.cloudflare.com/) (or dash.cloudflare.com → Zero Trust / Networking → Tunnels).
+2. **Create a tunnel** named `shape-lab`. Copy the install **token**.
+3. Add a **published application**:
+   - Hostname: `gym.yourdomain.com` (any subdomain on that domain)
+   - Service URL: `http://localhost:43127`
+4. In this repo:
+
+```bash
+cp .env.example .env
+```
+
+Paste into `.env`:
+
+```bash
+CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
+```
+
+`.env` is gitignored. Do not commit the token.
+
+### Gym computer (every session, or on boot)
+
+```bash
+npm run dev      # terminal 1 — leave it running
+npm run share    # terminal 2 — keeps the HTTPS name alive
+```
+
+`npm run share` prints the hostname from `.env` and runs `cloudflared tunnel run --token …`. It will download `cloudflared` via `npx` if it is not already on PATH.
+
+To start the tunnel when Windows boots (admin PowerShell, after `.env` has the token):
+
+```bash
+npm run share -- --install-service
+```
+
+That installs Cloudflare’s Windows service so you do not need a second terminal after reboot. `npm run dev` still has to be running (or started on login) for phones to load the app.
+
+### Temporary link only
+
+If you just need a throwaway HTTPS URL right now (new name every time):
+
+```bash
+npm run share -- --quick
+```
+
+Or `npm run share:quick`. Do not text that URL to the gym as the permanent address.
 
 ## Athlete Tasks pathway
 
