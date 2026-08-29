@@ -11,6 +11,7 @@ import {
   startRecorder,
 } from './saveMedia'
 import { evenGrid } from './collages'
+import { collageCellAspect, packedCellRects } from './collageLayout'
 
 export const COLLAGE_EXPORT_PRESETS = [5, 8, 10, 15, 20, 30, 60] as const
 
@@ -32,25 +33,12 @@ export function collageExportFilename(name: string, seconds: number, type: strin
 
 type Rect = { x: number; y: number; w: number; h: number }
 
-function cellRects(count: number, cols: number, rows: number, width: number, height: number): Rect[] {
-  const cw = width / cols
-  const ch = height / rows
-  const spanLast = count === 5 && cols === 2
-  const out: Rect[] = []
-  for (let i = 0; i < count; i += 1) {
-    if (spanLast && i === count - 1) {
-      const row = Math.floor(i / cols)
-      out.push({ x: 0, y: row * ch, w: width, h: ch })
-    } else {
-      out.push({
-        x: (i % cols) * cw,
-        y: Math.floor(i / cols) * ch,
-        w: cw,
-        h: ch,
-      })
-    }
-  }
-  return out
+function videoAspects(videos: HTMLVideoElement[]): number[] {
+  return videos.map((video) => {
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    return vw && vh ? vw / vh : 0
+  })
 }
 
 function drawContained(
@@ -90,7 +78,13 @@ export async function recordCollagePlayback(opts: RecordCollageOpts): Promise<Bl
   const landscape = cols >= rows
   const width = landscape ? 1920 : 1080
   const height = landscape ? 1080 : 1920
-  const rects = cellRects(n, cols, rows, width, height)
+  const rects = packedCellRects(
+    n,
+    { cols, rows },
+    collageCellAspect(videoAspects(opts.videos)),
+    width,
+    height,
+  )
 
   for (const video of opts.videos) {
     video.muted = true

@@ -137,8 +137,10 @@ export function InstagramEmbed({
   if (loading) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)] ${
-          fill ? 'h-full min-h-24' : 'h-48'
+        className={`flex items-center justify-center text-sm text-[var(--muted)] ${
+          fill
+            ? 'h-full min-h-0 bg-black'
+            : 'h-48 rounded-lg border border-dashed border-[var(--panel-border)]'
         }`}
       >
         Opening video…
@@ -185,7 +187,7 @@ export function InstagramEmbed({
         : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public videos only.'
 
   return (
-    <div className={fill ? 'flex h-full min-h-0 flex-col gap-0' : 'flex flex-col gap-2'}>
+    <div className={fill ? 'flex h-full min-h-0 w-full flex-col gap-0' : 'flex flex-col gap-2'}>
       <VideoWorkbench
         src={src}
         allowAbLoop

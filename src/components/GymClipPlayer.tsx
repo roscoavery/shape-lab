@@ -31,7 +31,7 @@ export function GymClipPlayer({
 }: Props) {
   const social = socialPlatform(url)
   if (social) {
-    return (
+    const embed = (
       <InstagramEmbed
         url={url}
         itemId={itemId}
@@ -46,8 +46,9 @@ export function GymClipPlayer({
         bare={bare}
       />
     )
+    return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : embed
   }
-  return (
+  const bench = (
     <VideoWorkbench
       src={url}
       allowAbLoop
@@ -63,4 +64,5 @@ export function GymClipPlayer({
       active={active}
     />
   )
+  return fill ? <div className="h-full min-h-0 w-full">{bench}</div> : bench
 }
