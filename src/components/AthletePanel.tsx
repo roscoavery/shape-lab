@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../types'
-import { createId } from '../lib/storage'
+import { createId, noteRemovedAthlete } from '../lib/storage'
 import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
 import {
@@ -163,6 +163,7 @@ export function AthletePanel({
       return
     }
     const next = athletes.filter((a) => a.id !== id)
+    noteRemovedAthlete(id)
     onChangeAthletes(next)
     if (activeId === id) onSelect(next[0]?.id ?? null)
   }

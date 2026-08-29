@@ -1,11 +1,21 @@
 /**
  * On-disk athlete roster so a new tunnel / Preview origin still has profiles.
+ * PUT merges with the file on disk — a browser that only has Ryan cannot
+ * wipe everyone else.
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  mergeRosterLists,
+  rosterListsFromUnknown,
+  type ProfileHint,
+  type RosterLists,
+} from './rosterMerge.ts'
 
 const FILE = path.join(process.cwd(), 'data', 'roster.json')
+const COACH_LIBS = path.join(process.cwd(), 'data', 'coach-libraries.json')
+const DISCUSS = path.join(process.cwd(), 'data', 'discuss.json')
 
 export type DiskRoster = {
   kind: 'shape-lab-roster'
@@ -19,6 +29,7 @@ export type DiskRoster = {
   flowProgress: Record<string, unknown>
   attempts?: unknown[]
   compareLibraries?: Record<string, unknown>
+  removedAthleteIds?: string[]
 }
 
 const EMPTY: DiskRoster = {
@@ -31,9 +42,68 @@ const EMPTY: DiskRoster = {
   homeworkLogs: [],
   taskProgress: {},
   flowProgress: {},
+  attempts: [],
+  compareLibraries: {},
+  removedAthleteIds: [],
 }
 
-export function readRosterFile(): DiskRoster {
+function listsToDisk(lists: RosterLists, exportedAt = new Date().toISOString()): DiskRoster {
+  return {
+    kind: 'shape-lab-roster',
+    version: 1,
+    exportedAt,
+    athletes: lists.athletes,
+    activeAthleteId: lists.activeAthleteId,
+    homework: lists.homework,
+    homeworkLogs: lists.homeworkLogs.slice(-1000),
+    taskProgress: lists.taskProgress,
+    flowProgress: lists.flowProgress,
+    attempts: lists.attempts.slice(-2000),
+    compareLibraries: lists.compareLibraries,
+    removedAthleteIds: lists.removedAthleteIds,
+  }
+}
+
+function nameFromCollection(title: string): string | null {
+  const trimmed = title.trim()
+  if (!trimmed) return null
+  const cut = trimmed.replace(/\s+(floor|drills?|ig|references?|collection).*$/i, '').trim()
+  if (!cut || /^my$/i.test(cut) || /^new$/i.test(cut)) return null
+  return cut
+}
+
+function profileHints(): Record<string, ProfileHint> {
+  const hints: Record<string, ProfileHint> = {}
+  try {
+    const data = JSON.parse(fs.readFileSync(COACH_LIBS, 'utf8')) as {
+      byAthleteId?: Record<string, { collections?: { name?: string }[] }>
+    }
+    for (const [id, lib] of Object.entries(data.byAthleteId ?? {})) {
+      const title = lib.collections?.find((c) => c.name)?.name ?? ''
+      const name = nameFromCollection(title)
+      if (name) hints[id] = { name, role: 'coach' }
+    }
+  } catch {
+    /* optional file */
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(DISCUSS, 'utf8')) as {
+      threads?: { authorId?: string }[]
+    }
+    for (const thread of data.threads ?? []) {
+      const id = thread.authorId
+      if (!id) continue
+      hints[id] = { name: hints[id]?.name ?? '', role: 'coach' }
+    }
+  } catch {
+    /* optional file */
+  }
+  if (!hints.ath_mtdrh90l_rhmvsa?.name) hints.ath_mtdrh90l_rhmvsa = { name: 'Jordan', role: 'coach' }
+  if (!hints.ath_maya_test?.name) hints.ath_maya_test = { name: 'Maya', role: 'coach' }
+  return hints
+}
+
+function readRawRoster(): DiskRoster {
   try {
     const data = JSON.parse(fs.readFileSync(FILE, 'utf8')) as DiskRoster
     if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) {
@@ -44,59 +114,40 @@ export function readRosterFile(): DiskRoster {
       ...data,
       athletes: Array.isArray(data.athletes) ? data.athletes : [],
       homework: Array.isArray(data.homework) ? data.homework : [],
-    homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
-    taskProgress: data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
-    flowProgress: data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
-    attempts: Array.isArray(data.attempts) ? data.attempts : [],
-    compareLibraries:
-      data.compareLibraries && typeof data.compareLibraries === 'object' ? data.compareLibraries : {},
+      homeworkLogs: Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
+      taskProgress:
+        data.taskProgress && typeof data.taskProgress === 'object' ? data.taskProgress : {},
+      flowProgress:
+        data.flowProgress && typeof data.flowProgress === 'object' ? data.flowProgress : {},
+      attempts: Array.isArray(data.attempts) ? data.attempts : [],
+      compareLibraries:
+        data.compareLibraries && typeof data.compareLibraries === 'object'
+          ? data.compareLibraries
+          : {},
+      removedAthleteIds: Array.isArray(data.removedAthleteIds) ? data.removedAthleteIds : [],
     }
   } catch {
     return { ...EMPTY }
   }
 }
 
-function homeworkDedupeKey(item: { athleteId?: string; shapeId?: string; autoKey?: string }): string {
-  const aid = item.athleteId || '_'
-  const sid = item.shapeId || ''
-  if (
-    item.autoKey === 'hollow' ||
-    sid === 'hollow' ||
-    sid === 'hollow_arms_down' ||
-    sid === 'hollow_arms_up'
-  ) {
-    return `${aid}::hollow`
-  }
-  return `${aid}::${sid}`
+function persistMerged(lists: RosterLists): DiskRoster {
+  const next = listsToDisk(lists)
+  fs.mkdirSync(path.dirname(FILE), { recursive: true })
+  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
+  return next
 }
 
-/** One card per athlete + drill so a Safari remount cannot stack copies on disk. */
-function dedupeHomework(list: unknown[]): unknown[] {
-  const best = new Map<string, Record<string, unknown>>()
-  for (const raw of list) {
-    if (!raw || typeof raw !== 'object') continue
-    const item = raw as Record<string, unknown>
-    const key = homeworkDedupeKey({
-      athleteId: typeof item.athleteId === 'string' ? item.athleteId : '',
-      shapeId: typeof item.shapeId === 'string' ? item.shapeId : '',
-      autoKey: typeof item.autoKey === 'string' ? item.autoKey : undefined,
-    })
-    const keep = best.get(key)
-    if (!keep) {
-      best.set(key, item)
-      continue
-    }
-    const preferAuto =
-      item.source === 'auto' && keep.source !== 'auto'
-        ? item
-        : keep.source === 'auto' && item.source !== 'auto'
-          ? keep
-          : String(keep.createdAt ?? '') <= String(item.createdAt ?? '')
-            ? keep
-            : item
-    best.set(key, preferAuto)
+export function readRosterFile(): DiskRoster {
+  const onDisk = readRawRoster()
+  const merged = mergeRosterLists(rosterListsFromUnknown(EMPTY), rosterListsFromUnknown(onDisk), profileHints())
+  const sameAthletes = JSON.stringify(onDisk.athletes) === JSON.stringify(merged.athletes)
+  const sameRemoved =
+    JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
+  if (!sameAthletes || !sameRemoved) {
+    return persistMerged(merged)
   }
-  return [...best.values()]
+  return listsToDisk(merged, onDisk.exportedAt)
 }
 
 export function writeRosterFile(data: unknown): DiskRoster {
@@ -104,23 +155,10 @@ export function writeRosterFile(data: unknown): DiskRoster {
   if (!parsed || parsed.kind !== 'shape-lab-roster' || !Array.isArray(parsed.athletes)) {
     throw new Error('Invalid roster payload')
   }
-  const next: DiskRoster = {
-    kind: 'shape-lab-roster',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    athletes: parsed.athletes,
-    activeAthleteId: parsed.activeAthleteId ?? null,
-    homework: Array.isArray(parsed.homework) ? dedupeHomework(parsed.homework) : [],
-    homeworkLogs: Array.isArray(parsed.homeworkLogs) ? parsed.homeworkLogs.slice(0, 1000) : [],
-    taskProgress: parsed.taskProgress && typeof parsed.taskProgress === 'object' ? parsed.taskProgress : {},
-    flowProgress: parsed.flowProgress && typeof parsed.flowProgress === 'object' ? parsed.flowProgress : {},
-    attempts: Array.isArray(parsed.attempts) ? parsed.attempts.slice(0, 2000) : [],
-    compareLibraries:
-      parsed.compareLibraries && typeof parsed.compareLibraries === 'object'
-        ? parsed.compareLibraries
-        : {},
-  }
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n')
-  return next
+  const merged = mergeRosterLists(
+    rosterListsFromUnknown(readRawRoster()),
+    rosterListsFromUnknown(parsed),
+    profileHints(),
+  )
+  return persistMerged(merged)
 }

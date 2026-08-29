@@ -21,6 +21,7 @@ import type {
 } from '../types'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
+const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
 const ATTEMPTS_KEY = 'shape-lab.attempts.v1'
 const SETTINGS_KEY = 'shape-lab.settings.v1'
 const ACTIVE_ATHLETE_KEY = 'shape-lab.activeAthlete.v1'
@@ -58,6 +59,22 @@ export function loadAthletes(): Athlete[] {
 
 export function saveAthletes(athletes: Athlete[]) {
   writeJson(ATHLETES_KEY, athletes)
+}
+
+export function loadRemovedAthleteIds(): string[] {
+  const raw = readJson<unknown>(REMOVED_ATHLETES_KEY, [])
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.startsWith('ath_'))
+}
+
+export function saveRemovedAthleteIds(ids: string[]) {
+  writeJson(REMOVED_ATHLETES_KEY, [...new Set(ids.filter((id) => id && id !== 'ath_ryan'))])
+}
+
+/** Remember an explicit delete so leftover homework cannot resurrect the row. */
+export function noteRemovedAthlete(id: string) {
+  if (!id || id === 'ath_ryan') return
+  saveRemovedAthleteIds([...loadRemovedAthleteIds(), id])
 }
 
 export function loadAttempts(): AttemptRecord[] {

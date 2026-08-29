@@ -63,7 +63,7 @@ import {
   saveTab,
   type AppTab,
 } from './lib/storage'
-import { localRosterSnapshot, pushServerRoster, syncRosterWithServer } from './lib/rosterSync'
+import { localRosterSnapshot, pushServerRoster, syncRosterWithServer, isServerRosterPushEnabled } from './lib/rosterSync'
 import {
   addIgStill,
   hydrateIgStills,
@@ -197,8 +197,9 @@ export default function App() {
 
   useEffect(() => {
     saveAthletes(athletes)
+    if (!rosterReadyRef.current) return
     for (const a of athletes) ensureAutoHomework(a.id)
-    if (rosterReadyRef.current && athletes.length > 0) {
+    if (athletes.length > 0) {
       void pushServerRoster(localRosterSnapshot())
     }
   }, [athletes])
@@ -209,27 +210,43 @@ export default function App() {
   }, [activeAthleteId, athletes.length])
 
   useEffect(() => {
+    const onApplied = () => {
+      setAthletes(ensureRyanInAthletes(loadAthletes()))
+    }
+    window.addEventListener('shape-lab-roster-applied', onApplied)
+    return () => window.removeEventListener('shape-lab-roster-applied', onApplied)
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
-    void syncRosterWithServer().then(async (synced) => {
-      if (cancelled) return
-      rosterReadyRef.current = true
-      const raw =
-        synced.athletes.length > 0
-          ? ensureRyanInAthletes(synced.athletes)
-          : ensureRyanInAthletes(loadAthletes())
-      const next = await withRyanPasscode(raw)
-      if (cancelled) return
-      setAthletes(next)
-      // A shared link must not open Ryan just because the gym last had him
-      // selected. Restore only a profile this tab already unlocked.
-      const unlocked = unlockedProfileId()
-      if (unlocked && next.some((a) => a.id === unlocked)) {
-        setActiveAthleteId(unlocked)
-        return
-      }
-      setActiveAthleteId(null)
-      setAthleteGate(null)
-    })
+    let retries = 0
+    const run = () =>
+      syncRosterWithServer().then(async (synced) => {
+        if (cancelled) return
+        const raw =
+          synced.athletes.length > 0
+            ? ensureRyanInAthletes(synced.athletes)
+            : ensureRyanInAthletes(loadAthletes())
+        const next = await withRyanPasscode(raw)
+        if (cancelled) return
+        // Only mark ready after GET succeeded. Otherwise a Ryan-only tab would PUT and wipe the gym.
+        rosterReadyRef.current = isServerRosterPushEnabled()
+        setAthletes(next)
+        const unlocked = unlockedProfileId()
+        if (unlocked && next.some((a) => a.id === unlocked)) {
+          setActiveAthleteId(unlocked)
+        } else {
+          setActiveAthleteId(null)
+          setAthleteGate(null)
+        }
+        if (!isServerRosterPushEnabled() && !cancelled && retries < 12) {
+          retries += 1
+          window.setTimeout(() => {
+            if (!cancelled) void run()
+          }, 2500)
+        }
+      })
+    void run()
     return () => {
       cancelled = true
     }

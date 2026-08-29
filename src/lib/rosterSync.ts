@@ -1,27 +1,46 @@
 /**
  * Sync athlete profiles (and homework) to the Shape Lab server so a new
- * trycloudflare / Preview origin still has Ryan's roster.
+ * browser / tunnel origin still has the gym roster.
+ *
+ * A new tab used to PUT Ryan-only before GET finished, which wiped Profiles
+ * on every other device. Pushes stay off until the first successful GET, and
+ * the server unions athletes instead of replacing the file.
  */
 
-import type { Athlete, AthleteTaskProgress, FlowProgress, HomeworkItem, HomeworkLog, AttemptRecord } from '../types'
+import type {
+  Athlete,
+  AthleteTaskProgress,
+  AttemptRecord,
+  FlowProgress,
+  HomeworkItem,
+  HomeworkLog,
+} from '../types'
+import type { RefCollection } from './clipStore'
+import { loadCompareLibraries, saveCompareLibraries, type CompareLibraries } from './compareLibraries'
+import {
+  isAthleteRecord,
+  mergeRosterLists,
+  rosterListsFromUnknown,
+  type RosterLists,
+} from '../../server/rosterMerge.ts'
+import { ensureRyanInAthletes } from './ryanProfile'
 import {
   loadActiveAthleteId,
   loadAllHomework,
   loadAllTaskProgress,
   loadAthletes,
+  loadAttempts,
+  loadFlowProgress,
   loadHomeworkLogs,
+  loadRemovedAthleteIds,
   saveActiveAthleteId,
   saveAllHomework,
   saveAllTaskProgress,
   saveAthletes,
-  saveFlowProgress,
-  loadFlowProgress,
-  loadAttempts,
   saveAttempts,
+  saveFlowProgress,
+  saveRemovedAthleteIds,
 } from './storage'
-import { ensureRyanInAthletes } from './ryanProfile'
-import { loadCompareLibraries, saveCompareLibraries, type CompareLibraries } from './compareLibraries'
-import type { RefCollection } from './clipStore'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -35,70 +54,44 @@ export type RosterBackup = {
   flowProgress: Record<string, FlowProgress>
   attempts?: AttemptRecord[]
   compareLibraries?: Record<string, RefCollection[]>
+  removedAthleteIds?: string[]
 }
 
-function isAthlete(x: unknown): x is Athlete {
-  if (!x || typeof x !== 'object') return false
-  const a = x as Athlete
-  return typeof a.id === 'string' && typeof a.name === 'string' && a.name.trim().length > 0
+/** False until GET /api/roster succeeds so a Ryan-only tab cannot clobber the gym. */
+let serverPushEnabled = false
+
+export function enableServerRosterPush() {
+  serverPushEnabled = true
 }
 
-function mergeAthletes(local: Athlete[], remote: Athlete[]): Athlete[] {
-  const byId = new Map<string, Athlete>()
-  const byName = new Map<string, Athlete>()
-  const put = (a: Athlete) => {
-    const existingId = byId.get(a.id)
-    const nameKey = a.name.trim().toLowerCase()
-    const existingName = byName.get(nameKey)
-    const keep = existingId ?? existingName
-    if (!keep) {
-      byId.set(a.id, a)
-      byName.set(nameKey, a)
-      return
-    }
-    const newerWins = (a.createdAt || '') >= (keep.createdAt || '')
-    const role: Athlete['role'] = newerWins
-      ? a.role || keep.role
-      : keep.role || a.role
-    const newer = newerWins
-      ? {
-          ...keep,
-          ...a,
-          id: keep.id,
-          passcodeHash: a.passcodeHash || keep.passcodeHash,
-          gymName: a.gymName || keep.gymName,
-          childName: a.childName || keep.childName,
-          role,
-        }
-      : {
-          ...a,
-          ...keep,
-          id: keep.id,
-          passcodeHash: keep.passcodeHash || a.passcodeHash,
-          gymName: keep.gymName || a.gymName,
-          childName: keep.childName || a.childName,
-          role,
-        }
-    byId.delete(keep.id)
-    byId.set(newer.id, newer)
-    byName.set(nameKey, newer)
+export function isServerRosterPushEnabled() {
+  return serverPushEnabled
+}
+
+function localFlowMap(): Record<string, FlowProgress> {
+  const flowProgress: Record<string, FlowProgress> = {}
+  for (const a of ensureRyanInAthletes(loadAthletes())) {
+    flowProgress[a.id] = loadFlowProgress(a.id)
   }
-  for (const a of local) put(a)
-  for (const a of remote) put(a)
-  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+  return flowProgress
 }
 
-function mergeById<T extends { id: string }>(local: T[], remote: T[]): T[] {
-  const map = new Map<string, T>()
-  for (const row of [...remote, ...local]) map.set(row.id, row)
-  return [...map.values()]
+function listsFromLocal(): RosterLists {
+  return rosterListsFromUnknown({
+    athletes: ensureRyanInAthletes(loadAthletes()),
+    homework: loadAllHomework(),
+    homeworkLogs: loadHomeworkLogs(),
+    taskProgress: loadAllTaskProgress(),
+    flowProgress: localFlowMap(),
+    attempts: loadAttempts(),
+    compareLibraries: loadCompareLibraries(),
+    removedAthleteIds: loadRemovedAthleteIds(),
+    activeAthleteId: loadActiveAthleteId(),
+  })
 }
 
 export function localRosterSnapshot(): RosterBackup {
-  const athletes = ensureRyanInAthletes(mergeAthletes([], loadAthletes()))
-  if (JSON.stringify(athletes) !== JSON.stringify(loadAthletes())) saveAthletes(athletes)
-  const flowProgress: Record<string, FlowProgress> = {}
-  for (const a of athletes) flowProgress[a.id] = loadFlowProgress(a.id)
+  const athletes = ensureRyanInAthletes(loadAthletes())
   return {
     kind: 'shape-lab-roster',
     version: 1,
@@ -108,61 +101,62 @@ export function localRosterSnapshot(): RosterBackup {
     homework: loadAllHomework(),
     homeworkLogs: loadHomeworkLogs(),
     taskProgress: loadAllTaskProgress(),
-    flowProgress,
+    flowProgress: localFlowMap(),
     attempts: loadAttempts(),
     compareLibraries: loadCompareLibraries(),
+    removedAthleteIds: loadRemovedAthleteIds(),
   }
+}
+
+function persistLists(lists: RosterLists): Athlete[] {
+  const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord))
+  saveAthletes(athletes)
+  saveRemovedAthleteIds(lists.removedAthleteIds)
+  saveAllHomework(lists.homework as HomeworkItem[])
+  try {
+    localStorage.setItem(
+      'shape-lab.homeworkLogs.v1',
+      JSON.stringify(lists.homeworkLogs.slice(0, 1000)),
+    )
+  } catch {
+    /* quota */
+  }
+  saveAllTaskProgress(lists.taskProgress as Record<string, AthleteTaskProgress>)
+  for (const p of Object.values(lists.flowProgress)) {
+    if (p && typeof p === 'object' && 'athleteId' in (p as object)) {
+      saveFlowProgress(p as FlowProgress)
+    }
+  }
+  if (lists.attempts.length > 0) {
+    saveAttempts(
+      (lists.attempts as AttemptRecord[])
+        .filter((a) => a && typeof a.id === 'string')
+        .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || '')),
+    )
+  }
+  const mergedLibs: CompareLibraries = { ...loadCompareLibraries() }
+  for (const [id, cols] of Object.entries(lists.compareLibraries)) {
+    if (!id || !Array.isArray(cols)) continue
+    mergedLibs[id] = cols as RefCollection[]
+  }
+  saveCompareLibraries(mergedLibs)
+  return athletes
 }
 
 export function applyRosterSnapshot(data: RosterBackup): {
   athletes: Athlete[]
   activeAthleteId: string | null
 } {
-  const athletes = ensureRyanInAthletes(mergeAthletes(loadAthletes(), data.athletes.filter(isAthlete)))
-  saveAthletes(athletes)
-  const incomingHomework = Array.isArray(data.homework) ? data.homework : []
-  saveAllHomework(mergeById(loadAllHomework(), incomingHomework))
-  const logs = mergeById(
-    loadHomeworkLogs(),
-    Array.isArray(data.homeworkLogs) ? data.homeworkLogs : [],
-  )
-  try {
-    localStorage.setItem('shape-lab.homeworkLogs.v1', JSON.stringify(logs.slice(0, 1000)))
-  } catch {
-    /* quota */
-  }
-  // Remote logs may still point at leftover copy ids — collapse onto the kept cards.
-  saveAllHomework(loadAllHomework().concat(incomingHomework))
-  const taskProgress = { ...data.taskProgress, ...loadAllTaskProgress() }
-  saveAllTaskProgress(taskProgress)
-  const flow = { ...data.flowProgress }
-  for (const p of Object.values(flow)) {
-    if (p && typeof p === 'object' && 'athleteId' in p) saveFlowProgress(p as FlowProgress)
-  }
-  if (Array.isArray(data.attempts) && data.attempts.length > 0) {
-    saveAttempts(
-      mergeById(loadAttempts(), data.attempts).sort((a, b) => b.savedAt.localeCompare(a.savedAt)),
-    )
-  }
-  if (data.compareLibraries && typeof data.compareLibraries === 'object') {
-    const local = loadCompareLibraries()
-    const merged: CompareLibraries = { ...local }
-    for (const [id, cols] of Object.entries(data.compareLibraries)) {
-      if (!id || !Array.isArray(cols)) continue
-      merged[id] = cols
-    }
-    saveCompareLibraries(merged)
-  }
+  const merged = mergeRosterLists(listsFromLocal(), rosterListsFromUnknown(data))
+  const athletes = persistLists(merged)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('shape-lab-roster-applied'))
   }
   const active =
-    (data.activeAthleteId && athletes.some((a) => a.id === data.activeAthleteId)
-      ? data.activeAthleteId
-      : loadActiveAthleteId()) ??
-    athletes[0]?.id ??
-    null
-  if (active) saveActiveAthleteId(active)
+    merged.activeAthleteId && athletes.some((a) => a.id === merged.activeAthleteId)
+      ? merged.activeAthleteId
+      : loadActiveAthleteId()
+  if (active && athletes.some((a) => a.id === active)) saveActiveAthleteId(active)
   return { athletes, activeAthleteId: active }
 }
 
@@ -179,6 +173,7 @@ export async function pullServerRoster(): Promise<RosterBackup | null> {
 }
 
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
+  if (!serverPushEnabled) return
   try {
     await fetch('/api/roster', {
       method: 'PUT',
@@ -195,13 +190,16 @@ export async function syncRosterWithServer(): Promise<{
   activeAthleteId: string | null
 }> {
   const server = await pullServerRoster()
-  const local = localRosterSnapshot()
-  if (server && server.athletes.length > 0) {
-    const applied = applyRosterSnapshot(server)
-    const merged = localRosterSnapshot()
-    if (merged.athletes.length > 0) await pushServerRoster(merged)
-    return applied
+  if (!server) {
+    // GET failed. Do not PUT — that is how a Ryan-only tab wiped the gym.
+    return {
+      athletes: ensureRyanInAthletes(loadAthletes()),
+      activeAthleteId: loadActiveAthleteId(),
+    }
   }
-  if (local.athletes.length > 0) await pushServerRoster(local)
-  return { athletes: local.athletes, activeAthleteId: local.activeAthleteId }
+  const applied = applyRosterSnapshot(server)
+  enableServerRosterPush()
+  const merged = localRosterSnapshot()
+  if (merged.athletes.length > 0) await pushServerRoster(merged)
+  return applied
 }
