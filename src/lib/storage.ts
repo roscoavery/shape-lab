@@ -630,6 +630,10 @@ export const APP_TABS = [
 ] as const
 export type AppTab = (typeof APP_TABS)[number]
 
+export function isRyanOnlyTab(tab: AppTab): boolean {
+  return tab === 'tasks' || tab === 'coach'
+}
+
 export function loadTab(): AppTab {
   try {
     const v = localStorage.getItem(TAB_KEY)
@@ -637,7 +641,7 @@ export function loadTab(): AppTab {
   } catch {
     /* private mode */
   }
-  return 'tasks'
+  return 'tasks2'
 }
 
 export function saveTab(tab: AppTab) {

@@ -289,8 +289,7 @@ export function EducationPanel({
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           {!athleteId ? (
             <p className="text-sm text-[var(--muted)]">
-              Select an athlete on the Tasks tab first — their hit photos show up here, grouped by
-              shape.
+              Unlock a profile first — their hit photos show up here, grouped by shape.
             </p>
           ) : (
             <HitFolder captures={hits} athleteName={athleteName} />

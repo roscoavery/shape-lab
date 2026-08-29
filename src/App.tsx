@@ -1,7 +1,7 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Network | Research | Coach | Profiles | About
+ * Tabs: Tasks (Ryan) | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Network | Research | Coach (Ryan) | Profiles | About
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -54,6 +54,7 @@ import {
   loadAttempts,
   loadReferencePhotos,
   loadSettings,
+  isRyanOnlyTab,
   loadTab,
   loadTaskProgress,
   saveActiveAthleteId,
@@ -90,7 +91,14 @@ import type {
 
 export default function App() {
   const camera = usePoseCamera()
-  const [tab, setTab] = useState<AppTab>(() => loadTab())
+  const [tab, setTab] = useState<AppTab>(() => {
+    const saved = loadTab()
+    if (!isRyanOnlyTab(saved)) return saved
+    const id = loadActiveAthleteId()
+    if (!id || !isProfileUnlocked(id)) return 'tasks2'
+    const roster = ensureRyanInAthletes(loadAthletes())
+    return isRyanAthlete(roster.find((a) => a.id === id) ?? null) ? saved : 'tasks2'
+  })
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
@@ -237,6 +245,11 @@ export default function App() {
     if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
   }, [tab])
 
+  useEffect(() => {
+    const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
+    if (!ryan && isRyanOnlyTab(tab)) setTab('tasks2')
+  }, [athletes, activeAthleteId, tab])
+
   useEffect(
     () => () => {
       if (hitPreviewUrl) URL.revokeObjectURL(hitPreviewUrl)
@@ -250,6 +263,8 @@ export default function App() {
   }, [cameraTab, camera.running, camera.stop])
 
   const goTab = (id: AppTab) => {
+    const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
+    if (isRyanOnlyTab(id) && !ryan) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -474,7 +489,9 @@ export default function App() {
               ['history', 'Profiles'],
               ['about', 'About'],
             ] as const
-          ).map(([id, label]) => (
+          )
+            .filter(([id]) => ryanEdit || !isRyanOnlyTab(id))
+            .map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -496,7 +513,7 @@ export default function App() {
         </nav>
       </header>
 
-      {tab === 'tasks' && (
+      {ryanEdit && tab === 'tasks' && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
           <TasksWorkspace
             shape={shape}
@@ -749,7 +766,7 @@ export default function App() {
         />
       )}
 
-      {tab === 'coach' && (
+      {ryanEdit && tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-3">
             <CameraStage
@@ -851,7 +868,9 @@ export default function App() {
               Fellow coaches create a coach profile on Profiles, keep their own Compare
               collections, and use Classes, Feed, Network, and Research. Ryan stays gym admin —
               only that profile edits the shared Compare library, shape descriptions,
-              and picture sizes.
+              and picture sizes. The first <strong className="text-[var(--text)]">Tasks</strong>{' '}
+              tab and <strong className="text-[var(--text)]">Coach</strong> stay hidden unless
+              Ryan is unlocked.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
