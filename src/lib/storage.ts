@@ -379,11 +379,14 @@ function inferAutoKey(item: HomeworkItem): string | undefined {
 /** One card per athlete + drill. Safari / Strict Mode used to keep seeding extras. */
 export function homeworkDedupeKey(
   item: Pick<HomeworkItem, 'athleteId' | 'shapeId'> &
-    Partial<Pick<HomeworkItem, 'autoKey' | 'source'>>,
+    Partial<Pick<HomeworkItem, 'autoKey' | 'source' | 'customLabel'>>,
 ): string {
   const aid = item.athleteId || '_'
   const auto = inferAutoKey(item as HomeworkItem)
   if (auto === 'hollow' || item.autoKey === 'hollow') return `${aid}::hollow`
+  const typed = item.customLabel?.trim().toLowerCase()
+  if (typed) return `${aid}::typed:${typed}`
+  if (item.shapeId.startsWith('custom:')) return `${aid}::${item.shapeId}`
   return `${aid}::${item.shapeId}`
 }
 

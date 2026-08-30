@@ -29,7 +29,8 @@ import { OverlayStillProvider } from './components/OverlayStillContext'
 import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
-import { TodayDashboard } from './components/today/TodayDashboard'
+import { HomeDashboard } from './components/lesson/HomeDashboard'
+import { LessonWorkspace } from './components/lesson/LessonWorkspace'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
@@ -67,6 +68,14 @@ import {
   type AppTab,
 } from './lib/storage'
 import { localRosterSnapshot, pushServerRoster, syncRosterWithServer, isServerRosterPushEnabled } from './lib/rosterSync'
+import {
+  getLessonPlan,
+  getLessonSession,
+  hydrateLessons,
+  loadActiveLessonId,
+  startLessonSession,
+  subscribeLessons,
+} from './lib/lessonStore'
 import {
   addIgStill,
   hydrateIgStills,
@@ -130,6 +139,12 @@ export default function App() {
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
   const [athleteGate, setAthleteGate] = useState<Athlete | null>(null)
+  const [lessonTick, setLessonTick] = useState(0)
+
+  useEffect(() => {
+    void hydrateLessons().then(() => setLessonTick((n) => n + 1))
+    return subscribeLessons(() => setLessonTick((n) => n + 1))
+  }, [])
 
   useEffect(() => {
     const unsub = subscribeIgStills((ig) => {
@@ -277,7 +292,18 @@ export default function App() {
     [hitPreviewUrl],
   )
 
-  const cameraTab = tab === 'tasks' || tab === 'tasks2' || tab === 'homework' || tab === 'coach'
+  const liveLesson = getLessonSession(loadActiveLessonId())
+  const liveLessonPlan = getLessonPlan(liveLesson?.planId ?? null)
+  const liveLessonAthlete = athletes.find((a) => a.id === liveLesson?.athleteId) ?? null
+  const liveLessonCoach = athletes.find((a) => a.id === liveLesson?.coachId) ?? null
+  void lessonTick
+
+  const cameraTab =
+    tab === 'tasks' ||
+    tab === 'tasks2' ||
+    tab === 'homework' ||
+    tab === 'coach' ||
+    tab === 'today'
   useEffect(() => {
     if (!cameraTab && camera.running) camera.stop()
   }, [cameraTab, camera.running, camera.stop])
@@ -287,6 +313,13 @@ export default function App() {
     if (isRyanOnlyTab(id) && !ryan) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
+  }
+
+  const startLesson = (athleteId: string, planId?: string | null) => {
+    const coach = athletes.find((a) => a.id === activeAthleteId) ?? null
+    if (!coach || !isCoachProfile(coach)) return
+    startLessonSession({ athleteId, coachId: coach.id, planId })
+    setLessonTick((n) => n + 1)
   }
 
   const saveIgStill = useCallback((draft: IgCropDraft) => {
@@ -497,14 +530,30 @@ export default function App() {
       </header>
 
       {tab === 'today' && (
-        <TodayDashboard
-          athletes={athletes}
-          activeAthleteId={activeAthleteId}
-          taskProgress={taskProgress}
-          attempts={attempts}
-          onSelectAthlete={requestSelectAthlete}
-          onGo={goTab}
-        />
+        liveLesson && !liveLesson.endedAt && liveLessonAthlete ? (
+          <LessonWorkspace
+            session={liveLesson}
+            plan={liveLessonPlan}
+            athleteName={liveLessonAthlete.name}
+            coachName={liveLessonCoach?.name ?? 'Coach'}
+            score={score}
+            currentShapeId={shape.id}
+            timingActive={timingActive}
+            landmarks={activeLandmarks}
+            onRequestShape={(shapeId) => onJumpToShape(shapeId)}
+            onEnsureCamera={() => camera.start()}
+            onGoCompare={() => goTab('compare')}
+            onSessionChange={() => setLessonTick((n) => n + 1)}
+            onEnded={() => setLessonTick((n) => n + 1)}
+          />
+        ) : (
+          <HomeDashboard
+            athletes={athletes}
+            signedIn={activeProfile}
+            onUnlock={(id) => requestSelectAthlete(id)}
+            onStartLesson={startLesson}
+          />
+        )
       )}
 
       {ryanEdit && tab === 'tasks' && (

@@ -12,17 +12,50 @@ import {
   SOURCE_LABEL,
   type AthleteVideo,
 } from '../lib/athleteVideoStore'
+import { emptyCoachSkillRef, saveCoachSkillRef, uploadCoachMedia } from '../lib/coachContentStore'
+import { ClipTrimmer } from './coach/ClipTrimmer'
+
+type Folder = 'all' | 'lesson' | 'compare' | 'practice'
 
 type Props = {
   athleteId: string | null
   athleteName: string | null
   refreshKey?: number
+  folder?: Folder
+  lessonId?: string | null
+  coachId?: string | null
+  coachName?: string | null
+  canSaveReference?: boolean
 }
 
-export function VideoLibraryPanel({ athleteId, athleteName, refreshKey = 0 }: Props) {
+async function copyToCoachMedia(src: string, ownerId: string, name: string): Promise<string> {
+  try {
+    const res = await fetch(src)
+    if (!res.ok) return src
+    const blob = await res.blob()
+    if (blob.size < 64 || blob.size > 48 * 1024 * 1024) return src
+    return await uploadCoachMedia({ ownerId, file: blob, name })
+  } catch {
+    return src
+  }
+}
+
+export function VideoLibraryPanel({
+  athleteId,
+  athleteName,
+  refreshKey = 0,
+  folder = 'all',
+  lessonId = null,
+  coachId = null,
+  coachName = null,
+  canSaveReference = false,
+}: Props) {
   const [videos, setVideos] = useState<AthleteVideo[]>([])
   const [playing, setPlaying] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [flash, setFlash] = useState<string | null>(null)
 
   useEffect(() => {
     if (!athleteId) {
@@ -37,26 +70,37 @@ export function VideoLibraryPanel({ athleteId, athleteName, refreshKey = 0 }: Pr
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
         <h3 className="text-lg font-semibold">Video library</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Unlock an athlete profile to see clips saved from delay cam, Compare, hold
-          challenge, and Tasks 2.
+          Unlock a profile to see clips saved from lessons, Compare, homework, and
+          class flows.
         </p>
       </section>
     )
   }
 
-  const groups = groupVideosByDate(videos)
+  const filtered = videos.filter((v) => {
+    if (lessonId) return v.lessonId === lessonId || v.source === 'lesson'
+    if (folder === 'lesson') return v.source === 'lesson' || Boolean(v.lessonId)
+    if (folder === 'compare') return v.source === 'compare-replay' || v.source === 'delay-record'
+    if (folder === 'practice') return v.source === 'hold' || v.source === 'tasks2'
+    return true
+  })
+  const groups = groupVideosByDate(filtered)
+  const showSave = Boolean(canSaveReference && coachId && coachName)
 
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <h3 className="text-lg font-semibold">Video library</h3>
       <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
         {athleteName ? `${athleteName} · ` : ''}
-        Recorded from delay cam after a skill, Compare replay, hold challenge, or
-        Tasks 2. Saved into this profile — any phone link or browser with the
-        passcode can play them. Grouped by date.
+        {folder === 'lesson'
+          ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
+          : 'Saved into this profile. Grouped by date.'}
       </p>
       {error && (
         <p className="mt-2 text-[12px] text-[var(--bad)]">{error}</p>
+      )}
+      {flash && (
+        <p className="mt-2 text-[12px] text-[var(--accent)]">{flash}</p>
       )}
       {groups.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--muted)]">
@@ -87,7 +131,7 @@ export function VideoLibraryPanel({ athleteId, athleteName, refreshKey = 0 }: Pr
                           {` · ${new Date(v.createdAt).toLocaleTimeString()}`}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => setPlaying(playing === v.id ? null : v.id)}
@@ -95,6 +139,17 @@ export function VideoLibraryPanel({ athleteId, athleteName, refreshKey = 0 }: Pr
                         >
                           {playing === v.id ? 'Hide' : 'Play'}
                         </button>
+                        {showSave && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSavingId(savingId === v.id ? null : v.id)
+                            }}
+                            className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-[11px]"
+                          >
+                            {savingId === v.id ? 'Cancel trim' : 'Save to references'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
@@ -115,6 +170,51 @@ export function VideoLibraryPanel({ athleteId, athleteName, refreshKey = 0 }: Pr
                         playsInline
                         className="max-h-72 w-full bg-black object-contain"
                       />
+                    )}
+                    {savingId === v.id && coachId && coachName && (
+                      <div className="px-3 pb-3">
+                        <ClipTrimmer
+                          src={v.url}
+                          defaultName={v.name.replace(/^Lesson · /, '')}
+                          busy={busy}
+                          onCancel={() => setSavingId(null)}
+                          onSave={({ name, notes, start, end }) => {
+                            setBusy(true)
+                            setError(null)
+                            void (async () => {
+                              try {
+                                const src = await copyToCoachMedia(
+                                  v.url,
+                                  coachId,
+                                  `${name}.mp4`,
+                                )
+                                const row = emptyCoachSkillRef(coachId, coachName)
+                                saveCoachSkillRef({
+                                  ...row,
+                                  name,
+                                  notes: notes || undefined,
+                                  src,
+                                  trimStart: start,
+                                  trimEnd: end,
+                                  lessonId: v.lessonId ?? lessonId ?? undefined,
+                                  athleteId,
+                                  athleteName: athleteName ?? undefined,
+                                })
+                                setFlash(`Saved “${name}” to skill references. Open Compare to play it with the UG clips.`)
+                                setSavingId(null)
+                              } catch (e) {
+                                setError(
+                                  e instanceof Error
+                                    ? e.message
+                                    : 'Could not save that clip as a reference.',
+                                )
+                              } finally {
+                                setBusy(false)
+                              }
+                            })()
+                          }}
+                        />
+                      </div>
                     )}
                   </li>
                 ))}

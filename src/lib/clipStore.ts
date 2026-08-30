@@ -27,6 +27,9 @@ export type RefItem = {
   keywords?: string[]
   /** Instagram / TikTok handle of the account that originally posted the clip. */
   postedBy?: string
+  /** Playback window for coach skill references saved from a lesson clip. */
+  trimStart?: number
+  trimEnd?: number
   createdAt: string
 }
 
