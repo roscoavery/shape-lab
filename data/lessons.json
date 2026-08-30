@@ -1,0 +1,249 @@
+{
+  "kind": "shape-lab-lessons",
+  "version": 1,
+  "exportedAt": "2026-08-30T06:44:08.949Z",
+  "plans": [
+    {
+      "id": "lpn_mtesjtgt_8k7xgp",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "coachId": "ath_mtcjvcfu_e37tqy",
+      "title": "Lesson plan",
+      "blocks": [
+        {
+          "id": "blk_mtesk7s8_hj45c9",
+          "kind": "hold",
+          "title": "Handstand",
+          "shapeId": "handstand",
+          "targetSeconds": 20,
+          "formStandard": 75
+        }
+      ],
+      "createdAt": "2026-08-29T19:46:18.221Z",
+      "updatedAt": "2026-08-29T19:46:45.120Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "les_mteskmd5_auoqq0",
+      "planId": "lpn_mtesjtgt_8k7xgp",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "coachId": "ath_mtcjvcfu_e37tqy",
+      "startedAt": "2026-08-29T19:46:55.673Z",
+      "notes": [
+        {
+          "id": "lnt_mteslahk_g79sxv",
+          "text": "Great focus on handstand form today!",
+          "createdAt": "2026-08-29T19:47:26.936Z",
+          "context": "general"
+        }
+      ],
+      "holds": [],
+      "endedAt": "2026-08-29T19:50:26.951Z"
+    },
+    {
+      "id": "les_mtesqo0v_37xm90",
+      "planId": "lpn_mtesjtgt_8k7xgp",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "coachId": "ath_mtcjvcfu_e37tqy",
+      "startedAt": "2026-08-29T19:51:37.759Z",
+      "notes": [],
+      "holds": [],
+      "endedAt": "2026-08-29T20:14:44.341Z"
+    },
+    {
+      "id": "les_mtesz7hx_ge4eao",
+      "planId": null,
+      "athleteId": "ath_mt9tj1tv_1vr1ec",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-29T19:58:16.245Z",
+      "notes": [
+        {
+          "id": "lnt_mteuy4qn_lch09v",
+          "text": "Press arms to mat \nPoint toes",
+          "createdAt": "2026-08-29T20:53:25.247Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "pike_open_candlestick",
+          "topicLabel": "Pike (open shoulders) → Candlestick"
+        },
+        {
+          "id": "lnt_mteuxr50_69xzn0",
+          "text": "Hands past 12 on tuck shape",
+          "createdAt": "2026-08-29T20:53:07.620Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "pike_tuck_hollow_arch",
+          "topicLabel": "Pike (open shoulders) → Tuck → Hollow → Arch"
+        },
+        {
+          "id": "lnt_mteux38d_3adgqe",
+          "text": "Cover ears and look through hands ankles together",
+          "createdAt": "2026-08-29T20:52:36.637Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "pike_hollow_arch",
+          "topicLabel": "Pike (zombie arms) → Hollow (arms down) → Arch (supine)"
+        },
+        {
+          "id": "lnt_mteuwjhn_rzhaff",
+          "text": "Straight knees on zombie \nArmpits in front of toes",
+          "createdAt": "2026-08-29T20:52:11.051Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "c_passe_cartwheel_zombie",
+          "topicLabel": "C Shape → Passé → Cartwheel step-in → Zombie"
+        },
+        {
+          "id": "lnt_mteuw0tj_0a2uoy",
+          "text": "Nice",
+          "createdAt": "2026-08-29T20:51:46.855Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "mc_cartwheel_lever_lunge",
+          "topicLabel": "Mountain Climber → Cartwheel → Landing lunge"
+        },
+        {
+          "id": "lnt_mteuvb0z_4jeanp",
+          "text": "Hand position on cartwheel\nStraight knees\nLook through armpit",
+          "createdAt": "2026-08-29T20:51:13.427Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "lunge_cartwheel_land",
+          "topicLabel": "Starting lunge → Cartwheel → Landing lunge"
+        },
+        {
+          "id": "lnt_mteuulib_4g35ei",
+          "text": "Don’t close too far on mc\nHead in point toes on hs \nOpen shoulders on lever \nBack foot flat on landing",
+          "createdAt": "2026-08-29T20:50:40.355Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "mc_hs_lever_lunge",
+          "topicLabel": "Mountain Climber → Handstand → Lever → Landing lunge"
+        },
+        {
+          "id": "lnt_mteutmox_to718y",
+          "text": "Hold open shoulders. \nRemember back foot flattens on landing lunge",
+          "createdAt": "2026-08-29T20:49:55.233Z",
+          "context": "general",
+          "topicKind": "sequence",
+          "topicId": "lunge_lever_hs_lunge",
+          "topicLabel": "Starting lunge → Lever → Handstand → Landing lunge"
+        }
+      ],
+      "holds": [
+        {
+          "shapeId": "handstand",
+          "shapeName": "Handstand",
+          "totalHoldSeconds": 0,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "camera",
+          "id": "lhd_mtet0drn_mkbzz2",
+          "createdAt": "2026-08-29T19:59:11.027Z"
+        },
+        {
+          "shapeId": "handstand",
+          "shapeName": "Handstand",
+          "totalHoldSeconds": 0,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "camera",
+          "id": "lhd_mtet0c5t_ztjp3r",
+          "createdAt": "2026-08-29T19:59:08.945Z"
+        },
+        {
+          "shapeId": "handstand",
+          "shapeName": "Handstand",
+          "totalHoldSeconds": 0,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "camera",
+          "id": "lhd_mtet0ag7_y2h7gm",
+          "createdAt": "2026-08-29T19:59:06.727Z"
+        }
+      ],
+      "endedAt": "2026-08-29T23:26:06.658Z"
+    },
+    {
+      "id": "les_mtetphmw_f0ptu6",
+      "planId": "lpn_mtesjtgt_8k7xgp",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-29T20:18:42.440Z",
+      "notes": [
+        {
+          "id": "lnt_mtetrx7t_it4ti4",
+          "text": "Heel stays down until the hands.",
+          "createdAt": "2026-08-29T20:20:35.945Z",
+          "context": "general",
+          "topicKind": "custom",
+          "topicLabel": "Cartwheel step-in"
+        },
+        {
+          "id": "lnt_mtetqx3k_zo1ctj",
+          "text": "Keep ribs in, eyes on thumbs.",
+          "createdAt": "2026-08-29T20:19:49.136Z",
+          "context": "general",
+          "topicKind": "shape",
+          "topicId": "handstand",
+          "topicLabel": "Handstand"
+        }
+      ],
+      "holds": [
+        {
+          "shapeId": "handstand",
+          "shapeName": "Handstand",
+          "totalHoldSeconds": 28.6,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "manual",
+          "topicKind": "shape",
+          "id": "lhd_mtetqfmf_xsp6da",
+          "createdAt": "2026-08-29T20:19:26.487Z"
+        }
+      ],
+      "endedAt": "2026-08-29T20:20:57.375Z"
+    },
+    {
+      "id": "les_mteu72by_crsary",
+      "planId": "lpn_mtesjtgt_8k7xgp",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-29T20:32:22.414Z",
+      "notes": [
+        {
+          "id": "lnt_mteubaw1_pll290",
+          "text": "Remember ribs in.",
+          "createdAt": "2026-08-29T20:35:40.129Z",
+          "context": "general",
+          "topicKind": "custom",
+          "topicLabel": "Handstand"
+        }
+      ],
+      "holds": [
+        {
+          "shapeId": "handstand",
+          "shapeName": "Handstand",
+          "totalHoldSeconds": 29.8,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "manual",
+          "topicKind": "shape",
+          "id": "lhd_mteu84v3_ufe80v",
+          "createdAt": "2026-08-29T20:33:12.351Z"
+        }
+      ],
+      "endedAt": "2026-08-29T20:34:21.808Z"
+    },
+    {
+      "id": "les_mtezn8ip_o37rkn",
+      "planId": null,
+      "athleteId": "ath_mtef44ic_bdqq0w",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-29T23:04:55.009Z",
+      "notes": [],
+      "holds": [],
+      "endedAt": "2026-08-30T04:27:19.055Z"
+    }
+  ]
+}

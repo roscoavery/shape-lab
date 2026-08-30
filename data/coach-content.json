@@ -1,0 +1,180 @@
+{
+  "kind": "shape-lab-coach-content",
+  "version": 1,
+  "exportedAt": "2026-08-30T06:44:09.035Z",
+  "shapes": [
+    {
+      "id": "csh_mteud99l_o9gti1",
+      "coachId": "ath_ryan",
+      "coachName": "Ryan",
+      "name": "Test lever hold",
+      "description": "Ryan test shape.",
+      "bodyPosition": "Chest on thigh.",
+      "progressions": [
+        {
+          "id": "prg_mteuephi_4u11x0",
+          "title": "Wall first",
+          "notes": "Hold 10s"
+        }
+      ],
+      "media": [],
+      "createdAt": "2026-08-29T20:37:11.337Z",
+      "updatedAt": "2026-08-29T20:39:11.344Z"
+    }
+  ],
+  "references": [],
+  "warmups": [
+    {
+      "id": "wup_mteugjja_gihwle",
+      "coachId": "ath_ryan",
+      "coachName": "Ryan",
+      "title": "Ryan stretch",
+      "description": "Morning mat.",
+      "steps": [
+        {
+          "id": "wst_mteuhn2s_pbnnx5",
+          "title": "Pike fold",
+          "notes": "Breathe 5."
+        }
+      ],
+      "createdAt": "2026-08-29T20:39:44.614Z",
+      "updatedAt": "2026-08-29T20:41:32.964Z"
+    },
+    {
+      "id": "wup_mtfa8o64_7b3drt",
+      "coachId": "ath_ryan",
+      "coachName": "Ryan",
+      "title": "Ryan stretch/warm up (classes)",
+      "description": "Before tumbling ",
+      "steps": [
+        {
+          "id": "wst_mtfaa03t_fsh50z",
+          "title": "20 jumping jacks ",
+          "notes": ""
+        },
+        {
+          "id": "wst_mtfaabwx_8h6g3h",
+          "title": "20 rebound jumps ",
+          "notes": ""
+        },
+        {
+          "id": "wst_mtfaak84_xuv7pe",
+          "title": "Standing straddle left right middle ",
+          "notes": "Straight knees ",
+          "holdSeconds": 10
+        },
+        {
+          "id": "wst_mtfabzhe_o35c8e",
+          "title": "Single leg elephant walk 5 each side ",
+          "notes": "Start feet together \nTake one leg out in front \nBend front knee\nFingers to the ground (add thumbs or palms if you can)\nStraighten front leg and bend 5 times 5 second holds ",
+          "holdSeconds": 5
+        },
+        {
+          "id": "wst_mtfaen6n_zi4pb8",
+          "title": "Get ready for splits ",
+          "notes": "Sit up tall on knees \nTake one leg out in front with hips squared and level \nPut ball of front foot where heel is \nPush hips to front heel (chest up ribs in) \nSqueeze hamstring towards calf \n",
+          "holdSeconds": 10
+        },
+        {
+          "id": "wst_mtfak10y_si8s0t",
+          "title": "Half split ",
+          "notes": "Straighten front knee and go to hands \nSlide to half split \nCheck hips ",
+          "holdSeconds": 2
+        },
+        {
+          "id": "wst_mtfalby6_yt9bbv",
+          "title": "3/4 split",
+          "notes": "Back to hands \nSlide to 3/4 splits \nCheck hips \nlean back with ribs in and press down on both feet \nTake pressure off of back knee ",
+          "holdSeconds": 10
+        },
+        {
+          "id": "wst_mtfan6v0_hwa1nv",
+          "title": "Slide as far as you go ",
+          "notes": "Keep hips squared \nBack knee down\nShoelaces on floor \n",
+          "holdSeconds": 10
+        },
+        {
+          "id": "wst_mtfanyqt_hxdna4",
+          "title": "Repeat on the other leg ",
+          "notes": ""
+        },
+        {
+          "id": "wst_mtfaobcf_hvjr2u",
+          "title": "Middle split ",
+          "notes": ""
+        },
+        {
+          "id": "wst_mtfaoi3a_fq60py",
+          "title": "Roll wrists ",
+          "notes": "5 circles out 5 in with bent elbows \n5 our 5 in straight elbows "
+        },
+        {
+          "id": "wst_mtfap8zj_vifwvw",
+          "title": "Hands and knees ",
+          "notes": "Fingers out lean side to side \nFlip them and be gentle (straight elbows) \nPoint them toward you and lean back (palms down) \nFlip them and be gentle (straight elbows)  try to point the inside of elbow forward \nFlip them and lean over them (go side to side and lean over all fingers) "
+        },
+        {
+          "id": "wst_mtfasfux_90vqnk",
+          "title": "Bridge (rainbow or long) ",
+          "notes": "Shake them out and lay on back "
+        },
+        {
+          "id": "wst_mtfat5g5_ol7jtm",
+          "title": "Bridge again (rainbow) ",
+          "notes": "Bridge push ups at least 10 "
+        },
+        {
+          "id": "wst_mtfatfz6_btsvax",
+          "title": "Pike hollow arch ",
+          "notes": ""
+        },
+        {
+          "id": "wst_mtfav347_uflr5z",
+          "title": "Pike tuck hollow arch x3",
+          "notes": "Repeat tuck hollow 3 times each round before arch "
+        },
+        {
+          "id": "wst_mtfawi87_qbhjxi",
+          "title": "V ups ",
+          "notes": "Pike \nTuck \nStraighten knees \nTap shins \nTap lower back to ground \n8-20 reps "
+        },
+        {
+          "id": "wst_mtfaxut7_aydi3c",
+          "title": "Side planks left and right ",
+          "notes": "",
+          "holdSeconds": 30
+        },
+        {
+          "id": "wst_mtfay5v5_g0zel9",
+          "title": "Superman hold ",
+          "notes": "",
+          "holdSeconds": 30
+        },
+        {
+          "id": "wst_mtfaygu1_a92alv",
+          "title": "Hollow hold ",
+          "notes": "",
+          "holdSeconds": 45
+        },
+        {
+          "id": "wst_mtfaymx5_sdroyz",
+          "title": "Candle sticks ",
+          "notes": "5 reps "
+        },
+        {
+          "id": "wst_mtfazvnj_71pirw",
+          "title": "",
+          "notes": ""
+        }
+      ],
+      "createdAt": "2026-08-30T04:01:31.228Z",
+      "updatedAt": "2026-08-30T04:23:16.181Z"
+    }
+  ],
+  "stars": [
+    {
+      "athleteId": "ath_ryan",
+      "warmupId": "wup_mteugjja_gihwle"
+    }
+  ]
+}

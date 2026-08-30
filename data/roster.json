@@ -1,7 +1,7 @@
 {
   "kind": "shape-lab-roster",
   "version": 1,
-  "exportedAt": "2026-08-29T18:59:28.738Z",
+  "exportedAt": "2026-08-30T14:30:08.921Z",
   "athletes": [
     {
       "id": "ath_ryan",
@@ -19,70 +19,6 @@
       "role": "coach"
     },
     {
-      "id": "ath_mtdpolgg_vwoxsa",
-      "name": "Ellie Hunt",
-      "createdAt": "2026-08-29T01:38:16.098Z",
-      "passcodeHash": "67817c19a87d7dde2d0df51631e97e145024b378aee09a9a5a2d2d26878c1167",
-      "role": "athlete"
-    },
-    {
-      "id": "ath_mtdrh90l_rhmvsa",
-      "name": "Jordan",
-      "createdAt": "2026-08-29T02:28:32.613Z",
-      "passcodeHash": "2706c09ab1a5c480b1aca5b5c920ff4d479b0d58e96cf6de46e923b1c77c1d74",
-      "role": "coach"
-    },
-    {
-      "id": "ath_mtdtf1v6_qfj63j",
-      "name": "Kai Lane",
-      "createdAt": "2026-08-29T03:22:49.266Z",
-      "passcodeHash": "5512acdb48c5f043d2771adac43d52bcea01912081460933333a096051ff1b65",
-      "role": "athlete"
-    },
-    {
-      "id": "ath_mtd7wbut_bd00j3",
-      "name": "Maya",
-      "createdAt": "2026-08-28T17:20:23.813Z",
-      "passcodeHash": "00a01f06d80feee277aa8347e9e3ad43ab10930f72df2e43eed8dcf2ac24ece8"
-    },
-    {
-      "id": "ath_mtdta5ui_bc0oqy",
-      "name": "Sam Lane",
-      "createdAt": "2026-08-29T03:19:01.147Z",
-      "passcodeHash": "a52226703b045b8fb08e86683d192a99d1563d3f48f779837b431e2f52fef6dd",
-      "role": "coach"
-    },
-    {
-      "id": "ath_mt9tj1tv_1vr1ec",
-      "name": "Test",
-      "createdAt": "2026-08-26T08:14:51.139Z"
-    },
-    {
-      "id": "ath_mt946zgf_p3ml85",
-      "name": "Saved profile p3ml85",
-      "createdAt": "2026-08-26T03:34:22.118Z",
-      "role": "athlete"
-    },
-    {
-      "id": "ath_mt91oaiv_nyw9y7",
-      "name": "Saved profile nyw9y7",
-      "createdAt": "2026-08-26T03:34:19.535Z",
-      "role": "athlete"
-    },
-    {
-      "id": "ath_mtcjvcfu_e37tqy",
-      "name": "Saved profile e37tqy",
-      "createdAt": "2026-08-28T06:07:47.133Z",
-      "role": "coach",
-      "passcodeHash": "de36ed0ac1c2b7f37a406fba9faa6d138c0afb44107db8252d2fe16988bb501d"
-    },
-    {
-      "id": "ath_mtcim8qd_8kzqid",
-      "name": "Saved profile 8kzqid",
-      "createdAt": "2026-08-28T05:32:42.820Z",
-      "role": "coach"
-    },
-    {
       "id": "ath_mtef44ic_bdqq0w",
       "name": "Ellie Hunt",
       "createdAt": "2026-08-29T13:30:11.029Z",
@@ -90,7 +26,7 @@
       "role": "athlete"
     }
   ],
-  "activeAthleteId": "ath_mtcjvcfu_e37tqy",
+  "activeAthleteId": "ath_ryan",
   "homework": [
     {
       "id": "hw_mt9jich2_vvektx",
@@ -629,6 +565,63 @@
       "targetSeconds": 30,
       "notes": "Stomach-to-wall preferred. Same body standards as freestanding.",
       "createdAt": "2026-08-29T13:30:11.046Z"
+    },
+    {
+      "id": "hw_mtettwql_m9vtd2",
+      "athleteId": "ath_mtettwqc_7u0aa4",
+      "shapeId": "hollow_arms_down",
+      "source": "auto",
+      "autoKey": "hollow",
+      "targetSeconds": 60,
+      "notes": "Start in a zombie-arm pike and inch back until the lowest part of the lower back touches the ground. Flatten the low back, then let the feet inch off. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears. Work toward a minute.",
+      "createdAt": "2026-08-29T20:22:08.637Z"
+    },
+    {
+      "id": "hw_mtettwql_c33rkh",
+      "athleteId": "ath_mtettwqc_7u0aa4",
+      "shapeId": "superman",
+      "source": "auto",
+      "autoKey": "superman",
+      "targetSeconds": 30,
+      "notes": "Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength. Work 30s toward a minute.",
+      "createdAt": "2026-08-29T20:22:08.637Z"
+    },
+    {
+      "id": "hw_mtettwql_wu8mqn",
+      "athleteId": "ath_mtettwqc_7u0aa4",
+      "shapeId": "side_plank",
+      "source": "auto",
+      "autoKey": "side_plank",
+      "targetSeconds": 30,
+      "notes": "Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Work 30s toward a minute.",
+      "createdAt": "2026-08-29T20:22:08.637Z"
+    },
+    {
+      "id": "hw_mtettwql_lgo0f9",
+      "athleteId": "ath_mtettwqc_7u0aa4",
+      "shapeId": "wall_handstand",
+      "source": "auto",
+      "autoKey": "wall_handstand",
+      "targetSeconds": 30,
+      "notes": "Stomach-to-wall preferred. Same body standards as freestanding.",
+      "createdAt": "2026-08-29T20:22:08.637Z"
+    },
+    {
+      "id": "hw_mtew1r3h_ir50eb",
+      "athleteId": "ath_ryan",
+      "shapeId": "custom:round_off_bhs",
+      "customLabel": "round-off BHS",
+      "source": "coach",
+      "targetSeconds": 20,
+      "createdAt": "2026-08-29T21:24:13.805Z"
+    },
+    {
+      "id": "hw_mtf0ofgv_o7azwh",
+      "athleteId": "ath_mtd7wbut_bd00j3",
+      "shapeId": "custom:work_shapes",
+      "customLabel": "Work shapes",
+      "source": "coach",
+      "createdAt": "2026-08-29T23:33:50.287Z"
     }
   ],
   "homeworkLogs": [],
@@ -648,13 +641,13 @@
       "athleteId": "ath_ryan",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-29T18:59:27.294Z"
+      "updatedAt": "2026-08-30T14:30:07.907Z"
     },
     "ath_mtdtwrt0_0imz3e": {
       "athleteId": "ath_mtdtwrt0_0imz3e",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-29T18:59:27.294Z"
+      "updatedAt": "2026-08-30T14:30:07.907Z"
     },
     "ath_mtdpolgg_vwoxsa": {
       "athleteId": "ath_mtdpolgg_vwoxsa",
@@ -720,7 +713,7 @@
       "athleteId": "ath_mtef44ic_bdqq0w",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-29T18:59:27.295Z"
+      "updatedAt": "2026-08-30T14:30:07.907Z"
     }
   },
   "attempts": [
@@ -1915,7 +1908,20 @@
       }
     ],
     "ath_mtdta5ui_bc0oqy": [],
-    "ath_mtdtwrt0_0imz3e": []
+    "ath_mtdtwrt0_0imz3e": [],
+    "ath_mtd7wbut_bd00j3": []
   },
-  "removedAthleteIds": []
+  "removedAthleteIds": [
+    "ath_mtettwqc_7u0aa4",
+    "ath_mtdpolgg_vwoxsa",
+    "ath_mt9tj1tv_1vr1ec",
+    "ath_mt946zgf_p3ml85",
+    "ath_mt91oaiv_nyw9y7",
+    "ath_mtcjvcfu_e37tqy",
+    "ath_mtcim8qd_8kzqid",
+    "ath_mtdta5ui_bc0oqy",
+    "ath_mtd7wbut_bd00j3",
+    "ath_mtdtf1v6_qfj63j",
+    "ath_mtdrh90l_rhmvsa"
+  ]
 }
