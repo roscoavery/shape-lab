@@ -17,6 +17,7 @@ export type AthleteVideoSource =
   | 'hold'
   | 'tasks2'
   | 'form-analysis'
+  | 'lesson'
 
 export type DiskAthleteVideo = {
   id: string
@@ -28,6 +29,7 @@ export type DiskAthleteVideo = {
   sizeBytes: number
   mime: string
   file: string
+  lessonId?: string
 }
 
 export type DiskAthleteVideoLibrary = {
@@ -50,6 +52,7 @@ const SOURCES = new Set<AthleteVideoSource>([
   'hold',
   'tasks2',
   'form-analysis',
+  'lesson',
 ])
 
 function safeId(id: string): string | null {
@@ -124,6 +127,7 @@ export async function addAthleteVideoFromBody(params: {
   durationSec?: number | null
   mime: string
   buf: Buffer
+  lessonId?: string
 }): Promise<DiskAthleteVideo | null> {
   const id = safeId(params.id)
   const athleteId = safeId(params.athleteId)
@@ -147,6 +151,7 @@ export async function addAthleteVideoFromBody(params: {
     sizeBytes: params.buf.length,
     mime,
     file,
+    ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
   }
   const meta = await readAthleteVideoMeta()
   const others = meta.videos.filter((v) => v.id !== id)

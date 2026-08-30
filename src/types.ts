@@ -365,8 +365,10 @@ export type HomeworkSource = 'auto' | 'coach' | 'athlete'
 export type HomeworkItem = {
   id: string
   athleteId: string
-  /** Shape being trained (from src/config/shapes.ts) */
+  /** Shape being trained (from src/config/shapes.ts), or `custom:…` when typed. */
   shapeId: string
+  /** Coach-typed drill name when this is not a scored gym shape. */
+  customLabel?: string
   source: HomeworkSource
   /**
    * Stable key for auto items ('hollow' | 'superman' | 'side_plank' |
@@ -424,6 +426,132 @@ export type HomeworkLog = {
   score: number
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
+}
+
+export type LessonBlockKind = 'hold' | 'compare' | 'talk'
+
+export type LessonBlock = {
+  id: string
+  kind: LessonBlockKind
+  title: string
+  notes?: string
+  shapeId?: string
+  targetSeconds?: number
+  formStandard?: number
+}
+
+export type LessonPlan = {
+  id: string
+  athleteId: string
+  coachId: string
+  title: string
+  blocks: LessonBlock[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type LessonNoteTopicKind = 'shape' | 'sequence' | 'custom' | 'coach'
+
+export type LessonNote = {
+  id: string
+  text: string
+  createdAt: string
+  context: 'general' | 'compare' | 'hold'
+  topicKind?: LessonNoteTopicKind
+  topicId?: string
+  topicLabel?: string
+}
+
+export type LessonHold = {
+  id: string
+  shapeId: string
+  shapeName: string
+  createdAt: string
+  totalHoldSeconds: number
+  properHoldSeconds: number
+  score: number
+  method: 'camera' | 'manual'
+  topicKind?: LessonNoteTopicKind
+}
+
+export type LessonSession = {
+  id: string
+  planId: string | null
+  athleteId: string
+  coachId: string
+  startedAt: string
+  endedAt?: string
+  notes: LessonNote[]
+  holds: LessonHold[]
+}
+
+export type CoachProgression = {
+  id: string
+  title: string
+  notes: string
+}
+
+export type CoachShapeMedia = {
+  id: string
+  kind: 'photo' | 'video'
+  src: string
+  crop?: { x: number; y: number; w: number; h: number }
+  label?: string
+}
+
+export type CoachShape = {
+  id: string
+  coachId: string
+  coachName: string
+  name: string
+  description: string
+  bodyPosition: string
+  scoreShapeId?: string
+  progressions: CoachProgression[]
+  media: CoachShapeMedia[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type WarmupStep = {
+  id: string
+  title: string
+  notes: string
+  holdSeconds?: number
+  mediaKind?: 'photo' | 'video'
+  mediaSrc?: string
+}
+
+export type WarmupGuide = {
+  id: string
+  coachId: string
+  coachName: string
+  title: string
+  description: string
+  steps: WarmupStep[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type WarmupStar = {
+  athleteId: string
+  warmupId: string
+}
+
+export type CoachSkillRef = {
+  id: string
+  coachId: string
+  coachName: string
+  name: string
+  notes?: string
+  src: string
+  trimStart?: number
+  trimEnd?: number
+  lessonId?: string
+  athleteId?: string
+  athleteName?: string
+  createdAt: string
+  updatedAt: string
 }
 
 /**

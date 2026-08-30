@@ -48,6 +48,9 @@ import {
   sendAthleteVideoFile,
   videosForClient,
 } from './athleteVideoDisk.ts'
+import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
+import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
+import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
@@ -69,6 +72,10 @@ const API_PATHS = new Set([
   '/api/social',
   '/api/discuss',
   '/api/coach-library',
+  '/api/lessons',
+  '/api/coach-content',
+  '/api/coach-media',
+  '/api/coach-media-file',
 ])
 
 function requestUrl(req: IncomingMessage): URL {
@@ -194,6 +201,7 @@ export async function handleShapeLabApi(
           : null,
         mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
         buf,
+        lessonId: url.searchParams.get('lessonId') ?? undefined,
       })
       if (!saved) {
         sendJson(res, 400, { error: 'Could not save that video.' })
@@ -433,6 +441,61 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/lessons') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readLessonsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeLessonsFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-content') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachContentFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeCoachContentFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-media') {
+    if (req.method === 'POST') {
+      const id = url.searchParams.get('id') ?? ''
+      const ownerId = url.searchParams.get('ownerId') ?? ''
+      const name = url.searchParams.get('name') ?? 'Media'
+      const mime = url.searchParams.get('mime') ?? req.headers['content-type'] ?? ''
+      try {
+        const buf = await readCoachMediaBuffer(req)
+        const saved = await addCoachMedia({ id, ownerId, name, mime, buf })
+        if (!saved) {
+          sendJson(res, 400, { error: 'Could not save that file.' })
+          return true
+        }
+        sendJson(res, 200, saved)
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Upload failed.' })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  if (path === '/api/coach-media-file') {
+    const id = url.searchParams.get('id') ?? ''
+    if (!(await sendCoachMediaFile(id, res))) {
+      sendJson(res, 404, { error: 'File not found' })
+    }
     return true
   }
   if (path === '/api/coach-library') {
