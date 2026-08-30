@@ -1,7 +1,8 @@
 /**
  * Shape Lab — main application shell
  *
- * Tabs: Tasks (Ryan) | Tasks 2 | Homework | Learn | Compare | Classes | Feed | Network | Research | Coach (Ryan) | Profiles | About
+ * Sections: Today | Practice | Videos | Learn | Team | More
+ * Existing Version 1 tools remain mounted under the new navigation shell.
  * Shape standards: src/config/shapes.ts
  * Curriculum: src/config/curriculum.ts
  * Tasks 2 scripts: src/config/tasks2.ts
@@ -10,6 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
+import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
@@ -97,7 +99,7 @@ export default function App() {
     const id = loadActiveAthleteId()
     if (!id || !isProfileUnlocked(id)) return 'tasks2'
     const roster = ensureRyanInAthletes(loadAthletes())
-    return isRyanAthlete(roster.find((a) => a.id === id) ?? null) ? saved : 'tasks2'
+    return isRyanAthlete(roster.find((a) => a.id === id) ?? null) ? saved : 'today'
   })
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
@@ -264,7 +266,7 @@ export default function App() {
 
   useEffect(() => {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
-    if (!ryan && isRyanOnlyTab(tab)) setTab('tasks2')
+    if (!ryan && isRyanOnlyTab(tab)) setTab('today')
   }, [athletes, activeAthleteId, tab])
 
   useEffect(
@@ -481,7 +483,7 @@ export default function App() {
     <ClipLoopsProvider>
     <FavoritesProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Shape Lab
@@ -490,45 +492,44 @@ export default function App() {
             Free browser gymnastics coaching prototype · MediaPipe Pose
           </p>
         </div>
-        <nav className="relative z-20 flex max-w-full shrink-0 gap-1 overflow-x-auto rounded-lg border border-[var(--panel-border)] bg-[var(--panel)] p-1">
-          {(
-            [
-              ['tasks', 'Tasks'],
-              ['tasks2', 'Tasks 2'],
-              ['homework', 'Homework'],
-              ['learn', 'Learn'],
-              ['compare', 'Compare'],
-              ['classes', 'Classes'],
-              ['feed', 'Feed'],
-              ['network', 'Network'],
-              ['research', 'Research'],
-              ['coach', 'Coach'],
-              ['history', 'Profiles'],
-              ['about', 'About'],
-            ] as const
-          )
-            .filter(([id]) => ryanEdit || !isRyanOnlyTab(id))
-            .map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              aria-current={tab === id ? 'page' : undefined}
-              onPointerDown={(e) => {
-                if (e.button !== 0) return
-                goTab(id)
-              }}
-              onClick={() => goTab(id)}
-              className={`shrink-0 rounded-md px-3 py-1.5 text-sm ${
-                tab === id
-                  ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                  : 'text-[var(--muted)] hover:text-[var(--text)]'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
       </header>
+
+      {tab === 'today' && (
+        <section className="mx-auto max-w-4xl rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 sm:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Today
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-[var(--text)]">
+            Coaching workspace
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
+            The Today lesson dashboard is the next rebuild milestone. All working
+            Version 1 tools are available now in their new sections.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {(
+              [
+                ['homework', 'Open Practice', 'Homework, class flows, holds, and body-position work'],
+                ['compare', 'Open Videos', 'Compare, delay camera, Replay Last, and Record'],
+                ['learn', 'Open Learn', 'Shapes, visual references, quizzes, and skill education'],
+              ] as const
+            ).map(([destination, label, description]) => (
+              <button
+                key={destination}
+                type="button"
+                onClick={() => goTab(destination)}
+                className="rounded-xl border border-[var(--panel-border)] bg-black/10 p-4 text-left hover:border-[var(--accent)]/50"
+              >
+                <span className="block font-semibold text-[var(--text)]">{label}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-[var(--muted)]">
+                  {description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {ryanEdit && tab === 'tasks' && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">

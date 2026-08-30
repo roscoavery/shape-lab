@@ -630,8 +630,11 @@ export function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-const TAB_KEY = 'shape-lab.tab.v1'
+// Keep Version 1's selected tab untouched so switching back to the protected
+// branch restores its own navigation state.
+const TAB_KEY = 'shape-lab.tab.v2-rebuild'
 export const APP_TABS = [
+  'today',
   'tasks',
   'tasks2',
   'homework',
@@ -658,7 +661,7 @@ export function loadTab(): AppTab {
   } catch {
     /* private mode */
   }
-  return 'tasks2'
+  return 'today'
 }
 
 export function saveTab(tab: AppTab) {

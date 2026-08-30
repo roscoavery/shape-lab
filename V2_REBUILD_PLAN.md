@@ -43,7 +43,7 @@ reimplemented and tested rather than blindly restored.
 - [x] Create and push `v2-rebuild`.
 - [x] Add this rebuild plan.
 - [x] Document the protected camera architecture in `CAMERA_ARCHITECTURE.md`.
-- [ ] Ryan confirms the recovery points and authorizes Phase 1.
+- [x] Ryan confirms the recovery points and authorizes Phase 1.
 
 ## Phase 1 — Navigation and safe shell
 
@@ -58,18 +58,18 @@ Target navigation:
 
 Checklist:
 
-- [ ] Add the new shell without deleting Version 1 screens or data.
-- [ ] Map Homework, Warm-up boards, Class flows, hold challenges, and
+- [x] Add the new shell without deleting Version 1 screens or data.
+- [x] Map Homework, Warm-up boards, Class flows, hold challenges, and
   body-position work into Practice.
-- [ ] Map Compare, delay camera, Replay Last, Record, references, saved clips,
+- [x] Map Compare, delay camera, Replay Last, Record, references, saved clips,
   and IG/reference library into Videos.
-- [ ] Map shape library, descriptions, references, quizzes, and skill education
+- [x] Map shape library, descriptions, references, quizzes, and skill education
   into Learn.
-- [ ] Map athlete/coach profiles, progress, assignments, and appropriate
+- [x] Map athlete/coach profiles, progress, assignments, and appropriate
   feed/network views into Team.
-- [ ] Map Research, profile/admin management, About, and administration into
+- [x] Map Research, profile/admin management, About, and administration into
   More.
-- [ ] Confirm direct access to migrated Version 1 functionality.
+- [x] Confirm direct access to migrated Version 1 functionality.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 2 — Today dashboard
