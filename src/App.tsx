@@ -29,6 +29,7 @@ import { OverlayStillProvider } from './components/OverlayStillContext'
 import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
+import { TodayDashboard } from './components/today/TodayDashboard'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
@@ -496,39 +497,14 @@ export default function App() {
       </header>
 
       {tab === 'today' && (
-        <section className="mx-auto max-w-4xl rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 sm:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-            Today
-          </p>
-          <h2 className="mt-2 text-2xl font-bold text-[var(--text)]">
-            Coaching workspace
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
-            The Today lesson dashboard is the next rebuild milestone. All working
-            Version 1 tools are available now in their new sections.
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {(
-              [
-                ['homework', 'Open Practice', 'Homework, class flows, holds, and body-position work'],
-                ['compare', 'Open Videos', 'Compare, delay camera, Replay Last, and Record'],
-                ['learn', 'Open Learn', 'Shapes, visual references, quizzes, and skill education'],
-              ] as const
-            ).map(([destination, label, description]) => (
-              <button
-                key={destination}
-                type="button"
-                onClick={() => goTab(destination)}
-                className="rounded-xl border border-[var(--panel-border)] bg-black/10 p-4 text-left hover:border-[var(--accent)]/50"
-              >
-                <span className="block font-semibold text-[var(--text)]">{label}</span>
-                <span className="mt-1 block text-xs leading-relaxed text-[var(--muted)]">
-                  {description}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <TodayDashboard
+          athletes={athletes}
+          activeAthleteId={activeAthleteId}
+          taskProgress={taskProgress}
+          attempts={attempts}
+          onSelectAthlete={requestSelectAthlete}
+          onGo={goTab}
+        />
       )}
 
       {ryanEdit && tab === 'tasks' && (

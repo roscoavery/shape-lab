@@ -70,16 +70,16 @@ Checklist:
 - [x] Map Research, profile/admin management, About, and administration into
   More.
 - [x] Confirm direct access to migrated Version 1 functionality.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 2 — Today dashboard
 
-- [ ] Open the app into Today rather than Tasks.
-- [ ] Add today/lesson board and active lesson access.
-- [ ] Show recent athlete or lesson context.
-- [ ] Add quick access to camera/session tools.
-- [ ] Add lesson-plan and current-lesson entry points.
-- [ ] Preserve all Version 1 features.
+- [x] Open the app into Today rather than Tasks.
+- [x] Add today/lesson board and active lesson access.
+- [x] Show recent athlete or lesson context.
+- [x] Add quick access to camera/session tools.
+- [x] Add lesson-plan and current-lesson entry points.
+- [x] Preserve all Version 1 features.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 3 — Lesson system
