@@ -84,18 +84,18 @@ Checklist:
 
 ## Phase 3 — Lesson system
 
-- [ ] Lesson plans.
-- [ ] Live lesson workspace.
-- [ ] Lesson review.
-- [ ] Notes filed by skill.
-- [ ] Tap-to-file correction cues.
-- [ ] Assign homework directly from a lesson.
-- [ ] Associate lesson clips with athlete, skill, and date.
-- [ ] Trim lesson clips into named references.
-- [ ] Skill-reference videos in coach libraries.
-- [ ] Hide generic lunge, bridge, and arm-position lesson picks where
+- [x] Lesson plans.
+- [x] Live lesson workspace.
+- [x] Lesson review.
+- [x] Notes filed by skill.
+- [x] Tap-to-file correction cues.
+- [x] Assign homework directly from a lesson.
+- [x] Associate lesson clips with athlete, skill, and date.
+- [x] Trim lesson clips into named references.
+- [x] Skill-reference videos in coach libraries.
+- [x] Hide generic lunge, bridge, and arm-position lesson picks where
   appropriate without removing those shapes elsewhere.
-- [ ] Keep data models backward-compatible.
+- [x] Keep data models backward-compatible.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 4 — Practice
