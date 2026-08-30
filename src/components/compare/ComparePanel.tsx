@@ -5,7 +5,7 @@
  * reference or delay cam more of the window (videos stay object-contain).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
 import { CompareSplitBar } from './CompareSplitBar'
@@ -21,6 +21,7 @@ import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import type { ReferencePhoto } from '../../types'
+import type { AthleteVideoSource } from '../../lib/athleteVideoStore'
 
 type Props = {
   onSaveIgStill: (draft: IgCropDraft) => void
@@ -30,6 +31,9 @@ type Props = {
   athleteName?: string | null
   gymEditor?: boolean
   personalEditor?: boolean
+  videoSource?: AthleteVideoSource
+  lessonId?: string | null
+  lessonBar?: ReactNode
 }
 
 export function ComparePanel({
@@ -40,6 +44,9 @@ export function ComparePanel({
   athleteName = null,
   gymEditor = false,
   personalEditor = false,
+  videoSource,
+  lessonId = null,
+  lessonBar = null,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -154,7 +161,12 @@ export function ComparePanel({
                 className="min-h-0 overflow-hidden"
                 style={{ flex: `${1 - tbRatio} 1 0%` }}
               >
-                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+                <CameraPane
+                  athleteId={athleteId}
+                  onLibrarySaved={onLibrarySaved}
+                  videoSource={videoSource}
+                  lessonId={lessonId}
+                />
               </div>
             </div>
           ) : splitScreen && split === 'lr' ? (
@@ -175,7 +187,12 @@ export function ComparePanel({
                 className="min-h-0 min-w-0 overflow-hidden"
                 style={{ flex: `${1 - lrRatio} 1 0%` }}
               >
-                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+                <CameraPane
+                  athleteId={athleteId}
+                  onLibrarySaved={onLibrarySaved}
+                  videoSource={videoSource}
+                  lessonId={lessonId}
+                />
               </div>
             </div>
           ) : (
@@ -197,10 +214,16 @@ export function ComparePanel({
                 />
               </div>
               <div className={showCam ? 'h-full min-h-0 min-w-0' : 'hidden'}>
-                <CameraPane athleteId={athleteId} onLibrarySaved={onLibrarySaved} />
+                <CameraPane
+                  athleteId={athleteId}
+                  onLibrarySaved={onLibrarySaved}
+                  videoSource={videoSource}
+                  lessonId={lessonId}
+                />
               </div>
             </div>
           )}
+          {!fullscreen && lessonBar}
           {!fullscreen && (
             <StillOverlayPicker photos={referencePhotos} compact />
           )}
@@ -209,6 +232,8 @@ export function ComparePanel({
               athleteId={athleteId}
               athleteName={athleteName}
               refreshKey={libraryTick}
+              folder={lessonId ? 'lesson' : 'all'}
+              lessonId={lessonId}
             />
           )}
         </div>

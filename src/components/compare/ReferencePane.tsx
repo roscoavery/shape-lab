@@ -54,6 +54,8 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
+import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
+import { subscribeCoachContent } from '../../lib/coachContentStore'
 
 const KIND_LABEL: Record<RefItem['kind'], string> = {
   file: 'File',
@@ -109,6 +111,7 @@ export function ReferencePane({
     null,
   )
   const [dragId, setDragId] = useState<string | null>(null)
+  const [skillCols, setSkillCols] = useState<RefCollection[]>(() => collectionsFromSkillRefs())
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const { fullscreen, refRail } = useCompareLayout()
@@ -116,8 +119,12 @@ export function ReferencePane({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
 
+  const allCollections = useMemo(
+    () => [...skillCols, ...collections.filter((c) => !isVirtualCoachRefCollection(c))],
+    [skillCols, collections],
+  )
   const activeCollection =
-    collections.find((c) => c.id === activeCollectionId) ?? null
+    allCollections.find((c) => c.id === activeCollectionId) ?? null
   const activeItem =
     activeCollection?.items.find((i) => i.id === activeItemId) ?? null
   const searching = searchQuery.trim().length > 0
@@ -130,7 +137,7 @@ export function ReferencePane({
   const canEditLibrary = gymEditor || personalEditor
 
   const canEditCollection = (col: RefCollection | null) => {
-    if (!col) return false
+    if (!col || isVirtualCoachRefCollection(col)) return false
     if (gymEditor && isGymCollection(col)) return true
     if (personalEditor && profileId && col.athleteId === profileId) return true
     return false
@@ -557,6 +564,8 @@ export function ReferencePane({
     })
   }, [])
 
+  useEffect(() => subscribeCoachContent(() => setSkillCols(collectionsFromSkillRefs())), [])
+
   const allSocialItems = useMemo(
     () => collections.flatMap((c) => c.items.filter(isSocialVideoItem)),
     [collections],
@@ -682,7 +691,7 @@ export function ReferencePane({
   })
   const otherHits: OtherHit[] =
     searching || onlyFavorites
-      ? collections
+      ? allCollections
           .filter((c) => c.id !== activeCollectionId)
           .flatMap((collection) =>
             collection.items
@@ -702,7 +711,7 @@ export function ReferencePane({
   const allKeywords = useMemo(() => {
     const seen = new Set<string>()
     const out: string[] = []
-    for (const col of collections) {
+    for (const col of allCollections) {
       for (const item of col.items) {
         for (const tag of item.keywords ?? []) {
           const key = tag.toLowerCase()
@@ -714,7 +723,7 @@ export function ReferencePane({
     }
     out.sort((a, b) => a.localeCompare(b))
     return out
-  }, [collections])
+  }, [allCollections])
 
   const inputCls =
     'rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2.5 py-1.5 text-sm'
@@ -943,7 +952,7 @@ export function ReferencePane({
               onChange={(e) => {
                 const id = e.target.value
                 const item =
-                  collections.flatMap((c) => c.items).find((i) => i.id === id) ??
+                  allCollections.flatMap((c) => c.items).find((i) => i.id === id) ??
                   activeCollection?.items.find((i) => i.id === id)
                 if (item) void selectItem(item)
               }}
@@ -983,6 +992,15 @@ export function ReferencePane({
           className={inputCls}
           aria-label="Collection"
         >
+          {skillCols.length > 0 && (
+            <optgroup label="Coach skill references">
+              {skillCols.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.items.length})
+                </option>
+              ))}
+            </optgroup>
+          )}
           {collections.some(isGymCollection) && (
             <optgroup label="Gym (Ryan)">
               {collections.filter(isGymCollection).map((c) => (
@@ -1332,6 +1350,8 @@ export function ReferencePane({
           allowAbLoop
           fill={fullscreen}
           persistUrl={activeItem?.url}
+          loopA={activeItem?.trimStart ?? null}
+          loopB={activeItem?.trimEnd ?? null}
         />
       ) : (
         <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">

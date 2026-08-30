@@ -30,6 +30,7 @@ import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
+import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
@@ -71,11 +72,13 @@ import { localRosterSnapshot, pushServerRoster, syncRosterWithServer, isServerRo
 import {
   getLessonPlan,
   getLessonSession,
+  addLessonNote,
   hydrateLessons,
   loadActiveLessonId,
   startLessonSession,
   subscribeLessons,
 } from './lib/lessonStore'
+import { hydrateCoachContent } from './lib/coachContentStore'
 import {
   addIgStill,
   hydrateIgStills,
@@ -143,6 +146,7 @@ export default function App() {
 
   useEffect(() => {
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
+    void hydrateCoachContent()
     return subscribeLessons(() => setLessonTick((n) => n + 1))
   }, [])
 
@@ -773,10 +777,31 @@ export default function App() {
               onSaveIgStill={saveIgStill}
               referencePhotos={referencePhotos}
               persistIgToApp={ryanEdit}
-              athleteId={activeAthleteId}
-              athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+              athleteId={liveLesson?.athleteId ?? activeAthleteId}
+              athleteName={
+                athletes.find((a) => a.id === (liveLesson?.athleteId ?? activeAthleteId))?.name ??
+                null
+              }
               gymEditor={ryanEdit}
               personalEditor={personalCompare}
+              videoSource={liveLesson ? 'lesson' : undefined}
+              lessonId={liveLesson?.id ?? null}
+              lessonBar={
+                liveLesson ? (
+                  <LessonNoteBar
+                    coachId={liveLesson.coachId}
+                    placeholder="Compare note for this athlete…"
+                    onAdd={(text, topic) => {
+                      const next = addLessonNote(liveLesson.id, text, 'compare', {
+                        kind: topic.kind,
+                        id: topic.id,
+                        label: topic.label,
+                      })
+                      if (next) setLessonTick((n) => n + 1)
+                    }}
+                  />
+                ) : null
+              }
             />
           </CompareErrorBoundary>
         </div>

@@ -115,3 +115,10 @@ Incremental migration rules:
 7. Test Delay, Replay Last, Record, tab switching, and fullscreen after every
    camera-session commit.
 
+## Phase 3 metadata change
+
+Phase 3 added optional `videoSource` and `lessonId` metadata to `CameraPane`.
+This only labels clips saved during a lesson so they appear in that athlete's
+lesson folder. It does not change stream ownership, recorder timing,
+`MediaSource`, delay-follow behavior, buffering, Replay Last, or Record.
+

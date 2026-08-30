@@ -62,9 +62,17 @@ function pickDelayMime(): string | null {
 type CameraPaneProps = {
   athleteId?: string | null
   onLibrarySaved?: () => void
+  videoSource?: import('../../lib/athleteVideoStore').AthleteVideoSource
+  lessonId?: string | null
 }
 
-export function CameraPane({ athleteId = null, onLibrarySaved }: CameraPaneProps) {
+export function CameraPane({
+  athleteId = null,
+  onLibrarySaved,
+  videoSource,
+  lessonId = null,
+}: CameraPaneProps) {
+  const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -442,8 +450,9 @@ export function CameraPane({ athleteId = null, onLibrarySaved }: CameraPaneProps
           athleteId,
           blob,
           name: meta.name,
-          source: 'compare-replay',
+          source: saveSource,
           durationSec: meta.durationSec,
+          lessonId,
         })
           .then(() => onLibrarySaved?.())
           .catch(() => {})
@@ -531,8 +540,9 @@ export function CameraPane({ athleteId = null, onLibrarySaved }: CameraPaneProps
         athleteId,
         blob,
         name: `Delay cam ${shown}s · ${new Date().toLocaleTimeString()}`,
-        source: 'delay-record',
+        source: saveSource === 'lesson' ? 'lesson' : 'delay-record',
         durationSec: shown,
+        lessonId,
       })
       onLibrarySaved?.()
       setFlash(`Saved to video library: ${saved.name}`)
@@ -571,8 +581,9 @@ export function CameraPane({ athleteId = null, onLibrarySaved }: CameraPaneProps
         athleteId,
         blob,
         name: meta.name,
-        source: 'compare-replay',
+        source: saveSource,
         durationSec: delaySec,
+        lessonId,
       })
         .then(() => {
           onLibrarySaved?.()

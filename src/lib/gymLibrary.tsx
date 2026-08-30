@@ -15,6 +15,7 @@ import {
 import { pullCoachLibrary } from './coachLibrary'
 import { clipLoopKey, socialPlatform } from './socialUrls'
 import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
+import { listCoachSkillRefs, subscribeCoachContent } from './coachContentStore'
 export type GymClip = {
   id: string
   name: string
@@ -25,10 +26,30 @@ export type GymClip = {
   keywords?: string[]
 }
 
+function flattenSkillRefs(seen: Set<string>): GymClip[] {
+  const out: GymClip[] = []
+  for (const ref of listCoachSkillRefs()) {
+    if (!ref.src) continue
+    const key = clipLoopKey(ref.src).toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({
+      id: ref.id,
+      name: ref.athleteName ? `${ref.name} · ${ref.athleteName}` : ref.name,
+      url: ref.src,
+      kind: 'url',
+      collectionId: `virtual:coach-refs:${ref.coachId}`,
+      collectionName: `${ref.coachName} skill refs`,
+      keywords: [ref.notes ?? '', 'skill'].filter(Boolean),
+    })
+  }
+  return out
+}
+
 function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
-  if (!backup) return []
   const seen = new Set<string>()
   const out: GymClip[] = []
+  if (backup) {
   for (const col of backup.collections) {
     for (const item of col.items) {
       if (!item.url) continue
@@ -53,6 +74,8 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
       })
     }
   }
+  }
+  out.push(...flattenSkillRefs(seen))
   return out
 }
 
@@ -102,9 +125,11 @@ export function GymLibraryProvider({
     const onChange = () => void refresh()
     window.addEventListener(LIBRARY_CHANGED_EVENT, onChange)
     window.addEventListener('focus', onChange)
+    const unsub = subscribeCoachContent(onChange)
     return () => {
       window.removeEventListener(LIBRARY_CHANGED_EVENT, onChange)
       window.removeEventListener('focus', onChange)
+      unsub()
     }
   }, [refresh])
 
