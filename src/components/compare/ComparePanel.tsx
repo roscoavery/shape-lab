@@ -33,6 +33,8 @@ type Props = {
   personalEditor?: boolean
   videoSource?: AthleteVideoSource
   lessonId?: string | null
+  skillId?: string | null
+  skillLabel?: string | null
   lessonBar?: ReactNode
 }
 
@@ -46,6 +48,8 @@ export function ComparePanel({
   personalEditor = false,
   videoSource,
   lessonId = null,
+  skillId = null,
+  skillLabel = null,
   lessonBar = null,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
@@ -166,6 +170,8 @@ export function ComparePanel({
                   onLibrarySaved={onLibrarySaved}
                   videoSource={videoSource}
                   lessonId={lessonId}
+                  skillId={skillId}
+                  skillLabel={skillLabel}
                 />
               </div>
             </div>
@@ -192,6 +198,8 @@ export function ComparePanel({
                   onLibrarySaved={onLibrarySaved}
                   videoSource={videoSource}
                   lessonId={lessonId}
+                  skillId={skillId}
+                  skillLabel={skillLabel}
                 />
               </div>
             </div>
@@ -219,6 +227,8 @@ export function ComparePanel({
                   onLibrarySaved={onLibrarySaved}
                   videoSource={videoSource}
                   lessonId={lessonId}
+                  skillId={skillId}
+                  skillLabel={skillLabel}
                 />
               </div>
             </div>

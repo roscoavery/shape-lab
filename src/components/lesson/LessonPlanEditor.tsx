@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { SHAPES, getShape } from '../../config/shapes'
+import { getShape } from '../../config/shapes'
+import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { DEFAULT_FORM_STANDARD, createId } from '../../lib/storage'
 import { upsertLessonPlan } from '../../lib/lessonStore'
 import type { LessonBlock, LessonBlockKind, LessonPlan } from '../../types'
@@ -11,7 +12,8 @@ type Props = {
   onCancel?: () => void
 }
 
-const HOLD_SHAPES = SHAPES.filter((s) =>
+const LESSON_SHAPES = lessonScoreShapes()
+const HOLD_SHAPES = LESSON_SHAPES.filter((s) =>
   /hollow|superman|plank|handstand|lever|candlestick|pike|bridge|lunge|tuck/i.test(
     `${s.id} ${s.name}`,
   ),
@@ -28,7 +30,7 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
 
   const shapeOptions = useMemo(() => {
     const ids = new Set(HOLD_SHAPES.map((s) => s.id))
-    const extra = SHAPES.filter((s) => !ids.has(s.id)).slice(0, 80)
+    const extra = LESSON_SHAPES.filter((s) => !ids.has(s.id)).slice(0, 80)
     return [...HOLD_SHAPES, ...extra]
   }, [])
 

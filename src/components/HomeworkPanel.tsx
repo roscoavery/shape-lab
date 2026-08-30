@@ -36,6 +36,7 @@ import {
   updateHomeworkItem,
 } from '../lib/storage'
 import { homeworkLooksReady } from '../lib/homeworkPose'
+import { homeworkTitle, isCustomHomework } from '../lib/homeworkLabel'
 import { pickCoachStill } from '../lib/shippedRefs'
 import type {
   HomeworkBreakdown,
@@ -357,7 +358,7 @@ export function HomeworkPanel({
     addHomeworkLog(log)
     setLogs((prev) => [log, ...prev])
     resetSession()
-    const shapeName = getShape(activeItem.shapeId)?.name ?? activeItem.shapeId
+    const shapeName = homeworkTitle(activeItem)
     showFlash(
       `Logged ${shapeName} — proper ${formatSeconds(log.properHoldSeconds ?? 0)}`,
     )
@@ -443,7 +444,7 @@ export function HomeworkPanel({
       [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
     )
     setManualItemId(null)
-    const shapeName = getShape(item.shapeId)?.name ?? item.shapeId
+    const shapeName = homeworkTitle(item)
     showFlash(`Manually logged ${shapeName} — ${formatSeconds(secs)}`)
   }
 
@@ -587,7 +588,7 @@ export function HomeworkPanel({
             >
               {visibleItems.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {getShape(i.shapeId)?.name ?? i.shapeId}
+                  {homeworkTitle(i)}
                 </option>
               ))}
             </select>
@@ -818,7 +819,7 @@ export function HomeworkPanel({
                     {badge.label}
                   </span>
                   <span className="truncate font-medium text-[var(--text)]">
-                    {shape?.name ?? item.shapeId}
+                    {homeworkTitle(item)}
                   </span>
                   {item.targetSeconds ? (
                     <span className="text-[11px] text-[var(--muted)]">
@@ -833,14 +834,14 @@ export function HomeworkPanel({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  {!isCustomHomework(item) && <button
                     type="button"
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
                     title="Camera session with live form scoring (recommended)"
                   >
                     Train
-                  </button>
+                  </button>}
                   <button
                     type="button"
                     onClick={() => openManual(item)}

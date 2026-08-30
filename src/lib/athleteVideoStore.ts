@@ -19,6 +19,8 @@ export type AthleteVideo = {
   mime: string
   url: string
   lessonId?: string
+  skillId?: string
+  skillLabel?: string
 }
 
 export const SOURCE_LABEL: Record<AthleteVideoSource, string> = {
@@ -48,12 +50,18 @@ export async function uploadAthleteVideo(opts: {
   source: AthleteVideoSource
   durationSec?: number | null
   lessonId?: string | null
+  skillId?: string | null
+  skillLabel?: string | null
 }): Promise<AthleteVideo> {
   const id = createId('vid')
   const mime = opts.blob.type || 'video/webm'
   const lessonQ = opts.lessonId ? `&lessonId=${encodeURIComponent(opts.lessonId)}` : ''
+  const skillQ = opts.skillId ? `&skillId=${encodeURIComponent(opts.skillId)}` : ''
+  const skillLabelQ = opts.skillLabel
+    ? `&skillLabel=${encodeURIComponent(opts.skillLabel)}`
+    : ''
   const res = await fetch(
-    `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(opts.athleteId)}&name=${encodeURIComponent(opts.name)}&source=${encodeURIComponent(opts.source)}&mime=${encodeURIComponent(mime)}&durationSec=${encodeURIComponent(String(opts.durationSec ?? ''))}${lessonQ}`,
+    `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(opts.athleteId)}&name=${encodeURIComponent(opts.name)}&source=${encodeURIComponent(opts.source)}&mime=${encodeURIComponent(mime)}&durationSec=${encodeURIComponent(String(opts.durationSec ?? ''))}${lessonQ}${skillQ}${skillLabelQ}`,
     {
       method: 'POST',
       headers: { 'Content-Type': mime },

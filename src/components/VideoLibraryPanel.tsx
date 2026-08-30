@@ -127,6 +127,7 @@ export function VideoLibraryPanel({
                         </p>
                         <p className="text-[11px] text-[var(--muted)]">
                           {SOURCE_LABEL[v.source]}
+                          {v.skillLabel ? ` · ${v.skillLabel}` : ''}
                           {v.durationSec != null ? ` · ${v.durationSec}s` : ''}
                           {` · ${new Date(v.createdAt).toLocaleTimeString()}`}
                         </p>

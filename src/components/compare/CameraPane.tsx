@@ -64,6 +64,8 @@ type CameraPaneProps = {
   onLibrarySaved?: () => void
   videoSource?: import('../../lib/athleteVideoStore').AthleteVideoSource
   lessonId?: string | null
+  skillId?: string | null
+  skillLabel?: string | null
 }
 
 export function CameraPane({
@@ -71,6 +73,8 @@ export function CameraPane({
   onLibrarySaved,
   videoSource,
   lessonId = null,
+  skillId = null,
+  skillLabel = null,
 }: CameraPaneProps) {
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -453,6 +457,8 @@ export function CameraPane({
           source: saveSource,
           durationSec: meta.durationSec,
           lessonId,
+          skillId,
+          skillLabel,
         })
           .then(() => onLibrarySaved?.())
           .catch(() => {})
@@ -543,6 +549,8 @@ export function CameraPane({
         source: saveSource === 'lesson' ? 'lesson' : 'delay-record',
         durationSec: shown,
         lessonId,
+        skillId,
+        skillLabel,
       })
       onLibrarySaved?.()
       setFlash(`Saved to video library: ${saved.name}`)
@@ -584,6 +592,8 @@ export function CameraPane({
         source: saveSource,
         durationSec: delaySec,
         lessonId,
+        skillId,
+        skillLabel,
       })
         .then(() => {
           onLibrarySaved?.()

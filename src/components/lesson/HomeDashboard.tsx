@@ -86,7 +86,7 @@ export function HomeDashboard({
           <h2 className="text-xl font-semibold">Hi {signedIn.name}</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
             Homework lives under Practice. Lessons your coach ran — notes, hold
-            times, and videos — show here. Stretch is under Practice → Warm-up.
+            times, and videos — show here.
           </p>
         </section>
         {myPlans.length > 0 && (

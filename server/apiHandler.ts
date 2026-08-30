@@ -202,6 +202,8 @@ export async function handleShapeLabApi(
         mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
         buf,
         lessonId: url.searchParams.get('lessonId') ?? undefined,
+        skillId: url.searchParams.get('skillId') ?? undefined,
+        skillLabel: url.searchParams.get('skillLabel') ?? undefined,
       })
       if (!saved) {
         sendJson(res, 400, { error: 'Could not save that video.' })

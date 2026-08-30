@@ -786,6 +786,8 @@ export default function App() {
               personalEditor={personalCompare}
               videoSource={liveLesson ? 'lesson' : undefined}
               lessonId={liveLesson?.id ?? null}
+              skillId={liveLesson ? shape.id : null}
+              skillLabel={liveLesson ? shape.name : null}
               lessonBar={
                 liveLesson ? (
                   <LessonNoteBar

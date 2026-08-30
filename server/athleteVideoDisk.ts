@@ -30,6 +30,8 @@ export type DiskAthleteVideo = {
   mime: string
   file: string
   lessonId?: string
+  skillId?: string
+  skillLabel?: string
 }
 
 export type DiskAthleteVideoLibrary = {
@@ -128,6 +130,8 @@ export async function addAthleteVideoFromBody(params: {
   mime: string
   buf: Buffer
   lessonId?: string
+  skillId?: string
+  skillLabel?: string
 }): Promise<DiskAthleteVideo | null> {
   const id = safeId(params.id)
   const athleteId = safeId(params.athleteId)
@@ -152,6 +156,10 @@ export async function addAthleteVideoFromBody(params: {
     mime,
     file,
     ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
+    ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
+    ...(params.skillLabel?.trim()
+      ? { skillLabel: params.skillLabel.trim().slice(0, 120) }
+      : {}),
   }
   const meta = await readAthleteVideoMeta()
   const others = meta.videos.filter((v) => v.id !== id)
