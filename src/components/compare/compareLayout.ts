@@ -12,6 +12,8 @@ export type CompareLayoutValue = {
   refRail: HTMLElement | null
   tbRatio: number
   lrRatio: number
+  /** Athlete pane is showing Replay Last — flush the split and overlay transport. */
+  athleteReplay: boolean
   setFullscreen: (on: boolean) => void
   setSplit: (split: CompareSplit) => void
   setFocus: (focus: CompareFocus) => void
@@ -20,6 +22,7 @@ export type CompareLayoutValue = {
   setRefRail: Dispatch<SetStateAction<HTMLElement | null>>
   setTbRatio: (n: number) => void
   setLrRatio: (n: number) => void
+  setAthleteReplay: (on: boolean) => void
 }
 
 const noop = () => {}
@@ -33,6 +36,7 @@ export const CompareLayoutContext = createContext<CompareLayoutValue>({
   refRail: null,
   tbRatio: 0.64,
   lrRatio: 0.5,
+  athleteReplay: false,
   setFullscreen: noop,
   setSplit: noop,
   setFocus: noop,
@@ -41,6 +45,7 @@ export const CompareLayoutContext = createContext<CompareLayoutValue>({
   setRefRail: noop,
   setTbRatio: noop,
   setLrRatio: noop,
+  setAthleteReplay: noop,
 })
 
 export function useCompareLayout() {

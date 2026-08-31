@@ -12,9 +12,18 @@ type Props = {
   onChange: (n: number) => void
   min?: number
   max?: number
+  /** Replay Last: panes sit flush; the drag hit area still overlaps both videos. */
+  flush?: boolean
 }
 
-export function CompareSplitDivider({ axis, value, onChange, min = 0.22, max = 0.78 }: Props) {
+export function CompareSplitDivider({
+  axis,
+  value,
+  onChange,
+  min = 0.22,
+  max = 0.78,
+  flush = false,
+}: Props) {
   const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
     null,
   )
@@ -61,17 +70,34 @@ export function CompareSplitDivider({ axis, value, onChange, min = 0.22, max = 0
       onPointerCancel={end}
       className={
         vertical
-          ? 'relative z-[16] flex h-3 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-black'
-          : 'relative z-[16] flex w-3 shrink-0 cursor-ew-resize touch-none items-center justify-center bg-black'
+          ? flush
+            ? 'relative z-[16] h-0 shrink-0 cursor-ns-resize touch-none'
+            : 'relative z-[16] flex h-3 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-black'
+          : flush
+            ? 'relative z-[16] w-0 shrink-0 cursor-ew-resize touch-none'
+            : 'relative z-[16] flex w-3 shrink-0 cursor-ew-resize touch-none items-center justify-center bg-black'
       }
     >
       <span
         className={
           vertical
-            ? 'h-1 w-12 rounded-full bg-white/55'
-            : 'h-12 w-1 rounded-full bg-white/55'
+            ? flush
+              ? 'absolute left-1/2 top-1/2 z-[17] h-5 w-full -translate-x-1/2 -translate-y-1/2'
+              : 'h-1 w-12 rounded-full bg-white/55'
+            : flush
+              ? 'absolute left-1/2 top-1/2 z-[17] h-full w-5 -translate-x-1/2 -translate-y-1/2'
+              : 'h-12 w-1 rounded-full bg-white/55'
         }
       />
+      {flush ? (
+        <span
+          className={
+            vertical
+              ? 'pointer-events-none absolute left-1/2 top-1/2 h-px w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40'
+              : 'pointer-events-none absolute left-1/2 top-1/2 h-10 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40'
+          }
+        />
+      ) : null}
     </div>
   )
 }

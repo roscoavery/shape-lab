@@ -64,6 +64,7 @@ export function ComparePanel({
   const [tbRatio, setTbRatio] = useState(0.64)
   const [lrRatio, setLrRatio] = useState(0.5)
   const [libraryTick, setLibraryTick] = useState(0)
+  const [athleteReplay, setAthleteReplay] = useState(false)
 
   useEffect(() => {
     if (enterFullscreenTick > 0) setFullscreen(true)
@@ -100,6 +101,7 @@ export function ComparePanel({
       refRail,
       tbRatio,
       lrRatio,
+      athleteReplay,
       setFullscreen,
       setSplit,
       setFocus,
@@ -108,8 +110,9 @@ export function ComparePanel({
       setRefRail,
       setTbRatio,
       setLrRatio,
+      setAthleteReplay,
     }),
-    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio],
+    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio, athleteReplay],
   )
 
   const showRef = focus !== 'cam'
@@ -167,7 +170,7 @@ export function ComparePanel({
                   profileId={athleteId}
                 />
               </div>
-              <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} />
+              <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} flush={athleteReplay} />
               <div
                 className="min-h-0 overflow-hidden"
                 style={{ flex: `${1 - tbRatio} 1 0%` }}
@@ -195,7 +198,7 @@ export function ComparePanel({
                   profileId={athleteId}
                 />
               </div>
-              <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} />
+              <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} flush={athleteReplay} />
               <div
                 className="min-h-0 min-w-0 overflow-hidden"
                 style={{ flex: `${1 - lrRatio} 1 0%` }}
@@ -216,8 +219,12 @@ export function ComparePanel({
                 fullscreen
                   ? 'grid min-h-0 flex-1 grid-cols-1'
                   : split === 'tb'
-                    ? 'grid gap-4'
-                    : 'grid gap-4 md:grid-cols-2'
+                    ? athleteReplay
+                      ? 'grid gap-0'
+                      : 'grid gap-4'
+                    : athleteReplay
+                      ? 'grid gap-0 md:grid-cols-2'
+                      : 'grid gap-4 md:grid-cols-2'
               }`}
             >
               <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>

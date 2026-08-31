@@ -5,7 +5,7 @@
  * sit in a separate bar so markup never steals those taps.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { FavoriteStar } from '../FavoriteStar'
@@ -39,6 +39,14 @@ type Props = {
   bare?: boolean
   /** When set, play only while true (doom-scroll / collage). */
   active?: boolean
+  /** Transport overlays the picture (hide/show). Defaults on in fullscreen. */
+  overlayChrome?: boolean
+  /** Two-finger pinch-zoom on phones (Replay Last). */
+  pinchZoom?: boolean
+  /** Scrub window currently looping — used to save that exact clip to Photos. */
+  onWindowChange?: (start: number, end: number) => void
+  /** Extra buttons in the overlay (Replay Last save / back). */
+  overlayActions?: ReactNode
 }
 
 function fmt(t: number): string {
@@ -69,6 +77,10 @@ function VideoWorkbenchInner({
   compact = false,
   bare = false,
   active,
+  overlayChrome,
+  pinchZoom = false,
+  onWindowChange,
+  overlayActions,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -95,6 +107,22 @@ function VideoWorkbenchInner({
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
+  const overlay = overlayChrome ?? fill
+  const [chromeOpen, setChromeOpen] = useState(true)
+  const frameRef = useRef<HTMLDivElement | null>(null)
+  const pinchRef = useRef<{
+    dist: number
+    scale: number
+    x: number
+    y: number
+    tx: number
+    ty: number
+  } | null>(null)
+  const panRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null)
+  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 })
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const zoomed = zoom.scale > 1.02
 
   useEffect(() => {
     const v = videoRef.current
@@ -177,6 +205,100 @@ function VideoWorkbenchInner({
     }
   }, [duration, tailSeconds, autoPlay])
 
+  useEffect(() => {
+    if (!onWindowChange || duration <= 0) return
+    if (pointA !== null && pointB !== null && pointB > pointA) {
+      onWindowChange(pointA, pointB)
+    } else {
+      onWindowChange(0, duration)
+    }
+  }, [duration, pointA, pointB, onWindowChange])
+
+  useEffect(() => {
+    if (!pinchZoom) return
+    const node = frameRef.current
+    if (!node) return
+
+    const distOf = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+    const midOf = (a: Touch, b: Touch) => ({
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2,
+    })
+
+    const onStart = (e: TouchEvent) => {
+      const z = zoomRef.current
+      if (e.touches.length === 2) {
+        panRef.current = null
+        const a = e.touches[0]!
+        const b = e.touches[1]!
+        const mid = midOf(a, b)
+        pinchRef.current = {
+          dist: Math.max(24, distOf(a, b)),
+          scale: z.scale,
+          x: mid.x,
+          y: mid.y,
+          tx: z.x,
+          ty: z.y,
+        }
+      } else if (e.touches.length === 1 && z.scale > 1.02) {
+        pinchRef.current = null
+        panRef.current = {
+          x: e.touches[0]!.clientX,
+          y: e.touches[0]!.clientY,
+          tx: z.x,
+          ty: z.y,
+        }
+      }
+    }
+
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length >= 2 && pinchRef.current) {
+        e.preventDefault()
+        const a = e.touches[0]!
+        const b = e.touches[1]!
+        const p = pinchRef.current
+        const nextScale = Math.min(4, Math.max(1, p.scale * (distOf(a, b) / p.dist)))
+        const mid = midOf(a, b)
+        const dx = mid.x - p.x
+        const dy = mid.y - p.y
+        setZoom({
+          scale: nextScale,
+          x: nextScale <= 1.02 ? 0 : p.tx + dx,
+          y: nextScale <= 1.02 ? 0 : p.ty + dy,
+        })
+        return
+      }
+      if (e.touches.length === 1 && panRef.current && zoomRef.current.scale > 1.02) {
+        e.preventDefault()
+        const t = e.touches[0]!
+        setZoom((z) => ({
+          ...z,
+          x: panRef.current!.tx + (t.clientX - panRef.current!.x),
+          y: panRef.current!.ty + (t.clientY - panRef.current!.y),
+        }))
+      }
+    }
+
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchRef.current = null
+      if (e.touches.length === 0) {
+        panRef.current = null
+        setZoom((z) => (z.scale <= 1.05 ? { scale: 1, x: 0, y: 0 } : z))
+      }
+    }
+
+    node.addEventListener('touchstart', onStart, { passive: true, capture: true })
+    node.addEventListener('touchmove', onMove, { passive: false, capture: true })
+    node.addEventListener('touchend', onEnd, { capture: true })
+    node.addEventListener('touchcancel', onEnd, { capture: true })
+    return () => {
+      node.removeEventListener('touchstart', onStart, true)
+      node.removeEventListener('touchmove', onMove, true)
+      node.removeEventListener('touchend', onEnd, true)
+      node.removeEventListener('touchcancel', onEnd, true)
+    }
+  }, [pinchZoom])
+
   const seek = (t: number) => {
     const v = videoRef.current
     if (!v) return
@@ -252,23 +374,23 @@ function VideoWorkbenchInner({
 
   const loopingAb = pointA !== null && pointB !== null && pointB > pointA
 
-  const btn = fill
+  const btn = fill || overlay
     ? 'rounded-md border border-white/30 bg-white/10 px-2.5 py-1.5 text-sm text-white hover:bg-white/18'
     : 'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-sm hover:bg-[#243040]'
 
   const abOn = (on: boolean) =>
     on
-      ? fill
+      ? fill || overlay
         ? 'rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-sm font-semibold text-[#06281f]'
         : 'rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-sm font-semibold text-white'
       : btn
 
   const speedBtn = (s: number) =>
     speed === s
-      ? fill
+      ? fill || overlay
         ? 'rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-black'
         : 'rounded-md bg-[var(--accent-dim)] px-2 py-1 text-xs font-semibold text-white'
-      : fill
+      : fill || overlay
         ? 'rounded-md border border-white/30 px-2.5 py-1.5 text-xs text-white/80 hover:text-white'
         : 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs text-[var(--muted)] hover:text-[var(--text)]'
 
@@ -343,7 +465,7 @@ function VideoWorkbenchInner({
             )}
           </>
         )}
-        <span className={`tabular-nums text-xs ${fill ? 'text-white/70' : 'text-[var(--muted)]'}`}>
+        <span className={`tabular-nums text-xs ${fill || overlay ? 'text-white/70' : 'text-[var(--muted)]'}`}>
           {fmt(time)}s / {fmt(duration)}s
           {loopingAb ? ` · loop ${fmt(pointA!)}–${fmt(pointB!)}` : ''}
         </span>
@@ -476,10 +598,11 @@ function VideoWorkbenchInner({
   )
 
   return (
-    <div className={`flex flex-col ${fill ? 'h-full min-h-0 gap-0' : 'gap-2'}`}>
+    <div className={`flex min-h-0 flex-col ${fill ? 'h-full gap-0' : overlay ? 'gap-0' : 'gap-2'}`}>
       <div
+        ref={frameRef}
         className={`relative min-h-0 overflow-hidden bg-black ${
-          fill ? 'h-full w-full flex-1' : 'rounded-lg border border-[var(--panel-border)]'
+          fill ? 'h-full w-full flex-1' : overlay ? 'rounded-lg' : 'rounded-lg border border-[var(--panel-border)]'
         }`}
       >
         <video
@@ -493,10 +616,26 @@ function VideoWorkbenchInner({
           onDurationChange={onDurationChange}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          className={`${fill ? 'block h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirror ? 'scale-x-[-1]' : ''}`}
+          style={
+            pinchZoom
+              ? {
+                  transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})${
+                    mirror ? ' scaleX(-1)' : ''
+                  }`,
+                  transformOrigin: 'center center',
+                }
+              : undefined
+          }
+          className={`${
+            fill
+              ? 'block h-full max-h-none'
+              : overlay
+                ? 'block min-h-[16rem] max-h-[min(70vh,36rem)]'
+                : 'max-h-[420px]'
+          } w-full object-contain ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
-        {markup && !bare && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} />}
+        {markup && !bare && !zoomed && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} pinchPassthrough={pinchZoom} />}
         {credit && !bare && (
           creditHref ? (
             <a
@@ -518,15 +657,35 @@ function VideoWorkbenchInner({
             </span>
           )
         )}
+        {!bare && overlay && chromeOpen && (
+          <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black/90 via-black/75 to-transparent px-2 pb-2 pt-8 text-white">
+            {overlayActions ? <div className="mb-2 flex flex-wrap gap-1.5">{overlayActions}</div> : null}
+            {transport}
+          </div>
+        )}
+        {!bare && overlay && !chromeOpen && overlayActions ? (
+          <div className="pointer-events-auto absolute bottom-2 left-2 z-[35] flex flex-wrap gap-1.5">
+            {overlayActions}
+          </div>
+        ) : null}
+        {!bare && overlay && (
+          <button
+            type="button"
+            onClick={() => setChromeOpen((open) => !open)}
+            className="absolute right-2 top-2 z-[35] rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+          >
+            {chromeOpen ? 'Hide bar' : 'Show bar'}
+          </button>
+        )}
       </div>
 
-      {!bare && (
+      {!bare && !overlay && (
         <div className={fill ? 'shrink-0 bg-black px-2 py-1.5 text-white' : ''}>
           {transport}
         </div>
       )}
 
-      {!fill && !compact && (
+      {!fill && !compact && !overlay && (
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
           <label className="flex items-center gap-1.5">
             <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />

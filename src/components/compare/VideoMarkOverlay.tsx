@@ -126,9 +126,11 @@ type Props = {
   videoRef: { current: HTMLVideoElement | null }
   /** True when the <video> is CSS-mirrored. */
   mirror?: boolean
+  /** Let two-finger pinch reach the player instead of starting a draw. */
+  pinchPassthrough?: boolean
 }
 
-export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
+export function VideoMarkOverlay({ videoRef, mirror = false, pinchPassthrough = false }: Props) {
   const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -166,6 +168,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   mirrorRef.current = mirror
   const pendingRef = useRef(pending)
   pendingRef.current = pending
+  const pointersRef = useRef(new Set<number>())
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current
@@ -328,6 +331,19 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (pendingRef.current) return
+    pointersRef.current.add(e.pointerId)
+    if (pinchPassthrough && pointersRef.current.size >= 2) {
+      drawingRef.current = false
+      arrowDragRef.current = false
+      cropDragRef.current = false
+      draggingDotRef.current = null
+      try {
+        canvasRef.current?.releasePointerCapture(e.pointerId)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
     const host = hostRef.current
     if (!host) return
     const pt = eventToNorm(e, host, videoRef.current)
@@ -438,6 +454,7 @@ export function VideoMarkOverlay({ videoRef, mirror = false }: Props) {
   }
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    pointersRef.current.delete(e.pointerId)
     e.preventDefault()
     try {
       canvasRef.current?.releasePointerCapture(e.pointerId)

@@ -66,7 +66,9 @@ Videos / Compare UI works and Ryan has verified delay behavior in the browser.
 - Old `SourceBuffer` data is trimmed with an additional safety margin.
 - Replay Last flushes the rolling recorder into one playable blob, immediately
   restarts rolling on the still-live stream, and opens only the requested tail
-  in `VideoWorkbench`.
+  in `VideoWorkbench`. Save to Photos re-encodes that same scrub window (the
+  delay length, or the A/B loop if you set one) so the file matches what you
+  were watching — it does not change the live rolling recorder.
 - Do not split WebM timeslices into independent files: later slices may not
   contain the file header and therefore may not play.
 

@@ -24,6 +24,7 @@ import {
 } from '../../lib/clipStore'
 import { createId } from '../../lib/storage'
 import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
+import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
@@ -89,7 +90,7 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail } = useCompareLayout()
+  const { fullscreen, camRail, setAthleteReplay } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -125,6 +126,8 @@ export function CameraPane({
   const [replayBuilding, setReplayBuilding] = useState(false)
   const [librarySaving, setLibrarySaving] = useState(false)
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
+  const [savingPhotos, setSavingPhotos] = useState(false)
+  const replayWindowRef = useRef<{ start: number; end: number } | null>(null)
   const [delayTime, setDelayTime] = useState(0)
   const [delayDuration, setDelayDuration] = useState(0)
 
@@ -149,6 +152,12 @@ export function CameraPane({
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [mode])
+
+  useEffect(() => {
+    const on = mode === 'replay' && Boolean(clipSrc)
+    setAthleteReplay(on)
+    return () => setAthleteReplay(false)
+  }, [mode, clipSrc, setAthleteReplay])
 
   const pumpDelayQueue = useCallback(() => {
     const sb = delaySourceBufferRef.current
@@ -507,16 +516,24 @@ export function CameraPane({
         )
         return
       }
-      replayBlobRef.current = blob
+      const tail = Math.min(delaySec, capturedFor)
+      let playable = blob
+      try {
+        playable = await extractVideoTail(blob, tail)
+      } catch {
+        playable = blob
+      }
+      replayBlobRef.current = playable
       if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(playable)
       clipUrlRef.current = url
       setClipSrc(url)
       setActiveClipId(null)
-      setReplayTailSec(Math.min(delaySec, capturedFor))
+      setReplayTailSec(tail)
+      replayWindowRef.current = { start: 0, end: tail }
       setMode('replay')
-      const shown = Math.max(1, Math.round(Math.min(delaySec, capturedFor)))
-      setFlash(`Last ${shown}s of buffer — pause, scrub, or save`)
+      const shown = Math.max(1, Math.round(tail))
+      setFlash(`Last ${shown}s of buffer — pinch to zoom, hide the bar, or save`)
       window.setTimeout(() => setFlash(null), 2500)
     } finally {
       setReplayBuilding(false)
@@ -562,61 +579,83 @@ export function CameraPane({
     }
   }
 
-  const saveReplayToApp = () => {
+  const blobForScrubWindow = async (): Promise<Blob | null> => {
     const blob = replayBlobRef.current
-    if (!blob) {
-      setError('Nothing to save — open a replay first.')
-      return
-    }
-    const meta: RecordedClip = {
-      id: createId('clip'),
-      name: `Buffer ${delaySec}s · ${new Date().toLocaleTimeString()}`,
-      createdAt: new Date().toISOString(),
-      durationSec: delaySec,
-      sizeBytes: blob.size,
-    }
-    void addClip(meta, blob)
-      .then(getClips)
-      .then((list) => {
-        setClips(list)
-        setActiveClipId(meta.id)
-        setFlash(`Saved in the app: ${meta.name}`)
-        setTimeout(() => setFlash(null), 2500)
-      })
-      .catch(() => setError('Could not save the clip — device storage may be full.'))
-    if (athleteId) {
-      void uploadAthleteVideo({
-        athleteId,
-        blob,
-        name: meta.name,
-        source: saveSource,
-        durationSec: delaySec,
-        lessonId,
-        skillId,
-        skillLabel,
-      })
-        .then(() => {
-          onLibrarySaved?.()
-          setFlash(`Saved to video library: ${meta.name}`)
-        })
-        .catch(() => {})
+    if (!blob) return null
+    const win = replayWindowRef.current
+    if (!win || !(win.end > win.start + 0.15)) return blob
+    try {
+      return await extractVideoRange(blob, win.start, win.end)
+    } catch {
+      return blob
     }
   }
 
-  const downloadReplay = () => {
-    const blob = replayBlobRef.current
-    if (!blob) {
-      setError('Nothing to download — open a replay first.')
-      return
-    }
-    const ext = extForVideoType(blob.type)
-    void saveVideoToDevice(blob, `shape-lab-replay-${delaySec}s.${ext}`).then((result) => {
-      if (result === 'failed') setError('Could not save that clip to this device.')
-      else {
-        setFlash(saveResultMessage(result))
-        setTimeout(() => setFlash(null), 4000)
+  const saveReplayToApp = () => {
+    void (async () => {
+      const blob = await blobForScrubWindow()
+      if (!blob) {
+        setError('Nothing to save — open a replay first.')
+        return
       }
-    })
+      const seconds = replayTailSec ?? delaySec
+      const meta: RecordedClip = {
+        id: createId('clip'),
+        name: `Buffer ${seconds}s · ${new Date().toLocaleTimeString()}`,
+        createdAt: new Date().toISOString(),
+        durationSec: seconds,
+        sizeBytes: blob.size,
+      }
+      void addClip(meta, blob)
+        .then(getClips)
+        .then((list) => {
+          setClips(list)
+          setActiveClipId(meta.id)
+          setFlash(`Saved in the app: ${meta.name}`)
+          setTimeout(() => setFlash(null), 2500)
+        })
+        .catch(() => setError('Could not save the clip — device storage may be full.'))
+      if (athleteId) {
+        void uploadAthleteVideo({
+          athleteId,
+          blob,
+          name: meta.name,
+          source: saveSource,
+          durationSec: seconds,
+          lessonId,
+          skillId,
+          skillLabel,
+        })
+          .then(() => {
+            onLibrarySaved?.()
+            setFlash(`Saved to video library: ${meta.name}`)
+          })
+          .catch(() => {})
+      }
+    })()
+  }
+
+  const downloadReplay = () => {
+    void (async () => {
+      const blob = await blobForScrubWindow()
+      if (!blob) {
+        setError('Nothing to download — open a replay first.')
+        return
+      }
+      setSavingPhotos(true)
+      const seconds = replayTailSec ?? delaySec
+      const ext = extForVideoType(blob.type)
+      try {
+        const result = await saveVideoToDevice(blob, `shape-lab-replay-${seconds}s.${ext}`)
+        if (result === 'failed') setError('Could not save that clip to this device.')
+        else {
+          setFlash(saveResultMessage(result))
+          setTimeout(() => setFlash(null), 4000)
+        }
+      } finally {
+        setSavingPhotos(false)
+      }
+    })()
   }
 
   const removeClip = async (id: string) => {
@@ -851,44 +890,46 @@ export function CameraPane({
       {/* Replay of the last N seconds (or a saved attempt) */}
       {mode === 'replay' &&
         (clipSrc ? (
-          <div className={`flex flex-col gap-2 ${fullscreen ? 'min-h-0 flex-1' : ''}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-[var(--text)]">
-                {replayTailSec
-                  ? `Last ${Math.round(replayTailSec)}s — this is the buffer you just recorded`
-                  : 'Saved attempt'}
-              </p>
-              <button
-                type="button"
-                onClick={() => setMode(running ? 'live' : 'replay')}
-                className={btnCls}
-              >
-                Back to live
-              </button>
-            </div>
+          <div className={`relative flex min-h-0 flex-col ${fullscreen ? 'h-full flex-1' : ''}`}>
             <VideoWorkbench
               src={clipSrc}
               mirror={mirror}
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
               fill={fullscreen}
+              overlayChrome
+              pinchZoom
               showStillOverlay={!fullscreen}
+              onWindowChange={(start, end) => {
+                replayWindowRef.current = { start, end }
+              }}
+              overlayActions={
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMode(running ? 'live' : 'replay')}
+                    className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white"
+                  >
+                    Back to live
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveReplayToApp}
+                    className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-[#06281f]"
+                  >
+                    Save in app
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingPhotos}
+                    onClick={downloadReplay}
+                    className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                  >
+                    {savingPhotos ? 'Saving…' : 'Save to Photos'}
+                  </button>
+                </>
+              }
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={saveReplayToApp}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
-              >
-                Save in app
-              </button>
-              <button type="button" onClick={downloadReplay} className={btnCls}>
-                Save to Photos / Files
-              </button>
-              <span className="text-xs text-[var(--muted)]">
-                Pause, play, and scrub. Saving keeps it in Recorded attempts below.
-              </span>
-            </div>
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
