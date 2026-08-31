@@ -109,7 +109,7 @@ Checklist:
 - [x] Typed custom homework using `custom:` names.
 - [x] Athlete assignment and progress tracking.
 - [x] Preserve existing homework data.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 5 — Coach shape libraries
 
