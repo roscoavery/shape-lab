@@ -15,6 +15,8 @@ rewritten.
 - [x] Rebuild branch created: `v2-rebuild`
 - [x] Version 2.1 freeze (9:16 drill library, before Replay Last chrome):
   `shape-lab-v2.1` and `cursor/shape-lab-v2.1-847e`
+- [x] Version 3 freeze (Videos three buttons, cinema library, edge carousel arrows):
+  `shape-lab-v3` and `cursor/shape-lab-v3-847e`
 - [x] Reflogs, stashes, unreachable objects, local branches, tags, and remote
   refs inspected before editing
 

@@ -371,27 +371,27 @@ export function InstagramEmbed({
       >
         {player}
         {carousel ? (
-          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-black/70 p-0.5 shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+          <>
             <button
               type="button"
               aria-label="Previous slide"
               onClick={() => go(safeSlide - 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-white hover:bg-white/15"
+              className="absolute left-1 top-[36%] z-40 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-xl leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)] hover:bg-black/80"
             >
               ‹
             </button>
-            <p className="min-w-[2.75rem] text-center text-[11px] font-semibold tabular-nums text-white">
-              {safeSlide + 1}/{slideCount}
-            </p>
             <button
               type="button"
               aria-label="Next slide"
               onClick={() => go(safeSlide + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-white hover:bg-white/15"
+              className="absolute right-1 top-[36%] z-40 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-xl leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)] hover:bg-black/80"
             >
               ›
             </button>
-          </div>
+            <p className="pointer-events-none absolute left-1/2 top-2 z-40 -translate-x-1/2 rounded-full bg-black/65 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+              {safeSlide + 1}/{slideCount}
+            </p>
+          </>
         ) : null}
       </div>
       {!fill && !quiet && (
