@@ -1,9 +1,11 @@
 /**
- * iPhone delay display — copy frames from the live <video>, unwind the
- * sensor rotation that canvas drawImage leaves in place, then paint them
- * delaySec later. Replay Last still plays the rolling MediaRecorder blob
- * (Safari applies the file's rotation tag there). This hook is only enabled
- * on iOS / ManagedMediaSource.
+ * iPhone delay display — copy frames from the live <video> into a ring,
+ * then paint them on a canvas delaySec later.
+ *
+ * Safari ignores canvas 2d rotation on camera frames (they stay 90° CW).
+ * This hook copies pixels as-is. CameraPane wraps the canvas in
+ * IosDelayUnwind so CSS can straighten them the same way LIVE is upright.
+ * Replay Last still plays the rolling blob (file rotation tag).
  */
 
 import { useEffect, useRef, useState, type RefObject } from 'react'
@@ -13,21 +15,13 @@ const MAX_EDGE = 512
 const DELAY_MAX_SEC = 20
 const MAX_FRAMES = CAP_FPS * (DELAY_MAX_SEC + 2)
 
-/**
- * iPhone camera buffers are 90° clockwise vs the upright LIVE preview.
- * Replay Last looks fine because the mp4 rotation matrix is applied.
- * canvas.drawImage / MSE do not — rotate the copy 90° CCW to match LIVE.
- */
-const UNWIND_CW_RAD = -Math.PI / 2
-
 type Slot = { ts: number; bmp: ImageBitmap }
 
 function coverScale(bw: number, bh: number, cw: number, ch: number) {
   return Math.max(cw / bw, ch / bh)
 }
 
-/** Paint the live video into `cap` with sensor rotation already unwound. */
-function captureUpright(
+function captureRaw(
   live: HTMLVideoElement,
   cap: HTMLCanvasElement,
   capCtx: CanvasRenderingContext2D,
@@ -40,20 +34,12 @@ function captureUpright(
   const scale = Math.min(1, MAX_EDGE / edge)
   const dw = Math.max(2, Math.round(srcW * scale))
   const dh = Math.max(2, Math.round(srcH * scale))
-  // 90° CCW swap: source width becomes dest height
-  const outW = dh
-  const outH = dw
-  if (cap.width !== outW || cap.height !== outH) {
-    cap.width = outW
-    cap.height = outH
+  if (cap.width !== dw || cap.height !== dh) {
+    cap.width = dw
+    cap.height = dh
   }
-  capCtx.save()
   capCtx.setTransform(1, 0, 0, 1, 0, 0)
-  capCtx.clearRect(0, 0, outW, outH)
-  capCtx.translate(0, outH)
-  capCtx.rotate(UNWIND_CW_RAD)
   capCtx.drawImage(live, 0, 0, dw, dh)
-  capCtx.restore()
   return true
 }
 
@@ -62,7 +48,6 @@ function drawFrame(
   bmp: ImageBitmap,
   cw: number,
   ch: number,
-  mirror: boolean,
   zoom: number,
 ) {
   const s = coverScale(bmp.width, bmp.height, cw, ch) * Math.max(0.4, zoom)
@@ -70,7 +55,6 @@ function drawFrame(
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, cw, ch)
   ctx.translate(cw / 2, ch / 2)
-  if (mirror) ctx.scale(-1, 1)
   ctx.drawImage(bmp, (-bmp.width * s) / 2, (-bmp.height * s) / 2, bmp.width * s, bmp.height * s)
   ctx.restore()
 }
@@ -94,23 +78,19 @@ export function useFrameDelay({
   canvasRef,
   delaySec,
   enabled,
-  mirror,
   zoom,
 }: {
   liveRef: RefObject<HTMLVideoElement | null>
   canvasRef: RefObject<HTMLCanvasElement | null>
   delaySec: number
   enabled: boolean
-  mirror: boolean
   zoom: number
 }) {
   const [buffering, setBuffering] = useState(false)
   const ringRef = useRef<Slot[]>([])
   const delaySecRef = useRef(delaySec)
-  const mirrorRef = useRef(mirror)
   const zoomRef = useRef(zoom)
   delaySecRef.current = delaySec
-  mirrorRef.current = mirror
   zoomRef.current = zoom
 
   useEffect(() => {
@@ -133,7 +113,7 @@ export function useFrameDelay({
       const canvas = canvasRef.current
       if (live && live.readyState >= 2 && capCtx && now - lastCap >= 1000 / CAP_FPS) {
         lastCap = now
-        if (captureUpright(live, cap, capCtx)) {
+        if (captureRaw(live, cap, capCtx)) {
           void createImageBitmap(cap)
             .then((bmp) => {
               if (dead) {
@@ -159,10 +139,10 @@ export function useFrameDelay({
         return was === next ? was : next
       })
 
-      if (canvas && ring.length > 0) {
+      if (canvas && ring.length > 0 && canvas.clientWidth > 2 && canvas.clientHeight > 2) {
         const dpr = Math.min(2, window.devicePixelRatio || 1)
-        const cssW = Math.max(2, canvas.clientWidth)
-        const cssH = Math.max(2, canvas.clientHeight)
+        const cssW = canvas.clientWidth
+        const cssH = canvas.clientHeight
         const pw = Math.round(cssW * dpr)
         const ph = Math.round(cssH * dpr)
         if (canvas.width !== pw || canvas.height !== ph) {
@@ -172,7 +152,7 @@ export function useFrameDelay({
         const ctx = canvas.getContext('2d', { alpha: false })
         const slot = nearest(ring, now - need)
         if (ctx && slot) {
-          drawFrame(ctx, slot.bmp, pw, ph, mirrorRef.current, zoomRef.current)
+          drawFrame(ctx, slot.bmp, pw, ph, zoomRef.current)
         }
       }
 

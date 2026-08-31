@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DELAY_MAX, DELAY_MIN, useDelayCam } from '../hooks/useDelayCam'
 import { isIosDevice } from '../lib/delayCameraPipeline'
+import { IosDelayUnwind } from './IosDelayUnwind'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -85,8 +86,7 @@ export function TaskDelayCam({
   }
 
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
-  const iosDelayCls = isIosDevice() ? '-rotate-90 origin-center' : ''
-  const videoMax = pip ? 'max-h-36 sm:max-h-44' : compact ? 'max-h-36' : 'max-h-48'
+  const videoBox = pip ? 'h-36 sm:h-44' : compact ? 'h-36' : 'h-48'
 
   const videoBlock = (
     <div className="relative overflow-hidden rounded-lg bg-black">
@@ -94,7 +94,7 @@ export function TaskDelayCam({
         <video
           ref={replayVideoRef}
           src={replaySrc}
-          className={`block w-full bg-black ${videoMax} ${mirrorCls}`}
+          className={`block w-full bg-black ${videoBox} ${mirrorCls}`}
           controls={!pip}
           playsInline
           onLoadedMetadata={(e) => {
@@ -106,13 +106,18 @@ export function TaskDelayCam({
           }}
         />
       ) : (
-        <video
-          ref={delay.delayVideoRef}
-          className={`block w-full bg-black ${videoMax} ${mode === 'delay' ? `${mirrorCls} ${iosDelayCls}` : 'hidden'}`}
-          playsInline
-          muted
-          disableRemotePlayback
-        />
+        <IosDelayUnwind
+          active={isIosDevice()}
+          className={`relative w-full ${videoBox} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
+        >
+          <video
+            ref={delay.delayVideoRef}
+            className="block h-full w-full bg-black"
+            playsInline
+            muted
+            disableRemotePlayback
+          />
+        </IosDelayUnwind>
       )}
       {mode === 'live' && !pip && (
         <p className="px-3 py-8 text-center text-xs text-[var(--muted)]">
