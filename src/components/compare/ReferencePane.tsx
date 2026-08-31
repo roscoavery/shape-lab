@@ -1373,7 +1373,7 @@ export function ReferencePane({
           bare={pip}
         />
       ) : (
-        <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
+        <div className={`relative flex items-center justify-center text-sm ${fullscreen ? 'h-full min-h-0 text-white/55' : 'h-48 rounded-lg border border-dashed border-[var(--panel-border)] text-[var(--muted)]'}`}>
           {!libraryReady
             ? 'Loading saved references…'
             : activeCollection?.items.length
@@ -1381,6 +1381,11 @@ export function ReferencePane({
                 ? 'Select a match above'
                 : 'Select a reference above'
               : 'Add a reference video to this collection'}
+          {hudCorner ? (
+            <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+              {hudCorner}
+            </div>
+          ) : null}
         </div>
       )}
       {pip && (
