@@ -9,6 +9,9 @@ import type { ReferencePhoto } from '../../types'
 
 type Props = {
   photos: ReferencePhoto[]
+  scoreValue?: number | null
+  scoreLabel?: string
+  scoreLive?: boolean
 }
 
 const pill = (on: boolean) =>
@@ -16,7 +19,12 @@ const pill = (on: boolean) =>
     ? 'bg-white text-black'
     : 'bg-white/8 text-white/80 hover:bg-white/14'
 
-export function CompareChromeRail({ photos }: Props) {
+export function CompareChromeRail({
+  photos,
+  scoreValue = null,
+  scoreLabel = 'Selected shape',
+  scoreLive = false,
+}: Props) {
   const {
     split,
     focus,
@@ -43,8 +51,7 @@ export function CompareChromeRail({ photos }: Props) {
       <button
         type="button"
         onClick={() => setChromeOpen(true)}
-        className="absolute left-2 top-1/2 z-[20] -translate-y-1/2 rounded-full border border-white/20 bg-black/55 px-2 py-8 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/90 shadow-lg backdrop-blur-md hover:bg-black/75"
-        style={{ writingMode: 'vertical-rl' }}
+        className="absolute bottom-3 left-3 z-[20] rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/90 shadow-lg backdrop-blur-md hover:bg-black/75"
       >
         Controls
       </button>
@@ -87,6 +94,25 @@ export function CompareChromeRail({ photos }: Props) {
           <button type="button" onClick={() => pickFocus('cam')} className={`rounded-lg px-2 py-1.5 text-[11px] font-medium ${pill(focus === 'cam')}`}>
             Delay cam
           </button>
+        </div>
+      </section>
+
+      <section>
+        <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+          Live score
+        </p>
+        <div className="rounded-lg bg-white/4 p-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="truncate text-[11px] text-white/65">{scoreLabel}</span>
+            <strong className="text-xl tabular-nums text-white">
+              {scoreLive && scoreValue != null ? Math.round(scoreValue) : '—'}
+            </strong>
+          </div>
+          <p className="mt-1 text-[10px] leading-snug text-white/45">
+            {scoreLive
+              ? 'Updating from the active scoring camera.'
+              : 'Shared live scoring connects in Phase 7; delay remains protected.'}
+          </p>
         </div>
       </section>
 

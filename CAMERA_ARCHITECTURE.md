@@ -132,3 +132,11 @@ stop `CameraPane` tracks. If another camera is already using the device and the
 browser refuses a second stream, it shows an error instead of disturbing the
 working Compare session. Shared-stream integration remains deferred to Phase 7.
 
+## Phase 6 Compare chrome
+
+Phase 6 moves the hidden-rail **Controls** chip to the bottom-left and adds the
+Live Score status area without changing `CameraPane`. Until Phase 7, the score
+area explicitly reports that the shared scoring stream is not connected.
+Fullscreen, references, A-B playback, Replay Last, Record, and delay auto-entry
+continue to use the protected Version 1 implementation.
+

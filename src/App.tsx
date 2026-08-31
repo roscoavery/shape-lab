@@ -794,6 +794,9 @@ export default function App() {
               lessonId={liveLesson?.id ?? null}
               skillId={liveLesson ? shape.id : null}
               skillLabel={liveLesson ? shape.name : null}
+              liveScore={score.overall}
+              liveScoreLabel={shape.name}
+              liveScoreRunning={camera.running}
               lessonBar={
                 liveLesson ? (
                   <LessonNoteBar

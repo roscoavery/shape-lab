@@ -125,14 +125,14 @@ Checklist:
 
 ## Phase 6 — Videos / Compare UI
 
-- [ ] Keep the Version 1 delay timing algorithm intact.
-- [ ] Add fullscreen rail.
-- [ ] Add Live Score.
-- [ ] Add Controls chip; place it bottom-left when the rail is hidden.
-- [ ] Auto-enter delay when fullscreen opens while the camera is running.
-- [ ] Support reference videos and stills.
-- [ ] Preserve A-B controls where supported.
-- [ ] Preserve Replay Last, Record, and comparison tools.
+- [x] Keep the Version 1 delay timing algorithm intact.
+- [x] Add fullscreen rail.
+- [x] Add Live Score.
+- [x] Add Controls chip; place it bottom-left when the rail is hidden.
+- [x] Auto-enter delay when fullscreen opens while the camera is running.
+- [x] Support reference videos and stills.
+- [x] Preserve A-B controls where supported.
+- [x] Preserve Replay Last, Record, and comparison tools.
 - [ ] Test delay performance before accepting each change.
 - [ ] Browser test, commit, push, summarize, and stop.
 
