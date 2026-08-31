@@ -3,6 +3,20 @@
 This document protects the known-good Version 1 Compare camera while Version 2
 is rebuilt. Update it whenever camera ownership or lifecycle changes.
 
+## COMPARE CAMERA SYSTEM
+
+Known-good and protected. `CameraPane` owns its own physical stream, delay
+buffer, Replay Last blob, attempt recorder, and complete start/stop lifecycle.
+Do not move this state into a provider, pass it another screen's stream, or
+change its `getUserMedia` lifecycle during this rebuild.
+
+## TODAY CAMERA SYSTEM
+
+Separate camera lifecycle. Today must never stop, mutate, reuse, clone, or take
+ownership of Compare's stream, `MediaSource`, rolling recorder, replay blob, or
+delay buffer. Entering Compare from Today may pass reference image/data only;
+Compare still starts and owns its camera exactly as the protected build does.
+
 ## Protected baseline
 
 The immutable pre-rebuild baseline is tagged `v1-working-delaycam` at
@@ -109,6 +123,9 @@ The working pre-change state is `v2-rebuild-pre-phase7`.
 Current decision: Compare keeps its independent Version 1 stream and buffering.
 Live Scoring uses the existing Practice pose-camera path instead of Today or
 Videos / Compare.
+
+Do not attempt shared ownership again on this branch. It is a possible future
+experiment only on a separate branch explicitly requested by Ryan.
 
 ## Phase 3 metadata change
 

@@ -139,7 +139,9 @@ Checklist:
 ## Phase 7 — Shared camera session (reverted)
 
 The shared-camera attempt regressed Replay Last and is no longer the rebuild
-direction.
+direction. Phase 7 is intentionally cancelled. Shared camera ownership may only
+return as a future experiment on a separate branch if Ryan explicitly requests
+it; it must never be developed directly on this rebuild branch.
 
 - [x] Preserve the pre-Phase-7 checkpoint at `v2-rebuild-pre-phase7`.
 - [x] Preserve the failed attempt at `v2-rebuild-phase7-attempt`.
@@ -147,6 +149,12 @@ direction.
 - [x] Keep Compare on its independent Version 1 delay-camera stream.
 - [x] Move Live Scoring to Practice using the existing pose-camera path.
 - [ ] Ryan confirms Delay, Replay Last, and Record are restored.
+
+Protected post-revert checkpoint: `v2-pre-shared-camera-working` and
+`cursor/v2-pre-shared-camera-working-847e`.
+
+For every remaining phase, regression-test Compare Delay, Replay Last, and
+Record. If any fails, stop immediately and revert only that phase.
 
 ## Phase 8 — Today floor camera (on hold)
 
