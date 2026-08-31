@@ -27,7 +27,7 @@ import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib
 import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
-import { useCompareLayout } from './compareLayout'
+import { hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
 import { DelayCamHud, LiveBufferStart } from './DelayCamHud'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { uploadAthleteVideo } from '../../lib/athleteVideoStore'
@@ -720,7 +720,7 @@ export function CameraPane({
 
   const camPip = fullscreen && focus === 'ref'
   const livePip = fullscreen && !camPip && mode === 'delay' && running && !livePeek
-  const livePipCorner = pipCorner === 'br' && focus === 'cam' ? 'right-[8.5rem]' : 'right-3'
+  const livePipCorner = hudAvoidPipRightClass(fullscreen, focus, pipCorner, 'cam')
 
   const cameraChrome = (
     <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
@@ -902,7 +902,9 @@ export function CameraPane({
               aria-label="Open live camera to set the tripod"
               onClick={() => setLivePeek(true)}
             />
-            <span className={`pointer-events-none absolute bottom-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white ${pipCorner === 'br' && focus === 'cam' ? 'right-[9.1rem]' : 'right-4'}`}>
+            <span className={`pointer-events-none absolute bottom-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white ${
+              pipPane(fullscreen, focus) === 'ref' && pipCorner === 'br' ? 'right-[9.1rem]' : 'right-4'
+            }`}>
               Live
             </span>
           </>

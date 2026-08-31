@@ -33,6 +33,21 @@ export function pipCornerClass(corner: PipCorner): string {
   }
 }
 
+/**
+ * Bottom-right HUD (save / hide / min) stays at the screen edge unless the
+ * minimized chip is actually in that corner — then inset so they do not overlap.
+ */
+export function hudAvoidPipRightClass(
+  fullscreen: boolean,
+  focus: CompareFocus,
+  pipCorner: PipCorner,
+  pane: 'cam' | 'ref',
+): string {
+  const chip = pipPane(fullscreen, focus)
+  if (chip && chip !== pane && pipCorner === 'br') return 'right-[8.5rem]'
+  return 'right-3'
+}
+
 export const COMPARE_PIP_BOX =
   'overflow-hidden rounded-xl border-2 border-white/75 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.65)] h-[9.75rem] w-[7rem]'
 

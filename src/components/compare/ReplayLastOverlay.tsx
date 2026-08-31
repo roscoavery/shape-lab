@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { IconPip } from './CompareHud'
-import { useCompareLayout } from './compareLayout'
+import { hudAvoidPipRightClass, useCompareLayout } from './compareLayout'
 
 export function IconBack() {
   return (
@@ -269,8 +269,8 @@ export function ReplayLastOverlay({
   onToggleChrome,
   onMinimize,
 }: Props) {
-  const { focus, fullscreen } = useCompareLayout()
-  const chipRight = fullscreen && focus === 'cam'
+  const { focus, fullscreen, pipCorner } = useCompareLayout()
+  const chipRight = hudAvoidPipRightClass(fullscreen, focus, pipCorner, 'cam')
   const step = (dir: -1 | 1) => onSeek(time + dir * FRAME)
 
   return (
@@ -284,7 +284,7 @@ export function ReplayLastOverlay({
         <IconBack />
       </button>
 
-      <div className={`absolute z-[40] flex flex-col items-center gap-4 text-white ${chromeOpen ? 'bottom-[8.75rem]' : 'bottom-4'} ${chipRight ? 'right-[8.5rem]' : 'right-3'}`}>
+      <div className={`absolute z-[40] flex flex-col items-center gap-4 text-white ${chromeOpen ? 'bottom-[8.75rem]' : 'bottom-4'} ${chipRight}`}>
         {onMinimize && (
           <button type="button" onClick={onMinimize} aria-label="Show reference, keep replay in the corner">
             <IconPip />
