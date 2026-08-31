@@ -257,6 +257,12 @@ export function TodayFloorCamera({
     if (next) setSelectedShapeId(next.id)
   }
 
+  const previousShape = () => {
+    const index = MATCH_SHAPES.findIndex((shape) => shape.id === selectedShape.id)
+    const previous = MATCH_SHAPES[(index - 1 + MATCH_SHAPES.length) % MATCH_SHAPES.length]
+    if (previous) setSelectedShapeId(previous.id)
+  }
+
   const openCompareWithReference = () => {
     const still = coachStills.find((item) => item.shapeId === selectedShape.id) ?? null
     overlay.setSelected(still)
@@ -328,7 +334,7 @@ export function TodayFloorCamera({
         </div>
       </div>
 
-      <div className="mt-3 grid shrink-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mt-3 grid shrink-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
         <label className="text-xs text-[var(--muted)]">
           Match this shape
           <select
@@ -343,6 +349,13 @@ export function TodayFloorCamera({
             ))}
           </select>
         </label>
+        <button
+          type="button"
+          onClick={previousShape}
+          className="self-end rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold text-[var(--text)]"
+        >
+          Previous Shape
+        </button>
         <button
           type="button"
           onClick={nextShape}
