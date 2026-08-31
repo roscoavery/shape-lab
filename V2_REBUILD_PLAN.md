@@ -121,7 +121,7 @@ Checklist:
 - [x] Coach and appropriate athlete examples.
 - [x] Skill-reference videos.
 - [x] Do not combine private libraries into a global library.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 6 — Videos / Compare UI
 
