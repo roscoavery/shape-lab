@@ -116,6 +116,7 @@ export default function App() {
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [compareFullTick, setCompareFullTick] = useState(0)
   const [hwStudio, setHwStudio] = useState(false)
+  const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -640,6 +641,8 @@ export default function App() {
             <Tasks2Panel
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+              assignedSequenceId={assignedFlowId}
+              onAssignedSequenceConsumed={() => setAssignedFlowId(null)}
               score={score}
               scoredShapeId={shape.id}
               onRequestShape={onJumpToShape}
@@ -720,6 +723,10 @@ export default function App() {
             landmarks={activeLandmarks}
             onEnsureCamera={() => camera.start()}
             onStudioChange={setHwStudio}
+            onOpenClassFlow={(flowId) => {
+              setAssignedFlowId(flowId)
+              goTab('tasks2')
+            }}
             camSlot={
               hwStudio ? (
                 <div className="flex flex-col gap-3">

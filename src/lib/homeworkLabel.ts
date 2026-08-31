@@ -1,5 +1,6 @@
 import { getShape } from '../config/shapes'
 import { SEQUENCES_BY_ID } from '../config/sequences'
+import { getFlowSequence } from '../config/tasks2'
 import { getDrill } from './coachContentStore'
 import type { DrillClip, HomeworkItem, SequenceDef } from '../types'
 
@@ -25,6 +26,26 @@ export function isSequenceHomework(
 export function homeworkSequenceId(item: Pick<HomeworkItem, 'shapeId'>): string | null {
   if (!isSequenceHomework(item)) return null
   return item.shapeId.slice(SEQUENCE_HOMEWORK_PREFIX.length)
+}
+
+/** Older hold-sequence homework ids → Class Flow ids. */
+const LEGACY_SEQ_TO_FLOW: Record<string, string> = {
+  lunge_lever_hs_lunge: 'flow_hs_right',
+  mc_hs_lever_lunge: 'flow_mc_hs',
+  pike_hollow_arch: 'flow_pike_hollow_arch',
+  pike_tuck_hollow_arch: 'flow_pike_tuck_hollow_arch',
+  lemon_squeezes: 'flow_lemon_squeezes',
+  core_home: 'flow_core_home',
+}
+
+export function flowIdForHomeworkItem(
+  item: Pick<HomeworkItem, 'shapeId'>,
+): string | null {
+  const id = homeworkSequenceId(item)
+  if (!id) return null
+  if (getFlowSequence(id)) return id
+  const mapped = LEGACY_SEQ_TO_FLOW[id]
+  return mapped && getFlowSequence(mapped) ? mapped : null
 }
 
 export function getHomeworkSequence(
@@ -72,7 +93,9 @@ export function homeworkTitle(
   if (isSequenceHomework(item)) {
     if (item.customLabel?.trim()) return item.customLabel.trim()
     const seq = getHomeworkSequence(item)
-    return seq?.name ?? item.shapeId.slice(SEQUENCE_HOMEWORK_PREFIX.length).replace(/_/g, ' ')
+    if (seq) return seq.name
+    const flow = getFlowSequence(flowIdForHomeworkItem(item) ?? '')
+    return flow?.name ?? item.shapeId.slice(SEQUENCE_HOMEWORK_PREFIX.length).replace(/_/g, ' ')
   }
   if (isDrillHomework(item)) {
     if (item.customLabel?.trim()) return item.customLabel.trim()

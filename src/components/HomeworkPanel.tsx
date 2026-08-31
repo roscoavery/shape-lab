@@ -16,7 +16,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { SEQUENCES } from '../config/sequences'
+import { FLOW_SEQUENCES } from '../config/tasks2'
 import { allLibraryShapes, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
@@ -27,6 +27,7 @@ import {
   addHomeworkItem,
   addHomeworkLog,
   createId,
+  flowHistoryForSequence,
   dedupeHomeworkItems,
   ensureAutoHomework,
   formStandardFor,
@@ -44,6 +45,7 @@ import {
   customHomeworkShapeId,
   drillHomeworkShapeId,
   getHomeworkDrill,
+  flowIdForHomeworkItem,
   getHomeworkSequence,
   homeworkTitle,
   isCustomHomework,
@@ -51,6 +53,7 @@ import {
   isSequenceHomework,
   sequenceHomeworkShapeId,
 } from '../lib/homeworkLabel'
+import { getHomeworkFlow, overallFlowScore } from '../lib/homeworkFlow'
 import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes } from './ExpandableNotes'
 import { HoldProperTimes } from './HoldProperTimes'
@@ -90,6 +93,8 @@ type Props = {
   /** Practice camera + score, shown only while a train studio is open. */
   camSlot?: ReactNode
   onStudioChange?: (open: boolean) => void
+  /** Sequence homework opens Practice → Class flows on that assigned task. */
+  onOpenClassFlow?: (flowId: string) => void
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -418,31 +423,44 @@ function DrillHomeworkCard({ item }: { item: HomeworkItem }) {
   )
 }
 
-function SequenceHomeworkSteps({ item }: { item: HomeworkItem }) {
+function SequenceHomeworkSteps({
+  item,
+  times,
+  lastScore,
+}: {
+  item: HomeworkItem
+  times: number
+  lastScore: number | null
+}) {
+  const flow = getHomeworkFlow(item)
   const seq = getHomeworkSequence(item)
-  if (!seq) return null
-  const trainShape = seq.steps.find((step) => getShape(step.shapeId))
+  if (!flow && !seq) return null
   return (
     <div className="mt-2 rounded-md bg-[#0d1218] px-2.5 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        Sequence steps
+        Class flow
       </p>
-      <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-[var(--text)]">
-        {seq.steps.map((step, i) => (
-          <li key={`${step.shapeId}-${i}`}>
-            {getShape(step.shapeId)?.name ?? step.shapeId}
-            {step.holdSeconds ? (
-              <span className="text-[var(--muted)]"> · {step.holdSeconds}s</span>
-            ) : null}
-          </li>
-        ))}
-      </ol>
-      {trainShape && (
+      <p className="mt-1 text-[12px] leading-relaxed text-[var(--text)]">
+        {flow?.description ?? seq?.description}
+      </p>
+      {flow ? (
         <p className="mt-1.5 text-[11px] text-[var(--muted)]">
-          Train scores the first camera-ready step:{' '}
-          {getShape(trainShape.shapeId)?.name ?? trainShape.shapeId}.
+          {flow.previewShapes.map((s) => s.label).join(' → ')}
+          {flow.setupSpeak ? ` · ${flow.setupSpeak}` : ''}
         </p>
+      ) : (
+        <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-[var(--text)]">
+          {seq!.steps.map((step, i) => (
+            <li key={`${step.shapeId}-${i}`}>
+              {getShape(step.shapeId)?.name ?? step.shapeId}
+            </li>
+          ))}
+        </ol>
       )}
+      <p className="mt-2 text-[12px] font-semibold tabular-nums text-[var(--accent)]">
+        {times} run{times === 1 ? '' : 's'}
+        {lastScore != null ? ` · last score ${lastScore}` : ''}
+      </p>
     </div>
   )
 }
@@ -497,6 +515,7 @@ export function HomeworkPanel({
   onEnsureCamera,
   camSlot = null,
   onStudioChange,
+  onOpenClassFlow,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -713,6 +732,11 @@ export function HomeworkPanel({
   }
 
   const startItem = (item: HomeworkItem) => {
+    const flowId = flowIdForHomeworkItem(item)
+    if (flowId && onOpenClassFlow) {
+      onOpenClassFlow(flowId)
+      return
+    }
     setOpenIds((prev) => new Set(prev).add(item.id))
     setActiveItemId(item.id)
     setManualItemId(null)
@@ -881,7 +905,7 @@ export function HomeworkPanel({
   const addItem = () => {
     if (!athleteId) return
     const typed = addTyped.trim()
-    const seq = SEQUENCES.find((s) => s.id === addSequenceId)
+    const seq = FLOW_SEQUENCES.find((s) => s.id === addSequenceId)
     const drill = listPublicDrills().find((d) => d.id === addDrillId)
     if (!typed && !addShapeId && !seq && !drill) return
     const nextShapeId = drill
@@ -1449,7 +1473,7 @@ export function HomeworkPanel({
                   </span>
                   {isSequenceHomework(item) && (
                     <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text)]">
-                      sequence
+                      class flow
                     </span>
                   )}
                   {isDrillHomework(item) && (
@@ -1476,9 +1500,13 @@ export function HomeworkPanel({
                     type="button"
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
-                    title="Camera session with live form scoring (recommended)"
+                    title={
+                      isSequenceHomework(item)
+                        ? 'Open this sequence in Class flow'
+                        : 'Camera session with live form scoring (recommended)'
+                    }
                   >
-                    Train
+                    {isSequenceHomework(item) ? 'Class flow' : 'Train'}
                   </button>}
                   <button
                     type="button"
@@ -1647,7 +1675,26 @@ export function HomeworkPanel({
               )}
 
               {isSequenceHomework(item) && (
-                <SequenceHomeworkSteps item={item} />
+                <SequenceHomeworkSteps
+                  item={item}
+                  times={(() => {
+                    const flowId = flowIdForHomeworkItem(item)
+                    const flowRuns =
+                      athleteId && flowId ? flowHistoryForSequence(athleteId, flowId) : []
+                    const seqLogs = itemLogs.filter((l) => l.kind === 'sequence')
+                    return Math.max(seqLogs.length, flowRuns.length, itemLogs.length)
+                  })()}
+                  lastScore={(() => {
+                    const seqLog = itemLogs.find((l) => l.kind === 'sequence' && l.score > 0)
+                    if (seqLog) return seqLog.score
+                    const flowId = flowIdForHomeworkItem(item)
+                    const latest =
+                      athleteId && flowId
+                        ? flowHistoryForSequence(athleteId, flowId)[0]
+                        : undefined
+                    return latest ? overallFlowScore(latest) : null
+                  })()}
+                />
               )}
               {isDrillHomework(item) && <DrillHomeworkCard item={item} />}
               {item.notes && (
@@ -1712,8 +1759,8 @@ export function HomeworkPanel({
               }
             }}
           >
-            <option value="">Or a sequence…</option>
-            {SEQUENCES.map((s) => (
+            <option value="">Or a class flow…</option>
+            {FLOW_SEQUENCES.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>

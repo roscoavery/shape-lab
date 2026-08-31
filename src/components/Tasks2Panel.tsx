@@ -45,6 +45,7 @@ import {
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
+import { logHomeworkSequenceRun } from '../lib/homeworkFlow'
 import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
@@ -92,6 +93,9 @@ type Props = {
   onHoldClock?: (seconds: number | null) => void
   mirror?: boolean
   cameraError?: string | null
+  /** Homework / coach assign — select this Class Flow when the page opens. */
+  assignedSequenceId?: string | null
+  onAssignedSequenceConsumed?: () => void
 }
 
 function scoreColor(n: number): string {
@@ -177,6 +181,8 @@ export function Tasks2Panel({
   onHoldClock,
   mirror = true,
   cameraError = null,
+  assignedSequenceId = null,
+  onAssignedSequenceConsumed,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
@@ -296,17 +302,22 @@ export function Tasks2Panel({
     }
     const p = loadFlowProgress(athleteId)
     setProgress(p)
-    if (p.currentId && getFlowSequence(p.currentId)) {
-      setSeqId(p.currentId)
-    } else {
-      const firstId = FLOW_SEQUENCES[0]!.id
-      setSeqId(firstId)
-      if (p.currentId && p.currentId !== firstId) {
-        saveFlowProgress({ ...p, currentId: firstId })
-      }
+    const assigned =
+      assignedSequenceId && getFlowSequence(assignedSequenceId)
+        ? assignedSequenceId
+        : null
+    const nextId =
+      assigned ??
+      (p.currentId && getFlowSequence(p.currentId) ? p.currentId : FLOW_SEQUENCES[0]!.id)
+    setSeqId(nextId)
+    if (p.currentId !== nextId) {
+      const saved = { ...p, currentId: nextId }
+      saveFlowProgress(saved)
+      setProgress(saved)
     }
-    setHistory(flowHistoryForSequence(athleteId, p.currentId ?? seqId))
-  }, [athleteId])
+    setHistory(flowHistoryForSequence(athleteId, nextId))
+    if (assigned) onAssignedSequenceConsumed?.()
+  }, [athleteId, assignedSequenceId, onAssignedSequenceConsumed])
 
   useEffect(() => {
     if (!athleteId) return
@@ -497,6 +508,7 @@ export function Tasks2Panel({
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
+        logHomeworkSequenceRun(built)
       }
       if (blob && blob.size > 800) {
         const filename = videoFileName(built, blob.type)
@@ -568,6 +580,7 @@ export function Tasks2Panel({
           saveFlowAnalysis(built)
           const next = recordFlowCompletion(athleteId, seqRun.id)
           setProgress(next)
+          logHomeworkSequenceRun(built)
         }
         setReport(built)
         setSnaps([])
@@ -700,6 +713,7 @@ export function Tasks2Panel({
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
+        logHomeworkSequenceRun(built)
       }
       setDeviceSave(null)
       setReport(built)

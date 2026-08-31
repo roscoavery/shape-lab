@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { allLibraryShapes } from '../../config/shapes'
-import { SEQUENCES } from '../../config/sequences'
+import { FLOW_SEQUENCES } from '../../config/tasks2'
 import {
   customHomeworkShapeId,
   drillHomeworkShapeId,
@@ -41,7 +41,7 @@ export function AssignHomeworkBar({
 
   const assign = () => {
     const label = typed.trim()
-    const seq = SEQUENCES.find((s) => s.id === sequenceId)
+    const seq = FLOW_SEQUENCES.find((s) => s.id === sequenceId)
     const drill = listPublicDrills().find((d) => d.id === drillId)
     if (!label && !shapeId && !seq && !drill) {
       setFlash('Pick a shape, a sequence, a drill, or type the name.')
@@ -81,7 +81,9 @@ export function AssignHomeworkBar({
       ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
       ...(notes.trim() || seqNotes ? { notes: notes.trim() || seqNotes } : {}),
     })
-    setFlash(`Assigned ${homeworkTitle(probe)}. They will see it under Practice → Homework.`)
+    setFlash(
+      `Assigned ${homeworkTitle(probe)}. They open it under Practice → Homework → Class flow.`,
+    )
     setNotes('')
     setSeconds('')
     setTyped('')
@@ -126,8 +128,8 @@ export function AssignHomeworkBar({
             }
           }}
         >
-          <option value="">Or assign a sequence…</option>
-          {SEQUENCES.map((s) => (
+          <option value="">Or assign a class flow…</option>
+          {FLOW_SEQUENCES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>

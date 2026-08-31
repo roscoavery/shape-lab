@@ -589,6 +589,7 @@ export function addHomeworkLog(log: HomeworkLog): void {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
   all.unshift(log)
   writeJson(HOMEWORK_LOGS_KEY, all.slice(0, 1000))
+  emitHomework()
   pushRosterSoon()
 }
 

@@ -243,8 +243,75 @@ export function VideoMarkOverlay({
       }
     }
 
+    const strokeStraight = (pts: Pt[], color: string) => {
+      if (pts.length === 0) return
+      ctx.lineJoin = 'miter'
+      ctx.miterLimit = 8
+      ctx.lineCap = 'butt'
+      ctx.strokeStyle = color
+      ctx.fillStyle = color
+      ctx.lineWidth = lw
+      const px = pts.map((p) => toPx(p, box))
+      if (px.length === 1) {
+        ctx.beginPath()
+        ctx.arc(px[0]!.x, px[0]!.y, lw / 2, 0, Math.PI * 2)
+        ctx.fill()
+        return
+      }
+      ctx.beginPath()
+      ctx.moveTo(px[0]!.x, px[0]!.y)
+      for (let i = 1; i < px.length; i++) {
+        ctx.lineTo(px[i]!.x, px[i]!.y)
+      }
+      ctx.stroke()
+    }
+
+    const paintLineAngle = (pts: Pt[]) => {
+      if (pts.length < 3) return
+      const a = toPx(pts[0]!, box)
+      const v = toPx(pts[1]!, box)
+      const c = toPx(pts[2]!, box)
+      const v1x = a.x - v.x
+      const v1y = a.y - v.y
+      const v2x = c.x - v.x
+      const v2y = c.y - v.y
+      const d1 = Math.hypot(v1x, v1y)
+      const d2 = Math.hypot(v2x, v2y)
+      if (d1 < 8 || d2 < 8) return
+      const dot = (v1x * v2x + v1y * v2y) / (d1 * d2)
+      const deg = (Math.acos(Math.min(1, Math.max(-1, dot))) * 180) / Math.PI
+      const ang1 = Math.atan2(v1y, v1x)
+      const ang2 = Math.atan2(v2y, v2x)
+      let delta = ang2 - ang1
+      while (delta <= -Math.PI) delta += Math.PI * 2
+      while (delta > Math.PI) delta -= Math.PI * 2
+      const radius = Math.max(18, Math.min(d1, d2) * 0.28, lw * 7)
+      ctx.beginPath()
+      ctx.arc(v.x, v.y, radius, ang1, ang1 + delta, delta < 0)
+      ctx.strokeStyle = LINE
+      ctx.lineWidth = Math.max(1.6, lw * 0.45)
+      ctx.stroke()
+      const mid = ang1 + delta / 2
+      const labelR = radius + Math.max(14, lw * 4.2)
+      const lx = v.x + Math.cos(mid) * labelR
+      const ly = v.y + Math.sin(mid) * labelR
+      const text = `${Math.round(deg)}°`
+      const fontPx = Math.max(13, Math.round(lw * 4.2))
+      ctx.font = `700 ${fontPx}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const tw = ctx.measureText(text).width
+      const padX = 6
+      const padY = 4
+      ctx.fillStyle = 'rgba(11, 15, 20, 0.82)'
+      ctx.fillRect(lx - tw / 2 - padX, ly - fontPx / 2 - padY, tw + padX * 2, fontPx + padY * 2)
+      ctx.fillStyle = LINE
+      ctx.fillText(text, lx, ly)
+    }
+
     const strokeLineDots = (pts: Pt[], color: string) => {
-      strokeSmooth(pts, color, false)
+      strokeStraight(pts, color)
+      paintLineAngle(pts)
       const r = Math.max(5, lw * 1.4)
       ctx.fillStyle = color
       for (const p of pts) {
@@ -711,7 +778,7 @@ export function VideoMarkOverlay({
       )}
       {!hud && tool === 'line' && linePts.length > 0 && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
-          Tap a Line dot to select it, then drag to move. A fourth tap on empty space clears the line.
+          Tap three points: two straight sides and a corner. The degree number sits on the angle. Drag a dot to move. A fourth tap clears.
         </p>
       )}
       {!hud && tool === 'draw' && !pending && (

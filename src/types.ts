@@ -424,6 +424,10 @@ export type HomeworkLog = {
   breakdowns?: HomeworkBreakdown[]
   /** Overall shape score (0–100) at log time; 0 for manual entries */
   score: number
+  /** Class-flow sequence run vs a timed hold. Missing = hold. */
+  kind?: 'hold' | 'sequence'
+  /** How many times this sequence was completed in the session (usually 1). */
+  reps?: number
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
   /** Lesson holds land on the athlete’s homework, labeled with the coach. */
