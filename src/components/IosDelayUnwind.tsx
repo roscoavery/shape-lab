@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
- * Spin a delay-cam <video>/canvas 90° CCW so iPhone sensor pixels match LIVE.
- * Transform does not change layout size — the surface keeps the pane's
- * width × height so Safari still paints. Mirror / zoom belong on this outer box.
+ * Spin a delay-cam <video> 90° clockwise so iPhone sensor pixels match LIVE.
+ * (CCW left the picture upside down.) Transform does not change layout size.
+ * Mirror / zoom belong on this outer box.
  */
 export function IosDelayUnwind({
   active,
@@ -47,8 +47,8 @@ export function IosDelayUnwind({
       <div
         className="ios-delay-spin"
         style={{
-          transform: `rotate(-90deg) scale(${fill})`,
-          WebkitTransform: `rotate(-90deg) scale(${fill})`,
+          transform: `rotate(90deg) scale(${fill})`,
+          WebkitTransform: `rotate(90deg) scale(${fill})`,
           transformOrigin: 'center center',
         }}
       >
