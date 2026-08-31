@@ -36,7 +36,11 @@ import {
   updateHomeworkItem,
 } from '../lib/storage'
 import { homeworkLooksReady } from '../lib/homeworkPose'
-import { homeworkTitle, isCustomHomework } from '../lib/homeworkLabel'
+import {
+  customHomeworkShapeId,
+  homeworkTitle,
+  isCustomHomework,
+} from '../lib/homeworkLabel'
 import { pickCoachStill } from '../lib/shippedRefs'
 import type {
   HomeworkBreakdown,
@@ -194,6 +198,7 @@ export function HomeworkPanel({
   const [plankSide, setPlankSide] = useState<PlankSide>('left')
   const [flash, setFlash] = useState<string | null>(null)
   const [addShapeId, setAddShapeId] = useState(SHAPES[0]?.id ?? '')
+  const [addTyped, setAddTyped] = useState('')
   const [addSource, setAddSource] = useState<'coach' | 'athlete'>('coach')
   const [addTarget, setAddTarget] = useState('20')
   const [addNotes, setAddNotes] = useState('')
@@ -467,34 +472,45 @@ export function HomeworkPanel({
   }
 
   const addItem = () => {
-    if (!athleteId || !addShapeId) return
-    const probe = { athleteId, shapeId: addShapeId, source: addSource, id: '', createdAt: '' }
+    if (!athleteId) return
+    const typed = addTyped.trim()
+    if (!typed && !addShapeId) return
+    const nextShapeId = typed ? customHomeworkShapeId(typed) : addShapeId
+    const probe = {
+      athleteId,
+      shapeId: nextShapeId,
+      customLabel: typed || undefined,
+      source: addSource,
+      id: '',
+      createdAt: '',
+    }
     if (visibleItems.some((h) => homeworkDedupeKey(h) === homeworkDedupeKey(probe))) {
       showFlash('That drill is already on this homework list.')
       return
     }
     const target = Number(addTarget)
     const defaultNotes =
-      addShapeId === 'rainbow_bridge'
+      nextShapeId === 'rainbow_bridge'
         ? 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
-        : addShapeId === 'side_plank'
+        : nextShapeId === 'side_plank'
           ? 'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other. Top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; or bend them and put weight on the bottom knee. Both sides. Work toward a minute.'
-        : addShapeId === 'long_bridge'
+        : nextShapeId === 'long_bridge'
           ? 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
-          : addShapeId === 'seated_pike'
+          : nextShapeId === 'seated_pike'
             ? 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Snap-open drill: pike → hollow arms down → arch (supine).'
-            : addShapeId === 'zombie'
+            : nextShapeId === 'zombie'
               ? 'Standing hollow, arms in front, ears covered. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Same finish as the seated pike with zombie arms.'
-            : addShapeId === 'pike_open_shoulders'
+            : nextShapeId === 'pike_open_shoulders'
               ? 'Arms up by the ears, shoulders open. Legs together, knees straight, toes pointed. Pike–tuck–hollow–arch; rock back to candlestick; pike–tuck for arms behind the ears on a back tuck.'
-              : addShapeId === 'tuck_open_shoulders'
+              : nextShapeId === 'tuck_open_shoulders'
                 ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
           : ''
     const notes = addNotes.trim() || defaultNotes
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
-      shapeId: addShapeId,
+      shapeId: nextShapeId,
+      ...(typed ? { customLabel: typed } : {}),
       source: addSource,
       ...(Number.isFinite(target) && target > 0
         ? { targetSeconds: target }
@@ -504,7 +520,8 @@ export function HomeworkPanel({
     }
     setItems(addHomeworkItem(item))
     setAddNotes('')
-    const shapeName = getShape(addShapeId)?.name ?? addShapeId
+    setAddTyped('')
+    const shapeName = homeworkTitle(item)
     showFlash(
       `${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${shapeName}`,
     )
@@ -1087,6 +1104,7 @@ export function HomeworkPanel({
             value={addShapeId}
             onChange={(e) => setAddShapeId(e.target.value)}
           >
+            <option value="">Pick a shape…</option>
             {SHAPES.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -1123,6 +1141,12 @@ export function HomeworkPanel({
             Add
           </button>
         </div>
+        <input
+          className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
+          placeholder="Or type a skill / drill instead of picking a shape"
+          value={addTyped}
+          onChange={(e) => setAddTyped(e.target.value)}
+        />
         <input
           className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
           placeholder="Optional note (e.g. 3 sets before bed)"

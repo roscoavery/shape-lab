@@ -100,15 +100,15 @@ Checklist:
 
 ## Phase 4 — Practice
 
-- [ ] Homework.
-- [ ] Warm-up boards.
-- [ ] Class flows.
-- [ ] Hold tracking.
-- [ ] Assigned shape work.
-- [ ] Existing shape/task homework selection.
-- [ ] Typed custom homework using `custom:` names.
-- [ ] Athlete assignment and progress tracking.
-- [ ] Preserve existing homework data.
+- [x] Homework.
+- [x] Warm-up boards.
+- [x] Class flows.
+- [x] Hold tracking.
+- [x] Assigned shape work.
+- [x] Existing shape/task homework selection.
+- [x] Typed custom homework using `custom:` names.
+- [x] Athlete assignment and progress tracking.
+- [x] Preserve existing homework data.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 5 — Coach shape libraries

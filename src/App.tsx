@@ -32,6 +32,7 @@ import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
+import { WarmupPanel } from './components/warmup/WarmupPanel'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
@@ -759,6 +760,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {tab === 'warmup' && <WarmupPanel signedIn={activeProfile} />}
 
       {tab === 'learn' && (
         <EducationPanel

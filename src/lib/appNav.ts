@@ -16,6 +16,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
   today: [{ id: 'today', label: 'Home' }],
   practice: [
     { id: 'homework', label: 'Homework' },
+    { id: 'warmup', label: 'Warm-up' },
     { id: 'tasks2', label: 'Class flows' },
     { id: 'tasks', label: 'Hold & body work' },
   ],
@@ -39,6 +40,7 @@ export function sectionForTab(tab: AppTab): AppSection {
     case 'today':
       return 'today'
     case 'homework':
+    case 'warmup':
     case 'tasks2':
     case 'tasks':
       return 'practice'
