@@ -700,6 +700,7 @@ export function CameraPane({
 
   const camPip = fullscreen && focus === 'ref'
   const livePip = fullscreen && !camPip && mode === 'delay' && running
+  const livePipCorner = focus === 'cam' ? 'right-[8.5rem]' : 'right-3'
 
   const cameraChrome = (
     <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
@@ -833,7 +834,7 @@ export function CameraPane({
     <section
       className={
         fullscreen
-          ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black'
+          ? 'relative flex h-full min-h-0 flex-col overflow-hidden bg-black'
           : 'relative flex min-h-0 flex-col gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
       }
     >
@@ -865,7 +866,7 @@ export function CameraPane({
           style={videoXform}
           className={
             livePip
-              ? 'absolute bottom-3 right-3 z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg'
+              ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg`
               : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
                   mode === 'delay' ? 'hidden' : ''
                 }`
@@ -875,11 +876,11 @@ export function CameraPane({
           <>
             <button
               type="button"
-              className="absolute bottom-3 right-3 z-[26] h-[7.75rem] w-[5.5rem] rounded-lg"
+              className={`absolute bottom-3 ${livePipCorner} z-[26] h-[7.75rem] w-[5.5rem] rounded-lg`}
               aria-label="Open live camera to set the tripod"
               onClick={() => setMode('live')}
             />
-            <span className="pointer-events-none absolute bottom-4 right-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+            <span className={`pointer-events-none absolute bottom-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white ${focus === 'cam' ? 'right-[9.1rem]' : 'right-4'}`}>
               Live
             </span>
           </>
@@ -950,33 +951,6 @@ export function CameraPane({
             onExit={() => setFullscreen(false)}
           />
         )}
-        {camPip && (
-          <>
-            <button
-              type="button"
-              className="absolute inset-0 z-[42]"
-              aria-label="Expand delay cam"
-              onClick={() => setFocus('split')}
-            />
-            {running && mode !== 'live' && (
-              <button
-                type="button"
-                className="absolute bottom-1.5 right-1.5 z-[43] rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-black shadow"
-                aria-label="Open live camera to set the tripod"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setFocus('cam')
-                  setMode('live')
-                }}
-              >
-                Live
-              </button>
-            )}
-            <span className="pointer-events-none absolute left-1.5 top-1.5 z-[43] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
-              {mode === 'live' ? 'Live' : 'Delay'}
-            </span>
-          </>
-        )}
         {mode === 'delay' && running && !fullscreen && (
           <button
             type="button"
@@ -1008,9 +982,10 @@ export function CameraPane({
               tailSeconds={replayTailSec ?? undefined}
               fill={fullscreen}
               overlayChrome
-              replayChrome
-              pinchZoom
-              markup
+              replayChrome={!camPip}
+              pinchZoom={!camPip}
+              markup={!camPip}
+              bare={camPip}
               showStillOverlay={!fullscreen}
               savingPhotos={savingPhotos}
               onWindowChange={(start, end) => {
@@ -1019,6 +994,7 @@ export function CameraPane({
               onBack={() => setMode(running ? 'delay' : 'live')}
               onSavePhotos={downloadReplay}
               onSaveInApp={saveReplayToApp}
+              onMinimize={() => setFocus('ref')}
             />
           </div>
         ) : (
@@ -1102,6 +1078,33 @@ export function CameraPane({
             ))}
           </ul>
         </div>
+      )}
+      {camPip && (
+        <>
+          <button
+            type="button"
+            className="absolute inset-0 z-[60]"
+            aria-label="Show replay full screen"
+            onClick={() => setFocus('cam')}
+          />
+          {running && mode !== 'live' && (
+            <button
+              type="button"
+              className="absolute bottom-1.5 right-1.5 z-[61] rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-black shadow"
+              aria-label="Open live camera to set the tripod"
+              onClick={(e) => {
+                e.stopPropagation()
+                setFocus('cam')
+                setMode('live')
+              }}
+            >
+              Live
+            </button>
+          )}
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-[61] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+            {mode === 'replay' ? 'Replay' : mode === 'live' ? 'Live' : 'Delay'}
+          </span>
+        </>
       )}
     </section>
   )

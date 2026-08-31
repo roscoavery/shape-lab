@@ -57,6 +57,8 @@ type Props = {
   onSavePhotos?: () => void
   onSaveInApp?: () => void
   savingPhotos?: boolean
+  /** Shrink replay to the corner and show the reference full screen. */
+  onMinimize?: () => void
 }
 
 function fmt(t: number): string {
@@ -97,6 +99,7 @@ function VideoWorkbenchInner({
   onSavePhotos,
   onSaveInApp,
   savingPhotos = false,
+  onMinimize,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -701,6 +704,7 @@ function VideoWorkbenchInner({
             onSave={onSavePhotos}
             onSaveInApp={onSaveInApp}
             onToggleChrome={() => setChromeOpen((open) => !open)}
+            onMinimize={onMinimize}
           />
         ) : (
           <>

@@ -54,7 +54,7 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
-import { HudCircle, IconClips, IconPip, IconX } from './CompareHud'
+import { HudCircle, IconClips, IconPip, IconSwap, IconX } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -946,8 +946,8 @@ export function ReferencePane({
         <HudCircle label="Clip" onClick={() => setClipHudOpen(true)}>
           <IconClips />
         </HudCircle>
-        <HudCircle label="Min" onClick={() => setFocus('cam')}>
-          <IconPip />
+        <HudCircle label={focus === 'split' ? 'Min' : 'Swap'} onClick={() => setFocus(focus === 'cam' ? 'ref' : 'cam')}>
+          {focus === 'split' ? <IconPip /> : <IconSwap />}
         </HudCircle>
       </>
     ) : null
@@ -1388,7 +1388,7 @@ export function ReferencePane({
           type="button"
           className="absolute inset-0 z-[45]"
           aria-label="Expand reference"
-          onClick={() => setFocus('split')}
+          onClick={() => setFocus('ref')}
         />
       )}
       {pip && (

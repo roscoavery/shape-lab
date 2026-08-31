@@ -88,7 +88,7 @@ export function CompareChromeRail({ photos }: Props) {
           </button>
         </div>
         <p className="mt-1 px-0.5 text-[10px] leading-snug text-white/40">
-          Min keeps the other view playing in the corner. Tap the chip to restore the split.
+          Min puts the other view in the same bottom-right chip. Tap the chip or Swap to flip replay and reference.
         </p>
       </section>
 

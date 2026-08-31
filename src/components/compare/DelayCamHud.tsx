@@ -3,7 +3,8 @@
  * and the live start screen for setting buffer time.
  */
 
-import { HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconPip, IconReplayArrow, IconShow, IconX } from './CompareHud'
+import { HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconPip, IconReplayArrow, IconShow, IconSwap, IconX } from './CompareHud'
+import { useCompareLayout } from './compareLayout'
 
 type DelayProps = {
   delaySec: number
@@ -42,6 +43,9 @@ export function DelayCamHud({
   onMinimize,
   onExit,
 }: DelayProps) {
+  const { focus } = useCompareLayout()
+  const minLabel = focus === 'split' ? 'Min' : 'Swap'
+  const MinIcon = focus === 'split' ? IconPip : IconSwap
   if (!hudOpen) {
     return (
       <div className="pointer-events-none absolute inset-0 z-[28]">
@@ -52,8 +56,8 @@ export function DelayCamHud({
           <span className="text-[10px] font-medium text-white">Show</span>
         </button>
         <div className="pointer-events-auto absolute right-3 top-3">
-          <HudCircle label="Min" onClick={onMinimize}>
-            <IconPip />
+          <HudCircle label={minLabel} onClick={onMinimize}>
+            <MinIcon />
           </HudCircle>
         </div>
       </div>
@@ -153,6 +157,9 @@ export function LiveBufferStart({
   onMinimize,
   onExit,
 }: StartProps) {
+  const { focus } = useCompareLayout()
+  const minLabel = focus === 'split' ? 'Min' : 'Swap'
+  const MinIcon = focus === 'split' ? IconPip : IconSwap
   return (
     <div className="pointer-events-none absolute inset-0 z-[28] text-white">
       {running && (
@@ -181,8 +188,8 @@ export function LiveBufferStart({
               <IconClock />
             </HudCircle>
           )}
-          <HudCircle label="Min" onClick={onMinimize}>
-            <IconPip />
+          <HudCircle label={minLabel} onClick={onMinimize}>
+            <MinIcon />
           </HudCircle>
         </div>
       </div>

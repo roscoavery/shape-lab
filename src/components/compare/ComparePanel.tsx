@@ -14,10 +14,12 @@ import { CompareSplitDivider } from './CompareSplitDivider'
 import {
   CompareLayoutContext,
   COMPARE_PIP_BOX,
+  flipFocus,
   pipPane,
   type CompareFocus,
   type CompareSplit,
 } from './compareLayout'
+import { HudCircle, IconSwap } from './CompareHud'
 import { IgStillContext, type IgCropDraft } from './IgStillContext'
 import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
@@ -174,7 +176,7 @@ export function ComparePanel({
                 key="ref"
                 className={
                   corner === 'ref'
-                    ? `${COMPARE_PIP_BOX} bottom-16 left-3`
+                    ? `${COMPARE_PIP_BOX} bottom-3 right-3`
                     : corner === 'cam'
                       ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
                       : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
@@ -228,6 +230,13 @@ export function ComparePanel({
                   skillLabel={skillLabel}
                 />
               </div>
+              {corner ? (
+                <div className="absolute bottom-[11.2rem] right-3 z-[40]">
+                  <HudCircle label="Swap" onClick={() => setFocus(flipFocus(focus))}>
+                    <IconSwap />
+                  </HudCircle>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div

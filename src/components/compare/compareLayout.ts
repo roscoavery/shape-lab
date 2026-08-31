@@ -12,6 +12,13 @@ export function pipPane(
   return focus === 'cam' ? 'ref' : 'cam'
 }
 
+/** Flip which pane is full vs in the corner. Split is unchanged. */
+export function flipFocus(focus: CompareFocus): CompareFocus {
+  if (focus === 'cam') return 'ref'
+  if (focus === 'ref') return 'cam'
+  return 'cam'
+}
+
 export const COMPARE_PIP_BOX =
   'absolute z-[36] overflow-hidden rounded-xl border-2 border-white/75 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.65)] h-[9.75rem] w-[7rem]'
 

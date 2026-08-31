@@ -122,6 +122,17 @@ export function IconPip() {
   )
 }
 
+export function IconSwap() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M7 8h11" />
+      <path d="m15 5 3 3-3 3" />
+      <path d="M17 16H6" />
+      <path d="m9 13-3 3 3 3" />
+    </svg>
+  )
+}
+
 export function IconLine() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
