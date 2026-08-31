@@ -574,11 +574,11 @@ function ShapeLibrary({
       </div>
 
       <p className="text-xs text-[var(--muted)]">
-        {shapes.length} shape{shapes.length === 1 ? '' : 's'}. Empty thumbnails are
-        homework without a still yet — every picture you sent is in this list.
+        {shapes.length} shape{shapes.length === 1 ? '' : 's'} as pictures. Tap a
+        still to open notes, then use the arrows to move to the next shape.
       </p>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {shapes.map((shape) => {
           const onPath = pathwayIds.has(shape.id)
           return (
@@ -586,17 +586,17 @@ function ShapeLibrary({
               <button
                 type="button"
                 onClick={() => onOpen(shape.id)}
-                className="flex h-full w-full gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 text-left transition hover:border-[var(--accent-dim)]"
+                className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] text-left transition hover:border-[var(--accent-dim)]"
               >
-                <div className="flex h-24 w-32 min-w-0 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0d1218]">
+                <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[#0d1218]">
                   <ReferenceStill
                     shapeId={shape.id}
                     photos={referencePhotos}
-                    alt=""
-                    className="h-full w-full min-h-0 min-w-0 object-contain"
+                    alt={shape.name}
+                    className="h-full w-full object-contain"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 px-2.5 py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-[var(--text)]">{shape.name}</span>
                     {onPath && (
@@ -610,7 +610,7 @@ function ShapeLibrary({
                       Same position as {otherSamePositionIds(shape.id).map((id) => getShape(id)?.name ?? id).join(', ')}
                     </p>
                   )}
-                  <p className="mt-1 line-clamp-3 text-xs leading-snug text-[var(--muted)]">
+                  <p className="mt-1 line-clamp-2 text-xs leading-snug text-[var(--muted)]">
                     {copyFor(shape.id).athlete}
                   </p>
                 </div>
@@ -692,17 +692,27 @@ function ShapeDetail({
             type="button"
             disabled={!previousShapeId}
             onClick={() => previousShapeId && onOpenShape(previousShapeId)}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--text)] disabled:opacity-40"
+            aria-label="Previous shape"
+            title={
+              previousShapeId
+                ? `Previous: ${getShape(previousShapeId)?.name ?? previousShapeId}`
+                : 'Previous shape'
+            }
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--panel-border)] text-xl text-[var(--text)] disabled:opacity-40"
           >
-            ← Previous shape
+            ←
           </button>
           <button
             type="button"
             disabled={!nextShapeId}
             onClick={() => nextShapeId && onOpenShape(nextShapeId)}
-            className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+            aria-label="Next shape"
+            title={
+              nextShapeId ? `Next: ${getShape(nextShapeId)?.name ?? nextShapeId}` : 'Next shape'
+            }
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-dim)] text-xl font-semibold text-white disabled:opacity-40"
           >
-            Next shape →
+            →
           </button>
         </div>
       </div>
@@ -768,7 +778,7 @@ function ShapeDetail({
           photos={referencePhotos}
           alt={`${shape.name} reference`}
           emptyLabel="No coach still for this shape yet"
-          imgClass="max-h-80 w-full object-contain"
+          imgClass="min-h-48 max-h-80 w-full object-contain"
           allowCrop={canEdit}
         />
       </div>
@@ -785,16 +795,20 @@ function ShapeDetail({
                   key={still.id}
                   photo={still}
                   alt={still.label ?? shape.name}
-                  imgClass="max-h-48 w-full object-contain"
+                  imgClass="min-h-48 max-h-64 w-full object-contain"
                 />
               ) : (
-                <CroppedStill
+                <div
                   key={still.id}
-                  src={still.dataUrl}
-                  stillId={still.id}
-                  alt={still.label ?? shape.name}
-                  className="max-h-48 w-full rounded-md bg-[#0d1218] object-contain"
-                />
+                  className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#0d1218]"
+                >
+                  <CroppedStill
+                    src={still.dataUrl}
+                    stillId={still.id}
+                    alt={still.label ?? shape.name}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
               ),
             )}
           </div>
@@ -1193,12 +1207,14 @@ function IgShapesLibrary({
                 key={still.id}
                 className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0d1218]"
               >
-                <CroppedStill
-                  src={still.dataUrl}
-                  stillId={still.id}
-                  alt={still.label ?? group.name}
-                  className="max-h-48 w-full object-contain"
-                />
+                <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#0d1218]">
+                  <CroppedStill
+                    src={still.dataUrl}
+                    stillId={still.id}
+                    alt={still.label ?? group.name}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                   <p className="min-w-0 truncate text-[11px] text-[var(--muted)]">
                     {still.label || group.name}

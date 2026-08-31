@@ -82,15 +82,8 @@ export function CroppedStill({
     }
   }, [src, crop, cropKey])
 
-  if (crop && !clipped) {
-    return (
-      <span
-        className={`inline-block bg-[#0d1218] ${className.replace(/\bobject-\w+\b/g, '')}`}
-        aria-hidden
-      />
-    )
-  }
-
+  // Always paint the source picture. A 0-height crop placeholder was
+  // hiding every still that uses max-height (IG library, shape cards).
   return (
     <img
       src={clipped ?? src}

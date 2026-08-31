@@ -119,14 +119,45 @@ function Thumb({
   onOpen: () => void
   onDelete?: (id: string) => void
 }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let objectUrl: string | null = null
+    let cancelled = false
+    void getCaptureBlob(capture.id).then((blob) => {
+      if (cancelled || !blob) return
+      objectUrl = URL.createObjectURL(blob)
+      setUrl(objectUrl)
+    })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [capture.id])
+
   return (
-    <div className="shrink-0 rounded border border-[var(--panel-border)] px-2 py-1 text-left text-xs">
-      <button type="button" className="block hover:text-white" onClick={onOpen}>
-        <div className="font-medium text-[var(--text)]">
-          {capture.kind === 'clip' ? 'clip' : 'photo'}
-        </div>
-        <div className="text-[var(--muted)]">
-          {new Date(capture.createdAt).toLocaleTimeString()}
+    <div className="w-28 shrink-0">
+      <button
+        type="button"
+        className="block w-full overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0d1218]"
+        onClick={onOpen}
+      >
+        <div className="flex aspect-square items-center justify-center">
+          {url ? (
+            capture.kind === 'clip' ? (
+              <video src={url} muted playsInline className="h-full w-full object-cover" />
+            ) : (
+              <img
+                src={url}
+                alt={capture.shapeName}
+                className="h-full w-full object-cover"
+              />
+            )
+          ) : (
+            <span className="px-1 text-center text-[10px] text-[var(--muted)]">
+              {capture.kind === 'clip' ? 'clip' : 'photo'}
+            </span>
+          )}
         </div>
       </button>
       {onDelete && (
