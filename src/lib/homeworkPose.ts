@@ -160,6 +160,24 @@ export function poseLooksSeatedTuck(lm: Landmark[] | null | undefined): boolean 
   return armUp
 }
 
+/** Supine tight arch — on the back, hips peaked, knees straight.
+ * Shoulders and feet stay relatively down (not a candlestick).
+ */
+export function poseLooksTightArch(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.08)
+  if (!hip || !sh || !ank) return false
+  // Hips are the peak (smaller y).
+  if (Math.max(sh.y, ank.y) - hip.y < 0.06) return false
+  // On the back, not stacked on the shoulders: feet stay near shoulder height.
+  if (Math.abs(ank.y - sh.y) > 0.28) return false
+  const kneeA = kneeAngleDeg(lm)
+  if (kneeA != null && kneeA < 145) return false
+  return true
+}
+
 /** Tuck rolled back onto the shoulders — hips above the shoulders,
  * knees bent, hips closed. Not a seated tuck and not an open candlestick.
  */
@@ -221,6 +239,9 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'tucked_candle') {
     return poseLooksTuckedCandle(lm) || overall >= 32
+  }
+  if (shapeId === 'arch') {
+    return poseLooksTightArch(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand' || shapeId === 'handstand') {
     // Total hold must wait for an invert. A middling score while standing

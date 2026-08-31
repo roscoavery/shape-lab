@@ -160,7 +160,6 @@ export const ARM_POSITION_SHAPE_IDS: string[] = [
  */
 const SCAFFOLD_SHAPE_IDS = new Set([
   'lunge',
-  'arch',
   'bridge',
   'tucked_handstand',
   'piked_handstand',
@@ -170,7 +169,7 @@ const SCAFFOLD_SHAPE_IDS = new Set([
 /**
  * Positions shown in Learn → Shape library: the pathway, homework, and
  * extras Ryan photographed (zombie, pike with zombie arms, Hands, pike with open
- * shoulders, Tuck, candlestick, tucked candle, Superman, Rainbow Bridge, Long Bridge, Side plank).
+ * shoulders, Tuck, candlestick, tucked candle, tight arch, Superman, Rainbow Bridge, Long Bridge, Side plank).
  * Arm-position drills live in the Arm positions test, not as a second empty catalog.
  */
 export function isLearnLibraryShape(id: string): boolean {

@@ -30,6 +30,7 @@ export const AUTO_DETECT_IDS = [
   'c_shape',
   'candlestick',
   'tucked_candle',
+  'arch',
   'seated_pike',
   'tuck_open_shoulders',
   'zombie',

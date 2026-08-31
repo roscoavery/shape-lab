@@ -22,6 +22,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   handstand: 'handstand.jpg',
   candlestick: ['candlestick.jpg', 'candlestick_drill.jpg'],
   tucked_candle: ['tucked_candle.jpg', 'tucked_candle_b.jpg'],
+  arch: 'arch.jpg',
   hollow_arms_down: 'hollow_arms_down.jpg',
   hollow_arms_up: 'hollow_arms_up.jpg',
   zombie: ['zombie.jpg', 'hands_push_through.jpg'],

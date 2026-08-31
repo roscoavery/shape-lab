@@ -80,6 +80,7 @@ const TOO_GENERIC = new Set(['hands', 'arch', 'c', 't', 'l'])
 const EXTRA_LEAKS: Record<string, string[]> = {
   c_shape: ['C shape', 'tumbling C', 'C-shape'],
   mountain_climber: ['mountain climber'],
+  arch: ['tight arch', 'arch (supine)', 'supine arch'],
   superman: ['Superman hold', 'prone Superman', 'Superman'],
   candlestick: ['candlestick'],
   tucked_candle: ['tucked candle', 'tucked candlestick'],

@@ -104,7 +104,7 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Shape glossary</p>
         <h3 className="mt-1 text-xl font-semibold">One clear picture per shape</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Every still you sent is stored in the app (pathway, hollows, zombie, pike with zombie arms, Hands, candlestick, tucked candle).
+          Every still you sent is stored in the app (pathway, hollows, zombie, pike with zombie arms, Hands, candlestick, tucked candle, tight arch).
           Extra is for learn-only positions with a picture. Arm-position drills are in the
           Arm positions test — they are not extra photo asks.
         </p>

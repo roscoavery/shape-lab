@@ -18,6 +18,7 @@ Included:
 - `lunge_land.jpg` (also used for Lunge · open shoulders — same position)
 - `lever.jpg`
 - `handstand.jpg`
+- `arch.jpg`
 - `candlestick.jpg`
 - `candlestick_drill.jpg`
 - `tucked_candle.jpg` (main)

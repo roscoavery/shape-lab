@@ -153,7 +153,7 @@ Or `npm run share:quick`. Do not text that URL to the gym as the permanent addre
 
 ### Learn: shape library and tests
 
-**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, tucked candle, Superman, Rainbow Bridge, Long Bridge, Side plank) plus homework that still needs a still (wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
+**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, tucked candle, tight arch, Superman, Rainbow Bridge, Long Bridge, Side plank) plus homework that still needs a still (wall handstand). Unused scoring leftovers (generic lunge, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
 Open **Learn → Shape test** and pick **Pictures** (name the still), **Descriptions** (name the body notes), or **Pictures and descriptions**. Description prompts have the shape’s name taken out so the question cannot read “this is a tuck.” **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** uses the same picture / description / mixed choice for low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **Learn → Physics test** is twelve questions from the tumbling-physics notes (inertia, angular momentum, moment of inertia, the round-off arm drop, tuck vs layout). When any of those tests finish, you see the score and every miss with the correct answer (and a why on the physics test). **My shapes** shows the athlete’s own hit photos.
 
@@ -173,6 +173,7 @@ lunge_start.jpg
 lunge_land.jpg  (also Lunge · open shoulders)
 lever.jpg
 handstand.jpg
+arch.jpg
 candlestick.jpg
 candlestick_drill.jpg
 tucked_candle.jpg  (main)
@@ -230,6 +231,8 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 **Pike (open shoulders)** is assignable (not auto). Arms up by the ears, reaching to the ceiling. Two stills (close-up and class line). Used in pike–tuck–hollow–arch, rocking back to candlestick (candle reps / hollow rocker prep), and teaching arms behind the ears on a back tuck.
 
 **Tuck** is assignable (not auto). Pulled in from that open-shoulder pike: knees bent, feet in, feet flexed, arms still reaching behind the ears, slightly rounded hollow back. Three stills (close-up, flexed feet, class line). The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle. Class talk-throughs: **Pike → Tuck → Hollow → Arch** and **Lemon squeezes** (hollow ↔ tuck) on **Tasks 2**. Coach sequences match. This is not a tucked handstand.
+
+**Tight arch** (also called arch supine) is assignable. On the back: arms press the floor behind the ears, hips push up, knees stay straight. Ankles together and toes pointed are the usual miss. Used at the end of pike → hollow → arch. This is not Superman (stomach) and not a candlestick.
 
 **Candlestick** has two stills (handstand-roll finish and the candlestick-drill finish). The drill should not pause: FTOS → C → sit and fall to tuck → roll back and arch. Toes stay above you, not past the face. Lifting the feet on an arch is a good candle. Assign the shipped **Candlestick drill** sequence, or (once Ryan uploads the clip) the drill video from **Learn → Drill library**.
 

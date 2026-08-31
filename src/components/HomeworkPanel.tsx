@@ -847,6 +847,8 @@ export function HomeworkPanel({
                   ? 'Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Rolls and back-tuck drills.'
                   : nextShapeId === 'candlestick'
                     ? 'Do not pause. FTOS, bend to C, sit and fall to tuck, roll back and arch for the candle. Toes stay above you — not past the face. If a coach lifts the feet on an arch, that is a good candle.'
+                    : nextShapeId === 'arch'
+                      ? 'Tight arch on the back. Arms press the floor behind the ears. Hips push up. Knees stay straight. Squeeze the ankles together and point the toes — that is the usual miss.'
           : ''
     const notes =
       addNotes.trim() ||
