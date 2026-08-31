@@ -54,7 +54,7 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
-import { HudCircle, IconClips, IconPip, IconSwap, IconX } from './CompareHud'
+import { HudCircle, IconClips, IconPip, IconSwap, IconX, CompareControlsButton } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -1386,15 +1386,12 @@ export function ReferencePane({
               {hudCorner}
             </div>
           ) : null}
+          {fullscreen && !pip ? (
+            <div className="pointer-events-auto absolute left-1.5 top-2 z-[35]">
+              <CompareControlsButton />
+            </div>
+          ) : null}
         </div>
-      )}
-      {pip && (
-        <button
-          type="button"
-          className="absolute inset-0 z-[45]"
-          aria-label="Expand reference"
-          onClick={() => setFocus('ref')}
-        />
       )}
       {pip && (
         <span className="pointer-events-none absolute left-1.5 top-1.5 z-[46] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useCompareLayout } from './compareLayout'
 
 export function HudCircle({
   label,
@@ -130,6 +131,38 @@ export function IconSwap() {
       <path d="M17 16H6" />
       <path d="m9 13-3 3 3 3" />
     </svg>
+  )
+}
+
+export function IconSplit() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3.5" y="4" width="17" height="7" rx="1.2" />
+      <rect x="3.5" y="13" width="17" height="7" rx="1.2" />
+    </svg>
+  )
+}
+
+export function IconControls() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+      <circle cx="12" cy="6.5" r="1.7" fill="currentColor" stroke="none" />
+      <path d="M4 6.5h6.2M13.8 6.5H20" />
+      <circle cx="8" cy="12" r="1.7" fill="currentColor" stroke="none" />
+      <path d="M4 12h2.2M9.8 12H20" />
+      <circle cx="16" cy="17.5" r="1.7" fill="currentColor" stroke="none" />
+      <path d="M4 17.5h10.2M17.8 17.5H20" />
+    </svg>
+  )
+}
+
+export function CompareControlsButton() {
+  const { fullscreen, chromeOpen, setChromeOpen } = useCompareLayout()
+  if (!fullscreen || chromeOpen) return null
+  return (
+    <HudCircle label="Controls" onClick={() => setChromeOpen(true)}>
+      <IconControls />
+    </HudCircle>
   )
 }
 

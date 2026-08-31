@@ -24,7 +24,7 @@ export function CompareSplitBar({ where }: { where: Where }) {
     setSplit(next)
     setFocus('split')
     if (where === 'reference' || where === 'camera') {
-      setChromeOpen(true)
+      setChromeOpen(false)
       setFullscreen(true)
     }
   }
@@ -32,7 +32,7 @@ export function CompareSplitBar({ where }: { where: Where }) {
   const enterFull = () => {
     setSplit('tb')
     setFocus('split')
-    setChromeOpen(true)
+    setChromeOpen(false)
     setFullscreen(true)
   }
 

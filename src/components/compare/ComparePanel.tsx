@@ -5,7 +5,7 @@
  * reference or delay cam more of the window (videos stay object-contain).
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
 import { CompareSplitBar } from './CompareSplitBar'
@@ -13,13 +13,13 @@ import { CompareChromeRail } from './CompareChromeRail'
 import { CompareSplitDivider } from './CompareSplitDivider'
 import {
   CompareLayoutContext,
-  COMPARE_PIP_BOX,
   flipFocus,
   pipPane,
   type CompareFocus,
   type CompareSplit,
+  type PipCorner,
 } from './compareLayout'
-import { HudCircle, IconSwap } from './CompareHud'
+import { ComparePipSlot } from './ComparePipDock'
 import { IgStillContext, type IgCropDraft } from './IgStillContext'
 import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
@@ -62,16 +62,20 @@ export function ComparePanel({
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
   const [focus, setFocus] = useState<CompareFocus>('split')
-  const [chromeOpen, setChromeOpen] = useState(true)
+  const [chromeOpen, setChromeOpen] = useState(false)
   const [camRail, setCamRail] = useState<HTMLElement | null>(null)
   const [refRail, setRefRail] = useState<HTMLElement | null>(null)
   const [tbRatio, setTbRatio] = useState(0.64)
   const [lrRatio, setLrRatio] = useState(0.5)
   const [libraryTick, setLibraryTick] = useState(0)
   const [athleteReplay, setAthleteReplay] = useState(false)
+  const [pipCorner, setPipCorner] = useState<PipCorner>('br')
 
   useEffect(() => {
-    if (enterFullscreenTick > 0) setFullscreen(true)
+    if (enterFullscreenTick > 0) {
+      setChromeOpen(false)
+      setFullscreen(true)
+    }
   }, [enterFullscreenTick])
 
   useEffect(() => {
@@ -86,6 +90,12 @@ export function ComparePanel({
       document.body.style.overflow = prev
       window.removeEventListener('keydown', onKey)
     }
+  }, [fullscreen])
+
+  const prevFsRef = useRef(false)
+  useEffect(() => {
+    if (fullscreen && !prevFsRef.current) setChromeOpen(false)
+    prevFsRef.current = fullscreen
   }, [fullscreen])
 
   const saveCrop = useCallback(
@@ -106,6 +116,7 @@ export function ComparePanel({
       tbRatio,
       lrRatio,
       athleteReplay,
+      pipCorner,
       setFullscreen,
       setSplit,
       setFocus,
@@ -115,8 +126,9 @@ export function ComparePanel({
       setTbRatio,
       setLrRatio,
       setAthleteReplay,
+      setPipCorner,
     }),
-    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio, athleteReplay],
+    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio, athleteReplay, pipCorner],
   )
 
   const showRef = focus !== 'cam'
@@ -172,16 +184,19 @@ export function ComparePanel({
                   : 'relative min-h-0 flex-1'
               }
             >
-              <div
-                key="ref"
-                className={
-                  corner === 'ref'
-                    ? `${COMPARE_PIP_BOX} bottom-3 right-3`
-                    : corner === 'cam'
-                      ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
-                      : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
+              <ComparePipSlot
+                active={corner === 'ref'}
+                onSwap={() => setFocus(flipFocus(focus))}
+                onSplit={() => {
+                  setSplit('tb')
+                  setFocus('split')
+                }}
+                splitClass={
+                  corner === 'cam'
+                    ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
+                    : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
                 }
-                style={
+                splitStyle={
                   splitScreen
                     ? split === 'tb'
                       ? { flex: `${tbRatio} 1 0%` }
@@ -195,7 +210,7 @@ export function ComparePanel({
                   personalEditor={personalEditor}
                   profileId={athleteId}
                 />
-              </div>
+              </ComparePipSlot>
               {splitScreen ? (
                 <CompareSplitDivider
                   axis={split === 'tb' ? 'y' : 'x'}
@@ -204,16 +219,19 @@ export function ComparePanel({
                   flush={athleteReplay}
                 />
               ) : null}
-              <div
-                key="cam"
-                className={
-                  corner === 'cam'
-                    ? `${COMPARE_PIP_BOX} bottom-3 right-3`
-                    : corner === 'ref'
-                      ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
-                      : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
+              <ComparePipSlot
+                active={corner === 'cam'}
+                onSwap={() => setFocus(flipFocus(focus))}
+                onSplit={() => {
+                  setSplit('tb')
+                  setFocus('split')
+                }}
+                splitClass={
+                  corner === 'ref'
+                    ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
+                    : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
                 }
-                style={
+                splitStyle={
                   splitScreen
                     ? split === 'tb'
                       ? { flex: `${1 - tbRatio} 1 0%` }
@@ -229,14 +247,7 @@ export function ComparePanel({
                   skillId={skillId}
                   skillLabel={skillLabel}
                 />
-              </div>
-              {corner ? (
-                <div className="absolute bottom-[11.2rem] right-3 z-[40]">
-                  <HudCircle label="Swap" onClick={() => setFocus(flipFocus(focus))}>
-                    <IconSwap />
-                  </HudCircle>
-                </div>
-              ) : null}
+              </ComparePipSlot>
             </div>
           ) : (
             <div

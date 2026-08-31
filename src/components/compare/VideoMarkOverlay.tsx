@@ -12,7 +12,7 @@ import { createId } from '../../lib/storage'
 import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
 import { useIgStillSave } from './IgStillContext'
-import { HudCircle, IconArrow, IconDraw, IconLine, IconShot, IconX } from './CompareHud'
+import { CompareControlsButton, HudCircle, IconArrow, IconDraw, IconLine, IconShot, IconX } from './CompareHud'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
@@ -644,6 +644,7 @@ export function VideoMarkOverlay({
       <HudCircle label="Clear" onClick={clearAll}>
         <IconX />
       </HudCircle>
+      {hud ? <CompareControlsButton /> : null}
     </div>
   )
 

@@ -91,7 +91,7 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, setFullscreen } = useCompareLayout()
+  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -133,6 +133,7 @@ export function CameraPane({
   const [delayDuration, setDelayDuration] = useState(0)
   const [camZoom, setCamZoom] = useState(1)
   const [delayHudOpen, setDelayHudOpen] = useState(true)
+  const [livePeek, setLivePeek] = useState(false)
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
@@ -146,6 +147,10 @@ export function CameraPane({
   useEffect(() => {
     delaySecRef.current = delaySec
   }, [delaySec])
+
+  useEffect(() => {
+    if (mode !== 'delay') setLivePeek(false)
+  }, [mode])
 
   useEffect(() => {
     if (mode !== 'delay') return
@@ -699,8 +704,8 @@ export function CameraPane({
   } as const
 
   const camPip = fullscreen && focus === 'ref'
-  const livePip = fullscreen && !camPip && mode === 'delay' && running
-  const livePipCorner = focus === 'cam' ? 'right-[8.5rem]' : 'right-3'
+  const livePip = fullscreen && !camPip && mode === 'delay' && running && !livePeek
+  const livePipCorner = pipCorner === 'br' && focus === 'cam' ? 'right-[8.5rem]' : 'right-3'
 
   const cameraChrome = (
     <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
@@ -868,7 +873,7 @@ export function CameraPane({
             livePip
               ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg`
               : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-                  mode === 'delay' ? 'hidden' : ''
+                  livePeek ? '' : mode === 'delay' ? 'hidden' : ''
                 }`
           }
         />
@@ -878,9 +883,9 @@ export function CameraPane({
               type="button"
               className={`absolute bottom-3 ${livePipCorner} z-[26] h-[7.75rem] w-[5.5rem] rounded-lg`}
               aria-label="Open live camera to set the tripod"
-              onClick={() => setMode('live')}
+              onClick={() => setLivePeek(true)}
             />
-            <span className={`pointer-events-none absolute bottom-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white ${focus === 'cam' ? 'right-[9.1rem]' : 'right-4'}`}>
+            <span className={`pointer-events-none absolute bottom-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white ${pipCorner === 'br' && focus === 'cam' ? 'right-[9.1rem]' : 'right-4'}`}>
               Live
             </span>
           </>
@@ -891,7 +896,7 @@ export function CameraPane({
           playsInline
           style={videoXform}
           className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-            mode === 'delay' ? '' : 'hidden'
+            mode === 'delay' && !livePeek ? '' : 'hidden'
           }`}
         />
         {!running && mode !== 'replay' && !fullscreen && (
@@ -909,7 +914,7 @@ export function CameraPane({
             {delaySec}s behind live
           </div>
         )}
-        {mode === 'delay' && running && fullscreen && !camPip && (
+        {mode === 'delay' && running && fullscreen && !camPip && !livePeek && (
           <DelayCamHud
             delaySec={delaySec}
             zoom={camZoom}
@@ -948,8 +953,19 @@ export function CameraPane({
               setMode('delay')
             }}
             onMinimize={() => setFocus('ref')}
-            onExit={() => setFullscreen(false)}
           />
+        )}
+        {livePeek && (
+          <button
+            type="button"
+            className="absolute inset-0 z-[50] flex items-center justify-center bg-black/20"
+            aria-label="Close live view"
+            onClick={() => setLivePeek(false)}
+          >
+            <span className="rounded-full bg-black/55 px-4 py-2 text-base font-medium tracking-wide text-white shadow-lg">
+              Tap to close
+            </span>
+          </button>
         )}
         {mode === 'delay' && running && !fullscreen && (
           <button
@@ -1081,13 +1097,7 @@ export function CameraPane({
       )}
       {camPip && (
         <>
-          <button
-            type="button"
-            className="absolute inset-0 z-[60]"
-            aria-label="Show replay full screen"
-            onClick={() => setFocus('cam')}
-          />
-          {running && mode !== 'live' && (
+          {running && mode === 'delay' && (
             <button
               type="button"
               className="absolute bottom-1.5 right-1.5 z-[61] rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-black shadow"
@@ -1095,7 +1105,7 @@ export function CameraPane({
               onClick={(e) => {
                 e.stopPropagation()
                 setFocus('cam')
-                setMode('live')
+                setLivePeek(true)
               }}
             >
               Live

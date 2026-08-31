@@ -3,7 +3,7 @@
  * and the live start screen for setting buffer time.
  */
 
-import { HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconPip, IconReplayArrow, IconShow, IconSwap, IconX } from './CompareHud'
+import { CompareControlsButton, HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconPip, IconReplayArrow, IconShow, IconSwap, IconX } from './CompareHud'
 import { useCompareLayout } from './compareLayout'
 
 type DelayProps = {
@@ -49,12 +49,15 @@ export function DelayCamHud({
   if (!hudOpen) {
     return (
       <div className="pointer-events-none absolute inset-0 z-[28]">
-        <button type="button" onClick={onShow} className="pointer-events-auto absolute left-3 top-3 flex flex-col items-center gap-0.5" aria-label="Show controls">
+        <button type="button" onClick={onShow} className="pointer-events-auto absolute left-3 top-3 flex flex-col items-center gap-0.5" aria-label="Show delay tools">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black">
             <IconShow />
           </span>
           <span className="text-[10px] font-medium text-white">Show</span>
         </button>
+        <div className="pointer-events-auto absolute left-3 top-[5.25rem]">
+          <CompareControlsButton />
+        </div>
         <div className="pointer-events-auto absolute right-3 top-3">
           <HudCircle label={minLabel} onClick={onMinimize}>
             <MinIcon />
@@ -108,6 +111,7 @@ export function DelayCamHud({
         <div className="mt-2">
           <HudRecord onClick={onRecord} busy={saving} />
         </div>
+        <CompareControlsButton />
       </div>
 
       <div className="pointer-events-auto absolute right-3 top-16 flex flex-col items-center gap-3">
@@ -143,7 +147,6 @@ type StartProps = {
   onStartCamera: () => void
   onEnterDelay: () => void
   onMinimize: () => void
-  onExit: () => void
 }
 
 export function LiveBufferStart({
@@ -155,7 +158,6 @@ export function LiveBufferStart({
   onStartCamera,
   onEnterDelay,
   onMinimize,
-  onExit,
 }: StartProps) {
   const { focus } = useCompareLayout()
   const minLabel = focus === 'split' ? 'Min' : 'Swap'
@@ -191,15 +193,9 @@ export function LiveBufferStart({
           <HudCircle label={minLabel} onClick={onMinimize}>
             <MinIcon />
           </HudCircle>
+          <CompareControlsButton />
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onExit}
-        className="pointer-events-auto absolute bottom-4 left-1/2 z-[29] -translate-x-1/2 text-lg font-semibold tracking-[0.28em] text-white"
-      >
-        EXIT
-      </button>
     </div>
   )
 }

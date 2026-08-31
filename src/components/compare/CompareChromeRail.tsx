@@ -38,17 +38,7 @@ export function CompareChromeRail({ photos }: Props) {
     setFocus(next)
   }
 
-  if (!chromeOpen) {
-    return (
-      <button
-        type="button"
-        onClick={() => setChromeOpen(true)}
-        className="absolute bottom-3 left-3 z-[20] rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/90 shadow-lg backdrop-blur-md hover:bg-black/75"
-      >
-        Controls
-      </button>
-    )
-  }
+  if (!chromeOpen) return null
 
   return (
     <aside className="relative z-[20] flex h-full w-[min(17.5rem,42vw)] shrink-0 flex-col gap-2 overflow-y-auto border-r border-white/10 bg-[#0b0f14]/92 px-2 py-2.5 backdrop-blur-xl">
@@ -88,7 +78,7 @@ export function CompareChromeRail({ photos }: Props) {
           </button>
         </div>
         <p className="mt-1 px-0.5 text-[10px] leading-snug text-white/40">
-          Min puts the other view in the same bottom-right chip. Tap the chip or Swap to flip replay and reference.
+          Min / Swap park the other view in a corner chip you can drag. Split on the chip restores top / bottom.
         </p>
       </section>
 
