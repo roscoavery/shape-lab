@@ -59,6 +59,30 @@ export function shippedFileList(shapeId: string): string[] {
   return Array.isArray(v) ? v : [v]
 }
 
+/**
+ * Crop keys that should share Ryan's library framing. Shared JPEGs
+ * (landing lunge / lunge · open shoulders, FTOS / standing open shoulders)
+ * keep one crop everywhere the still is shown.
+ */
+export function stillCropLookupIds(stillId: string | null | undefined): string[] {
+  if (!stillId) return []
+  const out = [stillId]
+  const match = /^default_([a-z0-9_]+)_(\d+)$/.exec(stillId)
+  if (!match) return out
+  const shapeId = match[1]!
+  const index = Number(match[2])
+  const file = shippedFileList(shapeId)[index]
+  if (!file) return out
+  for (const [id, spec] of Object.entries(SHIPPED_FILES)) {
+    const list = Array.isArray(spec) ? spec : [spec]
+    const i = list.indexOf(file)
+    if (i < 0) continue
+    const alias = `default_${id}_${i}`
+    if (!out.includes(alias)) out.push(alias)
+  }
+  return out
+}
+
 export const SHIPPED_REFERENCE_IDS = new Set(Object.keys(SHIPPED_FILES))
 
 /** Vite-hashed URLs — these travel with the JS bundle. */

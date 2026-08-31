@@ -3,9 +3,12 @@
  * so they can learn it immediately instead of only seeing a number.
  */
 
+import { CroppedStill } from '../CroppedStill'
+
 export type QuizReviewItem = {
   prompt: string
   photoUrl?: string | null
+  stillId?: string | null
   pickedLabel: string
   correctLabel: string
   correct: boolean
@@ -112,11 +115,14 @@ function ReviewCard({ item, index }: { item: QuizReviewItem; index: number }) {
         Miss {index}
       </p>
       {item.photoUrl && (
-        <img
-          src={item.photoUrl}
-          alt=""
-          className="mt-2 max-h-48 w-full rounded-lg bg-[#0d1218] object-contain"
-        />
+        <div className="mt-2 overflow-hidden rounded-lg bg-[#0d1218]">
+          <CroppedStill
+            src={item.photoUrl}
+            stillId={item.stillId}
+            alt=""
+            className="max-h-48 w-full object-contain"
+          />
+        </div>
       )}
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
         {item.prompt}

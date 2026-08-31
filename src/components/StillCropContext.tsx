@@ -12,6 +12,7 @@ import {
   isFullStillCrop,
   type StillCropRect,
 } from '../lib/stillCrop'
+import { stillCropLookupIds } from '../lib/shippedRefs'
 import { pullStillCrops, pushStillCrops } from '../lib/stillCropStore'
 
 type StillCropCtx = {
@@ -38,9 +39,11 @@ export function StillCropProvider({
 
   const cropFor = useCallback(
     (stillId: string | null | undefined): StillCropRect | null => {
-      if (!stillId) return null
-      const c = crops[stillId]
-      return c && !isFullStillCrop(c) ? c : null
+      for (const id of stillCropLookupIds(stillId)) {
+        const c = crops[id]
+        if (c && !isFullStillCrop(c)) return c
+      }
+      return null
     },
     [crops],
   )

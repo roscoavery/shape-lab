@@ -28,6 +28,7 @@ export type QuizQuestion = {
   shapeId: string
   prompt: string
   photoUrl: string | null
+  stillId: string | null
   choices: QuizChoice[]
   answerId: string
 }
@@ -262,6 +263,7 @@ export function buildShapeQuiz(
         shapeId: shape.id,
         prompt: 'What position is this?',
         photoUrl: photo.dataUrl,
+        stillId: photo.id,
         choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })
@@ -276,6 +278,7 @@ export function buildShapeQuiz(
         shapeId: shape.id,
         prompt: `Which position is being described?\n\n${body}`,
         photoUrl: null,
+        stillId: null,
         choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })
@@ -291,6 +294,7 @@ export function buildShapeQuiz(
         shapeId: shape.id,
         prompt: 'What position is this?',
         photoUrl: photo.dataUrl,
+        stillId: photo.id,
         choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
         answerId: shape.id,
       })

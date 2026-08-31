@@ -9,6 +9,7 @@ import {
 import { useShapeCopy } from './ShapeCopyContext'
 import type { ReferencePhoto } from '../types'
 import { QuizReview } from './learn/QuizReview'
+import { ReferenceStill } from './ReferenceStill'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -141,6 +142,7 @@ export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) 
       return {
         prompt: question.prompt,
         photoUrl: question.photoUrl,
+        stillId: question.stillId,
         pickedLabel: pickedChoice?.label ?? '(no answer)',
         correctLabel: correctChoice?.label ?? '',
         correct: choice === question.answerId,
@@ -182,12 +184,15 @@ export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) 
         </p>
       </div>
 
-      {q!.kind === 'picture' && q!.photoUrl && (
-        <img
-          src={q!.photoUrl}
-          alt=""
-          className="mb-3 max-h-64 w-full rounded-lg bg-[#0d1218] object-contain"
-        />
+      {q!.kind === 'picture' && (
+        <div className="mb-3 overflow-hidden rounded-lg bg-[#0d1218]">
+          <ReferenceStill
+            shapeId={q!.shapeId}
+            photos={referencePhotos}
+            alt=""
+            className="max-h-64 w-full object-contain"
+          />
+        </div>
       )}
 
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{q!.prompt}</p>

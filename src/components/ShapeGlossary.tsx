@@ -386,11 +386,14 @@ function ExtraFolder({
                 )}
                 <p className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{s.description}</p>
                 {ref && (
-                  <img
-                    src={ref.dataUrl}
-                    alt=""
-                    className="mt-2 max-h-40 w-full rounded-md object-contain bg-[#0d1218]"
-                  />
+                  <div className="mt-2 overflow-hidden rounded-md bg-[#0d1218]">
+                    <ReferenceStill
+                      shapeId={s.id}
+                      photos={photos}
+                      alt=""
+                      className="max-h-40 w-full object-contain"
+                    />
+                  </div>
                 )}
                 {s.coachNotes && (
                   <p className="mt-2 whitespace-pre-wrap text-sm">{s.coachNotes}</p>
