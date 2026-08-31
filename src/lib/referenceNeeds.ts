@@ -22,6 +22,7 @@ export const HOMEWORK_SHAPE_IDS = [
   'seated_pike',
   'pike_open_shoulders',
   'tuck_open_shoulders',
+  'tucked_candle',
   'side_plank',
   'wall_handstand',
 ] as const
@@ -77,6 +78,8 @@ const SHOTS: Record<string, string> = {
     'SIDE or 3/4. Sitting. Pike with arms up: legs together, knees straight, toes pointed, torso upright, shoulders open, arms covering the ears, fingers to the ceiling. Close-up and class line both count.',
   tuck_open_shoulders:
     'SIDE or 3/4. Sitting on the glutes. From an open-shoulder pike, knees bent, feet pulled in, feet flexed (toes to the shins), arms reaching behind the ears, slightly rounded hollow back. Close-up, flexed-feet, and class line all count.',
+  tucked_candle:
+    'SIDE. Same tuck rolled back onto the shoulders and arms. Arms behind the ears, round back, hips over, thighs in front of the eyes. The side-profile still is the main one.',
   superman:
     'SIDE. Two athletes on the stomach. Chin up, straight arms behind the ears, open shoulders, straight knees off the mat, feet and ankles together.',
   rainbow_bridge:

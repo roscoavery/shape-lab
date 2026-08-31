@@ -153,7 +153,7 @@ Or `npm run share:quick`. Do not text that URL to the gym as the permanent addre
 
 ### Learn: shape library and tests
 
-**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, Superman, Rainbow Bridge, Long Bridge, Side plank) plus homework that still needs a still (wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
+**Learn → Shape library** lists the positions you photographed (pathway, hollows, zombie, pike with zombie arms, Hands, pike with open shoulders, Tuck, candlestick, tucked candle, Superman, Rainbow Bridge, Long Bridge, Side plank) plus homework that still needs a still (wall handstand). Unused scoring leftovers (generic lunge, arch, bridge, tucked/piked/L handstand) stay in the code for sequences but are not empty library cards. Arm-position drills live in **Learn → Arm positions test**, not as a second catalog.
 
 Open **Learn → Shape test** and pick **Pictures** (name the still), **Descriptions** (name the body notes), or **Pictures and descriptions**. Description prompts have the shape’s name taken out so the question cannot read “this is a tuck.” **Landing lunge** and **Lunge · open shoulders** are the same position and share the landing-lunge still — the test treats them as one name. **Standing open shoulders** shares the FTOS still. **Learn → Arm positions test** uses the same picture / description / mixed choice for low V, T, front middle, open shoulders, and high V (standing and on a lunge) — those are not a Tasks gate right now. **Learn → Physics test** is twelve questions from the tumbling-physics notes (inertia, angular momentum, moment of inertia, the round-off arm drop, tuck vs layout). When any of those tests finish, you see the score and every miss with the correct answer (and a why on the physics test). **My shapes** shows the athlete’s own hit photos.
 
@@ -174,6 +174,8 @@ lunge_land.jpg  (also Lunge · open shoulders)
 lever.jpg
 handstand.jpg
 candlestick.jpg
+tucked_candle.jpg  (main)
+tucked_candle_b.jpg
 hollow_arms_down.jpg
 hollow_arms_up.jpg
 zombie.jpg
@@ -227,6 +229,8 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 **Pike (open shoulders)** is assignable (not auto). Arms up by the ears, reaching to the ceiling. Two stills (close-up and class line). Used in pike–tuck–hollow–arch, rocking back to candlestick (candle reps / hollow rocker prep), and teaching arms behind the ears on a back tuck.
 
 **Tuck** is assignable (not auto). Pulled in from that open-shoulder pike: knees bent, feet in, feet flexed, arms still reaching behind the ears, slightly rounded hollow back. Three stills (close-up, flexed feet, class line). The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle. Class talk-throughs: **Pike → Tuck → Hollow → Arch** and **Lemon squeezes** (hollow ↔ tuck) on **Tasks 2**. Coach sequences match. This is not a tucked handstand.
+
+**Tucked candle** is assignable (not auto). Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Used to teach forward and backward rolls and a lot of back-tuck drills. Verbal cues: arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Two stills; the side profile is the main one.
 
 **Core home conditioning** on **Tasks 2** (and Coach) is the easy at-home circuit: 10× pike (zombie arms) → hollow → arch, then 3× open-shoulder pike with tuck–hollow squeezes into an arch, then 30-second side plank (both sides), Superman, and hollow. Hollow starts from a zombie-arm pike and inches back until the lowest part of the low back touches, then flatten and let the feet inch off. End by working those holds toward a minute.
 

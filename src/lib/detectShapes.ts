@@ -29,6 +29,7 @@ export const AUTO_DETECT_IDS = [
   'mountain_climber',
   'c_shape',
   'candlestick',
+  'tucked_candle',
   'seated_pike',
   'tuck_open_shoulders',
   'zombie',

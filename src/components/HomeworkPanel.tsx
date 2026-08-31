@@ -811,6 +811,8 @@ export function HomeworkPanel({
               ? 'Arms up by the ears, shoulders open. Legs together, knees straight, toes pointed. Pike–tuck–hollow–arch; rock back to candlestick; pike–tuck for arms behind the ears on a back tuck.'
               : nextShapeId === 'tuck_open_shoulders'
                 ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
+                : nextShapeId === 'tucked_candle'
+                  ? 'Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Rolls and back-tuck drills.'
           : ''
     const notes = addNotes.trim() || (seq ? seq.description : defaultNotes)
     const item: HomeworkItem = {

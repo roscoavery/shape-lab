@@ -160,6 +160,23 @@ export function poseLooksSeatedTuck(lm: Landmark[] | null | undefined): boolean 
   return armUp
 }
 
+/** Tuck rolled back onto the shoulders — hips above the shoulders,
+ * knees bent, hips closed. Not a seated tuck and not an open candlestick.
+ */
+export function poseLooksTuckedCandle(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  if (!hip || !sh) return false
+  // Weight on the shoulders: hips clearly above the shoulders (smaller y).
+  if (sh.y - hip.y < 0.08) return false
+  const hipA = hipAngleDeg(lm)
+  if (hipA != null && hipA > 130) return false
+  const kneeA = kneeAngleDeg(lm)
+  if (kneeA != null && (kneeA < 25 || kneeA > 135)) return false
+  return true
+}
+
 /** Seated pike with zombie arms — hips and feet on the floor, torso up. */
 export function poseLooksSeatedPike(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
@@ -201,6 +218,9 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'tuck_open_shoulders') {
     return poseLooksSeatedTuck(lm) || overall >= 32
+  }
+  if (shapeId === 'tucked_candle') {
+    return poseLooksTuckedCandle(lm) || overall >= 32
   }
   if (shapeId === 'wall_handstand' || shapeId === 'handstand') {
     // Total hold must wait for an invert. A middling score while standing
