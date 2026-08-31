@@ -22,7 +22,7 @@ import {
 import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl } from '../../lib/clipStore'
-import { isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
@@ -630,6 +630,12 @@ export function ClassesPanel({ athlete }: Props) {
           canEdit={canEdit}
           onEditVideos={canEdit ? () => editExisting(playing) : undefined}
           onDuplicate={canEdit ? () => duplicateExisting(playing) : undefined}
+          editor={{
+            gymEditor: gymAdmin,
+            personalEditor: isCoachProfile(athlete) && !gymAdmin,
+            profileId: athlete?.id ?? null,
+          }}
+          gymAdmin={gymAdmin}
         />
       )}
     </div>

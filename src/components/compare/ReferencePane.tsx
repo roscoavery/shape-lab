@@ -53,6 +53,7 @@ import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
+import { PhoneReelViewer } from '../PhoneReelViewer'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
@@ -124,6 +125,8 @@ export function ReferencePane({
   const [clipHudOpen, setClipHudOpen] = useState(false)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
+  const [reelOpen, setReelOpen] = useState(false)
+  const [reelIndex, setReelIndex] = useState(0)
   const { fullscreen, refRail, focus, setFocus } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -734,6 +737,27 @@ export function ReferencePane({
   const matchCount = currentHits.length + otherHits.length
   const q = searchQuery.trim()
   const watchList = desk === 'browse' ? currentHits : (activeCollection?.items ?? [])
+  const reelItems = watchList.flatMap((item) =>
+    item.url
+      ? [
+          {
+            id: item.id,
+            name: item.name,
+            url: item.url,
+            kind: item.kind,
+            keywords: item.keywords,
+            postedBy: item.postedBy,
+            loopA: item.trimStart ?? null,
+            loopB: item.trimEnd ?? null,
+          },
+        ]
+      : [],
+  )
+  const openReel = (itemId?: string | null) => {
+    const idx = itemId ? reelItems.findIndex((i) => i.id === itemId) : reelItems.findIndex((i) => i.id === activeItemId)
+    setReelIndex(idx >= 0 ? idx : 0)
+    setReelOpen(true)
+  }
 
   const allKeywords = useMemo(() => {
     const seen = new Set<string>()
@@ -998,7 +1022,9 @@ export function ReferencePane({
     <div
       className={
         fill
-          ? 'relative min-h-0 flex-1'
+          ? viewer
+            ? 'relative min-h-0 max-lg:max-h-[34dvh] lg:min-h-0 lg:flex-1'
+            : 'relative min-h-0 flex-1'
           : 'sticky top-2 z-10 min-w-0 bg-[var(--panel)] max-lg:[&_video]:max-h-[min(36vh,16.5rem)] lg:static'
       }
     >
@@ -1022,6 +1048,9 @@ export function ReferencePane({
           persistUrl={activeItem.url}
           hudCorner={hudCorner}
           bare={pip}
+          compact={Boolean(viewer)}
+          quiet={Boolean(viewer)}
+          markup={!viewer && !pip}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1033,6 +1062,8 @@ export function ReferencePane({
           loopB={activeItem?.trimEnd ?? null}
           hudCorner={hudCorner}
           bare={pip}
+          compact={Boolean(viewer)}
+          markup={!viewer && !pip}
         />
       ) : (
         <div
@@ -1065,6 +1096,15 @@ export function ReferencePane({
         <span className="pointer-events-none absolute left-1.5 top-1.5 z-[46] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
           Ref
         </span>
+      )}
+      {viewer && reelItems.length > 0 && (
+        <button
+          type="button"
+          onClick={() => openReel(activeItemId)}
+          className="absolute bottom-2 right-2 z-[40] rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-lg"
+        >
+          Full screen
+        </button>
       )}
       {clipHudOpen && fill && !pip && (
         <div className="absolute inset-y-0 right-0 z-[50] flex w-[min(17.5rem,58%)] flex-col bg-black/92 text-white shadow-[-16px_0_40px_rgba(0,0,0,0.55)]">
@@ -1235,12 +1275,33 @@ export function ReferencePane({
         <div
           className={
             viewer
-              ? 'grid min-h-0 flex-1 overflow-hidden gap-3 grid-rows-[minmax(0,1.2fr)_minmax(11rem,0.8fr)] lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] lg:grid-rows-1'
+              ? 'grid min-h-0 flex-1 overflow-hidden gap-2 grid-rows-[minmax(0,34dvh)_minmax(0,1fr)] lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] lg:grid-rows-1'
               : 'grid items-start gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]'
           }
         >
           {renderPlayer(Boolean(viewer))}
-          <div className={`flex min-h-0 min-w-0 flex-col gap-3 ${viewer ? 'overflow-hidden' : ''}`}>
+          <div className={`flex min-h-0 min-w-0 flex-col ${viewer ? '' : 'gap-3'}`}>
+          {viewer && reelItems.length > 0 && (
+            <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openReel(activeItemId)}
+                className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-black"
+              >
+                Full screen reels
+              </button>
+              <p className="text-[11px] text-[var(--muted)]">
+                Swipe the list, or open TikTok-style full screen
+              </p>
+            </div>
+          )}
+          <div
+            className={
+              viewer
+                ? 'flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto panel-scroll'
+                : 'flex flex-col gap-3'
+            }
+          >
           {desk === 'browse' && (
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -1308,7 +1369,7 @@ export function ReferencePane({
             <div
               className={
                 viewer
-                  ? 'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto panel-scroll'
+                  ? 'flex flex-col gap-2'
                   : 'flex max-h-[min(22rem,48vh)] flex-col gap-2 overflow-y-auto panel-scroll lg:max-h-[min(32rem,70vh)]'
               }
             >
@@ -1365,6 +1426,7 @@ export function ReferencePane({
               This collection is empty. Open Add to paste a URL.
             </p>
           )}
+          </div>
           </div>
         </div>
       )}
@@ -1561,6 +1623,18 @@ export function ReferencePane({
       )}
 
       {fullscreen ? renderPlayer(true) : null}
+
+      {reelOpen ? (
+        <PhoneReelViewer
+          items={reelItems}
+          startIndex={reelIndex}
+          onClose={() => setReelOpen(false)}
+          editor={{ gymEditor, personalEditor, profileId }}
+          gymAdmin={gymEditor}
+          title="Reference reels"
+          onCopied={setNotice}
+        />
+      ) : null}
     </section>
   )
 }

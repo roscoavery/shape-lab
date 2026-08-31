@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
 import { socialPlatform } from '../lib/socialUrls'
@@ -14,6 +15,10 @@ type Props = {
   compact?: boolean
   quiet?: boolean
   bare?: boolean
+  markup?: boolean
+  markupSwipeSafe?: boolean
+  hudCorner?: ReactNode
+  overlayChrome?: boolean
 }
 
 export function GymClipPlayer({
@@ -28,6 +33,10 @@ export function GymClipPlayer({
   compact = false,
   quiet = false,
   bare = false,
+  markup,
+  markupSwipeSafe = false,
+  hudCorner,
+  overlayChrome,
 }: Props) {
   const social = socialPlatform(url)
   if (social) {
@@ -44,6 +53,10 @@ export function GymClipPlayer({
         quiet={quiet}
         active={active}
         bare={bare}
+        markup={markup}
+        markupSwipeSafe={markupSwipeSafe}
+        hudCorner={hudCorner}
+        overlayChrome={overlayChrome}
       />
     )
     return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : embed
@@ -58,10 +71,13 @@ export function GymClipPlayer({
       loopA={loopA}
       loopB={loopB}
       onAbChange={onAbChange}
-      markup={!compact && !bare}
+      markup={markup ?? (!compact && !bare)}
+      markupSwipeSafe={markupSwipeSafe}
       compact={compact}
       bare={bare}
       active={active}
+      hudCorner={hudCorner}
+      overlayChrome={overlayChrome}
     />
   )
   return fill ? <div className="h-full min-h-0 w-full">{bench}</div> : bench

@@ -353,6 +353,12 @@ export function FeedPanel({ athletes, athlete }: Props) {
             setPreviewFull(false)
           }}
           canEdit={false}
+          editor={{
+            gymEditor: isGymAdmin(athlete),
+            personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
+            profileId: athlete?.id ?? null,
+          }}
+          gymAdmin={isGymAdmin(athlete)}
         />
       )}
     </div>

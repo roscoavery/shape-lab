@@ -133,6 +133,11 @@ type Props = {
   hud?: boolean
   /** Extra top offset so Replay Last’s back chevron stays clear. */
   hudOffsetClass?: string
+  /**
+   * Start with no tool and let vertical swipes reach the page until Line /
+   * Shot / Draw / Arrow is selected. Used by the phone reel viewer.
+   */
+  swipeSafe?: boolean
 }
 
 export function VideoMarkOverlay({
@@ -141,12 +146,13 @@ export function VideoMarkOverlay({
   pinchPassthrough = false,
   hud = false,
   hudOffsetClass = 'left-1.5 top-2',
+  swipeSafe = false,
 }: Props) {
   const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const shapes = learnLibraryShapes()
-  const [tool, setTool] = useState<MarkTool>('line')
+  const [tool, setTool] = useState<MarkTool | null>(swipeSafe ? null : 'line')
   const [marks, setMarks] = useState<Mark[]>([])
   const [linePts, setLinePts] = useState<Pt[]>([])
   const [selectedDot, setSelectedDot] = useState<number | null>(null)
@@ -589,6 +595,10 @@ export function VideoMarkOverlay({
     setCustomName('')
     setShapeQuery('')
     setShapeId('')
+    if (swipeSafe) {
+      setTool(null)
+      setCursor('default')
+    }
     setNotice(
       igSave?.persistToApp
         ? 'Saved into the app — every browser and link will have this still.'
@@ -598,6 +608,17 @@ export function VideoMarkOverlay({
   }
 
   const pickTool = (id: MarkTool) => {
+    if (swipeSafe && tool === id) {
+      setTool(null)
+      setCursor('default')
+      setArrowPts([])
+      drawingRef.current = false
+      arrowDragRef.current = false
+      arrowPtsRef.current = []
+      draggingDotRef.current = null
+      resetCropDrag()
+      return
+    }
     setTool(id)
     setArrowPts([])
     drawingRef.current = false
@@ -652,8 +673,14 @@ export function VideoMarkOverlay({
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-10">
       <canvas
         ref={canvasRef}
-        className="pointer-events-auto absolute inset-0 h-full w-full touch-none"
-        style={{ touchAction: 'none', cursor, pointerEvents: pending ? 'none' : 'auto' }}
+        className={`absolute inset-0 h-full w-full ${
+          tool && !pending ? 'pointer-events-auto touch-none' : 'pointer-events-none'
+        }`}
+        style={{
+          touchAction: tool ? 'none' : 'pan-y',
+          cursor: tool ? cursor : 'default',
+          pointerEvents: pending || !tool ? 'none' : 'auto',
+        }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

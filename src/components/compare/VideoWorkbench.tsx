@@ -55,6 +55,8 @@ type Props = {
   pictureChrome?: ReactNode
   /** Phone player chrome for Compare Replay Last. */
   replayChrome?: boolean
+  /** Markup stays off the page until a tool is picked — phone reel swipe. */
+  markupSwipeSafe?: boolean
   onBack?: () => void
   onSavePhotos?: () => void
   onSaveInApp?: () => void
@@ -98,6 +100,7 @@ function VideoWorkbenchInner({
   hudCorner,
   pictureChrome,
   replayChrome = false,
+  markupSwipeSafe = false,
   onBack,
   onSavePhotos,
   onSaveInApp,
@@ -664,6 +667,7 @@ function VideoWorkbenchInner({
             pinchPassthrough={pinchZoom}
             hud
             hudOffsetClass={replayChrome ? 'left-1.5 top-14' : 'left-1.5 top-2'}
+            swipeSafe={markupSwipeSafe}
           />
         )}
         {credit && !bare && (

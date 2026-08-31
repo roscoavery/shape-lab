@@ -168,6 +168,10 @@ type Props = {
   active?: boolean
   bare?: boolean
   hudCorner?: ReactNode
+  /** Override Line overlay. Compact players default to no markup. */
+  markup?: boolean
+  markupSwipeSafe?: boolean
+  overlayChrome?: boolean
 }
 
 export function InstagramEmbed({
@@ -186,6 +190,9 @@ export function InstagramEmbed({
   active,
   bare = false,
   hudCorner,
+  markup,
+  markupSwipeSafe = false,
+  overlayChrome,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -250,6 +257,16 @@ export function InstagramEmbed({
     }
 
     void (async () => {
+      let playedFromCache = false
+      if (itemId) {
+        const cached = await loadCachedInstagramBlob(itemId)
+        if (cancelled) return
+        if (cached) {
+          playedFromCache = true
+          setSlides([{ url: '', kind: 'video' }])
+          showBlob(cached, 'video', true)
+        }
+      }
       try {
         const manifest = await fetchInstagramManifest(url)
         if (cancelled) return
@@ -261,6 +278,7 @@ export function InstagramEmbed({
         }
       } catch (err) {
         if (cancelled) return
+        if (playedFromCache) return
         if (itemId && retry === 0) {
           const cached = await loadCachedInstagramBlob(itemId)
           if (cached) {
@@ -487,11 +505,13 @@ export function InstagramEmbed({
         loopA={safeSlide === instagramSlideIndex(url) ? loopA : null}
         loopB={safeSlide === instagramSlideIndex(url) ? loopB : null}
         onAbChange={onAbChange}
-        markup={!compact && !bare}
+        markup={markup ?? (!compact && !bare)}
+        markupSwipeSafe={markupSwipeSafe}
         compact={compact}
         bare={bare}
         active={active}
         hudCorner={hudCorner}
+        overlayChrome={overlayChrome}
         pictureChrome={carouselChrome}
       />
     ) : null

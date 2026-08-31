@@ -22,7 +22,7 @@ type Props = {
   clip: ClipToCopy
   editor: OrganizeEditor
   gymAdmin?: boolean
-  variant?: 'row' | 'feed'
+  variant?: 'row' | 'feed' | 'reel'
   onCopied?: (message: string) => void
 }
 
@@ -135,9 +135,11 @@ export function ClipOrganizeMenu({
   }
 
   const btn =
-    variant === 'feed'
-      ? 'rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white'
-      : 'rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
+    variant === 'reel'
+      ? 'rounded-full bg-white/14 px-3 py-1.5 text-[11px] font-semibold text-white'
+      : variant === 'feed'
+        ? 'rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white'
+        : 'rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
 
   const lockTitle = locked
     ? 'Unlock a coach profile to add this clip to a collection or collage.'
@@ -257,11 +259,19 @@ export function ClipOrganizeMenu({
 
   return (
     <div className="relative shrink-0">
-      <div className={`flex flex-wrap items-center ${variant === 'feed' ? 'gap-2' : 'gap-0.5'}`}>
+      <div
+        className={`flex ${
+          variant === 'reel'
+            ? 'flex-col items-stretch gap-2'
+            : variant === 'feed'
+              ? 'flex-wrap items-center gap-2'
+              : 'flex-wrap items-center gap-0.5'
+        }`}
+      >
         <button
           type="button"
           title={lockTitle ?? 'Copy this clip into a collection you can edit'}
-          disabled={locked && variant !== 'feed'}
+          disabled={locked && variant === 'row'}
           onClick={(e) => {
             e.stopPropagation()
             if (!canCollect) {
@@ -279,7 +289,7 @@ export function ClipOrganizeMenu({
           <button
             type="button"
             title={lockTitle ?? 'Put this clip on a class collage'}
-            disabled={locked && variant !== 'feed'}
+            disabled={locked && variant === 'row'}
             onClick={(e) => {
               e.stopPropagation()
               if (!canCollage) {

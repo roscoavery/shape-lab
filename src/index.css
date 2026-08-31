@@ -97,10 +97,13 @@ button {
   animation: hit-check-ring 0.9s ease-out forwards;
 }
 
-/* Scrollbars for side panels */
+/* Scrollbars for side panels — iPhone must be able to pan these. */
 .panel-scroll {
   scrollbar-width: thin;
   scrollbar-color: #3a4a5c transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 /*

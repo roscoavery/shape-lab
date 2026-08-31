@@ -12,6 +12,9 @@ import {
 } from '../../lib/collageExport'
 import { collageCellAspect, packedGridSize } from '../../lib/collageLayout'
 import { saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
+import { PhoneReelViewer } from '../PhoneReelViewer'
+import { kindFromUrl } from '../../lib/clipStore'
+import type { OrganizeEditor } from '../../lib/organizeLibrary'
 
 export function CollageStage({
   collage,
@@ -23,6 +26,8 @@ export function CollageStage({
   canEdit,
   onEditVideos,
   onDuplicate,
+  editor,
+  gymAdmin = false,
 }: {
   collage: Collage
   nameForUrl: (url: string) => string
@@ -33,6 +38,8 @@ export function CollageStage({
   canEdit: boolean
   onEditVideos?: () => void
   onDuplicate?: () => void
+  editor?: OrganizeEditor
+  gymAdmin?: boolean
 }) {
   const { clips } = useGymLibrary()
   const gridRef = useRef<HTMLDivElement | null>(null)
@@ -48,6 +55,10 @@ export function CollageStage({
       : { w: window.innerWidth, h: window.innerHeight },
   )
   const [cellAspect, setCellAspect] = useState(9 / 16)
+  const [playingSlot, setPlayingSlot] = useState<number | null>(null)
+  const [loadAll, setLoadAll] = useState(false)
+  const [reelOpen, setReelOpen] = useState(false)
+  const [reelIndex, setReelIndex] = useState(0)
 
   const landscape = viewport.w > viewport.h
   const { cols, rows } = evenGrid(collage.slots.length, landscape || fullscreen)
@@ -102,9 +113,11 @@ export function CollageStage({
   }, [fullscreen, chrome])
 
   const runExport = async () => {
+    setLoadAll(true)
+    await new Promise((resolve) => window.setTimeout(resolve, 120))
     const videos = [...(gridRef.current?.querySelectorAll('video') ?? [])] as HTMLVideoElement[]
     if (videos.length === 0) {
-      setNotice('Wait for the clips to load, then export.')
+      setNotice('Tap a tile to start it, or wait a moment after Export so clips can load.')
       return
     }
     const seconds = clampExportSeconds(exportSec)
@@ -225,10 +238,20 @@ export function CollageStage({
           )}
           <button
             type="button"
+            onClick={() => {
+              setReelIndex(playingSlot ?? 0)
+              setReelOpen(true)
+            }}
+            className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-black"
+          >
+            Watch reels
+          </button>
+          <button
+            type="button"
             onClick={() => onFullscreen(!fullscreen)}
             className="rounded-md border border-white/30 px-2 py-1 text-xs"
           >
-            {fullscreen ? 'Exit full screen' : 'Full screen'}
+            {fullscreen ? 'Exit grid' : 'Full grid'}
           </button>
           <button
             type="button"
@@ -279,27 +302,55 @@ export function CollageStage({
             className="relative min-h-0 min-w-0 overflow-hidden bg-black"
             style={spanLast ? { gridColumn: '1 / -1' } : undefined}
           >
-            <GymClipPlayer
-              url={slot.url}
-              itemId={slot.clipId || `${collage.id}-${i}`}
-              fill
-              persistUrl={slot.url}
-              loopA={slot.loopA}
-              loopB={slot.loopB}
-              compact
-              quiet
-              bare={cinema}
-              onAbChange={
-                canEdit && onSlots && !cinema
-                  ? (a, b) => {
-                      const slots = collage.slots.map((s, idx) =>
-                        idx === i ? { ...s, loopA: a, loopB: b } : s,
-                      )
-                      onSlots(slots)
-                    }
-                  : undefined
-              }
-            />
+            {loadAll || playingSlot === i ? (
+              <GymClipPlayer
+                url={slot.url}
+                itemId={slot.clipId || `${collage.id}-${i}`}
+                fill
+                persistUrl={slot.url}
+                loopA={slot.loopA}
+                loopB={slot.loopB}
+                compact
+                quiet
+                bare={cinema}
+                active={loadAll || playingSlot === i}
+                markup={false}
+                onAbChange={
+                  canEdit && onSlots && !cinema
+                    ? (a, b) => {
+                        const slots = collage.slots.map((s, idx) =>
+                          idx === i ? { ...s, loopA: a, loopB: b } : s,
+                        )
+                        onSlots(slots)
+                      }
+                    : undefined
+                }
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPlayingSlot(i)}
+                className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#0d1218] px-3 text-center"
+              >
+                <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black">
+                  Play
+                </span>
+                <span className="text-[12px] font-semibold text-white">{nameForUrl(slot.url)}</span>
+                <span className="text-[11px] text-white/50">Loads this clip only</span>
+              </button>
+            )}
+            {playingSlot === i && !cinema ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setReelIndex(i)
+                  setReelOpen(true)
+                }}
+                className="absolute bottom-2 right-2 z-30 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-black"
+              >
+                Full screen
+              </button>
+            ) : null}
             {!cinema && (
               <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
                 {canEdit && onSlots ? (
@@ -363,6 +414,23 @@ export function CollageStage({
           {notice}
         </p>
       )}
+      {reelOpen ? (
+        <PhoneReelViewer
+          items={collage.slots.map((slot, i) => ({
+            id: slot.clipId || `${collage.id}-${i}`,
+            name: nameForUrl(slot.url),
+            url: slot.url,
+            kind: kindFromUrl(slot.url),
+            loopA: slot.loopA,
+            loopB: slot.loopB,
+          }))}
+          startIndex={reelIndex}
+          onClose={() => setReelOpen(false)}
+          editor={editor ?? { gymEditor: false, personalEditor: false, profileId: null }}
+          gymAdmin={gymAdmin}
+          title={collage.name}
+        />
+      ) : null}
     </div>
   )
   if (fullscreen) return createPortal(body, document.body)
