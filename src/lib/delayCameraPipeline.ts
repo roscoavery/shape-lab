@@ -35,6 +35,11 @@ function windowMediaSource(): MediaSourceCtor | null {
   return null
 }
 
+/** iPhone Safari: MSE delay is sideways and hitchy. Use the frame-canvas display. */
+export function usesFrameDelayDisplay() {
+  return getDelayCameraPipeline()?.managed === true
+}
+
 export function getDelayCameraPipeline(preferredMime?: string | null): DelayCameraPipeline | null {
   if (typeof MediaRecorder === 'undefined') return null
   const Source = windowMediaSource()
