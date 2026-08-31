@@ -1,8 +1,10 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
  * Spin a delay-cam surface 90° CCW so iPhone sensor pixels match LIVE.
- * Mirror / zoom belong on this outer box (screen space), not inside the canvas.
+ * The canvas/video keeps the pane's width × height (so it actually paints);
+ * rotate+scale is only a visual transform. Mirror / zoom belong on this
+ * outer box (screen space).
  */
 export function IosDelayUnwind({
   active,
@@ -15,6 +17,24 @@ export function IosDelayUnwind({
   style?: CSSProperties
   children: ReactNode
 }) {
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  const [fill, setFill] = useState(1)
+
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || !active) return
+    const apply = () => {
+      const w = el.clientWidth
+      const h = el.clientHeight
+      if (w < 2 || h < 2) return
+      setFill(Math.max(w / h, h / w))
+    }
+    apply()
+    const ro = new ResizeObserver(apply)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [active, className])
+
   if (!active) {
     return (
       <div className={className} style={style}>
@@ -22,10 +42,18 @@ export function IosDelayUnwind({
       </div>
     )
   }
+
   return (
-    <div className={`ios-delay-stage ${className ?? ''}`} style={style}>
-      <div className="ios-delay-unwind">
-        <div className="ios-delay-unwind-inner">{children}</div>
+    <div ref={boxRef} className={`ios-delay-stage ${className ?? ''}`} style={style}>
+      <div
+        className="ios-delay-spin"
+        style={{
+          transform: `rotate(-90deg) scale(${fill})`,
+          WebkitTransform: `rotate(-90deg) scale(${fill})`,
+          transformOrigin: 'center center',
+        }}
+      >
+        {children}
       </div>
     </div>
   )

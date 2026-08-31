@@ -106,32 +106,19 @@ button {
 /*
  * iPhone delay cam: canvas.drawImage of a camera <video> ignores 2d
  * rotate (sensor pixels stay 90° clockwise). CSS rotate uses the same
- * compositor as the upright LIVE pip. Swap width/height so the spun
- * surface still fills the pane.
+ * compositor as the upright LIVE pip. The spin layer is 100% of the
+ * pane so the canvas keeps a real layout size and can paint.
  */
 .ios-delay-stage {
   position: relative;
   overflow: hidden;
 }
-.ios-delay-unwind {
+.ios-delay-spin {
   position: absolute;
   inset: 0;
-  overflow: hidden;
-  container-type: size;
 }
-.ios-delay-unwind-inner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 100cqh;
-  height: 100cqw;
-  max-width: none;
-  max-height: none;
-  transform: translate(-50%, -50%) rotate(-90deg);
-  -webkit-transform: translate(-50%, -50%) rotate(-90deg);
-}
-.ios-delay-unwind-inner > canvas,
-.ios-delay-unwind-inner > video {
+.ios-delay-spin > canvas,
+.ios-delay-spin > video {
   display: block;
   width: 100%;
   height: 100%;

@@ -945,7 +945,7 @@ export function CameraPane({
               : 'hidden'
           }
         >
-          <canvas ref={delayCanvasRef} />
+          <canvas ref={delayCanvasRef} className="h-full w-full bg-black" />
         </IosDelayUnwind>
         {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">

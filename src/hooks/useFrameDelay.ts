@@ -139,10 +139,10 @@ export function useFrameDelay({
         return was === next ? was : next
       })
 
-      if (canvas && ring.length > 0 && canvas.clientWidth > 2 && canvas.clientHeight > 2) {
+      if (canvas && ring.length > 0) {
         const dpr = Math.min(2, window.devicePixelRatio || 1)
-        const cssW = canvas.clientWidth
-        const cssH = canvas.clientHeight
+        const cssW = Math.max(2, canvas.clientWidth)
+        const cssH = Math.max(2, canvas.clientHeight)
         const pw = Math.round(cssW * dpr)
         const ph = Math.round(cssH * dpr)
         if (canvas.width !== pw || canvas.height !== ph) {
