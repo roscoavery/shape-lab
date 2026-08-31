@@ -19,6 +19,7 @@ Included:
 - `lever.jpg`
 - `handstand.jpg`
 - `candlestick.jpg`
+- `candlestick_drill.jpg`
 - `tucked_candle.jpg` (main)
 - `tucked_candle_b.jpg`
 - `hollow_arms_down.jpg`

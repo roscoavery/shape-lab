@@ -384,7 +384,9 @@ export function homeworkDedupeKey(
   const aid = item.athleteId || '_'
   const auto = inferAutoKey(item as HomeworkItem)
   if (auto === 'hollow' || item.autoKey === 'hollow') return `${aid}::hollow`
-  if (item.shapeId.startsWith('seq:')) return `${aid}::${item.shapeId}`
+  if (item.shapeId.startsWith('seq:') || item.shapeId.startsWith('drill:')) {
+    return `${aid}::${item.shapeId}`
+  }
   const typed = item.customLabel?.trim().toLowerCase()
   if (typed) return `${aid}::typed:${typed}`
   if (item.shapeId.startsWith('custom:')) return `${aid}::${item.shapeId}`
@@ -657,6 +659,7 @@ export const APP_TABS = [
   'warmup',
   'learn',
   'coachlib',
+  'drills',
   'compare',
   'classes',
   'feed',
@@ -669,7 +672,7 @@ export const APP_TABS = [
 export type AppTab = (typeof APP_TABS)[number]
 
 export function isRyanOnlyTab(tab: AppTab): boolean {
-  return tab === 'tasks' || tab === 'coach'
+  return tab === 'tasks' || tab === 'coach' || tab === 'drills'
 }
 
 export function loadTab(): AppTab {

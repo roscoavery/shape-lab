@@ -2141,19 +2141,21 @@ export const SHAPES: ShapeDef[] = [
     id: 'candlestick',
     name: 'Candlestick',
     description:
-      'Shoulder-stand candlestick: open hips, ribs in, straight vertical line from shoulders to pointed toes. Staple for tumbling and straight-arm handstand forward rolls.',
+      'Shoulder-stand candlestick: open the hips like an arch, legs vertical, toes pointed to the ceiling — not past the face. Used for rolls, back-tuck drills, and the candlestick drill (FTOS → C → sit-tuck → roll and arch).',
     bodyPosition:
-      'SIDE or 3/4. Weight on the shoulders and upper back. Hips OPEN and stacked over the shoulders. Ribs in — no banana. Knees straight, feet together, toes pointed to the ceiling. One straight vertical line. Arms can rest on the floor by the ears / reaching past the head.',
+      'SIDE or 3/4. Weight on the shoulders and arms. Arms reach behind the ears on the floor. Hips open — try to hit an arch for the candle. Knees straight, feet together, toes pointed straight up. Toes stay above you; they should not pass over the face. Do not pause long in any piece. The drill is a sequence: start FTOS, bend to a C, sit and fall back to a tuck, roll back and arch for the candle. If a coach picks the feet up while they hold an arch, they are in a good candle.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     tips: [
-      'SIDE or 3/4 so the vertical line is obvious.',
-      'Open hips, ribs in — same stacked body as a good handstand, just on the shoulders.',
-      'Straight knees, pointed toes.',
+      'Do not pause — this is a sequence, not a long hold.',
+      'FTOS → bend to C → sit and fall to tuck → roll back and arch for the candle.',
+      'Arms behind the ears. Open the hips like an arch.',
+      'Toes stay above you. Do not let them pass over the face.',
+      'If a coach lifts the feet on an arch, that is a good candle.',
     ],
     coachNotes:
-      'A staple in gymnastics and tumbling. This still is the middle of a handstand forward roll. Useful for learning open hips with ribs in, entering the back extension roll, and exiting the handstand into a forward roll. Good handstand forward rolls with straight arms require this shape. Also useful for drills that apply to handsprings, tucks, layouts, and fulls.',
+      'Two stills: the handstand-forward-roll candle, and the candlestick-drill finish. The drill should not pause for long. Toes should not pass the face. Aim for an arch in the candle. Sequence: FTOS, bend to C, sit and fall back to tuck, roll back and arch. Lifting the feet on an arch puts them in a good candle. Also useful for straight-arm handstand forward rolls, back extension rolls, and tuck / layout / full drills.',
     criteria: [
       {
         id: 'legs_vertical',
@@ -2176,8 +2178,8 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 24,
-        feedbackLow: 'Open the hips — ribs in, no pike.',
-        feedbackHigh: 'Ribs in — don’t arch.',
+        feedbackLow: 'Open the hips — arch for the candle, no pike.',
+        feedbackHigh: 'Toes stay above you — don’t roll past the face.',
       },
       {
         id: 'knees',

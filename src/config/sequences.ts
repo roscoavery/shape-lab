@@ -112,6 +112,18 @@ export const SEQUENCES: SequenceDef[] = [
     ],
   },
   {
+    id: 'candlestick_drill',
+    name: 'Candlestick drill',
+    description:
+      'Do not pause. Start FTOS, bend to a C, sit and fall back to a tuck, then roll back and arch for the candle. Toes stay above you — they should not pass over the face. If a coach picks the feet up on an arch, that is a good candle.',
+    steps: [
+      { shapeId: 'feet_together_open_shoulders', holdSeconds: 0.8 },
+      { shapeId: 'c_shape', holdSeconds: 0.8 },
+      { shapeId: 'tuck_open_shoulders', holdSeconds: 0.8 },
+      { shapeId: 'candlestick', holdSeconds: 1.2 },
+    ],
+  },
+  {
     id: 'pike_open_candlestick',
     name: 'Pike (open shoulders) → Candlestick',
     description:

@@ -559,6 +559,17 @@ export type WarmupStar = {
   warmupId: string
 }
 
+/** Ryan’s private drill clip. If shapeId is set, the video shows on that shape for everyone. */
+export type DrillClip = {
+  id: string
+  title: string
+  notes: string
+  src: string
+  shapeId?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type CoachSkillRef = {
   id: string
   coachId: string

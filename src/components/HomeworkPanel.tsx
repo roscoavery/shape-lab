@@ -41,16 +41,19 @@ import { syncRosterWithServer } from '../lib/rosterSync'
 import { homeworkLooksReady } from '../lib/homeworkPose'
 import {
   customHomeworkShapeId,
+  drillHomeworkShapeId,
+  getHomeworkDrill,
   getHomeworkSequence,
   homeworkTitle,
   isCustomHomework,
+  isDrillHomework,
   isSequenceHomework,
   sequenceHomeworkShapeId,
 } from '../lib/homeworkLabel'
 import { CollapsibleSection } from './CollapsibleSection'
 import { HoldProperTimes } from './HoldProperTimes'
 import { pickCoachStill } from '../lib/shippedRefs'
-import { subscribeCoachContent } from '../lib/coachContentStore'
+import { listPublicDrills, subscribeCoachContent } from '../lib/coachContentStore'
 import type {
   HomeworkBreakdown,
   HomeworkItem,
@@ -387,6 +390,26 @@ function HollowPairRefs({
   )
 }
 
+function DrillHomeworkCard({ item }: { item: HomeworkItem }) {
+  const drill = getHomeworkDrill(item)
+  if (!drill) return null
+  return (
+    <div className="mt-2 rounded-md bg-[#0d1218] px-2.5 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+        Drill
+      </p>
+      {drill.shapeId && (
+        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+          Train scores {getShape(drill.shapeId)?.name ?? drill.shapeId}.
+        </p>
+      )}
+      {drill.src && (
+        <video className="mt-2 max-h-48 w-full rounded-md" src={drill.src} controls playsInline />
+      )}
+    </div>
+  )
+}
+
 function SequenceHomeworkSteps({ item }: { item: HomeworkItem }) {
   const seq = getHomeworkSequence(item)
   if (!seq) return null
@@ -434,6 +457,7 @@ export function HomeworkPanel({
   const [flash, setFlash] = useState<string | null>(null)
   const [addShapeId, setAddShapeId] = useState('')
   const [addSequenceId, setAddSequenceId] = useState('')
+  const [addDrillId, setAddDrillId] = useState('')
   const [libTick, setLibTick] = useState(0)
   const [addTyped, setAddTyped] = useState('')
   const [addSource, setAddSource] = useState<'coach' | 'athlete'>('coach')
@@ -529,8 +553,10 @@ export function HomeworkPanel({
 
   const activeItem = items.find((i) => i.id === activeItemId) ?? null
   const activeSequence = activeItem ? getHomeworkSequence(activeItem) : undefined
+  const activeDrill = activeItem ? getHomeworkDrill(activeItem) : undefined
   const activeCameraShapeId =
     activeSequence?.steps.find((step) => getShape(step.shapeId))?.shapeId ??
+    (activeDrill?.shapeId && getShape(activeDrill.shapeId) ? activeDrill.shapeId : undefined) ??
     activeItem?.shapeId ??
     ''
   const activeShape = activeCameraShapeId ? getShape(activeCameraShapeId) : undefined
@@ -619,8 +645,11 @@ export function HomeworkPanel({
     setActiveItemId(item.id)
     setManualItemId(null)
     const seq = getHomeworkSequence(item)
+    const drill = getHomeworkDrill(item)
     const cameraId =
-      seq?.steps.find((step) => getShape(step.shapeId))?.shapeId ?? item.shapeId
+      seq?.steps.find((step) => getShape(step.shapeId))?.shapeId ??
+      (drill?.shapeId && getShape(drill.shapeId) ? drill.shapeId : undefined) ??
+      item.shapeId
     onRequestShape(cameraId, 'auto', { profileOk: true })
     resetSession()
     resetSpeech()
@@ -777,16 +806,19 @@ export function HomeworkPanel({
     if (!athleteId) return
     const typed = addTyped.trim()
     const seq = SEQUENCES.find((s) => s.id === addSequenceId)
-    if (!typed && !addShapeId && !seq) return
-    const nextShapeId = seq
-      ? sequenceHomeworkShapeId(seq.id)
-      : typed
-        ? customHomeworkShapeId(typed)
-        : addShapeId
+    const drill = listPublicDrills().find((d) => d.id === addDrillId)
+    if (!typed && !addShapeId && !seq && !drill) return
+    const nextShapeId = drill
+      ? drillHomeworkShapeId(drill.id)
+      : seq
+        ? sequenceHomeworkShapeId(seq.id)
+        : typed
+          ? customHomeworkShapeId(typed)
+          : addShapeId
     const probe = {
       athleteId,
       shapeId: nextShapeId,
-      customLabel: seq ? seq.name : typed || undefined,
+      customLabel: drill ? drill.title : seq ? seq.name : typed || undefined,
       source: addSource,
       id: '',
       createdAt: '',
@@ -813,13 +845,23 @@ export function HomeworkPanel({
                 ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
                 : nextShapeId === 'tucked_candle'
                   ? 'Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Rolls and back-tuck drills.'
+                  : nextShapeId === 'candlestick'
+                    ? 'Do not pause. FTOS, bend to C, sit and fall to tuck, roll back and arch for the candle. Toes stay above you — not past the face. If a coach lifts the feet on an arch, that is a good candle.'
           : ''
-    const notes = addNotes.trim() || (seq ? seq.description : defaultNotes)
+    const notes =
+      addNotes.trim() ||
+      (drill ? drill.notes : seq ? seq.description : defaultNotes)
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
       shapeId: nextShapeId,
-      ...(seq ? { customLabel: seq.name } : typed ? { customLabel: typed } : {}),
+      ...(drill
+        ? { customLabel: drill.title }
+        : seq
+          ? { customLabel: seq.name }
+          : typed
+            ? { customLabel: typed }
+            : {}),
       source: addSource,
       ...(Number.isFinite(target) && target > 0
         ? { targetSeconds: target }
@@ -831,6 +873,7 @@ export function HomeworkPanel({
     setAddNotes('')
     setAddTyped('')
     setAddSequenceId('')
+    setAddDrillId('')
     const shapeName = homeworkTitle(item)
     showFlash(
       `${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${shapeName}`,
@@ -1246,6 +1289,11 @@ export function HomeworkPanel({
                       sequence
                     </span>
                   )}
+                  {isDrillHomework(item) && (
+                    <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text)]">
+                      drill
+                    </span>
+                  )}
                   {best > 0 && (
                     <span className="hidden text-[11px] tabular-nums text-[var(--accent)] sm:inline">
                       best {formatSeconds(best)}
@@ -1438,6 +1486,7 @@ export function HomeworkPanel({
               {isSequenceHomework(item) && (
                 <SequenceHomeworkSteps item={item} />
               )}
+              {isDrillHomework(item) && <DrillHomeworkCard item={item} />}
               {item.notes && (
                 <p className="mt-1 text-[11px] text-[var(--muted)]">
                   {item.notes}
@@ -1468,7 +1517,10 @@ export function HomeworkPanel({
             value={addShapeId}
             onChange={(e) => {
               setAddShapeId(e.target.value)
-              if (e.target.value) setAddSequenceId('')
+              if (e.target.value) {
+                setAddSequenceId('')
+                setAddDrillId('')
+              }
             }}
           >
             <option value="">Pick a shape…</option>
@@ -1483,13 +1535,34 @@ export function HomeworkPanel({
             value={addSequenceId}
             onChange={(e) => {
               setAddSequenceId(e.target.value)
-              if (e.target.value) setAddShapeId('')
+              if (e.target.value) {
+                setAddShapeId('')
+                setAddDrillId('')
+              }
             }}
           >
             <option value="">Or a sequence…</option>
             {SEQUENCES.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
+            value={addDrillId}
+            onChange={(e) => {
+              setAddDrillId(e.target.value)
+              if (e.target.value) {
+                setAddShapeId('')
+                setAddSequenceId('')
+              }
+            }}
+          >
+            <option value="">Or a drill…</option>
+            {listPublicDrills().map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.title}
               </option>
             ))}
           </select>

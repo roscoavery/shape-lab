@@ -32,7 +32,7 @@ import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
 import { PhysicsLessons } from './learn/PhysicsLessons'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
-import { subscribeCoachContent } from '../lib/coachContentStore'
+import { drillsForShape, subscribeCoachContent } from '../lib/coachContentStore'
 import { isCoachProfile } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
 import type { Athlete, ReferencePhoto, ShapeDef } from '../types'
@@ -718,6 +718,32 @@ function ShapeLibrary({
   )
 }
 
+function ShapeLinkedDrills({ shapeId }: { shapeId: string }) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
+  const drills = drillsForShape(shapeId)
+  void tick
+  if (drills.length === 0) return null
+  return (
+    <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+        Drill
+      </h4>
+      <ul className="grid gap-3">
+        {drills.map((d) => (
+          <li key={d.id}>
+            <p className="text-sm font-semibold">{d.title}</p>
+            {d.notes && <p className="mt-1 text-sm text-[var(--muted)]">{d.notes}</p>}
+            {d.src && (
+              <video className="mt-2 max-h-72 w-full rounded-md" src={d.src} controls playsInline />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function ShapeDetail({
   shapeId,
   orderedShapeIds,
@@ -855,6 +881,8 @@ function ShapeDetail({
           />
         </div>
       </div>
+
+      <ShapeLinkedDrills shapeId={shape.id} />
 
       {igForShape.length > 0 && (
         <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

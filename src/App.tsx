@@ -18,6 +18,7 @@ import { CoachShapeLibrary } from './components/coach/CoachShapeLibrary'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
+import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
@@ -772,6 +773,8 @@ export default function App() {
       )}
 
       {tab === 'coachlib' && <CoachShapeLibrary signedIn={activeProfile} />}
+
+      {tab === 'drills' && <DrillLibraryPanel signedIn={activeProfile} />}
 
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>

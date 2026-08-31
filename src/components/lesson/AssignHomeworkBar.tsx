@@ -3,11 +3,12 @@ import { allLibraryShapes } from '../../config/shapes'
 import { SEQUENCES } from '../../config/sequences'
 import {
   customHomeworkShapeId,
+  drillHomeworkShapeId,
   homeworkTitle,
   sequenceHomeworkShapeId,
 } from '../../lib/homeworkLabel'
 import { addHomeworkItem, createId, homeworkDedupeKey, ensureAutoHomework } from '../../lib/storage'
-import { subscribeCoachContent } from '../../lib/coachContentStore'
+import { listPublicDrills, subscribeCoachContent } from '../../lib/coachContentStore'
 import type { HomeworkSource } from '../../types'
 
 type Props = {
@@ -27,6 +28,7 @@ export function AssignHomeworkBar({
 }: Props) {
   const [shapeId, setShapeId] = useState(defaultShapeId ?? '')
   const [sequenceId, setSequenceId] = useState('')
+  const [drillId, setDrillId] = useState('')
   const [typed, setTyped] = useState(defaultTyped ?? '')
   const [notes, setNotes] = useState(defaultNotes ?? '')
   const [seconds, setSeconds] = useState('')
@@ -40,20 +42,23 @@ export function AssignHomeworkBar({
   const assign = () => {
     const label = typed.trim()
     const seq = SEQUENCES.find((s) => s.id === sequenceId)
-    if (!label && !shapeId && !seq) {
-      setFlash('Pick a shape, a sequence, or type the drill name.')
+    const drill = listPublicDrills().find((d) => d.id === drillId)
+    if (!label && !shapeId && !seq && !drill) {
+      setFlash('Pick a shape, a sequence, a drill, or type the name.')
       return
     }
-    const nextShapeId = seq
-      ? sequenceHomeworkShapeId(seq.id)
-      : label
-        ? customHomeworkShapeId(label)
-        : shapeId
+    const nextShapeId = drill
+      ? drillHomeworkShapeId(drill.id)
+      : seq
+        ? sequenceHomeworkShapeId(seq.id)
+        : label
+          ? customHomeworkShapeId(label)
+          : shapeId
     const existing = ensureAutoHomework(athleteId)
     const probe = {
       athleteId,
       shapeId: nextShapeId,
-      customLabel: seq ? seq.name : label || undefined,
+      customLabel: drill ? drill.title : seq ? seq.name : label || undefined,
       source: 'coach' as HomeworkSource,
       id: '',
       createdAt: '',
@@ -63,14 +68,14 @@ export function AssignHomeworkBar({
       return
     }
     const target = Number(seconds)
-    const seqNotes = seq
-      ? `${seq.description}`
-      : ''
+    const seqNotes = drill ? drill.notes : seq ? `${seq.description}` : ''
     addHomeworkItem({
       id: createId('hw'),
       athleteId,
       shapeId: nextShapeId,
-      ...(seq || label ? { customLabel: seq ? seq.name : label } : {}),
+      ...(drill || seq || label
+        ? { customLabel: drill ? drill.title : seq ? seq.name : label }
+        : {}),
       source: 'coach',
       createdAt: new Date().toISOString(),
       ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
@@ -81,6 +86,7 @@ export function AssignHomeworkBar({
     setSeconds('')
     setTyped('')
     setSequenceId('')
+    setDrillId('')
   }
 
   return (
@@ -96,7 +102,10 @@ export function AssignHomeworkBar({
           value={shapeId}
           onChange={(e) => {
             setShapeId(e.target.value)
-            if (e.target.value) setSequenceId('')
+            if (e.target.value) {
+              setSequenceId('')
+              setDrillId('')
+            }
           }}
         >
           <option value="">Pick a shape…</option>
@@ -111,13 +120,34 @@ export function AssignHomeworkBar({
           value={sequenceId}
           onChange={(e) => {
             setSequenceId(e.target.value)
-            if (e.target.value) setShapeId('')
+            if (e.target.value) {
+              setShapeId('')
+              setDrillId('')
+            }
           }}
         >
           <option value="">Or assign a sequence…</option>
           {SEQUENCES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+          value={drillId}
+          onChange={(e) => {
+            setDrillId(e.target.value)
+            if (e.target.value) {
+              setShapeId('')
+              setSequenceId('')
+            }
+          }}
+        >
+          <option value="">Or assign a drill…</option>
+          {listPublicDrills().map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.title}
             </option>
           ))}
         </select>

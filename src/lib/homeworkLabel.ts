@@ -1,9 +1,11 @@
 import { getShape } from '../config/shapes'
 import { SEQUENCES_BY_ID } from '../config/sequences'
-import type { HomeworkItem, SequenceDef } from '../types'
+import { getDrill } from './coachContentStore'
+import type { DrillClip, HomeworkItem, SequenceDef } from '../types'
 
 export const CUSTOM_HOMEWORK_PREFIX = 'custom:'
 export const SEQUENCE_HOMEWORK_PREFIX = 'seq:'
+export const DRILL_HOMEWORK_PREFIX = 'drill:'
 
 export function customHomeworkShapeId(label: string): string {
   const slug = label
@@ -36,10 +38,31 @@ export function sequenceHomeworkShapeId(sequenceId: string): string {
   return `${SEQUENCE_HOMEWORK_PREFIX}${sequenceId}`
 }
 
+export function isDrillHomework(item: Pick<HomeworkItem, 'shapeId'>): boolean {
+  return item.shapeId.startsWith(DRILL_HOMEWORK_PREFIX)
+}
+
+export function homeworkDrillId(item: Pick<HomeworkItem, 'shapeId'>): string | null {
+  if (!isDrillHomework(item)) return null
+  return item.shapeId.slice(DRILL_HOMEWORK_PREFIX.length)
+}
+
+export function getHomeworkDrill(
+  item: Pick<HomeworkItem, 'shapeId'>,
+): DrillClip | undefined {
+  const id = homeworkDrillId(item)
+  return id ? getDrill(id) : undefined
+}
+
+export function drillHomeworkShapeId(drillId: string): string {
+  return `${DRILL_HOMEWORK_PREFIX}${drillId}`
+}
+
 export function isCustomHomework(
   item: Pick<HomeworkItem, 'shapeId'> & { customLabel?: string },
 ): boolean {
   if (isSequenceHomework(item)) return false
+  if (isDrillHomework(item)) return false
   return Boolean(item.customLabel?.trim()) || item.shapeId.startsWith(CUSTOM_HOMEWORK_PREFIX)
 }
 
@@ -50,6 +73,11 @@ export function homeworkTitle(
     if (item.customLabel?.trim()) return item.customLabel.trim()
     const seq = getHomeworkSequence(item)
     return seq?.name ?? item.shapeId.slice(SEQUENCE_HOMEWORK_PREFIX.length).replace(/_/g, ' ')
+  }
+  if (isDrillHomework(item)) {
+    if (item.customLabel?.trim()) return item.customLabel.trim()
+    const drill = getHomeworkDrill(item)
+    return drill?.title ?? item.shapeId.slice(DRILL_HOMEWORK_PREFIX.length).replace(/_/g, ' ')
   }
   if (item.customLabel?.trim()) return item.customLabel.trim()
   if (item.shapeId.startsWith(CUSTOM_HOMEWORK_PREFIX)) {

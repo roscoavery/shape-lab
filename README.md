@@ -174,6 +174,7 @@ lunge_land.jpg  (also Lunge · open shoulders)
 lever.jpg
 handstand.jpg
 candlestick.jpg
+candlestick_drill.jpg
 tucked_candle.jpg  (main)
 tucked_candle_b.jpg
 hollow_arms_down.jpg
@@ -230,11 +231,15 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 
 **Tuck** is assignable (not auto). Pulled in from that open-shoulder pike: knees bent, feet in, feet flexed, arms still reaching behind the ears, slightly rounded hollow back. Three stills (close-up, flexed feet, class line). The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle. Class talk-throughs: **Pike → Tuck → Hollow → Arch** and **Lemon squeezes** (hollow ↔ tuck) on **Tasks 2**. Coach sequences match. This is not a tucked handstand.
 
+**Candlestick** has two stills (handstand-roll finish and the candlestick-drill finish). The drill should not pause: FTOS → C → sit and fall to tuck → roll back and arch. Toes stay above you, not past the face. Lifting the feet on an arch is a good candle. Assign the shipped **Candlestick drill** sequence, or (once Ryan uploads the clip) the drill video from **Learn → Drill library**.
+
 **Tucked candle** is assignable (not auto). Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Used to teach forward and backward rolls and a lot of back-tuck drills. Verbal cues: arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Two stills; the side profile is the main one.
 
 **Core home conditioning** on **Tasks 2** (and Coach) is the easy at-home circuit: 10× pike (zombie arms) → hollow → arch, then 3× open-shoulder pike with tuck–hollow squeezes into an arch, then 30-second side plank (both sides), Superman, and hollow. Hollow starts from a zombie-arm pike and inches back until the lowest part of the low back touches, then flatten and let the feet inch off. End by working those holds toward a minute.
 
-On top of that, the **coach can assign** any shape from the library as homework, or a **sequence** (lunge → lever → handstand, pike → hollow → arch, and the other shipped scripts). Sequences show their steps on the homework card; Train scores the first camera-ready step. Athletes can also self-select drills ("Coach assigns" / "Athlete picks" when adding).
+On top of that, the **coach can assign** any shape from the library as homework, a **sequence**, or a **drill** that Ryan linked to a shape. Sequences show their steps; linked drills play the video. Train scores the first camera-ready step (or the drill’s shape). Athletes can also self-select ("Coach assigns" / "Athlete picks" when adding).
+
+**Drill library** (Ryan only, under Learn): upload clips. The list stays private. Attach a shape and everyone sees that video on the shape page and can assign it as homework.
 
 **Gym shape library:** unlock a coach or gym-admin profile, then add a shape from **Learn → Shape library** or **Coach library**. It is gym-wide — Learn, homework assignment, and lesson pickers all see it. Optionally copy camera grading from a shipped shape. Private coach shapes stay on that coach’s card.
 
