@@ -426,6 +426,11 @@ export type HomeworkLog = {
   score: number
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
+  /** Lesson holds land on the athlete’s homework, labeled with the coach. */
+  loggedFrom?: 'lesson'
+  lessonId?: string
+  coachId?: string
+  coachName?: string
 }
 
 export type LessonBlockKind = 'hold' | 'compare' | 'talk'

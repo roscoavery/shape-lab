@@ -42,6 +42,7 @@ import {
   isCustomHomework,
 } from '../lib/homeworkLabel'
 import { CollapsibleSection } from './CollapsibleSection'
+import { HoldProperTimes } from './HoldProperTimes'
 import { pickCoachStill } from '../lib/shippedRefs'
 import type {
   HomeworkBreakdown,
@@ -211,20 +212,23 @@ function HoldTimesBoard({
                   <span className="text-[12px] text-[var(--muted)]">
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
+                    {log.loggedFrom === 'lesson' && (
+                      <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                        {log.coachName
+                          ? `lesson with ${log.coachName}`
+                          : 'lesson'}
+                      </span>
+                    )}
                     {isManual && (
                       <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
                         stopwatch
                       </span>
                     )}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-[var(--text)]">
-                    {formatSeconds(log.totalHoldSeconds)}
-                    {!isManual && proper != null ? (
-                      <span className="ml-1.5 text-[11px] font-normal text-[var(--muted)]">
-                        proper {formatSeconds(proper)}
-                      </span>
-                    ) : null}
-                  </span>
+                  <HoldProperTimes
+                    total={log.totalHoldSeconds}
+                    proper={!isManual ? proper : null}
+                  />
                 </li>
               )
             })}
@@ -711,6 +715,11 @@ export function HomeworkPanel({
         <p className="mt-1 text-xs text-[var(--muted)]">
           Camera train starts the timer when you actually hit the shape. Voice stays
           quiet until a real miss. Or use the stopwatch and log that time (or type one).
+        </p>
+        <p className="mt-2 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm leading-snug text-[var(--text)]">
+          Tap <strong>Train</strong> on a drill, allow the camera, and point it at
+          yourself. The clock starts when you hit the shape. Hold is the whole time;
+          proper is only the seconds at form standard.
         </p>
       </div>
 

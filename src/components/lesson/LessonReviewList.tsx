@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { formatSeconds } from '../../hooks/useHoldTimer'
 import { addLessonNote } from '../../lib/lessonStore'
 import type { Athlete, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { HoldProperTimes } from '../HoldProperTimes'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
@@ -93,11 +93,11 @@ export function LessonReviewList({
                         <div key={g.key} className="rounded-md bg-[#121820] px-2 py-2">
                           <p className="text-[11px] font-bold">{g.label}</p>
                           {g.holds.map((h) => (
-                            <p key={h.id} className="text-sm text-[var(--muted)]">
-                              Hold {formatSeconds(h.totalHoldSeconds)}
-                              {h.method === 'camera'
-                                ? ` · ${formatSeconds(h.properHoldSeconds)} proper`
-                                : ''}
+                            <p key={h.id} className="text-sm">
+                              <HoldProperTimes
+                                total={h.totalHoldSeconds}
+                                proper={h.method === 'camera' ? h.properHoldSeconds : null}
+                              />
                             </p>
                           ))}
                           {g.notes.map((n) => (

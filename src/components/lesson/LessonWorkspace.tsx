@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getShape } from '../../config/shapes'
 import { formatSeconds, useHoldTimer } from '../../hooks/useHoldTimer'
 import { homeworkLooksReady } from '../../lib/homeworkPose'
+import { logLessonHoldOnAthleteHomework } from '../../lib/lessonHomework'
 import { addLessonHold, addLessonNote, endLessonSession } from '../../lib/lessonStore'
 import { DEFAULT_FORM_STANDARD } from '../../lib/storage'
+import { HoldProperTimes } from '../HoldProperTimes'
 import type { Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
@@ -126,6 +128,18 @@ export function LessonWorkspace({
     })
     if (next) {
       if (holdTopic.kind === 'custom') rememberTypedHold(session.coachId, label)
+      logLessonHoldOnAthleteHomework({
+        athleteId: session.athleteId,
+        coachId: session.coachId,
+        coachName,
+        lessonId: session.id,
+        shapeId: holdTopic.id || `custom:${label.toLowerCase()}`,
+        shapeName: label,
+        totalHoldSeconds: Number(seconds.toFixed(1)),
+        properHoldSeconds: Number(proper.toFixed(1)),
+        score: scoreValue,
+        method,
+      })
       onSessionChange(next)
       if (method === 'manual') resetWatch()
       else hold.reset()
@@ -219,12 +233,14 @@ export function LessonWorkspace({
 
       <CollapsibleSection
         title="Stopwatch / holds"
-        hint="Start the clock when they go. Log the time when they come down."
+        hint={`Start the clock when they go. Logged holds go on ${athleteName}’s homework, marked as a lesson with ${coachName}.`}
       >
         <p className="text-sm text-[var(--muted)]">
           The clock does not wait for the camera. Pick the body position, tap Start
           when they go, Stop when they come down, then log it. If you want live
-          analysis, turn the camera on — it grades the shape you selected.
+          analysis, turn the camera on — it grades the shape you selected. Every
+          log lands on {athleteName}’s homework as a lesson with {coachName} — not
+          on your admin profile.
         </p>
         <div className="mt-3">
           <SkillPicker
@@ -407,9 +423,11 @@ export function LessonWorkspace({
               <div key={g.key} className="rounded-lg bg-[#121820] px-3 py-2">
                 <p className="text-sm font-semibold">{g.label}</p>
                 {g.holds.map((h) => (
-                  <p key={h.id} className="text-sm text-[var(--muted)]">
-                    Hold {formatSeconds(h.totalHoldSeconds)}
-                    {h.method === 'camera' ? ` · ${formatSeconds(h.properHoldSeconds)} proper` : ''}
+                  <p key={h.id} className="text-sm">
+                    <HoldProperTimes
+                      total={h.totalHoldSeconds}
+                      proper={h.method === 'camera' ? h.properHoldSeconds : null}
+                    />
                   </p>
                 ))}
                 {g.notes.map((n) => (
