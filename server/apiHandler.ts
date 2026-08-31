@@ -38,6 +38,7 @@ import {
   readRequestBodyLimited,
   sendIgStillFile,
   stillsForClient,
+  updateIgStillMeta,
 } from './igStillDisk.ts'
 import { readShapeCopyFile, writeShapeCopyFile } from './shapeCopyStore.ts'
 import { readStillCropFile, writeStillCropFile } from './stillCropStore.ts'
@@ -117,6 +118,17 @@ export async function handleShapeLabApi(
       sendJson(res, 200, saved)
       return true
     }
+    if (req.method === 'PATCH') {
+      const id = url.searchParams.get('id') ?? ''
+      const body = await readRequestBodyLimited(req)
+      const saved = await updateIgStillMeta(id, JSON.parse(body))
+      if (!saved) {
+        sendJson(res, 404, { error: 'Still not found' })
+        return true
+      }
+      sendJson(res, 200, saved)
+      return true
+    }
     if (req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? ''
       if (!(await deleteIgStill(id))) {
@@ -126,7 +138,7 @@ export async function handleShapeLabApi(
       sendJson(res, 200, { ok: true })
       return true
     }
-    sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+    sendJson(res, 405, { error: 'Use GET, POST, PATCH, or DELETE' })
     return true
   }
   if (path === '/api/ig-still-file') {

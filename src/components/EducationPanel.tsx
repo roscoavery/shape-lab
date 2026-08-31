@@ -26,7 +26,7 @@ import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
 import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
 import { deleteReferencePhoto } from '../lib/storage'
-import { removeIgStill } from '../lib/igStillStore'
+import { removeIgStill, updateIgStill } from '../lib/igStillStore'
 import { useShapeCopy } from './ShapeCopyContext'
 import { ShapeCopyEditor } from './ShapeCopyEditor'
 import { StillCropEditor } from './StillCropEditor'
@@ -1119,6 +1119,11 @@ function IgShapesLibrary({
 }) {
   const groups = groupIgStillsByShape(referencePhotos)
   const total = groups.reduce((n, g) => n + g.stills.length, 0)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draftLabel, setDraftLabel] = useState('')
+  const [draftNotes, setDraftNotes] = useState('')
+  const [editError, setEditError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const remove = async (still: ReferencePhoto) => {
     if (still.persistedToApp && !persistIgToApp) return
@@ -1127,6 +1132,33 @@ function IgShapesLibrary({
     })
     await deleteReferencePhoto(still.id)
     onReferencesChange(referencePhotos.filter((p) => p.id !== still.id))
+  }
+
+  const beginEdit = (still: ReferencePhoto) => {
+    setEditingId(still.id)
+    setDraftLabel(still.label ?? '')
+    setDraftNotes(still.notes ?? '')
+    setEditError(null)
+  }
+
+  const saveDescription = async (still: ReferencePhoto) => {
+    setSaving(true)
+    setEditError(null)
+    try {
+      const saved = await updateIgStill(
+        still.id,
+        { label: draftLabel, notes: draftNotes },
+        { persistToApp: Boolean(still.persistedToApp) },
+      )
+      onReferencesChange(
+        referencePhotos.map((photo) => (photo.id === still.id ? { ...photo, ...saved } : photo)),
+      )
+      setEditingId(null)
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Could not save that description.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -1186,6 +1218,56 @@ function IgShapesLibrary({
                     Delete
                   </button>
                 </div>
+                {still.notes && editingId !== still.id && (
+                  <p className="whitespace-pre-wrap border-t border-[var(--panel-border)] px-2 py-2 text-xs leading-relaxed text-[var(--text)]">
+                    {still.notes}
+                  </p>
+                )}
+                {persistIgToApp && editingId !== still.id && (
+                  <button
+                    type="button"
+                    onClick={() => beginEdit(still)}
+                    className="mx-2 mb-2 text-xs text-[var(--accent)] underline"
+                  >
+                    Edit name and description
+                  </button>
+                )}
+                {persistIgToApp && editingId === still.id && (
+                  <div className="border-t border-[var(--panel-border)] p-2">
+                    <input
+                      value={draftLabel}
+                      onChange={(event) => setDraftLabel(event.target.value)}
+                      placeholder="Shape name or short label"
+                      className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                    />
+                    <textarea
+                      value={draftNotes}
+                      onChange={(event) => setDraftNotes(event.target.value)}
+                      placeholder="Describe this shape"
+                      rows={3}
+                      className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => void saveDescription(still)}
+                        className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                      >
+                        {saving ? 'Saving…' : 'Save description'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setEditingId(null)}
+                        className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {editError && <p className="mt-2 text-xs text-[var(--bad)]">{editError}</p>}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

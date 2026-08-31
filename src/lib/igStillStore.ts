@@ -161,6 +161,45 @@ export async function addIgStill(
   return next
 }
 
+export type IgStillTextPatch = Partial<
+  Pick<ReferencePhoto, 'label' | 'customName' | 'notes'>
+>
+
+/** Merge text edits without replacing the image, crop, ownership, or timestamps. */
+export async function updateIgStill(
+  id: string,
+  patch: IgStillTextPatch,
+  opts?: { persistToApp?: boolean },
+): Promise<ReferencePhoto> {
+  const current = memory.find((photo) => photo.id === id)
+  if (!current) throw new Error('IG still not found.')
+  let next: ReferencePhoto = { ...current, ...patch }
+  memory = [next, ...memory.filter((photo) => photo.id !== id)].slice(0, MAX_IG)
+  emit()
+  await writeLocal(next)
+
+  if (opts?.persistToApp) {
+    const res = await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    if (!res.ok) throw new Error('Could not save that description to the gym app.')
+    const saved = (await res.json()) as ReferencePhoto
+    next = {
+      ...next,
+      ...saved,
+      dataUrl: next.dataUrl.startsWith('data:') ? next.dataUrl : saved.dataUrl,
+      library: 'ig',
+      persistedToApp: true,
+    }
+    memory = [next, ...memory.filter((photo) => photo.id !== id)].slice(0, MAX_IG)
+    emit()
+    await writeLocal(next)
+  }
+  return next
+}
+
 export async function removeIgStill(
   id: string,
   opts?: { fromApp?: boolean },

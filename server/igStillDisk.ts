@@ -17,6 +17,7 @@ export type DiskIgStill = {
   athleteId: string | null
   label?: string
   customName?: string
+  notes?: string
   createdAt: string
   library: 'ig'
   file: string
@@ -94,6 +95,7 @@ export async function stillsForClient(): Promise<Array<Record<string, unknown>>>
     athleteId: s.athleteId,
     label: s.label,
     customName: s.customName,
+    notes: s.notes,
     createdAt: s.createdAt,
     library: 'ig',
     persistedToApp: true,
@@ -120,6 +122,7 @@ export async function addIgStillFromBody(body: unknown): Promise<Record<string, 
     athleteId: typeof p.athleteId === 'string' ? p.athleteId : null,
     label: typeof p.label === 'string' ? p.label : undefined,
     customName: typeof p.customName === 'string' ? p.customName : undefined,
+    notes: typeof p.notes === 'string' ? p.notes : undefined,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
     library: 'ig',
     file,
@@ -128,6 +131,39 @@ export async function addIgStillFromBody(body: unknown): Promise<Record<string, 
   await writeMeta(stills)
   return {
     ...row,
+    persistedToApp: true,
+    dataUrl: `/api/ig-still-file?id=${encodeURIComponent(id)}`,
+  }
+}
+
+function optionalText(value: unknown, max: number): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const text = value.trim().slice(0, max)
+  return text || undefined
+}
+
+/** Update text metadata without rewriting or deleting the stored image blob. */
+export async function updateIgStillMeta(
+  idRaw: string,
+  body: unknown,
+): Promise<Record<string, unknown> | null> {
+  const id = safeId(idRaw)
+  if (!id || !body || typeof body !== 'object') return null
+  const meta = await readIgStillMeta()
+  const found = meta.stills.find((still) => still.id === id)
+  if (!found) return null
+  const patch = body as Record<string, unknown>
+  const next: DiskIgStill = {
+    ...found,
+    ...(Object.hasOwn(patch, 'label') ? { label: optionalText(patch.label, 120) } : {}),
+    ...(Object.hasOwn(patch, 'customName')
+      ? { customName: optionalText(patch.customName, 120) }
+      : {}),
+    ...(Object.hasOwn(patch, 'notes') ? { notes: optionalText(patch.notes, 1200) } : {}),
+  }
+  await writeMeta(meta.stills.map((still) => (still.id === id ? next : still)))
+  return {
+    ...next,
     persistedToApp: true,
     dataUrl: `/api/ig-still-file?id=${encodeURIComponent(id)}`,
   }
