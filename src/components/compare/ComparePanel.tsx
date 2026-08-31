@@ -36,9 +36,6 @@ type Props = {
   skillId?: string | null
   skillLabel?: string | null
   lessonBar?: ReactNode
-  liveScore?: number | null
-  liveScoreLabel?: string
-  liveScoreRunning?: boolean
 }
 
 export function ComparePanel({
@@ -54,9 +51,6 @@ export function ComparePanel({
   skillId = null,
   skillLabel = null,
   lessonBar = null,
-  liveScore = null,
-  liveScoreLabel = 'Selected shape',
-  liveScoreRunning = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -129,14 +123,7 @@ export function ComparePanel({
             : 'flex flex-col gap-4'
         }
       >
-        {fullscreen && (
-          <CompareChromeRail
-            photos={referencePhotos}
-            scoreValue={liveScore}
-            scoreLabel={liveScoreLabel}
-            scoreLive={liveScoreRunning}
-          />
-        )}
+        {fullscreen && <CompareChromeRail photos={referencePhotos} />}
         <div className={fullscreen ? 'relative flex min-h-0 min-w-0 flex-1 flex-col' : 'flex flex-col gap-4'}>
           {!fullscreen && (
             <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">

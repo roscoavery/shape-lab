@@ -794,9 +794,6 @@ export default function App() {
               lessonId={liveLesson?.id ?? null}
               skillId={liveLesson ? shape.id : null}
               skillLabel={liveLesson ? shape.name : null}
-              liveScore={score.overall}
-              liveScoreLabel={shape.name}
-              liveScoreRunning={camera.running}
               lessonBar={
                 liveLesson ? (
                   <LessonNoteBar
@@ -847,6 +844,16 @@ export default function App() {
 
       {ryanEdit && tab === 'coach' && (
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 lg:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Practice
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Live scoring</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Score shapes with the stable Practice camera. Videos / Compare keeps
+              its independent Version 1 delay camera and replay buffer.
+            </p>
+          </section>
           <div className="flex flex-col gap-3">
             <CameraStage
               videoRef={camera.videoRef}

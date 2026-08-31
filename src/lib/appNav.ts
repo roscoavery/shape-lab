@@ -19,6 +19,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'warmup', label: 'Warm-up' },
     { id: 'tasks2', label: 'Class flows' },
     { id: 'tasks', label: 'Hold & body work' },
+    { id: 'coach', label: 'Live scoring' },
   ],
   videos: [{ id: 'compare', label: 'Compare' }],
   learn: [
@@ -34,7 +35,6 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'history', label: 'Profiles' },
     { id: 'research', label: 'Research' },
     { id: 'about', label: 'About' },
-    { id: 'coach', label: 'Coach tools' },
   ],
 }
 
@@ -46,6 +46,7 @@ export function sectionForTab(tab: AppTab): AppSection {
     case 'warmup':
     case 'tasks2':
     case 'tasks':
+    case 'coach':
       return 'practice'
     case 'compare':
       return 'videos'

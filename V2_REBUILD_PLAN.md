@@ -127,7 +127,7 @@ Checklist:
 
 - [x] Keep the Version 1 delay timing algorithm intact.
 - [x] Add fullscreen rail.
-- [x] Add Live Score.
+- [x] Keep Live Score out of Compare; expose stable scoring under Practice.
 - [x] Add Controls chip; place it bottom-left when the rail is hidden.
 - [x] Auto-enter delay when fullscreen opens while the camera is running.
 - [x] Support reference videos and stills.
@@ -136,20 +136,22 @@ Checklist:
 - [ ] Test delay performance before accepting each change.
 - [ ] Browser test, commit, push, summarize, and stop.
 
-## Phase 7 — Shared camera session
+## Phase 7 — Shared camera session (reverted)
 
-- [ ] Introduce a shared camera/session manager only after Phase 6 is reliable.
-- [ ] Keep the legacy Compare-owned stream available as a fallback.
-- [ ] Use one physical camera stream for Today and Compare when possible.
-- [ ] Prevent duplicate `getUserMedia` calls.
-- [ ] Prevent one consumer from accidentally stopping another consumer's stream.
-- [ ] Keep the session safe across component mount/unmount.
-- [ ] Preserve delay buffer, Replay Last, and Record.
-- [ ] Expose camera-session status if useful.
-- [ ] Test Compare delay after every session-layer change.
-- [ ] Make frequent commits; summarize and stop at each risky camera gate.
+The shared-camera attempt regressed Replay Last and is no longer the rebuild
+direction.
 
-## Phase 8 — Today floor camera
+- [x] Preserve the pre-Phase-7 checkpoint at `v2-rebuild-pre-phase7`.
+- [x] Preserve the failed attempt at `v2-rebuild-phase7-attempt`.
+- [x] Revert `v2-rebuild` to the pre-Phase-7 implementation.
+- [x] Keep Compare on its independent Version 1 delay-camera stream.
+- [x] Move Live Scoring to Practice using the existing pose-camera path.
+- [ ] Ryan confirms Delay, Replay Last, and Record are restored.
+
+## Phase 8 — Today floor camera (on hold)
+
+Do not add Live Scoring to Today. Reassess non-scoring floor detection only
+after the restored Compare camera is confirmed.
 
 - [ ] Automatic person detection with up to four people.
 - [ ] Shape labels on detected people.

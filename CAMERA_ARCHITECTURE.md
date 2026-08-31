@@ -85,9 +85,10 @@ Videos / Compare UI works and Ryan has verified delay behavior in the browser.
 - Fullscreen moves camera controls into the Compare rail through a portal and
   changes video sizing; it does not own the camera lifecycle.
 
-## Intended shared-session architecture (Phase 7)
+## Rejected shared-session architecture (Phase 7 history)
 
-The protected camera core remains the behavioral reference:
+The attempted shared-session design below regressed Replay Last. It is retained
+here only as history and must not be restored onto the active rebuild:
 
 ```text
 WORKING CAMERA CORE
@@ -102,18 +103,12 @@ SHARED CAMERA SESSION
   Videos / Compare
 ```
 
-Incremental migration rules:
+The failed implementation is recoverable at `v2-rebuild-phase7-attempt`.
+The working pre-change state is `v2-rebuild-pre-phase7`.
 
-1. Add a session owner without changing the delay algorithm.
-2. Let Compare accept either its legacy stream or a shared stream.
-3. Keep the legacy path available until shared-stream Compare passes browser
-   tests.
-4. Add Today as a second consumer only after Compare passes.
-5. Never stop physical tracks while another registered consumer is active.
-6. Keep rolling delay state owned by the Compare camera core unless a later,
-   separately tested change explicitly moves it.
-7. Test Delay, Replay Last, Record, tab switching, and fullscreen after every
-   camera-session commit.
+Current decision: Compare keeps its independent Version 1 stream and buffering.
+Live Scoring uses the existing Practice pose-camera path instead of Today or
+Videos / Compare.
 
 ## Phase 3 metadata change
 
@@ -130,13 +125,13 @@ shape-photo capture panel open. It starts after the coach explicitly chooses
 camera capture, stops only its own tracks when closed, and does not access or
 stop `CameraPane` tracks. If another camera is already using the device and the
 browser refuses a second stream, it shows an error instead of disturbing the
-working Compare session. Shared-stream integration remains deferred to Phase 7.
+working Compare session.
 
 ## Phase 6 Compare chrome
 
-Phase 6 moves the hidden-rail **Controls** chip to the bottom-left and adds the
-Live Score status area without changing `CameraPane`. Until Phase 7, the score
-area explicitly reports that the shared scoring stream is not connected.
-Fullscreen, references, A-B playback, Replay Last, Record, and delay auto-entry
-continue to use the protected Version 1 implementation.
+Phase 6 moves the hidden-rail **Controls** chip to the bottom-left without
+changing `CameraPane`. Live Score was removed from Compare after the failed
+Phase 7 attempt and now lives under Practice. Fullscreen, references, A-B
+playback, Replay Last, Record, and delay auto-entry continue to use the
+protected Version 1 implementation.
 
