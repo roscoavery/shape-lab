@@ -14,7 +14,7 @@
  *    with method: 'manual' and shown with a badge (no proper-hold data).
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
@@ -33,8 +33,10 @@ import {
   logProperHoldSeconds,
   progressHollowHomework,
   removeHomeworkItem,
+  subscribeHomework,
   updateHomeworkItem,
 } from '../lib/storage'
+import { syncRosterWithServer } from '../lib/rosterSync'
 import { homeworkLooksReady } from '../lib/homeworkPose'
 import {
   customHomeworkShapeId,
@@ -375,7 +377,8 @@ export function HomeworkPanel({
     return () => window.clearInterval(id)
   }, [watchRunning])
 
-  // Load (and auto-seed) homework whenever the athlete changes
+  // Load (and auto-seed) homework whenever the athlete changes, and again
+  // when a coach assigns a drill or the gym roster syncs in.
   useEffect(() => {
     if (!athleteId) {
       setItems([])
@@ -384,13 +387,37 @@ export function HomeworkPanel({
       setManualItemId(null)
       return
     }
-    setItems(ensureAutoHomework(athleteId))
-    setLogs(loadHomeworkLogs(athleteId))
-    setActiveItemId(null)
-    setManualItemId(null)
+    const reload = () => {
+      setItems(ensureAutoHomework(athleteId))
+      setLogs(loadHomeworkLogs(athleteId))
+    }
+    reload()
+    void syncRosterWithServer().then(reload)
+    const unsub = subscribeHomework(reload)
+    const onApplied = () => reload()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void syncRosterWithServer().then(reload)
+      }
+    }
+    window.addEventListener('shape-lab-roster-applied', onApplied)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      unsub()
+      window.removeEventListener('shape-lab-roster-applied', onApplied)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [athleteId])
 
   const visibleItems = useMemo(() => dedupeHomeworkItems(items), [items])
+  const fromCoach = useMemo(
+    () => visibleItems.filter((item) => item.source === 'coach'),
+    [visibleItems],
+  )
+  const otherDrills = useMemo(
+    () => visibleItems.filter((item) => item.source !== 'coach'),
+    [visibleItems],
+  )
 
   const watchLogItem =
     visibleItems.find((item) => item.id === manualItemId) ?? visibleItems[0] ?? null
@@ -999,9 +1026,19 @@ export function HomeworkPanel({
         </div>
       )}
 
-      {/* Homework items */}
+      {/* Homework items — coach assignments first so the athlete sees them */}
+      {fromCoach.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            From your coach
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            Assigned for you. These stay on your homework until they are removed.
+          </p>
+        </div>
+      )}
       <div className="space-y-2">
-        {visibleItems.map((item) => {
+        {(fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems).map((item) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
           const properValues = itemLogs
@@ -1022,8 +1059,13 @@ export function HomeworkPanel({
             .map((l) => logProperHoldSeconds(l) ?? 0)
           const manualOpen = manualItemId === item.id
           return (
+            <Fragment key={item.id}>
+            {fromCoach.length > 0 && item.id === otherDrills[0]?.id && (
+              <p className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Core drills
+              </p>
+            )}
             <div
-              key={item.id}
               className={`rounded-lg border p-3 ${
                 activeItemId === item.id
                   ? 'border-[var(--accent)]/50 bg-[#121f1a]'
@@ -1245,6 +1287,7 @@ export function HomeworkPanel({
                 </p>
               )}
             </div>
+            </Fragment>
           )
         })}
       </div>

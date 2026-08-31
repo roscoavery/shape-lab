@@ -454,11 +454,23 @@ export function loadAllHomework(): HomeworkItem[] {
   return deduped
 }
 
+const homeworkListeners = new Set<() => void>()
+
+function emitHomework() {
+  for (const cb of homeworkListeners) cb()
+}
+
+export function subscribeHomework(cb: () => void): () => void {
+  homeworkListeners.add(cb)
+  return () => homeworkListeners.delete(cb)
+}
+
 export function saveAllHomework(items: HomeworkItem[]) {
   const cleaned = dedupeHomeworkItems(items)
   remapOrphanHomeworkLogs(items, cleaned)
   writeJson(HOMEWORK_KEY, cleaned)
   pushRosterSoon()
+  emitHomework()
 }
 
 /** Auto items first (in AUTO_HOMEWORK_DEFS order), then added items by date. */
