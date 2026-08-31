@@ -188,14 +188,16 @@ Compare.
 - [x] Remove old demo-pose buttons.
 - [x] Keep ordinary camera views visually clean.
 - [x] Hide pose-debug tools from ordinary users.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 11 — Profiles / admin cleanup
 
-- [ ] Collapse the new-profile form by default.
-- [ ] Keep admin delete only under More → Profiles.
-- [ ] Remove admin delete controls from Today.
-- [ ] Preserve roster and profile data.
+- [x] Add Previous Shape and Next Shape to opened Learn shape details.
+- [x] Allow Ryan to edit IG shape names and descriptions without replacing images.
+- [x] Collapse the new-profile form by default.
+- [x] Keep admin delete only under More → Profiles.
+- [x] Remove admin delete controls from Today.
+- [x] Preserve roster and profile data.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 12 — Regression test

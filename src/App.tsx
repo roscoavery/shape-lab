@@ -888,6 +888,7 @@ export default function App() {
             activeId={activeAthleteId}
             onChangeAthletes={setAthleteRoster}
             onSelect={requestSelectAthlete}
+            allowDelete
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
           <VideoLibraryPanel

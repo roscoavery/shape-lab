@@ -22,6 +22,8 @@ type Props = {
   activeId: string | null
   onChangeAthletes: (next: Athlete[]) => void
   onSelect: (id: string | null) => void
+  /** Destructive profile controls belong only on More → Profiles. */
+  allowDelete?: boolean
 }
 
 export function AthletePanel({
@@ -29,7 +31,9 @@ export function AthletePanel({
   activeId,
   onChangeAthletes,
   onSelect,
+  allowDelete = false,
 }: Props) {
+  const [newProfileOpen, setNewProfileOpen] = useState(false)
   const [name, setName] = useState('')
   const [newHandle, setNewHandle] = useState('')
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
@@ -209,10 +213,15 @@ export function AthletePanel({
         ))}
       </select>
 
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        New profile
-      </p>
-      <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={newProfileOpen}
+        onClick={() => setNewProfileOpen((open) => !open)}
+        className="mb-2 rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--text)]"
+      >
+        {newProfileOpen ? 'Hide new profile form' : 'New profile'}
+      </button>
+      {newProfileOpen && <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-2">
           {PROFILE_KINDS.map((kind) => (
             <button
@@ -282,7 +291,7 @@ export function AthletePanel({
           />
         )}
         <p className="text-[11px] leading-snug text-[var(--muted)]">{roleHint(newRole)}</p>
-      </div>
+      </div>}
 
       {active && !active.passcodeHash && (
         <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
@@ -362,6 +371,7 @@ export function AthletePanel({
                 @{active.instagramHandle}
               </a>
             )}
+            {allowDelete && (
             <button
               type="button"
               className="text-xs text-[var(--bad)] underline"
@@ -375,6 +385,7 @@ export function AthletePanel({
             >
               {isRyanAthlete(active) ? 'Ryan stays on the roster' : 'Delete profile'}
             </button>
+            )}
             <button
               type="button"
               className="text-xs text-[var(--muted)] underline"
