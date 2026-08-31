@@ -43,11 +43,12 @@ export function isIosDevice() {
 }
 
 /**
- * iPhone: recorded MSE is sideways (no rotation tag) even when Safari
- * exposes classic MediaSource. Always use the frame-canvas display there.
+ * iPhone canvas delay display was blank (Safari would not paint a
+ * zero-sized / offscreen canvas copy). Delay cam uses MSE again;
+ * IosDelayUnwind CSS-rotates that <video>, which does paint.
  */
 export function usesFrameDelayDisplay() {
-  return isIosDevice() || getDelayCameraPipeline()?.managed === true
+  return false
 }
 
 export function getDelayCameraPipeline(preferredMime?: string | null): DelayCameraPipeline | null {

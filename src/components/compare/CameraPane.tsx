@@ -36,10 +36,8 @@ import {
   pickRecorderMime,
   prepareDelayVideo,
   isIosDevice,
-  usesFrameDelayDisplay,
 } from '../../lib/delayCameraPipeline'
 import { IosDelayUnwind } from '../IosDelayUnwind'
-import { useFrameDelay } from '../../hooks/useFrameDelay'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -68,8 +66,7 @@ export function CameraPane({
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
-  const delayCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const frameDelayOn = usesFrameDelayDisplay()
+  const iosDelay = isIosDevice()
   const streamRef = useRef<MediaStream | null>(null)
 
   // Delay engine refs
@@ -125,13 +122,6 @@ export function CameraPane({
   const [camZoom, setCamZoom] = useState(1)
   const [delayHudOpen, setDelayHudOpen] = useState(true)
   const [livePeek, setLivePeek] = useState(false)
-  const frameDelay = useFrameDelay({
-    liveRef: liveVideoRef,
-    canvasRef: delayCanvasRef,
-    delaySec,
-    enabled: frameDelayOn && mode === 'delay' && running,
-    zoom: 1,
-  })
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
@@ -324,10 +314,6 @@ export function CameraPane({
   }, [])
 
   const startDelay = useCallback(() => {
-    if (usesFrameDelayDisplay()) {
-      setDelayBuffering(true)
-      return
-    }
     const video = delayVideoRef.current
     if (!video) return
     const pipeline = getDelayCameraPipeline(rollingMimeRef.current)
@@ -409,7 +395,7 @@ export function CameraPane({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: frameDelayOn
+        video: iosDelay
           ? {
               facingMode: 'user',
               width: { ideal: 720 },
@@ -903,11 +889,9 @@ export function CameraPane({
           className={
             livePip
               ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg`
-              : frameDelayOn && mode === 'delay' && !livePeek
-                ? `pointer-events-none absolute inset-0 h-full w-full object-contain opacity-0`
-                : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-                    livePeek ? '' : mode === 'delay' ? 'hidden' : ''
-                  }`
+              : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
+                  livePeek ? '' : mode === 'delay' ? 'hidden' : ''
+                }`
           }
         />
         {livePip && (
@@ -923,41 +907,37 @@ export function CameraPane({
             </span>
           </>
         )}
-        <video
-          ref={delayVideoRef}
-          muted
-          playsInline
-          disableRemotePlayback
-          webkit-playsinline="true"
-          style={isIosDevice() ? undefined : videoXform}
-          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-            frameDelayOn || mode !== 'delay' || livePeek ? 'hidden' : ''
-          }`}
-        />
         <IosDelayUnwind
-          active={frameDelayOn}
+          active={iosDelay}
           style={videoXform}
           className={
-            frameDelayOn && mode === 'delay' && !livePeek
+            mode === 'delay' && !livePeek
               ? fullscreen
-                ? 'absolute inset-0 z-[1]'
-                : 'relative z-[1] h-[min(420px,70vw)] max-h-[420px] w-full'
+                ? 'h-full min-h-0 w-full'
+                : 'h-[min(420px,70vw)] max-h-[420px] w-full'
               : 'hidden'
           }
         >
-          <canvas ref={delayCanvasRef} className="h-full w-full bg-black" />
+          <video
+            ref={delayVideoRef}
+            muted
+            playsInline
+            disableRemotePlayback
+            webkit-playsinline="true"
+            className="h-full w-full object-cover"
+          />
         </IosDelayUnwind>
         {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
             Camera off — press Start camera
           </div>
         )}
-        {mode === 'delay' && running && (frameDelayOn ? frameDelay.buffering : delayBuffering) && !fullscreen && (
+        {mode === 'delay' && running && delayBuffering && !fullscreen && (
           <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-[var(--warn)]">
             Buffering… delayed view starts in ~{delaySec}s
           </div>
         )}
-        {mode === 'delay' && running && !(frameDelayOn ? frameDelay.buffering : delayBuffering) && !fullscreen && (
+        {mode === 'delay' && running && !delayBuffering && !fullscreen && (
           <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-[var(--accent)]">
             {delaySec}s behind live
           </div>
@@ -966,7 +946,7 @@ export function CameraPane({
           <DelayCamHud
             delaySec={delaySec}
             zoom={camZoom}
-            buffering={frameDelayOn ? frameDelay.buffering : delayBuffering}
+            buffering={delayBuffering}
             recording={recording}
             saving={librarySaving}
             hudOpen={delayHudOpen}

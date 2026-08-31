@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
- * Spin a delay-cam surface 90° CCW so iPhone sensor pixels match LIVE.
- * The canvas/video keeps the pane's width × height (so it actually paints);
- * rotate+scale is only a visual transform. Mirror / zoom belong on this
- * outer box (screen space).
+ * Spin a delay-cam <video>/canvas 90° CCW so iPhone sensor pixels match LIVE.
+ * Transform does not change layout size — the surface keeps the pane's
+ * width × height so Safari still paints. Mirror / zoom belong on this outer box.
  */
 export function IosDelayUnwind({
   active,
