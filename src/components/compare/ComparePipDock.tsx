@@ -45,6 +45,7 @@ export function ComparePipSlot({
 }: Props) {
   const { pipCorner, setPipCorner } = useCompareLayout()
   const dockRef = useRef<HTMLDivElement | null>(null)
+  const posRef = useRef<{ x: number; y: number } | null>(null)
   const drag = useRef<{
     pointerId: number
     startX: number
@@ -55,14 +56,17 @@ export function ComparePipSlot({
   } | null>(null)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+  const beginDrag = (e: PointerEvent<HTMLDivElement>) => {
     if (!active) return
     const dock = dockRef.current
     const parent = dock?.parentElement
     if (!dock || !parent) return
+    e.preventDefault()
+    e.stopPropagation()
     const prect = parent.getBoundingClientRect()
     const drect = dock.getBoundingClientRect()
     e.currentTarget.setPointerCapture(e.pointerId)
+    posRef.current = null
     drag.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -80,15 +84,18 @@ export function ComparePipSlot({
     if (!d || d.pointerId !== e.pointerId || !parent) return
     const dx = e.clientX - d.startX
     const dy = e.clientY - d.startY
-    if (!d.moved && Math.hypot(dx, dy) < 10) return
+    if (!d.moved && Math.hypot(dx, dy) < 8) return
     d.moved = true
+    e.preventDefault()
     const prect = parent.getBoundingClientRect()
     const maxX = Math.max(MARGIN, prect.width - CHIP_W - MARGIN)
     const maxY = Math.max(MARGIN, prect.height - CHIP_H - 52 - MARGIN)
-    setPos({
+    const next = {
       x: Math.min(maxX, Math.max(MARGIN, d.origX + dx)),
       y: Math.min(maxY, Math.max(MARGIN, d.origY + dy)),
-    })
+    }
+    posRef.current = next
+    setPos(next)
   }
 
   const end = (e: PointerEvent<HTMLDivElement>) => {
@@ -96,11 +103,13 @@ export function ComparePipSlot({
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
     const moved = d.moved
+    const last = posRef.current
     drag.current = null
+    posRef.current = null
     const parent = dockRef.current?.parentElement
-    if (moved && parent && pos) {
+    if (moved && parent && last) {
       const prect = parent.getBoundingClientRect()
-      setPipCorner(snapCorner(pos.x, pos.y, prect.width, prect.height))
+      setPipCorner(snapCorner(last.x, last.y, prect.width, prect.height))
       setPos(null)
       return
     }
@@ -113,22 +122,15 @@ export function ComparePipSlot({
       ref={dockRef}
       className={
         active
-          ? `absolute z-[36] flex w-[7rem] flex-col items-center gap-1 touch-none ${
+          ? `absolute z-[36] flex w-[7rem] flex-col items-center gap-1 ${
               pos ? '' : pipCornerClass(pipCorner)
             }`
           : splitClass
       }
       style={active ? (pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined) : splitStyle}
-      onPointerDown={active ? onPointerDown : undefined}
-      onPointerMove={active ? onPointerMove : undefined}
-      onPointerUp={active ? end : undefined}
-      onPointerCancel={active ? end : undefined}
     >
       {active ? (
-        <div
-          className="flex items-center gap-2"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
+        <div className="flex items-center gap-2">
           <HudCircle label="Swap" size="sm" onClick={onSwap}>
             <IconSwap />
           </HudCircle>
@@ -137,7 +139,21 @@ export function ComparePipSlot({
           </HudCircle>
         </div>
       ) : null}
-      <div className={active ? COMPARE_PIP_BOX : 'h-full min-h-0 min-w-0'}>{children}</div>
+      <div className={active ? `relative ${COMPARE_PIP_BOX}` : 'h-full min-h-0 min-w-0'}>
+        <div className={active ? 'pointer-events-none h-full min-h-0' : 'h-full min-h-0'}>
+          {children}
+        </div>
+        {active ? (
+          <div
+            className="absolute inset-0 z-[80] touch-none"
+            onPointerDown={beginDrag}
+            onPointerMove={onPointerMove}
+            onPointerUp={end}
+            onPointerCancel={end}
+            aria-label="Drag minimized view to a corner, or tap to swap"
+          />
+        ) : null}
+      </div>
     </div>
   )
 }
