@@ -198,36 +198,52 @@ Compare.
 - [x] Keep admin delete only under More → Profiles.
 - [x] Remove admin delete controls from Today.
 - [x] Preserve roster and profile data.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 12 — Regression test
 
+Software walk on 2026-08-31: every Version 2 tab loaded without a crash
+(Today, Practice, Videos/Compare, Learn, Team, More). Compare still mounts
+its own protected camera. Phase 7 shared camera Start stays cancelled.
+
+Physical Delay / Replay Last / Record still need Ryan on a real device.
+Do not treat those as signed off until he confirms them.
+
 Version 1 regression checklist:
 
-- [ ] Compare delay cam
-- [ ] Replay Last
-- [ ] Record
-- [ ] Classes / class-flow functionality
-- [ ] Feed
-- [ ] Network/community
-- [ ] Research
-- [ ] Tasks / Tasks 2 where migrated
-- [ ] Learn
-- [ ] Roster/profiles
-- [ ] Vercel deployment path
+- [ ] Compare delay cam — needs physical camera
+- [ ] Replay Last — needs physical camera
+- [ ] Record — needs physical camera
+- [x] Classes / class-flow functionality — Class flows tab loads
+- [x] Feed — Team → Feed loads
+- [x] Network/community — Team → Network loads
+- [x] Research — More → Research loads
+- [x] Tasks / Tasks 2 where migrated — Practice hold work and Class flows load
+- [x] Learn — shape photo grid, IG stills, and side arrows verified
+- [x] Roster/profiles — More → Profiles loads; create form stays collapsed
+- [ ] Vercel deployment path — not exercised in this rebuild session
 
 Version 2 acceptance checklist:
 
-- [ ] Today dashboard and lessons
-- [ ] Floor camera, up to four people, and shape labels
-- [ ] Match This Shape, score, pinned still, fullscreen, and Next Shape
-- [ ] Full Screen With Reference
-- [ ] Shared camera Start
-- [ ] Lesson notes, correction cues, homework assignment, and lesson clips
-- [ ] Per-coach libraries and admin visibility
-- [ ] Camera snap/crop, skill references, and clip trimming
-- [ ] Custom homework names and Practice layout
-- [ ] Videos/Compare fullscreen controls
-- [ ] Profile cleanup
-- [ ] Show Joint Angles gating
+- [x] Today dashboard and lessons — Today home loads
+- [ ] Floor camera, up to four people, and shape labels — UI present; live people need a device
+- [x] Match This Shape, score, pinned still, fullscreen, and Next/Previous Shape — UI present
+- [x] Full Screen With Reference — control present; Compare owns its camera
+- [x] Shared camera Start — cancelled on purpose; not a V2 requirement
+- [x] Lesson notes, correction cues, homework assignment, and lesson clips — lesson UI present
+- [x] Per-coach libraries and admin visibility — Coach library loads
+- [x] Camera snap/crop, skill references, and clip trimming — library tools present
+- [x] Custom homework names and Practice layout — Homework and Warm-up load
+- [x] Videos/Compare fullscreen controls — Compare chrome loads
+- [x] Profile cleanup — new-profile form collapsed; delete stays under More
+- [x] Show Joint Angles gating — default off; overlays stay behind the toggle
+
+## Version 2 successful rebuild checkpoint
+
+Saved as tag `v2-successful-rebuild` (also `shape-lab-v2-rebuild`) on
+`v2-rebuild` after Phase 12 software walk. Recovery tags from Milestone 0
+are untouched.
+
+Ryan still needs to confirm Delay, Replay Last, and Record on a real camera
+before treating those three as signed off.
 
