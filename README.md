@@ -234,7 +234,7 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 
 **Tight arch** (also called arch supine) is assignable. On the back: arms press the floor behind the ears, hips push up, knees stay straight. Ankles together and toes pointed are the usual miss. Used at the end of pike → hollow → arch. This is not Superman (stomach) and not a candlestick.
 
-**Candlestick** has two stills (handstand-roll finish and the candlestick-drill finish). The drill should not pause: FTOS → C → sit and fall to tuck → roll back and arch. Toes stay above you, not past the face. Lifting the feet on an arch is a good candle. Assign the shipped **Candlestick drill** sequence, or (once Ryan uploads the clip) the drill video from **Learn → Drill library**.
+**Candlestick** is a shoulder stand: open hips, ribs in, straight line from shoulders to pointed toes. Two stills (handstand-roll and shoulder-stand). The **Candlestick drill** is not a shape card — it lives in **Learn → Drill library** (Ryan only) and also shows on the Candlestick page. Do not pause; FTOS → C → sit and fall to tuck → roll back and arch. Toes stay above you, not past the face. Lifting the feet on an arch is a good candle.
 
 **Tucked candle** is assignable (not auto). Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Used to teach forward and backward rolls and a lot of back-tuck drills. Verbal cues: arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Two stills; the side profile is the main one.
 

@@ -118,7 +118,11 @@ export function EducationPanel({
   }, [query, filter, pathwayIds, catalog, copyFor])
 
   const goHome = () => setView({ kind: 'home' })
-  const goShapes = () => setView({ kind: 'shapes' })
+  const goShapes = () => {
+    setQuery('')
+    setFilter('all')
+    setView({ kind: 'shapes' })
+  }
   const goPathways = () => setView({ kind: 'pathways' })
   const openShape = (shapeId: string) => setView({ kind: 'shape', shapeId })
   const openTask = (taskId: string) => setView({ kind: 'task', taskId })
@@ -727,7 +731,7 @@ function ShapeLinkedDrills({ shapeId }: { shapeId: string }) {
   return (
     <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-        Drill
+        Drills that use this shape
       </h4>
       <ul className="grid gap-3">
         {drills.map((d) => (

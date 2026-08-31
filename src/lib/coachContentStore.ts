@@ -4,6 +4,7 @@
  */
 
 import { SHAPES_BY_ID } from '../config/shapes'
+import { SHIPPED_DRILLS } from '../config/drills'
 import { setGymShapeCache } from './gymShapeCache'
 import type {
   CoachShape,
@@ -56,7 +57,7 @@ function readFile(): CoachContentFile {
       references: Array.isArray(data.references) ? data.references : [],
       warmups: Array.isArray(data.warmups) ? data.warmups : [],
       stars: Array.isArray(data.stars) ? data.stars : [],
-      gymLibrary: Array.isArray(data.gymLibrary) ? data.gymLibrary : [],
+      gymLibrary: cleanGymLibrary(Array.isArray(data.gymLibrary) ? data.gymLibrary : []),
       drills: Array.isArray(data.drills) ? data.drills : [],
     }
     syncGymCache(parsed)
@@ -78,6 +79,15 @@ function emptyFile(): CoachContentFile {
     gymLibrary: [],
     drills: [],
   }
+}
+
+function cleanGymLibrary(rows: GymLibraryShape[]): GymLibraryShape[] {
+  return rows.filter(
+    (s) =>
+      s?.id &&
+      s.id !== 'gym_gym_candlestick_rock' &&
+      !/candlestick\s*rock/i.test(s.name ?? ''),
+  )
 }
 
 function gymRowToDef(row: GymLibraryShape): ShapeDef {
@@ -108,7 +118,7 @@ function persist(next: CoachContentFile) {
     references: (next.references ?? []).slice(0, 240),
     warmups: next.warmups.slice(0, 120),
     stars: next.stars.slice(0, 400),
-    gymLibrary: (next.gymLibrary ?? []).slice(0, 200),
+    gymLibrary: cleanGymLibrary(next.gymLibrary ?? []).slice(0, 200),
     drills: (next.drills ?? []).slice(0, 200),
   }
   try {
@@ -161,7 +171,7 @@ export async function hydrateCoachContent(): Promise<void> {
       shapes: mergeById(local.shapes, data.shapes ?? []),
       references: mergeById(local.references ?? [], data.references ?? []),
       warmups: mergeById(local.warmups, data.warmups ?? []),
-      gymLibrary: mergeById(local.gymLibrary ?? [], data.gymLibrary ?? []),
+      gymLibrary: cleanGymLibrary(mergeById(local.gymLibrary ?? [], data.gymLibrary ?? [])),
       drills: mergeById(local.drills ?? [], data.drills ?? []),
       stars: [...local.stars, ...(data.stars ?? [])].filter(
         (s, i, all) =>
@@ -222,19 +232,38 @@ export function saveGymLibraryShape(row: GymLibraryShape): GymLibraryShape {
 }
 
 export function listDrills(): DrillClip[] {
-  return (readFile().drills ?? [])
-    .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const stored = readFile().drills ?? []
+  const byId = new Map<string, DrillClip>()
+  for (const row of stored) {
+    if (row?.id) byId.set(row.id, row)
+  }
+  for (const ship of SHIPPED_DRILLS) {
+    const over = byId.get(ship.id)
+    byId.set(
+      ship.id,
+      over
+        ? {
+            ...ship,
+            ...over,
+            title: over.title.trim() || ship.title,
+            notes: over.notes.trim() || ship.notes,
+            shapeId: over.shapeId || ship.shapeId,
+            src: over.src || ship.src,
+          }
+        : ship,
+    )
+  }
+  return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-/** Drills Ryan linked to a shape — these show in Learn for everyone. */
+/** Drills linked to a shape — these show on that shape in Learn, not as extra shape cards. */
 export function listPublicDrills(): DrillClip[] {
-  return listDrills().filter((d) => Boolean(d.shapeId && d.src))
+  return listDrills().filter((d) => Boolean(d.shapeId))
 }
 
 export function drillsForShape(shapeId: string): DrillClip[] {
   if (!shapeId) return []
-  return listPublicDrills().filter((d) => d.shapeId === shapeId)
+  return listDrills().filter((d) => d.shapeId === shapeId)
 }
 
 export function getDrill(id: string | undefined): DrillClip | undefined {

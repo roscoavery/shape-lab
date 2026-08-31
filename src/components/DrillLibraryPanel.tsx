@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
+import { SHIPPED_DRILL_IDS } from '../config/drills'
 import {
   deleteDrill,
   emptyDrill,
@@ -74,8 +75,8 @@ export function DrillLibraryPanel({ signedIn }: Props) {
       {drills.length === 0 && !editing && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
           <p className="text-sm text-[var(--muted)]">
-            No drills yet. Add one and drop the video in — start with the
-            candlestick drill.
+            No extra drills yet. Candlestick drill is already here — add a video
+            to it, or add another drill.
           </p>
         </section>
       )}
@@ -100,17 +101,19 @@ export function DrillLibraryPanel({ signedIn }: Props) {
                 )}
                 <div className="mt-2 flex gap-3">
                   <button type="button" className="text-xs underline" onClick={() => setEditing(d)}>
-                    Edit
+                    {SHIPPED_DRILL_IDS.has(d.id) ? 'Add / replace video' : 'Edit'}
                   </button>
-                  <button
-                    type="button"
-                    className="text-xs text-[var(--bad)] underline"
-                    onClick={() => {
-                      if (window.confirm(`Remove ${d.title || 'this drill'}?`)) deleteDrill(d.id)
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {!SHIPPED_DRILL_IDS.has(d.id) && (
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--bad)] underline"
+                      onClick={() => {
+                        if (window.confirm(`Remove ${d.title || 'this drill'}?`)) deleteDrill(d.id)
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </li>
             ))}

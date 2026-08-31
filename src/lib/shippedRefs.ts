@@ -56,7 +56,7 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'tucked_candle.jpg': 'Main',
   'tucked_candle_b.jpg': 'Second view',
   'candlestick.jpg': 'Handstand roll',
-  'candlestick_drill.jpg': 'Drill',
+  'candlestick_drill.jpg': 'Shoulder stand',
 }
 
 export function shippedFileList(shapeId: string): string[] {
