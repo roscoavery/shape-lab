@@ -251,16 +251,17 @@ export function TodayFloorCamera({
     }
   }
 
+  const selectedIndex = MATCH_SHAPES.findIndex((shape) => shape.id === selectedShape.id)
+  const previousMatch =
+    MATCH_SHAPES[(selectedIndex - 1 + MATCH_SHAPES.length) % MATCH_SHAPES.length] ?? null
+  const nextMatch = MATCH_SHAPES[(selectedIndex + 1) % MATCH_SHAPES.length] ?? null
+
   const nextShape = () => {
-    const index = MATCH_SHAPES.findIndex((shape) => shape.id === selectedShape.id)
-    const next = MATCH_SHAPES[(index + 1) % MATCH_SHAPES.length]
-    if (next) setSelectedShapeId(next.id)
+    if (nextMatch) setSelectedShapeId(nextMatch.id)
   }
 
   const previousShape = () => {
-    const index = MATCH_SHAPES.findIndex((shape) => shape.id === selectedShape.id)
-    const previous = MATCH_SHAPES[(index - 1 + MATCH_SHAPES.length) % MATCH_SHAPES.length]
-    if (previous) setSelectedShapeId(previous.id)
+    if (previousMatch) setSelectedShapeId(previousMatch.id)
   }
 
   const openCompareWithReference = () => {
@@ -402,8 +403,26 @@ export function TodayFloorCamera({
             </p>
           )}
         </div>
+        <button
+          type="button"
+          onClick={previousShape}
+          aria-label="Previous shape"
+          title={previousMatch ? `Previous: ${previousMatch.name}` : 'Previous shape'}
+          className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/70 text-xl text-white shadow-lg"
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          onClick={nextShape}
+          aria-label="Next shape"
+          title={nextMatch ? `Next: ${nextMatch.name}` : 'Next shape'}
+          className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/70 text-xl text-white shadow-lg"
+        >
+          →
+        </button>
         {!running && (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/65">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/65">
             Camera off — start it here when you need floor detection.
           </div>
         )}

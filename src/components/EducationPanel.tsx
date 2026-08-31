@@ -327,6 +327,38 @@ function NavChip({
   )
 }
 
+function ShapeSideArrow({
+  side,
+  shapeId,
+  onOpen,
+}: {
+  side: 'left' | 'right'
+  shapeId: string | null
+  onOpen: (shapeId: string) => void
+}) {
+  const name = shapeId ? getShape(shapeId)?.name ?? shapeId : null
+  return (
+    <button
+      type="button"
+      disabled={!shapeId}
+      onClick={() => shapeId && onOpen(shapeId)}
+      aria-label={side === 'left' ? 'Previous shape' : 'Next shape'}
+      title={
+        name
+          ? `${side === 'left' ? 'Previous' : 'Next'}: ${name}`
+          : side === 'left'
+            ? 'Previous shape'
+            : 'Next shape'
+      }
+      className={`absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/70 text-xl text-white shadow-lg disabled:opacity-30 ${
+        side === 'left' ? 'left-0' : 'right-0'
+      }`}
+    >
+      {side === 'left' ? '←' : '→'}
+    </button>
+  )
+}
+
 function HomeView({
   pathwayCount,
   shapeCount,
@@ -717,43 +749,13 @@ function ShapeDetail({
 
   return (
     <article className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-sm text-[var(--muted)] hover:text-[var(--accent)]"
-        >
-          ← Shape library
-        </button>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={!previousShapeId}
-            onClick={() => previousShapeId && onOpenShape(previousShapeId)}
-            aria-label="Previous shape"
-            title={
-              previousShapeId
-                ? `Previous: ${getShape(previousShapeId)?.name ?? previousShapeId}`
-                : 'Previous shape'
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--panel-border)] text-xl text-[var(--text)] disabled:opacity-40"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            disabled={!nextShapeId}
-            onClick={() => nextShapeId && onOpenShape(nextShapeId)}
-            aria-label="Next shape"
-            title={
-              nextShapeId ? `Next: ${getShape(nextShapeId)?.name ?? nextShapeId}` : 'Next shape'
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-dim)] text-xl font-semibold text-white disabled:opacity-40"
-          >
-            →
-          </button>
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-sm text-[var(--muted)] hover:text-[var(--accent)]"
+      >
+        ← Shape library
+      </button>
 
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -811,14 +813,28 @@ function ShapeDetail({
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
           Coach still
         </h4>
-        <CoachStillGallery
-          shapeId={shape.id}
-          photos={referencePhotos}
-          alt={`${shape.name} reference`}
-          emptyLabel="No coach still for this shape yet"
-          imgClass="min-h-48 max-h-80 w-full object-contain"
-          allowCrop={canEdit}
-        />
+        <div className="relative">
+          <ShapeSideArrow
+            side="left"
+            shapeId={previousShapeId}
+            onOpen={onOpenShape}
+          />
+          <div className="px-12 sm:px-14">
+            <CoachStillGallery
+              shapeId={shape.id}
+              photos={referencePhotos}
+              alt={`${shape.name} reference`}
+              emptyLabel="No coach still for this shape yet"
+              imgClass="min-h-48 max-h-80 w-full object-contain"
+              allowCrop={canEdit}
+            />
+          </div>
+          <ShapeSideArrow
+            side="right"
+            shapeId={nextShapeId}
+            onOpen={onOpenShape}
+          />
+        </div>
       </div>
 
       {igForShape.length > 0 && (
