@@ -321,6 +321,32 @@ export function InstagramEmbed({
   const slidePersist = urlWithIgSlide(persistUrl ?? url, safeSlide)
   const carousel = slideCount > 1
 
+  const carouselChrome = carousel ? (
+    <>
+      <button
+        type="button"
+        aria-label="Previous slide"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => go(safeSlide - 1)}
+        className="pointer-events-auto absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-2xl font-bold leading-none text-black shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        aria-label="Next slide"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => go(safeSlide + 1)}
+        className="pointer-events-auto absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-2xl font-bold leading-none text-black shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
+      >
+        ›
+      </button>
+      <p className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/75 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+        {safeSlide + 1}/{slideCount}
+      </p>
+    </>
+  ) : null
+
   const player =
     kind === 'image' && src ? (
       <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
@@ -338,6 +364,7 @@ export function InstagramEmbed({
             {hudCorner}
           </div>
         ) : null}
+        {carouselChrome}
       </div>
     ) : src ? (
       <VideoWorkbench
@@ -356,6 +383,7 @@ export function InstagramEmbed({
         bare={bare}
         active={active}
         hudCorner={hudCorner}
+        pictureChrome={carouselChrome}
       />
     ) : null
 
@@ -370,29 +398,6 @@ export function InstagramEmbed({
         }}
       >
         {player}
-        {carousel ? (
-          <>
-            <button
-              type="button"
-              aria-label="Previous slide"
-              onClick={() => go(safeSlide - 1)}
-              className="absolute left-1 top-[36%] z-40 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-xl leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)] hover:bg-black/80"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label="Next slide"
-              onClick={() => go(safeSlide + 1)}
-              className="absolute right-1 top-[36%] z-40 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-xl leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)] hover:bg-black/80"
-            >
-              ›
-            </button>
-            <p className="pointer-events-none absolute left-1/2 top-2 z-40 -translate-x-1/2 rounded-full bg-black/65 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
-              {safeSlide + 1}/{slideCount}
-            </p>
-          </>
-        ) : null}
       </div>
       {!fill && !quiet && (
         <p className="text-xs text-[var(--muted)]">

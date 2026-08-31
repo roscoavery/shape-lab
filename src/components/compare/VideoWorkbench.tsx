@@ -51,6 +51,8 @@ type Props = {
   overlayActions?: ReactNode
   /** Extra HUD circles stacked with Show / Hide on the overlay chrome. */
   hudCorner?: ReactNode
+  /** Left/right chrome on the picture (carousel arrows), above the scrub bar. */
+  pictureChrome?: ReactNode
   /** Phone player chrome for Compare Replay Last. */
   replayChrome?: boolean
   onBack?: () => void
@@ -94,6 +96,7 @@ function VideoWorkbenchInner({
   onWindowChange,
   overlayActions,
   hudCorner,
+  pictureChrome,
   replayChrome = false,
   onBack,
   onSavePhotos,
@@ -732,6 +735,9 @@ function VideoWorkbenchInner({
             )}
           </>
         )}
+        {pictureChrome ? (
+          <div className="pointer-events-none absolute inset-0 z-[55]">{pictureChrome}</div>
+        ) : null}
       </div>
 
       {!bare && !overlay && (
