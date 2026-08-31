@@ -33,6 +33,7 @@ import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
+import { TodayFloorCamera } from './components/today/TodayFloorCamera'
 import { WarmupPanel } from './components/warmup/WarmupPanel'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
@@ -308,8 +309,7 @@ export default function App() {
     tab === 'tasks' ||
     tab === 'tasks2' ||
     tab === 'homework' ||
-    tab === 'coach' ||
-    tab === 'today'
+    tab === 'coach'
   useEffect(() => {
     if (!cameraTab && camera.running) camera.stop()
   }, [cameraTab, camera.running, camera.stop])
@@ -536,30 +536,40 @@ export default function App() {
       </header>
 
       {tab === 'today' && (
-        liveLesson && !liveLesson.endedAt && liveLessonAthlete ? (
-          <LessonWorkspace
-            session={liveLesson}
-            plan={liveLessonPlan}
-            athleteName={liveLessonAthlete.name}
-            coachName={liveLessonCoach?.name ?? 'Coach'}
-            score={score}
-            currentShapeId={shape.id}
-            timingActive={timingActive}
-            landmarks={activeLandmarks}
-            onRequestShape={(shapeId) => onJumpToShape(shapeId)}
-            onEnsureCamera={() => camera.start()}
-            onGoCompare={() => goTab('compare')}
-            onSessionChange={() => setLessonTick((n) => n + 1)}
-            onEnded={() => setLessonTick((n) => n + 1)}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
+          <div className="min-w-0">
+            {liveLesson && !liveLesson.endedAt && liveLessonAthlete ? (
+              <LessonWorkspace
+                session={liveLesson}
+                plan={liveLessonPlan}
+                athleteName={liveLessonAthlete.name}
+                coachName={liveLessonCoach?.name ?? 'Coach'}
+                score={score}
+                currentShapeId={shape.id}
+                timingActive={false}
+                landmarks={null}
+                onRequestShape={(shapeId) => onJumpToShape(shapeId)}
+                onGoCompare={() => goTab('compare')}
+                onSessionChange={() => setLessonTick((n) => n + 1)}
+                onEnded={() => setLessonTick((n) => n + 1)}
+              />
+            ) : (
+              <HomeDashboard
+                athletes={athletes}
+                signedIn={activeProfile}
+                onUnlock={(id) => requestSelectAthlete(id)}
+                onStartLesson={startLesson}
+              />
+            )}
+          </div>
+          <TodayFloorCamera
+            mirror={settings.mirrorVideo}
+            showJointAngles={settings.showAngles}
+            onShowJointAnglesChange={(showAngles) =>
+              setSettings((current) => ({ ...current, showAngles }))
+            }
           />
-        ) : (
-          <HomeDashboard
-            athletes={athletes}
-            signedIn={activeProfile}
-            onUnlock={(id) => requestSelectAthlete(id)}
-            onStartLesson={startLesson}
-          />
-        )
+        </div>
       )}
 
       {ryanEdit && tab === 'tasks' && (

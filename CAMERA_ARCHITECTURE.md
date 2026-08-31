@@ -152,3 +152,15 @@ Phase 7 attempt and now lives under Practice. Fullscreen, references, A-B
 playback, Replay Last, Record, and delay auto-entry continue to use the
 protected Version 1 implementation.
 
+## Phase 8 Today floor camera
+
+`TodayFloorCamera` owns a separate Today-only stream and a separate four-person
+MediaPipe detector. It starts only from **Start floor camera** and stops its own
+tracks when stopped or when Today unmounts. It imports nothing from
+`CameraPane`, receives no Compare stream, and cannot access Compare's recorder,
+replay blob, `MediaSource`, or delay queue.
+
+Shape labels are drawn for up to four detected people. Body-only skeleton lines,
+joints, and angle labels are drawn only when **Show Joint Angles** is enabled;
+face landmarks are never drawn.
+

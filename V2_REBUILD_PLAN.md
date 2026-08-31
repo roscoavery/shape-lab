@@ -161,12 +161,12 @@ Record. If any fails, stop immediately and revert only that phase.
 Do not add Live Scoring to Today. Reassess non-scoring floor detection only
 after the restored Compare camera is confirmed.
 
-- [ ] Automatic person detection with up to four people.
-- [ ] Shape labels on detected people.
-- [ ] Graceful behavior with fewer than four people.
-- [ ] No face landmarks.
-- [ ] Show skeleton/angle overlays only with Show Joint Angles enabled.
-- [ ] Keep floor detection isolated from the Compare delay buffer.
+- [x] Automatic person detection with up to four people.
+- [x] Shape labels on detected people.
+- [x] Graceful behavior with fewer than four people.
+- [x] No face landmarks.
+- [x] Show skeleton/angle overlays only with Show Joint Angles enabled.
+- [x] Keep floor detection isolated from the Compare delay buffer.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 9 — Match This Shape
