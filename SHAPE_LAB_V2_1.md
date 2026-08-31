@@ -15,7 +15,7 @@ Earlier snapshots stay as they are:
 
 - Version 1: `shape-lab-v1` / `cursor/shape-lab-v1-847e`
 - Earlier Version 2: `shape-lab-v2` / `cursor/shape-lab-v2-847e`
-- Later Version 3 (Videos landing + library viewer): `shape-lab-v3` / `cursor/shape-lab-v3-847e`
+- Later Version 3: `shape-lab-v3` / `cursor/shape-lab-v3-847e` (Videos landing + iPhone delay cam). Landing-only freeze: `shape-lab-v3-landing`.
 
 ## How to revert `v2-rebuild`
 
