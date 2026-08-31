@@ -143,6 +143,58 @@ function TimeToBeatBanner({
   )
 }
 
+function HomeworkProgressStrip({
+  items,
+  logsByItem,
+}: {
+  items: HomeworkItem[]
+  logsByItem: Map<string, HomeworkLog[]>
+}) {
+  const trained = items.filter((item) => (logsByItem.get(item.id) ?? []).length > 0)
+  const totalLogs = items.reduce(
+    (count, item) => count + (logsByItem.get(item.id) ?? []).length,
+    0,
+  )
+  let bestJump: { name: string; delta: number } | null = null
+  for (const item of items) {
+    const itemLogs = logsByItem.get(item.id) ?? []
+    if (itemLogs.length < 2) continue
+    const first = itemLogs[itemLogs.length - 1]?.totalHoldSeconds ?? 0
+    const best = bestHoldSeconds(itemLogs)
+    const delta = best - first
+    if (delta > 0.4 && (!bestJump || delta > bestJump.delta)) {
+      bestJump = { name: homeworkTitle(item), delta }
+    }
+  }
+  const goalHits = items.filter((item) => {
+    if (!item.targetSeconds) return false
+    return bestHoldSeconds(logsByItem.get(item.id) ?? []) >= item.targetSeconds
+  })
+
+  const headline =
+    trained.length === 0
+      ? 'Your first logged hold starts the story. Tap Train and put time on the mat.'
+      : bestJump
+        ? `${bestJump.name} is up ${formatSeconds(bestJump.delta)} from your first hold. That is real progress.`
+        : `${trained.length} drill${trained.length === 1 ? '' : 's'} with logged time. Keep stacking holds.`
+
+  return (
+    <div className="rounded-lg border border-[var(--good)]/40 bg-[#102820] px-3 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--good)]">
+        Your progress
+      </p>
+      <p className="mt-1 text-sm font-medium leading-snug text-[var(--text)]">{headline}</p>
+      <p className="mt-1 text-xs text-[var(--muted)]">
+        {trained.length} of {items.length} drill{items.length === 1 ? '' : 's'} logged
+        {totalLogs > 0 ? ` · ${totalLogs} hold${totalLogs === 1 ? '' : 's'}` : ''}
+        {goalHits.length > 0
+          ? ` · ${goalHits.length} at goal`
+          : ''}
+      </p>
+    </div>
+  )
+}
+
 function HoldTimesBoard({
   logs,
   isPlank,
@@ -361,6 +413,7 @@ export function HomeworkPanel({
   const [watchRunning, setWatchRunning] = useState(false)
   const [watchMs, setWatchMs] = useState(0)
   const [watchOffer, setWatchOffer] = useState<number | null>(null)
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
   const watchStartRef = useRef<number | null>(null)
   const watchAccRef = useRef(0)
 
@@ -502,7 +555,17 @@ export function HomeworkPanel({
     setBreakdownCount(0)
   }
 
+  const toggleOpen = (id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   const startItem = (item: HomeworkItem) => {
+    setOpenIds((prev) => new Set(prev).add(item.id))
     setActiveItemId(item.id)
     setManualItemId(null)
     onRequestShape(item.shapeId, 'auto', { profileOk: true })
@@ -551,6 +614,7 @@ export function HomeworkPanel({
   }
 
   const openManual = (item: HomeworkItem) => {
+    setOpenIds((prev) => new Set(prev).add(item.id))
     setManualItemId((prev) => (prev === item.id ? null : item.id))
     setManualSeconds('')
     setManualDate(todayInputValue())
@@ -749,6 +813,8 @@ export function HomeworkPanel({
           proper is only the seconds at form standard.
         </p>
       </div>
+
+      <HomeworkProgressStrip items={visibleItems} logsByItem={logsByItem} />
 
       <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -1027,16 +1093,40 @@ export function HomeworkPanel({
       )}
 
       {/* Homework items — coach assignments first so the athlete sees them */}
-      {fromCoach.length > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-            From your coach
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">
-            Assigned for you. These stay on your homework until they are removed.
-          </p>
+          {fromCoach.length > 0 ? (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                From your coach
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                Assigned for you. Open a drill only when you want the details.
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--muted)]">
+              Open a drill only when you want the details.
+            </p>
+          )}
         </div>
-      )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setOpenIds(new Set(visibleItems.map((item) => item.id)))}
+            className="text-xs text-[var(--muted)] underline"
+          >
+            Open all
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpenIds(new Set())}
+            className="text-xs text-[var(--muted)] underline"
+          >
+            Close all
+          </button>
+        </div>
+      </div>
       <div className="space-y-2">
         {(fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems).map((item) => {
           const shape = getShape(item.shapeId)
@@ -1058,6 +1148,9 @@ export function HomeworkPanel({
             .reverse()
             .map((l) => logProperHoldSeconds(l) ?? 0)
           const manualOpen = manualItemId === item.id
+          const detailsOpen =
+            openIds.has(item.id) || activeItemId === item.id || manualOpen
+          const best = bestHoldSeconds(itemLogs)
           return (
             <Fragment key={item.id}>
             {fromCoach.length > 0 && item.id === otherDrills[0]?.id && (
@@ -1066,14 +1159,19 @@ export function HomeworkPanel({
               </p>
             )}
             <div
-              className={`rounded-lg border p-3 ${
+              className={`rounded-lg border p-2.5 ${
                 activeItemId === item.id
                   ? 'border-[var(--accent)]/50 bg-[#121f1a]'
                   : 'border-[var(--panel-border)] bg-[#121820]'
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  aria-expanded={detailsOpen}
+                  onClick={() => toggleOpen(item.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
                   <span
                     className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.cls}`}
                   >
@@ -1082,23 +1180,20 @@ export function HomeworkPanel({
                   <span className="truncate font-medium text-[var(--text)]">
                     {homeworkTitle(item)}
                   </span>
-                  {item.targetSeconds ? (
-                    <span className="text-[11px] text-[var(--muted)]">
-                      goal {item.targetSeconds}s
+                  {best > 0 && (
+                    <span className="hidden text-[11px] tabular-nums text-[var(--accent)] sm:inline">
+                      best {formatSeconds(best)}
                     </span>
-                  ) : null}
-                  <span
-                    className="text-[11px] text-[var(--muted)]"
-                    title="Form standard for proper-hold time"
-                  >
-                    form ≥{formStandardFor(item)}
-                  </span>
+                  )}
                   {lastBeat != null && (
                     <span className="rounded bg-[#2a2312] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--warn)]">
                       beat {formatSeconds(lastBeat)}
                     </span>
                   )}
-                </div>
+                  <span className="ml-auto shrink-0 text-xs font-semibold text-[var(--muted)]">
+                    {detailsOpen ? 'Hide' : 'Show'}
+                  </span>
+                </button>
                 <div className="flex items-center gap-2">
                   {!isCustomHomework(item) && <button
                     type="button"
@@ -1114,20 +1209,13 @@ export function HomeworkPanel({
                     className="rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
                     title="No camera? Type a hold time instead"
                   >
-                    Log manually
+                    Log
                   </button>
-                  {item.source !== 'auto' && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item)}
-                      className="text-xs text-[var(--bad)] underline"
-                    >
-                      Remove
-                    </button>
-                  )}
                 </div>
               </div>
 
+              {detailsOpen && (
+              <>
               <HoldTimesBoard logs={itemLogs} isPlank={isPlank} />
               {trendValues.length >= 2 && (
                 <div className="mt-1 flex justify-end">
@@ -1286,17 +1374,25 @@ export function HomeworkPanel({
                   {item.notes}
                 </p>
               )}
+              {item.source !== 'auto' && (
+                <button
+                  type="button"
+                  onClick={() => removeItem(item)}
+                  className="mt-2 text-xs text-[var(--bad)] underline"
+                >
+                  Remove
+                </button>
+              )}
+              </>
+              )}
             </div>
             </Fragment>
           )
         })}
       </div>
 
-      {/* Add homework */}
-      <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
-        <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
-          Add homework
-        </p>
+      <CollapsibleSection inset title="Add homework" hint="Coach or athlete can add another drill">
+      <div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <select
             className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
@@ -1356,6 +1452,7 @@ export function HomeworkPanel({
           }}
         />
       </div>
+      </CollapsibleSection>
 
       {flash && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
