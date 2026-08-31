@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { jointAngle, VISIBILITY_DRAW } from '../../lib/angles'
 import { classifyPoses, personAnchor, type DetectedPerson } from '../../lib/detectShapes'
+import { listCoachOverlayStills } from '../../lib/igStills'
 import { LM, POSE_EDGES } from '../../lib/landmarks'
+import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { getFloorPoseLandmarker, resultToMultipleLandmarks } from '../../lib/pose'
-import type { Landmark } from '../../types'
+import { scoreShape } from '../../lib/scoring'
+import type { Landmark, ReferencePhoto, ScoreResult, ShapeDef } from '../../types'
+import { useOverlayStill } from '../OverlayStillContext'
+import { ReferenceStill } from '../ReferenceStill'
 
 type Props = {
   mirror: boolean
   showJointAngles: boolean
   onShowJointAnglesChange: (show: boolean) => void
+  referencePhotos: ReferencePhoto[]
+  onOpenCompareWithReference: () => void
 }
+
+const MATCH_SHAPES = lessonScoreShapes()
 
 const ANGLES: { label: string; points: [number, number, number] }[] = [
   { label: 'L elbow', points: [LM.LEFT_SHOULDER, LM.LEFT_ELBOW, LM.LEFT_WRIST] },
@@ -22,6 +31,21 @@ const ANGLES: { label: string; points: [number, number, number] }[] = [
 
 function visible(point: Landmark | undefined) {
   return Boolean(point && (point.visibility ?? 1) >= VISIBILITY_DRAW)
+}
+
+function primaryPose(poses: Landmark[][]): Landmark[] | null {
+  let best: { pose: Landmark[]; area: number } | null = null
+  for (const pose of poses) {
+    const visibleBody = pose
+      .slice(LM.LEFT_SHOULDER)
+      .filter((point) => (point.visibility ?? 1) >= VISIBILITY_DRAW)
+    if (visibleBody.length === 0) continue
+    const xs = visibleBody.map((point) => point.x)
+    const ys = visibleBody.map((point) => point.y)
+    const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
+    if (!best || area > best.area) best = { pose, area }
+  }
+  return best?.pose ?? null
 }
 
 function drawFloorOverlay(
@@ -97,6 +121,8 @@ export function TodayFloorCamera({
   mirror,
   showJointAngles,
   onShowJointAnglesChange,
+  referencePhotos,
+  onOpenCompareWithReference,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -105,14 +131,42 @@ export function TodayFloorCamera({
   const startingRef = useRef(false)
   const showAnglesRef = useRef(showJointAngles)
   const mirrorRef = useRef(mirror)
+  const selectedShapeRef = useRef<ShapeDef>(MATCH_SHAPES[0]!)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [people, setPeople] = useState<DetectedPerson[]>([])
+  const [selectedShapeId, setSelectedShapeId] = useState(
+    MATCH_SHAPES[0]?.id ?? 'handstand',
+  )
+  const [matchScore, setMatchScore] = useState<ScoreResult | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
+  const overlay = useOverlayStill()
+  const selectedShape =
+    MATCH_SHAPES.find((shape) => shape.id === selectedShapeId) ?? MATCH_SHAPES[0]!
+  const coachStills = useMemo(
+    () => listCoachOverlayStills(referencePhotos),
+    [referencePhotos],
+  )
 
   useEffect(() => {
     showAnglesRef.current = showJointAngles
     mirrorRef.current = mirror
-  }, [showJointAngles, mirror])
+    selectedShapeRef.current = selectedShape
+  }, [showJointAngles, mirror, selectedShape])
+
+  useEffect(() => {
+    if (!fullscreen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [fullscreen])
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -123,6 +177,7 @@ export function TodayFloorCamera({
     canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
     setRunning(false)
     setPeople([])
+    setMatchScore(null)
   }, [])
 
   useEffect(() => () => stop(), [stop])
@@ -159,7 +214,16 @@ export function TodayFloorCamera({
           try {
             const poses = resultToMultipleLandmarks(landmarker.detectForVideo(target, now))
             const hits = classifyPoses(poses)
+            const primary = primaryPose(poses)
             setPeople(hits)
+            setMatchScore(
+              primary
+                ? scoreShape(primary, selectedShapeRef.current, null, {
+                    stance: 'auto',
+                    profileOk: true,
+                  })
+                : null,
+            )
             drawFloorOverlay(
               canvas,
               target.videoWidth,
@@ -187,8 +251,45 @@ export function TodayFloorCamera({
     }
   }
 
+  const nextShape = () => {
+    const index = MATCH_SHAPES.findIndex((shape) => shape.id === selectedShape.id)
+    const next = MATCH_SHAPES[(index + 1) % MATCH_SHAPES.length]
+    if (next) setSelectedShapeId(next.id)
+  }
+
+  const openCompareWithReference = () => {
+    const still = coachStills.find((item) => item.shapeId === selectedShape.id) ?? null
+    overlay.setSelected(still)
+    if (still) {
+      overlay.setOpacity(0.8)
+      overlay.setScale(0.28)
+      overlay.setOffset(82, 18)
+    }
+    setFullscreen(false)
+    stop()
+    onOpenCompareWithReference()
+  }
+
+  const scoreValue = matchScore?.overall ?? null
+  const scoreColor =
+    scoreValue == null
+      ? 'text-white/55'
+      : scoreValue >= 85
+        ? 'text-[var(--good)]'
+        : scoreValue >= 70
+          ? 'text-[var(--accent)]'
+          : scoreValue >= 50
+            ? 'text-[var(--warn)]'
+            : 'text-[var(--bad)]'
+
   return (
-    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <section
+      className={
+        fullscreen
+          ? 'fixed inset-0 z-[300] flex h-[100dvh] flex-col overflow-hidden bg-black p-3 sm:p-4'
+          : 'rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+      }
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
@@ -199,26 +300,63 @@ export function TodayFloorCamera({
             Tracks up to four people. This camera is separate from Videos / Compare.
           </p>
         </div>
-        {!running ? (
+        <div className="flex flex-wrap gap-2">
+          {!running ? (
+            <button
+              type="button"
+              onClick={() => void start()}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-black"
+            >
+              Start floor camera
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={stop}
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+            >
+              Stop floor camera
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => void start()}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-black"
-          >
-            Start floor camera
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={stop}
+            onClick={() => setFullscreen((open) => !open)}
             className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
           >
-            Stop floor camera
+            {fullscreen ? 'Exit full screen' : 'Full screen'}
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="relative mt-3 aspect-video overflow-hidden rounded-xl bg-black">
+      <div className="mt-3 grid shrink-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label className="text-xs text-[var(--muted)]">
+          Match this shape
+          <select
+            value={selectedShape.id}
+            onChange={(event) => setSelectedShapeId(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+          >
+            {MATCH_SHAPES.map((shape) => (
+              <option key={shape.id} value={shape.id}>
+                {shape.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={nextShape}
+          className="self-end rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black"
+        >
+          Next Shape
+        </button>
+      </div>
+
+      <div
+        className={`relative mt-3 overflow-hidden rounded-xl bg-black ${
+          fullscreen ? 'min-h-0 flex-1' : 'aspect-video'
+        }`}
+      >
         <video
           ref={videoRef}
           muted
@@ -226,6 +364,31 @@ export function TodayFloorCamera({
           className={`h-full w-full object-contain ${mirror ? '-scale-x-100' : ''}`}
         />
         <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+        <div className="pointer-events-none absolute right-2 top-2 z-10 w-[min(34%,12rem)] overflow-hidden rounded-lg border border-white/30 bg-black/75 shadow-lg">
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/75">
+            Coach still · {selectedShape.name}
+          </p>
+          <ReferenceStill
+            shapeId={selectedShape.id}
+            photos={referencePhotos}
+            alt={selectedShape.name}
+            className="max-h-36 w-full object-contain"
+            emptyLabel={`No coach still for ${selectedShape.name}`}
+          />
+        </div>
+        <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-[70%] rounded-xl bg-black/75 px-3 py-2 text-white shadow-lg">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
+            Live match · {selectedShape.name}
+          </p>
+          <p className={`text-3xl font-black tabular-nums ${scoreColor}`}>
+            {scoreValue == null ? '—' : Math.round(scoreValue)}
+          </p>
+          {matchScore?.mainCorrection && (
+            <p className="mt-1 text-xs leading-snug text-white/85">
+              {matchScore.mainCorrection}
+            </p>
+          )}
+        </div>
         {!running && (
           <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/65">
             Camera off — start it here when you need floor detection.
@@ -233,7 +396,7 @@ export function TodayFloorCamera({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[var(--muted)]">
           {running
             ? people.length === 0
@@ -250,6 +413,13 @@ export function TodayFloorCamera({
           Show Joint Angles
         </label>
       </div>
+      <button
+        type="button"
+        onClick={openCompareWithReference}
+        className="mt-3 shrink-0 rounded-lg border border-[var(--accent)]/60 px-3 py-2 text-sm font-semibold text-[var(--text)]"
+      >
+        Full Screen With Reference
+      </button>
       {error && (
         <p className="mt-3 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
           {error}

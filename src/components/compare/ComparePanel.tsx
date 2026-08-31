@@ -36,6 +36,8 @@ type Props = {
   skillId?: string | null
   skillLabel?: string | null
   lessonBar?: ReactNode
+  /** Reference handoff may request fullscreen without touching camera ownership. */
+  enterFullscreenTick?: number
 }
 
 export function ComparePanel({
@@ -51,6 +53,7 @@ export function ComparePanel({
   skillId = null,
   skillLabel = null,
   lessonBar = null,
+  enterFullscreenTick = 0,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -61,6 +64,10 @@ export function ComparePanel({
   const [tbRatio, setTbRatio] = useState(0.64)
   const [lrRatio, setLrRatio] = useState(0.5)
   const [libraryTick, setLibraryTick] = useState(0)
+
+  useEffect(() => {
+    if (enterFullscreenTick > 0) setFullscreen(true)
+  }, [enterFullscreenTick])
 
   useEffect(() => {
     if (!fullscreen) return

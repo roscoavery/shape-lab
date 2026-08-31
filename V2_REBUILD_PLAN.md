@@ -133,8 +133,8 @@ Checklist:
 - [x] Support reference videos and stills.
 - [x] Preserve A-B controls where supported.
 - [x] Preserve Replay Last, Record, and comparison tools.
-- [ ] Test delay performance before accepting each change.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Test delay performance before accepting each change.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 7 — Shared camera session (reverted)
 
@@ -148,7 +148,7 @@ it; it must never be developed directly on this rebuild branch.
 - [x] Revert `v2-rebuild` to the pre-Phase-7 implementation.
 - [x] Keep Compare on its independent Version 1 delay-camera stream.
 - [x] Move Live Scoring to Practice using the existing pose-camera path.
-- [ ] Ryan confirms Delay, Replay Last, and Record are restored.
+- [x] Ryan confirms Delay, Replay Last, and Record are restored.
 
 Protected post-revert checkpoint: `v2-pre-shared-camera-working` and
 `cursor/v2-pre-shared-camera-working-847e`.
@@ -156,10 +156,10 @@ Protected post-revert checkpoint: `v2-pre-shared-camera-working` and
 For every remaining phase, regression-test Compare Delay, Replay Last, and
 Record. If any fails, stop immediately and revert only that phase.
 
-## Phase 8 — Today floor camera (on hold)
+## Phase 8 — Isolated Today floor camera
 
-Do not add Live Scoring to Today. Reassess non-scoring floor detection only
-after the restored Compare camera is confirmed.
+Today owns this camera locally. It never shares streams or buffer state with
+Compare.
 
 - [x] Automatic person detection with up to four people.
 - [x] Shape labels on detected people.
@@ -167,17 +167,17 @@ after the restored Compare camera is confirmed.
 - [x] No face landmarks.
 - [x] Show skeleton/angle overlays only with Show Joint Angles enabled.
 - [x] Keep floor detection isolated from the Compare delay buffer.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 9 — Match This Shape
 
-- [ ] Shape/reference selection.
-- [ ] Pinned coach still picture-in-picture.
-- [ ] Live athlete camera and score.
-- [ ] Visual grading.
-- [ ] Next Shape without restarting the camera where possible.
-- [ ] Fullscreen Today floor mode.
-- [ ] Full Screen With Reference opens Videos / Compare with the current still.
+- [x] Shape/reference selection.
+- [x] Pinned coach still picture-in-picture.
+- [x] Live athlete camera and score.
+- [x] Visual grading.
+- [x] Next Shape without restarting the camera where possible.
+- [x] Fullscreen Today floor mode.
+- [x] Full Screen With Reference opens Videos / Compare with the current still.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 10 — Camera / skeleton cleanup

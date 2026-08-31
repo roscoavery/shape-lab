@@ -164,3 +164,14 @@ Shape labels are drawn for up to four detected people. Body-only skeleton lines,
 joints, and angle labels are drawn only when **Show Joint Angles** is enabled;
 face landmarks are never drawn.
 
+## Phase 9 reference handoff
+
+Match This Shape scoring runs only against the Today-owned floor-camera poses.
+Changing or advancing the selected shape does not restart that stream.
+
+**Full Screen With Reference** stores only the selected still data in the
+existing overlay context, stops Today's own tracks, navigates to Compare, and
+requests the existing Compare layout fullscreen. Compare remains responsible
+for its own Start button, physical stream, delay buffer, Replay Last, and
+recording lifecycle.
+

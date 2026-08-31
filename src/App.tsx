@@ -118,6 +118,7 @@ export default function App() {
     return isRyanAthlete(roster.find((a) => a.id === id) ?? null) ? saved : 'today'
   })
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
+  const [compareFullTick, setCompareFullTick] = useState(0)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -319,6 +320,11 @@ export default function App() {
     if (isRyanOnlyTab(id) && !ryan) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
+  }
+
+  const openCompareWithReference = () => {
+    goTab('compare')
+    setCompareFullTick((tick) => tick + 1)
   }
 
   const startLesson = (athleteId: string, planId?: string | null) => {
@@ -565,6 +571,8 @@ export default function App() {
           <TodayFloorCamera
             mirror={settings.mirrorVideo}
             showJointAngles={settings.showAngles}
+            referencePhotos={referencePhotos}
+            onOpenCompareWithReference={openCompareWithReference}
             onShowJointAnglesChange={(showAngles) =>
               setSettings((current) => ({ ...current, showAngles }))
             }
@@ -800,6 +808,7 @@ export default function App() {
               }
               gymEditor={ryanEdit}
               personalEditor={personalCompare}
+              enterFullscreenTick={compareFullTick}
               videoSource={liveLesson ? 'lesson' : undefined}
               lessonId={liveLesson?.id ?? null}
               skillId={liveLesson ? shape.id : null}
