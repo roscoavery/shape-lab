@@ -118,8 +118,8 @@ export function DelayCamHud({
         <HudCircle label="Reset" onClick={onReset}>
           <IconX />
         </HudCircle>
-        <HudCircle label="Min" onClick={onMinimize}>
-          <IconPip />
+        <HudCircle label={minLabel} onClick={onMinimize}>
+          <MinIcon />
         </HudCircle>
       </div>
 
