@@ -110,14 +110,6 @@ export function VideoLibraryPanel({
           </p>
         </>
       )}
-      {embedded && (
-        <p className="text-sm leading-relaxed text-[var(--muted)]">
-          {athleteName ? `${athleteName} · ` : ''}
-          {folder === 'lesson'
-            ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
-            : 'Saved into this profile. Grouped by date.'}
-        </p>
-      )}
       {error && (
         <p className="mt-2 text-[12px] text-[var(--bad)]">{error}</p>
       )}

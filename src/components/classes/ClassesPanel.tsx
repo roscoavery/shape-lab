@@ -336,17 +336,11 @@ export function ClassesPanel({ athlete }: Props) {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           Class drills
         </p>
-        <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Collages</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Build a board of up to six clips. The same video can sit on more than one
-          tile. After you save, each panel has its own video menu (not in full
-          screen). Edit changes the board; Duplicate copies it into your class
-          library.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--text)]">Collages</h2>
           <button
             type="button"
             onClick={startNew}

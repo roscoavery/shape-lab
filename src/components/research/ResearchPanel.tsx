@@ -40,6 +40,8 @@ import { isCoachProfile } from '../../lib/profileRole'
 import { loadDiscuss, type DiscussFile } from '../../lib/discuss'
 import { discussDigest } from '../../lib/discussStats'
 import { discussTopicById } from '../../config/discussTopics'
+import { CollapsibleSection } from '../CollapsibleSection'
+import { SegmentedTabs } from '../SegmentedTabs'
 
 type View =
   | { page: 'list' }
@@ -114,52 +116,45 @@ export function ResearchPanel({ athletes, athlete }: Props) {
           Research
         </p>
         <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Tumbling studies</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Ask a question, state what we think, log what this gym actually does, then look
-          at the counts. n is this gym — not a world census, and not a cause. Anyone can
-          read findings. Unlock a profile to log. Coaches log for any athlete; athletes
-          log for themselves. The lounge digest counts what coaches argue about and how
-          often they wrote the “why.”
-        </p>
-        <div className="mt-3 flex flex-wrap gap-1">
-          {(
-            [
-              ['list', 'Studies'],
-              ['correlations', 'Correlations'],
-              ['ideas', 'Ideas'],
-              ['lounge', 'Lounge'],
-            ] as const
-          ).map(([id, label]) => {
-            const on =
-              (id === 'list' && (view.page === 'list' || view.page === 'study')) ||
-              (id === 'correlations' && view.page === 'correlations') ||
-              (id === 'ideas' && view.page === 'ideas') ||
-              (id === 'lounge' && view.page === 'lounge')
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() =>
-                  setView(
-                    id === 'list'
-                      ? { page: 'list' }
-                      : id === 'correlations'
-                        ? { page: 'correlations' }
-                        : id === 'ideas'
-                          ? { page: 'ideas' }
-                          : { page: 'lounge' },
-                  )
-                }
-                className={`rounded-md px-3 py-1.5 text-sm ${
-                  on
-                    ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                    : 'text-[var(--muted)] hover:text-[var(--text)]'
-                }`}
-              >
-                {label}
-              </button>
-            )
-          })}
+        <div className="mt-3">
+          <SegmentedTabs
+            value={
+              view.page === 'study' ? 'list' : view.page
+            }
+            onChange={(id) =>
+              setView(
+                id === 'list'
+                  ? { page: 'list' }
+                  : id === 'correlations'
+                    ? { page: 'correlations' }
+                    : id === 'ideas'
+                      ? { page: 'ideas' }
+                      : { page: 'lounge' },
+              )
+            }
+            tabs={[
+              { id: 'list', label: 'Studies' },
+              { id: 'correlations', label: 'Correlations' },
+              { id: 'ideas', label: 'Ideas' },
+              { id: 'lounge', label: 'Lounge' },
+            ]}
+          />
+        </div>
+        <div className="mt-3">
+          <CollapsibleSection
+            title="How studies work"
+            hint="Ask, log, then look at counts — n is this gym"
+            defaultOpen={false}
+            inset
+          >
+            <p className="text-sm leading-relaxed text-[var(--muted)]">
+              Ask a question, state what we think, log what this gym actually does, then look
+              at the counts. n is this gym — not a world census, and not a cause. Anyone can
+              read findings. Unlock a profile to log. Coaches log for any athlete; athletes
+              log for themselves. The lounge digest counts what coaches argue about and how
+              often they wrote the “why.”
+            </p>
+          </CollapsibleSection>
         </div>
       </section>
 

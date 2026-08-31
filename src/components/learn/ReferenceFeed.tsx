@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
+import { CollapsibleSection } from '../CollapsibleSection'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
@@ -91,14 +92,16 @@ export function ReferenceFeed({ athlete = null }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
-        <strong className="text-[var(--text)]">Reference scroll.</strong> Same Instagram
-        library as Compare — a rename there shows here. Search a shape or collection,
-        then collect a clip or drop it on a class collage. Star a URL or a saved A/B
-        loop. Swipe or scroll. Set <strong className="text-[var(--text)]">A</strong> and{' '}
-        <strong className="text-[var(--text)]">B</strong> on a clip to loop just that
-        piece; it saves for Classes and Compare too.
-      </div>
+      <CollapsibleSection
+        title="Reference scroll"
+        hint="Same library as Compare. Search, collect, or add to a collage."
+        defaultOpen={false}
+      >
+        <p className="text-sm leading-relaxed text-[var(--muted)]">
+          A rename in Compare shows here. Star a URL or a saved A/B loop. Set A and B
+          on a clip to loop that piece — it saves for Classes and Compare too.
+        </p>
+      </CollapsibleSection>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}

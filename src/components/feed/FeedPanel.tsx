@@ -152,15 +152,10 @@ export function FeedPanel({ athletes, athlete }: Props) {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           Gym feed
         </p>
-        <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Accomplishments</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Post a thought, a clip of a hit, or a class collage from Classes. Video is
-          optional. Coaches tag athletes. Athletes tag their coach. Other coaches can
-          save a shared collage into their own class library. Ryan stays gym admin.
-        </p>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">Accomplishments</h2>
       </section>
 
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">

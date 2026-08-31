@@ -30,6 +30,7 @@ import {
 } from '../../lib/discuss'
 import { DISCUSS_TOPICS, discussTopicById } from '../../config/discussTopics'
 import { discussDigest } from '../../lib/discussStats'
+import { SegmentedTabs } from '../SegmentedTabs'
 
 type Page = 'people' | 'messages' | 'lounge'
 
@@ -77,33 +78,17 @@ export function NetworkPanel({ athletes, athlete }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Network
         </p>
-        <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">People, messages, lounge</h2>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Follow other profiles on this gym, message them, and share a clip URL.
-          The lounge is coaches only — tumbling philosophies, tagged so Research
-          can see what people argue about and why.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-1">
-          {(
-            [
-              ['people', 'People'],
-              ['messages', 'Messages'],
-              ['lounge', 'Coach lounge'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setPage(id)}
-              className={`rounded-md px-3 py-1.5 text-sm ${
-                page === id
-                  ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                  : 'text-[var(--muted)] hover:text-[var(--text)]'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">People, messages, lounge</h2>
+        <div className="mt-3">
+          <SegmentedTabs
+            value={page}
+            onChange={setPage}
+            tabs={[
+              { id: 'people', label: 'People' },
+              { id: 'messages', label: 'Messages' },
+              { id: 'lounge', label: 'Coach lounge' },
+            ]}
+          />
         </div>
       </section>
 

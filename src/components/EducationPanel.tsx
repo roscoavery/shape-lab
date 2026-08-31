@@ -132,12 +132,9 @@ export function EducationPanel({
 
   return (
     <div className={`mx-auto space-y-4 ${view.kind === 'scroll' ? 'max-w-xl' : 'max-w-4xl'}`}>
-      <header className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
-        <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
-        <p className="mt-0.5 text-xs text-[var(--muted)]">
-          Stills and notes first. Tests and physics are in the chips.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Learn</h2>
+        <div className="mt-3 flex flex-wrap gap-1 rounded-xl bg-[#0d1218] p-1">
           <NavChip
             active={view.kind === 'home'}
             onClick={goHome}
@@ -319,10 +316,10 @@ function NavChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-sm ${
+      className={`rounded-lg px-3 py-1.5 text-sm transition ${
         active
-          ? 'bg-[var(--accent-dim)] font-semibold text-white'
-          : 'border border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--text)]'
+          ? 'bg-[var(--panel)] font-semibold text-[var(--text)]'
+          : 'text-[var(--muted)] hover:text-[var(--text)]'
       }`}
     >
       {label}
@@ -1298,20 +1295,29 @@ function IgShapesLibrary({
     <section className="space-y-4">
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          These stills are cropped from Compare — looping Instagram clips, uploaded
-          reference video, or athlete replay. They do not replace the coach stills in
-          Shape library. On Tasks, Homework, or Coach, pick any of these (or any coach
-          still) as a ghost overlay on the camera. Stills saved while the{' '}
-          <strong className="text-[var(--text)]">Ryan</strong> profile is selected are
-          stored on this gym computer, so a new browser or phone link still has them.
-          Other profiles keep crops on this device only.
-        </p>
-        <p className="mt-2 text-sm text-[var(--muted)]">
+        <p className="mt-1 text-sm text-[var(--muted)]">
           {total === 0
-            ? 'None saved yet. Open Compare, pause the clip, tap Screenshot, press one corner of the shape, and drag to the opposite corner.'
+            ? 'None saved yet. Open Compare, pause the clip, tap Screenshot.'
             : `${total} still${total === 1 ? '' : 's'} in ${groups.length} shape${groups.length === 1 ? '' : 's'}.`}
         </p>
+        <div className="mt-3">
+          <CollapsibleSection
+            title="Where these stills come from"
+            hint="Cropped from Compare — they don’t replace coach stills"
+            defaultOpen={false}
+            inset
+          >
+            <p className="text-sm leading-relaxed text-[var(--muted)]">
+              These stills are cropped from Compare — looping Instagram clips, uploaded
+              reference video, or athlete replay. They do not replace the coach stills in
+              Shape library. On Tasks, Homework, or Coach, pick any of these (or any coach
+              still) as a ghost overlay on the camera. Stills saved while the{' '}
+              <strong className="text-[var(--text)]">Ryan</strong> profile is selected are
+              stored on this gym computer, so a new browser or phone link still has them.
+              Other profiles keep crops on this device only.
+            </p>
+          </CollapsibleSection>
+        </div>
       </div>
 
       {groups.map((group) => (

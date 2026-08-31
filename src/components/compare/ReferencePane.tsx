@@ -52,9 +52,9 @@ import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
-import { CompareSplitBar } from './CompareSplitBar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
 import { LIBRARY_CHANGED_EVENT } from '../../lib/libraryEvents'
 import { HudCircle, IconClips, IconPip, IconSwap, IconX, CompareControlsButton } from './CompareHud'
@@ -120,7 +120,7 @@ export function ReferencePane({
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const [clipHudOpen, setClipHudOpen] = useState(false)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
-  const [clipsOpen, setClipsOpen] = useState(false)
+  const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
   const { fullscreen, refRail, focus, setFocus } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -287,6 +287,7 @@ export function ReferencePane({
       setActiveCollectionId(collection.id)
     }
     setActiveItemId(item.id)
+    if (!fullscreen) setDesk('watch')
     if (item.kind === 'file') {
       const blob = await getBlob(item.id)
       if (!blob) {
@@ -464,10 +465,7 @@ export function ReferencePane({
       )
     }
     const first = items[0]
-    if (first) {
-      setClipsOpen(true)
-      await selectItem(first)
-    }
+    if (first) await selectItem(first)
   }
 
   const addFile = async (file: File) => {
@@ -494,7 +492,6 @@ export function ReferencePane({
     })
     setKeywordInput('')
     setCachedIds((prev) => new Set(prev).add(item.id))
-    setClipsOpen(true)
     await selectItem(item)
   }
 
@@ -733,10 +730,6 @@ export function ReferencePane({
       : []
   const matchCount = currentHits.length + otherHits.length
   const q = searchQuery.trim()
-
-  useEffect(() => {
-    if (searching || onlyFavorites) setClipsOpen(true)
-  }, [searching, onlyFavorites])
 
   const allKeywords = useMemo(() => {
     const seen = new Set<string>()
@@ -1028,15 +1021,23 @@ export function ReferencePane({
         : null}
       {!fullscreen && (
       <>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Reference video</h2>
-          <span className="text-xs text-[var(--muted)]">the technique to copy</span>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Library
+          </p>
+          <h2 className="text-xl font-semibold tracking-tight">Reference video</h2>
         </div>
-        <CompareSplitBar where="reference" />
+        {activeItem ? (
+          <p className="max-w-[50%] truncate text-right text-xs text-[var(--muted)]">
+            {activeItem.name}
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--muted)]">Watch, then Clips or Add</p>
+        )}
       </div>
 
-      {/* Collection picker */}
+      {desk !== 'keep' && (
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={activeCollectionId ?? ''}
@@ -1046,7 +1047,7 @@ export function ReferencePane({
             revokeSrc()
             setItemSrc(null)
           }}
-          className={inputCls}
+          className={`${inputCls} min-w-0 flex-1`}
           aria-label="Collection"
         >
           {skillCols.length > 0 && (
@@ -1079,334 +1080,323 @@ export function ReferencePane({
             </optgroup>
           )}
         </select>
-        {canEditLibrary && (
-        <>
-        <input
-          value={newCollectionName}
-          onChange={(e) => setNewCollectionName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void addCollection()}
-          placeholder={personalEditor ? 'New collection (yours)' : 'New collection name'}
-          className={`${inputCls} w-40`}
-        />
-        <button type="button" onClick={() => void addCollection()} className={btnCls}>
-          + Collection
-        </button>
-        </>
-        )}
-        {activeCollection &&
-          canEditCollection(activeCollection) &&
-          (activeCollection.athleteId
-            ? true
-            : gymEditor && collections.filter(isGymCollection).length > 1) && (
-          <button
-            type="button"
-            onClick={() => void removeCollection()}
-            className={`${btnCls} text-[var(--bad)]`}
-          >
-            Delete
-          </button>
-        )}
-      </div>
-
-      {/* Add reference */}
-      {canEditLibrary && (
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
-          placeholder="Instagram, TikTok, or Facebook video URL(s), or a direct video URL"
-          className={`${inputCls} min-w-0 flex-1`}
-        />
-        <input
-          value={keywordInput}
-          onChange={(e) => setKeywordInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
-          list="shape-keyword-suggestions"
-          placeholder="Keywords — handstand, whip"
-          className={`${inputCls} w-full sm:w-52`}
-          aria-label="Shape keywords for this URL"
-        />
-        <datalist id="shape-keyword-suggestions">
-          {SHAPE_TAG_SUGGESTIONS.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
-        <button type="button" onClick={() => void addUrl()} className={btnCls}>
-          Add URL
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className={`${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`}
-        >
-          Upload video
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void addFile(file)
-            e.target.value = ''
-          }}
-        />
       </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search a shape — handstand, whip, roundoff…"
-          className={`${inputCls} min-w-0 flex-1`}
-          aria-label="Search saved references by name, URL, or keyword"
-        />
-        <button
-          type="button"
-          aria-pressed={onlyFavorites}
-          onClick={() => setOnlyFavorites((v) => !v)}
-          className={
-            onlyFavorites
-              ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
-              : `${btnCls} text-[var(--muted)]`
-          }
-          title="Show starred URLs"
-        >
-          {onlyFavorites ? '★ Favorites' : '☆ Favorites'}
-        </button>
-        {q ? (
-          <button
-            type="button"
-            onClick={() => setSearchQuery('')}
-            className={`${btnCls} text-[var(--muted)]`}
-          >
-            Clear
-          </button>
-        ) : null}
-        {gymEditor && (
-          <button
-            type="button"
-            onClick={() => void saveIntoApp()}
-            disabled={saveState === 'saving'}
-            className={
-              saveState === 'dirty'
-                ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
-                : `${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`
-            }
-            title="Write this URL list into the app so every phone link and browser sees it"
-          >
-            {saveState === 'saving'
-              ? 'Saving library…'
-              : saveState === 'saved'
-                ? 'Saved into the app'
-                : 'Save into the app'}
-          </button>
-        )}
-          <button
-            type="button"
-            onClick={() => void saveAllInApp()}
-            disabled={Boolean(saving) || uncachedSocial.length === 0}
-            className={`${btnCls} border-[var(--accent-dim)] text-[var(--accent)] disabled:opacity-50`}
-            title="Download every social video into this app so they play without the original site"
-          >
-            {saving
-              ? `Saving ${saving.current}/${saving.total}…`
-              : uncachedSocial.length === 0
-                ? 'All videos in app'
-                : `Save all in app (${uncachedSocial.length})`}
-          </button>
-        <button
-          type="button"
-          onClick={exportLibrary}
-          className={btnCls}
-          title="Download a JSON backup of every saved URL and name"
-        >
-          Export library
-        </button>
-        {canEditLibrary && (
-        <button
-          type="button"
-          onClick={() => importInputRef.current?.click()}
-          className={btnCls}
-          title="Restore URLs from a Shape Lab library JSON file"
-        >
-          Import
-        </button>
-        )}
-        <button
-          type="button"
-          onClick={() => void copyAllUrls()}
-          className={btnCls}
-          title="Copy every saved Instagram/direct URL"
-        >
-          Copy URLs
-        </button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void importLibraryFile(file)
-            e.target.value = ''
-          }}
-        />
-      </div>
-      {allKeywords.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(showAllKeywords ? allKeywords : allKeywords.slice(0, 8)).map((kw) => {
-            const on = q.toLowerCase() === kw.toLowerCase()
-            return (
-              <button
-                key={kw}
-                type="button"
-                onClick={() => setSearchQuery(on ? '' : kw)}
-                className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                  on
-                    ? 'border-[var(--accent)] bg-[var(--accent-dim)]/40 text-[var(--text)]'
-                    : 'border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--text)]'
-                }`}
-              >
-                {kw}
-              </button>
-            )
-          })}
-          {allKeywords.length > 8 ? (
+      <SegmentedTabs
+        value={desk}
+        onChange={setDesk}
+        tabs={[
+          { id: 'watch', label: 'Watch' },
+          { id: 'browse', label: 'Clips' },
+          ...(canEditLibrary ? [{ id: 'add' as const, label: 'Add' }] : []),
+          { id: 'keep', label: 'Library' },
+        ]}
+        badges={{
+          browse: matchCount > 0 ? matchCount : undefined,
+          keep: saveState === 'dirty' ? true : undefined,
+        }}
+      />
+
+      {desk === 'browse' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search a shape — handstand, whip…"
+              className={`${inputCls} min-w-0 flex-1`}
+              aria-label="Search saved references by name, URL, or keyword"
+            />
             <button
               type="button"
-              onClick={() => setShowAllKeywords((v) => !v)}
-              className="rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+              aria-pressed={onlyFavorites}
+              onClick={() => setOnlyFavorites((v) => !v)}
+              className={
+                onlyFavorites
+                  ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+                  : `${btnCls} text-[var(--muted)]`
+              }
+              title="Show starred URLs"
             >
-              {showAllKeywords ? 'Fewer tags' : `More tags (${allKeywords.length - 8})`}
+              {onlyFavorites ? '★ Favorites' : '☆ Favorites'}
             </button>
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className={`${btnCls} text-[var(--muted)]`}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {allKeywords.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(showAllKeywords ? allKeywords : allKeywords.slice(0, 8)).map((kw) => {
+                const on = q.toLowerCase() === kw.toLowerCase()
+                return (
+                  <button
+                    key={kw}
+                    type="button"
+                    onClick={() => setSearchQuery(on ? '' : kw)}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                      on
+                        ? 'border-[var(--accent)] bg-[var(--accent-dim)]/40 text-[var(--text)]'
+                        : 'border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {kw}
+                  </button>
+                )
+              })}
+              {allKeywords.length > 8 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllKeywords((v) => !v)}
+                  className="rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+                >
+                  {showAllKeywords ? 'Fewer' : `More (${allKeywords.length - 8})`}
+                </button>
+              ) : null}
+            </div>
           ) : null}
+          {activeCollection && (currentHits.length > 0 || otherHits.length > 0) ? (
+            <div className={`flex ${searching ? 'max-h-80' : 'max-h-64'} flex-col gap-2 overflow-y-auto panel-scroll`}>
+              {searching && otherHits.length > 0 && (
+                <p className="text-xs text-[var(--muted)]">
+                  {otherHits.length} from other collections
+                </p>
+              )}
+              {currentHits.length > 0 && (
+                <ul className="flex flex-col gap-1">
+                  {currentHits.map((item, index) =>
+                    renderRow(item, {
+                      collection: activeCollection,
+                      index,
+                      total: currentHits.length,
+                      allowReorder: !searching && canEditCollection(activeCollection),
+                    }),
+                  )}
+                </ul>
+              )}
+              {otherHits.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                    In other collections
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {otherHits.map((hit, index) =>
+                      renderRow(hit.item, {
+                        collection: hit.collection,
+                        index,
+                        total: otherHits.length,
+                        allowReorder: false,
+                      }),
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : null}
+          {onlyFavorites && currentHits.length === 0 && otherHits.length === 0 && (
+            <p className="text-sm text-[var(--muted)]">
+              No favorite URLs yet. Star a clip, then open Favorites.
+            </p>
+          )}
+          {searching && currentHits.length === 0 && otherHits.length === 0 && (
+            <p className="text-sm text-[var(--muted)]">
+              No videos tagged or named “{q}”.
+            </p>
+          )}
         </div>
-      ) : null}
-      <CollapsibleSection
-        title="Build your library"
-        hint="Paste URLs, tag shapes, copy clips into a collection"
-        defaultOpen={false}
-        inset
-      >
-        <div className="space-y-2 text-xs leading-relaxed text-[var(--muted)]">
-          <p>
-            <strong className="text-[var(--text)]">Create.</strong> Name a collection, then paste
-            Instagram, TikTok, or Facebook links (or a list). Add keywords — handstand, whip,
-            roundoff — so search lists every video with that tag, including clips in other
-            collections.
-          </p>
-          <p>
-            <strong className="text-[var(--text)]">Organize.</strong> Drag or use ↑↓ to reorder
-            (not while searching). Rename or Tags anytime. Star a URL or a saved A/B loop —
-            Favorites filters this list. Collect copies any reference (gym, another collection,
-            or a skill clip) into a list you can edit.
-          </p>
-          <p>
-            Public videos download into this app the first time they play — or hit Save all in
-            app.{' '}
-            {gymEditor
-              ? 'The named gym URL list saves into the app so later previews still have it.'
-              : personalEditor
-                ? 'Your collections save on this profile only. Gym collections stay as Ryan left them — watch, don’t edit names or the gym list.'
-                : 'Anyone can watch the gym library. Coaches add URLs in their own collections. Unlock Ryan to edit the gym list.'}{' '}
-            Export library is an extra JSON backup.
+      )}
+
+      {desk === 'add' && canEditLibrary && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={newCollectionName}
+              onChange={(e) => setNewCollectionName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void addCollection()}
+              placeholder={personalEditor ? 'New collection (yours)' : 'New collection name'}
+              className={`${inputCls} min-w-0 flex-1`}
+            />
+            <button type="button" onClick={() => void addCollection()} className={btnCls}>
+              + Collection
+            </button>
+            {activeCollection &&
+              canEditCollection(activeCollection) &&
+              (activeCollection.athleteId
+                ? true
+                : gymEditor && collections.filter(isGymCollection).length > 1) && (
+              <button
+                type="button"
+                onClick={() => void removeCollection()}
+                className={`${btnCls} text-[var(--bad)]`}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+          <input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
+            placeholder="Instagram, TikTok, Facebook, or a direct video URL"
+            className={`${inputCls} w-full`}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
+              list="shape-keyword-suggestions"
+              placeholder="Keywords — handstand, whip"
+              className={`${inputCls} min-w-0 flex-1`}
+              aria-label="Shape keywords for this URL"
+            />
+            <datalist id="shape-keyword-suggestions">
+              {SHAPE_TAG_SUGGESTIONS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <button type="button" onClick={() => void addUrl()} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]">
+              Add URL
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`}
+            >
+              Upload
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void addFile(file)
+                e.target.value = ''
+              }}
+            />
+          </div>
+          <p className="text-xs leading-relaxed text-[var(--muted)]">
+            Paste a public link (or a list). Keywords let search find the clip in every collection.
           </p>
         </div>
-      </CollapsibleSection>
+      )}
+
+      {desk === 'keep' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {gymEditor && (
+              <button
+                type="button"
+                onClick={() => void saveIntoApp()}
+                disabled={saveState === 'saving'}
+                className={
+                  saveState === 'dirty'
+                    ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+                    : `${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`
+                }
+                title="Write this URL list into the app so every phone link and browser sees it"
+              >
+                {saveState === 'saving'
+                  ? 'Saving…'
+                  : saveState === 'saved'
+                    ? 'Saved'
+                    : 'Save into the app'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void saveAllInApp()}
+              disabled={Boolean(saving) || uncachedSocial.length === 0}
+              className={`${btnCls} border-[var(--accent-dim)] text-[var(--accent)] disabled:opacity-50`}
+            >
+              {saving
+                ? `Saving ${saving.current}/${saving.total}…`
+                : uncachedSocial.length === 0
+                  ? 'All videos in app'
+                  : `Save all in app (${uncachedSocial.length})`}
+            </button>
+            <button type="button" onClick={exportLibrary} className={btnCls}>
+              Export
+            </button>
+            {canEditLibrary && (
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                className={btnCls}
+              >
+                Import
+              </button>
+            )}
+            <button type="button" onClick={() => void copyAllUrls()} className={btnCls}>
+              Copy URLs
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void importLibraryFile(file)
+                e.target.value = ''
+              }}
+            />
+          </div>
+          <CollapsibleSection
+            title="How to organize"
+            hint="Collections, tags, and backups"
+            defaultOpen={false}
+            inset
+          >
+            <div className="space-y-2 text-xs leading-relaxed text-[var(--muted)]">
+              <p>
+                <strong className="text-[var(--text)]">Create.</strong> Add a collection, then paste
+                Instagram, TikTok, or Facebook links. Keywords — handstand, whip, roundoff — list
+                every clip with that tag.
+              </p>
+              <p>
+                <strong className="text-[var(--text)]">Organize.</strong> Reorder on Clips (not while
+                searching). Rename or Tags anytime. Collect copies any reference into a list you can
+                edit. Star a URL or A/B loop for Favorites.
+              </p>
+              <p>
+                Videos download the first time they play, or use Save all in app.{' '}
+                {gymEditor
+                  ? 'Save into the app so later previews still have the gym list.'
+                  : personalEditor
+                    ? 'Your collections stay on this profile. Gym lists stay as Ryan left them.'
+                    : 'Anyone can watch the gym library. Coaches add URLs in their own collections.'}{' '}
+                Export is an extra JSON backup.
+              </p>
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
           {error}
         </p>
       )}
-      {notice && (
+      {notice && desk !== 'watch' && (
         <p className="rounded-lg border border-[var(--panel-border)] bg-[#152018] px-3 py-2 text-sm text-[var(--text)]">
           {notice}
         </p>
       )}
 
       {libraryReady &&
-        collections.every((c) => c.items.filter((i) => i.url).length === 0) && (
-        <p className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-3 text-sm text-[var(--muted)]">
-          Paste a public Instagram, TikTok, or Facebook video URL to start this collection. Rename it after it
-          lands — names and URLs save into the app.
-        </p>
-      )}
-
-      {activeCollection && (currentHits.length > 0 || otherHits.length > 0) && (
-        <CollapsibleSection
-          title={
-            searching
-              ? `Search results (${matchCount})`
-              : onlyFavorites
-                ? `Favorites (${matchCount})`
-                : `Collection clips (${matchCount})`
-          }
-          hint={
-            clipsOpen
-              ? searching
-                ? `Matching “${q}” — reorder is paused`
-                : 'Hide this list so the player stays close'
-              : 'Open to pick, collect, or reorder clips'
-          }
-          inset
-          open={clipsOpen}
-          onOpenChange={setClipsOpen}
-        >
-        <div className={`flex ${searching ? 'max-h-80' : 'max-h-56'} flex-col gap-2 overflow-y-auto panel-scroll`}>
-          {searching && otherHits.length > 0 && (
-            <p className="text-xs text-[var(--muted)]">
-              {otherHits.length} from other collections
-            </p>
-          )}
-          {currentHits.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {currentHits.map((item, index) =>
-                renderRow(item, {
-                  collection: activeCollection,
-                  index,
-                  total: currentHits.length,
-                  allowReorder: !searching && canEditCollection(activeCollection),
-                }),
-              )}
-            </ul>
-          )}
-          {otherHits.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
-                In other collections
-              </p>
-              <ul className="flex flex-col gap-1">
-                {otherHits.map((hit, index) =>
-                  renderRow(hit.item, {
-                    collection: hit.collection,
-                    index,
-                    total: otherHits.length,
-                    allowReorder: false,
-                  }),
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
-        </CollapsibleSection>
-      )}
-
-      {onlyFavorites && currentHits.length === 0 && otherHits.length === 0 && (
+        collections.every((c) => c.items.filter((i) => i.url).length === 0) &&
+        desk === 'watch' && (
         <p className="text-sm text-[var(--muted)]">
-          No favorite URLs yet. Tap the star next to a clip, then open Favorites to
-          jump back to it.
-        </p>
-      )}
-
-      {searching && currentHits.length === 0 && otherHits.length === 0 && (
-        <p className="text-sm text-[var(--muted)]">
-          No videos tagged or named “{q}”. Tap Tags on a clip, or add that
-          keyword when you paste the URL.
+          Open Add to paste a public video URL into this collection.
         </p>
       )}
 
@@ -1414,7 +1404,9 @@ export function ReferencePane({
       )}
 
       {/* Player */}
-      <div className={fullscreen ? 'relative min-h-0 flex-1' : ''}>
+      {(fullscreen || desk === 'watch') && (
+      <div className={fullscreen ? 'relative min-h-0 flex-1' : ''}
+      >
       {activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
@@ -1521,6 +1513,7 @@ export function ReferencePane({
         </div>
       )}
       </div>
+      )}
     </section>
   )
 }

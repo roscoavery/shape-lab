@@ -493,9 +493,6 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Shape Lab
           </h1>
-          <p className="text-sm text-[var(--muted)]">
-            Free browser gymnastics coaching prototype · MediaPipe Pose
-          </p>
         </div>
         <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
       </header>

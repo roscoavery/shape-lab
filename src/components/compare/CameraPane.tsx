@@ -91,7 +91,7 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner, setReplayStart } =
+  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner, setReplayStart, replayAfterGo } =
     useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
@@ -966,7 +966,7 @@ export function CameraPane({
                 setDelayHudOpen(true)
                 setMode('delay')
                 setReplayStart(false)
-                setFocus('split')
+                setFocus(replayAfterGo === 'cam' ? 'cam' : 'split')
               })()
             }}
           />

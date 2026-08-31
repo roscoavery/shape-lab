@@ -33,8 +33,8 @@ export function CollapsibleSection({
     <section
       className={
         inset
-          ? 'rounded-lg border border-[var(--panel-border)] bg-[#0d1218]'
-          : 'rounded-xl border border-[var(--panel-border)] bg-[var(--panel)]'
+          ? 'rounded-xl bg-[#0d1218]/80'
+          : 'rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]'
       }
     >
       <button
@@ -42,25 +42,24 @@ export function CollapsibleSection({
         aria-expanded={isOpen}
         onClick={toggle}
         className={`flex w-full items-center justify-between gap-3 text-left ${
-          inset ? 'px-3 py-2' : 'px-4 py-3'
+          inset ? 'px-3 py-2.5' : 'px-4 py-3'
         }`}
       >
         <div className="min-w-0">
-          <h3 className="font-semibold text-[var(--text)]">{title}</h3>
-          {hint ? (
-            <p className="mt-0.5 text-xs text-[var(--muted)]">{hint}</p>
+          <h3 className="text-sm font-semibold text-[var(--text)]">{title}</h3>
+          {hint && !isOpen ? (
+            <p className="mt-0.5 truncate text-xs text-[var(--muted)]">{hint}</p>
           ) : null}
         </div>
-        <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">
-          {isOpen ? 'Hide' : 'Show'}
+        <span
+          className={`shrink-0 text-[var(--muted)] transition ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden
+        >
+          ▾
         </span>
       </button>
       {isOpen ? (
-        <div
-          className={`border-t border-[var(--panel-border)] ${
-            inset ? 'px-3 py-2' : 'px-4 pb-4 pt-3'
-          }`}
-        >
+        <div className={inset ? 'px-3 pb-3' : 'px-4 pb-4'}>
           {children}
         </div>
       ) : null}

@@ -50,11 +50,14 @@ export type CompareLayoutValue = {
   pipCorner: PipCorner
   /** First-open buffer picker covers the camera; hide the reference chip. */
   replayStart: boolean
+  /** After GO!, open the split or stay on delay cam. */
+  replayAfterGo: CompareFocus
   setFullscreen: (on: boolean) => void
   setSplit: (split: CompareSplit) => void
   setFocus: (focus: CompareFocus) => void
   setChromeOpen: (on: boolean) => void
   setReplayStart: (on: boolean) => void
+  setReplayAfterGo: (focus: CompareFocus) => void
   setCamRail: Dispatch<SetStateAction<HTMLElement | null>>
   setRefRail: Dispatch<SetStateAction<HTMLElement | null>>
   setTbRatio: (n: number) => void
@@ -77,11 +80,13 @@ export const CompareLayoutContext = createContext<CompareLayoutValue>({
   athleteReplay: false,
   pipCorner: 'br',
   replayStart: false,
+  replayAfterGo: 'split',
   setFullscreen: noop,
   setSplit: noop,
   setFocus: noop,
   setChromeOpen: noop,
   setReplayStart: noop,
+  setReplayAfterGo: noop,
   setCamRail: noop,
   setRefRail: noop,
   setTbRatio: noop,
