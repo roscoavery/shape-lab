@@ -104,18 +104,13 @@ button {
 }
 
 /*
- * iPhone delay cam: canvas.drawImage of a camera <video> ignores 2d
- * rotate (sensor pixels stay 90° clockwise). CSS rotate uses the same
- * compositor as the upright LIVE pip. The spin layer is 100% of the
- * pane so the canvas keeps a real layout size and can paint.
+ * iPhone delay cam: CSS-rotate the MSE <video> to match the upright LIVE
+ * pip. The inner box is sized in JS (pane height × width) then rotated,
+ * so layout stays non-zero and the picture is not scaled up.
  */
 .ios-delay-stage {
   position: relative;
   overflow: hidden;
-}
-.ios-delay-spin {
-  width: 100%;
-  height: 100%;
 }
 .ios-delay-spin > canvas,
 .ios-delay-spin > video {
@@ -124,6 +119,6 @@ button {
   height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
 }

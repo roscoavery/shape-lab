@@ -924,7 +924,7 @@ export function CameraPane({
             playsInline
             disableRemotePlayback
             webkit-playsinline="true"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         </IosDelayUnwind>
         {!running && mode !== 'replay' && !fullscreen && (
