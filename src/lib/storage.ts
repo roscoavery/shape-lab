@@ -95,7 +95,7 @@ export function loadSettings(): AppSettings {
   const defaults: AppSettings = {
     qualityThresholdOverride: null,
     mirrorVideo: true,
-    showAngles: true,
+    showAngles: false,
     voiceEnabled: true,
   }
   const raw = readJson<Partial<AppSettings> & { voiceCoaching?: boolean }>(SETTINGS_KEY, {})
@@ -105,7 +105,7 @@ export function loadSettings(): AppSettings {
   return {
     qualityThresholdOverride: raw.qualityThresholdOverride ?? null,
     mirrorVideo: raw.mirrorVideo ?? true,
-    showAngles: raw.showAngles ?? true,
+    showAngles: raw.showAngles ?? false,
     voiceEnabled,
   }
 }

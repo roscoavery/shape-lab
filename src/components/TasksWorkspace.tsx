@@ -34,7 +34,7 @@ type Props = {
   mirror: boolean
   showAngles: boolean
   cameraRunning: boolean
-  demoMode: boolean
+  demoMode?: boolean
   stream: MediaStream | null
   cameraControls: ReactNode
   cameraError: string | null
@@ -102,7 +102,7 @@ export function TasksWorkspace({
   mirror,
   showAngles,
   cameraRunning,
-  demoMode,
+  demoMode = false,
   stream,
   cameraControls,
   cameraError,
@@ -336,7 +336,7 @@ export function TasksWorkspace({
               canvasRef={canvasRef}
               landmarks={landmarks}
               mirror={mirror}
-              showAngles={showAngles || flowMode}
+              showAngles={showAngles}
               running={cameraRunning}
               demoMode={demoMode}
               shape={shape}

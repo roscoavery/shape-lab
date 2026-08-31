@@ -169,7 +169,7 @@ export function CameraStage({
         ctx.fillRect(0, 0, canvas.width, canvas.height)
       }
 
-      if (landmarks) {
+      if (landmarks && showAngles) {
         if (jointMode === 'merged') {
           ctx.restore()
           drawPoseOverlay(ctx, landmarks, {
@@ -198,7 +198,7 @@ export function CameraStage({
             ctx.stroke()
           }
 
-          for (const lm of landmarks) {
+          for (const lm of landmarks.slice(LM.LEFT_SHOULDER)) {
             if ((lm.visibility ?? 1) < VISIBILITY_DRAW) continue
             ctx.beginPath()
             ctx.fillStyle = '#ffffff'
@@ -280,8 +280,7 @@ export function CameraStage({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0a0e12]/90 p-6 text-center">
           <p className="text-lg font-semibold text-[var(--text)]">Camera is off</p>
           <p className="max-w-sm text-sm text-[var(--muted)]">
-            Start the camera for live coaching, or use <strong>Demo: good HS</strong> to test
-            Handstand scoring without a camera.
+            Start the camera for live coaching and shape scoring.
           </p>
         </div>
       )}

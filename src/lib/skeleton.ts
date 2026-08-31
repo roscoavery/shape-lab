@@ -202,7 +202,8 @@ function drawSplit(
     ctx.stroke()
   }
   const r = Math.max(4, width * 0.006)
-  for (const lm of landmarks) {
+  // Face landmarks (0–10) are intentionally never drawn.
+  for (const lm of landmarks.slice(LM.LEFT_SHOULDER)) {
     if ((lm.visibility ?? 1) < VISIBILITY_DRAW) continue
     const p = toPx(lm, width, height, mirror)
     drawDot(ctx, p.x, p.y, r)

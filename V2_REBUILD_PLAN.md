@@ -175,18 +175,19 @@ Compare.
 - [x] Pinned coach still picture-in-picture.
 - [x] Live athlete camera and score.
 - [x] Visual grading.
+- [x] Previous Shape without restarting the camera.
 - [x] Next Shape without restarting the camera where possible.
 - [x] Fullscreen Today floor mode.
 - [x] Full Screen With Reference opens Videos / Compare with the current still.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 10 — Camera / skeleton cleanup
 
-- [ ] Gate skeleton and angles behind Show Joint Angles.
-- [ ] Remove face landmarks.
-- [ ] Remove old demo-pose buttons.
-- [ ] Keep ordinary camera views visually clean.
-- [ ] Hide pose-debug tools from ordinary users.
+- [x] Gate skeleton and angles behind Show Joint Angles.
+- [x] Remove face landmarks.
+- [x] Remove old demo-pose buttons.
+- [x] Keep ordinary camera views visually clean.
+- [x] Hide pose-debug tools from ordinary users.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 11 — Profiles / admin cleanup

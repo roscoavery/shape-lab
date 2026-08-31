@@ -175,3 +175,13 @@ requests the existing Compare layout fullscreen. Compare remains responsible
 for its own Start button, physical stream, delay buffer, Replay Last, and
 recording lifecycle.
 
+## Phase 10 overlay policy
+
+Practice and Today draw no skeleton, joints, or angles unless **Show Joint
+Angles** is enabled. When enabled, only body landmarks 11–32 are drawn; face
+landmarks 0–10 are always excluded. Synthetic demo-pose controls are not exposed
+in the application.
+
+These rules affect pose-scoring canvases only. Compare's plain live/delay video
+and replay implementation remain unchanged.
+

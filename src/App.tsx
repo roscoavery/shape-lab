@@ -50,10 +50,6 @@ import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
 import { scoreShape } from './lib/scoring'
 import {
-  sampleGoodHandstand,
-  sampleNeedsWorkHandstand,
-} from './lib/samplePoses'
-import {
   addAttempt,
   createId,
   ensureAutoHomework,
@@ -102,7 +98,6 @@ import type {
   Athlete,
   AthleteTaskProgress,
   AttemptRecord,
-  Landmark,
   ReferencePhoto,
   ShapeDef,
 } from './types'
@@ -128,7 +123,6 @@ export default function App() {
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
-  const [demoLandmarks, setDemoLandmarks] = useState<Landmark[] | null>(null)
   const [taskProgress, setTaskProgress] = useState<AthleteTaskProgress | null>(null)
   const [scoreStance, setScoreStance] = useState<'left' | 'right' | 'auto'>('auto')
   const [scoreProfileOk, setScoreProfileOk] = useState(false)
@@ -165,7 +159,7 @@ export default function App() {
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
 
-  const activeLandmarks = camera.running ? camera.landmarks : demoLandmarks
+  const activeLandmarks = camera.running ? camera.landmarks : null
 
   const score = useMemo(
     () =>
@@ -176,7 +170,7 @@ export default function App() {
     [activeLandmarks, shape, qualityThreshold, scoreStance, scoreProfileOk],
   )
 
-  const timingActive = camera.running || demoLandmarks !== null
+  const timingActive = camera.running
   const hold = useHoldTimer(
     timingActive,
     score.holdReady ? Math.max(score.overall, qualityThreshold) : score.overall,
@@ -413,10 +407,7 @@ export default function App() {
       {!camera.running ? (
         <button
           type="button"
-          onClick={() => {
-            setDemoLandmarks(null)
-            void camera.start()
-          }}
+          onClick={() => void camera.start()}
           className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
         >
           Start camera
@@ -428,39 +419,6 @@ export default function App() {
           className="rounded-lg border border-[var(--panel-border)] px-4 py-2"
         >
           Stop camera
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => {
-          camera.stop()
-          setDemoLandmarks(sampleGoodHandstand())
-          setShape(SHAPES[0])
-        }}
-        className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
-        title="Inject a synthetic good handstand to test scoring without a camera"
-      >
-        Demo: good HS
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          camera.stop()
-          setDemoLandmarks(sampleNeedsWorkHandstand())
-          setShape(SHAPES[0])
-        }}
-        className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm hover:bg-[#243040]"
-        title="Inject a broken handstand to see corrections"
-      >
-        Demo: needs work
-      </button>
-      {demoLandmarks && !camera.running && (
-        <button
-          type="button"
-          onClick={() => setDemoLandmarks(null)}
-          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted)]"
-        >
-          Clear demo
         </button>
       )}
       <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
@@ -593,7 +551,6 @@ export default function App() {
             mirror={settings.mirrorVideo}
             showAngles={settings.showAngles}
             cameraRunning={camera.running}
-            demoMode={!camera.running && demoLandmarks !== null}
             stream={camera.stream}
             cameraControls={cameraControls}
             cameraError={camera.error}
@@ -659,7 +616,6 @@ export default function App() {
             mirror={settings.mirrorVideo}
             showAngles={settings.showAngles}
             cameraRunning={camera.running}
-            demoMode={!camera.running && demoLandmarks !== null}
             stream={camera.stream}
             cameraControls={cameraControls}
             cameraError={camera.error}
@@ -754,7 +710,6 @@ export default function App() {
               mirror={settings.mirrorVideo}
               showAngles={settings.showAngles}
               running={camera.running}
-              demoMode={!camera.running && demoLandmarks !== null}
               shape={shape}
               score={score}
               compact
@@ -881,7 +836,6 @@ export default function App() {
               mirror={settings.mirrorVideo}
               showAngles={settings.showAngles}
               running={camera.running}
-              demoMode={!camera.running && demoLandmarks !== null}
               shape={shape}
               score={score}
               compact
