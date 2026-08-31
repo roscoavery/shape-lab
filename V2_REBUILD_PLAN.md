@@ -80,7 +80,7 @@ Checklist:
 - [x] Add quick access to camera/session tools.
 - [x] Add lesson-plan and current-lesson entry points.
 - [x] Preserve all Version 1 features.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 3 — Lesson system
 
@@ -96,7 +96,7 @@ Checklist:
 - [x] Hide generic lunge, bridge, and arm-position lesson picks where
   appropriate without removing those shapes elsewhere.
 - [x] Keep data models backward-compatible.
-- [ ] Browser test, commit, push, summarize, and stop.
+- [x] Browser test, commit, push, summarize, and stop.
 
 ## Phase 4 — Practice
 
