@@ -12,6 +12,7 @@ import { createId } from '../../lib/storage'
 import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
 import { useIgStillSave } from './IgStillContext'
+import { HudCircle, IconArrow, IconDraw, IconLine, IconShot, IconX } from './CompareHud'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
@@ -128,9 +129,19 @@ type Props = {
   mirror?: boolean
   /** Let two-finger pinch reach the player instead of starting a draw. */
   pinchPassthrough?: boolean
+  /** Compact circular HUD (Replay Last / delay cam / reference). */
+  hud?: boolean
+  /** Extra top offset so Replay Last’s back chevron stays clear. */
+  hudOffsetClass?: string
 }
 
-export function VideoMarkOverlay({ videoRef, mirror = false, pinchPassthrough = false }: Props) {
+export function VideoMarkOverlay({
+  videoRef,
+  mirror = false,
+  pinchPassthrough = false,
+  hud = false,
+  hudOffsetClass = 'left-1.5 top-2',
+}: Props) {
   const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -586,24 +597,26 @@ export function VideoMarkOverlay({ videoRef, mirror = false, pinchPassthrough = 
     window.setTimeout(() => setNotice(null), 4000)
   }
 
+  const pickTool = (id: MarkTool) => {
+    setTool(id)
+    setArrowPts([])
+    drawingRef.current = false
+    arrowDragRef.current = false
+    arrowPtsRef.current = []
+    draggingDotRef.current = null
+    if (id !== 'line') {
+      setSelectedDot(null)
+      selectedDotRef.current = null
+    }
+    setCursor('crosshair')
+    setDrawPts(null)
+    resetCropDrag()
+  }
+
   const btn = (id: MarkTool, labelText: string) => (
     <button
       type="button"
-      onClick={() => {
-        setTool(id)
-        setArrowPts([])
-        drawingRef.current = false
-        arrowDragRef.current = false
-        arrowPtsRef.current = []
-        draggingDotRef.current = null
-        if (id !== 'line') {
-          setSelectedDot(null)
-          selectedDotRef.current = null
-        }
-        setCursor('crosshair')
-        setDrawPts(null)
-        resetCropDrag()
-      }}
+      onClick={() => pickTool(id)}
       className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
         tool === id
           ? 'bg-[var(--accent)] text-[#06281f]'
@@ -612,6 +625,26 @@ export function VideoMarkOverlay({ videoRef, mirror = false, pinchPassthrough = 
     >
       {labelText}
     </button>
+  )
+
+  const toolHud = (
+    <div className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2.5 ${hudOffsetClass}`}>
+      <HudCircle label="Line" active={tool === 'line'} onClick={() => pickTool('line')}>
+        <IconLine />
+      </HudCircle>
+      <HudCircle label="Draw" active={tool === 'draw'} onClick={() => pickTool('draw')}>
+        <IconDraw />
+      </HudCircle>
+      <HudCircle label="Arrow" active={tool === 'arrow'} onClick={() => pickTool('arrow')}>
+        <IconArrow />
+      </HudCircle>
+      <HudCircle label="Shot" active={tool === 'crop'} onClick={() => pickTool('crop')}>
+        <IconShot />
+      </HudCircle>
+      <HudCircle label="Clear" onClick={clearAll}>
+        <IconX />
+      </HudCircle>
+    </div>
   )
 
   return (
@@ -626,35 +659,39 @@ export function VideoMarkOverlay({ videoRef, mirror = false, pinchPassthrough = 
         onPointerCancel={onPointerUp}
         aria-label="Draw on video"
       />
-      <div className="pointer-events-auto absolute left-1 top-1 z-20 flex flex-wrap gap-1">
-        {btn('line', 'Line')}
-        {btn('draw', 'Draw')}
-        {btn('arrow', 'Arrow')}
-        {btn('crop', 'Screenshot')}
-        <button
-          type="button"
-          onClick={clearAll}
-          className="rounded-md border border-white/30 bg-black/55 px-2 py-1 text-[11px] text-white"
-        >
-          Clear
-        </button>
-      </div>
-      {tool === 'crop' && !pending && (
+      {hud ? (
+        toolHud
+      ) : (
+        <div className="pointer-events-auto absolute left-1 top-1 z-20 flex flex-wrap gap-1">
+          {btn('line', 'Line')}
+          {btn('draw', 'Draw')}
+          {btn('arrow', 'Arrow')}
+          {btn('crop', 'Screenshot')}
+          <button
+            type="button"
+            onClick={clearAll}
+            className="rounded-md border border-white/30 bg-black/55 px-2 py-1 text-[11px] text-white"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+      {!hud && tool === 'crop' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Press one corner of the shape, drag to the opposite corner, then let go.
         </p>
       )}
-      {tool === 'line' && linePts.length > 0 && !pending && (
+      {!hud && tool === 'line' && linePts.length > 0 && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Tap a Line dot to select it, then drag to move. A fourth tap on empty space clears the line.
         </p>
       )}
-      {tool === 'draw' && !pending && (
+      {!hud && tool === 'draw' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Press and drag — a smooth stroke, not a line of dots.
         </p>
       )}
-      {tool === 'arrow' && !pending && (
+      {!hud && tool === 'arrow' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
           Press, draw the path, let go — the arrowhead lands where you release.
         </p>

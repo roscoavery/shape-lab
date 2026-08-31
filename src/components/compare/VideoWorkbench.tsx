@@ -647,7 +647,15 @@ function VideoWorkbenchInner({
           } w-full object-contain ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
-        {markup && !bare && !zoomed && !replayChrome && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} pinchPassthrough={pinchZoom} />}
+        {markup && !bare && !zoomed && (
+          <VideoMarkOverlay
+            videoRef={videoRef}
+            mirror={mirror}
+            pinchPassthrough={pinchZoom}
+            hud
+            hudOffsetClass={replayChrome ? 'left-1.5 top-14' : 'left-1.5 top-2'}
+          />
+        )}
         {credit && !bare && (
           creditHref ? (
             <a

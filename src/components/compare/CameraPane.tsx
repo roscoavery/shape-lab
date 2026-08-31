@@ -28,6 +28,7 @@ import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
+import { DelayCamHud, LiveBufferStart } from './DelayCamHud'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { uploadAthleteVideo } from '../../lib/athleteVideoStore'
 
@@ -90,7 +91,7 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail, setAthleteReplay } = useCompareLayout()
+  const { fullscreen, camRail, setAthleteReplay, setFullscreen } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -130,12 +131,21 @@ export function CameraPane({
   const replayWindowRef = useRef<{ start: number; end: number } | null>(null)
   const [delayTime, setDelayTime] = useState(0)
   const [delayDuration, setDelayDuration] = useState(0)
+  const [camZoom, setCamZoom] = useState(1)
+  const [delayHudOpen, setDelayHudOpen] = useState(true)
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
-    if (fullscreen && !prevFullscreenRef.current && running) setMode('delay')
+    if (fullscreen && !prevFullscreenRef.current) {
+      setMode((m) => (m === 'replay' ? m : 'live'))
+      setDelayHudOpen(true)
+    }
     prevFullscreenRef.current = fullscreen
-  }, [fullscreen, running])
+  }, [fullscreen])
+
+  useEffect(() => {
+    delaySecRef.current = delaySec
+  }, [delaySec])
 
   useEffect(() => {
     if (mode !== 'delay') return
@@ -677,7 +687,10 @@ export function CameraPane({
   const btnCls = rail
     ? 'rounded-lg bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/16'
     : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]'
-  const mirrorCls = mirror ? 'scale-x-[-1]' : ''
+  const videoXform = {
+    transform: `${mirror ? 'scaleX(-1) ' : ''}scale(${camZoom})`,
+    transformOrigin: 'center center',
+  } as const
 
   const cameraChrome = (
     <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
@@ -826,7 +839,7 @@ export function CameraPane({
       )}
 
       {!fullscreen && cameraChrome}
-      {rail && camRail ? createPortal(cameraChrome, camRail) : null}
+      {rail && camRail && mode === 'replay' ? createPortal(cameraChrome, camRail) : null}
 
       {/* Video area — live video stays mounted (even during replay) so the stream keeps running */}
       <div
@@ -840,7 +853,8 @@ export function CameraPane({
           ref={liveVideoRef}
           muted
           playsInline
-          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirrorCls} ${
+          style={videoXform}
+          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
             mode === 'delay' ? 'hidden' : ''
           }`}
         />
@@ -848,26 +862,67 @@ export function CameraPane({
           ref={delayVideoRef}
           muted
           playsInline
-          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${mirrorCls} ${
+          style={videoXform}
+          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
             mode === 'delay' ? '' : 'hidden'
           }`}
         />
-        {!running && mode !== 'replay' && (
+        {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
             Camera off — press Start camera
           </div>
         )}
-        {mode === 'delay' && running && delayBuffering && (
+        {mode === 'delay' && running && delayBuffering && !fullscreen && (
           <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-[var(--warn)]">
             Buffering… delayed view starts in ~{delaySec}s
           </div>
         )}
-        {mode === 'delay' && running && !delayBuffering && (
+        {mode === 'delay' && running && !delayBuffering && !fullscreen && (
           <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-[var(--accent)]">
             {delaySec}s behind live
           </div>
         )}
         {mode === 'delay' && running && fullscreen && (
+          <DelayCamHud
+            delaySec={delaySec}
+            zoom={camZoom}
+            buffering={delayBuffering}
+            recording={recording}
+            saving={librarySaving}
+            hudOpen={delayHudOpen}
+            onZoom={setCamZoom}
+            onHide={() => setDelayHudOpen(false)}
+            onShow={() => setDelayHudOpen(true)}
+            onReplay={() => void openBufferReplay()}
+            onFlip={() => setMirror((on) => !on)}
+            onRecord={() => void recordAfterSkill()}
+            onBuffer={() => setMode('live')}
+            onReset={() => {
+              setCamZoom(1)
+              delayFollowRef.current = true
+            }}
+            onExit={() => {
+              setCamZoom(1)
+              setMode('live')
+            }}
+          />
+        )}
+        {mode === 'live' && fullscreen && (
+          <LiveBufferStart
+            running={running}
+            delaySec={delaySec}
+            min={DELAY_MIN}
+            max={DELAY_MAX}
+            onDelaySec={setDelaySec}
+            onStartCamera={() => void startCamera()}
+            onEnterDelay={() => {
+              setDelayHudOpen(true)
+              setMode('delay')
+            }}
+            onExit={() => setFullscreen(false)}
+          />
+        )}
+        {mode === 'delay' && running && !fullscreen && (
           <button
             type="button"
             disabled={librarySaving}
@@ -900,7 +955,7 @@ export function CameraPane({
               overlayChrome
               replayChrome
               pinchZoom
-              markup={false}
+              markup
               showStillOverlay={!fullscreen}
               savingPhotos={savingPhotos}
               onWindowChange={(start, end) => {
