@@ -5,7 +5,9 @@ import { homeworkLooksReady } from '../../lib/homeworkPose'
 import { addLessonHold, addLessonNote, endLessonSession } from '../../lib/lessonStore'
 import { DEFAULT_FORM_STANDARD } from '../../lib/storage'
 import type { Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
+import { CollapsibleSection } from '../CollapsibleSection'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
+import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
 import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { rememberTypedHold } from '../../lib/typedHolds'
@@ -168,9 +170,11 @@ export function LessonWorkspace({
       </section>
 
       {plan && plan.blocks.length > 0 && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <h3 className="font-semibold">Plan</h3>
-          <ol className="mt-2 flex flex-col gap-2">
+        <CollapsibleSection
+          title="View lesson plan"
+          hint={`${plan.blocks.length} block${plan.blocks.length === 1 ? '' : 's'} · ${plan.title}`}
+        >
+          <ol className="flex flex-col gap-2">
             {plan.blocks.map((b, i) => (
               <li
                 key={b.id}
@@ -210,12 +214,14 @@ export function LessonWorkspace({
               </li>
             ))}
           </ol>
-        </section>
+        </CollapsibleSection>
       )}
 
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-        <h3 className="font-semibold">Hold stopwatch</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+      <CollapsibleSection
+        title="Stopwatch / holds"
+        hint="Start the clock when they go. Log the time when they come down."
+      >
+        <p className="text-sm text-[var(--muted)]">
           The clock does not wait for the camera. Pick the body position, tap Start
           when they go, Stop when they come down, then log it. If you want live
           analysis, turn the camera on — it grades the shape you selected.
@@ -355,11 +361,13 @@ export function LessonWorkspace({
             </button>
           </div>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-        <h3 className="font-semibold">Notes by skill</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+      <CollapsibleSection
+        title="Notes"
+        hint={`File what ${athleteName} should remember, grouped by skill.`}
+      >
+        <p className="text-sm text-[var(--muted)]">
           One note per thought is fine. File each on the shape or sequence so {athleteName}{' '}
           can find “remember this” next to that skill.
         </p>
@@ -374,14 +382,27 @@ export function LessonWorkspace({
             }}
           />
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-        <h3 className="font-semibold">This lesson, organized</h3>
+      <CollapsibleSection
+        title="Assign homework"
+        hint="Add a drill they will see under Practice → Homework."
+      >
+        <AssignHomeworkBar athleteId={session.athleteId} hideHeading />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Recap of lessons"
+        hint={
+          grouped.length === 0
+            ? 'Nothing filed yet this lesson'
+            : `${grouped.length} skill${grouped.length === 1 ? '' : 's'} with notes or holds`
+        }
+      >
         {grouped.length === 0 ? (
-          <p className="mt-2 text-sm text-[var(--muted)]">Nothing filed yet.</p>
+          <p className="text-sm text-[var(--muted)]">Nothing filed yet.</p>
         ) : (
-          <div className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {grouped.map((g) => (
               <div key={g.key} className="rounded-lg bg-[#121820] px-3 py-2">
                 <p className="text-sm font-semibold">{g.label}</p>
@@ -400,22 +421,28 @@ export function LessonWorkspace({
             ))}
           </div>
         )}
-      </section>
+      </CollapsibleSection>
 
-      <VideoLibraryPanel
-        athleteId={session.athleteId}
-        athleteName={athleteName}
-        refreshKey={tick}
-        folder="lesson"
-        lessonId={session.id}
-      />
-      <button
-        type="button"
-        className="text-left text-xs text-[var(--muted)] underline"
-        onClick={() => setTick((n) => n + 1)}
+      <CollapsibleSection
+        title="Video library"
+        hint="Lesson clips saved from delay cam and Compare."
       >
-        Refresh videos
-      </button>
+        <VideoLibraryPanel
+          athleteId={session.athleteId}
+          athleteName={athleteName}
+          refreshKey={tick}
+          folder="lesson"
+          lessonId={session.id}
+          embedded
+        />
+        <button
+          type="button"
+          className="mt-2 text-left text-xs text-[var(--muted)] underline"
+          onClick={() => setTick((n) => n + 1)}
+        >
+          Refresh videos
+        </button>
+      </CollapsibleSection>
     </div>
   )
 }

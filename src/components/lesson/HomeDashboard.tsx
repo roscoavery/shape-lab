@@ -8,6 +8,7 @@ import {
   subscribeLessons,
 } from '../../lib/lessonStore'
 import type { Athlete, LessonPlan, LessonSession } from '../../types'
+import { CollapsibleSection } from '../CollapsibleSection'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 
@@ -90,9 +91,11 @@ export function HomeDashboard({
           </p>
         </section>
         {myPlans.length > 0 && (
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-            <h3 className="font-semibold">Coming up</h3>
-            <ul className="mt-2 flex flex-col gap-2">
+          <CollapsibleSection
+            title="View lesson plan"
+            hint={`${myPlans.length} plan${myPlans.length === 1 ? '' : 's'} on the board`}
+          >
+            <ul className="flex flex-col gap-2">
               {myPlans.map((p) => (
                 <li key={p.id} className="rounded-lg bg-[#121820] px-3 py-2 text-sm">
                   <p className="font-medium">{p.title}</p>
@@ -100,13 +103,13 @@ export function HomeDashboard({
                 </li>
               ))}
             </ul>
-          </section>
+          </CollapsibleSection>
         )}
         <LessonReviewList
           sessions={mine}
           athletes={athletes}
           canEdit={false}
-          title="Your lessons"
+          title="Recap of lessons"
           emptyText="No lessons saved yet. After a coach ends a lesson, notes and videos show here."
           onChanged={() => setRefresh((n) => n + 1)}
         />
@@ -221,7 +224,7 @@ export function HomeDashboard({
         sessions={sessionsForCoach(signedIn.id)}
         athletes={athletes}
         canEdit
-        title="Recent lessons"
+        title="Recap of lessons"
         emptyText="When you end a lesson, it lands here — notes, videos, more notes, and homework."
         onChanged={() => setRefresh((n) => n + 1)}
       />

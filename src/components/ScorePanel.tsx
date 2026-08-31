@@ -1,5 +1,6 @@
 import type { ScoreResult, ShapeDef } from '../types'
 import { formatSeconds } from '../hooks/useHoldTimer'
+import { CollapsibleSection } from './CollapsibleSection'
 import { ViewCallout } from './ViewCallout'
 
 function scoreColor(score: number): string {
@@ -18,6 +19,8 @@ type Props = {
   onResetTimer: () => void
   onSave: () => void
   canSave: boolean
+  /** Homework: keep the long grading copy closed until they ask. */
+  collapseWhatWeGrade?: boolean
 }
 
 export function ScorePanel({
@@ -29,18 +32,62 @@ export function ScorePanel({
   onResetTimer,
   onSave,
   canSave,
+  collapseWhatWeGrade = false,
 }: Props) {
   const inQuality = score.holdReady ?? score.overall >= qualityThreshold
+  const visibleCriteria = score.criteria.filter((c) => !c.id.startsWith('_'))
+  const gradeBody = (
+    <>
+      {shape.bodyPosition && (
+        <p className="text-sm leading-snug">{shape.bodyPosition}</p>
+      )}
+      {visibleCriteria.length > 0 && (
+        <div className="mt-3 grid gap-2">
+          {visibleCriteria.map((c) => (
+            <div key={c.id} className="grid grid-cols-[1fr_auto] items-center gap-2">
+              <div>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span>{c.label}</span>
+                  <span className="tabular-nums font-semibold" style={{ color: scoreColor(c.score) }}>
+                    {c.score}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded bg-[#0d1218]">
+                  <div
+                    className="h-full rounded transition-[width] duration-150"
+                    style={{
+                      width: `${c.score}%`,
+                      background: scoreColor(c.score),
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-      {shape.bodyPosition && (
-        <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm leading-snug">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Body position (what we grade)
-          </p>
-          <p>{shape.bodyPosition}</p>
-        </div>
+      {collapseWhatWeGrade ? (
+        <CollapsibleSection
+          inset
+          title="What we grade"
+          hint="Body position and form criteria"
+        >
+          {gradeBody}
+        </CollapsibleSection>
+      ) : (
+        shape.bodyPosition && (
+          <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm leading-snug">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Body position (what we grade)
+            </p>
+            <p>{shape.bodyPosition}</p>
+          </div>
+        )
       )}
       <ViewCallout shape={shape} score={score} />
       <div className="flex items-end justify-between gap-3">
@@ -82,29 +129,31 @@ export function ScorePanel({
         </div>
       )}
 
-      <div className="grid gap-2">
-        {score.criteria.map((c) => (
-          <div key={c.id} className="grid grid-cols-[1fr_auto] items-center gap-2">
-            <div>
-              <div className="flex items-center justify-between gap-2 text-sm">
-                <span>{c.label}</span>
-                <span className="tabular-nums font-semibold" style={{ color: scoreColor(c.score) }}>
-                  {c.score}
-                </span>
-              </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded bg-[#0d1218]">
-                <div
-                  className="h-full rounded transition-[width] duration-150"
-                  style={{
-                    width: `${c.score}%`,
-                    background: scoreColor(c.score),
-                  }}
-                />
+      {!collapseWhatWeGrade && (
+        <div className="grid gap-2">
+          {score.criteria.map((c) => (
+            <div key={c.id} className="grid grid-cols-[1fr_auto] items-center gap-2">
+              <div>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span>{c.label}</span>
+                  <span className="tabular-nums font-semibold" style={{ color: scoreColor(c.score) }}>
+                    {c.score}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded bg-[#0d1218]">
+                  <div
+                    className="h-full rounded transition-[width] duration-150"
+                    style={{
+                      width: `${c.score}%`,
+                      background: scoreColor(c.score),
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
         <div>

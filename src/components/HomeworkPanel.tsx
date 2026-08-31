@@ -41,6 +41,7 @@ import {
   homeworkTitle,
   isCustomHomework,
 } from '../lib/homeworkLabel'
+import { CollapsibleSection } from './CollapsibleSection'
 import { pickCoachStill } from '../lib/shippedRefs'
 import type {
   HomeworkBreakdown,
@@ -90,6 +91,148 @@ function todayInputValue(): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+function lastHoldSeconds(
+  logs: HomeworkLog[],
+  side?: 'left' | 'right',
+): number | null {
+  const pool = side ? logs.filter((l) => l.side === side) : logs
+  return pool[0]?.totalHoldSeconds ?? null
+}
+
+function bestHoldSeconds(logs: HomeworkLog[], side?: 'left' | 'right'): number {
+  const pool = side ? logs.filter((l) => l.side === side) : logs
+  return pool.reduce((best, log) => Math.max(best, log.totalHoldSeconds), 0)
+}
+
+function beatNote(seconds: number, last: number | null): string {
+  if (last == null) return ' — first logged hold for this drill'
+  if (seconds > last) return ` — beat last time (${formatSeconds(last)})`
+  if (seconds === last) return ' — matched last time'
+  return ` — last time was ${formatSeconds(last)}`
+}
+
+function TimeToBeatBanner({
+  seconds,
+  sideLabel,
+}: {
+  seconds: number | null
+  sideLabel?: string
+}) {
+  if (seconds == null) {
+    return (
+      <p className="rounded-md bg-[#1a2218] px-2.5 py-2 text-xs text-[var(--muted)]">
+        First hold on this drill — this time becomes the mark to beat.
+      </p>
+    )
+  }
+  return (
+    <div className="rounded-md border border-[var(--warn)]/45 bg-[#2a2312] px-2.5 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--warn)]">
+        Time to beat{sideLabel ? ` · ${sideLabel}` : ''}
+      </p>
+      <p className="text-2xl font-black tabular-nums leading-tight text-[var(--warn)]">
+        {formatSeconds(seconds)}
+      </p>
+      <p className="text-[11px] text-[var(--muted)]">from last time</p>
+    </div>
+  )
+}
+
+function HoldTimesBoard({
+  logs,
+  isPlank,
+}: {
+  logs: HomeworkLog[]
+  isPlank: boolean
+}) {
+  const last = lastHoldSeconds(logs)
+  const best = bestHoldSeconds(logs)
+  const bestLeft = isPlank ? bestHoldSeconds(logs, 'left') : 0
+  const bestRight = isPlank ? bestHoldSeconds(logs, 'right') : 0
+  const lastLeft = isPlank ? lastHoldSeconds(logs, 'left') : null
+  const lastRight = isPlank ? lastHoldSeconds(logs, 'right') : null
+
+  return (
+    <div className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#0d1614] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+        Your hold times
+      </p>
+      {logs.length === 0 ? (
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Nothing logged yet. After you log a hold, it shows here with a time to
+          beat for next time.
+        </p>
+      ) : (
+        <>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                Time to beat
+              </p>
+              <p className="text-2xl font-black tabular-nums text-[var(--warn)]">
+                {formatSeconds(last ?? 0)}
+              </p>
+              <p className="text-[11px] text-[var(--muted)]">Last session</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                Best
+              </p>
+              <p className="text-2xl font-black tabular-nums text-[var(--accent)]">
+                {formatSeconds(best)}
+              </p>
+              <p className="text-[11px] text-[var(--muted)]">
+                {logs.length} session{logs.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            {isPlank && (
+              <div className="col-span-2 sm:col-span-1">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                  Left · Right
+                </p>
+                <p className="text-sm font-semibold tabular-nums text-[var(--text)]">
+                  Best {formatSeconds(bestLeft)} · {formatSeconds(bestRight)}
+                </p>
+                <p className="text-[11px] text-[var(--muted)]">
+                  Beat {lastLeft != null ? formatSeconds(lastLeft) : '—'} ·{' '}
+                  {lastRight != null ? formatSeconds(lastRight) : '—'}
+                </p>
+              </div>
+            )}
+          </div>
+          <ul className="mt-3 divide-y divide-[var(--panel-border)] border-t border-[var(--panel-border)]">
+            {logs.slice(0, 8).map((log) => {
+              const proper = logProperHoldSeconds(log)
+              const isManual = log.method === 'manual'
+              return (
+                <li key={log.id} className="flex flex-wrap items-baseline justify-between gap-2 py-1.5">
+                  <span className="text-[12px] text-[var(--muted)]">
+                    {new Date(log.date).toLocaleString()}
+                    {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
+                    {isManual && (
+                      <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
+                        stopwatch
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-[var(--text)]">
+                    {formatSeconds(log.totalHoldSeconds)}
+                    {!isManual && proper != null ? (
+                      <span className="ml-1.5 text-[11px] font-normal text-[var(--muted)]">
+                        proper {formatSeconds(proper)}
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  )
 }
 
 /** Tiny proper-hold trend over the last camera sessions (chronological). */
@@ -245,6 +388,9 @@ export function HomeworkPanel({
 
   const visibleItems = useMemo(() => dedupeHomeworkItems(items), [items])
 
+  const watchLogItem =
+    visibleItems.find((item) => item.id === manualItemId) ?? visibleItems[0] ?? null
+
   const logsByItem = useMemo(() => {
     const map = new Map<string, HomeworkLog[]>()
     for (const l of logs) {
@@ -364,8 +510,12 @@ export function HomeworkPanel({
     setLogs((prev) => [log, ...prev])
     resetSession()
     const shapeName = homeworkTitle(activeItem)
+    const prior = lastHoldSeconds(
+      (logsByItem.get(activeItem.id) ?? []).filter((row) => row.id !== log.id),
+      isPlank && plankSide !== 'both' ? plankSide : undefined,
+    )
     showFlash(
-      `Logged ${shapeName} — proper ${formatSeconds(log.properHoldSeconds ?? 0)}`,
+      `Logged ${shapeName} — ${formatSeconds(log.totalHoldSeconds)}${beatNote(log.totalHoldSeconds, prior)}`,
     )
   }
 
@@ -449,8 +599,12 @@ export function HomeworkPanel({
       [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
     )
     setManualItemId(null)
+    const prior = lastHoldSeconds(
+      (logsByItem.get(item.id) ?? []).filter((row) => row.id !== log.id),
+      isPlank && manualSide !== 'both' ? manualSide : undefined,
+    )
     const shapeName = homeworkTitle(item)
-    showFlash(`Manually logged ${shapeName} — ${formatSeconds(secs)}`)
+    showFlash(`Logged ${shapeName} — ${formatSeconds(secs)}${beatNote(secs, prior)}`)
   }
 
   const changeStandard = (item: HomeworkItem, value: string) => {
@@ -552,7 +706,7 @@ export function HomeworkPanel({
           Homework
         </p>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Drill library &amp; lifetime progress
+          Track your hold time and measure your progress!
         </h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
           Camera train starts the timer when you actually hit the shape. Voice stays
@@ -567,6 +721,14 @@ export function HomeworkPanel({
         <p className="mt-1 text-3xl font-black tabular-nums text-[var(--text)]">
           {formatSeconds(watchMs / 1000)}
         </p>
+        {watchLogItem && (
+          <div className="mt-2">
+            <TimeToBeatBanner
+              seconds={lastHoldSeconds(logsByItem.get(watchLogItem.id) ?? [])}
+              sideLabel={homeworkTitle(watchLogItem)}
+            />
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap gap-2">
           {!watchRunning ? (
             <button
@@ -648,6 +810,21 @@ export function HomeworkPanel({
                   : 'Allow the camera if Safari asks'
                 : 'Switching camera to this shape…'}
             </p>
+          </div>
+          <div className="mb-2">
+            <TimeToBeatBanner
+              seconds={lastHoldSeconds(
+                logsByItem.get(activeItem.id) ?? [],
+                activeItem.shapeId === 'side_plank' && plankSide !== 'both'
+                  ? plankSide
+                  : undefined,
+              )}
+              sideLabel={
+                activeItem.shapeId === 'side_plank' && plankSide !== 'both'
+                  ? plankSide
+                  : undefined
+              }
+            />
           </div>
           <div className="mb-2 grid grid-cols-3 gap-2 text-sm">
             <div>
@@ -738,11 +915,34 @@ export function HomeworkPanel({
                 emptyLabel={`No coach still for ${activeShape.name} yet`}
                 imgClass="max-h-48 w-full object-contain"
               />
-              {activeShape.bodyPosition && (
-                <p className="px-2 py-1.5 text-[11px] leading-snug text-[var(--text)]">
-                  {activeShape.bodyPosition}
-                </p>
-              )}
+            </div>
+          )}
+          {(activeShape.bodyPosition || score.criteria.length > 0) && (
+            <div className="mb-2">
+              <CollapsibleSection
+                inset
+                title="What we grade"
+                hint="Body position and form criteria"
+              >
+                {activeShape.bodyPosition && (
+                  <p className="text-sm leading-relaxed">{activeShape.bodyPosition}</p>
+                )}
+                {score.criteria.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {score.criteria
+                      .filter((c) => !c.id.startsWith('_'))
+                      .map((c) => (
+                        <li
+                          key={c.id}
+                          className="flex items-baseline justify-between gap-2 text-sm"
+                        >
+                          <span>{c.label}</span>
+                          <span className="tabular-nums font-semibold">{c.score}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </CollapsibleSection>
             </div>
           )}
           {activeItem.shapeId === 'side_plank' && (
@@ -805,14 +1005,7 @@ export function HomeworkPanel({
           const readyToLevelUp =
             hollowStage1 && bestProper >= HOLLOW_PROGRESS_TARGET_SECONDS
           const isPlank = item.shapeId === 'side_plank'
-          const bestSide = (side: 'left' | 'right') =>
-            itemLogs
-              .filter((l) => l.side === side)
-              .map((l) => logProperHoldSeconds(l))
-              .filter((v): v is number => v !== null)
-              .reduce((b, v) => Math.max(b, v), 0)
-          const bestLeft = isPlank ? bestSide('left') : 0
-          const bestRight = isPlank ? bestSide('right') : 0
+          const lastBeat = lastHoldSeconds(itemLogs)
           const trendValues = itemLogs
             .filter((l) => logProperHoldSeconds(l) !== null)
             .slice(0, 10)
@@ -849,6 +1042,11 @@ export function HomeworkPanel({
                   >
                     form ≥{formStandardFor(item)}
                   </span>
+                  {lastBeat != null && (
+                    <span className="rounded bg-[#2a2312] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--warn)]">
+                      beat {formatSeconds(lastBeat)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {!isCustomHomework(item) && <button
@@ -879,6 +1077,13 @@ export function HomeworkPanel({
                 </div>
               </div>
 
+              <HoldTimesBoard logs={itemLogs} isPlank={isPlank} />
+              {trendValues.length >= 2 && (
+                <div className="mt-1 flex justify-end">
+                  <Sparkline values={trendValues} target={item.targetSeconds} />
+                </div>
+              )}
+
               {!isHollowAuto && pickCoachStill(referencePhotos, item.shapeId) && (
                 <div className="mt-2 overflow-hidden rounded-md bg-[#0d1218]">
                   <CoachStillGallery
@@ -893,6 +1098,14 @@ export function HomeworkPanel({
               {/* Manual log form (secondary flow) */}
               {manualOpen && (
                 <div className="mt-2 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
+                  <div className="mb-2">
+                    <TimeToBeatBanner
+                      seconds={lastBeat}
+                      sideLabel={
+                        isPlank && manualSide !== 'both' ? manualSide : undefined
+                      }
+                    />
+                  </div>
                   <p className="mb-1.5 text-[11px] text-[var(--muted)]">
                     Manual entry — no form check, only total time. Use the
                     camera when you can for proper-hold tracking.
@@ -1021,72 +1234,6 @@ export function HomeworkPanel({
                 <p className="mt-1 text-[11px] text-[var(--muted)]">
                   {item.notes}
                 </p>
-              )}
-
-              {/* Progress over time (proper hold) */}
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--panel-border)] pt-2 text-xs text-[var(--muted)]">
-                <div>
-                  <span className="text-[10px] uppercase">Best proper </span>
-                  <span className="font-semibold text-[var(--accent)]">
-                    {formatSeconds(bestProper)}
-                  </span>
-                  {isPlank && (bestLeft > 0 || bestRight > 0) && (
-                    <span className="ml-2">
-                      L {formatSeconds(bestLeft)} · R {formatSeconds(bestRight)}
-                    </span>
-                  )}
-                  <span className="ml-2 text-[10px] uppercase">
-                    {itemLogs.length} session{itemLogs.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <Sparkline values={trendValues} target={item.targetSeconds} />
-              </div>
-              {itemLogs.length > 0 && (
-                <ul className="mt-1 space-y-0.5">
-                  {itemLogs.slice(0, 5).map((l) => {
-                    const proper = logProperHoldSeconds(l)
-                    const isManual = l.method === 'manual'
-                    return (
-                      <li key={l.id} className="text-[11px] text-[var(--muted)]">
-                        <div className="flex justify-between gap-2">
-                          <span>
-                            {new Date(l.date).toLocaleString()}
-                            {l.side ? ` · ${l.side === 'left' ? 'L' : 'R'}` : ''}
-                            {isManual && (
-                              <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
-                                manual
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[var(--text)]">
-                            {isManual
-                              ? `${formatSeconds(l.totalHoldSeconds)} total`
-                              : `${l.score} · P ${formatSeconds(proper ?? 0)} / ${formatSeconds(l.totalHoldSeconds)}`}
-                          </span>
-                        </div>
-                        {l.breakdowns && l.breakdowns.length > 0 && (
-                          <details className="ml-2">
-                            <summary className="cursor-pointer text-[10px] text-[var(--warn)]">
-                              {l.breakdowns.length} form break
-                              {l.breakdowns.length === 1 ? '' : 's'}
-                            </summary>
-                            <ul className="ml-2 mt-0.5 space-y-px">
-                              {l.breakdowns.map((b, i) => (
-                                <li key={i} className="text-[10px]">
-                                  <span className="tabular-nums text-[var(--text)]">
-                                    {formatSeconds(b.atSeconds)}
-                                  </span>{' '}
-                                  — {b.criterionLabel}
-                                  {b.feedback ? `: ${b.feedback}` : ''}
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
               )}
             </div>
           )

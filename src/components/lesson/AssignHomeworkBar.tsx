@@ -11,9 +11,16 @@ type Props = {
   defaultShapeId?: string
   defaultNotes?: string
   defaultTyped?: string
+  hideHeading?: boolean
 }
 
-export function AssignHomeworkBar({ athleteId, defaultShapeId, defaultNotes, defaultTyped }: Props) {
+export function AssignHomeworkBar({
+  athleteId,
+  defaultShapeId,
+  defaultNotes,
+  defaultTyped,
+  hideHeading = false,
+}: Props) {
   const [shapeId, setShapeId] = useState(defaultShapeId ?? '')
   const [typed, setTyped] = useState(defaultTyped ?? '')
   const [notes, setNotes] = useState(defaultNotes ?? '')
@@ -58,11 +65,13 @@ export function AssignHomeworkBar({ athleteId, defaultShapeId, defaultNotes, def
   }
 
   return (
-    <div className="rounded-lg bg-[#0d1218] px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        Assign homework
-      </p>
-      <div className="mt-2 flex flex-col gap-2">
+    <div className={hideHeading ? '' : 'rounded-lg bg-[#0d1218] px-3 py-2'}>
+      {!hideHeading && (
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+          Assign homework
+        </p>
+      )}
+      <div className={hideHeading ? 'flex flex-col gap-2' : 'mt-2 flex flex-col gap-2'}>
         <select
           className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
           value={shapeId}

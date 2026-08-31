@@ -26,6 +26,8 @@ type Props = {
   coachId?: string | null
   coachName?: string | null
   canSaveReference?: boolean
+  /** Skip the outer heading — parent already titled this block. */
+  embedded?: boolean
 }
 
 async function copyToCoachMedia(src: string, ownerId: string, name: string): Promise<string> {
@@ -49,6 +51,7 @@ export function VideoLibraryPanel({
   coachId = null,
   coachName = null,
   canSaveReference = false,
+  embedded = false,
 }: Props) {
   const [videos, setVideos] = useState<AthleteVideo[]>([])
   const [playing, setPlaying] = useState<string | null>(null)
@@ -66,6 +69,13 @@ export function VideoLibraryPanel({
   }, [athleteId, refreshKey])
 
   if (!athleteId) {
+    const empty = (
+      <p className="text-sm text-[var(--muted)]">
+        Unlock a profile to see clips saved from lessons, Compare, homework, and
+        class flows.
+      </p>
+    )
+    if (embedded) return empty
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
         <h3 className="text-lg font-semibold">Video library</h3>
@@ -87,15 +97,27 @@ export function VideoLibraryPanel({
   const groups = groupVideosByDate(filtered)
   const showSave = Boolean(canSaveReference && coachId && coachName)
 
-  return (
-    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-      <h3 className="text-lg font-semibold">Video library</h3>
-      <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-        {athleteName ? `${athleteName} · ` : ''}
-        {folder === 'lesson'
-          ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
-          : 'Saved into this profile. Grouped by date.'}
-      </p>
+  const body = (
+    <>
+      {!embedded && (
+        <>
+          <h3 className="text-lg font-semibold">Video library</h3>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+            {athleteName ? `${athleteName} · ` : ''}
+            {folder === 'lesson'
+              ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
+              : 'Saved into this profile. Grouped by date.'}
+          </p>
+        </>
+      )}
+      {embedded && (
+        <p className="text-sm leading-relaxed text-[var(--muted)]">
+          {athleteName ? `${athleteName} · ` : ''}
+          {folder === 'lesson'
+            ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
+            : 'Saved into this profile. Grouped by date.'}
+        </p>
+      )}
       {error && (
         <p className="mt-2 text-[12px] text-[var(--bad)]">{error}</p>
       )}
@@ -224,6 +246,13 @@ export function VideoLibraryPanel({
           ))}
         </div>
       )}
+    </>
+  )
+
+  if (embedded) return body
+  return (
+    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+      {body}
     </section>
   )
 }

@@ -682,12 +682,34 @@ export default function App() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
           <div className="order-2 flex flex-col gap-3 lg:order-1">
             <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
-              <AthletePanel
-                athletes={athletes}
-                activeId={activeAthleteId}
-                onChangeAthletes={setAthleteRoster}
-                onSelect={requestSelectAthlete}
-              />
+              {activeAthleteId ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
+                  <p className="text-sm text-[var(--text)]">
+                    Signed in as{' '}
+                    <strong>
+                      {athletes.find((a) => a.id === activeAthleteId)?.name ?? 'athlete'}
+                    </strong>
+                    <span className="text-[var(--muted)]">
+                      {' '}
+                      — holds you log stay on this profile
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => requestSelectAthlete(null)}
+                    className="text-xs text-[var(--muted)] underline"
+                  >
+                    Switch profile
+                  </button>
+                </div>
+              ) : (
+                <AthletePanel
+                  athletes={athletes}
+                  activeId={activeAthleteId}
+                  onChangeAthletes={setAthleteRoster}
+                  onSelect={requestSelectAthlete}
+                />
+              )}
               <HomeworkPanel
                 athleteId={activeAthleteId}
                 score={score}
@@ -730,6 +752,7 @@ export default function App() {
               onResetTimer={hold.reset}
               onSave={saveAttempt}
               canSave={Boolean(activeAthleteId)}
+              collapseWhatWeGrade
             />
           </div>
         </div>
