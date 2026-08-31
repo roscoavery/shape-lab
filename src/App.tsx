@@ -115,6 +115,7 @@ export default function App() {
   })
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [compareFullTick, setCompareFullTick] = useState(0)
+  const [hwStudio, setHwStudio] = useState(false)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -281,6 +282,7 @@ export default function App() {
     saveTab(tab)
     if (tab === 'compare') setCompareOpened(true)
     if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
+    if (tab !== 'homework') setHwStudio(false)
   }, [tab])
 
   useEffect(() => {
@@ -677,82 +679,81 @@ export default function App() {
       )}
 
       {tab === 'homework' && (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
-          <div className="order-2 flex flex-col gap-3 lg:order-1">
-            <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
-              {activeAthleteId ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
-                  <p className="text-sm text-[var(--text)]">
-                    Signed in as{' '}
-                    <strong>
-                      {athletes.find((a) => a.id === activeAthleteId)?.name ?? 'athlete'}
-                    </strong>
-                    <span className="text-[var(--muted)]">
-                      {' '}
-                      — holds you log stay on this profile
-                    </span>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => requestSelectAthlete(null)}
-                    className="text-xs text-[var(--muted)] underline"
-                  >
-                    Switch profile
-                  </button>
-                </div>
-              ) : (
-                <AthletePanel
-                  athletes={athletes}
-                  activeId={activeAthleteId}
-                  onChangeAthletes={setAthleteRoster}
-                  onSelect={requestSelectAthlete}
-                />
-              )}
-              <HomeworkPanel
-                athleteId={activeAthleteId}
-                score={score}
-                currentShapeId={shape.id}
-                onRequestShape={onJumpToShape}
-                timingActive={timingActive}
-                voiceEnabled={settings.voiceEnabled}
-                referencePhotos={referencePhotos}
-                landmarks={activeLandmarks}
-                onEnsureCamera={() => camera.start()}
-              />
-            </div>
-          </div>
-
-          <div className="order-1 flex flex-col gap-3 lg:order-2 lg:sticky lg:top-3">
-            <CameraStage
-              videoRef={camera.videoRef}
-              canvasRef={camera.canvasRef}
-              landmarks={activeLandmarks}
-              mirror={settings.mirrorVideo}
-              showAngles={settings.showAngles}
-              running={camera.running}
-              shape={shape}
-              score={score}
-              compact
-            />
-            {cameraControls}
-            <StillOverlayPicker photos={referencePhotos} compact />
-            {camera.error && (
-              <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
-                {camera.error}
+        <div className="flex flex-col gap-3">
+          {!hwStudio && activeAthleteId ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
+              <p className="text-sm text-[var(--text)]">
+                Signed in as{' '}
+                <strong>
+                  {athletes.find((a) => a.id === activeAthleteId)?.name ?? 'athlete'}
+                </strong>
+                <span className="text-[var(--muted)]">
+                  {' '}
+                  — holds you log stay on this profile
+                </span>
               </p>
-            )}
-            <ScorePanel
-              shape={shape}
-              score={score}
-              qualityThreshold={qualityThreshold}
-              totalHoldSeconds={hold.totalHoldSeconds}
-              qualityHoldSeconds={hold.qualityHoldSeconds}
-              onResetTimer={hold.reset}
-              onSave={saveAttempt}
-              canSave={Boolean(activeAthleteId)}
-              collapseWhatWeGrade
+              <button
+                type="button"
+                onClick={() => requestSelectAthlete(null)}
+                className="text-xs text-[var(--muted)] underline"
+              >
+                Switch profile
+              </button>
+            </div>
+          ) : null}
+          {!hwStudio && !activeAthleteId ? (
+            <AthletePanel
+              athletes={athletes}
+              activeId={activeAthleteId}
+              onChangeAthletes={setAthleteRoster}
+              onSelect={requestSelectAthlete}
             />
-          </div>
+          ) : null}
+          <HomeworkPanel
+            athleteId={activeAthleteId}
+            score={score}
+            currentShapeId={shape.id}
+            onRequestShape={onJumpToShape}
+            timingActive={timingActive}
+            voiceEnabled={settings.voiceEnabled}
+            referencePhotos={referencePhotos}
+            landmarks={activeLandmarks}
+            onEnsureCamera={() => camera.start()}
+            onStudioChange={setHwStudio}
+            camSlot={
+              hwStudio ? (
+                <div className="flex flex-col gap-3">
+                  <CameraStage
+                    videoRef={camera.videoRef}
+                    canvasRef={camera.canvasRef}
+                    landmarks={activeLandmarks}
+                    mirror={settings.mirrorVideo}
+                    showAngles={settings.showAngles}
+                    running={camera.running}
+                    shape={shape}
+                    score={score}
+                  />
+                  {cameraControls}
+                  {camera.error && (
+                    <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
+                      {camera.error}
+                    </p>
+                  )}
+                  <ScorePanel
+                    shape={shape}
+                    score={score}
+                    qualityThreshold={qualityThreshold}
+                    totalHoldSeconds={hold.totalHoldSeconds}
+                    qualityHoldSeconds={hold.qualityHoldSeconds}
+                    onResetTimer={hold.reset}
+                    onSave={saveAttempt}
+                    canSave={Boolean(activeAthleteId)}
+                    collapseWhatWeGrade
+                  />
+                </div>
+              ) : null
+            }
+          />
         </div>
       )}
 

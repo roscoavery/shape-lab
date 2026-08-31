@@ -14,7 +14,8 @@
  *    with method: 'manual' and shown with a badge (no proper-hold data).
  */
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { SEQUENCES } from '../config/sequences'
 import { allLibraryShapes, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
@@ -86,6 +87,9 @@ type Props = {
   referencePhotos: ReferencePhoto[]
   landmarks?: Landmark[] | null
   onEnsureCamera?: () => void | Promise<void>
+  /** Practice camera + score, shown only while a train studio is open. */
+  camSlot?: ReactNode
+  onStudioChange?: (open: boolean) => void
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -443,6 +447,44 @@ function SequenceHomeworkSteps({ item }: { item: HomeworkItem }) {
   )
 }
 
+function HwOverlay({
+  eyebrow,
+  title,
+  onDone,
+  children,
+  wide = false,
+}: {
+  eyebrow: string
+  title: string
+  onDone: () => void
+  children: ReactNode
+  wide?: boolean
+}) {
+  return createPortal(
+    <div className="fixed inset-0 z-[240] flex h-[100dvh] w-screen flex-col bg-[#0b0f14]">
+      <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 pb-2 pt-[max(0.7rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-full bg-white/12 px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-white/20"
+        >
+          Done
+        </button>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6ee7f0]/85">
+            {eyebrow}
+          </p>
+          <p className="truncate text-sm text-white/65">{title}</p>
+        </div>
+      </header>
+      <div className={`min-h-0 flex-1 ${wide ? 'overflow-hidden px-3 py-3' : 'overflow-y-auto px-3 py-3'}`}>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function HomeworkPanel({
   athleteId,
   score,
@@ -453,6 +495,8 @@ export function HomeworkPanel({
   referencePhotos,
   landmarks = null,
   onEnsureCamera,
+  camSlot = null,
+  onStudioChange,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -478,6 +522,7 @@ export function HomeworkPanel({
   const [watchMs, setWatchMs] = useState(0)
   const [watchOffer, setWatchOffer] = useState<number | null>(null)
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
+  const [hwPage, setHwPage] = useState<'home' | 'pick' | 'watch' | 'add'>('home')
   const watchStartRef = useRef<number | null>(null)
   const watchAccRef = useRef(0)
 
@@ -528,6 +573,25 @@ export function HomeworkPanel({
     }
   }, [athleteId])
 
+  useEffect(() => {
+    const open = hwPage !== 'home' || Boolean(activeItemId)
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (activeItemId) stopItem()
+      else setHwPage('home')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+    // stopItem is stable enough for Escape
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hwPage, activeItemId])
+
   const libraryShapes = useMemo(
     () => allLibraryShapes().slice().sort((a, b) => a.name.localeCompare(b.name)),
     [libTick],
@@ -541,6 +605,10 @@ export function HomeworkPanel({
     () => visibleItems.filter((item) => item.source !== 'coach'),
     [visibleItems],
   )
+  const nextTrainItem =
+    fromCoach.find((item) => !isCustomHomework(item)) ??
+    visibleItems.find((item) => !isCustomHomework(item)) ??
+    null
 
   const watchLogItem =
     visibleItems.find((item) => item.id === manualItemId) ?? visibleItems[0] ?? null
@@ -648,6 +716,8 @@ export function HomeworkPanel({
     setOpenIds((prev) => new Set(prev).add(item.id))
     setActiveItemId(item.id)
     setManualItemId(null)
+    setHwPage('home')
+    onStudioChange?.(true)
     const seq = getHomeworkSequence(item)
     const drill = getHomeworkDrill(item)
     const cameraId =
@@ -663,6 +733,8 @@ export function HomeworkPanel({
   const stopItem = () => {
     setActiveItemId(null)
     resetSpeech()
+    onStudioChange?.(false)
+    setHwPage('home')
   }
 
   const logSession = () => {
@@ -904,27 +976,91 @@ export function HomeworkPanel({
     )
   }
 
+  const orderedDrills = fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems
+
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <div className="flex flex-col gap-3">
       <div>
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
           Homework
         </p>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Track your hold time and measure your progress!
+          Train a drill, then get out of the way
         </h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          Camera train starts the timer when you actually hit the shape. Voice stays
-          quiet until a real miss. Or use the stopwatch and log that time (or type one).
-        </p>
-        <p className="mt-2 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm leading-snug text-[var(--text)]">
-          Tap <strong>Train</strong> on a drill, allow the camera, and point it at
-          yourself. The clock starts when you hit the shape. Hold is the whole time;
-          proper is only the seconds at form standard.
-        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          disabled={!nextTrainItem}
+          onClick={() => nextTrainItem && startItem(nextTrainItem)}
+          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] disabled:opacity-50 sm:py-8"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+            Homework · Camera
+          </span>
+          <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+            Train now
+          </span>
+          <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+            {nextTrainItem
+              ? `${homeworkTitle(nextTrainItem)} — full screen, clock starts when you hit the shape.`
+              : 'Add a camera drill first.'}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setHwPage('pick')}
+          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#6ee7f0] via-[#22b8c9] to-[#0d4f5c] px-5 py-6 text-center shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#04262c]/70">
+            Homework · Library
+          </span>
+          <span className="mt-1 text-2xl font-bold tracking-tight text-[#04262c] sm:text-3xl">
+            Pick a drill
+          </span>
+          <span className="mt-2 max-w-lg text-sm font-medium text-[#04262c]/80">
+            {visibleItems.length} drill{visibleItems.length === 1 ? '' : 's'} — tap one to train full screen.
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setHwPage('watch')}
+          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] px-5 py-5 text-center shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+            No camera
+          </span>
+          <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+            Stopwatch
+          </span>
+          <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+            Time a hold, then log it to a drill.
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setHwPage('add')}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-4 text-center"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+            Your library
+          </span>
+          <span className="mt-1 block text-lg font-bold text-[var(--text)]">Add homework</span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
+            Make your own list — a shape, sequence, or drill.
+          </span>
+        </button>
       </div>
 
       <HomeworkProgressStrip items={visibleItems} logsByItem={logsByItem} />
+
+      {hwPage === 'watch' && (
+        <HwOverlay
+          eyebrow="Homework · Stopwatch"
+          title="Time a hold, then log it"
+          onDone={() => setHwPage('home')}
+        >
 
       <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -1005,9 +1141,21 @@ export function HomeworkPanel({
           </div>
         )}
       </div>
+        </HwOverlay>
+      )}
 
-      {/* Active camera session */}
       {activeItem && activeShape && (
+        <HwOverlay
+          eyebrow="Homework · Train"
+          title={activeShape.name}
+          onDone={stopItem}
+          wide
+        >
+          <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:flex-row">
+            {camSlot ? (
+              <div className="min-h-0 flex-1 overflow-y-auto">{camSlot}</div>
+            ) : null}
+            <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#102820] p-3">
           <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-semibold text-[var(--text)]">
@@ -1200,8 +1348,17 @@ export function HomeworkPanel({
             </button>
           </div>
         </div>
+            </div>
+          </div>
+        </HwOverlay>
       )}
 
+      {hwPage === 'pick' && (
+        <HwOverlay
+          eyebrow="Homework · Library"
+          title="Tap a drill to train full screen"
+          onDone={() => setHwPage('home')}
+        >
       {/* Homework items — coach assignments first so the athlete sees them */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -1238,7 +1395,7 @@ export function HomeworkPanel({
         </div>
       </div>
       <div className="space-y-2">
-        {(fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems).map((item) => {
+        {orderedDrills.map((item) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
           const properValues = itemLogs
@@ -1514,7 +1671,15 @@ export function HomeworkPanel({
           )
         })}
       </div>
+        </HwOverlay>
+      )}
 
+      {hwPage === 'add' && (
+        <HwOverlay
+          eyebrow="Homework · Add"
+          title="Make your own library"
+          onDone={() => setHwPage('home')}
+        >
       <CollapsibleSection inset title="Add homework" hint="Coach or athlete can add another drill">
       <div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -1619,6 +1784,8 @@ export function HomeworkPanel({
         />
       </div>
       </CollapsibleSection>
+        </HwOverlay>
+      )}
 
       {flash && (
         <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">

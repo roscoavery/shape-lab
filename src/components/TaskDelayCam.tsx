@@ -109,6 +109,7 @@ export function TaskDelayCam({
           className={`block w-full bg-black ${videoMax} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
           playsInline
           muted
+          disableRemotePlayback
         />
       )}
       {mode === 'live' && !pip && (

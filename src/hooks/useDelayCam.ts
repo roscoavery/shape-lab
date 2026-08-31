@@ -4,26 +4,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getDelayCameraPipeline, prepareDelayVideo } from '../lib/delayCameraPipeline'
 
 export const DELAY_MIN = 6
 export const DELAY_MAX = 20
 const TRIM_MARGIN = 8
-
-const MIME_CANDIDATES = [
-  'video/webm;codecs=vp8',
-  'video/webm;codecs=vp9',
-  'video/webm',
-  'video/mp4',
-]
-
-function pickDelayMime(): string | null {
-  if (typeof MediaRecorder === 'undefined' || typeof MediaSource === 'undefined') return null
-  return (
-    MIME_CANDIDATES.find(
-      (t) => MediaRecorder.isTypeSupported(t) && MediaSource.isTypeSupported(t),
-    ) ?? null
-  )
-}
 
 export function useDelayCam(stream: MediaStream | null, delaySec: number, enabled: boolean) {
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -39,6 +24,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   const rollingStartRef = useRef(0)
   const rollingMimeRef = useRef('video/webm')
   const rollingGenRef = useRef(0)
+  const rollingPumpRef = useRef(0)
   const flushWaiterRef = useRef<((blob: Blob | null) => void) | null>(null)
 
   const [buffering, setBuffering] = useState(false)
@@ -65,7 +51,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   const startRolling = useCallback(
     (live: MediaStream): Promise<boolean> => {
       return new Promise((resolve) => {
-        const mime = pickDelayMime()
+        const pipeline = getDelayCameraPipeline()
+        const mime = pipeline?.mime
         if (!mime) {
           resolve(false)
           return
@@ -75,6 +62,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           resolve(true)
           return
         }
+        window.clearInterval(rollingPumpRef.current)
         rollingMimeRef.current = mime
         rollingChunksRef.current = []
         rollingStartRef.current = performance.now()
@@ -112,6 +100,17 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         }
         try {
           rec.start(200)
+          if (pipeline.managed) {
+            rollingPumpRef.current = window.setInterval(() => {
+              if (rec.state === 'recording') {
+                try {
+                  rec.requestData()
+                } catch {
+                  /* iOS timeslice fallback */
+                }
+              }
+            }, 350)
+          }
         } catch (err) {
           rollingRecorderRef.current = null
           setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
@@ -125,6 +124,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   )
 
   const stopRolling = useCallback(() => {
+    window.clearInterval(rollingPumpRef.current)
     flushWaiterRef.current = null
     const rec = rollingRecorderRef.current
     rollingRecorderRef.current = null
@@ -232,23 +232,25 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
 
   const startDelay = useCallback(() => {
     const video = delayVideoRef.current
-    const mime = rollingMimeRef.current || pickDelayMime()
-    if (!video || !mime || typeof MediaSource === 'undefined' || !MediaSource.isTypeSupported(mime)) {
+    const pipeline = getDelayCameraPipeline(rollingMimeRef.current)
+    if (!video || !pipeline) {
       setError(
-        'Delay cam needs Chrome, Edge, or Firefox (MediaRecorder + MediaSource).',
+        'Delay cam needs a browser that can record and play the same video codec (Safari on iPhone, Chrome or Firefox on Android, or Chrome / Edge / Firefox on a computer).',
       )
       return
     }
     setError(null)
     setBuffering(true)
-    const ms = new MediaSource()
+    prepareDelayVideo(video)
+    const ms = new pipeline.Source()
     delayMediaSourceRef.current = ms
     const url = URL.createObjectURL(ms)
     delayUrlRef.current = url
     video.src = url
+    rollingMimeRef.current = pipeline.mime
     ms.addEventListener('sourceopen', () => {
       if (delayMediaSourceRef.current !== ms) return
-      const sb = ms.addSourceBuffer(mime)
+      const sb = ms.addSourceBuffer(pipeline.mime)
       delaySourceBufferRef.current = sb
       sb.addEventListener('updateend', pumpDelayQueue)
       void Promise.all(rollingChunksRef.current.map((b) => b.arrayBuffer())).then((bufs) => {

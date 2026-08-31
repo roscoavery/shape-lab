@@ -31,6 +31,11 @@ import { useCompareLayout } from './compareLayout'
 import { DelayCamHud, LiveBufferStart } from './DelayCamHud'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { uploadAthleteVideo } from '../../lib/athleteVideoStore'
+import {
+  getDelayCameraPipeline,
+  pickRecorderMime,
+  prepareDelayVideo,
+} from '../../lib/delayCameraPipeline'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -38,28 +43,6 @@ const DELAY_MIN = 6
 const DELAY_MAX = 20
 /** Extra seconds of MSE buffer kept behind the playhead before trimming. */
 const TRIM_MARGIN = 8
-
-const MIME_CANDIDATES = [
-  'video/mp4;codecs=avc1.42E01E',
-  'video/mp4',
-  'video/webm;codecs=vp8',
-  'video/webm;codecs=vp9',
-  'video/webm',
-]
-
-function pickRecorderMime(): string | null {
-  if (typeof MediaRecorder === 'undefined') return null
-  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null
-}
-
-function pickDelayMime(): string | null {
-  if (typeof MediaRecorder === 'undefined' || typeof MediaSource === 'undefined') return null
-  return (
-    MIME_CANDIDATES.find(
-      (t) => MediaRecorder.isTypeSupported(t) && MediaSource.isTypeSupported(t),
-    ) ?? null
-  )
-}
 
 type CameraPaneProps = {
   athleteId?: string | null
@@ -88,6 +71,7 @@ export function CameraPane({
   const delayMediaSourceRef = useRef<MediaSource | null>(null)
   const delayQueueRef = useRef<ArrayBuffer[]>([])
   const delayTimerRef = useRef<number>(0)
+  const rollingPumpRef = useRef(0)
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
@@ -197,10 +181,12 @@ export function CameraPane({
   const startRolling = useCallback(() => {
     const stream = streamRef.current
     if (!stream) return
-    const mime = pickDelayMime() ?? pickRecorderMime()
+    const pipeline = getDelayCameraPipeline()
+    const mime = pipeline?.mime ?? pickRecorderMime()
     if (!mime) return
     const existing = rollingRecorderRef.current
     if (existing && existing.state !== 'inactive') return
+    window.clearInterval(rollingPumpRef.current)
     rollingMimeRef.current = mime
     rollingChunksRef.current = []
     rollingStartRef.current = performance.now()
@@ -230,9 +216,21 @@ export function CameraPane({
       if (waiter) waiter(blob && blob.size > 500 ? blob : null)
     }
     rec.start(200)
+    if (pipeline?.managed) {
+      rollingPumpRef.current = window.setInterval(() => {
+        if (rec.state === 'recording') {
+          try {
+            rec.requestData()
+          } catch {
+            /* iOS timeslice fallback */
+          }
+        }
+      }, 350)
+    }
   }, [pumpDelayQueue])
 
   const stopRolling = useCallback(() => {
+    window.clearInterval(rollingPumpRef.current)
     flushWaiterRef.current = null
     const rec = rollingRecorderRef.current
     rollingRecorderRef.current = null
@@ -315,25 +313,27 @@ export function CameraPane({
   const startDelay = useCallback(() => {
     const video = delayVideoRef.current
     if (!video) return
-    const mime = rollingMimeRef.current || pickDelayMime()
-    if (!mime || typeof MediaSource === 'undefined' || !MediaSource.isTypeSupported(mime)) {
+    const pipeline = getDelayCameraPipeline(rollingMimeRef.current)
+    if (!pipeline) {
       setError(
-        'Delay cam is not supported in this browser (needs MediaRecorder + MediaSource with a shared codec — use Chrome, Edge, or Firefox).',
+        'Delay cam needs a browser that can record and play the same video codec (Safari on iPhone, Chrome or Firefox on Android, or Chrome / Edge / Firefox on a computer).',
       )
       return
     }
     setError(null)
     setDelayBuffering(true)
+    prepareDelayVideo(video)
 
-    const ms = new MediaSource()
+    const ms = new pipeline.Source()
     delayMediaSourceRef.current = ms
     const url = URL.createObjectURL(ms)
     delayUrlRef.current = url
     video.src = url
+    rollingMimeRef.current = pipeline.mime
 
     ms.addEventListener('sourceopen', () => {
       if (delayMediaSourceRef.current !== ms) return
-      const sb = ms.addSourceBuffer(mime)
+      const sb = ms.addSourceBuffer(pipeline.mime)
       delaySourceBufferRef.current = sb
       sb.addEventListener('updateend', pumpDelayQueue)
       // Replay already-captured clusters so delay can start as soon as we have N seconds.
@@ -401,6 +401,8 @@ export function CameraPane({
       streamRef.current = stream
       const video = liveVideoRef.current
       if (!video) throw new Error('Video element missing')
+      prepareDelayVideo(video)
+      prepareDelayVideo(delayVideoRef.current)
       video.srcObject = stream
       await video.play()
       setRunning(true)
@@ -871,6 +873,8 @@ export function CameraPane({
           ref={liveVideoRef}
           muted
           playsInline
+          disableRemotePlayback
+          webkit-playsinline="true"
           style={videoXform}
           className={
             livePip
@@ -897,6 +901,8 @@ export function CameraPane({
           ref={delayVideoRef}
           muted
           playsInline
+          disableRemotePlayback
+          webkit-playsinline="true"
           style={videoXform}
           className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
             mode === 'delay' && !livePeek ? '' : 'hidden'
