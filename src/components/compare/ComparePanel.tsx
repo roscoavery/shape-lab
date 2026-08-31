@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
-import { CompareSplitBar } from './CompareSplitBar'
 import { CompareChromeRail } from './CompareChromeRail'
 import { CompareSplitDivider } from './CompareSplitDivider'
 import {
@@ -24,6 +23,7 @@ import { IgStillContext, type IgCropDraft } from './IgStillContext'
 import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
+import { CollapsibleSection } from '../CollapsibleSection'
 import type { ReferencePhoto } from '../../types'
 import type { AthleteVideoSource } from '../../lib/athleteVideoStore'
 
@@ -153,26 +153,78 @@ export function ComparePanel({
         {fullscreen && <CompareChromeRail photos={referencePhotos} />}
         <div className={fullscreen ? 'relative flex min-h-0 min-w-0 flex-1 flex-col' : 'flex flex-col gap-4'}>
           {!fullscreen && (
-            <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
-              <strong className="text-[var(--text)]">Full screen split is on both cards below.</strong>{' '}
-              It opens top / bottom. Drag the bar between the videos so the
-              reference or delay cam takes more of the window — the pictures are
-              not stretched. On delay cam, tap <strong className="text-[var(--text)]">Record</strong> after
-              the skill; that clip lands in this profile’s video library.{' '}
-              <strong className="text-[var(--text)]">Screenshot</strong> on a looping clip: press one
-              corner, drag to the opposite corner, and it lands in{' '}
-              <strong className="text-[var(--text)]">Learn → IG shapes</strong>
-              {gymEditor
-                ? '. Ryan is unlocked — gym Compare URLs save into the shared library. After you add or rename, tap Save into the app so every link and browser has them.'
-                : personalEditor
-                  ? '. Your Compare collections save on this profile only (Instagram URLs included). Gym collections stay as Ryan left them — watch, don’t edit. Shape descriptions and picture sizes stay Ryan-only.'
-                  : '. Anyone can watch the gym library. Unlock a coach profile to add URLs in your own collections, or unlock Ryan to edit the gym list.'}
-            </section>
+            <button
+              type="button"
+              onClick={() => {
+                setSplit('tb')
+                setFocus('split')
+                setChromeOpen(false)
+                setFullscreen(true)
+              }}
+              className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+                Videos · Compare
+              </span>
+              <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+                Replay with reference cam
+              </span>
+              <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+                Full-screen split: looping reference on one side, delay cam on the other.
+                Drag the bar between them — the pictures stay true.
+              </span>
+            </button>
           )}
           {!fullscreen && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <CompareSplitBar where="page" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSplit('lr')
+                  setFocus('split')
+                  setChromeOpen(false)
+                  setFullscreen(true)
+                }}
+                className="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+              >
+                Open left / right
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSplit('tb')
+                  setFocus('split')
+                  setChromeOpen(false)
+                  setFullscreen(true)
+                }}
+                className="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+              >
+                Open top / bottom
+              </button>
             </div>
+          )}
+          {!fullscreen && (
+            <CollapsibleSection
+              title="How Compare works"
+              hint="Delay cam, Record, screenshots, and who can edit the gym list"
+              defaultOpen={false}
+            >
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                Replay with reference cam opens top / bottom. Drag the bar so the
+                reference or delay cam takes more of the window — pictures are not
+                stretched. On delay cam, tap{' '}
+                <strong className="text-[var(--text)]">Record</strong> after the skill;
+                that clip lands in this profile’s video library.{' '}
+                <strong className="text-[var(--text)]">Screenshot</strong> on a looping
+                clip: press one corner, drag to the opposite corner, and it lands in{' '}
+                <strong className="text-[var(--text)]">Learn → IG shapes</strong>
+                {gymEditor
+                  ? '. Ryan is unlocked — gym Compare URLs save into the shared library. After you add or rename, tap Save into the app so every link and browser has them.'
+                  : personalEditor
+                    ? '. Your Compare collections save on this profile only. Gym collections stay as Ryan left them — watch, don’t edit.'
+                    : '. Anyone can watch the gym library. Unlock a coach profile to add URLs in your own collections, or unlock Ryan to edit the gym list.'}
+              </p>
+            </CollapsibleSection>
           )}
           {fullscreen ? (
             <div
@@ -286,13 +338,24 @@ export function ComparePanel({
             <StillOverlayPicker photos={referencePhotos} compact />
           )}
           {!fullscreen && (
-            <VideoLibraryPanel
-              athleteId={athleteId}
-              athleteName={athleteName}
-              refreshKey={libraryTick}
-              folder={lessonId ? 'lesson' : 'all'}
-              lessonId={lessonId}
-            />
+            <CollapsibleSection
+              title="Video library"
+              hint={
+                athleteName
+                  ? `${athleteName} · delay cam and Compare clips — open to play`
+                  : 'Delay cam and Compare clips — open to play'
+              }
+              defaultOpen={false}
+            >
+              <VideoLibraryPanel
+                embedded
+                athleteId={athleteId}
+                athleteName={athleteName}
+                refreshKey={libraryTick}
+                folder={lessonId ? 'lesson' : 'all'}
+                lessonId={lessonId}
+              />
+            </CollapsibleSection>
           )}
         </div>
         {fullscreen && (

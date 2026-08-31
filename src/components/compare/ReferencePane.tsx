@@ -53,7 +53,10 @@ import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
+import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
+import { CollapsibleSection } from '../CollapsibleSection'
 import { useCompareLayout } from './compareLayout'
+import { LIBRARY_CHANGED_EVENT } from '../../lib/libraryEvents'
 import { HudCircle, IconClips, IconPip, IconSwap, IconX, CompareControlsButton } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
@@ -116,6 +119,8 @@ export function ReferencePane({
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const [clipHudOpen, setClipHudOpen] = useState(false)
+  const [showAllKeywords, setShowAllKeywords] = useState(false)
+  const [clipsOpen, setClipsOpen] = useState(false)
   const { fullscreen, refRail, focus, setFocus } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -253,6 +258,20 @@ export function ReferencePane({
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
   }, [refreshCachedIds, persist, gymEditor, personalEditor, profileId])
+
+  useEffect(() => {
+    const onChange = () => {
+      void getCollections().then((list) => {
+        setCollections(
+          list.filter(
+            (c) => isGymCollection(c) || (profileId != null && c.athleteId === profileId),
+          ),
+        )
+      })
+    }
+    window.addEventListener(LIBRARY_CHANGED_EVENT, onChange)
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, onChange)
+  }, [profileId])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -445,7 +464,10 @@ export function ReferencePane({
       )
     }
     const first = items[0]
-    if (first) await selectItem(first)
+    if (first) {
+      setClipsOpen(true)
+      await selectItem(first)
+    }
   }
 
   const addFile = async (file: File) => {
@@ -472,6 +494,7 @@ export function ReferencePane({
     })
     setKeywordInput('')
     setCachedIds((prev) => new Set(prev).add(item.id))
+    setClipsOpen(true)
     await selectItem(item)
   }
 
@@ -711,6 +734,10 @@ export function ReferencePane({
   const matchCount = currentHits.length + otherHits.length
   const q = searchQuery.trim()
 
+  useEffect(() => {
+    if (searching || onlyFavorites) setClipsOpen(true)
+  }, [searching, onlyFavorites])
+
   const allKeywords = useMemo(() => {
     const seen = new Set<string>()
     const out: string[] = []
@@ -923,6 +950,21 @@ export function ReferencePane({
             >
               Tags
             </button>
+            )}
+            {canEditLibrary && (
+              <ClipOrganizeMenu
+                clip={{
+                  name: item.name,
+                  url: item.url,
+                  kind: item.kind,
+                  keywords: item.keywords,
+                  postedBy: item.postedBy,
+                  sourceId: item.id,
+                }}
+                editor={{ gymEditor, personalEditor, profileId }}
+                gymAdmin={gymEditor}
+                onCopied={setNotice}
+              />
             )}
           </>
         )}
@@ -1215,8 +1257,8 @@ export function ReferencePane({
         />
       </div>
       {allKeywords.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {allKeywords.map((kw) => {
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(showAllKeywords ? allKeywords : allKeywords.slice(0, 8)).map((kw) => {
             const on = q.toLowerCase() === kw.toLowerCase()
             return (
               <button
@@ -1233,23 +1275,48 @@ export function ReferencePane({
               </button>
             )
           })}
+          {allKeywords.length > 8 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllKeywords((v) => !v)}
+              className="rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+            >
+              {showAllKeywords ? 'Fewer tags' : `More tags (${allKeywords.length - 8})`}
+            </button>
+          ) : null}
         </div>
       ) : null}
-      <p className="text-xs leading-relaxed text-[var(--muted)]">
-        Paste Instagram, TikTok, or Facebook links (or a list). Add keywords
-        for the shape — handstand, whip, roundoff — so a search lists every
-        video with that tag, including clips in other collections. Public
-        videos download into this app the first time they play — or hit Save
-        all in app. Drag or use ↑↓ to reorder (not while searching). Rename
-        or tap Tags anytime. Star a URL or a saved A/B loop to find it later —
-        Favorites filters this list.{' '}
-        {gymEditor
-          ? 'The named gym URL list saves into the app so later previews still have it.'
-          : personalEditor
-            ? 'Your collections save on this profile only. Gym collections stay as Ryan left them — you can watch them, not edit names, sizes, or the gym list.'
-            : 'Anyone can watch the gym library. Coaches add URLs in their own collections. Unlock Ryan to edit the gym list, shape descriptions, or picture sizes.'}{' '}
-        Export library is an extra JSON backup.
-      </p>
+      <CollapsibleSection
+        title="Build your library"
+        hint="Paste URLs, tag shapes, copy clips into a collection"
+        defaultOpen={false}
+        inset
+      >
+        <div className="space-y-2 text-xs leading-relaxed text-[var(--muted)]">
+          <p>
+            <strong className="text-[var(--text)]">Create.</strong> Name a collection, then paste
+            Instagram, TikTok, or Facebook links (or a list). Add keywords — handstand, whip,
+            roundoff — so search lists every video with that tag, including clips in other
+            collections.
+          </p>
+          <p>
+            <strong className="text-[var(--text)]">Organize.</strong> Drag or use ↑↓ to reorder
+            (not while searching). Rename or Tags anytime. Star a URL or a saved A/B loop —
+            Favorites filters this list. Collect copies any reference (gym, another collection,
+            or a skill clip) into a list you can edit.
+          </p>
+          <p>
+            Public videos download into this app the first time they play — or hit Save all in
+            app.{' '}
+            {gymEditor
+              ? 'The named gym URL list saves into the app so later previews still have it.'
+              : personalEditor
+                ? 'Your collections save on this profile only. Gym collections stay as Ryan left them — watch, don’t edit names or the gym list.'
+                : 'Anyone can watch the gym library. Coaches add URLs in their own collections. Unlock Ryan to edit the gym list.'}{' '}
+            Export library is an extra JSON backup.
+          </p>
+        </div>
+      </CollapsibleSection>
 
       {error && (
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
@@ -1271,22 +1338,29 @@ export function ReferencePane({
       )}
 
       {activeCollection && (currentHits.length > 0 || otherHits.length > 0) && (
+        <CollapsibleSection
+          title={
+            searching
+              ? `Search results (${matchCount})`
+              : onlyFavorites
+                ? `Favorites (${matchCount})`
+                : `Collection clips (${matchCount})`
+          }
+          hint={
+            clipsOpen
+              ? searching
+                ? `Matching “${q}” — reorder is paused`
+                : 'Hide this list so the player stays close'
+              : 'Open to pick, collect, or reorder clips'
+          }
+          inset
+          open={clipsOpen}
+          onOpenChange={setClipsOpen}
+        >
         <div className={`flex ${searching ? 'max-h-80' : 'max-h-56'} flex-col gap-2 overflow-y-auto panel-scroll`}>
-          {searching && (
+          {searching && otherHits.length > 0 && (
             <p className="text-xs text-[var(--muted)]">
-              {matchCount} video{matchCount === 1 ? '' : 's'} matching “{q}”
-              {otherHits.length
-                ? ` · ${otherHits.length} from other collections`
-                : ''}
-              {' — reorder is paused while you search'}
-            </p>
-          )}
-          {onlyFavorites && !searching && (
-            <p className="text-xs text-[var(--muted)]">
-              {matchCount} favorite URL{matchCount === 1 ? '' : 's'}
-              {otherHits.length
-                ? ` · ${otherHits.length} from other collections`
-                : ''}
+              {otherHits.length} from other collections
             </p>
           )}
           {currentHits.length > 0 && (
@@ -1319,6 +1393,7 @@ export function ReferencePane({
             </div>
           )}
         </div>
+        </CollapsibleSection>
       )}
 
       {onlyFavorites && currentHits.length === 0 && otherHits.length === 0 && (

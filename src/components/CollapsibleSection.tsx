@@ -4,6 +4,9 @@ type Props = {
   title: string
   hint?: string
   defaultOpen?: boolean
+  /** Controlled open state. When set, the section ignores defaultOpen after mount. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   children: ReactNode
   /** Tighter chrome for nesting inside an already-bordered card. */
   inset?: boolean
@@ -13,10 +16,18 @@ export function CollapsibleSection({
   title,
   hint,
   defaultOpen = false,
+  open,
+  onOpenChange,
   children,
   inset = false,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [uncontrolled, setUncontrolled] = useState(defaultOpen)
+  const isOpen = open ?? uncontrolled
+  const toggle = () => {
+    const next = !isOpen
+    if (open === undefined) setUncontrolled(next)
+    onOpenChange?.(next)
+  }
 
   return (
     <section
@@ -28,8 +39,8 @@ export function CollapsibleSection({
     >
       <button
         type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        aria-expanded={isOpen}
+        onClick={toggle}
         className={`flex w-full items-center justify-between gap-3 text-left ${
           inset ? 'px-3 py-2' : 'px-4 py-3'
         }`}
@@ -41,10 +52,10 @@ export function CollapsibleSection({
           ) : null}
         </div>
         <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">
-          {open ? 'Hide' : 'Show'}
+          {isOpen ? 'Hide' : 'Show'}
         </span>
       </button>
-      {open ? (
+      {isOpen ? (
         <div
           className={`border-t border-[var(--panel-border)] ${
             inset ? 'px-3 py-2' : 'px-4 pb-4 pt-3'

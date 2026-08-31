@@ -25,6 +25,7 @@ import { isSameReferenceUrl } from '../../lib/clipStore'
 import { isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
+import { GymClipPlayer } from '../GymClipPlayer'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -61,6 +62,7 @@ export function ClassesPanel({ athlete }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [filter, setFilter] = useState('')
   const [onlyFavorites, setOnlyFavorites] = useState(false)
+  const [previewClip, setPreviewClip] = useState<GymClip | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [sharingId, setSharingId] = useState<string | null>(null)
@@ -486,7 +488,8 @@ export function ClassesPanel({ athlete }: Props) {
               No favorite URLs yet. Star clips here or in Compare.
             </p>
           )}
-          <div className="mt-3 max-h-72 space-y-3 overflow-y-auto">
+          <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+          <div className="max-h-72 space-y-3 overflow-y-auto">
             {grouped.map((col) => (
               <div key={col.id}>
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -498,7 +501,18 @@ export function ClassesPanel({ athlete }: Props) {
                     const used = draft.slots.filter((s) =>
                       isSameReferenceUrl(s.url, item.url!),
                     ).length
-                    const clip = clips.find((c) => isSameReferenceUrl(c.url, item.url!))
+                    const clip = clips.find((c) => isSameReferenceUrl(c.url, item.url!)) ?? {
+                      id: item.id,
+                      name: item.name,
+                      url: item.url!,
+                      kind: item.kind,
+                      collectionId: col.id,
+                      collectionName: col.name,
+                      keywords: item.keywords,
+                    }
+                    const previewing = previewClip
+                      ? isSameReferenceUrl(previewClip.url, clip.url)
+                      : false
                     return (
                       <li key={item.id} className="flex items-center gap-1">
                         <FavoriteStar
@@ -513,29 +527,29 @@ export function ClassesPanel({ athlete }: Props) {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            addClip(
-                              clip ?? {
-                                id: item.id,
-                                name: item.name,
-                                url: item.url!,
-                                kind: item.kind,
-                                collectionId: col.id,
-                                collectionName: col.name,
-                                keywords: item.keywords,
-                              },
-                            )
-                          }
+                          onClick={() => setPreviewClip(clip)}
                           className={`flex min-w-0 flex-1 items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
-                            used
-                              ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                              : 'bg-[#0d1218] text-[var(--text)]'
+                            previewing
+                              ? 'bg-white/10 font-semibold text-[var(--text)] ring-1 ring-[var(--accent)]'
+                              : used
+                                ? 'bg-[var(--accent-dim)]/40 text-[var(--text)]'
+                                : 'bg-[#0d1218] text-[var(--text)]'
                           }`}
                         >
                           <span className="truncate">{item.name}</span>
-                          <span className="shrink-0 text-[11px] opacity-80">
-                            {used ? `Add again (${used})` : 'Add'}
+                          <span className="shrink-0 text-[11px] opacity-70">
+                            {previewing ? 'Preview' : 'Look'}
                           </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewClip(clip)
+                            addClip(clip)
+                          }}
+                          className="shrink-0 rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-[11px] font-semibold text-[var(--accent)]"
+                        >
+                          {used ? `Add (${used})` : 'Add'}
                         </button>
                       </li>
                     )
@@ -543,6 +557,42 @@ export function ClassesPanel({ athlete }: Props) {
                 </ul>
               </div>
             ))}
+          </div>
+          <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-black md:sticky md:top-2">
+            {previewClip ? (
+              <div className="flex flex-col">
+                <div className="aspect-[9/16] max-h-72 w-full">
+                  <GymClipPlayer
+                    key={previewClip.id}
+                    url={previewClip.url}
+                    itemId={previewClip.id}
+                    fill
+                    active
+                    persistUrl={previewClip.url}
+                    compact
+                    quiet
+                  />
+                </div>
+                <div className="space-y-2 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    {previewClip.collectionName}
+                  </p>
+                  <p className="text-sm font-semibold text-white">{previewClip.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => addClip(previewClip)}
+                    className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                  >
+                    Add to collage
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="px-3 py-8 text-center text-sm text-white/55">
+                Tap a clip to preview it before it goes on the board.
+              </p>
+            )}
+          </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button

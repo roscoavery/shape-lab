@@ -5,20 +5,54 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
+import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
+import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { itemMatchesQuery } from '../../lib/clipStore'
+import type { Athlete } from '../../types'
 
-export function ReferenceFeed() {
+type Props = {
+  athlete?: Athlete | null
+}
+
+export function ReferenceFeed({ athlete = null }: Props) {
   const { clips, loading } = useGymLibrary()
   const favorites = useFavorites()
   const [active, setActive] = useState(0)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
+  const [query, setQuery] = useState('')
+  const [flash, setFlash] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
-  const visible = useMemo(
-    () => (onlyFavorites ? clips.filter((c) => favorites.isUrlFavorite(c.url)) : clips),
-    [clips, onlyFavorites, favorites],
-  )
+  const editor = {
+    gymEditor: isGymAdmin(athlete),
+    personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
+    profileId: athlete?.id ?? null,
+  }
+
+  const visible = useMemo(() => {
+    const q = query.trim()
+    return clips.filter((c) => {
+      if (onlyFavorites && !favorites.isUrlFavorite(c.url)) return false
+      if (!q) return true
+      const asItem = {
+        id: c.id,
+        kind: c.kind,
+        name: c.name,
+        url: c.url,
+        keywords: c.keywords,
+        createdAt: '',
+      }
+      return (
+        itemMatchesQuery(asItem, q) || c.collectionName.toLowerCase().includes(q.toLowerCase())
+      )
+    })
+  }, [clips, onlyFavorites, favorites, query])
+
+  useEffect(() => {
+    setActive(0)
+  }, [query, onlyFavorites, visible.length])
 
   useEffect(() => {
     const root = rootRef.current
@@ -59,13 +93,20 @@ export function ReferenceFeed() {
     <div className="space-y-3">
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
         <strong className="text-[var(--text)]">Reference scroll.</strong> Same Instagram
-        library as Compare — a rename there shows here. Star a URL or a saved A/B loop
-        to keep the ones you cue often. Swipe or scroll. Set{' '}
-        <strong className="text-[var(--text)]">A</strong> and{' '}
+        library as Compare — a rename there shows here. Search a shape or collection,
+        then collect a clip or drop it on a class collage. Star a URL or a saved A/B
+        loop. Swipe or scroll. Set <strong className="text-[var(--text)]">A</strong> and{' '}
         <strong className="text-[var(--text)]">B</strong> on a clip to loop just that
         piece; it saves for Classes and Compare too.
       </div>
-      <div className="flex flex-wrap gap-2">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search a shape, name, or collection…"
+        aria-label="Search reference videos"
+        className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+      />
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           aria-pressed={!onlyFavorites}
@@ -90,10 +131,31 @@ export function ReferenceFeed() {
         >
           ★ Favorites
         </button>
+        {query ? (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]"
+          >
+            Clear
+          </button>
+        ) : null}
+        <span className="text-xs text-[var(--muted)]">
+          {visible.length} clip{visible.length === 1 ? '' : 's'}
+        </span>
       </div>
-      {onlyFavorites && visible.length === 0 ? (
+      {flash ? (
+        <p className="rounded-lg border border-[var(--panel-border)] bg-[#152018] px-3 py-2 text-sm text-[var(--text)]">
+          {flash}
+        </p>
+      ) : null}
+      {onlyFavorites && visible.length === 0 && !query ? (
         <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
           No favorite URLs yet. Star clips in Compare or here, then open Favorites.
+        </p>
+      ) : visible.length === 0 ? (
+        <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
+          No clips match “{query}”. Try a shape keyword or a collection name.
         </p>
       ) : (
         <div
@@ -145,9 +207,24 @@ export function ReferenceFeed() {
                 {clip.keywords && clip.keywords.length > 0 && (
                   <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
                 )}
-                <p className="mt-1 text-[11px] text-white/40">
-                  {i + 1} / {visible.length}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <ClipOrganizeMenu
+                    variant="feed"
+                    clip={{
+                      name: clip.name,
+                      url: clip.url,
+                      kind: clip.kind,
+                      keywords: clip.keywords,
+                      sourceId: clip.id,
+                    }}
+                    editor={editor}
+                    gymAdmin={isGymAdmin(athlete)}
+                    onCopied={setFlash}
+                  />
+                  <p className="text-[11px] text-white/40">
+                    {i + 1} / {visible.length}
+                  </p>
+                </div>
               </div>
             </article>
           ))}

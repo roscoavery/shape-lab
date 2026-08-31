@@ -264,7 +264,7 @@ export function EducationPanel({
         />
       )}
 
-      {view.kind === 'scroll' && <ReferenceFeed />}
+      {view.kind === 'scroll' && <ReferenceFeed athlete={signedIn} />}
 
       {view.kind === 'glossary' && (
         <ShapeGlossary

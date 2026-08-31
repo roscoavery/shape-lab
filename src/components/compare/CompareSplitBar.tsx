@@ -1,7 +1,7 @@
 /**
  * Shared Compare split / full-screen controls.
- * Shown on the Compare page and on both the reference and athlete camera cards
- * so the full-screen split is not buried above the library.
+ * Page chrome uses a large “Replay with reference cam” button in ComparePanel.
+ * Cards keep a compact entry so split is not buried above the library.
  */
 
 import { useCompareLayout, type CompareSplit } from './compareLayout'
@@ -12,21 +12,13 @@ export function CompareSplitBar({ where }: { where: Where }) {
   const { fullscreen, split, setFullscreen, setSplit, setFocus, setChromeOpen } =
     useCompareLayout()
   if (fullscreen && where !== 'overlay') return null
-
-  const enter =
-    where === 'reference'
-      ? 'Full screen with delay cam'
-      : where === 'camera'
-        ? 'Full screen with reference'
-        : 'Full screen split'
+  if (where === 'overlay' || where === 'page') return null
 
   const pick = (next: CompareSplit) => {
     setSplit(next)
     setFocus('split')
-    if (where === 'reference' || where === 'camera') {
-      setChromeOpen(false)
-      setFullscreen(true)
-    }
+    setChromeOpen(false)
+    setFullscreen(true)
   }
 
   const enterFull = () => {
@@ -35,8 +27,6 @@ export function CompareSplitBar({ where }: { where: Where }) {
     setChromeOpen(false)
     setFullscreen(true)
   }
-
-  if (where === 'overlay') return null
 
   const idleBtn = 'border border-[var(--panel-border)] text-[var(--muted)]'
 
@@ -47,7 +37,7 @@ export function CompareSplitBar({ where }: { where: Where }) {
         onClick={enterFull}
         className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
       >
-        {enter}
+        Replay with reference cam
       </button>
       <button
         type="button"
@@ -67,11 +57,6 @@ export function CompareSplitBar({ where }: { where: Where }) {
       >
         Top / bottom
       </button>
-      {where === 'page' && (
-        <p className="text-[11px] text-[var(--muted)]">
-          Looping reference + delay cam. Hide the side menu in full screen for a clean split.
-        </p>
-      )}
     </div>
   )
 }
