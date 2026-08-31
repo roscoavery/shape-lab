@@ -6,7 +6,7 @@ import {
   isResolvableVideoUrl,
   proxyInstagramMedia,
   lookupPostedBy,
-  resolveSocialVideo,
+  resolveSocialSlides,
   sendJson,
 } from './instagramResolve.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
@@ -543,17 +543,21 @@ export async function handleShapeLabApi(
       sendJson(res, 200, postedBy ? { postedBy } : {})
       return true
     }
-    const direct = await resolveSocialVideo(page)
-    if (!direct) {
+    const resolved = await resolveSocialSlides(page)
+    if (!resolved) {
       sendJson(res, 422, {
         error:
           'Could not get a playable file for that video. It may be private, deleted, or blocked in this region.',
       })
       return true
     }
-    const postedBy = await lookupPostedBy(page)
+    const postedBy = resolved.postedBy ?? (await lookupPostedBy(page))
     sendJson(res, 200, {
-      videoUrl: `/api/ig-media?src=${encodeURIComponent(direct)}`,
+      videoUrl: `/api/ig-media?src=${encodeURIComponent(resolved.url)}`,
+      slides: resolved.slides.map((slide) => ({
+        url: `/api/ig-media?src=${encodeURIComponent(slide.url)}`,
+        kind: slide.kind,
+      })),
       ...(postedBy ? { postedBy } : {}),
     })
     return true

@@ -55,6 +55,29 @@ const IG_RESERVED = new Set([
   'legal',
 ])
 
+/** 0-based carousel index from Instagram `img_index` (1-based) or `#igslide=`. */
+export function instagramSlideIndex(url: string): number {
+  try {
+    const u = new URL(url, 'https://instagram.com')
+    const fromQuery = Number(u.searchParams.get('img_index'))
+    if (Number.isFinite(fromQuery) && fromQuery >= 1) return Math.floor(fromQuery) - 1
+    const hash = u.hash.match(/igslide=(\d+)/i)
+    if (hash) {
+      const n = Number(hash[1])
+      if (Number.isFinite(n) && n >= 1) return Math.floor(n) - 1
+    }
+  } catch {
+    /* keep 0 */
+  }
+  return 0
+}
+
+export function urlWithIgSlide(url: string, index: number): string {
+  const base = url.trim().replace(/#.*$/, '')
+  if (index <= 0) return base
+  return `${base}#igslide=${index + 1}`
+}
+
 export function parseInstagramUrl(
   url: string,
 ): { type: 'p' | 'reel' | 'tv'; code: string; username?: string } | null {
@@ -157,7 +180,9 @@ export function clipLoopKey(url: string): string {
   if (/^null[a-z0-9_-]+$/i.test(trimmed)) {
     return `instagram:${trimmed.slice(4).toLowerCase()}`
   }
-  return socialVideoKey(trimmed) ?? canonicalSocialUrl(trimmed).replace(/\/+$/, '')
+  const slide = instagramSlideIndex(trimmed)
+  const base = socialVideoKey(trimmed) ?? canonicalSocialUrl(trimmed).replace(/\/+$/, '')
+  return slide > 0 ? `${base}:s${slide}` : base
 }
 
 export function socialProfileUrl(handle: string, platform: SocialPlatform | null): string {

@@ -2,16 +2,26 @@
  * Public Instagram / TikTok / Facebook video → looping in-app player.
  * Prefers a blob already saved in IndexedDB. Otherwise resolves a playable
  * mp4 through /api/ig-resolve, stores the bytes, and plays that copy.
+ * Instagram carousels expose every slide so you can swipe between them.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import {
+  instagramSlideIndex,
   postedByFromUrl,
   socialOpenLabel,
   socialPlatform,
   socialProfileUrl,
+  urlWithIgSlide,
 } from '../../lib/socialUrls'
-import { fetchInstagramVideo, isQuotaError, loadCachedInstagramBlob } from '../../lib/igCache'
+import {
+  fetchIgMediaBlob,
+  fetchInstagramManifest,
+  isQuotaError,
+  loadCachedInstagramBlob,
+  slideCacheId,
+  type IgSlide,
+} from '../../lib/igCache'
 import { deleteBlob, putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
@@ -54,7 +64,10 @@ export function InstagramEmbed({
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
   onCachedRef.current = onCached
+  const [slides, setSlides] = useState<IgSlide[]>([])
+  const [slide, setSlide] = useState(() => instagramSlideIndex(url))
   const [src, setSrc] = useState<string | null>(null)
+  const [kind, setKind] = useState<IgSlide['kind']>('video')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [fromCache, setFromCache] = useState(false)
@@ -64,6 +77,15 @@ export function InstagramEmbed({
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
   onPostedByRef.current = onPostedBy
+  const objectUrlRef = useRef<string | null>(null)
+  const dragRef = useRef<{ id: number; x: number; y: number } | null>(null)
+
+  const slideCount = slides.length
+  const safeSlide = slideCount > 0 ? Math.min(slide, slideCount - 1) : 0
+
+  useEffect(() => {
+    setSlide(instagramSlideIndex(url))
+  }, [url])
 
   useEffect(() => {
     if (!socialPlatform(url)) {
@@ -76,71 +98,51 @@ export function InstagramEmbed({
     }
 
     let cancelled = false
-    let objectUrl: string | null = null
     setLoading(true)
     setError(null)
-    setSrc(null)
+    setSlides([])
     setFromCache(false)
     setSaved(false)
     setQuotaWarn(false)
     setResolvedBy(null)
 
+    const revoke = () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+
+    const showBlob = (blob: Blob, slideKind: IgSlide['kind'], cached: boolean) => {
+      revoke()
+      const objectUrl = URL.createObjectURL(blob)
+      objectUrlRef.current = objectUrl
+      setSrc(objectUrl)
+      setKind(slideKind)
+      setFromCache(cached)
+      setLoading(false)
+    }
+
     void (async () => {
       try {
+        const manifest = await fetchInstagramManifest(url)
+        if (cancelled) return
+        setSlides(manifest.slides)
+        setSlide((prev) => Math.min(prev, Math.max(0, manifest.slides.length - 1)))
+        if (manifest.postedBy) {
+          setResolvedBy(manifest.postedBy)
+          onPostedByRef.current?.(manifest.postedBy)
+        }
+      } catch (err) {
+        if (cancelled) return
         if (itemId && retry === 0) {
           const cached = await loadCachedInstagramBlob(itemId)
-          if (cancelled) return
           if (cached) {
-            objectUrl = URL.createObjectURL(cached)
-            if (cancelled) {
-              URL.revokeObjectURL(objectUrl)
-              return
-            }
-            setSrc(objectUrl)
-            setFromCache(true)
-            setLoading(false)
-            if (!postedBy && !postedByFromUrl(url)) {
-              void fetch(`/api/ig-resolve?url=${encodeURIComponent(url)}&meta=1`)
-                .then((r) => r.json() as Promise<{ postedBy?: string }>)
-                .then((data) => {
-                  if (cancelled || !data.postedBy) return
-                  setResolvedBy(data.postedBy)
-                  onPostedByRef.current?.(data.postedBy)
-                })
-                .catch(() => {})
-            }
+            setSlides([{ url: '', kind: 'video' }])
+            showBlob(cached, 'video', true)
             return
           }
         }
-
-        const { blob, postedBy: found } = await fetchInstagramVideo(url)
-        if (cancelled) {
-          return
-        }
-        if (found) {
-          setResolvedBy(found)
-          onPostedByRef.current?.(found)
-        }
-        if (itemId) {
-          try {
-            await putBlob(itemId, blob)
-            if (!cancelled) {
-              setSaved(true)
-              onCachedRef.current?.(itemId)
-            }
-          } catch (err) {
-            if (isQuotaError(err)) setQuotaWarn(true)
-          }
-        }
-        objectUrl = URL.createObjectURL(blob)
-        if (cancelled) {
-          URL.revokeObjectURL(objectUrl)
-          return
-        }
-        setSrc(objectUrl)
-        setLoading(false)
-      } catch (err) {
-        if (cancelled) return
         setError(
           err instanceof Error
             ? err.message
@@ -152,9 +154,108 @@ export function InstagramEmbed({
 
     return () => {
       cancelled = true
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      revoke()
     }
   }, [url, itemId, retry])
+
+  useEffect(() => {
+    if (slides.length === 0) return
+    const index = Math.min(Math.max(safeSlide, 0), slides.length - 1)
+    const current = slides[index]
+    if (!current) return
+    let cancelled = false
+
+    const revoke = () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+
+    void (async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const cacheKey = itemId ? slideCacheId(itemId, index) : null
+        if (cacheKey) {
+          const cached = await loadCachedInstagramBlob(cacheKey)
+          if (cancelled) return
+          if (cached) {
+            revoke()
+            const objectUrl = URL.createObjectURL(cached)
+            objectUrlRef.current = objectUrl
+            setSrc(objectUrl)
+            setKind(current.kind)
+            setFromCache(true)
+            setLoading(false)
+            return
+          }
+        }
+        if (!current.url) {
+          setLoading(false)
+          return
+        }
+        const blob = await fetchIgMediaBlob(current.url)
+        if (cancelled) return
+        if (cacheKey) {
+          try {
+            await putBlob(cacheKey, blob)
+            if (!cancelled && cacheKey === itemId) onCachedRef.current?.(itemId)
+          } catch (err) {
+            if (isQuotaError(err)) setQuotaWarn(true)
+          }
+        }
+        revoke()
+        const objectUrl = URL.createObjectURL(blob)
+        objectUrlRef.current = objectUrl
+        setSrc(objectUrl)
+        setKind(current.kind)
+        setFromCache(false)
+        setLoading(false)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Could not open that slide.')
+        setLoading(false)
+      }
+    })()
+
+    const neighbor = slides[index + 1] ?? slides[index - 1]
+    if (neighbor?.url && itemId) {
+      const nextKey = slideCacheId(itemId, index + 1 < slides.length ? index + 1 : index - 1)
+      void loadCachedInstagramBlob(nextKey).then((cached) => {
+        if (cached || !neighbor.url) return
+        void fetchIgMediaBlob(neighbor.url)
+          .then((blob) => putBlob(nextKey, blob))
+          .catch(() => {})
+      })
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [safeSlide, slides, itemId])
+
+  const go = (next: number) => {
+    if (slideCount < 2) return
+    setSlide((next + slideCount) % slideCount)
+  }
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (slideCount < 2) return
+    const el = e.target as HTMLElement
+    if (el.closest('button, input, textarea, select, a, [role="slider"]')) return
+    dragRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY }
+  }
+
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    dragRef.current = null
+    if (!drag || drag.id !== e.pointerId || slideCount < 2) return
+    const dx = e.clientX - drag.x
+    const dy = e.clientY - drag.y
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.15) return
+    go(safeSlide + (dx < 0 ? 1 : -1))
+  }
 
   if (!platform) {
     return (
@@ -164,7 +265,7 @@ export function InstagramEmbed({
     )
   }
 
-  if (loading) {
+  if (loading && !src) {
     return (
       <div
         className={`flex items-center justify-center text-sm text-[var(--muted)] ${
@@ -178,7 +279,7 @@ export function InstagramEmbed({
     )
   }
 
-  if (error || !src) {
+  if ((error || !src) && !src) {
     return (
       <div className="flex flex-col gap-2">
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
@@ -216,21 +317,39 @@ export function InstagramEmbed({
         ? 'Saved in this app. Pause, scrub, and slow-mo work on this copy. Public videos only.'
         : 'Playing in this app, looping. Pause, scrub, and slow-mo work on this copy. Public videos only.'
 
-  return (
-    <div className={fill ? 'flex h-full min-h-0 w-full flex-col gap-0' : 'flex flex-col gap-2'}>
+  const credit = postedBy || resolvedBy || postedByFromUrl(url)
+  const slidePersist = urlWithIgSlide(persistUrl ?? url, safeSlide)
+  const carousel = slideCount > 1
+
+  const player =
+    kind === 'image' && src ? (
+      <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
+        <img
+          src={src}
+          alt=""
+          className={
+            fill
+              ? 'h-full w-full object-contain'
+              : 'max-h-[420px] w-full rounded-lg object-contain'
+          }
+        />
+        {hudCorner ? (
+          <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+            {hudCorner}
+          </div>
+        ) : null}
+      </div>
+    ) : src ? (
       <VideoWorkbench
         src={src}
         allowAbLoop
         autoPlay={active !== false}
         fill={fill}
-        persistUrl={persistUrl ?? url}
-        credit={postedBy || resolvedBy || postedByFromUrl(url)}
-        creditHref={socialProfileUrl(
-          postedBy || resolvedBy || postedByFromUrl(url) || '',
-          platform,
-        )}
-        loopA={loopA}
-        loopB={loopB}
+        persistUrl={slidePersist}
+        credit={credit}
+        creditHref={socialProfileUrl(credit || '', platform)}
+        loopA={safeSlide === instagramSlideIndex(url) ? loopA : null}
+        loopB={safeSlide === instagramSlideIndex(url) ? loopB : null}
         onAbChange={onAbChange}
         markup={!compact && !bare}
         compact={compact}
@@ -238,7 +357,63 @@ export function InstagramEmbed({
         active={active}
         hudCorner={hudCorner}
       />
-      {!fill && !quiet && <p className="text-xs text-[var(--muted)]">{footer}</p>}
+    ) : null
+
+  return (
+    <div className={fill ? 'flex h-full min-h-0 w-full flex-col gap-0' : 'flex flex-col gap-2'}>
+      <div
+        className={fill ? 'relative min-h-0 flex-1' : 'relative'}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          dragRef.current = null
+        }}
+      >
+        {player}
+        {carousel ? (
+          <>
+            <button
+              type="button"
+              aria-label="Previous slide"
+              onClick={() => go(safeSlide - 1)}
+              className={`absolute left-1 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-lg text-white ${
+                fill ? '' : ''
+              }`}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Next slide"
+              onClick={() => go(safeSlide + 1)}
+              className="absolute right-1 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-lg text-white"
+            >
+              ›
+            </button>
+            <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1">
+              <p className="rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
+                {safeSlide + 1} / {slideCount}
+              </p>
+              <div className="flex gap-1">
+                {slides.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      i === safeSlide ? 'bg-white' : 'bg-white/35'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+      {!fill && !quiet && (
+        <p className="text-xs text-[var(--muted)]">
+          {carousel ? 'Swipe or use the arrows for the other slides in this post. ' : ''}
+          {footer}
+        </p>
+      )}
     </div>
   )
 }
