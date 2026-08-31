@@ -244,6 +244,7 @@ export function ComparePanel({
                   value={split === 'tb' ? tbRatio : lrRatio}
                   onChange={split === 'tb' ? setTbRatio : setLrRatio}
                   flush={athleteReplay}
+                  onClose={exitReplay}
                 />
               ) : null}
               <ComparePipSlot
@@ -340,12 +341,12 @@ export function ComparePanel({
             </CollapsibleSection>
           )}
         </div>
-        {fullscreen && (
+        {fullscreen && !splitScreen && (
           <button
             type="button"
             aria-label="Close replay with reference cam"
             onClick={exitReplay}
-            className="pointer-events-auto absolute right-3 top-3 z-[80] flex h-8 w-8 items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+            className="pointer-events-auto absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-[#e03131] text-[1.45rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
           >
             ×
           </button>

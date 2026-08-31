@@ -14,6 +14,8 @@ type Props = {
   max?: number
   /** Replay Last: panes sit flush; the drag hit area still overlaps both videos. */
   flush?: boolean
+  /** Leave fullscreen without sitting on the Clip HUD. */
+  onClose?: () => void
 }
 
 export function CompareSplitDivider({
@@ -23,6 +25,7 @@ export function CompareSplitDivider({
   min = 0.22,
   max = 0.78,
   flush = false,
+  onClose,
 }: Props) {
   const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
     null,
@@ -97,6 +100,21 @@ export function CompareSplitDivider({
               : 'pointer-events-none absolute left-1/2 top-1/2 h-10 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40'
           }
         />
+      ) : null}
+      {onClose ? (
+        <button
+          type="button"
+          aria-label="Close replay with reference cam"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onClose}
+          className={
+            vertical
+              ? 'absolute right-2 top-1/2 z-[22] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+              : 'absolute bottom-2 left-1/2 z-[22] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+          }
+        >
+          ×
+        </button>
       ) : null}
     </div>
   )
