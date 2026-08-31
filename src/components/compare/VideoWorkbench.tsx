@@ -130,7 +130,7 @@ function VideoWorkbenchInner({
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
   const overlay = overlayChrome ?? (fill || replayChrome)
-  const [chromeOpen, setChromeOpen] = useState(true)
+  const [chromeOpen, setChromeOpen] = useState(false)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
     dist: number

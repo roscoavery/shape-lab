@@ -16,7 +16,7 @@ export function HudCircle({
   children: ReactNode
   size?: 'sm' | 'md' | 'lg'
 }) {
-  const dim = size === 'lg' ? 'h-14 w-14' : size === 'sm' ? 'h-9 w-9' : 'h-11 w-11'
+  const dim = size === 'lg' ? 'h-[3.25rem] w-[3.25rem]' : size === 'sm' ? 'h-8 w-8' : 'h-10 w-10'
   return (
     <button
       type="button"
@@ -54,7 +54,7 @@ export function HudRecord({ onClick, busy = false, disabled = false }: { onClick
 
 export function IconHide() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <path d="M9 9 5 5M9 9H5m4 0V5" />
       <path d="m15 15 4 4M15 15h4m-4 0v4" />
     </svg>
@@ -63,7 +63,7 @@ export function IconHide() {
 
 export function IconShow() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <path d="M8 8 4 4M4 4h4M4 4v4" />
       <path d="m16 16 4 4M20 20h-4M20 20v-4" />
     </svg>
@@ -81,7 +81,7 @@ export function IconReplayArrow() {
 
 export function IconFlip() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden>
       <path d="M11 4.5v15L4.2 12z" />
       <path d="M13 4.5v15L19.8 12z" />
     </svg>
@@ -90,7 +90,7 @@ export function IconFlip() {
 
 export function IconClock() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <circle cx="12" cy="12" r="8" />
       <path d="M12 8v4.5l3 2" />
     </svg>
@@ -99,7 +99,7 @@ export function IconClock() {
 
 export function IconX() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <path d="M7 7l10 10M17 7 7 17" />
     </svg>
   )
@@ -107,7 +107,7 @@ export function IconX() {
 
 export function IconClips() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="4" y="6" width="16" height="12" rx="2" />
       <path d="M8 6V4.8M12 6V4.8M16 6V4.8M8 19.2V18M12 19.2V18M16 19.2V18" />
     </svg>
@@ -116,7 +116,7 @@ export function IconClips() {
 
 export function IconPip() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3.5" y="5" width="17" height="14" rx="2" />
       <rect x="12.5" y="12" width="6.5" height="5.5" rx="1" fill="currentColor" stroke="none" />
     </svg>
@@ -125,7 +125,7 @@ export function IconPip() {
 
 export function IconSwap() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M7 8h11" />
       <path d="m15 5 3 3-3 3" />
       <path d="M17 16H6" />
@@ -136,7 +136,7 @@ export function IconSwap() {
 
 export function IconSplit() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3.5" y="4" width="17" height="7" rx="1.2" />
       <rect x="3.5" y="13" width="17" height="7" rx="1.2" />
     </svg>
@@ -145,7 +145,7 @@ export function IconSplit() {
 
 export function IconControls() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <circle cx="12" cy="6.5" r="1.7" fill="currentColor" stroke="none" />
       <path d="M4 6.5h6.2M13.8 6.5H20" />
       <circle cx="8" cy="12" r="1.7" fill="currentColor" stroke="none" />
@@ -168,7 +168,7 @@ export function CompareControlsButton() {
 
 export function IconLine() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <path d="M5 17 19 7" />
       <circle cx="5" cy="17" r="1.6" fill="currentColor" />
       <circle cx="19" cy="7" r="1.6" fill="currentColor" />
@@ -178,7 +178,7 @@ export function IconLine() {
 
 export function IconDraw() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M5 16c2-5 4 2 7-2s4-6 7-1" />
     </svg>
   )
@@ -186,7 +186,7 @@ export function IconDraw() {
 
 export function IconArrow() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M5 17 18 6" />
       <path d="M12 6h6v6" />
     </svg>
@@ -195,7 +195,7 @@ export function IconArrow() {
 
 export function IconShot() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <rect x="4" y="6" width="16" height="12" rx="2" />
       <circle cx="12" cy="12" r="2.4" />
     </svg>

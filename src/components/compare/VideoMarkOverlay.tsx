@@ -628,7 +628,7 @@ export function VideoMarkOverlay({
   )
 
   const toolHud = (
-    <div className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2.5 ${hudOffsetClass}`}>
+    <div className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2 ${hudOffsetClass}`}>
       <HudCircle label="Line" active={tool === 'line'} onClick={() => pickTool('line')}>
         <IconLine />
       </HudCircle>

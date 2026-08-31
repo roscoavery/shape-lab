@@ -25,6 +25,132 @@ import {
 import { deleteBlob, putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
+/** Keep carousel chevrons out of the left markup stack / right Show HUD. */
+const HUD_LEFT_CLEAR = 52
+const HUD_RIGHT_CLEAR = 10
+const EDGE_BTN = 40
+
+function mediaContainBox(media: HTMLVideoElement | HTMLImageElement, host: HTMLElement) {
+  const hr = host.getBoundingClientRect()
+  const nw =
+    'videoWidth' in media && media.videoWidth
+      ? media.videoWidth
+      : (media as HTMLImageElement).naturalWidth || 0
+  const nh =
+    'videoHeight' in media && media.videoHeight
+      ? media.videoHeight
+      : (media as HTMLImageElement).naturalHeight || 0
+  if (!nw || !nh || hr.width < 2 || hr.height < 2) {
+    return { left: 0, top: 0, width: hr.width, height: hr.height, hostW: hr.width }
+  }
+  const scale = Math.min(hr.width / nw, hr.height / nh)
+  const width = nw * scale
+  const height = nh * scale
+  return {
+    left: (hr.width - width) / 2,
+    top: (hr.height - height) / 2,
+    width,
+    height,
+    hostW: hr.width,
+  }
+}
+
+function CarouselEdgeNav({
+  index,
+  count,
+  onPrev,
+  onNext,
+}: {
+  index: number
+  count: number
+  onPrev: () => void
+  onNext: () => void
+}) {
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const [pos, setPos] = useState<{ left: number; right: number; y: number; cx: number; top: number } | null>(
+    null,
+  )
+
+  useEffect(() => {
+    const overlay = hostRef.current
+    if (!overlay) return
+    const parent = overlay.parentElement
+    const frame =
+      parent?.querySelector('video, img') ? parent : parent?.parentElement
+    if (!frame) return
+
+    const measure = () => {
+      const media = frame.querySelector('video, img') as HTMLVideoElement | HTMLImageElement | null
+      if (!media) return
+      const box = mediaContainBox(media, frame)
+      const y = box.top + box.height / 2
+      let left = box.left - EDGE_BTN / 2
+      if (left < HUD_LEFT_CLEAR) left = HUD_LEFT_CLEAR
+      let right = box.hostW - (box.left + box.width) - EDGE_BTN / 2
+      if (right < HUD_RIGHT_CLEAR) right = HUD_RIGHT_CLEAR
+      setPos({
+        left,
+        right,
+        y,
+        cx: box.left + box.width / 2,
+        top: box.top + 8,
+      })
+    }
+
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(frame)
+    const media = frame.querySelector('video, img')
+    media?.addEventListener('loadedmetadata', measure)
+    media?.addEventListener('load', measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      media?.removeEventListener('loadedmetadata', measure)
+      media?.removeEventListener('load', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [index, count])
+
+  const btnCls =
+    'pointer-events-auto absolute flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/75 bg-black/20 text-xl leading-none text-white backdrop-blur-[1px]'
+
+  return (
+    <div ref={hostRef} className="pointer-events-none absolute inset-0">
+      {pos ? (
+        <>
+          <button
+            type="button"
+            aria-label="Previous slide"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onPrev}
+            style={{ left: pos.left, top: pos.y }}
+            className={btnCls}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            aria-label="Next slide"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onNext}
+            style={{ right: pos.right, top: pos.y }}
+            className={btnCls}
+          >
+            ›
+          </button>
+          <p
+            className="pointer-events-none absolute -translate-x-1/2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white"
+            style={{ left: pos.cx, top: pos.top }}
+          >
+            {index + 1}/{count}
+          </p>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 type Props = {
   url: string
   itemId?: string
@@ -322,29 +448,12 @@ export function InstagramEmbed({
   const carousel = slideCount > 1
 
   const carouselChrome = carousel ? (
-    <>
-      <button
-        type="button"
-        aria-label="Previous slide"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => go(safeSlide - 1)}
-        className="pointer-events-auto absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-2xl font-bold leading-none text-black shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        aria-label="Next slide"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => go(safeSlide + 1)}
-        className="pointer-events-auto absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-2xl font-bold leading-none text-black shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
-      >
-        ›
-      </button>
-      <p className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/75 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
-        {safeSlide + 1}/{slideCount}
-      </p>
-    </>
+    <CarouselEdgeNav
+      index={safeSlide}
+      count={slideCount}
+      onPrev={() => go(safeSlide - 1)}
+      onNext={() => go(safeSlide + 1)}
+    />
   ) : null
 
   const player =
