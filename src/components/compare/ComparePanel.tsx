@@ -13,6 +13,8 @@ import { CompareChromeRail } from './CompareChromeRail'
 import { CompareSplitDivider } from './CompareSplitDivider'
 import {
   CompareLayoutContext,
+  COMPARE_PIP_BOX,
+  pipPane,
   type CompareFocus,
   type CompareSplit,
 } from './compareLayout'
@@ -117,6 +119,7 @@ export function ComparePanel({
 
   const showRef = focus !== 'cam'
   const showCam = focus !== 'ref'
+  const corner = pipPane(fullscreen, focus)
   const splitScreen = fullscreen && focus === 'split'
 
   const onLibrarySaved = useCallback(() => {
@@ -157,11 +160,32 @@ export function ComparePanel({
               <CompareSplitBar where="page" />
             </div>
           )}
-          {splitScreen && split === 'tb' ? (
-            <div className="flex min-h-0 flex-1 flex-col">
+          {fullscreen ? (
+            <div
+              className={
+                splitScreen
+                  ? split === 'tb'
+                    ? 'flex min-h-0 flex-1 flex-col'
+                    : 'flex min-h-0 flex-1 flex-row'
+                  : 'relative min-h-0 flex-1'
+              }
+            >
               <div
-                className="min-h-0 overflow-hidden"
-                style={{ flex: `${tbRatio} 1 0%` }}
+                key="ref"
+                className={
+                  corner === 'ref'
+                    ? `${COMPARE_PIP_BOX} bottom-16 left-3`
+                    : corner === 'cam'
+                      ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
+                      : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
+                }
+                style={
+                  splitScreen
+                    ? split === 'tb'
+                      ? { flex: `${tbRatio} 1 0%` }
+                      : { flex: `${lrRatio} 1 0%` }
+                    : undefined
+                }
               >
                 <ReferencePane
                   key={athleteId ?? 'none'}
@@ -170,38 +194,30 @@ export function ComparePanel({
                   profileId={athleteId}
                 />
               </div>
-              <CompareSplitDivider axis="y" value={tbRatio} onChange={setTbRatio} flush={athleteReplay} />
-              <div
-                className="min-h-0 overflow-hidden"
-                style={{ flex: `${1 - tbRatio} 1 0%` }}
-              >
-                <CameraPane
-                  athleteId={athleteId}
-                  onLibrarySaved={onLibrarySaved}
-                  videoSource={videoSource}
-                  lessonId={lessonId}
-                  skillId={skillId}
-                  skillLabel={skillLabel}
+              {splitScreen ? (
+                <CompareSplitDivider
+                  axis={split === 'tb' ? 'y' : 'x'}
+                  value={split === 'tb' ? tbRatio : lrRatio}
+                  onChange={split === 'tb' ? setTbRatio : setLrRatio}
+                  flush={athleteReplay}
                 />
-              </div>
-            </div>
-          ) : splitScreen && split === 'lr' ? (
-            <div className="flex min-h-0 flex-1 flex-row">
+              ) : null}
               <div
-                className="min-h-0 min-w-0 overflow-hidden"
-                style={{ flex: `${lrRatio} 1 0%` }}
-              >
-                <ReferencePane
-                  key={athleteId ?? 'none'}
-                  gymEditor={gymEditor}
-                  personalEditor={personalEditor}
-                  profileId={athleteId}
-                />
-              </div>
-              <CompareSplitDivider axis="x" value={lrRatio} onChange={setLrRatio} flush={athleteReplay} />
-              <div
-                className="min-h-0 min-w-0 overflow-hidden"
-                style={{ flex: `${1 - lrRatio} 1 0%` }}
+                key="cam"
+                className={
+                  corner === 'cam'
+                    ? `${COMPARE_PIP_BOX} bottom-3 right-3`
+                    : corner === 'ref'
+                      ? 'absolute inset-0 z-[10] min-h-0 overflow-hidden'
+                      : `min-h-0 overflow-hidden ${split === 'lr' ? 'min-w-0' : ''}`
+                }
+                style={
+                  splitScreen
+                    ? split === 'tb'
+                      ? { flex: `${1 - tbRatio} 1 0%` }
+                      : { flex: `${1 - lrRatio} 1 0%` }
+                    : undefined
+                }
               >
                 <CameraPane
                   athleteId={athleteId}
@@ -215,17 +231,15 @@ export function ComparePanel({
             </div>
           ) : (
             <div
-              className={`min-h-0 ${fullscreen ? 'flex-1' : ''} ${
-                fullscreen
-                  ? 'grid min-h-0 flex-1 grid-cols-1'
-                  : split === 'tb'
-                    ? athleteReplay
-                      ? 'grid gap-0'
-                      : 'grid gap-4'
-                    : athleteReplay
-                      ? 'grid gap-0 md:grid-cols-2'
-                      : 'grid gap-4 md:grid-cols-2'
-              }`}
+              className={
+                split === 'tb'
+                  ? athleteReplay
+                    ? 'grid gap-0'
+                    : 'grid gap-4'
+                  : athleteReplay
+                    ? 'grid gap-0 md:grid-cols-2'
+                    : 'grid gap-4 md:grid-cols-2'
+              }
             >
               <div className={showRef ? 'h-full min-h-0 min-w-0' : 'hidden'}>
                 <ReferencePane

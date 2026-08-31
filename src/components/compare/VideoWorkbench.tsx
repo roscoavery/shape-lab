@@ -10,6 +10,7 @@ import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { FavoriteStar } from '../FavoriteStar'
 import { ReplayLastOverlay } from './ReplayLastOverlay'
+import { HudCircle, IconHide, IconShow } from './CompareHud'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 import { useFavoritesOptional } from '../../lib/favorites'
 
@@ -48,6 +49,8 @@ type Props = {
   onWindowChange?: (start: number, end: number) => void
   /** Extra buttons in the overlay (Replay Last save / back). */
   overlayActions?: ReactNode
+  /** Extra HUD circles stacked with Show / Hide on the overlay chrome. */
+  hudCorner?: ReactNode
   /** Phone player chrome for Compare Replay Last. */
   replayChrome?: boolean
   onBack?: () => void
@@ -88,6 +91,7 @@ function VideoWorkbenchInner({
   pinchZoom = false,
   onWindowChange,
   overlayActions,
+  hudCorner,
   replayChrome = false,
   onBack,
   onSavePhotos,
@@ -712,13 +716,15 @@ function VideoWorkbenchInner({
               </div>
             ) : null}
             {!bare && overlay && (
-              <button
-                type="button"
-                onClick={() => setChromeOpen((open) => !open)}
-                className="absolute right-2 top-2 z-[35] rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-              >
-                {chromeOpen ? 'Hide bar' : 'Show bar'}
-              </button>
+              <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+                {hudCorner}
+                <HudCircle
+                  label={chromeOpen ? 'Hide' : 'Show'}
+                  onClick={() => setChromeOpen((open) => !open)}
+                >
+                  {chromeOpen ? <IconHide /> : <IconShow />}
+                </HudCircle>
+              </div>
             )}
           </>
         )}

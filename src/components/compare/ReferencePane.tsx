@@ -54,6 +54,7 @@ import { InstagramEmbed } from './InstagramEmbed'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { useCompareLayout } from './compareLayout'
+import { HudCircle, IconClips, IconPip, IconX } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -114,7 +115,8 @@ export function ReferencePane({
   const [skillCols, setSkillCols] = useState<RefCollection[]>(() => collectionsFromSkillRefs())
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
-  const { fullscreen, refRail } = useCompareLayout()
+  const [clipHudOpen, setClipHudOpen] = useState(false)
+  const { fullscreen, refRail, focus, setFocus } = useCompareLayout()
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -128,6 +130,7 @@ export function ReferencePane({
   const activeItem =
     activeCollection?.items.find((i) => i.id === activeItemId) ?? null
   const searching = searchQuery.trim().length > 0
+  const pip = fullscreen && focus === 'cam'
 
   const refreshCachedIds = useCallback(async (cols: RefCollection[]) => {
     const ids = cols.flatMap((c) => c.items.map((i) => i.id))
@@ -937,6 +940,18 @@ export function ReferencePane({
     )
   }
 
+  const hudCorner =
+    fullscreen && !pip ? (
+      <>
+        <HudCircle label="Clip" onClick={() => setClipHudOpen(true)}>
+          <IconClips />
+        </HudCircle>
+        <HudCircle label="Min" onClick={() => setFocus('cam')}>
+          <IconPip />
+        </HudCircle>
+      </>
+    ) : null
+
   return (
     <section
       className={
@@ -1324,7 +1339,7 @@ export function ReferencePane({
       )}
 
       {/* Player */}
-      <div className={fullscreen ? 'min-h-0 flex-1' : ''}>
+      <div className={fullscreen ? 'relative min-h-0 flex-1' : ''}>
       {activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
@@ -1343,6 +1358,8 @@ export function ReferencePane({
           }}
           fill={fullscreen}
           persistUrl={activeItem.url}
+          hudCorner={hudCorner}
+          bare={pip}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1352,6 +1369,8 @@ export function ReferencePane({
           persistUrl={activeItem?.url}
           loopA={activeItem?.trimStart ?? null}
           loopB={activeItem?.trimEnd ?? null}
+          hudCorner={hudCorner}
+          bare={pip}
         />
       ) : (
         <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
@@ -1362,6 +1381,66 @@ export function ReferencePane({
                 ? 'Select a match above'
                 : 'Select a reference above'
               : 'Add a reference video to this collection'}
+        </div>
+      )}
+      {pip && (
+        <button
+          type="button"
+          className="absolute inset-0 z-[45]"
+          aria-label="Expand reference"
+          onClick={() => setFocus('split')}
+        />
+      )}
+      {pip && (
+        <span className="pointer-events-none absolute left-1.5 top-1.5 z-[46] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+          Ref
+        </span>
+      )}
+      {clipHudOpen && fullscreen && !pip && (
+        <div className="absolute inset-0 z-[50] flex flex-col bg-black/88 text-white">
+          <div className="flex items-center justify-between px-3 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Clips</p>
+            <HudCircle label="Close" onClick={() => setClipHudOpen(false)}>
+              <IconX />
+            </HudCircle>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-2">
+            {allCollections.every((c) => c.items.length === 0) ? (
+              <p className="py-6 text-center text-sm text-white/60">No clips in the library yet.</p>
+            ) : (
+              allCollections.map((col) =>
+                col.items.length === 0 ? null : (
+                  <div key={col.id} className="mb-4">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                      {col.name}
+                    </p>
+                    <ul className="flex flex-col gap-1">
+                      {col.items.map((item) => {
+                        const on = item.id === activeItemId
+                        return (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void selectItem(item, col)
+                                setClipHudOpen(false)
+                              }}
+                              className={`w-full rounded-xl px-3 py-2.5 text-left text-sm ${
+                                on ? 'bg-white font-semibold text-black' : 'bg-white/10 text-white'
+                              }`}
+                            >
+                              {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
+                              {item.name}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                ),
+              )
+            )}
+          </div>
         </div>
       )}
       </div>

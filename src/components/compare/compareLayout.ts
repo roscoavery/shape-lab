@@ -3,6 +3,18 @@ import { createContext, useContext, type Dispatch, type SetStateAction } from 'r
 export type CompareSplit = 'lr' | 'tb'
 export type CompareFocus = 'split' | 'ref' | 'cam'
 
+/** Which pane is shrunk to a corner chip (the other stays full screen). */
+export function pipPane(
+  fullscreen: boolean,
+  focus: CompareFocus,
+): 'ref' | 'cam' | null {
+  if (!fullscreen || focus === 'split') return null
+  return focus === 'cam' ? 'ref' : 'cam'
+}
+
+export const COMPARE_PIP_BOX =
+  'absolute z-[36] overflow-hidden rounded-xl border-2 border-white/75 bg-black shadow-[0_12px_32px_rgba(0,0,0,0.65)] h-[9.75rem] w-[7rem]'
+
 export type CompareLayoutValue = {
   fullscreen: boolean
   split: CompareSplit

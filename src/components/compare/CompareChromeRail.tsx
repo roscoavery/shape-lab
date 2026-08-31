@@ -87,6 +87,9 @@ export function CompareChromeRail({ photos }: Props) {
             Delay cam
           </button>
         </div>
+        <p className="mt-1 px-0.5 text-[10px] leading-snug text-white/40">
+          Min keeps the other view playing in the corner. Tap the chip to restore the split.
+        </p>
       </section>
 
       <section>

@@ -91,7 +91,7 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail, setAthleteReplay, setFullscreen } = useCompareLayout()
+  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, setFullscreen } = useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -168,6 +168,12 @@ export function CameraPane({
     setAthleteReplay(on)
     return () => setAthleteReplay(false)
   }, [mode, clipSrc, setAthleteReplay])
+
+  useEffect(() => {
+    if (mode === 'replay' && clipSrc && fullscreen && focus === 'ref') {
+      setFocus('cam')
+    }
+  }, [mode, clipSrc, fullscreen, focus, setFocus])
 
   const pumpDelayQueue = useCallback(() => {
     const sb = delaySourceBufferRef.current
@@ -692,6 +698,9 @@ export function CameraPane({
     transformOrigin: 'center center',
   } as const
 
+  const camPip = fullscreen && focus === 'ref'
+  const livePip = fullscreen && !camPip && mode === 'delay' && running
+
   const cameraChrome = (
     <div className={rail ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center gap-2'}>
       {!running ? (
@@ -854,10 +863,27 @@ export function CameraPane({
           muted
           playsInline
           style={videoXform}
-          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-            mode === 'delay' ? 'hidden' : ''
-          }`}
+          className={
+            livePip
+              ? 'absolute bottom-3 right-3 z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg'
+              : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
+                  mode === 'delay' ? 'hidden' : ''
+                }`
+          }
         />
+        {livePip && (
+          <>
+            <button
+              type="button"
+              className="absolute bottom-3 right-3 z-[26] h-[7.75rem] w-[5.5rem] rounded-lg"
+              aria-label="Open live camera to set the tripod"
+              onClick={() => setMode('live')}
+            />
+            <span className="pointer-events-none absolute bottom-4 right-4 z-[27] rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              Live
+            </span>
+          </>
+        )}
         <video
           ref={delayVideoRef}
           muted
@@ -882,7 +908,7 @@ export function CameraPane({
             {delaySec}s behind live
           </div>
         )}
-        {mode === 'delay' && running && fullscreen && (
+        {mode === 'delay' && running && fullscreen && !camPip && (
           <DelayCamHud
             delaySec={delaySec}
             zoom={camZoom}
@@ -901,13 +927,14 @@ export function CameraPane({
               setCamZoom(1)
               delayFollowRef.current = true
             }}
+            onMinimize={() => setFocus('ref')}
             onExit={() => {
               setCamZoom(1)
               setMode('live')
             }}
           />
         )}
-        {mode === 'live' && fullscreen && (
+        {mode === 'live' && fullscreen && !camPip && (
           <LiveBufferStart
             running={running}
             delaySec={delaySec}
@@ -919,8 +946,36 @@ export function CameraPane({
               setDelayHudOpen(true)
               setMode('delay')
             }}
+            onMinimize={() => setFocus('ref')}
             onExit={() => setFullscreen(false)}
           />
+        )}
+        {camPip && (
+          <>
+            <button
+              type="button"
+              className="absolute inset-0 z-[42]"
+              aria-label="Expand delay cam"
+              onClick={() => setFocus('split')}
+            />
+            {running && mode !== 'live' && (
+              <button
+                type="button"
+                className="absolute bottom-1.5 right-1.5 z-[43] rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-black shadow"
+                aria-label="Open live camera to set the tripod"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFocus('cam')
+                  setMode('live')
+                }}
+              >
+                Live
+              </button>
+            )}
+            <span className="pointer-events-none absolute left-1.5 top-1.5 z-[43] rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+              {mode === 'live' ? 'Live' : 'Delay'}
+            </span>
+          </>
         )}
         {mode === 'delay' && running && !fullscreen && (
           <button

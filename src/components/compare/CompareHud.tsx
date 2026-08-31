@@ -104,6 +104,24 @@ export function IconX() {
   )
 }
 
+export function IconClips() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="6" width="16" height="12" rx="2" />
+      <path d="M8 6V4.8M12 6V4.8M16 6V4.8M8 19.2V18M12 19.2V18M16 19.2V18" />
+    </svg>
+  )
+}
+
+export function IconPip() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <rect x="12.5" y="12" width="6.5" height="5.5" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function IconLine() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>

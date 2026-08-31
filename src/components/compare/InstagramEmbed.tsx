@@ -4,7 +4,7 @@
  * mp4 through /api/ig-resolve, stores the bytes, and plays that copy.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   postedByFromUrl,
   socialOpenLabel,
@@ -31,6 +31,7 @@ type Props = {
   quiet?: boolean
   active?: boolean
   bare?: boolean
+  hudCorner?: ReactNode
 }
 
 export function InstagramEmbed({
@@ -48,6 +49,7 @@ export function InstagramEmbed({
   quiet = false,
   active,
   bare = false,
+  hudCorner,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -234,6 +236,7 @@ export function InstagramEmbed({
         compact={compact}
         bare={bare}
         active={active}
+        hudCorner={hudCorner}
       />
       {!fill && !quiet && <p className="text-xs text-[var(--muted)]">{footer}</p>}
     </div>

@@ -3,7 +3,7 @@
  * and the live start screen for setting buffer time.
  */
 
-import { HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconReplayArrow, IconShow, IconX } from './CompareHud'
+import { HudCircle, HudRecord, IconClock, IconFlip, IconHide, IconPip, IconReplayArrow, IconShow, IconX } from './CompareHud'
 
 type DelayProps = {
   delaySec: number
@@ -20,6 +20,7 @@ type DelayProps = {
   onRecord: () => void
   onBuffer: () => void
   onReset: () => void
+  onMinimize: () => void
   onExit: () => void
 }
 
@@ -38,16 +39,24 @@ export function DelayCamHud({
   onRecord,
   onBuffer,
   onReset,
+  onMinimize,
   onExit,
 }: DelayProps) {
   if (!hudOpen) {
     return (
-      <button type="button" onClick={onShow} className="absolute left-3 top-3 z-[28] flex flex-col items-center gap-0.5" aria-label="Show controls">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black">
-          <IconShow />
-        </span>
-        <span className="text-[10px] font-medium text-white">Show</span>
-      </button>
+      <div className="pointer-events-none absolute inset-0 z-[28]">
+        <button type="button" onClick={onShow} className="pointer-events-auto absolute left-3 top-3 flex flex-col items-center gap-0.5" aria-label="Show controls">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black">
+            <IconShow />
+          </span>
+          <span className="text-[10px] font-medium text-white">Show</span>
+        </button>
+        <div className="pointer-events-auto absolute right-3 top-3">
+          <HudCircle label="Min" onClick={onMinimize}>
+            <IconPip />
+          </HudCircle>
+        </div>
+      </div>
     )
   }
 
@@ -105,6 +114,9 @@ export function DelayCamHud({
         <HudCircle label="Reset" onClick={onReset}>
           <IconX />
         </HudCircle>
+        <HudCircle label="Min" onClick={onMinimize}>
+          <IconPip />
+        </HudCircle>
       </div>
 
       <button
@@ -126,6 +138,7 @@ type StartProps = {
   onDelaySec: (n: number) => void
   onStartCamera: () => void
   onEnterDelay: () => void
+  onMinimize: () => void
   onExit: () => void
 }
 
@@ -137,6 +150,7 @@ export function LiveBufferStart({
   onDelaySec,
   onStartCamera,
   onEnterDelay,
+  onMinimize,
   onExit,
 }: StartProps) {
   return (
@@ -167,6 +181,9 @@ export function LiveBufferStart({
               <IconClock />
             </HudCircle>
           )}
+          <HudCircle label="Min" onClick={onMinimize}>
+            <IconPip />
+          </HudCircle>
         </div>
       </div>
       <button
