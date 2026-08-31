@@ -8,7 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FLOW_SEQUENCES, getFlowSequence, type FlowSequence } from '../config/tasks2'
 import { getShape } from '../config/shapes'
 import { DELAY_MAX, useDelayCam } from '../hooks/useDelayCam'
-import { useSpeechCoach } from '../hooks/useSpeechCoach'
+import { expandLeadCount, useSpeechCoach } from '../hooks/useSpeechCoach'
+import { isPhoneBrowser } from '../lib/delayCameraPipeline'
 import {
   getCaptureBlob,
   getPoseTrackJson,
@@ -106,8 +107,9 @@ function scoreColor(n: number): string {
 }
 
 function speakDurationMs(text: string): number {
-  const words = text.trim().split(/\s+/).filter(Boolean).length
-  return Math.max(650, words * 310 + 220)
+  const spoken = expandLeadCount(text.trim())
+  const words = spoken.split(/\s+/).filter(Boolean).length
+  return Math.max(720, words * 310 + 220)
 }
 
 function wait(ms: number) {
@@ -231,8 +233,13 @@ export function Tasks2Panel({
   onCueRef.current = onCue
   onPreviewItemsRef.current = onPreviewItems
 
-  const { speakEvent, reset: resetSpeech, unlock: unlockSpeech, supported: speechSupported } =
-    useSpeechCoach(true)
+  const {
+    speakEvent,
+    reset: resetSpeech,
+    unlock: unlockSpeech,
+    holdAudio,
+    supported: speechSupported,
+  } = useSpeechCoach(true)
   const recordStream = overlayStream ?? stream
   const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
 
@@ -373,7 +380,9 @@ export function Tasks2Panel({
           return
         }
         speakEvent(spoken, false, done)
-        window.setTimeout(done, estimate + 8000)
+        // Phone Safari often never fires utterance onend — don't wait 8s per beat.
+        const extra = isPhoneBrowser() ? 700 : 1600
+        window.setTimeout(done, estimate + extra)
       }),
     [speakEvent, speechSupported],
   )
@@ -805,6 +814,9 @@ export function Tasks2Panel({
           }
         }
         onRequestFullscreen?.()
+        // Camera / recorder steal the Start-tap speech unlock on iPhone Safari.
+        holdAudio()
+        unlockSpeech()
         await wait(200)
         if (!alive()) return
         setCue(seqRun.previewSpeak)
@@ -976,6 +988,7 @@ export function Tasks2Panel({
             }
           }
           await wait(180)
+          holdAudio()
           if (!alive()) return
           for (const s of collected) {
             s.atSec = undefined
@@ -1073,6 +1086,7 @@ export function Tasks2Panel({
       delay,
       finishHoldRun,
       finishRun,
+      holdAudio,
       onEnsureCamera,
       onExitFullscreen,
       onRequestFullscreen,

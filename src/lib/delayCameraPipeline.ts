@@ -42,6 +42,13 @@ export function isIosDevice() {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
+/** iPhone / iPad / Android — speechSynthesis is flaky on all of these. */
+export function isPhoneBrowser() {
+  if (isIosDevice()) return true
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent)
+}
+
 /**
  * iPhone canvas delay display was blank (Safari would not paint a
  * zero-sized / offscreen canvas copy). Delay cam uses MSE again;

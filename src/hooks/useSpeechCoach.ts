@@ -10,9 +10,17 @@
  *
  * Only skip / reset / pause cancel speech. Everything else waits its turn so
  * the coach can finish the cue before saying the next line.
+ *
+ * Phone Safari (especially iPhone) often never fires `onend` on short lines
+ * like "2.", and camera / MediaRecorder can drop the speech unlock. We:
+ *   - say counts as words ("Two.") so the utterance is long enough
+ *   - watchdog any utterance that never ends
+ *   - cancel + gap between lines on iOS
+ *   - keep a silent AudioContext alive from the Start tap
  */
 
 import { useCallback, useEffect, useRef } from 'react'
+import { isIosDevice, isPhoneBrowser } from '../lib/delayCameraPipeline'
 
 const CUE_THROTTLE_MS = 2200
 
@@ -30,11 +38,50 @@ function stripDegreeSpeak(text: string): string {
   return s.replace(/\s+/g, ' ').trim()
 }
 
+/**
+ * iPhone Safari often swallows `onend` on a one-syllable "2." / "3."
+ * Speak the count as a word so the line actually finishes and the next
+ * class-flow cue ("Fall to lunge.") can start.
+ */
+const COUNT_WORD: Record<string, string> = {
+  '1': 'One',
+  '2': 'Two',
+  '3': 'Three',
+  '4': 'Four',
+  '5': 'Five',
+  '6': 'Six',
+  '7': 'Seven',
+  '8': 'Eight',
+  '9': 'Nine',
+  '10': 'Ten',
+  '20': 'Twenty',
+  '30': 'Thirty',
+}
+
+export function expandLeadCount(text: string): string {
+  return text.replace(/^(\d+)\.(\s|$)/, (_m, n: string, rest: string) => {
+    const word = COUNT_WORD[n]
+    return word ? `${word}.${rest}` : `${n}.${rest}`
+  })
+}
+
+function estimateUtteranceMs(text: string, rate: number): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length
+  const raw = Math.max(520, words * 320 + 200)
+  return Math.round(raw / Math.max(0.65, rate))
+}
+
 type SpeechJob = {
   text: string
   rate: number
   pitch: number
   onEnd?: () => void
+}
+
+type KeepAlive = {
+  ctx: AudioContext
+  osc: OscillatorNode
+  gain: GainNode
 }
 
 function voiceScore(v: SpeechSynthesisVoice): number {
@@ -90,6 +137,15 @@ export function holdPrompt(seconds: number): string {
   return `Hold ${n} seconds.`
 }
 
+function audioContextCtor(): (new () => AudioContext) | null {
+  if (typeof window === 'undefined') return null
+  const w = window as unknown as {
+    AudioContext?: new () => AudioContext
+    webkitAudioContext?: new () => AudioContext
+  }
+  return w.AudioContext ?? w.webkitAudioContext ?? null
+}
+
 export function useSpeechCoach(enabled: boolean) {
   const lastCueRef = useRef<string | null>(null)
   const lastCueAt = useRef(0)
@@ -101,6 +157,8 @@ export function useSpeechCoach(enabled: boolean) {
   const queueRef = useRef<SpeechJob[]>([])
   const speakingRef = useRef(false)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const keepAliveRef = useRef<KeepAlive | null>(null)
+  const pumpTimerRef = useRef<number | null>(null)
   const supported =
     typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined'
 
@@ -115,14 +173,25 @@ export function useSpeechCoach(enabled: boolean) {
   }, [supported])
 
   /**
-   * Chrome pauses speechSynthesis after ~15s of talking. A 5-rep sequence is
-   * longer than that — resume on a timer so the class script keeps speaking.
+   * Chrome pauses speechSynthesis after ~15s of talking. Resume when paused.
+   * On iPhone, calling resume() while already speaking can stall the queue —
+   * only resume if Safari actually paused us.
    */
   useEffect(() => {
     if (!supported) return
     const id = window.setInterval(() => {
       try {
-        if (window.speechSynthesis.speaking || window.speechSynthesis.pending || window.speechSynthesis.paused) {
+        if (isIosDevice()) {
+          if (window.speechSynthesis.paused) window.speechSynthesis.resume()
+          const keep = keepAliveRef.current
+          if (keep && keep.ctx.state === 'suspended') void keep.ctx.resume()
+          return
+        }
+        if (
+          window.speechSynthesis.speaking ||
+          window.speechSynthesis.pending ||
+          window.speechSynthesis.paused
+        ) {
           window.speechSynthesis.resume()
         }
       } catch {
@@ -131,6 +200,51 @@ export function useSpeechCoach(enabled: boolean) {
     }, 4000)
     return () => window.clearInterval(id)
   }, [supported])
+
+  const stopKeepAlive = useCallback(() => {
+    const keep = keepAliveRef.current
+    keepAliveRef.current = null
+    if (!keep) return
+    try {
+      keep.osc.stop()
+    } catch {
+      /* already stopped */
+    }
+    try {
+      keep.osc.disconnect()
+      keep.gain.disconnect()
+    } catch {
+      /* ignore */
+    }
+    void keep.ctx.close().catch(() => undefined)
+  }, [])
+
+  const startKeepAlive = useCallback(() => {
+    if (!isIosDevice()) return
+    const Ctor = audioContextCtor()
+    if (!Ctor) return
+    try {
+      let keep = keepAliveRef.current
+      if (keep && keep.ctx.state !== 'closed') {
+        void keep.ctx.resume()
+        return
+      }
+      const ctx = new Ctor()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      gain.gain.value = 0.00008
+      osc.frequency.value = 180
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      keepAliveRef.current = { ctx, osc, gain }
+      void ctx.resume()
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => () => stopKeepAlive(), [stopKeepAlive])
 
   const ensureVoice = useCallback(() => {
     if (!voiceRef.current) voiceRef.current = pickNaturalVoice()
@@ -143,32 +257,73 @@ export function useSpeechCoach(enabled: boolean) {
     if (!supported || speakingRef.current) return
     const next = queueRef.current.shift()
     if (!next) return
-    const voice = ensureVoice()
-    const u = new SpeechSynthesisUtterance(next.text)
-    u.lang = voice?.lang || 'en-US'
-    if (voice) u.voice = voice
-    u.rate = next.rate
-    u.pitch = next.pitch
-    u.volume = 1
     speakingRef.current = true
-    let finished = false
-    const done = () => {
-      if (finished) return
-      finished = true
-      if (utteranceRef.current === u) utteranceRef.current = null
-      next.onEnd?.()
-      speakingRef.current = false
-      pumpRef.current()
+
+    const startUtterance = () => {
+      const voice = ensureVoice()
+      const spoken = expandLeadCount(next.text)
+      const u = new SpeechSynthesisUtterance(spoken)
+      u.lang = voice?.lang || 'en-US'
+      if (voice) u.voice = voice
+      u.rate = next.rate
+      u.pitch = next.pitch
+      u.volume = 1
+      let finished = false
+      let watchdog = 0
+      const done = () => {
+        if (finished) return
+        finished = true
+        window.clearTimeout(watchdog)
+        if (utteranceRef.current === u) utteranceRef.current = null
+        next.onEnd?.()
+        speakingRef.current = false
+        const gap = isIosDevice() ? 50 : 0
+        if (gap) {
+          if (pumpTimerRef.current != null) window.clearTimeout(pumpTimerRef.current)
+          pumpTimerRef.current = window.setTimeout(() => {
+            pumpTimerRef.current = null
+            pumpRef.current()
+          }, gap)
+        } else {
+          pumpRef.current()
+        }
+      }
+      const extra = isPhoneBrowser() ? 800 : 4000
+      watchdog = window.setTimeout(() => {
+        if (finished) return
+        try {
+          window.speechSynthesis.cancel()
+        } catch {
+          /* ignore */
+        }
+        done()
+      }, estimateUtteranceMs(spoken, next.rate) + extra)
+      u.onend = () => done()
+      u.onerror = () => done()
+      utteranceRef.current = u
+      try {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume()
+        else if (!isIosDevice()) window.speechSynthesis.resume()
+        window.speechSynthesis.speak(u)
+      } catch {
+        done()
+      }
     }
-    u.onend = () => done()
-    u.onerror = () => done()
-    utteranceRef.current = u
-    try {
-      window.speechSynthesis.resume()
-      window.speechSynthesis.speak(u)
-    } catch {
-      done()
+
+    if (isIosDevice()) {
+      try {
+        window.speechSynthesis.cancel()
+      } catch {
+        /* ignore */
+      }
+      if (pumpTimerRef.current != null) window.clearTimeout(pumpTimerRef.current)
+      pumpTimerRef.current = window.setTimeout(() => {
+        pumpTimerRef.current = null
+        startUtterance()
+      }, 40)
+      return
     }
+    startUtterance()
   }, [supported, ensureVoice])
 
   pumpRef.current = pump
@@ -196,6 +351,10 @@ export function useSpeechCoach(enabled: boolean) {
       if (opts.interrupt) {
         queueRef.current = [job]
         speakingRef.current = false
+        if (pumpTimerRef.current != null) {
+          window.clearTimeout(pumpTimerRef.current)
+          pumpTimerRef.current = null
+        }
         try {
           window.speechSynthesis.cancel()
         } catch {
@@ -270,6 +429,10 @@ export function useSpeechCoach(enabled: boolean) {
     queueRef.current = []
     speakingRef.current = false
     utteranceRef.current = null
+    if (pumpTimerRef.current != null) {
+      window.clearTimeout(pumpTimerRef.current)
+      pumpTimerRef.current = null
+    }
     if (supported) {
       try {
         window.speechSynthesis.cancel()
@@ -282,6 +445,7 @@ export function useSpeechCoach(enabled: boolean) {
   /** Call from a click handler before any await — unlocks iOS / Chrome speech. */
   const unlock = useCallback(() => {
     if (!supported) return
+    startKeepAlive()
     try {
       window.speechSynthesis.resume()
       const u = new SpeechSynthesisUtterance(' ')
@@ -293,7 +457,7 @@ export function useSpeechCoach(enabled: boolean) {
     } catch {
       /* ignore */
     }
-  }, [supported])
+  }, [supported, startKeepAlive])
 
   return {
     speak,
@@ -304,6 +468,7 @@ export function useSpeechCoach(enabled: boolean) {
     speakLost,
     reset,
     unlock,
+    holdAudio: startKeepAlive,
     supported,
   }
 }
