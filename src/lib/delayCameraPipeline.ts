@@ -35,9 +35,19 @@ function windowMediaSource(): MediaSourceCtor | null {
   return null
 }
 
-/** iPhone Safari: MSE delay is sideways and hitchy. Use the frame-canvas display. */
+export function isIosDevice() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/iP(hone|od|ad)/.test(ua)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+}
+
+/**
+ * iPhone: recorded MSE is sideways (no rotation tag) even when Safari
+ * exposes classic MediaSource. Always use the frame-canvas display there.
+ */
 export function usesFrameDelayDisplay() {
-  return getDelayCameraPipeline()?.managed === true
+  return isIosDevice() || getDelayCameraPipeline()?.managed === true
 }
 
 export function getDelayCameraPipeline(preferredMime?: string | null): DelayCameraPipeline | null {

@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { DELAY_MAX, DELAY_MIN, useDelayCam } from '../hooks/useDelayCam'
+import { isIosDevice } from '../lib/delayCameraPipeline'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -84,6 +85,7 @@ export function TaskDelayCam({
   }
 
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
+  const iosDelayCls = isIosDevice() ? '-rotate-90 origin-center' : ''
   const videoMax = pip ? 'max-h-36 sm:max-h-44' : compact ? 'max-h-36' : 'max-h-48'
 
   const videoBlock = (
@@ -106,7 +108,7 @@ export function TaskDelayCam({
       ) : (
         <video
           ref={delay.delayVideoRef}
-          className={`block w-full bg-black ${videoMax} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
+          className={`block w-full bg-black ${videoMax} ${mode === 'delay' ? `${mirrorCls} ${iosDelayCls}` : 'hidden'}`}
           playsInline
           muted
           disableRemotePlayback

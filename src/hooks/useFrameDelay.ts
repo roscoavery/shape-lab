@@ -1,8 +1,9 @@
 /**
- * iPhone delay display — copy frames from the live preview (already upright)
- * into a short ring, then paint them on a canvas delaySec later.
- * Leaves MediaRecorder / Replay Last alone. Used when MSE playback is
- * sideways or hitchy (ManagedMediaSource).
+ * iPhone delay display — copy frames from the live <video>, unwind the
+ * sensor rotation that canvas drawImage leaves in place, then paint them
+ * delaySec later. Replay Last still plays the rolling MediaRecorder blob
+ * (Safari applies the file's rotation tag there). This hook is only enabled
+ * on iOS / ManagedMediaSource.
  */
 
 import { useEffect, useRef, useState, type RefObject } from 'react'
@@ -12,11 +13,48 @@ const MAX_EDGE = 512
 const DELAY_MAX_SEC = 20
 const MAX_FRAMES = CAP_FPS * (DELAY_MAX_SEC + 2)
 
+/**
+ * iPhone camera buffers are 90° clockwise vs the upright LIVE preview.
+ * Replay Last looks fine because the mp4 rotation matrix is applied.
+ * canvas.drawImage / MSE do not — rotate the copy 90° CCW to match LIVE.
+ */
+const UNWIND_CW_RAD = -Math.PI / 2
+
 type Slot = { ts: number; bmp: ImageBitmap }
 
-function coverScale(bw: number, bh: number, cw: number, ch: number, rotated: boolean) {
-  if (rotated) return Math.max(ch / bw, cw / bh)
+function coverScale(bw: number, bh: number, cw: number, ch: number) {
   return Math.max(cw / bw, ch / bh)
+}
+
+/** Paint the live video into `cap` with sensor rotation already unwound. */
+function captureUpright(
+  live: HTMLVideoElement,
+  cap: HTMLCanvasElement,
+  capCtx: CanvasRenderingContext2D,
+): boolean {
+  const srcW = live.videoWidth || 0
+  const srcH = live.videoHeight || 0
+  if (srcW < 2 || srcH < 2) return false
+
+  const edge = Math.max(srcW, srcH)
+  const scale = Math.min(1, MAX_EDGE / edge)
+  const dw = Math.max(2, Math.round(srcW * scale))
+  const dh = Math.max(2, Math.round(srcH * scale))
+  // 90° CCW swap: source width becomes dest height
+  const outW = dh
+  const outH = dw
+  if (cap.width !== outW || cap.height !== outH) {
+    cap.width = outW
+    cap.height = outH
+  }
+  capCtx.save()
+  capCtx.setTransform(1, 0, 0, 1, 0, 0)
+  capCtx.clearRect(0, 0, outW, outH)
+  capCtx.translate(0, outH)
+  capCtx.rotate(UNWIND_CW_RAD)
+  capCtx.drawImage(live, 0, 0, dw, dh)
+  capCtx.restore()
+  return true
 }
 
 function drawFrame(
@@ -27,14 +65,12 @@ function drawFrame(
   mirror: boolean,
   zoom: number,
 ) {
-  const rotate = bmp.width > bmp.height && ch > cw
-  const s = coverScale(bmp.width, bmp.height, cw, ch, rotate) * Math.max(0.4, zoom)
+  const s = coverScale(bmp.width, bmp.height, cw, ch) * Math.max(0.4, zoom)
   ctx.save()
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, cw, ch)
   ctx.translate(cw / 2, ch / 2)
   if (mirror) ctx.scale(-1, 1)
-  if (rotate) ctx.rotate(-Math.PI / 2)
   ctx.drawImage(bmp, (-bmp.width * s) / 2, (-bmp.height * s) / 2, bmp.width * s, bmp.height * s)
   ctx.restore()
 }
@@ -97,31 +133,22 @@ export function useFrameDelay({
       const canvas = canvasRef.current
       if (live && live.readyState >= 2 && capCtx && now - lastCap >= 1000 / CAP_FPS) {
         lastCap = now
-        const srcW = live.videoWidth || 1
-        const srcH = live.videoHeight || 1
-        const edge = Math.max(srcW, srcH)
-        const scale = Math.min(1, MAX_EDGE / edge)
-        const w = Math.max(2, Math.round(srcW * scale))
-        const h = Math.max(2, Math.round(srcH * scale))
-        if (cap.width !== w || cap.height !== h) {
-          cap.width = w
-          cap.height = h
+        if (captureUpright(live, cap, capCtx)) {
+          void createImageBitmap(cap)
+            .then((bmp) => {
+              if (dead) {
+                bmp.close()
+                return
+              }
+              const ring = ringRef.current
+              ring.push({ ts: now, bmp })
+              const oldest = now - (DELAY_MAX_SEC + 1) * 1000
+              while (ring.length > MAX_FRAMES || (ring[0] && ring[0].ts < oldest)) {
+                ring.shift()?.bmp.close()
+              }
+            })
+            .catch(() => {})
         }
-        capCtx.drawImage(live, 0, 0, w, h)
-        void createImageBitmap(cap)
-          .then((bmp) => {
-            if (dead) {
-              bmp.close()
-              return
-            }
-            const ring = ringRef.current
-            ring.push({ ts: now, bmp })
-            const oldest = now - (DELAY_MAX_SEC + 1) * 1000
-            while (ring.length > MAX_FRAMES || (ring[0] && ring[0].ts < oldest)) {
-              ring.shift()?.bmp.close()
-            }
-          })
-          .catch(() => {})
       }
 
       const ring = ringRef.current

@@ -35,6 +35,7 @@ import {
   getDelayCameraPipeline,
   pickRecorderMime,
   prepareDelayVideo,
+  isIosDevice,
   usesFrameDelayDisplay,
 } from '../../lib/delayCameraPipeline'
 import { useFrameDelay } from '../../hooks/useFrameDelay'
@@ -730,6 +731,15 @@ export function CameraPane({
     transform: `${mirror ? 'scaleX(-1) ' : ''}scale(${camZoom})`,
     transformOrigin: 'center center',
   } as const
+  // MSE delay <video> has no rotation tag (Replay Last does). If iPhone still
+  // lands on that element, unwind 90° CW in CSS. The canvas path already
+  // unwinds in pixels — do not also CSS-rotate the canvas.
+  const delayVideoXform = isIosDevice()
+    ? {
+        transform: `rotate(-90deg) ${mirror ? 'scaleX(-1) ' : ''}scale(${camZoom})`,
+        transformOrigin: 'center center' as const,
+      }
+    : videoXform
 
   const camPip = fullscreen && focus === 'ref'
   const livePip = fullscreen && !camPip && mode === 'delay' && running && !livePeek
@@ -928,16 +938,18 @@ export function CameraPane({
           playsInline
           disableRemotePlayback
           webkit-playsinline="true"
-          style={videoXform}
+          style={delayVideoXform}
           className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
             frameDelayOn || mode !== 'delay' || livePeek ? 'hidden' : ''
           }`}
         />
         <canvas
           ref={delayCanvasRef}
-          className={`${fullscreen ? 'h-full max-h-none' : 'max-h-[420px] h-[min(420px,70vw)]'} w-full bg-black ${
-            frameDelayOn && mode === 'delay' && !livePeek ? '' : 'hidden'
-          }`}
+          className={`${
+            fullscreen
+              ? 'absolute inset-0 h-full max-h-none'
+              : 'relative max-h-[420px] h-[min(420px,70vw)]'
+          } w-full bg-black ${frameDelayOn && mode === 'delay' && !livePeek ? '' : 'hidden'}`}
         />
         {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
