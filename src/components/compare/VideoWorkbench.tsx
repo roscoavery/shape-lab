@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { FavoriteStar } from '../FavoriteStar'
+import { ReplayLastOverlay } from './ReplayLastOverlay'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 import { useFavoritesOptional } from '../../lib/favorites'
 
@@ -47,6 +48,12 @@ type Props = {
   onWindowChange?: (start: number, end: number) => void
   /** Extra buttons in the overlay (Replay Last save / back). */
   overlayActions?: ReactNode
+  /** Phone player chrome for Compare Replay Last. */
+  replayChrome?: boolean
+  onBack?: () => void
+  onSavePhotos?: () => void
+  onSaveInApp?: () => void
+  savingPhotos?: boolean
 }
 
 function fmt(t: number): string {
@@ -81,6 +88,11 @@ function VideoWorkbenchInner({
   pinchZoom = false,
   onWindowChange,
   overlayActions,
+  replayChrome = false,
+  onBack,
+  onSavePhotos,
+  onSaveInApp,
+  savingPhotos = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -107,7 +119,7 @@ function VideoWorkbenchInner({
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
-  const overlay = overlayChrome ?? fill
+  const overlay = overlayChrome ?? (fill || replayChrome)
   const [chromeOpen, setChromeOpen] = useState(true)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
@@ -635,7 +647,7 @@ function VideoWorkbenchInner({
           } w-full object-contain ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
-        {markup && !bare && !zoomed && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} pinchPassthrough={pinchZoom} />}
+        {markup && !bare && !zoomed && !replayChrome && <VideoMarkOverlay videoRef={videoRef} mirror={mirror} pinchPassthrough={pinchZoom} />}
         {credit && !bare && (
           creditHref ? (
             <a
@@ -657,25 +669,50 @@ function VideoWorkbenchInner({
             </span>
           )
         )}
-        {!bare && overlay && chromeOpen && (
-          <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black/90 via-black/75 to-transparent px-2 pb-2 pt-8 text-white">
-            {overlayActions ? <div className="mb-2 flex flex-wrap gap-1.5">{overlayActions}</div> : null}
-            {transport}
-          </div>
-        )}
-        {!bare && overlay && !chromeOpen && overlayActions ? (
-          <div className="pointer-events-auto absolute bottom-2 left-2 z-[35] flex flex-wrap gap-1.5">
-            {overlayActions}
-          </div>
-        ) : null}
-        {!bare && overlay && (
-          <button
-            type="button"
-            onClick={() => setChromeOpen((open) => !open)}
-            className="absolute right-2 top-2 z-[35] rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-          >
-            {chromeOpen ? 'Hide bar' : 'Show bar'}
-          </button>
+        {replayChrome && onBack && onSavePhotos ? (
+          <ReplayLastOverlay
+            src={src}
+            duration={duration}
+            time={time}
+            playing={playing}
+            speed={speed}
+            pointA={pointA}
+            pointB={pointB}
+            chromeOpen={chromeOpen}
+            saving={savingPhotos}
+            onSeek={seek}
+            onTogglePlay={togglePlay}
+            onMarkA={markA}
+            onMarkB={markB}
+            onSpeed={setSpeed}
+            onBack={onBack}
+            onSave={onSavePhotos}
+            onSaveInApp={onSaveInApp}
+            onToggleChrome={() => setChromeOpen((open) => !open)}
+          />
+        ) : (
+          <>
+            {!bare && overlay && chromeOpen && (
+              <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black/90 via-black/75 to-transparent px-2 pb-2 pt-8 text-white">
+                {overlayActions ? <div className="mb-2 flex flex-wrap gap-1.5">{overlayActions}</div> : null}
+                {transport}
+              </div>
+            )}
+            {!bare && overlay && !chromeOpen && overlayActions ? (
+              <div className="pointer-events-auto absolute bottom-2 left-2 z-[35] flex flex-wrap gap-1.5">
+                {overlayActions}
+              </div>
+            ) : null}
+            {!bare && overlay && (
+              <button
+                type="button"
+                onClick={() => setChromeOpen((open) => !open)}
+                className="absolute right-2 top-2 z-[35] rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+              >
+                {chromeOpen ? 'Hide bar' : 'Show bar'}
+              </button>
+            )}
+          </>
         )}
       </div>
 

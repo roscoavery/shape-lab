@@ -898,37 +898,17 @@ export function CameraPane({
               tailSeconds={replayTailSec ?? undefined}
               fill={fullscreen}
               overlayChrome
+              replayChrome
               pinchZoom
+              markup={false}
               showStillOverlay={!fullscreen}
+              savingPhotos={savingPhotos}
               onWindowChange={(start, end) => {
                 replayWindowRef.current = { start, end }
               }}
-              overlayActions={
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setMode(running ? 'live' : 'replay')}
-                    className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white"
-                  >
-                    Back to live
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveReplayToApp}
-                    className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-[#06281f]"
-                  >
-                    Save in app
-                  </button>
-                  <button
-                    type="button"
-                    disabled={savingPhotos}
-                    onClick={downloadReplay}
-                    className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-                  >
-                    {savingPhotos ? 'Saving…' : 'Save to Photos'}
-                  </button>
-                </>
-              }
+              onBack={() => setMode(running ? 'delay' : 'live')}
+              onSavePhotos={downloadReplay}
+              onSaveInApp={saveReplayToApp}
             />
           </div>
         ) : (
