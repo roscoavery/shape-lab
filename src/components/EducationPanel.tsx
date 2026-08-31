@@ -233,6 +233,7 @@ export function EducationPanel({
       {view.kind === 'shape' && (
         <ShapeDetail
           shapeId={view.shapeId}
+          orderedShapeIds={filteredShapes.map((shape) => shape.id)}
           pathwayIds={pathwayIds}
           referencePhotos={referencePhotos}
           onBack={goShapes}
@@ -630,6 +631,7 @@ function ShapeLibrary({
 
 function ShapeDetail({
   shapeId,
+  orderedShapeIds,
   pathwayIds,
   referencePhotos,
   onBack,
@@ -637,6 +639,7 @@ function ShapeDetail({
   onOpenShape,
 }: {
   shapeId: string
+  orderedShapeIds: string[]
   pathwayIds: Set<string>
   referencePhotos: ReferencePhoto[]
   onBack: () => void
@@ -664,16 +667,45 @@ function ShapeDetail({
   const igForShape = igStillsForShape(referencePhotos, shape.id)
   const athleteCopy = copyFor(shape.id).athlete
   const appCopy = copyFor(shape.id).app
+  const shapeIndex = orderedShapeIds.indexOf(shape.id)
+  const previousShapeId =
+    shapeIndex >= 0 && orderedShapeIds.length > 1
+      ? orderedShapeIds[(shapeIndex - 1 + orderedShapeIds.length) % orderedShapeIds.length]
+      : null
+  const nextShapeId =
+    shapeIndex >= 0 && orderedShapeIds.length > 1
+      ? orderedShapeIds[(shapeIndex + 1) % orderedShapeIds.length]
+      : null
 
   return (
     <article className="space-y-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="text-sm text-[var(--muted)] hover:text-[var(--accent)]"
-      >
-        ← Shape library
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-[var(--muted)] hover:text-[var(--accent)]"
+        >
+          ← Shape library
+        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={!previousShapeId}
+            onClick={() => previousShapeId && onOpenShape(previousShapeId)}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--text)] disabled:opacity-40"
+          >
+            ← Previous shape
+          </button>
+          <button
+            type="button"
+            disabled={!nextShapeId}
+            onClick={() => nextShapeId && onOpenShape(nextShapeId)}
+            className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+          >
+            Next shape →
+          </button>
+        </div>
+      </div>
 
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
