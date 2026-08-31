@@ -65,7 +65,7 @@ export function EducationPanel({
   persistIgToApp = false,
   onReferencesChange,
 }: Props) {
-  const [view, setView] = useState<EduView>({ kind: 'home' })
+  const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [hits, setHits] = useState<TaskCapture[]>([])
@@ -214,6 +214,8 @@ export function EducationPanel({
           onPhysics={() => setView({ kind: 'physics' })}
           onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
           igCount={listIgStills(referencePhotos).length}
+          referencePhotos={referencePhotos}
+          shapes={catalog}
         />
       )}
 
@@ -340,6 +342,8 @@ function HomeView({
   onPhysics,
   onPhysicsQuiz,
   igCount,
+  referencePhotos,
+  shapes,
 }: {
   pathwayCount: number
   shapeCount: number
@@ -355,6 +359,8 @@ function HomeView({
   onPhysics: () => void
   onPhysicsQuiz: () => void
   igCount: number
+  referencePhotos: ReferencePhoto[]
+  shapes: ShapeDef[]
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -364,6 +370,21 @@ function HomeView({
         className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Shape library</h3>
+        <div className="mt-3 grid grid-cols-3 gap-1">
+          {shapes.slice(0, 6).map((shape) => (
+            <div
+              key={shape.id}
+              className="aspect-square overflow-hidden rounded-md bg-[#0d1218]"
+            >
+              <ReferenceStill
+                shapeId={shape.id}
+                photos={referencePhotos}
+                alt={shape.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Browse {shapeCount} positions with the coach stills you shared, plus
           homework. {pathwayCount} are on the athlete pathway. Arm drills live in
@@ -487,6 +508,23 @@ function HomeView({
         className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
+        {listIgStills(referencePhotos).length > 0 && (
+          <div className="mt-3 grid grid-cols-3 gap-1">
+            {listIgStills(referencePhotos).slice(0, 6).map((still) => (
+              <div
+                key={still.id}
+                className="aspect-square overflow-hidden rounded-md bg-[#0d1218]"
+              >
+                <CroppedStill
+                  src={still.dataUrl}
+                  stillId={still.id}
+                  alt={still.label ?? 'IG shape'}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
         <p className="mt-2 text-sm text-[var(--muted)]">
           Crops from Compare. Screenshot a looping Instagram clip or replay — press one
           corner, drag to the opposite corner — and the still lands here. Select Ryan

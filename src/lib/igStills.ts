@@ -36,8 +36,23 @@ export function igStillDisplayName(photo: ReferencePhoto): string {
   return photo.shapeId
 }
 
+/** Recover a paint-able src if a description edit dropped the data URL. */
+export function igStillSrc(photo: ReferencePhoto): string | null {
+  if (isUsablePhotoSrc(photo.dataUrl)) return photo.dataUrl
+  if (photo.id && (photo.persistedToApp || photo.library === 'ig')) {
+    return `/api/ig-still-file?id=${encodeURIComponent(photo.id)}`
+  }
+  return null
+}
+
 export function listIgStills(photos: ReferencePhoto[]): ReferencePhoto[] {
-  return photos.filter((p) => isIgStill(p) && isUsablePhotoSrc(p.dataUrl))
+  return photos
+    .filter((p) => isIgStill(p))
+    .map((p) => {
+      const src = igStillSrc(p)
+      return src && src !== p.dataUrl ? { ...p, dataUrl: src } : p
+    })
+    .filter((p) => isUsablePhotoSrc(p.dataUrl))
 }
 
 export function igStillsForShape(
