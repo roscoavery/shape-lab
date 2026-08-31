@@ -87,12 +87,15 @@ type Props = {
   /** Other coaches: write collections tagged to this profile only. */
   personalEditor?: boolean
   profileId?: string | null
+  /** Full-screen watch + list viewer — quieter chrome, no page card. */
+  viewer?: boolean
 }
 
 export function ReferencePane({
   gymEditor = false,
   personalEditor = false,
   profileId = null,
+  viewer = false,
 }: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
@@ -761,6 +764,7 @@ export function ReferencePane({
       index: number
       total: number
       allowReorder: boolean
+      quiet?: boolean
     },
   ) => {
     const isActive = activeItemId === item.id
@@ -771,7 +775,7 @@ export function ReferencePane({
         className={`flex items-center gap-1 rounded-md ${
           dragId === item.id ? 'opacity-60' : ''
         }`}
-        draggable={opts.allowReorder && renamingId !== item.id && taggingId !== item.id}
+        draggable={opts.allowReorder && !opts.quiet && renamingId !== item.id && taggingId !== item.id}
         onDragStart={() => setDragId(item.id)}
         onDragOver={(e) => {
           if (!opts.allowReorder) return
@@ -783,7 +787,7 @@ export function ReferencePane({
         }}
         onDragEnd={() => setDragId(null)}
       >
-        {opts.allowReorder && (
+        {opts.allowReorder && !opts.quiet && (
           <span className="flex shrink-0 flex-col">
             <button
               type="button"
@@ -882,9 +886,11 @@ export function ReferencePane({
                   : 'text-[var(--muted)] hover:bg-[#243040] hover:text-[var(--text)]'
               }`}
             >
-              <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                {KIND_LABEL[item.kind]}
-              </span>
+              {!opts.quiet && (
+                <span className="rounded bg-[#0d1218] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                  {KIND_LABEL[item.kind]}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{item.name}</span>
                 {(item.postedBy || (item.url && postedByFromUrl(item.url))) && (
@@ -897,7 +903,7 @@ export function ReferencePane({
                     in {opts.collection.name}
                   </span>
                 ) : null}
-                {item.keywords && item.keywords.length > 0 ? (
+                {!opts.quiet && item.keywords && item.keywords.length > 0 ? (
                   <span className="mt-0.5 flex flex-wrap gap-1">
                     {item.keywords.map((kw) => (
                       <span
@@ -915,7 +921,7 @@ export function ReferencePane({
                   </span>
                 ) : null}
               </span>
-              {isSocialVideoItem(item) && (
+              {!opts.quiet && isSocialVideoItem(item) && (
                 <span
                   className={`shrink-0 text-[10px] ${
                     cached ? 'text-[var(--good)]' : 'text-[var(--muted)]'
@@ -925,7 +931,7 @@ export function ReferencePane({
                 </span>
               )}
             </button>
-            {canEditCollection(opts.collection) && (
+            {!opts.quiet && canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startRename(item)}
@@ -935,7 +941,7 @@ export function ReferencePane({
               Rename
             </button>
             )}
-            {canEditCollection(opts.collection) && (
+            {!opts.quiet && canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startTags(item)}
@@ -945,7 +951,7 @@ export function ReferencePane({
               Tags
             </button>
             )}
-            {canEditLibrary && (
+            {!opts.quiet && canEditLibrary && (
               <ClipOrganizeMenu
                 clip={{
                   name: item.name,
@@ -962,7 +968,7 @@ export function ReferencePane({
             )}
           </>
         )}
-        {canEditCollection(opts.collection) && (
+        {!opts.quiet && canEditCollection(opts.collection) && (
         <button
           type="button"
           onClick={() => void removeItem(item, opts.collection)}
@@ -1048,7 +1054,7 @@ export function ReferencePane({
               {hudCorner}
             </div>
           ) : null}
-          {fill && !pip ? (
+          {fill && !pip && !viewer ? (
             <div className="pointer-events-auto absolute left-1.5 top-2 z-[35]">
               <CompareControlsButton />
             </div>
@@ -1115,7 +1121,9 @@ export function ReferencePane({
       className={
         fullscreen
           ? 'flex h-full min-h-0 flex-col overflow-hidden bg-black'
-          : 'flex flex-col gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
+          : viewer
+            ? 'flex h-full min-h-0 flex-col gap-2 overflow-hidden bg-[#0b0f14] px-1 pb-2 pt-1'
+            : 'flex flex-col gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4'
       }
     >
       {fullscreen && refRail
@@ -1144,6 +1152,7 @@ export function ReferencePane({
         : null}
       {!fullscreen && (
       <>
+      {!viewer && (
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
@@ -1159,6 +1168,7 @@ export function ReferencePane({
           <p className="text-xs text-[var(--muted)]">Play one, scroll the list</p>
         )}
       </div>
+      )}
 
       {desk !== 'keep' && (
       <div className="flex flex-wrap items-center gap-2">
@@ -1222,9 +1232,15 @@ export function ReferencePane({
       />
 
       {(desk === 'watch' || desk === 'browse') && (
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]">
-          {renderPlayer(false)}
-          <div className="flex min-h-0 min-w-0 flex-col gap-3">
+        <div
+          className={
+            viewer
+              ? 'grid min-h-0 flex-1 overflow-hidden gap-3 grid-rows-[minmax(0,1.2fr)_minmax(11rem,0.8fr)] lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] lg:grid-rows-1'
+              : 'grid items-start gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]'
+          }
+        >
+          {renderPlayer(Boolean(viewer))}
+          <div className={`flex min-h-0 min-w-0 flex-col gap-3 ${viewer ? 'overflow-hidden' : ''}`}>
           {desk === 'browse' && (
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -1289,7 +1305,13 @@ export function ReferencePane({
             </div>
           ) : null}
           {activeCollection && (watchList.length > 0 || (desk === 'browse' && otherHits.length > 0)) ? (
-            <div className="flex max-h-[min(22rem,48vh)] flex-col gap-2 overflow-y-auto panel-scroll lg:max-h-[min(32rem,70vh)]">
+            <div
+              className={
+                viewer
+                  ? 'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto panel-scroll'
+                  : 'flex max-h-[min(22rem,48vh)] flex-col gap-2 overflow-y-auto panel-scroll lg:max-h-[min(32rem,70vh)]'
+              }
+            >
               {desk === 'browse' && searching && otherHits.length > 0 && (
                 <p className="text-xs text-[var(--muted)]">
                   {otherHits.length} from other collections
@@ -1303,6 +1325,7 @@ export function ReferencePane({
                       index,
                       total: watchList.length,
                       allowReorder: desk === 'watch' && canEditCollection(activeCollection),
+                      quiet: viewer,
                     }),
                   )}
                 </ul>
@@ -1319,6 +1342,7 @@ export function ReferencePane({
                         index,
                         total: otherHits.length,
                         allowReorder: false,
+                        quiet: viewer,
                       }),
                     )}
                   </ul>
@@ -1346,7 +1370,7 @@ export function ReferencePane({
       )}
 
       {desk === 'add' && canEditLibrary && (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${viewer ? 'min-h-0 flex-1 overflow-y-auto' : ''}`}>
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={newCollectionName}
@@ -1423,7 +1447,7 @@ export function ReferencePane({
       )}
 
       {desk === 'keep' && (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${viewer ? 'min-h-0 flex-1 overflow-y-auto' : ''}`}>
           <div className="flex flex-wrap items-center gap-2">
             {gymEditor && (
               <button

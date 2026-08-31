@@ -72,8 +72,10 @@ export function ComparePanel({
   const [pipCorner, setPipCorner] = useState<PipCorner>('br')
   const [replayStart, setReplayStart] = useState(false)
   const [replayAfterGo, setReplayAfterGo] = useState<CompareFocus>('split')
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   const enterReplay = (next: CompareSplit, afterGo: CompareFocus = 'split') => {
+    setLibraryOpen(false)
     setSplit(next)
     setFocus('cam')
     setChromeOpen(false)
@@ -81,6 +83,15 @@ export function ComparePanel({
     setReplayAfterGo(afterGo)
     setFullscreen(true)
   }
+
+  const openLibrary = () => {
+    setChromeOpen(false)
+    setReplayStart(false)
+    setFullscreen(false)
+    setLibraryOpen(true)
+  }
+
+  const closeLibrary = () => setLibraryOpen(false)
 
   const exitReplay = () => {
     setChromeOpen(false)
@@ -107,6 +118,20 @@ export function ComparePanel({
       window.removeEventListener('keydown', onKey)
     }
   }, [fullscreen])
+
+  useEffect(() => {
+    if (!libraryOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLibrary()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [libraryOpen])
 
   const prevFsRef = useRef(false)
   useEffect(() => {
@@ -190,13 +215,31 @@ export function ComparePanel({
               <button
                 type="button"
                 onClick={() => enterReplay('tb', 'cam')}
-                className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] px-5 py-3 text-center shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-3.5"
+                className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] px-5 py-5 text-center shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
               >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#06281f]/70">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
                   Delay cam only
                 </span>
-                <span className="mt-0.5 text-lg font-bold tracking-tight text-[#06281f] sm:text-xl">
+                <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
                   Athlete camera
+                </span>
+                <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+                  Full-screen delay cam — no reference pane in the way.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={openLibrary}
+                className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#6ee7f0] via-[#22b8c9] to-[#0d4f5c] px-5 py-6 text-center shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#04262c]/70">
+                  Videos · Library
+                </span>
+                <span className="mt-1 text-2xl font-bold tracking-tight text-[#04262c] sm:text-3xl">
+                  Reference library
+                </span>
+                <span className="mt-2 max-w-lg text-sm font-medium text-[#04262c]/80">
+                  Watch the gym list, swipe carousels, and make your own collections.
                 </span>
               </button>
             </div>
@@ -277,16 +320,7 @@ export function ComparePanel({
                 />
               </ComparePipSlot>
             </div>
-          ) : (
-            <div className="min-h-0 min-w-0">
-              <ReferencePane
-                key={athleteId ?? 'none'}
-                gymEditor={gymEditor}
-                personalEditor={personalEditor}
-                profileId={athleteId}
-              />
-            </div>
-          )}
+          ) : null}
           {!fullscreen && lessonBar}
           {!fullscreen && (
             <CollapsibleSection
@@ -295,9 +329,10 @@ export function ComparePanel({
               defaultOpen={false}
             >
               <p className="text-sm leading-relaxed text-[var(--muted)]">
-                Replay with reference cam opens top / bottom. Drag the bar so the
-                reference or delay cam takes more of the window — pictures are not
-                stretched. On delay cam, tap{' '}
+                Each Videos button opens a full-screen viewer. Replay with reference
+                cam is top / bottom — drag the bar so the reference or delay cam
+                takes more of the window. Reference library is the player and clip
+                list with Done in the corner. On delay cam, tap{' '}
                 <strong className="text-[var(--text)]">Record</strong> after the skill;
                 that clip lands in this profile’s video library.{' '}
                 <strong className="text-[var(--text)]">Screenshot</strong> on a looping
@@ -357,6 +392,36 @@ export function ComparePanel({
           </div>
         )}
       </div>
+      {libraryOpen ? (
+        <div className="fixed inset-0 z-[240] flex h-[100dvh] w-screen flex-col bg-[#0b0f14]">
+          <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 pb-2 pt-[max(0.7rem,env(safe-area-inset-top))]">
+            <button
+              type="button"
+              onClick={closeLibrary}
+              className="rounded-full bg-white/12 px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-white/20"
+            >
+              Done
+            </button>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6ee7f0]/85">
+                Reference library
+              </p>
+              <p className="truncate text-sm text-white/65">
+                Player and list — make your own collections from Add
+              </p>
+            </div>
+          </header>
+          <div className="min-h-0 flex-1 px-2 pt-2 sm:px-3">
+            <ReferencePane
+              key={`library-${athleteId ?? 'none'}`}
+              gymEditor={gymEditor}
+              personalEditor={personalEditor}
+              profileId={athleteId}
+              viewer
+            />
+          </div>
+        </div>
+      ) : null}
     </CompareLayoutContext.Provider>
     </IgStillContext.Provider>
   )

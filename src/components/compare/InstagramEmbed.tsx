@@ -371,41 +371,27 @@ export function InstagramEmbed({
       >
         {player}
         {carousel ? (
-          <>
+          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-black/70 p-0.5 shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
             <button
               type="button"
               aria-label="Previous slide"
               onClick={() => go(safeSlide - 1)}
-              className={`absolute left-1 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-lg text-white ${
-                fill ? '' : ''
-              }`}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-white hover:bg-white/15"
             >
               ‹
             </button>
+            <p className="min-w-[2.75rem] text-center text-[11px] font-semibold tabular-nums text-white">
+              {safeSlide + 1}/{slideCount}
+            </p>
             <button
               type="button"
               aria-label="Next slide"
               onClick={() => go(safeSlide + 1)}
-              className="absolute right-1 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-lg text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-white hover:bg-white/15"
             >
               ›
             </button>
-            <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1">
-              <p className="rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
-                {safeSlide + 1} / {slideCount}
-              </p>
-              <div className="flex gap-1">
-                {slides.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      i === safeSlide ? 'bg-white' : 'bg-white/35'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </>
+          </div>
         ) : null}
       </div>
       {!fill && !quiet && (
