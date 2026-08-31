@@ -1,7 +1,7 @@
 {
   "kind": "shape-lab-lessons",
   "version": 1,
-  "exportedAt": "2026-08-30T06:44:08.949Z",
+  "exportedAt": "2026-08-31T01:17:09.550Z",
   "plans": [
     {
       "id": "lpn_mtesjtgt_8k7xgp",
@@ -244,6 +244,36 @@
       "notes": [],
       "holds": [],
       "endedAt": "2026-08-30T04:27:19.055Z"
+    },
+    {
+      "id": "les_mtgh9rzr_0spl07",
+      "planId": null,
+      "athleteId": "ath_mtef44ic_bdqq0w",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-31T00:06:06.327Z",
+      "notes": [],
+      "holds": [
+        {
+          "shapeId": "hollow_arms_down",
+          "shapeName": "Hollow",
+          "totalHoldSeconds": 19.6,
+          "properHoldSeconds": 0,
+          "score": 0,
+          "method": "manual",
+          "topicKind": "shape",
+          "id": "lhd_mtghacu8_rsydw7",
+          "createdAt": "2026-08-31T00:06:33.344Z"
+        }
+      ]
+    },
+    {
+      "id": "les_mtgjt5bo_7x1ynm",
+      "planId": null,
+      "athleteId": "ath_mtef44ic_bdqq0w",
+      "coachId": "ath_ryan",
+      "startedAt": "2026-08-31T01:17:09.300Z",
+      "notes": [],
+      "holds": []
     }
   ]
 }

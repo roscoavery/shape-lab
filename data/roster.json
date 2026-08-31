@@ -1,7 +1,7 @@
 {
   "kind": "shape-lab-roster",
   "version": 1,
-  "exportedAt": "2026-08-30T14:30:08.921Z",
+  "exportedAt": "2026-08-31T01:15:39.948Z",
   "athletes": [
     {
       "id": "ath_ryan",
@@ -641,13 +641,13 @@
       "athleteId": "ath_ryan",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-30T14:30:07.907Z"
+      "updatedAt": "2026-08-31T01:15:39.776Z"
     },
     "ath_mtdtwrt0_0imz3e": {
       "athleteId": "ath_mtdtwrt0_0imz3e",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-30T14:30:07.907Z"
+      "updatedAt": "2026-08-31T01:15:39.776Z"
     },
     "ath_mtdpolgg_vwoxsa": {
       "athleteId": "ath_mtdpolgg_vwoxsa",
@@ -713,7 +713,7 @@
       "athleteId": "ath_mtef44ic_bdqq0w",
       "completions": {},
       "currentId": "flow_hs_right",
-      "updatedAt": "2026-08-30T14:30:07.907Z"
+      "updatedAt": "2026-08-31T01:15:39.776Z"
     }
   },
   "attempts": [
