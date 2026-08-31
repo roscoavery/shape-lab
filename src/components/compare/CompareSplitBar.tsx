@@ -9,22 +9,24 @@ import { useCompareLayout, type CompareSplit } from './compareLayout'
 type Where = 'page' | 'reference' | 'camera' | 'overlay'
 
 export function CompareSplitBar({ where }: { where: Where }) {
-  const { fullscreen, split, setFullscreen, setSplit, setFocus, setChromeOpen } =
+  const { fullscreen, split, setFullscreen, setSplit, setFocus, setChromeOpen, setReplayStart } =
     useCompareLayout()
   if (fullscreen && where !== 'overlay') return null
   if (where === 'overlay' || where === 'page') return null
 
   const pick = (next: CompareSplit) => {
     setSplit(next)
-    setFocus('split')
+    setFocus('cam')
     setChromeOpen(false)
+    setReplayStart(true)
     setFullscreen(true)
   }
 
   const enterFull = () => {
     setSplit('tb')
-    setFocus('split')
+    setFocus('cam')
     setChromeOpen(false)
+    setReplayStart(true)
     setFullscreen(true)
   }
 

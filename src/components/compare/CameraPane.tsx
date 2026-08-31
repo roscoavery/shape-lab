@@ -91,7 +91,8 @@ export function CameraPane({
   const delayUrlRef = useRef<string | null>(null)
   const delaySecRef = useRef(6)
   const delayFollowRef = useRef(true)
-  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner } = useCompareLayout()
+  const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner, setReplayStart } =
+    useCompareLayout()
 
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
@@ -116,7 +117,7 @@ export function CameraPane({
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('live')
   const [mirror, setMirror] = useState(true)
-  const [delaySec, setDelaySec] = useState(6)
+  const [delaySec, setDelaySec] = useState(12)
   const [delayBuffering, setDelayBuffering] = useState(false)
   const [recording, setRecording] = useState(false)
   const [recSeconds, setRecSeconds] = useState(0)
@@ -386,7 +387,7 @@ export function CameraPane({
   // Camera start/stop
   // -------------------------------------------------------------------------
 
-  const startCamera = async () => {
+  const startCamera = async (): Promise<boolean> => {
     setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -404,6 +405,7 @@ export function CameraPane({
       await video.play()
       setRunning(true)
       startRolling()
+      return true
     } catch (err) {
       setError(
         err instanceof Error
@@ -411,6 +413,7 @@ export function CameraPane({
           : 'Could not access camera. Allow camera permission and use HTTPS or localhost.',
       )
       setRunning(false)
+      return false
     }
   }
 
@@ -928,7 +931,11 @@ export function CameraPane({
             onReplay={() => void openBufferReplay()}
             onFlip={() => setMirror((on) => !on)}
             onRecord={() => void recordAfterSkill()}
-            onBuffer={() => setMode('live')}
+            onBuffer={() => {
+              setMode('live')
+              setReplayStart(true)
+              setFocus('cam')
+            }}
             onReset={() => {
               setCamZoom(1)
               delayFollowRef.current = true
@@ -937,6 +944,8 @@ export function CameraPane({
             onExit={() => {
               setCamZoom(1)
               setMode('live')
+              setReplayStart(true)
+              setFocus('cam')
             }}
           />
         )}
@@ -946,13 +955,20 @@ export function CameraPane({
             delaySec={delaySec}
             min={DELAY_MIN}
             max={DELAY_MAX}
+            error={error}
             onDelaySec={setDelaySec}
-            onStartCamera={() => void startCamera()}
-            onEnterDelay={() => {
-              setDelayHudOpen(true)
-              setMode('delay')
+            onGo={() => {
+              void (async () => {
+                if (!running) {
+                  const ok = await startCamera()
+                  if (!ok) return
+                }
+                setDelayHudOpen(true)
+                setMode('delay')
+                setReplayStart(false)
+                setFocus('split')
+              })()
             }}
-            onMinimize={() => setFocus('ref')}
           />
         )}
         {livePeek && (

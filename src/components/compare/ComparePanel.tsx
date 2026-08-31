@@ -70,12 +70,26 @@ export function ComparePanel({
   const [libraryTick, setLibraryTick] = useState(0)
   const [athleteReplay, setAthleteReplay] = useState(false)
   const [pipCorner, setPipCorner] = useState<PipCorner>('br')
+  const [replayStart, setReplayStart] = useState(false)
+
+  const enterReplay = (next: CompareSplit) => {
+    setSplit(next)
+    setFocus('cam')
+    setChromeOpen(false)
+    setReplayStart(true)
+    setFullscreen(true)
+  }
+
+  const exitReplay = () => {
+    setChromeOpen(false)
+    setReplayStart(false)
+    setFullscreen(false)
+  }
 
   useEffect(() => {
-    if (enterFullscreenTick > 0) {
-      setChromeOpen(false)
-      setFullscreen(true)
-    }
+    if (enterFullscreenTick > 0) enterReplay('tb')
+    // enterReplay is stable enough for this tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enterFullscreenTick])
 
   useEffect(() => {
@@ -83,7 +97,7 @@ export function ComparePanel({
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false)
+      if (e.key === 'Escape') exitReplay()
     }
     window.addEventListener('keydown', onKey)
     return () => {
@@ -117,10 +131,12 @@ export function ComparePanel({
       lrRatio,
       athleteReplay,
       pipCorner,
+      replayStart,
       setFullscreen,
       setSplit,
       setFocus,
       setChromeOpen,
+      setReplayStart,
       setCamRail,
       setRefRail,
       setTbRatio,
@@ -128,7 +144,7 @@ export function ComparePanel({
       setAthleteReplay,
       setPipCorner,
     }),
-    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio, athleteReplay, pipCorner],
+    [fullscreen, split, focus, chromeOpen, camRail, refRail, tbRatio, lrRatio, athleteReplay, pipCorner, replayStart],
   )
 
   const showRef = focus !== 'cam'
@@ -155,12 +171,7 @@ export function ComparePanel({
           {!fullscreen && (
             <button
               type="button"
-              onClick={() => {
-                setSplit('tb')
-                setFocus('split')
-                setChromeOpen(false)
-                setFullscreen(true)
-              }}
+              onClick={() => enterReplay('tb')}
               className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
             >
               <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
@@ -179,24 +190,14 @@ export function ComparePanel({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setSplit('lr')
-                  setFocus('split')
-                  setChromeOpen(false)
-                  setFullscreen(true)
-                }}
+                onClick={() => enterReplay('lr')}
                 className="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
               >
                 Open left / right
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setSplit('tb')
-                  setFocus('split')
-                  setChromeOpen(false)
-                  setFullscreen(true)
-                }}
+                onClick={() => enterReplay('tb')}
                 className="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
               >
                 Open top / bottom
@@ -237,7 +238,7 @@ export function ComparePanel({
               }
             >
               <ComparePipSlot
-                active={corner === 'ref'}
+                active={corner === 'ref' && !replayStart}
                 onSwap={() => setFocus(flipFocus(focus))}
                 onSplit={() => {
                   setSplit('tb')
@@ -358,6 +359,16 @@ export function ComparePanel({
             </CollapsibleSection>
           )}
         </div>
+        {fullscreen && (
+          <button
+            type="button"
+            aria-label="Close replay with reference cam"
+            onClick={exitReplay}
+            className="pointer-events-auto absolute right-3 top-3 z-[80] flex h-8 w-8 items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+          >
+            ×
+          </button>
+        )}
         {fullscreen && (
           <div className="pointer-events-none absolute inset-0 z-[18]">
             <FloatingStillOverlay />

@@ -27,6 +27,7 @@ export function CompareChromeRail({ photos }: Props) {
     setChromeOpen,
     setCamRail,
     setRefRail,
+    setReplayStart,
   } = useCompareLayout()
 
   const pickSplit = (next: CompareSplit) => {
@@ -45,7 +46,10 @@ export function CompareChromeRail({ photos }: Props) {
       <div className="flex items-center gap-1.5">
         <button
           type="button"
-          onClick={() => setFullscreen(false)}
+          onClick={() => {
+            setReplayStart(false)
+            setFullscreen(false)
+          }}
           className="flex-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black"
         >
           Exit

@@ -48,10 +48,13 @@ export type CompareLayoutValue = {
   /** Athlete pane is showing Replay Last — flush the split and overlay transport. */
   athleteReplay: boolean
   pipCorner: PipCorner
+  /** First-open buffer picker covers the camera; hide the reference chip. */
+  replayStart: boolean
   setFullscreen: (on: boolean) => void
   setSplit: (split: CompareSplit) => void
   setFocus: (focus: CompareFocus) => void
   setChromeOpen: (on: boolean) => void
+  setReplayStart: (on: boolean) => void
   setCamRail: Dispatch<SetStateAction<HTMLElement | null>>
   setRefRail: Dispatch<SetStateAction<HTMLElement | null>>
   setTbRatio: (n: number) => void
@@ -73,10 +76,12 @@ export const CompareLayoutContext = createContext<CompareLayoutValue>({
   lrRatio: 0.5,
   athleteReplay: false,
   pipCorner: 'br',
+  replayStart: false,
   setFullscreen: noop,
   setSplit: noop,
   setFocus: noop,
   setChromeOpen: noop,
+  setReplayStart: noop,
   setCamRail: noop,
   setRefRail: noop,
   setTbRatio: noop,
