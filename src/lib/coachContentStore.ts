@@ -3,7 +3,16 @@
  * Gym-wide via /api/coach-content, cached locally.
  */
 
-import type { CoachShape, CoachSkillRef, WarmupGuide, WarmupStar } from '../types'
+import { SHAPES_BY_ID } from '../config/shapes'
+import { setGymShapeCache } from './gymShapeCache'
+import type {
+  CoachShape,
+  CoachSkillRef,
+  GymLibraryShape,
+  ShapeDef,
+  WarmupGuide,
+  WarmupStar,
+} from '../types'
 import { createId } from './storage'
 import { dispatchLibraryChanged } from './libraryEvents'
 
@@ -17,6 +26,7 @@ export type CoachContentFile = {
   references: CoachSkillRef[]
   warmups: WarmupGuide[]
   stars: WarmupStar[]
+  gymLibrary?: GymLibraryShape[]
 }
 
 const listeners = new Set<() => void>()
@@ -36,7 +46,7 @@ function readFile(): CoachContentFile {
     if (!raw) return emptyFile()
     const data = JSON.parse(raw) as CoachContentFile
     if (data?.kind !== 'shape-lab-coach-content') return emptyFile()
-    return {
+    const parsed: CoachContentFile = {
       kind: 'shape-lab-coach-content',
       version: 1,
       exportedAt: data.exportedAt ?? '',
@@ -44,7 +54,10 @@ function readFile(): CoachContentFile {
       references: Array.isArray(data.references) ? data.references : [],
       warmups: Array.isArray(data.warmups) ? data.warmups : [],
       stars: Array.isArray(data.stars) ? data.stars : [],
+      gymLibrary: Array.isArray(data.gymLibrary) ? data.gymLibrary : [],
     }
+    syncGymCache(parsed)
+    return parsed
   } catch {
     return emptyFile()
   }
@@ -59,7 +72,28 @@ function emptyFile(): CoachContentFile {
     references: [],
     warmups: [],
     stars: [],
+    gymLibrary: [],
   }
+}
+
+function gymRowToDef(row: GymLibraryShape): ShapeDef {
+  const like = row.scoreShapeId ? SHAPES_BY_ID[row.scoreShapeId] : undefined
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || row.bodyPosition,
+    bodyPosition: row.bodyPosition,
+    category: row.category ?? 'hold',
+    qualityThreshold: like?.qualityThreshold ?? 65,
+    cameraView: row.cameraView ?? like?.cameraView ?? 'any',
+    criteria: like?.criteria ?? [],
+    tips: like?.tips,
+    coachNotes: row.description,
+  }
+}
+
+function syncGymCache(file: CoachContentFile) {
+  setGymShapeCache((file.gymLibrary ?? []).map(gymRowToDef))
 }
 
 function persist(next: CoachContentFile) {
@@ -70,12 +104,14 @@ function persist(next: CoachContentFile) {
     references: (next.references ?? []).slice(0, 240),
     warmups: next.warmups.slice(0, 120),
     stars: next.stars.slice(0, 400),
+    gymLibrary: (next.gymLibrary ?? []).slice(0, 200),
   }
   try {
     localStorage.setItem(KEY, JSON.stringify(file))
   } catch {
     /* quota */
   }
+  syncGymCache(file)
   emit()
   void pushContent(file)
 }
@@ -120,6 +156,7 @@ export async function hydrateCoachContent(): Promise<void> {
       shapes: mergeById(local.shapes, data.shapes ?? []),
       references: mergeById(local.references ?? [], data.references ?? []),
       warmups: mergeById(local.warmups, data.warmups ?? []),
+      gymLibrary: mergeById(local.gymLibrary ?? [], data.gymLibrary ?? []),
       stars: [...local.stars, ...(data.stars ?? [])].filter(
         (s, i, all) =>
           s.athleteId &&
@@ -160,6 +197,30 @@ export function saveCoachShape(shape: CoachShape): CoachShape {
 export function deleteCoachShape(id: string) {
   const file = readFile()
   persist({ ...file, shapes: file.shapes.filter((s) => s.id !== id) })
+}
+
+export function listGymLibraryShapes(): GymLibraryShape[] {
+  return (readFile().gymLibrary ?? [])
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function saveGymLibraryShape(row: GymLibraryShape): GymLibraryShape {
+  const next = { ...row, updatedAt: new Date().toISOString() }
+  const file = readFile()
+  persist({
+    ...file,
+    gymLibrary: [next, ...(file.gymLibrary ?? []).filter((s) => s.id !== next.id)],
+  })
+  return next
+}
+
+export function deleteGymLibraryShape(id: string) {
+  const file = readFile()
+  persist({
+    ...file,
+    gymLibrary: (file.gymLibrary ?? []).filter((s) => s.id !== id),
+  })
 }
 
 export function listCoachSkillRefs(): CoachSkillRef[] {
@@ -306,3 +367,7 @@ export async function uploadCoachMedia(opts: {
   if (!data.url) throw new Error('Could not save that file.')
   return data.url
 }
+
+// Warm the gym-shape cache from localStorage so Learn / getShape see
+// gym-wide shapes before the first subscribe tick.
+void readFile()

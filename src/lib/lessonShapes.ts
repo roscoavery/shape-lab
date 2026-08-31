@@ -1,4 +1,4 @@
-import { SHAPES, getShape } from '../config/shapes'
+import { allLibraryShapes, getShape } from '../config/shapes'
 import { ARM_POSITION_SHAPE_IDS } from './educationCopy'
 import type { ShapeDef } from '../types'
 
@@ -28,9 +28,13 @@ export const LESSON_HIDDEN_SHAPE_IDS = ['lunge', 'bridge'] as const
 
 /** Library shapes a lesson can time or camera-score. */
 export function lessonScoreShapes(): ShapeDef[] {
-  return SHAPES.filter(
-    (s) => !isArmPositionShape(s.id) && !LESSON_HIDDEN_SHAPE_IDS.includes(s.id as (typeof LESSON_HIDDEN_SHAPE_IDS)[number]),
-  ).sort((a, b) => a.name.localeCompare(b.name))
+  return allLibraryShapes()
+    .filter(
+      (s) =>
+        !isArmPositionShape(s.id) &&
+        !LESSON_HIDDEN_SHAPE_IDS.includes(s.id as (typeof LESSON_HIDDEN_SHAPE_IDS)[number]),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export function quickHoldShapes(): { id: QuickHoldId; label: string; shape: ShapeDef }[] {

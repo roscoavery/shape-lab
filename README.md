@@ -230,7 +230,9 @@ Every athlete automatically has **4 lifetime drills** (they can never be removed
 
 **Core home conditioning** on **Tasks 2** (and Coach) is the easy at-home circuit: 10× pike (zombie arms) → hollow → arch, then 3× open-shoulder pike with tuck–hollow squeezes into an arch, then 30-second side plank (both sides), Superman, and hollow. Hollow starts from a zombie-arm pike and inches back until the lowest part of the low back touches, then flatten and let the feet inch off. End by working those holds toward a minute.
 
-On top of that, the **coach can assign** any shape from the library as homework, and the **athlete can self-select** drills too ("Coach assigns" / "Athlete picks" when adding).
+On top of that, the **coach can assign** any shape from the library as homework, or a **sequence** (lunge → lever → handstand, pike → hollow → arch, and the other shipped scripts). Sequences show their steps on the homework card; Train scores the first camera-ready step. Athletes can also self-select drills ("Coach assigns" / "Athlete picks" when adding).
+
+**Gym shape library:** unlock a coach or gym-admin profile, then add a shape from **Learn → Shape library** or **Coach library**. It is gym-wide — Learn, homework assignment, and lesson pickers all see it. Optionally copy camera grading from a shipped shape. Private coach shapes stay on that coach’s card.
 
 **Camera sessions (primary, encouraged):**
 

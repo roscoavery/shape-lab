@@ -1,4 +1,6 @@
-import { SHAPES } from '../config/shapes'
+import { useEffect, useMemo, useState } from 'react'
+import { allLibraryShapes, getShape } from '../config/shapes'
+import { subscribeCoachContent } from '../lib/coachContentStore'
 import type { ShapeDef } from '../types'
 
 type Props = {
@@ -7,6 +9,13 @@ type Props = {
 }
 
 export function ShapeSelector({ selectedId, onSelect }: Props) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
+  const options = useMemo(
+    () => allLibraryShapes().slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [tick],
+  )
+  const selected = getShape(selectedId)
   return (
     <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <label className="mb-2 block text-xs uppercase tracking-wider text-[var(--muted)]">
@@ -16,24 +25,24 @@ export function ShapeSelector({ selectedId, onSelect }: Props) {
         className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-[var(--text)]"
         value={selectedId}
         onChange={(e) => {
-          const shape = SHAPES.find((s) => s.id === e.target.value)
+          const shape = getShape(e.target.value)
           if (shape) onSelect(shape)
         }}
       >
-        {SHAPES.map((s) => (
+        {options.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
         ))}
       </select>
-      {SHAPES.find((s) => s.id === selectedId)?.description && (
+      {selected?.description && (
         <p className="mt-2 text-sm text-[var(--muted)]">
-          {SHAPES.find((s) => s.id === selectedId)?.description}
+          {selected.description}
         </p>
       )}
-      {SHAPES.find((s) => s.id === selectedId)?.tips && (
+      {selected?.tips && (
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--muted)]">
-          {SHAPES.find((s) => s.id === selectedId)?.tips?.map((t) => (
+          {selected.tips.map((t) => (
             <li key={t}>{t}</li>
           ))}
         </ul>

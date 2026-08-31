@@ -38,6 +38,7 @@
  */
 
 import { LM } from '../lib/landmarks'
+import { getGymShapeFromCache, listGymShapeCache } from '../lib/gymShapeCache'
 import type { CriterionDef, ShapeDef } from '../types'
 
 /** Shortcut: left elbow angle landmarks */
@@ -3623,5 +3624,10 @@ export const SHAPES_BY_ID: Record<string, ShapeDef> = Object.fromEntries(
 
 export function getShape(id: string): ShapeDef | undefined {
   if (id === 'hollow') return SHAPES_BY_ID.hollow_arms_up
-  return SHAPES_BY_ID[id]
+  return SHAPES_BY_ID[id] ?? getGymShapeFromCache(id)
+}
+
+export function allLibraryShapes(): ShapeDef[] {
+  const extra = listGymShapeCache().filter((row) => !SHAPES_BY_ID[row.id])
+  return [...SHAPES, ...extra]
 }

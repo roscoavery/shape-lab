@@ -10,6 +10,7 @@ export type DiskCoachContent = {
   references: unknown[]
   warmups: unknown[]
   stars: unknown[]
+  gymLibrary?: unknown[]
 }
 
 const EMPTY: DiskCoachContent = {
@@ -20,6 +21,7 @@ const EMPTY: DiskCoachContent = {
   references: [],
   warmups: [],
   stars: [],
+  gymLibrary: [],
 }
 
 export async function readCoachContentFile(): Promise<DiskCoachContent> {
@@ -33,6 +35,7 @@ export async function readCoachContentFile(): Promise<DiskCoachContent> {
     references: Array.isArray(data.references) ? data.references : [],
     warmups: Array.isArray(data.warmups) ? data.warmups : [],
     stars: Array.isArray(data.stars) ? data.stars : [],
+    gymLibrary: Array.isArray(data.gymLibrary) ? data.gymLibrary : [],
   }
 }
 
@@ -97,6 +100,10 @@ export async function writeCoachContentFile(raw: unknown): Promise<DiskCoachCont
     references: union(current.references, Array.isArray(body.references) ? body.references : []),
     warmups: union(current.warmups, Array.isArray(body.warmups) ? body.warmups : []),
     stars: unionStars(current.stars, Array.isArray(body.stars) ? body.stars : []),
+    gymLibrary: union(
+      current.gymLibrary ?? [],
+      Array.isArray(body.gymLibrary) ? body.gymLibrary : [],
+    ),
   }
   await writeJson(FILE, next)
   return next

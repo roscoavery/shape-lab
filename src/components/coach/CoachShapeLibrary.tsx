@@ -3,15 +3,18 @@ import { SHAPES } from '../../config/shapes'
 import {
   deleteCoachShape,
   deleteCoachSkillRef,
+  deleteGymLibraryShape,
   emptyCoachShape,
   emptyCoachSkillRef,
   listCoachShapes,
   listCoachSkillRefs,
+  listGymLibraryShapes,
   saveCoachShape,
   saveCoachSkillRef,
   subscribeCoachContent,
   uploadCoachMedia,
 } from '../../lib/coachContentStore'
+import { AddGymShapeForm } from '../AddGymShapeForm'
 import { compressImageFile } from '../../lib/mediaCompress'
 import { createId } from '../../lib/storage'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
@@ -50,6 +53,7 @@ export function CoachShapeLibrary({ signedIn }: Props) {
 
   const shapes = listCoachShapes()
   const refs = listCoachSkillRefs()
+  const gymShapes = listGymLibraryShapes()
   const mine = coach && signedIn ? shapes.filter((s) => s.coachId === signedIn.id) : []
   const others =
     admin && signedIn ? shapes.filter((s) => s.coachId !== signedIn.id) : []
@@ -63,11 +67,11 @@ export function CoachShapeLibrary({ signedIn }: Props) {
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Coach library</p>
         <h2 className="text-xl font-semibold">Shapes and skill references</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Coaches snap or upload a picture or clip for a body position, and can
-          also upload a skill video (tumbling pass, vault, bar set). Skill
-          references show up in Compare next to the UG clips. Each coach edits
-          only their own library
-          {admin ? '; as gym admin, you can also view every coach’s work' : ''}.
+          Add a shape to the <strong className="text-[var(--text)]">gym library</strong> so
+          it appears in Learn and in homework assignment for everyone. Private
+          shapes stay on your coach card. Skill videos show up in Compare next
+          to the UG clips
+          {admin ? '. As gym admin, you can also view every coach’s private work' : ''}.
         </p>
         {coach && signedIn && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -79,7 +83,7 @@ export function CoachShapeLibrary({ signedIn }: Props) {
                 setEditing(emptyCoachShape(signedIn.id, signedIn.name))
               }}
             >
-              Add a shape
+              Add a private shape
             </button>
             <button
               type="button"
@@ -123,6 +127,51 @@ export function CoachShapeLibrary({ signedIn }: Props) {
         />
       )}
       {err && <p className="text-sm text-[var(--bad)]">{err}</p>}
+
+      {coach && signedIn && (
+        <section className="rounded-xl border border-[var(--accent)]/35 bg-[var(--panel)] p-4">
+          <h3 className="font-semibold">Gym shape library</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            These shapes are gym-wide — Learn, homework pickers, and lesson
+            assignment all see them.
+          </p>
+          <div className="mt-3">
+            <AddGymShapeForm signedIn={signedIn} />
+          </div>
+          {gymShapes.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              No gym-wide shapes yet. Add one above.
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2">
+              {gymShapes.map((s) => (
+                <li key={s.id} className="rounded-lg bg-[#121820] p-3">
+                  <p className="text-sm font-semibold">{s.name}</p>
+                  {s.bodyPosition && <p className="mt-1 text-sm">{s.bodyPosition}</p>}
+                  {s.description && (
+                    <p className="mt-1 text-sm text-[var(--muted)]">{s.description}</p>
+                  )}
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    Added by {s.createdByName}
+                    {s.scoreShapeId ? ' · camera grades like a shipped shape' : ''}
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-2 text-xs text-[var(--bad)] underline"
+                    onClick={() => {
+                      if (window.confirm(`Remove ${s.name} from the gym library?`)) {
+                        deleteGymLibraryShape(s.id)
+                      }
+                    }}
+                  >
+                    Remove from gym library
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {mine.length > 0 && (
         <ShapeList

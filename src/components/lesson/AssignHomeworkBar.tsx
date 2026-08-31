@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { SHAPES } from '../../config/shapes'
-import { customHomeworkShapeId, homeworkTitle } from '../../lib/homeworkLabel'
+import { useEffect, useState } from 'react'
+import { allLibraryShapes } from '../../config/shapes'
+import { SEQUENCES } from '../../config/sequences'
+import {
+  customHomeworkShapeId,
+  homeworkTitle,
+  sequenceHomeworkShapeId,
+} from '../../lib/homeworkLabel'
 import { addHomeworkItem, createId, homeworkDedupeKey, ensureAutoHomework } from '../../lib/storage'
+import { subscribeCoachContent } from '../../lib/coachContentStore'
 import type { HomeworkSource } from '../../types'
-
-const OPTIONS = [...SHAPES].sort((a, b) => a.name.localeCompare(b.name))
 
 type Props = {
   athleteId: string
@@ -22,23 +26,34 @@ export function AssignHomeworkBar({
   hideHeading = false,
 }: Props) {
   const [shapeId, setShapeId] = useState(defaultShapeId ?? '')
+  const [sequenceId, setSequenceId] = useState('')
   const [typed, setTyped] = useState(defaultTyped ?? '')
   const [notes, setNotes] = useState(defaultNotes ?? '')
   const [seconds, setSeconds] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
+  const [libTick, setLibTick] = useState(0)
+
+  useEffect(() => subscribeCoachContent(() => setLibTick((n) => n + 1)), [])
+  const options = allLibraryShapes().slice().sort((a, b) => a.name.localeCompare(b.name))
+  void libTick
 
   const assign = () => {
     const label = typed.trim()
-    if (!label && !shapeId) {
-      setFlash('Pick a shape or type the drill name.')
+    const seq = SEQUENCES.find((s) => s.id === sequenceId)
+    if (!label && !shapeId && !seq) {
+      setFlash('Pick a shape, a sequence, or type the drill name.')
       return
     }
-    const nextShapeId = label ? customHomeworkShapeId(label) : shapeId
+    const nextShapeId = seq
+      ? sequenceHomeworkShapeId(seq.id)
+      : label
+        ? customHomeworkShapeId(label)
+        : shapeId
     const existing = ensureAutoHomework(athleteId)
     const probe = {
       athleteId,
       shapeId: nextShapeId,
-      customLabel: label || undefined,
+      customLabel: seq ? seq.name : label || undefined,
       source: 'coach' as HomeworkSource,
       id: '',
       createdAt: '',
@@ -48,20 +63,24 @@ export function AssignHomeworkBar({
       return
     }
     const target = Number(seconds)
+    const seqNotes = seq
+      ? `${seq.description}`
+      : ''
     addHomeworkItem({
       id: createId('hw'),
       athleteId,
       shapeId: nextShapeId,
-      ...(label ? { customLabel: label } : {}),
+      ...(seq || label ? { customLabel: seq ? seq.name : label } : {}),
       source: 'coach',
       createdAt: new Date().toISOString(),
       ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
-      ...(notes.trim() ? { notes: notes.trim() } : {}),
+      ...(notes.trim() || seqNotes ? { notes: notes.trim() || seqNotes } : {}),
     })
     setFlash(`Assigned ${homeworkTitle(probe)}. They will see it under Practice → Homework.`)
     setNotes('')
     setSeconds('')
     setTyped('')
+    setSequenceId('')
   }
 
   return (
@@ -75,10 +94,28 @@ export function AssignHomeworkBar({
         <select
           className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
           value={shapeId}
-          onChange={(e) => setShapeId(e.target.value)}
+          onChange={(e) => {
+            setShapeId(e.target.value)
+            if (e.target.value) setSequenceId('')
+          }}
         >
           <option value="">Pick a shape…</option>
-          {OPTIONS.map((s) => (
+          {options.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+          value={sequenceId}
+          onChange={(e) => {
+            setSequenceId(e.target.value)
+            if (e.target.value) setShapeId('')
+          }}
+        >
+          <option value="">Or assign a sequence…</option>
+          {SEQUENCES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>

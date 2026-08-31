@@ -18,7 +18,6 @@ import {
 } from '../lib/educationCopy'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
 import { listCaptures, type TaskCapture } from '../lib/captureStore'
-import type { ReferencePhoto, ShapeDef } from '../types'
 import { ViewCallout } from './ViewCallout'
 import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
@@ -33,6 +32,10 @@ import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
 import { PhysicsLessons } from './learn/PhysicsLessons'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
+import { subscribeCoachContent } from '../lib/coachContentStore'
+import { isCoachProfile } from '../lib/profileRole'
+import { AddGymShapeForm } from './AddGymShapeForm'
+import type { Athlete, ReferencePhoto, ShapeDef } from '../types'
 
 type EduView =
   | { kind: 'home' }
@@ -54,6 +57,7 @@ type Props = {
   athleteName?: string | null
   persistIgToApp?: boolean
   onReferencesChange: (photos: ReferencePhoto[]) => void
+  signedIn?: Athlete | null
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -64,12 +68,17 @@ export function EducationPanel({
   athleteName,
   persistIgToApp = false,
   onReferencesChange,
+  signedIn = null,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [hits, setHits] = useState<TaskCapture[]>([])
+  const [catalogTick, setCatalogTick] = useState(0)
   const { copyFor } = useShapeCopy()
+  const canAddGymShape = Boolean(signedIn && isCoachProfile(signedIn))
+
+  useEffect(() => subscribeCoachContent(() => setCatalogTick((n) => n + 1)), [])
 
   useEffect(() => {
     if (!athleteId) {
@@ -80,7 +89,7 @@ export function EducationPanel({
   }, [athleteId, view.kind])
 
   const pathwayIds = useMemo(() => curriculumShapeIds(), [])
-  const catalog = useMemo(() => learnLibraryShapes(), [])
+  const catalog = useMemo(() => learnLibraryShapes(), [catalogTick])
 
   const filteredShapes = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -220,16 +229,21 @@ export function EducationPanel({
       )}
 
       {view.kind === 'shapes' && (
-        <ShapeLibrary
-          shapes={filteredShapes}
-          pathwayIds={pathwayIds}
-          query={query}
-          filter={filter}
-          onQuery={setQuery}
-          onFilter={setFilter}
-          onOpen={openShape}
-          referencePhotos={referencePhotos}
-        />
+        <>
+          {canAddGymShape && signedIn && (
+            <AddGymShapeForm signedIn={signedIn} />
+          )}
+          <ShapeLibrary
+            shapes={filteredShapes}
+            pathwayIds={pathwayIds}
+            query={query}
+            filter={filter}
+            onQuery={setQuery}
+            onFilter={setFilter}
+            onOpen={openShape}
+            referencePhotos={referencePhotos}
+          />
+        </>
       )}
 
       {view.kind === 'shape' && (
@@ -669,6 +683,11 @@ function ShapeLibrary({
                 <div className="min-w-0 px-2.5 py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-[var(--text)]">{shape.name}</span>
+                    {shape.id.startsWith('gym_') && (
+                      <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text)]">
+                        Gym
+                      </span>
+                    )}
                     {onPath && (
                       <span className="rounded bg-[var(--accent-dim)]/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--accent)]">
                         Pathway

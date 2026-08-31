@@ -15,7 +15,8 @@
  */
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { SHAPES, getShape } from '../config/shapes'
+import { SEQUENCES } from '../config/sequences'
+import { allLibraryShapes, getShape } from '../config/shapes'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
@@ -40,12 +41,16 @@ import { syncRosterWithServer } from '../lib/rosterSync'
 import { homeworkLooksReady } from '../lib/homeworkPose'
 import {
   customHomeworkShapeId,
+  getHomeworkSequence,
   homeworkTitle,
   isCustomHomework,
+  isSequenceHomework,
+  sequenceHomeworkShapeId,
 } from '../lib/homeworkLabel'
 import { CollapsibleSection } from './CollapsibleSection'
 import { HoldProperTimes } from './HoldProperTimes'
 import { pickCoachStill } from '../lib/shippedRefs'
+import { subscribeCoachContent } from '../lib/coachContentStore'
 import type {
   HomeworkBreakdown,
   HomeworkItem,
@@ -382,6 +387,35 @@ function HollowPairRefs({
   )
 }
 
+function SequenceHomeworkSteps({ item }: { item: HomeworkItem }) {
+  const seq = getHomeworkSequence(item)
+  if (!seq) return null
+  const trainShape = seq.steps.find((step) => getShape(step.shapeId))
+  return (
+    <div className="mt-2 rounded-md bg-[#0d1218] px-2.5 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+        Sequence steps
+      </p>
+      <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-[var(--text)]">
+        {seq.steps.map((step, i) => (
+          <li key={`${step.shapeId}-${i}`}>
+            {getShape(step.shapeId)?.name ?? step.shapeId}
+            {step.holdSeconds ? (
+              <span className="text-[var(--muted)]"> · {step.holdSeconds}s</span>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+      {trainShape && (
+        <p className="mt-1.5 text-[11px] text-[var(--muted)]">
+          Train scores the first camera-ready step:{' '}
+          {getShape(trainShape.shapeId)?.name ?? trainShape.shapeId}.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function HomeworkPanel({
   athleteId,
   score,
@@ -398,7 +432,9 @@ export function HomeworkPanel({
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [plankSide, setPlankSide] = useState<PlankSide>('left')
   const [flash, setFlash] = useState<string | null>(null)
-  const [addShapeId, setAddShapeId] = useState(SHAPES[0]?.id ?? '')
+  const [addShapeId, setAddShapeId] = useState('')
+  const [addSequenceId, setAddSequenceId] = useState('')
+  const [libTick, setLibTick] = useState(0)
   const [addTyped, setAddTyped] = useState('')
   const [addSource, setAddSource] = useState<'coach' | 'athlete'>('coach')
   const [addTarget, setAddTarget] = useState('20')
@@ -455,13 +491,19 @@ export function HomeworkPanel({
     }
     window.addEventListener('shape-lab-roster-applied', onApplied)
     document.addEventListener('visibilitychange', onVisible)
+    const unsubLib = subscribeCoachContent(() => setLibTick((n) => n + 1))
     return () => {
       unsub()
+      unsubLib()
       window.removeEventListener('shape-lab-roster-applied', onApplied)
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [athleteId])
 
+  const libraryShapes = useMemo(
+    () => allLibraryShapes().slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [libTick],
+  )
   const visibleItems = useMemo(() => dedupeHomeworkItems(items), [items])
   const fromCoach = useMemo(
     () => visibleItems.filter((item) => item.source === 'coach'),
@@ -486,16 +528,24 @@ export function HomeworkPanel({
   }, [logs])
 
   const activeItem = items.find((i) => i.id === activeItemId) ?? null
-  const activeShape = activeItem ? getShape(activeItem.shapeId) : undefined
+  const activeSequence = activeItem ? getHomeworkSequence(activeItem) : undefined
+  const activeCameraShapeId =
+    activeSequence?.steps.find((step) => getShape(step.shapeId))?.shapeId ??
+    activeItem?.shapeId ??
+    ''
+  const activeShape = activeCameraShapeId ? getShape(activeCameraShapeId) : undefined
   const standard = activeItem ? formStandardFor(activeItem) : DEFAULT_FORM_STANDARD
 
   // Session timers: total vs proper (≥ form standard), independent of the
   // global quality threshold used elsewhere in the app.
   const sessionTiming =
-    timingActive && activeItem !== null && currentShapeId === activeItem.shapeId
+    timingActive &&
+    activeItem !== null &&
+    Boolean(activeCameraShapeId) &&
+    currentShapeId === activeCameraShapeId
   const inShape =
     Boolean(activeItem) &&
-    homeworkLooksReady(activeItem!.shapeId, landmarks, score.overall)
+    homeworkLooksReady(activeCameraShapeId || activeItem!.shapeId, landmarks, score.overall)
   const hold = useHoldTimer(
     sessionTiming && inShape,
     inShape ? Math.max(score.overall, 10) : 0,
@@ -568,7 +618,10 @@ export function HomeworkPanel({
     setOpenIds((prev) => new Set(prev).add(item.id))
     setActiveItemId(item.id)
     setManualItemId(null)
-    onRequestShape(item.shapeId, 'auto', { profileOk: true })
+    const seq = getHomeworkSequence(item)
+    const cameraId =
+      seq?.steps.find((step) => getShape(step.shapeId))?.shapeId ?? item.shapeId
+    onRequestShape(cameraId, 'auto', { profileOk: true })
     resetSession()
     resetSpeech()
     void onEnsureCamera?.()
@@ -723,12 +776,17 @@ export function HomeworkPanel({
   const addItem = () => {
     if (!athleteId) return
     const typed = addTyped.trim()
-    if (!typed && !addShapeId) return
-    const nextShapeId = typed ? customHomeworkShapeId(typed) : addShapeId
+    const seq = SEQUENCES.find((s) => s.id === addSequenceId)
+    if (!typed && !addShapeId && !seq) return
+    const nextShapeId = seq
+      ? sequenceHomeworkShapeId(seq.id)
+      : typed
+        ? customHomeworkShapeId(typed)
+        : addShapeId
     const probe = {
       athleteId,
       shapeId: nextShapeId,
-      customLabel: typed || undefined,
+      customLabel: seq ? seq.name : typed || undefined,
       source: addSource,
       id: '',
       createdAt: '',
@@ -754,12 +812,12 @@ export function HomeworkPanel({
               : nextShapeId === 'tuck_open_shoulders'
                 ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
           : ''
-    const notes = addNotes.trim() || defaultNotes
+    const notes = addNotes.trim() || (seq ? seq.description : defaultNotes)
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
       shapeId: nextShapeId,
-      ...(typed ? { customLabel: typed } : {}),
+      ...(seq ? { customLabel: seq.name } : typed ? { customLabel: typed } : {}),
       source: addSource,
       ...(Number.isFinite(target) && target > 0
         ? { targetSeconds: target }
@@ -770,6 +828,7 @@ export function HomeworkPanel({
     setItems(addHomeworkItem(item))
     setAddNotes('')
     setAddTyped('')
+    setAddSequenceId('')
     const shapeName = homeworkTitle(item)
     showFlash(
       `${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${shapeName}`,
@@ -1180,6 +1239,11 @@ export function HomeworkPanel({
                   <span className="truncate font-medium text-[var(--text)]">
                     {homeworkTitle(item)}
                   </span>
+                  {isSequenceHomework(item) && (
+                    <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text)]">
+                      sequence
+                    </span>
+                  )}
                   {best > 0 && (
                     <span className="hidden text-[11px] tabular-nums text-[var(--accent)] sm:inline">
                       best {formatSeconds(best)}
@@ -1369,6 +1433,9 @@ export function HomeworkPanel({
                 </div>
               )}
 
+              {isSequenceHomework(item) && (
+                <SequenceHomeworkSteps item={item} />
+              )}
               {item.notes && (
                 <p className="mt-1 text-[11px] text-[var(--muted)]">
                   {item.notes}
@@ -1397,10 +1464,28 @@ export function HomeworkPanel({
           <select
             className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
             value={addShapeId}
-            onChange={(e) => setAddShapeId(e.target.value)}
+            onChange={(e) => {
+              setAddShapeId(e.target.value)
+              if (e.target.value) setAddSequenceId('')
+            }}
           >
             <option value="">Pick a shape…</option>
-            {SHAPES.map((s) => (
+            {libraryShapes.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
+            value={addSequenceId}
+            onChange={(e) => {
+              setAddSequenceId(e.target.value)
+              if (e.target.value) setAddShapeId('')
+            }}
+          >
+            <option value="">Or a sequence…</option>
+            {SEQUENCES.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>

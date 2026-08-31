@@ -504,6 +504,22 @@ export type CoachShapeMedia = {
   label?: string
 }
 
+/** Gym-wide shape added while signed in — appears in Learn and homework. */
+export type GymLibraryShape = {
+  id: string
+  name: string
+  description: string
+  bodyPosition: string
+  cameraView?: CameraView
+  category?: ShapeCategory
+  /** Grade camera work using this shipped shape’s criteria. */
+  scoreShapeId?: string
+  createdById: string
+  createdByName: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type CoachShape = {
   id: string
   coachId: string

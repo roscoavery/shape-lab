@@ -4,7 +4,7 @@
  */
 
 import { CURRICULUM_TASKS } from '../config/curriculum'
-import { getShape, SHAPES } from '../config/shapes'
+import { allLibraryShapes, getShape } from '../config/shapes'
 import type { CriterionDef, ShapeDef } from '../types'
 
 /**
@@ -180,7 +180,7 @@ export function isLearnLibraryShape(id: string): boolean {
 }
 
 export function learnLibraryShapes(): ShapeDef[] {
-  return SHAPES.filter((s) => isLearnLibraryShape(s.id))
+  return allLibraryShapes().filter((s) => isLearnLibraryShape(s.id))
 }
 
 /** Task index (0-based) where a shape first appears in the pathway, or null. */

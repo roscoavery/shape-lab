@@ -767,6 +767,7 @@ export default function App() {
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
           persistIgToApp={ryanEdit}
           onReferencesChange={setReferencePhotos}
+          signedIn={activeProfile}
         />
       )}
 
