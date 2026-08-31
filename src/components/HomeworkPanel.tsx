@@ -51,7 +51,9 @@ import {
   sequenceHomeworkShapeId,
 } from '../lib/homeworkLabel'
 import { CollapsibleSection } from './CollapsibleSection'
+import { ExpandableNotes } from './ExpandableNotes'
 import { HoldProperTimes } from './HoldProperTimes'
+import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { pickCoachStill } from '../lib/shippedRefs'
 import { listPublicDrills, subscribeCoachContent } from '../lib/coachContentStore'
 import type {
@@ -404,7 +406,9 @@ function DrillHomeworkCard({ item }: { item: HomeworkItem }) {
         </p>
       )}
       {drill.src && (
-        <video className="mt-2 max-h-48 w-full rounded-md" src={drill.src} controls playsInline />
+        <div className="mt-2">
+          <PortraitVideoPlayer src={drill.src} title={drill.title} size="embed" />
+        </div>
       )}
     </div>
   )
@@ -1490,9 +1494,9 @@ export function HomeworkPanel({
               )}
               {isDrillHomework(item) && <DrillHomeworkCard item={item} />}
               {item.notes && (
-                <p className="mt-1 text-[11px] text-[var(--muted)]">
-                  {item.notes}
-                </p>
+                <div className="mt-1">
+                  <ExpandableNotes text={item.notes} previewLines={1} />
+                </div>
               )}
               {item.source !== 'auto' && (
                 <button

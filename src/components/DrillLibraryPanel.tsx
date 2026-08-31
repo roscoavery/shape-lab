@@ -1,6 +1,6 @@
 /**
- * Ryan’s private drill library. Upload clips here. Linking a shape
- * publishes that video on the shape in Learn for everyone.
+ * Ryan’s private drill library. Compact list, then a quiet 9:16 watch view.
+ * Linking a shape publishes that video on the shape in Learn for everyone.
  */
 
 import { useEffect, useState } from 'react'
@@ -15,6 +15,8 @@ import {
   uploadCoachMedia,
 } from '../lib/coachContentStore'
 import type { Athlete, DrillClip } from '../types'
+import { ExpandableNotes, firstCue } from './ExpandableNotes'
+import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 
 type Props = {
   signedIn: Athlete | null
@@ -22,9 +24,14 @@ type Props = {
 
 const SHAPE_OPTIONS = [...SHAPES].sort((a, b) => a.name.localeCompare(b.name))
 
+type Screen =
+  | { kind: 'list' }
+  | { kind: 'watch'; id: string }
+  | { kind: 'edit'; draft: DrillClip }
+
 export function DrillLibraryPanel({ signedIn }: Props) {
   const [tick, setTick] = useState(0)
-  const [editing, setEditing] = useState<DrillClip | null>(null)
+  const [screen, setScreen] = useState<Screen>({ kind: 'list' })
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
@@ -32,93 +39,169 @@ export function DrillLibraryPanel({ signedIn }: Props) {
 
   if (!signedIn) {
     return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-sm text-[var(--muted)]">
+      <div className="mx-auto max-w-lg rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-sm text-[var(--muted)]">
         Unlock Ryan to open the drill library.
       </div>
     )
   }
 
   const drills = listDrills()
+  const watching =
+    screen.kind === 'watch' ? drills.find((d) => d.id === screen.id) : undefined
+
+  if (screen.kind === 'watch' && watching) {
+    return (
+      <DrillWatch
+        drill={watching}
+        onBack={() => setScreen({ kind: 'list' })}
+        onEdit={() => {
+          setErr(null)
+          setScreen({ kind: 'edit', draft: watching })
+        }}
+      />
+    )
+  }
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4">
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Just for you</p>
-        <h2 className="text-xl font-semibold">Drill library</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Upload drill clips here. This list stays on your profile. If you
-          attach a shape, that video shows on the shape in Learn — and coaches
-          can assign it as homework.
-        </p>
+    <div className="mx-auto grid max-w-lg gap-3">
+      <header className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Just for you</p>
+          <h2 className="text-lg font-semibold">Drill library</h2>
+        </div>
         <button
           type="button"
-          className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
           onClick={() => {
             setErr(null)
-            setEditing(emptyDrill())
+            setScreen({ kind: 'edit', draft: emptyDrill() })
           }}
         >
-          Add a drill
+          Add
         </button>
-      </section>
+      </header>
 
-      {editing && (
+      {screen.kind === 'edit' && (
         <DrillEditor
-          draft={editing}
-          onCancel={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
+          draft={screen.draft}
+          onCancel={() => setScreen({ kind: 'list' })}
+          onSaved={() => setScreen({ kind: 'list' })}
           onError={setErr}
         />
       )}
       {err && <p className="text-sm text-[var(--bad)]">{err}</p>}
 
-      {drills.length === 0 && !editing && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <p className="text-sm text-[var(--muted)]">
-            No extra drills yet. Candlestick drill is already here — add a video
-            to it, or add another drill.
-          </p>
-        </section>
+      {drills.length === 0 && screen.kind !== 'edit' && (
+        <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
+          No extra drills yet. Add one, or put a video on Candlestick drill.
+        </p>
       )}
 
       {drills.length > 0 && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <h3 className="font-semibold">Your drills</h3>
-          <ul className="mt-3 flex flex-col gap-3">
-            {drills.map((d) => (
-              <li key={d.id} className="rounded-lg bg-[#121820] p-3">
-                <p className="text-sm font-semibold">{d.title || 'Untitled drill'}</p>
-                {d.shapeId && (
-                  <p className="text-[11px] text-[var(--accent)]">
-                    On {getShape(d.shapeId)?.name ?? d.shapeId} in Learn
-                  </p>
-                )}
-                {d.notes && <p className="mt-1 text-sm text-[var(--muted)]">{d.notes}</p>}
+        <ul className="flex flex-col gap-1.5">
+          {drills.map((d) => (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => setScreen({ kind: 'watch', id: d.id })}
+                className="flex w-full items-center gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-2.5 py-2 text-left hover:border-[var(--accent-dim)]"
+              >
                 {d.src ? (
-                  <video className="mt-2 max-h-56 w-full rounded-md" src={d.src} controls playsInline />
+                  <PortraitVideoPlayer src={d.src} title={d.title} size="thumb" />
                 ) : (
-                  <p className="mt-2 text-xs text-[var(--warn)]">No video yet — edit and upload.</p>
+                  <span className="flex h-[4.75rem] w-[2.7rem] shrink-0 items-center justify-center rounded-md bg-[#0d1218] text-[10px] text-[var(--muted)]">
+                    9:16
+                  </span>
                 )}
-                <div className="mt-2 flex gap-3">
-                  <button type="button" className="text-xs underline" onClick={() => setEditing(d)}>
-                    {SHIPPED_DRILL_IDS.has(d.id) ? 'Add / replace video' : 'Edit'}
-                  </button>
-                  {!SHIPPED_DRILL_IDS.has(d.id) && (
-                    <button
-                      type="button"
-                      className="text-xs text-[var(--bad)] underline"
-                      onClick={() => {
-                        if (window.confirm(`Remove ${d.title || 'this drill'}?`)) deleteDrill(d.id)
-                      }}
-                    >
-                      Delete
-                    </button>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{d.title || 'Untitled drill'}</span>
+                  {d.shapeId && (
+                    <span className="mt-0.5 block text-[11px] text-[var(--accent)]">
+                      {getShape(d.shapeId)?.name ?? d.shapeId}
+                    </span>
                   )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+                  {d.notes && (
+                    <span className="mt-0.5 block truncate text-xs text-[var(--muted)]">
+                      {firstCue(d.notes)}
+                    </span>
+                  )}
+                  {!d.src && (
+                    <span className="mt-0.5 block text-[11px] text-[var(--warn)]">No video yet</span>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">Open</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function DrillWatch({
+  drill,
+  onBack,
+  onEdit,
+}: {
+  drill: DrillClip
+  onBack: () => void
+  onEdit: () => void
+}) {
+  return (
+    <div className="mx-auto flex max-w-md flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={onBack} className="text-sm text-[var(--muted)] hover:text-[var(--accent)]">
+          ← Drills
+        </button>
+        <button type="button" onClick={onEdit} className="text-xs font-semibold text-[var(--accent)]">
+          {SHIPPED_DRILL_IDS.has(drill.id) ? 'Video' : 'Edit'}
+        </button>
+      </div>
+
+      <h2 className="truncate text-center text-base font-semibold">{drill.title || 'Untitled drill'}</h2>
+      {drill.shapeId && (
+        <p className="-mt-2 text-center text-[11px] text-[var(--accent)]">
+          On {getShape(drill.shapeId)?.name ?? drill.shapeId}
+        </p>
+      )}
+
+      {drill.src ? (
+        <PortraitVideoPlayer src={drill.src} title={drill.title} size="watch" />
+      ) : (
+        <div className="flex h-[min(52dvh,26rem)] items-center justify-center rounded-2xl border border-dashed border-[var(--panel-border)] bg-[var(--panel)]">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+          >
+            Add a 9:16 video
+          </button>
+        </div>
+      )}
+
+      {drill.notes && (
+        <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2.5">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            How to
+          </p>
+          <ExpandableNotes text={drill.notes} previewLines={1} />
+        </div>
+      )}
+
+      {!SHIPPED_DRILL_IDS.has(drill.id) && (
+        <button
+          type="button"
+          className="self-start text-xs text-[var(--bad)] underline"
+          onClick={() => {
+            if (window.confirm(`Remove ${drill.title || 'this drill'}?`)) {
+              deleteDrill(drill.id)
+              onBack()
+            }
+          }}
+        >
+          Delete
+        </button>
       )}
     </div>
   )
@@ -157,32 +240,32 @@ function DrillEditor({
   }
 
   return (
-    <section className="rounded-xl border border-[var(--accent)]/35 bg-[var(--panel)] p-4">
-      <h3 className="font-semibold">Write the drill</h3>
-      <div className="mt-3 flex flex-col gap-2">
+    <section className="rounded-xl border border-[var(--accent)]/35 bg-[var(--panel)] p-3">
+      <h3 className="font-semibold">{SHIPPED_DRILL_IDS.has(initial.id) ? 'Add / replace video' : 'Write the drill'}</h3>
+      <div className="mt-2 flex flex-col gap-2">
         <input
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          placeholder="Name (candlestick drill…)"
+          placeholder="Name"
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
         <textarea
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          rows={4}
-          placeholder="What they should do"
+          rows={3}
+          placeholder="Cues — one idea per line"
           value={draft.notes}
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />
         <label className="text-sm">
           <span className="text-[11px] uppercase tracking-wider text-[var(--muted)]">
-            Show on this shape in Learn (optional)
+            Show on this shape
           </span>
           <select
             className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             value={draft.shapeId ?? ''}
             onChange={(e) => setDraft({ ...draft, shapeId: e.target.value || undefined })}
           >
-            <option value="">Keep private — no shape page</option>
+            <option value="">Keep private</option>
             {SHAPE_OPTIONS.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -191,7 +274,7 @@ function DrillEditor({
           </select>
         </label>
         <label className="self-start rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm">
-          {busy ? 'Uploading…' : draft.src ? 'Replace video' : 'Upload video'}
+          {busy ? 'Uploading…' : draft.src ? 'Replace video' : 'Upload 9:16 video'}
           <input
             type="file"
             accept="video/*"
@@ -204,9 +287,7 @@ function DrillEditor({
             }}
           />
         </label>
-        {draft.src && (
-          <video className="max-h-56 w-full rounded-md" src={draft.src} controls playsInline />
-        )}
+        {draft.src && <PortraitVideoPlayer src={draft.src} title={draft.title} size="embed" />}
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -217,7 +298,7 @@ function DrillEditor({
               onSaved()
             }}
           >
-            Save drill
+            Save
           </button>
           <button
             type="button"

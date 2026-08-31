@@ -35,6 +35,9 @@ import { PhysicsQuiz } from './learn/PhysicsQuiz'
 import { drillsForShape, subscribeCoachContent } from '../lib/coachContentStore'
 import { isCoachProfile } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
+import { CollapsibleSection } from './CollapsibleSection'
+import { ExpandableNotes, firstCue } from './ExpandableNotes'
+import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import type { Athlete, ReferencePhoto, ShapeDef } from '../types'
 
 type EduView =
@@ -129,30 +132,12 @@ export function EducationPanel({
 
   return (
     <div className={`mx-auto space-y-4 ${view.kind === 'scroll' ? 'max-w-xl' : 'max-w-4xl'}`}>
-      <header className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="mb-1 text-xs uppercase tracking-wider text-[var(--muted)]">
-          Learn without a camera
+      <header className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
+        <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">
+          Stills and notes first. Tests and physics are in the chips.
         </p>
-        <h2 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
-          Education
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Study the tumbling notes for each shape here first. Camera angle and
-          scoring details stay with the app. Open{' '}
-          <strong className="text-[var(--text)]">Tumbling physics</strong> for
-          inertia, angular momentum, and why a small arm drop after a round-off
-          can get the feet in front, then take the{' '}
-          <strong className="text-[var(--text)]">Physics test</strong>. The{' '}
-          <strong className="text-[var(--text)]">Shape test</strong> can be
-          pictures, descriptions, or both — written notes do not name the answer.
-          After any test you see your score and every miss with the right answer.
-          Scroll the gym Instagram library under{' '}
-          <strong className="text-[var(--text)]">Reference scroll</strong>. When you
-          are ready to practice, open the{' '}
-          <strong className="text-[var(--text)]">Tasks</strong> tab and start the
-          camera.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <NavChip
             active={view.kind === 'home'}
             onClick={goHome}
@@ -724,25 +709,58 @@ function ShapeLibrary({
 
 function ShapeLinkedDrills({ shapeId }: { shapeId: string }) {
   const [tick, setTick] = useState(0)
+  const [openId, setOpenId] = useState<string | null>(null)
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
   const drills = drillsForShape(shapeId)
   void tick
   if (drills.length === 0) return null
   return (
-    <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-      <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-        Drills that use this shape
+    <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+        Drills
       </h4>
-      <ul className="grid gap-3">
-        {drills.map((d) => (
-          <li key={d.id}>
-            <p className="text-sm font-semibold">{d.title}</p>
-            {d.notes && <p className="mt-1 text-sm text-[var(--muted)]">{d.notes}</p>}
-            {d.src && (
-              <video className="mt-2 max-h-72 w-full rounded-md" src={d.src} controls playsInline />
-            )}
-          </li>
-        ))}
+      <ul className="grid gap-1.5">
+        {drills.map((d) => {
+          const open = openId === d.id
+          return (
+            <li key={d.id} className="rounded-lg bg-[#121820] p-2">
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpenId(open ? null : d.id)}
+                className="flex w-full items-center gap-2.5 text-left"
+              >
+                {d.src ? (
+                  <PortraitVideoPlayer src={d.src} title={d.title} size="thumb" />
+                ) : (
+                  <span className="flex h-[4.75rem] w-[2.7rem] shrink-0 items-center justify-center rounded-md bg-[#0d1218] text-[10px] text-[var(--muted)]">
+                    —
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{d.title}</span>
+                  {d.notes && (
+                    <span className="mt-0.5 block truncate text-xs text-[var(--muted)]">
+                      {firstCue(d.notes)}
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">
+                  {open ? 'Hide' : d.src ? 'Watch' : 'Show'}
+                </span>
+              </button>
+              {open && (
+                <div className="mt-2 grid gap-2">
+                  {d.src && <PortraitVideoPlayer src={d.src} title={d.title} size="embed" />}
+                  {d.notes && <ExpandableNotes text={d.notes} previewLines={1} />}
+                  {!d.src && (
+                    <p className="text-xs text-[var(--muted)]">No clip on this drill yet.</p>
+                  )}
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -806,7 +824,7 @@ function ShapeDetail({
         ← Shape library
       </button>
 
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -838,9 +856,11 @@ function ShapeDetail({
                 . They share this still.
               </p>
             )}
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
-              {athleteCopy}
-            </p>
+            {athleteCopy && (
+              <div className="mt-3">
+                <ExpandableNotes text={athleteCopy} previewLines={2} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -858,8 +878,8 @@ function ShapeDetail({
         )}
       </div>
 
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+        <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
           Coach still
         </h4>
         <div className="relative">
@@ -923,23 +943,20 @@ function ShapeDetail({
       <ShapeCopyEditor shapeId={shape.id} shapeName={shape.name} />
 
       {canEdit && (
-        <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            What the app knows
-          </h4>
+        <CollapsibleSection title="What the app knows" hint="Scoring notes — hide this from the floor">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted)]">
             {appCopy}
           </p>
           <div className="mt-3">
             <ViewCallout shape={shape} />
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-          How to hit this shape
-        </h4>
+      <CollapsibleSection
+        title="How to hit this shape"
+        hint={howTo.length > 0 ? `${howTo.length} cues` : 'Use the still'}
+      >
         {howTo.length > 0 ? (
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-[var(--text)]">
             {howTo.map((line) => (
@@ -948,16 +965,13 @@ function ShapeDetail({
           </ul>
         ) : (
           <p className="text-sm text-[var(--muted)]">
-            Use the notes above — hit the shape the way it looks in the coach still.
+            Hit the shape the way it looks in the coach still.
           </p>
         )}
-      </div>
+      </CollapsibleSection>
 
       {canEdit && (
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-          Scoring criteria (app)
-        </h4>
+      <CollapsibleSection title="Scoring criteria" hint="App weights — coaches only">
         <ul className="space-y-3">
           {criteria.map((c) => {
             const cues = criterionHowToHit(c)
@@ -988,7 +1002,7 @@ function ShapeDetail({
             )
           })}
         </ul>
-      </div>
+      </CollapsibleSection>
       )}
     </article>
   )
