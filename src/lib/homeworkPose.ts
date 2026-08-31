@@ -3,6 +3,7 @@
  * start when the athlete actually hits the position — not only at a high score.
  */
 
+import { poseInverted } from './handstandHold'
 import { LM } from './landmarks'
 import { mergePair } from './skeleton'
 import type { Landmark } from '../types'
@@ -201,15 +202,10 @@ export function homeworkLooksReady(
   if (shapeId === 'tuck_open_shoulders') {
     return poseLooksSeatedTuck(lm) || overall >= 32
   }
-  if (shapeId === 'wall_handstand') {
-    if (overall >= 32) return true
-    if (!lm) return false
-    const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.12))
-    const ankles = [lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE]].filter((p) => visOk(p, 0.1))
-    if (!wrists.length || !ankles.length) return false
-    const wristY = Math.max(...wrists.map((p) => p.y))
-    const ankleY = Math.min(...ankles.map((p) => p.y))
-    return wristY - ankleY > 0.18
+  if (shapeId === 'wall_handstand' || shapeId === 'handstand') {
+    // Total hold must wait for an invert. A middling score while standing
+    // at the wall used to start the clock; proper hold already required form.
+    return poseInverted(lm)
   }
   return overall >= 28
 }
