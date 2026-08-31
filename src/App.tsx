@@ -14,6 +14,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
+import { CoachShapeLibrary } from './components/coach/CoachShapeLibrary'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
@@ -772,6 +773,8 @@ export default function App() {
           onReferencesChange={setReferencePhotos}
         />
       )}
+
+      {tab === 'coachlib' && <CoachShapeLibrary signedIn={activeProfile} />}
 
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>

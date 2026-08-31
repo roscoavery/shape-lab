@@ -21,7 +21,10 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'tasks', label: 'Hold & body work' },
   ],
   videos: [{ id: 'compare', label: 'Compare' }],
-  learn: [{ id: 'learn', label: 'Shapes & skills' }],
+  learn: [
+    { id: 'learn', label: 'Shapes & skills' },
+    { id: 'coachlib', label: 'Coach library' },
+  ],
   team: [
     { id: 'classes', label: 'Classes' },
     { id: 'feed', label: 'Feed' },
@@ -47,6 +50,7 @@ export function sectionForTab(tab: AppTab): AppSection {
     case 'compare':
       return 'videos'
     case 'learn':
+    case 'coachlib':
       return 'learn'
     case 'classes':
     case 'feed':

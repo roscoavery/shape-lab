@@ -113,14 +113,14 @@ Checklist:
 
 ## Phase 5 — Coach shape libraries
 
-- [ ] Keep separate per-coach libraries.
-- [ ] Admin can view other coaches' libraries.
-- [ ] Camera snap while creating a shape.
-- [ ] Crop/framing captured images.
-- [ ] Descriptions and visual references.
-- [ ] Coach and appropriate athlete examples.
-- [ ] Skill-reference videos.
-- [ ] Do not combine private libraries into a global library.
+- [x] Keep separate per-coach libraries.
+- [x] Admin can view other coaches' libraries.
+- [x] Camera snap while creating a shape.
+- [x] Crop/framing captured images.
+- [x] Descriptions and visual references.
+- [x] Coach and appropriate athlete examples.
+- [x] Skill-reference videos.
+- [x] Do not combine private libraries into a global library.
 - [ ] Browser test, commit, push, summarize, and stop.
 
 ## Phase 6 — Videos / Compare UI

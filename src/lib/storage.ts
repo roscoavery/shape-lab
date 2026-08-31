@@ -643,6 +643,7 @@ export const APP_TABS = [
   'homework',
   'warmup',
   'learn',
+  'coachlib',
   'compare',
   'classes',
   'feed',

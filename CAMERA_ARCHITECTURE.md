@@ -123,3 +123,12 @@ appear in that athlete's lesson and skill history. It does not change stream
 ownership, recorder timing,
 `MediaSource`, delay-follow behavior, buffering, Replay Last, or Record.
 
+## Phase 5 shape-photo capture
+
+`ShapeSnapCamera` owns a short-lived, isolated stream only while a coach has the
+shape-photo capture panel open. It starts after the coach explicitly chooses
+camera capture, stops only its own tracks when closed, and does not access or
+stop `CameraPane` tracks. If another camera is already using the device and the
+browser refuses a second stream, it shows an error instead of disturbing the
+working Compare session. Shared-stream integration remains deferred to Phase 7.
+
