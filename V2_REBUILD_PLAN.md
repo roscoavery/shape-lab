@@ -13,6 +13,8 @@ rewritten.
 - [x] Earlier Version 2 history: `shape-lab-v2` and
   `cursor/shape-lab-v2-847e` at `087bf53`
 - [x] Rebuild branch created: `v2-rebuild`
+- [x] Version 2.1 freeze (9:16 drill library, before Replay Last chrome):
+  `shape-lab-v2.1` and `cursor/shape-lab-v2.1-847e`
 - [x] Reflogs, stashes, unreachable objects, local branches, tags, and remote
   refs inspected before editing
 
