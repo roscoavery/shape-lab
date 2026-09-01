@@ -39,6 +39,7 @@ export function AthletePanel({
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
   const [newGym, setNewGym] = useState('')
   const [newChild, setNewChild] = useState('')
+  const [newBackPain, setNewBackPain] = useState<boolean | null>(null)
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
   const [handle, setHandle] = useState('')
@@ -101,6 +102,7 @@ export function AthletePanel({
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
+      ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
     }
     markProfileUnlocked(id)
     onChangeAthletes([...athletes, athlete])
@@ -112,6 +114,7 @@ export function AthletePanel({
     setPasscode('')
     setPasscodeAgain('')
     setNewRole('athlete')
+    setNewBackPain(null)
     flash(
       role === 'coach' || role === 'gym_owner'
         ? `${athlete.name} is ready as ${roleLabel(athlete)}. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
@@ -290,6 +293,39 @@ export function AthletePanel({
             }}
           />
         )}
+        {(newRole === 'coach' || newRole === 'parent' || newRole === 'gym_owner') && (
+          <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+            <p className="text-xs text-[var(--text)]">Do you ever have back pain?</p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+              If yes, Homework opens a back-care path — journal, glute bridges,
+              and back extensions you ease into.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setNewBackPain(true)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                  newBackPain === true
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-[var(--panel-border)]'
+                }`}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewBackPain(false)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                  newBackPain === false
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-[var(--panel-border)]'
+                }`}
+              >
+                No
+              </button>
+            </div>
+          </div>
+        )}
         <p className="text-[11px] leading-snug text-[var(--muted)]">{roleHint(newRole)}</p>
       </div>}
 
@@ -343,6 +379,49 @@ export function AthletePanel({
                 if (e.key === 'Enter') saveDetails()
               }}
             />
+          )}
+          {(profileRole(active) === 'coach' ||
+            profileRole(active) === 'parent' ||
+            profileRole(active) === 'gym_owner') && (
+            <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+              <p className="text-xs text-[var(--text)]">Back pain on this profile?</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChangeAthletes(
+                      athletes.map((a) =>
+                        a.id === active.id ? { ...a, hasBackPain: true } : a,
+                      ),
+                    )
+                  }
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    active.hasBackPain
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-[var(--panel-border)]'
+                  }`}
+                >
+                  Yes — show back care
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChangeAthletes(
+                      athletes.map((a) =>
+                        a.id === active.id ? { ...a, hasBackPain: false } : a,
+                      ),
+                    )
+                  }
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    active.hasBackPain === false
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-[var(--panel-border)]'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
           )}
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"

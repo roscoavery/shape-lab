@@ -18,6 +18,8 @@ export type Athlete = {
   role?: ProfileKind
   gymName?: string
   childName?: string
+  hasBackPain?: boolean
+  injuryActive?: boolean
 }
 
 const RYAN_PROFILE_ID = 'ath_ryan'
@@ -40,6 +42,10 @@ export type RosterLists = {
   compareLibraries: Record<string, unknown>
   removedAthleteIds: string[]
   activeAthleteId: string | null
+  dismissedHomeworkKeys: string[]
+  injuryLogs: unknown[]
+  painJournals: unknown[]
+  coachExercises: unknown[]
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -67,7 +73,27 @@ function homeworkDedupeKey(item: Record<string, unknown>): string {
   if (autoKey === 'hollow' || sid === 'hollow' || sid === 'hollow_arms_down' || sid === 'hollow_arms_up') {
     return `${aid}::hollow`
   }
+  const catalog =
+    typeof item.catalogId === 'string' && item.catalogId
+      ? item.catalogId
+      : sid.startsWith('catalog:')
+        ? sid.slice('catalog:'.length)
+        : ''
+  if (catalog) return `${aid}::catalog:${catalog}`
+  if (typeof item.coachExerciseId === 'string' && item.coachExerciseId) {
+    return `${aid}::cx:${item.coachExerciseId}`
+  }
   return `${aid}::${sid || (typeof item.id === 'string' ? item.id : '')}`
+}
+
+function dropDismissedHomework(items: unknown[], keys: string[]): unknown[] {
+  const dismissed = new Set(keys)
+  if (dismissed.size === 0) return items
+  return items.filter((raw) => {
+    if (!isRecord(raw)) return false
+    if (raw.source === 'auto') return true
+    return !dismissed.has(homeworkDedupeKey(raw))
+  })
 }
 
 function mergeHomework(local: unknown[], remote: unknown[]): unknown[] {
@@ -144,6 +170,8 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     instagramHandle: newer.instagramHandle || older.instagramHandle,
     notes: newer.notes || older.notes,
     role,
+    hasBackPain: newer.hasBackPain ?? older.hasBackPain,
+    injuryActive: newer.injuryActive ?? older.injuryActive,
     createdAt: older.createdAt || newer.createdAt,
   }
 }
@@ -274,6 +302,10 @@ export function emptyRosterLists(): RosterLists {
     compareLibraries: {},
     removedAthleteIds: [],
     activeAthleteId: null,
+    dismissedHomeworkKeys: [],
+    injuryLogs: [],
+    painJournals: [],
+    coachExercises: [],
   }
 }
 
@@ -303,6 +335,10 @@ export function rosterListsFromUnknown(data: unknown): RosterLists {
     compareLibraries,
     removedAthleteIds: asIdList(data.removedAthleteIds),
     activeAthleteId: typeof data.activeAthleteId === 'string' ? data.activeAthleteId : null,
+    dismissedHomeworkKeys: asIdList(data.dismissedHomeworkKeys),
+    injuryLogs: Array.isArray(data.injuryLogs) ? data.injuryLogs : [],
+    painJournals: Array.isArray(data.painJournals) ? data.painJournals : [],
+    coachExercises: Array.isArray(data.coachExercises) ? data.coachExercises : [],
   }
 }
 
@@ -312,10 +348,17 @@ export function mergeRosterLists(
   hints: Record<string, ProfileHint> = {},
 ): RosterLists {
   const removed = normalizeRemovedIds([...local.removedAthleteIds, ...remote.removedAthleteIds])
+  const dismissedHomeworkKeys = [
+    ...new Set([...local.dismissedHomeworkKeys, ...remote.dismissedHomeworkKeys]),
+  ]
+  const homework = dropDismissedHomework(
+    mergeHomework(local.homework, remote.homework),
+    dismissedHomeworkKeys,
+  )
   const athletes = restoreMissingAthletes(
     {
       athletes: applyRemovals(mergeAthleteLists(local.athletes, remote.athletes), removed),
-      homework: mergeHomework(local.homework, remote.homework),
+      homework,
       homeworkLogs: mergeByRowId(local.homeworkLogs, remote.homeworkLogs, 1000),
       taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
       flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
@@ -323,12 +366,16 @@ export function mergeRosterLists(
       compareLibraries: mergeCompareLibs(local.compareLibraries, remote.compareLibraries),
       removedAthleteIds: removed,
       activeAthleteId: remote.activeAthleteId || local.activeAthleteId,
+      dismissedHomeworkKeys,
+      injuryLogs: mergeByRowId(local.injuryLogs, remote.injuryLogs, 400),
+      painJournals: mergeByRowId(local.painJournals, remote.painJournals, 400),
+      coachExercises: mergeByRowId(local.coachExercises, remote.coachExercises, 200),
     },
     hints,
   )
   return {
     athletes: applyRemovals(athletes, removed),
-    homework: mergeHomework(local.homework, remote.homework),
+    homework,
     homeworkLogs: mergeByRowId(local.homeworkLogs, remote.homeworkLogs, 1000),
     taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
     flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
@@ -336,5 +383,9 @@ export function mergeRosterLists(
     compareLibraries: mergeCompareLibs(local.compareLibraries, remote.compareLibraries),
     removedAthleteIds: removed,
     activeAthleteId: remote.activeAthleteId || local.activeAthleteId,
+    dismissedHomeworkKeys,
+    injuryLogs: mergeByRowId(local.injuryLogs, remote.injuryLogs, 400),
+    painJournals: mergeByRowId(local.painJournals, remote.painJournals, 400),
+    coachExercises: mergeByRowId(local.coachExercises, remote.coachExercises, 200),
   }
 }

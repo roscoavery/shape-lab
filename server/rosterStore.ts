@@ -27,6 +27,10 @@ export type DiskRoster = {
   attempts?: unknown[]
   compareLibraries?: Record<string, unknown>
   removedAthleteIds?: string[]
+  dismissedHomeworkKeys?: string[]
+  injuryLogs?: unknown[]
+  painJournals?: unknown[]
+  coachExercises?: unknown[]
 }
 
 const EMPTY: DiskRoster = {
@@ -42,6 +46,10 @@ const EMPTY: DiskRoster = {
   attempts: [],
   compareLibraries: {},
   removedAthleteIds: [],
+  dismissedHomeworkKeys: [],
+  injuryLogs: [],
+  painJournals: [],
+  coachExercises: [],
 }
 
 function listsToDisk(lists: RosterLists, exportedAt = new Date().toISOString()): DiskRoster {
@@ -58,6 +66,10 @@ function listsToDisk(lists: RosterLists, exportedAt = new Date().toISOString()):
     attempts: lists.attempts.slice(-2000),
     compareLibraries: lists.compareLibraries,
     removedAthleteIds: lists.removedAthleteIds,
+    dismissedHomeworkKeys: lists.dismissedHomeworkKeys,
+    injuryLogs: lists.injuryLogs.slice(-400),
+    painJournals: lists.painJournals.slice(-400),
+    coachExercises: lists.coachExercises.slice(-200),
   }
 }
 
@@ -111,6 +123,12 @@ async function readRawRoster(): Promise<DiskRoster> {
         ? data.compareLibraries
         : {},
     removedAthleteIds: Array.isArray(data.removedAthleteIds) ? data.removedAthleteIds : [],
+    dismissedHomeworkKeys: Array.isArray(data.dismissedHomeworkKeys)
+      ? data.dismissedHomeworkKeys
+      : [],
+    injuryLogs: Array.isArray(data.injuryLogs) ? data.injuryLogs : [],
+    painJournals: Array.isArray(data.painJournals) ? data.painJournals : [],
+    coachExercises: Array.isArray(data.coachExercises) ? data.coachExercises : [],
   }
 }
 

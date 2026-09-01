@@ -38,6 +38,7 @@ import { AddGymShapeForm } from './AddGymShapeForm'
 import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
+import { ShapeExplorer } from './learn/ShapeExplorer'
 import type { Athlete, ReferencePhoto, ShapeDef } from '../types'
 
 type EduView =
@@ -78,6 +79,7 @@ export function EducationPanel({
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [hits, setHits] = useState<TaskCapture[]>([])
   const [catalogTick, setCatalogTick] = useState(0)
+  const [exploreId, setExploreId] = useState<string | null>(null)
   const { copyFor } = useShapeCopy()
   const canAddGymShape = Boolean(signedIn && isCoachProfile(signedIn))
 
@@ -227,6 +229,7 @@ export function EducationPanel({
             onQuery={setQuery}
             onFilter={setFilter}
             onOpen={openShape}
+            onExplore={(id) => setExploreId(id)}
             referencePhotos={referencePhotos}
           />
         </>
@@ -241,6 +244,7 @@ export function EducationPanel({
           onBack={goShapes}
           onOpenTask={openTask}
           onOpenShape={openShape}
+          onExplore={() => setExploreId(view.shapeId)}
         />
       )}
 
@@ -258,6 +262,15 @@ export function EducationPanel({
           onBack={goPathways}
           onOpenShape={openShape}
           onOpenTask={openTask}
+        />
+      )}
+
+      {exploreId && filteredShapes.length > 0 && (
+        <ShapeExplorer
+          shapes={filteredShapes}
+          startId={exploreId}
+          photos={referencePhotos}
+          onClose={() => setExploreId(null)}
         />
       )}
 
@@ -592,6 +605,7 @@ function ShapeLibrary({
   onQuery,
   onFilter,
   onOpen,
+  onExplore,
   referencePhotos,
 }: {
   shapes: ShapeDef[]
@@ -601,6 +615,7 @@ function ShapeLibrary({
   onQuery: (q: string) => void
   onFilter: (f: ShapeFilter) => void
   onOpen: (id: string) => void
+  onExplore: (id: string) => void
   referencePhotos: ReferencePhoto[]
 }) {
   const { copyFor } = useShapeCopy()
@@ -643,10 +658,21 @@ function ShapeLibrary({
         </div>
       </div>
 
-      <p className="text-xs text-[var(--muted)]">
-        {shapes.length} shape{shapes.length === 1 ? '' : 's'} as pictures. Tap a
-        still to open notes, then use the arrows to move to the next shape.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-[var(--muted)]">
+          {shapes.length} shape{shapes.length === 1 ? '' : 's'} as pictures. Tap a
+          still for notes, or open full screen to swipe, tap through, or play a slideshow.
+        </p>
+        {shapes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onExplore(shapes[0]!.id)}
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
+          >
+            Explore full screen
+          </button>
+        )}
+      </div>
 
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {shapes.map((shape) => {
@@ -771,6 +797,7 @@ function ShapeDetail({
   onBack,
   onOpenTask,
   onOpenShape,
+  onExplore,
 }: {
   shapeId: string
   orderedShapeIds: string[]
@@ -779,6 +806,7 @@ function ShapeDetail({
   onBack: () => void
   onOpenTask: (taskId: string) => void
   onOpenShape: (shapeId: string) => void
+  onExplore: () => void
 }) {
   const { copyFor, canEdit } = useShapeCopy()
   const shape = getShape(shapeId)
@@ -813,6 +841,7 @@ function ShapeDetail({
 
   return (
     <article className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
       <button
         type="button"
         onClick={onBack}
@@ -820,6 +849,14 @@ function ShapeDetail({
       >
         ← Shape library
       </button>
+        <button
+          type="button"
+          onClick={onExplore}
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
+        >
+          Full screen
+        </button>
+      </div>
 
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

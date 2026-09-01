@@ -404,7 +404,11 @@ export function LessonWorkspace({
         title="Assign homework"
         hint="Add a drill they will see under Practice → Homework."
       >
-        <AssignHomeworkBar athleteId={session.athleteId} hideHeading />
+        <AssignHomeworkBar
+          athleteId={session.athleteId}
+          coachId={session.coachId}
+          hideHeading
+        />
       </CollapsibleSection>
 
       <CollapsibleSection

@@ -11,9 +11,12 @@ import type {
   Athlete,
   AthleteTaskProgress,
   AttemptRecord,
+  CoachExercise,
   FlowProgress,
   HomeworkItem,
   HomeworkLog,
+  InjuryEntry,
+  PainJournalEntry,
 } from '../types'
 import type { RefCollection } from './clipStore'
 import { loadCompareLibraries, saveCompareLibraries, type CompareLibraries } from './compareLibraries'
@@ -41,6 +44,16 @@ import {
   saveFlowProgress,
   saveRemovedAthleteIds,
 } from './storage'
+import {
+  loadCoachExercises,
+  loadDismissedHomeworkKeys,
+  loadInjuryLogs,
+  loadPainJournal,
+  saveCoachExercises,
+  saveDismissedHomeworkKeys,
+  saveInjuryLogs,
+  savePainJournal,
+} from './careStore'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -55,6 +68,10 @@ export type RosterBackup = {
   attempts?: AttemptRecord[]
   compareLibraries?: Record<string, RefCollection[]>
   removedAthleteIds?: string[]
+  dismissedHomeworkKeys?: string[]
+  injuryLogs?: InjuryEntry[]
+  painJournals?: PainJournalEntry[]
+  coachExercises?: CoachExercise[]
 }
 
 /** False until GET /api/roster succeeds so a Ryan-only tab cannot clobber the gym. */
@@ -87,6 +104,10 @@ function listsFromLocal(): RosterLists {
     compareLibraries: loadCompareLibraries(),
     removedAthleteIds: loadRemovedAthleteIds(),
     activeAthleteId: loadActiveAthleteId(),
+    dismissedHomeworkKeys: loadDismissedHomeworkKeys(),
+    injuryLogs: loadInjuryLogs(),
+    painJournals: loadPainJournal(),
+    coachExercises: loadCoachExercises(),
   })
 }
 
@@ -105,6 +126,10 @@ export function localRosterSnapshot(): RosterBackup {
     attempts: loadAttempts(),
     compareLibraries: loadCompareLibraries(),
     removedAthleteIds: loadRemovedAthleteIds(),
+    dismissedHomeworkKeys: loadDismissedHomeworkKeys(),
+    injuryLogs: loadInjuryLogs(),
+    painJournals: loadPainJournal(),
+    coachExercises: loadCoachExercises(),
   }
 }
 
@@ -112,6 +137,10 @@ function persistLists(lists: RosterLists): Athlete[] {
   const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord))
   saveAthletes(athletes)
   saveRemovedAthleteIds(lists.removedAthleteIds)
+  saveDismissedHomeworkKeys(lists.dismissedHomeworkKeys)
+  saveInjuryLogs(lists.injuryLogs as InjuryEntry[])
+  savePainJournal(lists.painJournals as PainJournalEntry[])
+  saveCoachExercises(lists.coachExercises as CoachExercise[])
   saveAllHomework(lists.homework as HomeworkItem[])
   try {
     localStorage.setItem(

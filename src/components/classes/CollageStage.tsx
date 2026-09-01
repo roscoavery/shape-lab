@@ -339,7 +339,7 @@ export function CollageStage({
                 <span className="text-[11px] text-white/50">Loads this clip only</span>
               </button>
             )}
-            {playingSlot === i && !cinema ? (
+            {(playingSlot === i || cinema) && slot.url ? (
               <button
                 type="button"
                 onClick={() => {

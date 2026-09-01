@@ -714,6 +714,13 @@ export default function App() {
           ) : null}
           <HomeworkPanel
             athleteId={activeAthleteId}
+            athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+            onUpdateAthlete={(patch) => {
+              if (!activeAthleteId) return
+              setAthleteRoster(
+                athletes.map((a) => (a.id === activeAthleteId ? { ...a, ...patch } : a)),
+              )
+            }}
             score={score}
             currentShapeId={shape.id}
             onRequestShape={onJumpToShape}

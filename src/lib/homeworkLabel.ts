@@ -1,8 +1,9 @@
 import { getShape } from '../config/shapes'
 import { SEQUENCES_BY_ID } from '../config/sequences'
 import { getFlowSequence } from '../config/tasks2'
+import { catalogIdFromShape, getCatalogItem } from '../config/homeworkCatalog'
 import { getDrill } from './coachContentStore'
-import type { DrillClip, HomeworkItem, SequenceDef } from '../types'
+import type { DrillClip, HomeworkItem, HomeworkTrackMode, SequenceDef } from '../types'
 
 export const CUSTOM_HOMEWORK_PREFIX = 'custom:'
 export const SEQUENCE_HOMEWORK_PREFIX = 'seq:'
@@ -79,17 +80,37 @@ export function drillHomeworkShapeId(drillId: string): string {
   return `${DRILL_HOMEWORK_PREFIX}${drillId}`
 }
 
+export function isCatalogHomework(
+  item: Pick<HomeworkItem, 'shapeId'> & { catalogId?: string },
+): boolean {
+  return Boolean(item.catalogId) || item.shapeId.startsWith('catalog:')
+}
+
 export function isCustomHomework(
-  item: Pick<HomeworkItem, 'shapeId'> & { customLabel?: string },
+  item: Pick<HomeworkItem, 'shapeId'> & { customLabel?: string; catalogId?: string },
 ): boolean {
   if (isSequenceHomework(item)) return false
   if (isDrillHomework(item)) return false
+  if (isCatalogHomework(item)) return false
   return Boolean(item.customLabel?.trim()) || item.shapeId.startsWith(CUSTOM_HOMEWORK_PREFIX)
 }
 
+export function homeworkTrackMode(
+  item: Pick<HomeworkItem, 'shapeId' | 'trackMode'> & { catalogId?: string },
+): HomeworkTrackMode {
+  if (item.trackMode) return item.trackMode
+  const cat = getCatalogItem(item.catalogId ?? catalogIdFromShape(item.shapeId))
+  if (cat) return cat.trackMode
+  if (isCustomHomework(item)) return 'reps'
+  if (isSequenceHomework(item) || isDrillHomework(item)) return 'hold'
+  return 'hold'
+}
+
 export function homeworkTitle(
-  item: Pick<HomeworkItem, 'shapeId'> & { customLabel?: string },
+  item: Pick<HomeworkItem, 'shapeId'> & { customLabel?: string; catalogId?: string },
 ): string {
+  const cat = getCatalogItem(item.catalogId ?? catalogIdFromShape(item.shapeId))
+  if (cat) return item.customLabel?.trim() || cat.name
   if (isSequenceHomework(item)) {
     if (item.customLabel?.trim()) return item.customLabel.trim()
     const seq = getHomeworkSequence(item)

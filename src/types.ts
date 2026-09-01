@@ -192,6 +192,13 @@ export type Athlete = {
   gymName?: string
   /** Parent profiles: the athlete they came for. */
   childName?: string
+  /**
+   * Asked when a coach or parent makes a profile. Opens the back-care
+   * homework path (journal, glute bridges, back extensions).
+   */
+  hasBackPain?: boolean
+  /** Athlete (or coach) said they are dealing with an injury right now. */
+  injuryActive?: boolean
 }
 
 export type CriterionScore = {
@@ -357,6 +364,9 @@ export type TaskRunReport = {
 /** Who put a homework item on the athlete's list. */
 export type HomeworkSource = 'auto' | 'coach' | 'athlete'
 
+/** How an assigned or catalog drill is trained and logged. */
+export type HomeworkTrackMode = 'hold' | 'reps' | 'hold_or_reps'
+
 /**
  * One homework drill on an athlete's list.
  * `auto` items are seeded for EVERY athlete and cannot be removed —
@@ -387,6 +397,21 @@ export type HomeworkItem = {
   createdAt: string
   /** Set when the hollow auto item was leveled up arms-down → arms-up */
   progressedAt?: string
+  /** Stock catalog id (push-ups, pull-ups, back extensions, …). */
+  catalogId?: string
+  /** Coach-authored custom exercise id. */
+  coachExerciseId?: string
+  /**
+   * How this drill is logged. Custom skills default to reps so a typed
+   * skill is not trapped on a hold-only timer.
+   */
+  trackMode?: HomeworkTrackMode
+  /** Rep goal when this is a reps (or hold-or-reps) drill. */
+  targetReps?: number
+  /** Pull-up grip, or any grip the coach named. */
+  grip?: string
+  /** Allow a weight field on the log (back extensions, glute bridges). */
+  allowWeight?: boolean
 }
 
 /** One form-breakdown event during a camera homework session. */
@@ -424,10 +449,18 @@ export type HomeworkLog = {
   breakdowns?: HomeworkBreakdown[]
   /** Overall shape score (0–100) at log time; 0 for manual entries */
   score: number
-  /** Class-flow sequence run vs a timed hold. Missing = hold. */
-  kind?: 'hold' | 'sequence'
-  /** How many times this sequence was completed in the session (usually 1). */
+  /** Class-flow sequence run vs a timed hold vs a set of reps. Missing = hold. */
+  kind?: 'hold' | 'sequence' | 'reps'
+  /** Sequence completions, or counted reps for a strength drill. */
   reps?: number
+  /** Reps the athlete counted as quality (form they would show a coach). */
+  qualityReps?: number
+  grip?: string
+  weightLb?: number
+  /** 0–10 pain after this session (care / back-extension logs). */
+  painLevel?: number
+  journal?: string
+  trackMode?: HomeworkTrackMode
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
   /** Lesson holds land on the athlete’s homework, labeled with the coach. */
@@ -622,4 +655,47 @@ export type ReferencePhoto = {
    * Written to the Shape Lab server (Ryan profile). Shows on every browser / link.
    */
   persistedToApp?: boolean
+}
+
+/** Coach-authored exercise that can be assigned as homework. */
+export type CoachExercise = {
+  id: string
+  coachId: string
+  name: string
+  trackMode: HomeworkTrackMode
+  notes?: string
+  createdAt: string
+}
+
+/** One injury check-in — healing log, not a diagnosis. */
+export type InjuryEntry = {
+  id: string
+  athleteId: string
+  date: string
+  /** Where it hurts (knee, low back, wrist, …). */
+  bodyPart: string
+  /** 0 = none, 10 = worst. */
+  painLevel: number
+  whatHurts: string
+  where: string
+  startedWhen?: string
+  worseWhen?: string
+  betterWhen?: string
+  doctorNotes?: string
+  notes?: string
+}
+
+/** Back-care journal after a guided session. */
+export type PainJournalEntry = {
+  id: string
+  athleteId: string
+  date: string
+  painLevel: number
+  exerciseId?: string
+  exerciseName?: string
+  holdSeconds?: number
+  reps?: number
+  weightLb?: number
+  felt?: string
+  notes?: string
 }

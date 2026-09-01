@@ -18,6 +18,28 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from '
 import { createPortal } from 'react-dom'
 import { FLOW_SEQUENCES } from '../config/tasks2'
 import { allLibraryShapes, getShape } from '../config/shapes'
+import {
+  HOMEWORK_CATALOG,
+  catalogShapeId,
+  getCatalogItem,
+  needsWristPrep,
+} from '../config/homeworkCatalog'
+import { isPhoneBrowser } from '../lib/delayCameraPipeline'
+import { isCoachProfile } from '../lib/profileRole'
+import {
+  addCoachExercise,
+  addInjuryEntry,
+  addPainJournalEntry,
+  loadCoachExercises,
+  loadInjuryLogs,
+  loadPainJournal,
+  removeCoachExercise,
+} from '../lib/careStore'
+import { FormStandardField } from './homework/FormStandardField'
+import { TrainPicker } from './homework/TrainPicker'
+import { WristPrepNotice } from './homework/WristPrepNotice'
+import { RepSession } from './homework/RepSession'
+import { CarePanel } from './homework/CarePanel'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
@@ -48,6 +70,8 @@ import {
   flowIdForHomeworkItem,
   getHomeworkSequence,
   homeworkTitle,
+  homeworkTrackMode,
+  isCatalogHomework,
   isCustomHomework,
   isDrillHomework,
   isSequenceHomework,
@@ -61,11 +85,16 @@ import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { pickCoachStill } from '../lib/shippedRefs'
 import { listPublicDrills, subscribeCoachContent } from '../lib/coachContentStore'
 import type {
+  Athlete,
+  CoachExercise,
   HomeworkBreakdown,
   HomeworkItem,
   HomeworkLog,
   HomeworkSource,
+  HomeworkTrackMode,
+  InjuryEntry,
   Landmark,
+  PainJournalEntry,
   ReferencePhoto,
   ScoreResult,
 } from '../types'
@@ -74,6 +103,8 @@ type PlankSide = 'left' | 'right' | 'both'
 
 type Props = {
   athleteId: string | null
+  athlete?: Athlete | null
+  onUpdateAthlete?: (patch: Partial<Athlete>) => void
   score: ScoreResult
   /** Shape the camera is currently scoring (App state) */
   currentShapeId: string
@@ -505,6 +536,8 @@ function HwOverlay({
 
 export function HomeworkPanel({
   athleteId,
+  athlete = null,
+  onUpdateAthlete,
   score,
   currentShapeId,
   onRequestShape,
@@ -527,9 +560,19 @@ export function HomeworkPanel({
   const [addDrillId, setAddDrillId] = useState('')
   const [libTick, setLibTick] = useState(0)
   const [addTyped, setAddTyped] = useState('')
-  const [addSource, setAddSource] = useState<'coach' | 'athlete'>('coach')
+  const [addSource, setAddSource] = useState<'coach' | 'athlete'>('athlete')
   const [addTarget, setAddTarget] = useState('20')
+  const [addReps, setAddReps] = useState('')
+  const [addMode, setAddMode] = useState<HomeworkTrackMode | ''>('')
+  const [addCatalogId, setAddCatalogId] = useState('')
+  const [addGrip, setAddGrip] = useState('')
   const [addNotes, setAddNotes] = useState('')
+  const [pendingWrist, setPendingWrist] = useState<HomeworkItem | null>(null)
+  const [injuryLogs, setInjuryLogs] = useState<InjuryEntry[]>([])
+  const [painJournal, setPainJournal] = useState<PainJournalEntry[]>([])
+  const [coachExercises, setCoachExercises] = useState<CoachExercise[]>([])
+  const [newExName, setNewExName] = useState('')
+  const [newExMode, setNewExMode] = useState<HomeworkTrackMode>('reps')
   // Manual logging (secondary flow)
   const [manualItemId, setManualItemId] = useState<string | null>(null)
   const [manualSeconds, setManualSeconds] = useState('')
@@ -541,7 +584,9 @@ export function HomeworkPanel({
   const [watchMs, setWatchMs] = useState(0)
   const [watchOffer, setWatchOffer] = useState<number | null>(null)
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
-  const [hwPage, setHwPage] = useState<'home' | 'pick' | 'watch' | 'add'>('home')
+  const [hwPage, setHwPage] = useState<
+    'home' | 'pick' | 'watch' | 'add' | 'train' | 'wrist' | 'reps' | 'care'
+  >('home')
   const watchStartRef = useRef<number | null>(null)
   const watchAccRef = useRef(0)
 
@@ -571,6 +616,9 @@ export function HomeworkPanel({
     const reload = () => {
       setItems(ensureAutoHomework(athleteId))
       setLogs(loadHomeworkLogs(athleteId))
+      setInjuryLogs(loadInjuryLogs(athleteId))
+      setPainJournal(loadPainJournal(athleteId))
+      setCoachExercises(loadCoachExercises(athlete?.id))
     }
     reload()
     void syncRosterWithServer().then(reload)
@@ -590,7 +638,7 @@ export function HomeworkPanel({
       window.removeEventListener('shape-lab-roster-applied', onApplied)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [athleteId])
+  }, [athleteId, athlete?.id])
 
   useEffect(() => {
     const open = hwPage !== 'home' || Boolean(activeItemId)
@@ -624,10 +672,32 @@ export function HomeworkPanel({
     () => visibleItems.filter((item) => item.source !== 'coach'),
     [visibleItems],
   )
-  const nextTrainItem =
-    fromCoach.find((item) => !isCustomHomework(item)) ??
-    visibleItems.find((item) => !isCustomHomework(item)) ??
-    null
+  const showAssignedBanner =
+    fromCoach.length > 0 && !isCoachProfile(athlete) && athlete?.role !== 'parent'
+  const coreItems = useMemo(
+    () => visibleItems.filter((item) => item.source === 'auto'),
+    [visibleItems],
+  )
+  const strengthItems = useMemo(
+    () =>
+      visibleItems.filter(
+        (item) =>
+          isCatalogHomework(item) ||
+          homeworkTrackMode(item) === 'reps' ||
+          homeworkTrackMode(item) === 'hold_or_reps',
+      ),
+    [visibleItems],
+  )
+  const otherTrainItems = useMemo(
+    () =>
+      visibleItems.filter(
+        (item) =>
+          item.source !== 'auto' &&
+          item.source !== 'coach' &&
+          !isCatalogHomework(item),
+      ),
+    [visibleItems],
+  )
 
   const watchLogItem =
     visibleItems.find((item) => item.id === manualItemId) ?? visibleItems[0] ?? null
@@ -659,15 +729,17 @@ export function HomeworkPanel({
     timingActive &&
     activeItem !== null &&
     Boolean(activeCameraShapeId) &&
-    currentShapeId === activeCameraShapeId
+    (currentShapeId === activeCameraShapeId || isPhoneBrowser())
   const inShape =
     Boolean(activeItem) &&
     homeworkLooksReady(activeCameraShapeId || activeItem!.shapeId, landmarks, score.overall)
-  const hold = useHoldTimer(
-    sessionTiming && inShape,
-    inShape ? Math.max(score.overall, 10) : 0,
-    standard,
-  )
+  // Phone cameras score lower; once the pose is in the shape, start proper-hold time.
+  const holdScore = !inShape
+    ? 0
+    : isPhoneBrowser()
+      ? Math.max(score.overall, standard)
+      : Math.max(score.overall, 10)
+  const hold = useHoldTimer(sessionTiming && inShape, holdScore, standard)
   const properHoldSeconds = hold.qualityHoldSeconds
 
   const { speak, reset: resetSpeech, supported: speechSupported } =
@@ -731,7 +803,22 @@ export function HomeworkPanel({
     })
   }
 
-  const startItem = (item: HomeworkItem) => {
+  const startItem = (item: HomeworkItem, opts?: { skipWrist?: boolean }) => {
+    if (!opts?.skipWrist && needsWristPrep(item.shapeId, item.catalogId)) {
+      setPendingWrist(item)
+      setHwPage('wrist')
+      return
+    }
+    setPendingWrist(null)
+    const mode = homeworkTrackMode(item)
+    const hasCameraShape = Boolean(getShape(item.shapeId)) && !isCatalogHomework(item)
+    if (mode === 'reps' || (mode === 'hold_or_reps' && !hasCameraShape) || isCustomHomework(item)) {
+      setActiveItemId(item.id)
+      setManualItemId(null)
+      setHwPage('reps')
+      onStudioChange?.(false)
+      return
+    }
     const flowId = flowIdForHomeworkItem(item)
     if (flowId && onOpenClassFlow) {
       onOpenClassFlow(flowId)
@@ -884,7 +971,7 @@ export function HomeworkPanel({
     showFlash(`Logged ${shapeName} — ${formatSeconds(secs)}${beatNote(secs, prior)}`)
   }
 
-  const changeStandard = (item: HomeworkItem, value: string) => {
+  const changeStandard = (item: HomeworkItem, value: string | number) => {
     const v = Number(value)
     if (!Number.isFinite(v)) return
     const clamped = Math.min(100, Math.max(0, Math.round(v)))
@@ -892,6 +979,87 @@ export function HomeworkPanel({
     if (updated) {
       setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
     }
+  }
+
+  const addCatalogItem = (catalogId: string, source: HomeworkSource = 'athlete') => {
+    if (!athleteId) return
+    const cat = getCatalogItem(catalogId)
+    if (!cat) return
+    const item: HomeworkItem = {
+      id: createId('hw'),
+      athleteId,
+      shapeId: catalogShapeId(cat.id),
+      catalogId: cat.id,
+      customLabel: cat.name,
+      source,
+      trackMode: cat.trackMode,
+      targetReps: cat.targetReps,
+      targetSeconds: cat.targetSeconds,
+      allowWeight: cat.allowWeight,
+      notes: cat.notes,
+      createdAt: new Date().toISOString(),
+    }
+    setItems(addHomeworkItem(item))
+    showFlash(`Added ${cat.name}`)
+    return item
+  }
+
+  const logRepSet = (
+    item: HomeworkItem,
+    input: {
+      reps: number
+      qualityReps: number
+      holdSeconds?: number
+      grip?: string
+      weightLb?: number
+      painLevel?: number
+      journal?: string
+      trackMode: HomeworkTrackMode
+    },
+  ) => {
+    if (!athleteId) return
+    const log: HomeworkLog = {
+      id: createId('hwlog'),
+      athleteId,
+      homeworkId: item.id,
+      shapeId: item.shapeId,
+      date: new Date().toISOString(),
+      method: 'manual',
+      kind: input.holdSeconds && !input.reps ? 'hold' : 'reps',
+      totalHoldSeconds: input.holdSeconds ?? 0,
+      reps: input.reps || undefined,
+      qualityReps: input.qualityReps || undefined,
+      grip: input.grip,
+      weightLb: input.weightLb,
+      painLevel: input.painLevel,
+      journal: input.journal,
+      trackMode: input.trackMode,
+      score: 0,
+    }
+    addHomeworkLog(log)
+    setLogs((prev) => [log, ...prev])
+    if (input.journal || input.painLevel != null) {
+      addPainJournalEntry({
+        id: createId('pj'),
+        athleteId,
+        date: log.date,
+        painLevel: input.painLevel ?? 0,
+        exerciseId: item.catalogId,
+        exerciseName: homeworkTitle(item),
+        holdSeconds: input.holdSeconds,
+        reps: input.reps,
+        weightLb: input.weightLb,
+        felt: input.journal,
+      })
+      setPainJournal(loadPainJournal(athleteId))
+    }
+    showFlash(
+      input.holdSeconds
+        ? `Logged ${homeworkTitle(item)} — ${input.holdSeconds}s`
+        : `Logged ${homeworkTitle(item)} — ${input.reps} reps${
+            input.qualityReps ? ` (${input.qualityReps} quality)` : ''
+          }`,
+    )
   }
 
   const levelUpHollow = (item: HomeworkItem) => {
@@ -907,8 +1075,16 @@ export function HomeworkPanel({
     const typed = addTyped.trim()
     const seq = FLOW_SEQUENCES.find((s) => s.id === addSequenceId)
     const drill = listPublicDrills().find((d) => d.id === addDrillId)
-    if (!typed && !addShapeId && !seq && !drill) return
-    const nextShapeId = drill
+    const cat = getCatalogItem(addCatalogId)
+    const coachEx = addCatalogId.startsWith('cx:')
+      ? coachExercises.find((e) => e.id === addCatalogId.slice(3))
+      : undefined
+    if (!typed && !addShapeId && !seq && !drill && !cat && !coachEx) return
+    const nextShapeId = cat
+      ? catalogShapeId(cat.id)
+      : coachEx
+        ? customHomeworkShapeId(coachEx.name)
+      : drill
       ? drillHomeworkShapeId(drill.id)
       : seq
         ? sequenceHomeworkShapeId(seq.id)
@@ -918,7 +1094,17 @@ export function HomeworkPanel({
     const probe = {
       athleteId,
       shapeId: nextShapeId,
-      customLabel: drill ? drill.title : seq ? seq.name : typed || undefined,
+      customLabel: cat
+        ? cat.name
+        : coachEx
+          ? coachEx.name
+          : drill
+            ? drill.title
+            : seq
+              ? seq.name
+              : typed || undefined,
+      catalogId: cat?.id,
+      coachExerciseId: coachEx?.id,
       source: addSource,
       id: '',
       createdAt: '',
@@ -952,22 +1138,34 @@ export function HomeworkPanel({
           : ''
     const notes =
       addNotes.trim() ||
+      cat?.notes ||
+      coachEx?.notes ||
       (drill ? drill.notes : seq ? seq.description : defaultNotes)
+    const trackMode: HomeworkTrackMode | undefined =
+      addMode ||
+      cat?.trackMode ||
+      coachEx?.trackMode ||
+      (typed && !addShapeId && !seq && !drill ? 'reps' : undefined)
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
       shapeId: nextShapeId,
-      ...(drill
-        ? { customLabel: drill.title }
-        : seq
-          ? { customLabel: seq.name }
-          : typed
-            ? { customLabel: typed }
-            : {}),
+      ...(cat
+        ? { catalogId: cat.id, customLabel: cat.name, allowWeight: cat.allowWeight }
+        : coachEx
+          ? { coachExerciseId: coachEx.id, customLabel: coachEx.name }
+        : drill
+          ? { customLabel: drill.title }
+          : seq
+            ? { customLabel: seq.name }
+            : typed
+              ? { customLabel: typed }
+              : {}),
       source: addSource,
-      ...(Number.isFinite(target) && target > 0
-        ? { targetSeconds: target }
-        : {}),
+      ...(trackMode ? { trackMode } : {}),
+      ...(addGrip ? { grip: addGrip } : {}),
+      ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
+      ...(Number(addReps) > 0 ? { targetReps: Number(addReps) } : cat?.targetReps ? { targetReps: cat.targetReps } : {}),
       ...(notes ? { notes } : {}),
       createdAt: new Date().toISOString(),
     }
@@ -976,6 +1174,10 @@ export function HomeworkPanel({
     setAddTyped('')
     setAddSequenceId('')
     setAddDrillId('')
+    setAddCatalogId('')
+    setAddMode('')
+    setAddReps('')
+    setAddGrip('')
     const shapeName = homeworkTitle(item)
     showFlash(
       `${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${shapeName}`,
@@ -1016,20 +1218,17 @@ export function HomeworkPanel({
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          disabled={!nextTrainItem}
-          onClick={() => nextTrainItem && startItem(nextTrainItem)}
-          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] disabled:opacity-50 sm:py-8"
+          onClick={() => setHwPage('train')}
+          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
         >
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
-            Homework · Camera
+            Homework · Choose
           </span>
           <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
             Train now
           </span>
           <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
-            {nextTrainItem
-              ? `${homeworkTitle(nextTrainItem)} — full screen, clock starts when you hit the shape.`
-              : 'Add a camera drill first.'}
+            What do you want to train? Core drills, assigned work, or a rep set.
           </span>
         </button>
         <button
@@ -1072,12 +1271,127 @@ export function HomeworkPanel({
           </span>
           <span className="mt-1 block text-lg font-bold text-[var(--text)]">Add homework</span>
           <span className="mt-1 block text-sm text-[var(--muted)]">
-            Make your own list — a shape, sequence, or drill.
+            Shape, class flow, rep exercise, or a skill you type.
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setHwPage('care')}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-4 text-center"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--warn)]">
+            Care
+          </span>
+          <span className="mt-1 block text-lg font-bold text-[var(--text)]">
+            {athlete?.injuryActive || athlete?.hasBackPain
+              ? 'Injury and back care'
+              : "I'm dealing with an injury"}
+          </span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
+            Log pain, remember what the doctor said, and train what you can handle today.
           </span>
         </button>
       </div>
 
       <HomeworkProgressStrip items={visibleItems} logsByItem={logsByItem} />
+
+      {hwPage === 'train' && (
+        <HwOverlay
+          eyebrow="Homework · Train"
+          title="What do you want to train?"
+          onDone={() => setHwPage('home')}
+        >
+          <TrainPicker
+            assigned={showAssignedBanner ? fromCoach : []}
+            core={coreItems}
+            strength={strengthItems}
+            other={[
+              ...(!showAssignedBanner ? fromCoach : []),
+              ...otherTrainItems.filter((item) => !strengthItems.some((s) => s.id === item.id)),
+            ]}
+            onPick={(item) => startItem(item)}
+          />
+        </HwOverlay>
+      )}
+
+      {hwPage === 'wrist' && pendingWrist && (
+        <HwOverlay
+          eyebrow="Homework · Wrists"
+          title="Prepare first"
+          onDone={() => {
+            setPendingWrist(null)
+            setHwPage('train')
+          }}
+        >
+          <WristPrepNotice
+            drillName={homeworkTitle(pendingWrist)}
+            onContinue={() => startItem(pendingWrist, { skipWrist: true })}
+            onBack={() => {
+              setPendingWrist(null)
+              setHwPage('train')
+            }}
+          />
+        </HwOverlay>
+      )}
+
+      {hwPage === 'reps' && activeItem && (
+        <HwOverlay
+          eyebrow="Homework · Reps"
+          title={homeworkTitle(activeItem)}
+          onDone={stopItem}
+        >
+          <RepSession
+            item={activeItem}
+            logs={logsByItem.get(activeItem.id) ?? []}
+            onLog={(input) => logRepSet(activeItem, input)}
+            onDone={stopItem}
+          />
+        </HwOverlay>
+      )}
+
+      {hwPage === 'care' && (
+        <HwOverlay
+          eyebrow="Homework · Care"
+          title="Healing is a trail"
+          onDone={() => setHwPage('home')}
+        >
+          <CarePanel
+            athlete={athlete}
+            injuryLogs={injuryLogs}
+            painJournal={painJournal}
+            backItems={visibleItems.filter(
+              (item) => item.catalogId === 'glute_bridge' || item.catalogId === 'back_extension',
+            )}
+            onFlagInjury={(active) => onUpdateAthlete?.({ injuryActive: active })}
+            onSaveInjury={(entry) => {
+              if (!athleteId) return
+              addInjuryEntry({
+                id: createId('inj'),
+                athleteId,
+                date: new Date().toISOString(),
+                ...entry,
+              })
+              setInjuryLogs(loadInjuryLogs(athleteId))
+              onUpdateAthlete?.({ injuryActive: true })
+            }}
+            onSaveJournal={(entry) => {
+              if (!athleteId) return
+              addPainJournalEntry({
+                id: createId('pj'),
+                athleteId,
+                date: new Date().toISOString(),
+                ...entry,
+              })
+              setPainJournal(loadPainJournal(athleteId))
+            }}
+            onTrain={(item) => startItem(item)}
+            onAddBackCare={(catalogId) => {
+              const item = addCatalogItem(catalogId, 'athlete')
+              if (item) startItem(item)
+            }}
+          />
+        </HwOverlay>
+      )}
 
       {hwPage === 'watch' && (
         <HwOverlay
@@ -1234,19 +1548,11 @@ export function HomeworkPanel({
               </p>
             </div>
           </div>
-          <div className="mb-2 flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
-            <label className="flex items-center gap-1">
-              Form standard
-              <input
-                type="number"
-                min={0}
-                max={100}
-                className="w-14 rounded border border-[var(--panel-border)] bg-[#0d1218] px-1.5 py-0.5"
-                value={standard}
-                onChange={(e) => changeStandard(activeItem, e.target.value)}
-                title="Score required to count proper-hold time (default 85)"
-              />
-            </label>
+          <div className="mb-2 flex flex-col gap-2 text-xs text-[var(--muted)]">
+            <FormStandardField
+              value={standard}
+              onCommit={(next) => changeStandard(activeItem, next)}
+            />
             <span>
               {breakdownCount === 0
                 ? 'No form breaks yet'
@@ -1386,18 +1692,19 @@ export function HomeworkPanel({
       {/* Homework items — coach assignments first so the athlete sees them */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          {fromCoach.length > 0 ? (
+          {showAssignedBanner ? (
             <>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
                 From your coach
               </p>
               <p className="mt-0.5 text-xs text-[var(--muted)]">
                 Assigned for you. Open a drill only when you want the details.
+                Remove one and it stays off this list.
               </p>
             </>
           ) : (
             <p className="text-xs text-[var(--muted)]">
-              Open a drill only when you want the details.
+              Core drills stay on every profile. Remove anything extra and it will not come back.
             </p>
           )}
         </div>
@@ -1444,7 +1751,7 @@ export function HomeworkPanel({
           const best = bestHoldSeconds(itemLogs)
           return (
             <Fragment key={item.id}>
-            {fromCoach.length > 0 && item.id === otherDrills[0]?.id && (
+            {showAssignedBanner && item.id === otherDrills[0]?.id && (
               <p className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Core drills
               </p>
@@ -1496,18 +1803,24 @@ export function HomeworkPanel({
                   </span>
                 </button>
                 <div className="flex items-center gap-2">
-                  {!isCustomHomework(item) && <button
+                  <button
                     type="button"
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
                     title={
                       isSequenceHomework(item)
                         ? 'Open this sequence in Class flow'
-                        : 'Camera session with live form scoring (recommended)'
+                        : homeworkTrackMode(item) !== 'hold'
+                          ? 'Log reps or a hold'
+                          : 'Camera session with live form scoring (recommended)'
                     }
                   >
-                    {isSequenceHomework(item) ? 'Class flow' : 'Train'}
-                  </button>}
+                    {isSequenceHomework(item)
+                      ? 'Class flow'
+                      : homeworkTrackMode(item) !== 'hold'
+                        ? 'Log'
+                        : 'Train'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => openManual(item)}
@@ -1732,6 +2045,36 @@ export function HomeworkPanel({
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <select
             className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
+            value={addCatalogId}
+            onChange={(e) => {
+              setAddCatalogId(e.target.value)
+              if (e.target.value) {
+                setAddShapeId('')
+                setAddSequenceId('')
+                setAddDrillId('')
+                const cat = getCatalogItem(e.target.value)
+                if (cat) {
+                  setAddMode(cat.trackMode)
+                  setAddReps(cat.targetReps ? String(cat.targetReps) : '')
+                  setAddTarget(cat.targetSeconds ? String(cat.targetSeconds) : addTarget)
+                }
+              }
+            }}
+          >
+            <option value="">Rep / hold exercise…</option>
+            {HOMEWORK_CATALOG.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} · {c.trackMode === 'hold' ? 'hold' : c.trackMode === 'reps' ? 'reps' : 'hold or reps'}
+              </option>
+            ))}
+            {coachExercises.map((ex) => (
+              <option key={ex.id} value={`cx:${ex.id}`}>
+                {ex.name} (yours)
+              </option>
+            ))}
+          </select>
+          <select
+            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
             value={addShapeId}
             onChange={(e) => {
               setAddShapeId(e.target.value)
@@ -1785,7 +2128,7 @@ export function HomeworkPanel({
             ))}
           </select>
           <label className="flex items-center gap-1 text-xs text-[var(--muted)]">
-            goal
+            hold goal
             <input
               type="number"
               min={0}
@@ -1795,6 +2138,26 @@ export function HomeworkPanel({
             />
             s
           </label>
+          <label className="flex items-center gap-1 text-xs text-[var(--muted)]">
+            reps
+            <input
+              type="number"
+              min={0}
+              className="w-14 rounded border border-[var(--panel-border)] bg-[#0d1218] px-1.5 py-1"
+              value={addReps}
+              onChange={(e) => setAddReps(e.target.value)}
+            />
+          </label>
+          <select
+            className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
+            value={addMode}
+            onChange={(e) => setAddMode((e.target.value || '') as HomeworkTrackMode | '')}
+          >
+            <option value="">Track: default</option>
+            <option value="hold">Holds</option>
+            <option value="reps">Reps</option>
+            <option value="hold_or_reps">Holds and reps</option>
+          </select>
           <select
             className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
             value={addSource}
@@ -1829,6 +2192,70 @@ export function HomeworkPanel({
             if (e.key === 'Enter') addItem()
           }}
         />
+        {isCoachProfile(athlete) && (
+          <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
+            <p className="text-xs font-semibold text-[var(--text)]">Your custom exercises</p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+              Name a skill and choose holds, reps, or both. Assigned custom skills
+              log reps and quality reps — they are not hold-only.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                placeholder="Exercise name"
+                value={newExName}
+                onChange={(e) => setNewExName(e.target.value)}
+              />
+              <select
+                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-xs"
+                value={newExMode}
+                onChange={(e) => setNewExMode(e.target.value as HomeworkTrackMode)}
+              >
+                <option value="reps">Reps</option>
+                <option value="hold">Holds</option>
+                <option value="hold_or_reps">Holds and reps</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!athlete?.id || !newExName.trim()) return
+                  addCoachExercise({
+                    coachId: athlete.id,
+                    name: newExName.trim(),
+                    trackMode: newExMode,
+                  })
+                  setCoachExercises(loadCoachExercises(athlete.id))
+                  setNewExName('')
+                  showFlash('Exercise added to your assign list.')
+                }}
+                className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                Save exercise
+              </button>
+            </div>
+            {coachExercises.length > 0 && (
+              <ul className="mt-2 space-y-1 text-xs">
+                {coachExercises.map((ex) => (
+                  <li key={ex.id} className="flex items-center justify-between gap-2">
+                    <span>
+                      {ex.name} · {ex.trackMode.replace(/_/g, ' ')}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-[var(--bad)] underline"
+                      onClick={() => {
+                        removeCoachExercise(ex.id)
+                        setCoachExercises(loadCoachExercises(athlete?.id))
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
       </CollapsibleSection>
         </HwOverlay>

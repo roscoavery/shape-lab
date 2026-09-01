@@ -149,6 +149,7 @@ export function LessonReviewList({
                         <AssignHomeworkBar
                           hideHeading
                           athleteId={s.athleteId}
+                          coachId={s.coachId}
                           defaultNotes={s.notes[0]?.text}
                           defaultShapeId={
                             s.holds.find((h) => !h.shapeId.startsWith('custom:'))?.shapeId

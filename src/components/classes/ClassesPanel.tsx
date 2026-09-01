@@ -21,11 +21,12 @@ import {
 } from '../../lib/collages'
 import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
-import { isSameReferenceUrl } from '../../lib/clipStore'
+import { isSameReferenceUrl, kindFromUrl } from '../../lib/clipStore'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
+import { PhoneReelViewer } from '../PhoneReelViewer'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -63,6 +64,7 @@ export function ClassesPanel({ athlete }: Props) {
   const [filter, setFilter] = useState('')
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [previewClip, setPreviewClip] = useState<GymClip | null>(null)
+  const [previewReel, setPreviewReel] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [sharingId, setSharingId] = useState<string | null>(null)
@@ -555,7 +557,7 @@ export function ClassesPanel({ athlete }: Props) {
           <div className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-black md:sticky md:top-2">
             {previewClip ? (
               <div className="flex flex-col">
-                <div className="aspect-[9/16] max-h-72 w-full">
+                <div className="relative aspect-[9/16] max-h-72 w-full">
                   <GymClipPlayer
                     key={previewClip.id}
                     url={previewClip.url}
@@ -566,19 +568,35 @@ export function ClassesPanel({ athlete }: Props) {
                     compact
                     quiet
                   />
+                  <button
+                    type="button"
+                    onClick={() => setPreviewReel(true)}
+                    className="absolute bottom-2 right-2 z-20 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-black"
+                  >
+                    Full screen
+                  </button>
                 </div>
                 <div className="space-y-2 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
                     {previewClip.collectionName}
                   </p>
                   <p className="text-sm font-semibold text-white">{previewClip.name}</p>
-                  <button
-                    type="button"
-                    onClick={() => addClip(previewClip)}
-                    className="w-full rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
-                  >
-                    Add to collage
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewReel(true)}
+                      className="rounded-lg border border-white/25 px-3 py-1.5 text-sm font-semibold text-white"
+                    >
+                      Watch full screen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addClip(previewClip)}
+                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                    >
+                      Add to collage
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -617,6 +635,37 @@ export function ClassesPanel({ athlete }: Props) {
       )}
       {gymBoards.length > 0 && (
         <CollageList title="Gym boards" collages={gymBoards} {...listProps} />
+      )}
+
+      {previewReel && previewClip && (
+        <PhoneReelViewer
+          items={grouped.flatMap((col) =>
+            col.items
+              .filter((item) => item.url)
+              .map((item) => ({
+                id: item.id,
+                name: item.name,
+                url: item.url!,
+                kind: kindFromUrl(item.url!),
+                keywords: item.keywords,
+                collectionName: col.name,
+              })),
+          )}
+          startIndex={Math.max(
+            0,
+            grouped
+              .flatMap((col) => col.items.filter((item) => item.url))
+              .findIndex((item) => isSameReferenceUrl(item.url!, previewClip.url)),
+          )}
+          onClose={() => setPreviewReel(false)}
+          editor={{
+            gymEditor: gymAdmin,
+            personalEditor: isCoachProfile(athlete) && !gymAdmin,
+            profileId: athlete?.id ?? null,
+          }}
+          gymAdmin={gymAdmin}
+          title="Collage clips"
+        />
       )}
 
       {playing && (

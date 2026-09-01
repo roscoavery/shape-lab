@@ -19,6 +19,8 @@ import type {
   FlowProgress,
   FlowRunReport,
 } from '../types'
+import { dismissHomeworkKey, loadDismissedHomeworkKeys, undismissHomeworkKey } from './careStore'
+import { catalogIdFromShape } from '../config/homeworkCatalog'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
 const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
@@ -379,7 +381,7 @@ function inferAutoKey(item: HomeworkItem): string | undefined {
 /** One card per athlete + drill. Safari / Strict Mode used to keep seeding extras. */
 export function homeworkDedupeKey(
   item: Pick<HomeworkItem, 'athleteId' | 'shapeId'> &
-    Partial<Pick<HomeworkItem, 'autoKey' | 'source' | 'customLabel'>>,
+    Partial<Pick<HomeworkItem, 'autoKey' | 'source' | 'customLabel' | 'catalogId' | 'coachExerciseId'>>,
 ): string {
   const aid = item.athleteId || '_'
   const auto = inferAutoKey(item as HomeworkItem)
@@ -387,10 +389,19 @@ export function homeworkDedupeKey(
   if (item.shapeId.startsWith('seq:') || item.shapeId.startsWith('drill:')) {
     return `${aid}::${item.shapeId}`
   }
+  const catalog = item.catalogId || catalogIdFromShape(item.shapeId)
+  if (catalog) return `${aid}::catalog:${catalog}`
+  if (item.coachExerciseId) return `${aid}::cx:${item.coachExerciseId}`
   const typed = item.customLabel?.trim().toLowerCase()
   if (typed) return `${aid}::typed:${typed}`
   if (item.shapeId.startsWith('custom:')) return `${aid}::${item.shapeId}`
   return `${aid}::${item.shapeId}`
+}
+
+export function filterDismissedHomework(items: HomeworkItem[]): HomeworkItem[] {
+  const dismissed = new Set(loadDismissedHomeworkKeys())
+  if (dismissed.size === 0) return items
+  return items.filter((item) => item.source === 'auto' || !dismissed.has(homeworkDedupeKey(item)))
 }
 
 function preferHomeworkItem(a: HomeworkItem, b: HomeworkItem): HomeworkItem {
@@ -447,7 +458,7 @@ export function loadAllHomework(): HomeworkItem[] {
       }
     }
   }
-  const deduped = dedupeHomeworkItems(items)
+  const deduped = filterDismissedHomework(dedupeHomeworkItems(items))
   if (changed || deduped.length !== items.length) {
     remapOrphanHomeworkLogs(items, deduped)
     writeJson(HOMEWORK_KEY, deduped)
@@ -469,7 +480,7 @@ export function subscribeHomework(cb: () => void): () => void {
 }
 
 export function saveAllHomework(items: HomeworkItem[]) {
-  const cleaned = dedupeHomeworkItems(items)
+  const cleaned = filterDismissedHomework(dedupeHomeworkItems(items))
   remapOrphanHomeworkLogs(items, cleaned)
   writeJson(HOMEWORK_KEY, cleaned)
   pushRosterSoon()
@@ -534,6 +545,7 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
 export function addHomeworkItem(item: HomeworkItem): HomeworkItem[] {
   const all = loadAllHomework()
   const key = homeworkDedupeKey(item)
+  undismissHomeworkKey(key)
   if (all.some((h) => h.athleteId === item.athleteId && homeworkDedupeKey(h) === key)) {
     return sortHomework(all.filter((h) => h.athleteId === item.athleteId))
   }
@@ -545,7 +557,18 @@ export function addHomeworkItem(item: HomeworkItem): HomeworkItem[] {
 /** Update editable fields on a homework item (e.g. formStandard). */
 export function updateHomeworkItem(
   id: string,
-  patch: Partial<Pick<HomeworkItem, 'formStandard' | 'targetSeconds' | 'notes'>>,
+  patch: Partial<
+    Pick<
+      HomeworkItem,
+      | 'formStandard'
+      | 'targetSeconds'
+      | 'notes'
+      | 'trackMode'
+      | 'targetReps'
+      | 'grip'
+      | 'allowWeight'
+    >
+  >,
 ): HomeworkItem | null {
   const all = loadAllHomework()
   const item = all.find((h) => h.id === id)
@@ -560,6 +583,7 @@ export function removeHomeworkItem(id: string): void {
   const all = loadAllHomework()
   const target = all.find((h) => h.id === id)
   if (!target || target.source === 'auto') return
+  dismissHomeworkKey(homeworkDedupeKey(target))
   saveAllHomework(all.filter((h) => h.id !== id))
 }
 
