@@ -1,4 +1,11 @@
-export type TodayShortcutId = 'library' | 'quiz' | 'replay' | 'scroll' | 'feed' | 'station'
+export type TodayShortcutId =
+  | 'library'
+  | 'quiz'
+  | 'replay'
+  | 'scroll'
+  | 'feed'
+  | 'station'
+  | 'homework'
 
 type Props = {
   onGo: (id: TodayShortcutId) => void
@@ -51,6 +58,14 @@ const TOOLS: {
     hint: 'What the gym posted — collages and hits.',
     className:
       'from-[#fda4af] via-[#fb7185] to-[#9f1239] text-[#2a0b12] shadow-[0_16px_40px_rgba(251,113,133,0.22)]',
+  },
+  {
+    id: 'homework',
+    eyebrow: 'Practice',
+    title: 'Homework',
+    hint: 'Train now, pick a drill, or add an exercise.',
+    className:
+      'from-[#86efac] via-[#22c55e] to-[#14532d] text-[#052e16] shadow-[0_16px_40px_rgba(34,197,94,0.22)]',
   },
 ]
 

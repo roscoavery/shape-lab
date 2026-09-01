@@ -147,8 +147,8 @@ export function HomeDashboard({
             </span>
             <span className="mt-1 block text-2xl font-bold">Start class</span>
             <span className="mt-1 block text-sm font-medium opacity-80">
-              Pick Connections (Monday 5pm), track who is here, assign homework
-              to the whole class at the end.
+              Pick the class you teach tonight, track who is here, assign
+              homework to the whole group at the end.
             </span>
           </button>
         )}

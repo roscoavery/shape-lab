@@ -552,6 +552,8 @@ export default function App() {
                     goTab('learn')
                   } else if (id === 'feed') {
                     goTab('feed')
+                  } else if (id === 'homework') {
+                    goTab('homework')
                   } else if (id === 'station') {
                     setStationOpen(true)
                   }

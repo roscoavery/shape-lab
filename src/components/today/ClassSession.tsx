@@ -33,14 +33,16 @@ type Props = {
 type Screen = 'pick' | 'live' | 'assign' | 'schedule'
 
 export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, onClose }: Props) {
-  const [tick, setTick] = useState(0)
+  const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings(coach.id))
   const [screen, setScreen] = useState<Screen>('pick')
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
 
-  useEffect(() => subscribeCoachClasses(() => setTick((n) => n + 1)), [])
-  void tick
+  const refresh = () => {
+    setOfferings(loadOfferings(coach.id))
+  }
 
-  const offerings = loadOfferings(coach.id)
+  useEffect(() => subscribeCoachClasses(refresh), [coach.id])
+
   const live = getActiveMeeting(coach.id)
   const recent = loadMeetings(coach.id).filter((m) => m.endedAt).slice(0, 4)
 
@@ -77,7 +79,14 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
           <ScheduleEditor
             coachId={coach.id}
             offerings={offerings}
-            onBack={() => setScreen('pick')}
+            onBack={() => {
+              refresh()
+              setScreen('pick')
+            }}
+            onSaved={() => {
+              refresh()
+              setScreen('pick')
+            }}
           />
         )}
 
@@ -93,10 +102,10 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
               </p>
             </div>
             {offerings.length === 0 ? (
-              <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-                You have not named a class yet. Add one like Connections
-                (Monday 5pm).
-              </p>
+              <QuickAddClass
+                coachId={coach.id}
+                onSaved={() => refresh()}
+              />
             ) : (
               <div className="flex flex-col gap-2">
                 {offerings.map((o) => (
@@ -306,14 +315,71 @@ function LiveClass({
   )
 }
 
+function QuickAddClass({
+  coachId,
+  onSaved,
+}: {
+  coachId: string
+  onSaved: () => void
+}) {
+  const [name, setName] = useState('Connections')
+  const [weekday, setWeekday] = useState<Weekday>('Monday')
+  const [time, setTime] = useState('5pm')
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+      <p className="text-sm text-white/70">
+        Name the class you are on the floor for. Example: Connections, Monday, 5pm.
+      </p>
+      <input
+        className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+        placeholder="Class name — Connections"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          className="h-12 rounded-xl border border-white/10 bg-black/30 px-3"
+          value={weekday}
+          onChange={(e) => setWeekday(e.target.value as Weekday)}
+        >
+          {WEEKDAYS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <input
+          className="h-12 rounded-xl border border-white/10 bg-black/30 px-3"
+          placeholder="5pm"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+        />
+      </div>
+      <button
+        type="button"
+        disabled={!name.trim()}
+        onClick={() => {
+          saveOffering({ coachId, name: name.trim(), weekday, time: time.trim() || '5pm' })
+          onSaved()
+        }}
+        className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+      >
+        Save and show this class
+      </button>
+    </div>
+  )
+}
+
 function ScheduleEditor({
   coachId,
   offerings,
   onBack,
+  onSaved,
 }: {
   coachId: string
   offerings: CoachClassOffering[]
   onBack: () => void
+  onSaved: () => void
 }) {
   const [name, setName] = useState('')
   const [weekday, setWeekday] = useState<Weekday>('Monday')
@@ -358,6 +424,7 @@ function ScheduleEditor({
         onClick={() => {
           saveOffering({ coachId, name: name.trim(), weekday, time: time.trim() || '5pm' })
           setName('')
+          onSaved()
         }}
         className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
       >
