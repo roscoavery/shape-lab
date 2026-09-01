@@ -213,6 +213,17 @@ export type Athlete = {
   openShoulderHardness?: 1 | 2 | 3 | 4 | 5
   /** Optional class-station snapshot (data URL). */
   photoDataUrl?: string
+  /** Recent shape-test scores (oldest first, newest last). */
+  shapeTests?: ShapeTestRecord[]
+}
+
+export type ShapeTestRecord = {
+  id: string
+  takenAt: number
+  pool: 'pathway' | 'arm-positions'
+  format: 'picture' | 'describe' | 'mixed'
+  score: number
+  total: number
 }
 
 export type CriterionScore = {

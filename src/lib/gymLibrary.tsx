@@ -13,7 +13,7 @@ import {
   type LibraryBackup,
 } from './libraryBackup'
 import { pullCoachLibrary } from './coachLibrary'
-import { clipLoopKey, socialPlatform } from './socialUrls'
+import { clipLoopKey, postedByFromUrl, socialPlatform } from './socialUrls'
 import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
 import { listCoachSkillRefs, subscribeCoachContent } from './coachContentStore'
 export type GymClip = {
@@ -24,6 +24,7 @@ export type GymClip = {
   collectionId: string
   collectionName: string
   keywords?: string[]
+  postedBy?: string
 }
 
 function flattenSkillRefs(seen: Set<string>): GymClip[] {
@@ -41,6 +42,7 @@ function flattenSkillRefs(seen: Set<string>): GymClip[] {
       collectionId: `virtual:coach-refs:${ref.coachId}`,
       collectionName: `${ref.coachName} skill refs`,
       keywords: [ref.notes ?? '', 'skill'].filter(Boolean),
+      postedBy: postedByFromUrl(ref.src) ?? undefined,
     })
   }
   return out
@@ -71,6 +73,7 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
         collectionId: col.id,
         collectionName: col.athleteId ? `${col.name} (mine)` : col.name,
         keywords: item.keywords,
+        postedBy: item.postedBy || postedByFromUrl(item.url) || undefined,
       })
     }
   }

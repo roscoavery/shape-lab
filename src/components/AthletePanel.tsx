@@ -21,6 +21,12 @@ import {
   forgetQuizGuest,
   loadQuizGuests,
 } from '../lib/classStation'
+import {
+  formatQuizScore,
+  lastShapeTest,
+  takeGuestGrades,
+  quizKindLabel,
+} from '../lib/quizGrades'
 
 type Props = {
   athletes: Athlete[]
@@ -126,6 +132,7 @@ export function AthletePanel({
       passcodeHash,
       role,
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
+      shapeTests: takeGuestGrades(firstName, lastName),
     }
     markProfileUnlocked(id)
     forgetQuizGuest(firstName, lastName)
@@ -244,13 +251,17 @@ export function AthletePanel({
         onChange={(e) => onSelect(e.target.value || null)}
       >
         <option value="">Select profile…</option>
-        {athletes.map((a) => (
-          <option key={a.id} value={a.id}>
-            {`${a.name} · ${roleLabel(a)}`}
-            {a.gymName ? ` · ${a.gymName}` : ''}
-            {a.instagramHandle ? ` (@${a.instagramHandle})` : ''}
-          </option>
-        ))}
+        {athletes.map((a) => {
+          const last = lastShapeTest(a)
+          return (
+            <option key={a.id} value={a.id}>
+              {`${a.name} · ${roleLabel(a)}`}
+              {a.gymName ? ` · ${a.gymName}` : ''}
+              {a.instagramHandle ? ` (@${a.instagramHandle})` : ''}
+              {last ? ` · last test ${formatQuizScore(last)}` : ''}
+            </option>
+          )
+        })}
       </select>
 
       <button
@@ -428,6 +439,22 @@ export function AthletePanel({
               Save passcode
             </button>
           </div>
+        </div>
+      )}
+
+      {active && lastShapeTest(active) && (
+        <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Shape tests
+          </p>
+          <p className="mt-1 text-sm text-[var(--text)]">
+            Last: {formatQuizScore(lastShapeTest(active)!)} · {quizKindLabel(lastShapeTest(active)!)}
+          </p>
+          {(active.shapeTests ?? []).length > 1 && (
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+              {(active.shapeTests ?? []).length} saved scores on this profile
+            </p>
+          )}
         </div>
       )}
 

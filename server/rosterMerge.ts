@@ -29,6 +29,16 @@ export type Athlete = {
   harderShape?: 'hollow' | 'superman'
   openShoulderHardness?: 1 | 2 | 3 | 4 | 5
   photoDataUrl?: string
+  shapeTests?: ShapeTestRecord[]
+}
+
+type ShapeTestRecord = {
+  id: string
+  takenAt: number
+  pool: 'pathway' | 'arm-positions'
+  format: 'picture' | 'describe' | 'mixed'
+  score: number
+  total: number
 }
 
 const RYAN_PROFILE_ID = 'ath_ryan'
@@ -190,8 +200,24 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     harderShape: newer.harderShape || older.harderShape,
     openShoulderHardness: newer.openShoulderHardness ?? older.openShoulderHardness,
     photoDataUrl: newer.photoDataUrl || older.photoDataUrl,
+    shapeTests: mergeShapeTests(newer.shapeTests, older.shapeTests),
     createdAt: older.createdAt || newer.createdAt,
   }
+}
+
+function mergeShapeTests(
+  a: ShapeTestRecord[] | undefined,
+  b: ShapeTestRecord[] | undefined,
+): ShapeTestRecord[] | undefined {
+  const byId = new Map<string, ShapeTestRecord>()
+  for (const row of [...(a ?? []), ...(b ?? [])]) {
+    if (!row || typeof row.id !== 'string' || !row.id) continue
+    byId.set(row.id, row)
+  }
+  if (byId.size === 0) return a ?? b
+  return [...byId.values()]
+    .sort((x, y) => (x.takenAt || 0) - (y.takenAt || 0))
+    .slice(-24)
 }
 
 /**

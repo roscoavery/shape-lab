@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Athlete } from '../../types'
 import { createId } from '../../lib/storage'
+import { mergeShapeTests, takeGuestGrades } from '../../lib/quizGrades'
 import { profileRole } from '../../lib/profileRole'
 import {
   displayPersonName,
@@ -56,7 +57,6 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
   const [filter, setFilter] = useState('')
-  const fileRef = useRef<HTMLInputElement | null>(null)
 
   const roster = useMemo(
     () => athletes.filter((a) => profileRole(a) === 'athlete' || !a.role),
@@ -130,6 +130,10 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       hasBackPain: existing?.hasBackPain,
       injuryActive: existing?.injuryActive,
       photoDataUrl: draft.photoDataUrl || existing?.photoDataUrl,
+      shapeTests: mergeShapeTests(
+        existing?.shapeTests,
+        takeGuestGrades(draft.firstName, draft.lastName),
+      ),
     }
     onSaveAthlete(athlete, existing ? 'update' : 'create')
     setGuests(forgetQuizGuest(draft.firstName, draft.lastName))
@@ -398,41 +402,13 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
         {draft.step === 'photo' && (
           <Question
             title="Quick snapshot?"
-            hint="Optional. Helps us tell two kids with the same first name apart."
+            hint="Optional. Opens this iPad’s camera so we can tell two kids with the same first name apart."
             onBack={() => go('shoulder')}
           >
-            {draft.photoDataUrl ? (
-              <img
-                src={draft.photoDataUrl}
-                alt=""
-                className="mx-auto h-40 w-40 rounded-full object-cover"
-              />
-            ) : (
-              <p className="text-sm text-white/55">Skip if the line is moving.</p>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="user"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const reader = new FileReader()
-                reader.onload = () => {
-                  persist({ ...draft, photoDataUrl: String(reader.result || '') })
-                }
-                reader.readAsDataURL(file)
-              }}
+            <StationSnapshot
+              photoDataUrl={draft.photoDataUrl}
+              onCapture={(photoDataUrl) => persist({ ...draft, photoDataUrl })}
             />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="h-14 rounded-2xl border border-white/15 text-base font-semibold"
-            >
-              {draft.photoDataUrl ? 'Retake' : 'Take a snapshot'}
-            </button>
             <button
               type="button"
               onClick={() => go('done')}
@@ -501,6 +477,150 @@ function Question({
       <button type="button" onClick={onBack} className="self-start text-sm text-white/50 underline">
         Back
       </button>
+    </div>
+  )
+}
+
+function cameraErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : ''
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Camera permission was blocked. Allow the camera, then try again.'
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No camera found on this device.'
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'The camera is already in use. Close the other camera view and try again.'
+  }
+  if (name === 'SecurityError') {
+    return 'This page needs HTTPS (or localhost) before the camera can open.'
+  }
+  return err instanceof Error ? err.message : 'Could not open the camera.'
+}
+
+function stopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop())
+}
+
+function StationSnapshot({
+  photoDataUrl,
+  onCapture,
+}: {
+  photoDataUrl?: string
+  onCapture: (dataUrl: string) => void
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const [live, setLive] = useState(false)
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      stopStream(streamRef.current)
+      streamRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!live || !streamRef.current) return
+    const video = videoRef.current
+    if (!video) return
+    video.srcObject = streamRef.current
+    void video
+      .play()
+      .then(() => setReady(true))
+      .catch((err) => setError(cameraErrorMessage(err)))
+  }, [live])
+
+  const openCamera = async () => {
+    setError(null)
+    setBusy(true)
+    setReady(false)
+    try {
+      stopStream(streamRef.current)
+      streamRef.current = null
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 1280 },
+        },
+      })
+      streamRef.current = stream
+      setLive(true)
+    } catch (err) {
+      setLive(false)
+      setReady(false)
+      setError(cameraErrorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const snap = () => {
+    const video = videoRef.current
+    if (!video || video.videoWidth < 2) {
+      setError('Wait for the preview, then tap Capture.')
+      return
+    }
+    const size = Math.min(video.videoWidth, video.videoHeight)
+    const sx = (video.videoWidth - size) / 2
+    const sy = (video.videoHeight - size) / 2
+    const canvas = document.createElement('canvas')
+    canvas.width = 640
+    canvas.height = 640
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 640, 640)
+    onCapture(canvas.toDataURL('image/jpeg', 0.86))
+    stopStream(streamRef.current)
+    streamRef.current = null
+    setLive(false)
+    setReady(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {photoDataUrl && !live ? (
+        <img
+          src={photoDataUrl}
+          alt=""
+          className="mx-auto h-40 w-40 rounded-full object-cover"
+        />
+      ) : live ? (
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          className="mx-auto h-56 w-56 rounded-full bg-black object-cover"
+        />
+      ) : (
+        <p className="text-sm text-white/55">Skip if the line is moving.</p>
+      )}
+      {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
+      {live ? (
+        <button
+          type="button"
+          disabled={!ready}
+          onClick={snap}
+          className="h-14 rounded-2xl border border-white/15 text-base font-semibold disabled:opacity-40"
+        >
+          {ready ? 'Capture' : 'Opening camera…'}
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void openCamera()}
+          className="h-14 rounded-2xl border border-white/15 text-base font-semibold disabled:opacity-40"
+        >
+          {busy ? 'Opening camera…' : photoDataUrl ? 'Retake' : 'Open camera'}
+        </button>
+      )}
     </div>
   )
 }

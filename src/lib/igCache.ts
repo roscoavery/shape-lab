@@ -9,6 +9,7 @@
  */
 
 import { getBlob, hasBlob, putBlob } from './clipStore'
+import { socialPlatform } from './socialUrls'
 
 export type IgSlide = {
   url: string
@@ -155,4 +156,41 @@ export function prefetchIgSlide(itemId: string, index: number, url?: string) {
       })
       .catch(() => {})
   })
+}
+
+/** Resolve + download the first playable slide so a swipe feels instant. */
+export async function prefetchInstagram(pageUrl: string, itemId: string): Promise<void> {
+  if (!socialPlatform(pageUrl)) return
+  if (blobMem.has(itemId) || blobMem.has(slideCacheId(itemId, 0))) return
+  try {
+    const cached = await loadCachedInstagramBlob(itemId)
+    if (cached) return
+    const manifest = await fetchInstagramManifest(pageUrl)
+    const first = manifest.slides.find((s) => s.kind === 'video') ?? manifest.slides[0]
+    if (!first?.url) return
+    const blob = await fetchIgMediaBlob(first.url)
+    rememberInstagramBlob(itemId, blob)
+    rememberInstagramBlob(slideCacheId(itemId, 0), blob)
+    await putBlob(itemId, blob).catch(() => {})
+    manifest.slides.forEach((slide, i) => {
+      if (i === 0) return
+      prefetchIgSlide(itemId, i, slide.url)
+    })
+  } catch {
+    /* warmup — the player will show the real error if this clip is opened */
+  }
+}
+
+export function prefetchNeighborClips(
+  clips: { id: string; url: string }[],
+  active: number,
+  radius = 2,
+) {
+  const start = Math.max(0, active)
+  const end = Math.min(clips.length - 1, active + radius)
+  for (let i = start; i <= end; i++) {
+    const clip = clips[i]
+    if (!clip) continue
+    void prefetchInstagram(clip.url, clip.id)
+  }
 }

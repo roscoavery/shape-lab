@@ -39,7 +39,8 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShapeExplorer } from './learn/ShapeExplorer'
-import type { Athlete, ReferencePhoto, ShapeDef } from '../types'
+import type { Athlete, ReferencePhoto, ShapeDef, ShapeTestRecord } from '../types'
+import type { QuizTaker } from './learn/QuizWho'
 
 type EduView =
   | { kind: 'home' }
@@ -69,6 +70,7 @@ type Props = {
   onIntentConsumed?: () => void
   presetQuizTaker?: { firstName: string; lastName: string; athleteId?: string } | null
   onQuizTaker?: (taker: { firstName: string; lastName: string; athleteId?: string }) => void
+  onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -85,6 +87,7 @@ export function EducationPanel({
   onIntentConsumed,
   presetQuizTaker = null,
   onQuizTaker,
+  onRecordQuiz,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
@@ -311,6 +314,7 @@ export function EducationPanel({
           athletes={athletes}
           presetTaker={presetQuizTaker}
           onTakerReady={onQuizTaker}
+          onGrade={onRecordQuiz}
         />
       )}
 

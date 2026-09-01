@@ -8,6 +8,7 @@ import {
   rememberQuizGuest,
   splitPersonName,
 } from '../../lib/classStation'
+import { formatQuizScore, lastGuestGrade, lastShapeTest } from '../../lib/quizGrades'
 
 export type QuizTaker = {
   athleteId?: string
@@ -89,26 +90,35 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
             onChange={(e) => setFilter(e.target.value)}
           />
           <div className="max-h-[50vh] space-y-2 overflow-y-auto">
-            {visibleGuests.map((g) => (
-              <button
-                key={`${g.firstName}-${g.lastName}`}
-                type="button"
-                onClick={() => choose(g.firstName, g.lastName)}
-                className="flex w-full items-center justify-between rounded-2xl border border-[var(--accent)]/35 bg-[#102820] px-4 py-3 text-left"
-              >
-                <span>
-                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                    Typed a name, no profile yet
+            {visibleGuests.map((g) => {
+              const last = lastGuestGrade(g.firstName, g.lastName)
+              return (
+                <button
+                  key={`${g.firstName}-${g.lastName}`}
+                  type="button"
+                  onClick={() => choose(g.firstName, g.lastName)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-[var(--accent)]/35 bg-[#102820] px-4 py-3 text-left"
+                >
+                  <span>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                      Typed a name, no profile yet
+                    </span>
+                    <span className="text-base font-semibold">
+                      {displayPersonName(g.firstName, g.lastName)}
+                    </span>
+                    {last ? (
+                      <span className="mt-0.5 block text-xs font-medium text-white/70">
+                        Last: {formatQuizScore(last)}
+                      </span>
+                    ) : null}
                   </span>
-                  <span className="text-base font-semibold">
-                    {displayPersonName(g.firstName, g.lastName)}
-                  </span>
-                </span>
-                <span className="text-xs text-[var(--muted)]">Use</span>
-              </button>
-            ))}
+                  <span className="text-xs text-[var(--muted)]">Use</span>
+                </button>
+              )
+            })}
             {visible.map((a) => {
               const parts = splitPersonName(a.name)
+              const last = lastShapeTest(a)
               return (
                 <button
                   key={a.id}
@@ -116,9 +126,14 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
                   onClick={() =>
                     choose(a.firstName || parts.firstName, a.lastName || parts.lastName, a.id)
                   }
-                  className="w-full rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3 text-left text-base font-semibold"
+                  className="flex w-full items-center justify-between rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3 text-left"
                 >
-                  {a.name}
+                  <span className="text-base font-semibold">{a.name}</span>
+                  {last ? (
+                    <span className="text-xs font-medium text-[var(--accent)]">
+                      Last: {formatQuizScore(last)}
+                    </span>
+                  ) : null}
                 </button>
               )
             })}

@@ -22,6 +22,7 @@ import {
 import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl, kindFromUrl } from '../../lib/clipStore'
+import { postedByFromUrl } from '../../lib/socialUrls'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
@@ -649,6 +650,7 @@ export function ClassesPanel({ athlete }: Props) {
                 kind: kindFromUrl(item.url!),
                 keywords: item.keywords,
                 collectionName: col.name,
+                postedBy: item.postedBy || postedByFromUrl(item.url!) || undefined,
               })),
           )}
           startIndex={Math.max(

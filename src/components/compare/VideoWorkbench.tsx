@@ -133,7 +133,7 @@ function VideoWorkbenchInner({
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
   const overlay = overlayChrome ?? (fill || replayChrome)
-  const [chromeOpen, setChromeOpen] = useState(false)
+  const [chromeOpen, setChromeOpen] = useState(() => Boolean(compact && fill))
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
     dist: number
@@ -716,7 +716,7 @@ function VideoWorkbenchInner({
         ) : (
           <>
             {!bare && overlay && chromeOpen && (
-              <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black/90 via-black/75 to-transparent px-2 pb-2 pt-8 text-white">
+              <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[40] bg-gradient-to-t from-black/90 via-black/75 to-transparent px-2 pb-2 pt-8 text-white">
                 {overlayActions ? <div className="mb-2 flex flex-wrap gap-1.5">{overlayActions}</div> : null}
                 {transport}
               </div>

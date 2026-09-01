@@ -14,6 +14,7 @@ import { collageCellAspect, packedGridSize } from '../../lib/collageLayout'
 import { saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
 import { PhoneReelViewer } from '../PhoneReelViewer'
 import { kindFromUrl } from '../../lib/clipStore'
+import { postedByFromUrl } from '../../lib/socialUrls'
 import type { OrganizeEditor } from '../../lib/organizeLibrary'
 
 export function CollageStage({
@@ -423,6 +424,7 @@ export function CollageStage({
             kind: kindFromUrl(slot.url),
             loopA: slot.loopA,
             loopB: slot.loopB,
+            postedBy: postedByFromUrl(slot.url) || undefined,
           }))}
           startIndex={reelIndex}
           onClose={() => setReelOpen(false)}

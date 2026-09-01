@@ -36,6 +36,7 @@ import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { markClassAttendance } from './lib/coachClasses'
 import { splitPersonName } from './lib/classStation'
+import { appendShapeTest, rememberGuestGrade } from './lib/quizGrades'
 import type { LearnIntent } from './components/EducationPanel'
 import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
@@ -826,6 +827,17 @@ export default function App() {
               lastName: taker.lastName,
               source: 'shape_test',
             })
+          }}
+          onRecordQuiz={(taker, record) => {
+            if (taker.athleteId) {
+              setAthleteRoster(
+                athletes.map((a) =>
+                  a.id === taker.athleteId ? appendShapeTest(a, record) : a,
+                ),
+              )
+              return
+            }
+            rememberGuestGrade(taker.firstName, taker.lastName, record)
           }}
         />
       )}

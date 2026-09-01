@@ -12,6 +12,8 @@ import { QuizReview } from './learn/QuizReview'
 import { ReferenceStill } from './ReferenceStill'
 import { QuizWho, type QuizTaker } from './learn/QuizWho'
 import { displayPersonName } from '../lib/classStation'
+import { makeShapeTestRecord } from '../lib/quizGrades'
+import type { ShapeTestRecord } from '../types'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -20,6 +22,7 @@ type Props = {
   athletes?: Athlete[]
   presetTaker?: QuizTaker | null
   onTakerReady?: (taker: QuizTaker) => void
+  onGrade?: (taker: QuizTaker, record: ShapeTestRecord) => void
 }
 
 export function ShapeQuiz({
@@ -29,6 +32,7 @@ export function ShapeQuiz({
   athletes = [],
   presetTaker = null,
   onTakerReady,
+  onGrade,
 }: Props) {
   const { copyFor } = useShapeCopy()
   const [taker, setTaker] = useState<QuizTaker | null>(presetTaker)
@@ -265,6 +269,12 @@ export function ShapeQuiz({
             className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
             onClick={() => {
               if (index + 1 >= total) {
+                const score = questions.reduce((n, question, i) => {
+                  return n + (pickedIds[i] === question.answerId ? 1 : 0)
+                }, 0)
+                if (taker) {
+                  onGrade?.(taker, makeShapeTestRecord(pool, format, score, total))
+                }
                 setDone(true)
               } else {
                 setIndex((i) => i + 1)

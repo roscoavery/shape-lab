@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { cropVideoFrame, type NormPt } from '../../lib/cropFrame'
 import { customShapeId } from '../../lib/igStills'
 import { addIgStill } from '../../lib/igStillStore'
@@ -801,11 +802,15 @@ export function VideoMarkOverlay({
           {error}
         </p>
       )}
-      {pending && (
+      {pending &&
+        createPortal(
         <div
-          className="pointer-events-auto absolute inset-x-1 bottom-1 z-30 max-h-[78%] overflow-y-auto rounded-lg border border-white/25 bg-[#0d1218]/95 p-2 shadow-xl"
+          className="fixed inset-0 z-[400] flex items-end justify-center bg-black/60 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
+        >
+        <div
+          className="pointer-events-auto max-h-[min(86dvh,38rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/25 bg-[#0d1218] p-3 shadow-xl"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Save to IG shapes
@@ -901,6 +906,8 @@ export function VideoMarkOverlay({
             </button>
           </div>
         </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

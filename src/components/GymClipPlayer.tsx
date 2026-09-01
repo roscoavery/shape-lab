@@ -19,6 +19,8 @@ type Props = {
   markupSwipeSafe?: boolean
   hudCorner?: ReactNode
   overlayChrome?: boolean
+  postedBy?: string | null
+  onPostedBy?: (handle: string) => void
 }
 
 export function GymClipPlayer({
@@ -37,6 +39,8 @@ export function GymClipPlayer({
   markupSwipeSafe = false,
   hudCorner,
   overlayChrome,
+  postedBy,
+  onPostedBy,
 }: Props) {
   const social = socialPlatform(url)
   if (social) {
@@ -57,6 +61,8 @@ export function GymClipPlayer({
         markupSwipeSafe={markupSwipeSafe}
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
+        postedBy={postedBy}
+        onPostedBy={onPostedBy}
       />
     )
     return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : embed

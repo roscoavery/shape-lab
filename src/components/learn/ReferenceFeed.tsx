@@ -13,6 +13,8 @@ import { useFavorites } from '../../lib/favorites'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { itemMatchesQuery } from '../../lib/clipStore'
 import type { Athlete } from '../../types'
+import { prefetchNeighborClips } from '../../lib/igCache'
+import { postedByFromUrl } from '../../lib/socialUrls'
 
 type Props = {
   athlete?: Athlete | null
@@ -76,6 +78,16 @@ export function ReferenceFeed({ athlete = null }: Props) {
     for (const card of cards) io.observe(card)
     return () => io.disconnect()
   }, [visible.length])
+
+  useEffect(() => {
+    prefetchNeighborClips(visible, active, 2)
+  }, [visible, active])
+
+  useEffect(() => {
+    visible.slice(0, 6).forEach((clip) => {
+      void prefetchNeighborClips([clip], 0, 0)
+    })
+  }, [visible])
 
   if (loading && clips.length === 0) {
     return (
@@ -197,6 +209,7 @@ export function ReferenceFeed({ athlete = null }: Props) {
                     compact
                     quiet
                     markup={false}
+                    postedBy={clip.postedBy || postedByFromUrl(clip.url)}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-white/40">
@@ -221,6 +234,11 @@ export function ReferenceFeed({ athlete = null }: Props) {
                       {clip.collectionName}
                     </p>
                     <h3 className="text-base font-semibold text-white">{clip.name}</h3>
+                    {(clip.postedBy || postedByFromUrl(clip.url)) && (
+                      <p className="mt-0.5 text-sm font-semibold text-white/80">
+                        @{(clip.postedBy || postedByFromUrl(clip.url) || '').replace(/^@/, '')}
+                      </p>
+                    )}
                   </div>
                   <FavoriteStar
                     fill
@@ -268,6 +286,7 @@ export function ReferenceFeed({ athlete = null }: Props) {
             kind: clip.kind,
             keywords: clip.keywords,
             collectionName: clip.collectionName,
+            postedBy: clip.postedBy || postedByFromUrl(clip.url) || undefined,
           }))}
           startIndex={reelIndex}
           onClose={() => setReelOpen(false)}
