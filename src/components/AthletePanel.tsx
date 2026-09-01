@@ -16,6 +16,11 @@ import {
   markProfileUnlocked,
   passcodeLooksOk,
 } from '../lib/athletePasscode'
+import {
+  displayPersonName,
+  forgetQuizGuest,
+  loadQuizGuests,
+} from '../lib/classStation'
 
 type Props = {
   athletes: Athlete[]
@@ -35,6 +40,10 @@ export function AthletePanel({
 }: Props) {
   const [newProfileOpen, setNewProfileOpen] = useState(false)
   const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPhone, setNewPhone] = useState('')
   const [newHandle, setNewHandle] = useState('')
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
   const [newGym, setNewGym] = useState('')
@@ -43,8 +52,11 @@ export function AthletePanel({
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
   const [handle, setHandle] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [gymName, setGymName] = useState('')
   const [childName, setChildName] = useState('')
+  const guests = loadQuizGuests()
   const [legacyPin, setLegacyPin] = useState('')
   const [legacyPinAgain, setLegacyPinAgain] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
@@ -55,6 +67,8 @@ export function AthletePanel({
     setHandle(active?.instagramHandle ?? '')
     setGymName(active?.gymName ?? '')
     setChildName(active?.childName ?? '')
+    setEmail(active?.email ?? '')
+    setPhone(active?.phone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
   }, [active?.id, active?.instagramHandle, active?.gymName, active?.childName])
@@ -65,9 +79,14 @@ export function AthletePanel({
   }
 
   const add = async () => {
-    const trimmed = name.trim()
-    if (!trimmed) {
-      flash('Type a name, then a 4-digit passcode, then Create.')
+    const trimmed =
+      displayPersonName(firstName, lastName) || name.trim()
+    if (!trimmed || !firstName.trim() || !lastName.trim()) {
+      flash('First and last name, then email and phone, then a 4-digit passcode.')
+      return
+    }
+    if (!newEmail.trim() || !newPhone.trim()) {
+      flash('Add an email and a phone number so we can tell people apart.')
       return
     }
     const existing = athletes.find(
@@ -96,6 +115,10 @@ export function AthletePanel({
     const athlete: Athlete = {
       id,
       name: trimmed,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: newEmail.trim(),
+      phone: newPhone.trim(),
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       gymName: newGym.trim() || undefined,
       childName: role === 'parent' ? newChild.trim() || undefined : undefined,
@@ -105,9 +128,14 @@ export function AthletePanel({
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
     }
     markProfileUnlocked(id)
+    forgetQuizGuest(firstName, lastName)
     onChangeAthletes([...athletes, athlete])
     onSelect(athlete.id)
     setName('')
+    setFirstName('')
+    setLastName('')
+    setNewEmail('')
+    setNewPhone('')
     setNewHandle('')
     setNewGym('')
     setNewChild('')
@@ -131,7 +159,14 @@ export function AthletePanel({
     onChangeAthletes(
       athletes.map((a) =>
         a.id === active.id
-          ? { ...a, instagramHandle, gymName: nextGym, childName: nextChild }
+          ? {
+              ...a,
+              instagramHandle,
+              gymName: nextGym,
+              childName: nextChild,
+              email: email.trim() || undefined,
+              phone: phone.trim() || undefined,
+            }
           : a,
       ),
     )
@@ -139,6 +174,8 @@ export function AthletePanel({
       instagramHandle ? `@${instagramHandle}` : null,
       nextGym,
       nextChild ? `athlete ${nextChild}` : null,
+      email.trim() || null,
+      phone.trim() || null,
     ].filter(Boolean)
     flash(bits.length ? `Saved ${bits.join(' · ')}` : 'Profile details cleared', 2200)
   }
@@ -242,24 +279,66 @@ export function AthletePanel({
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        {guests.filter((g) => !athletes.some((a) => a.name.toLowerCase() === displayPersonName(g.firstName, g.lastName).toLowerCase())).length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Took the shape test — no profile yet
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {guests
+                .filter((g) => !athletes.some((a) => a.name.toLowerCase() === displayPersonName(g.firstName, g.lastName).toLowerCase()))
+                .slice(0, 8)
+                .map((g) => (
+                  <button
+                    key={`${g.firstName}-${g.lastName}`}
+                    type="button"
+                    onClick={() => {
+                      setFirstName(g.firstName)
+                      setLastName(g.lastName)
+                    }}
+                    className="rounded-full border border-[var(--accent)]/40 bg-[#102820] px-3 py-1.5 text-xs font-semibold"
+                  >
+                    {displayPersonName(g.firstName, g.lastName)}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
           <input
-            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
+            className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
           />
-          <button
-            type="button"
-            onClick={() => void add()}
-            className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-sm font-medium text-white"
-          >
-            Create
-          </button>
+          <input
+            className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
         </div>
+        <input
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          placeholder="Email"
+          inputMode="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+        />
+        <input
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          placeholder="Phone"
+          inputMode="tel"
+          value={newPhone}
+          onChange={(e) => setNewPhone(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={() => void add()}
+          className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-sm font-medium text-white"
+        >
+          Create
+        </button>
         {pinInput(passcode, setPasscode, '4-digit passcode')}
         {pinInput(passcodeAgain, setPasscodeAgain, 'Type it again', () => void add())}
         <input
@@ -354,6 +433,20 @@ export function AthletePanel({
 
       {active && (
         <div className="mt-3 flex flex-col gap-2">
+          <input
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Email"
+            inputMode="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Phone"
+            inputMode="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
           {(profileRole(active) === 'gym_owner' ||
             profileRole(active) === 'coach' ||
             profileRole(active) === 'athlete') && (

@@ -7,18 +7,31 @@ import {
   type QuizQuestion,
 } from '../lib/shapeQuiz'
 import { useShapeCopy } from './ShapeCopyContext'
-import type { ReferencePhoto } from '../types'
+import type { Athlete, ReferencePhoto } from '../types'
 import { QuizReview } from './learn/QuizReview'
 import { ReferenceStill } from './ReferenceStill'
+import { QuizWho, type QuizTaker } from './learn/QuizWho'
+import { displayPersonName } from '../lib/classStation'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
   onExit: () => void
   pool?: QuizPool
+  athletes?: Athlete[]
+  presetTaker?: QuizTaker | null
+  onTakerReady?: (taker: QuizTaker) => void
 }
 
-export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) {
+export function ShapeQuiz({
+  referencePhotos,
+  onExit,
+  pool = 'pathway',
+  athletes = [],
+  presetTaker = null,
+  onTakerReady,
+}: Props) {
   const { copyFor } = useShapeCopy()
+  const [taker, setTaker] = useState<QuizTaker | null>(presetTaker)
   const [format, setFormat] = useState<QuizFormat | null>(null)
   const [seed, setSeed] = useState(0)
   const questions = useMemo(
@@ -84,10 +97,26 @@ export function ShapeQuiz({ referencePhotos, onExit, pool = 'pathway' }: Props) 
     })
   }
 
+  if (!taker) {
+    return (
+      <QuizWho
+        athletes={athletes}
+        preset={presetTaker}
+        onReady={(next) => {
+          setTaker(next)
+          onTakerReady?.(next)
+        }}
+        onExit={onExit}
+      />
+    )
+  }
+
   if (!format) {
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">{baseTitle}</p>
+        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
+          {baseTitle} · {displayPersonName(taker.firstName, taker.lastName)}
+        </p>
         <h3 className="mt-1 text-xl font-semibold text-[var(--text)]">How do you want to take it?</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Pictures are coach stills. Descriptions are body-position notes with the

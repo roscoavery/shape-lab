@@ -25,8 +25,16 @@ export function LessonNoteBar({
     setTopic((cur) => (cur.label.trim() ? cur : preset))
   }, [preset])
 
+  const [cueQuery, setCueQuery] = useState('')
+  const [showAllCues, setShowAllCues] = useState(false)
   const label = topic.label.trim()
   const cues = label ? cuesForNote(topic, coachId) : []
+  const yours = cues.filter((c) => c.source === 'yours')
+  const shapeCues = cues.filter((c) => c.source === 'shape')
+  const q = cueQuery.trim().toLowerCase()
+  const filtered = q
+    ? cues.filter((c) => c.text.toLowerCase().includes(q))
+    : [...yours, ...shapeCues.slice(0, showAllCues ? shapeCues.length : 3)]
   void cueTick
 
   const file = (line: string) => {
@@ -91,8 +99,14 @@ export function LessonNoteBar({
           <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
             Tap a correction to file it
           </p>
+          <input
+            className="mt-2 h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
+            placeholder="Search a correction…"
+            value={cueQuery}
+            onChange={(e) => setCueQuery(e.target.value)}
+          />
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {cues.map((c) => (
+            {filtered.map((c) => (
               <button
                 key={`${c.source}:${c.text}`}
                 type="button"
@@ -106,6 +120,15 @@ export function LessonNoteBar({
               </button>
             ))}
           </div>
+          {!q && !showAllCues && shapeCues.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllCues(true)}
+              className="mt-2 text-xs font-semibold text-[var(--accent)] underline"
+            >
+              More corrections ({shapeCues.length - 3})
+            </button>
+          )}
         </div>
       )}
       {label && cues.length === 0 && (

@@ -199,6 +199,20 @@ export type Athlete = {
   hasBackPain?: boolean
   /** Athlete (or coach) said they are dealing with an injury right now. */
   injuryActive?: boolean
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  /** Mom or dad — used on the class station so Ryan can text a parent. */
+  parentPhone?: string
+  /** Which leg goes forward on a cartwheel. */
+  cartwheelLeg?: 'left' | 'right'
+  /** Research: which hold feels harder. */
+  harderShape?: 'hollow' | 'superman'
+  /** 1 = easy, 5 = very hard to hit a fully open shoulder. */
+  openShoulderHardness?: 1 | 2 | 3 | 4 | 5
+  /** Optional class-station snapshot (data URL). */
+  photoDataUrl?: string
 }
 
 export type CriterionScore = {

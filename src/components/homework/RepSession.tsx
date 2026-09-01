@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { HomeworkItem, HomeworkLog, HomeworkTrackMode } from '../../types'
 import { getCatalogItem, PULLUP_GRIPS } from '../../config/homeworkCatalog'
 import { homeworkTitle } from '../../lib/homeworkLabel'
+import { shouldEncourageSlowReps } from '../../lib/backCare'
 
 type Props = {
   item: HomeworkItem
@@ -112,6 +113,12 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
             Best hold on file: {bestHold > 0 ? `${bestHold.toFixed(0)}s` : 'none yet'}
             {painFreeTwoMin ? ' · two-minute pain-free hold unlocked' : ''}
           </p>
+          {shouldEncourageSlowReps(logs) && (
+            <p className="mt-2 text-sm text-[var(--accent)]">
+              Three days of 2-minute holds are on file. Slow, tiny-range reps
+              are OK now if they do not make the pain worse.
+            </p>
+          )}
         </div>
       )}
 

@@ -11,6 +11,7 @@ import type { Athlete, LessonPlan, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
+import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 
 type Props = {
   athletes: Athlete[]
@@ -18,6 +19,8 @@ type Props = {
   onUnlock: (id: string) => void
   onStartLesson: (athleteId: string, planId?: string | null) => void
   onOpenLesson?: (session: LessonSession) => void
+  onShortcut?: (id: TodayShortcutId) => void
+  onStartClass?: () => void
 }
 
 export function HomeDashboard({
@@ -25,6 +28,8 @@ export function HomeDashboard({
   signedIn,
   onUnlock,
   onStartLesson,
+  onShortcut,
+  onStartClass,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withId, setWithId] = useState<string | null>(null)
@@ -52,30 +57,33 @@ export function HomeDashboard({
 
   if (!signedIn) {
     return (
-      <section className="mx-auto max-w-xl rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h2 className="text-xl font-semibold">Unlock a profile</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Coaches start a lesson from here. Athletes see their notes, hold times,
-          and lesson videos. Open <strong className="text-[var(--text)]">More → Profiles</strong>{' '}
-          if you still need to create one.
-        </p>
-        <div className="mt-4 flex flex-col gap-2">
-          {athletes.slice(0, 12).map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => onUnlock(a.id)}
-              className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
-            >
-              <span className="font-medium">{a.name}</span>
-              <span className="text-[var(--muted)]"> · {roleLabel(a)}</span>
-            </button>
-          ))}
-        </div>
-        {athletes.length === 0 && (
-          <p className="mt-3 text-sm text-[var(--muted)]">No profiles on this gym yet.</p>
-        )}
-      </section>
+      <div className="mx-auto grid max-w-3xl gap-4">
+        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+          <h2 className="text-xl font-semibold">Unlock a profile</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Coaches start a lesson from here. Athletes see their notes, hold times,
+            and lesson videos. Open <strong className="text-[var(--text)]">More → Profiles</strong>{' '}
+            if you still need to create one.
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            {athletes.slice(0, 12).map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => onUnlock(a.id)}
+                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
+              >
+                <span className="font-medium">{a.name}</span>
+                <span className="text-[var(--muted)]"> · {roleLabel(a)}</span>
+              </button>
+            ))}
+          </div>
+          {athletes.length === 0 && (
+            <p className="mt-3 text-sm text-[var(--muted)]">No profiles on this gym yet.</p>
+          )}
+        </section>
+        {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
+      </div>
     )
   }
 
@@ -90,6 +98,7 @@ export function HomeDashboard({
             times, and videos — show here.
           </p>
         </section>
+        {onShortcut && <TodayShortcuts onGo={onShortcut} showStation={false} />}
         {myPlans.length > 0 && (
           <CollapsibleSection
             title="View lesson plan"
@@ -120,19 +129,36 @@ export function HomeDashboard({
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Lesson</p>
-        <h2 className="text-xl font-semibold">Who are you with?</h2>
+        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
+        <h2 className="text-xl font-semibold">Start a lesson or a class</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Pick the athlete. Then start the lesson or write a plan first. Compare
-          saves and hold times land in their folder. They can read the notes on
-          their own Today page.
+          Start lesson is one athlete. Start class is the hour you are teaching
+          — Connections (Monday 5pm) — so shape-test names and homework land on
+          that roster.
         </p>
+        {onStartClass && (
+          <button
+            type="button"
+            onClick={onStartClass}
+            className="mt-3 w-full rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
+              Floor
+            </span>
+            <span className="mt-1 block text-2xl font-bold">Start class</span>
+            <span className="mt-1 block text-sm font-medium opacity-80">
+              Pick Connections (Monday 5pm), track who is here, assign homework
+              to the whole class at the end.
+            </span>
+          </button>
+        )}
+        <h3 className="mt-5 text-lg font-semibold">Start lesson · who are you with?</h3>
         {roster.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             No athletes yet. Add one under More → Profiles.
           </p>
         ) : (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {roster.map((a) => (
               <button
                 key={a.id}
@@ -219,6 +245,8 @@ export function HomeDashboard({
           onCancel={() => setEditing(null)}
         />
       )}
+
+      {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
 
       <LessonReviewList
         sessions={sessionsForCoach(signedIn.id)}

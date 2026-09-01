@@ -32,6 +32,11 @@ import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
+import { ClassStation } from './components/today/ClassStation'
+import { ClassSession } from './components/today/ClassSession'
+import { markClassAttendance } from './lib/coachClasses'
+import { splitPersonName } from './lib/classStation'
+import type { LearnIntent } from './components/EducationPanel'
 import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
 import { TodayFloorCamera } from './components/today/TodayFloorCamera'
@@ -117,6 +122,14 @@ export default function App() {
   const [compareFullTick, setCompareFullTick] = useState(0)
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
+  const [learnIntent, setLearnIntent] = useState<LearnIntent | null>(null)
+  const [quizPreset, setQuizPreset] = useState<{
+    firstName: string
+    lastName: string
+    athleteId?: string
+  } | null>(null)
+  const [stationOpen, setStationOpen] = useState(false)
+  const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -524,6 +537,25 @@ export default function App() {
                 signedIn={activeProfile}
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
+                onStartClass={() => setClassSessionOpen(true)}
+                onShortcut={(id) => {
+                  if (id === 'library') {
+                    setLearnIntent('shapes')
+                    goTab('learn')
+                  } else if (id === 'quiz') {
+                    setLearnIntent('quiz')
+                    goTab('learn')
+                  } else if (id === 'replay') {
+                    openCompareWithReference()
+                  } else if (id === 'scroll') {
+                    setLearnIntent('scroll')
+                    goTab('learn')
+                  } else if (id === 'feed') {
+                    goTab('feed')
+                  } else if (id === 'station') {
+                    setStationOpen(true)
+                  }
+                }}
               />
             )}
           </div>
@@ -781,6 +813,18 @@ export default function App() {
           persistIgToApp={ryanEdit}
           onReferencesChange={setReferencePhotos}
           signedIn={activeProfile}
+          athletes={athletes}
+          intent={learnIntent}
+          onIntentConsumed={() => setLearnIntent(null)}
+          presetQuizTaker={quizPreset}
+          onQuizTaker={(taker) => {
+            markClassAttendance({
+              athleteId: taker.athleteId,
+              firstName: taker.firstName,
+              lastName: taker.lastName,
+              source: 'shape_test',
+            })
+          }}
         />
       )}
 
@@ -1102,6 +1146,48 @@ export default function App() {
         </div>
       )}
     </div>
+    {stationOpen && (
+      <ClassStation
+        athletes={athletes}
+        onClose={() => setStationOpen(false)}
+        onSaveAthlete={(athlete, mode) => {
+          if (mode === 'create') {
+            setAthleteRoster([...athletes, athlete])
+          } else {
+            setAthleteRoster(athletes.map((a) => (a.id === athlete.id ? { ...a, ...athlete } : a)))
+          }
+          markClassAttendance({
+            athleteId: athlete.id,
+            firstName: athlete.firstName || splitPersonName(athlete.name).firstName,
+            lastName: athlete.lastName || splitPersonName(athlete.name).lastName,
+            source: 'profile',
+          })
+        }}
+        onStartShapeTest={(athlete) => {
+          const parts = splitPersonName(athlete.name)
+          setQuizPreset({
+            firstName: athlete.firstName || parts.firstName,
+            lastName: athlete.lastName || parts.lastName,
+            athleteId: athlete.id,
+          })
+          setStationOpen(false)
+          setLearnIntent('quiz')
+          goTab('learn')
+        }}
+      />
+    )}
+    {classSessionOpen && activeProfile && isCoachProfile(activeProfile) && (
+      <ClassSession
+        coach={activeProfile}
+        athletes={athletes}
+        onClose={() => setClassSessionOpen(false)}
+        onOpenStation={() => setStationOpen(true)}
+        onOpenShapeTest={() => {
+          setLearnIntent('quiz')
+          goTab('learn')
+        }}
+      />
+    )}
     {athleteGate && (
       <UnlockAthleteModal
         athlete={athleteGate}

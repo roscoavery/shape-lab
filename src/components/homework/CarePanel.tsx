@@ -12,6 +12,8 @@ type Props = {
   onSaveJournal: (entry: Omit<PainJournalEntry, 'id' | 'athleteId' | 'date'>) => void
   onTrain: (item: HomeworkItem) => void
   onAddBackCare: (catalogId: string) => void
+  onStartSession?: () => void
+  encourageSlowReps?: boolean
 }
 
 const BODY_PARTS = [
@@ -35,6 +37,8 @@ export function CarePanel({
   onSaveJournal,
   onTrain,
   onAddBackCare,
+  onStartSession,
+  encourageSlowReps = false,
 }: Props) {
   const [part, setPart] = useState(athlete?.hasBackPain ? 'low back' : '')
   const [level, setLevel] = useState('3')
@@ -46,6 +50,9 @@ export function CarePanel({
   const [doctor, setDoctor] = useState('')
   const [notes, setNotes] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
+  const [addingAnother, setAddingAnother] = useState(false)
+  const [offerSession, setOfferSession] = useState(false)
+  const [addedCare, setAddedCare] = useState<string | null>(null)
 
   const [jPain, setJPain] = useState('2')
   const [jFelt, setJFelt] = useState('')
@@ -91,10 +98,53 @@ export function CarePanel({
         </button>
       </div>
 
+      {injuryLogs.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold text-[var(--text)]">Injuries on file</h4>
+            <button
+              type="button"
+              onClick={() => {
+                setAddingAnother(true)
+                setPart('')
+                setWhat('')
+                setWhere('')
+                setStarted('')
+                setWorse('')
+                setBetter('')
+                setDoctor('')
+                setNotes('')
+              }}
+              className="text-xs font-semibold text-[var(--accent)] underline"
+            >
+              Document another
+            </button>
+          </div>
+          <ul className="mt-2 space-y-2">
+            {injuryLogs.slice(0, 10).map((e) => (
+              <li
+                key={e.id}
+                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+              >
+                <p className="font-medium text-[var(--text)]">
+                  {e.bodyPart} · {e.painLevel}/10 · {new Date(e.date).toLocaleDateString()}
+                </p>
+                <p className="text-[var(--muted)]">{e.whatHurts}</p>
+                {e.doctorNotes ? (
+                  <p className="mt-1 text-xs text-[var(--accent)]">Doctor: {e.doctorNotes}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="flex flex-col gap-2">
-        <h4 className="text-sm font-semibold text-[var(--text)]">Injury check-in</h4>
+        <h4 className="text-sm font-semibold text-[var(--text)]">
+          {injuryLogs.length > 0 && addingAnother ? 'Another injury' : 'Injury check-in'}
+        </h4>
         <p className="text-xs text-[var(--muted)]">
-          What hurts, where, and what you want to remember. This stays on your profile.
+          What hurts, where, and what you want to remember. You can document more than one.
         </p>
         <label className="text-xs text-[var(--muted)]">
           Where
@@ -200,34 +250,15 @@ export function CarePanel({
               notes: notes.trim() || undefined,
             })
             flash('Saved. That is one more honest note on the way back.')
+            setAddingAnother(false)
+            setWhat('')
+            setWhere('')
           }}
           className="self-start rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
         >
           Save check-in
         </button>
       </section>
-
-      {injuryLogs.length > 0 && (
-        <section>
-          <h4 className="text-sm font-semibold text-[var(--text)]">Healing log</h4>
-          <ul className="mt-2 space-y-2">
-            {injuryLogs.slice(0, 8).map((e) => (
-              <li
-                key={e.id}
-                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
-              >
-                <p className="font-medium text-[var(--text)]">
-                  {e.bodyPart} · {e.painLevel}/10 · {new Date(e.date).toLocaleDateString()}
-                </p>
-                <p className="text-[var(--muted)]">{e.whatHurts}</p>
-                {e.doctorNotes ? (
-                  <p className="mt-1 text-xs text-[var(--accent)]">Doctor: {e.doctorNotes}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {showBack && (
         <section className="flex flex-col gap-3 rounded-xl border border-[var(--panel-border)] bg-[#121820] p-4">
@@ -248,17 +279,23 @@ export function CarePanel({
                   <p className="font-semibold text-[var(--text)]">{cat.name}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">{cat.cues[0]}</p>
                   {existing ? (
-                    <button
-                      type="button"
-                      onClick={() => onTrain(existing)}
-                      className="mt-2 rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
-                    >
-                      Train
-                    </button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <p className="self-center text-xs text-[var(--accent)]">On your list</p>
+                      <button
+                        type="button"
+                        onClick={() => onTrain(existing)}
+                        className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        Train
+                      </button>
+                    </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => onAddBackCare(id)}
+                      onClick={() => {
+                        onAddBackCare(id)
+                        setAddedCare(cat.name)
+                      }}
                       className="mt-2 rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs"
                     >
                       Add to homework
@@ -308,11 +345,33 @@ export function CarePanel({
                 flash('Journal saved. Patterns show up when you keep writing.')
                 setJFelt('')
                 setJNotes('')
+                setOfferSession(true)
               }}
               className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
             >
               Save journal
             </button>
+            {offerSession && onStartSession && (
+              <button
+                type="button"
+                onClick={onStartSession}
+                className="mt-2 w-full rounded-xl bg-gradient-to-br from-[#5cf0c8] to-[#147a62] px-4 py-3 text-sm font-bold text-[#06281f]"
+              >
+                Start a session — go to homework
+              </button>
+            )}
+            {encourageSlowReps && (
+              <p className="mt-3 rounded-lg border border-[var(--accent)]/35 bg-[#102820] px-3 py-2 text-sm text-[var(--text)]">
+                You have logged 2-minute back-extension holds on three days.
+                Try slow, controlled reps in a tiny range — only if it does not
+                make the pain worse.
+              </p>
+            )}
+            {addedCare && (
+              <p className="mt-2 text-sm text-[var(--accent)]">
+                {addedCare} is on the list. Add the other one too if you want both.
+              </p>
+            )}
           </div>
           {painTrend.length > 0 && (
             <div>

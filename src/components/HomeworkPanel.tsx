@@ -16,10 +16,8 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { FLOW_SEQUENCES } from '../config/tasks2'
 import { allLibraryShapes, getShape } from '../config/shapes'
 import {
-  HOMEWORK_CATALOG,
   catalogShapeId,
   getCatalogItem,
   needsWristPrep,
@@ -40,6 +38,9 @@ import { TrainPicker } from './homework/TrainPicker'
 import { WristPrepNotice } from './homework/WristPrepNotice'
 import { RepSession } from './homework/RepSession'
 import { CarePanel } from './homework/CarePanel'
+import { AddHomeworkForm, type HomeworkPick } from './homework/AddHomeworkForm'
+import { alreadyHasCatalog, catalogIdsForBackPain, shouldEncourageSlowReps } from '../lib/backCare'
+import { buildHomeworkItem } from '../lib/homeworkAssign'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
@@ -64,8 +65,6 @@ import {
 import { syncRosterWithServer } from '../lib/rosterSync'
 import { homeworkLooksReady } from '../lib/homeworkPose'
 import {
-  customHomeworkShapeId,
-  drillHomeworkShapeId,
   getHomeworkDrill,
   flowIdForHomeworkItem,
   getHomeworkSequence,
@@ -75,7 +74,6 @@ import {
   isCustomHomework,
   isDrillHomework,
   isSequenceHomework,
-  sequenceHomeworkShapeId,
 } from '../lib/homeworkLabel'
 import { getHomeworkFlow, overallFlowScore } from '../lib/homeworkFlow'
 import { CollapsibleSection } from './CollapsibleSection'
@@ -83,7 +81,7 @@ import { ExpandableNotes } from './ExpandableNotes'
 import { HoldProperTimes } from './HoldProperTimes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { pickCoachStill } from '../lib/shippedRefs'
-import { listPublicDrills, subscribeCoachContent } from '../lib/coachContentStore'
+import { subscribeCoachContent } from '../lib/coachContentStore'
 import type {
   Athlete,
   CoachExercise,
@@ -126,6 +124,8 @@ type Props = {
   onStudioChange?: (open: boolean) => void
   /** Sequence homework opens Practice → Class flows on that assigned task. */
   onOpenClassFlow?: (flowId: string) => void
+  openPage?: 'train' | 'add' | 'care' | null
+  onOpenPageConsumed?: () => void
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -549,22 +549,19 @@ export function HomeworkPanel({
   camSlot = null,
   onStudioChange,
   onOpenClassFlow,
+  openPage = null,
+  onOpenPageConsumed,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [plankSide, setPlankSide] = useState<PlankSide>('left')
   const [flash, setFlash] = useState<string | null>(null)
-  const [addShapeId, setAddShapeId] = useState('')
-  const [addSequenceId, setAddSequenceId] = useState('')
-  const [addDrillId, setAddDrillId] = useState('')
   const [libTick, setLibTick] = useState(0)
-  const [addTyped, setAddTyped] = useState('')
   const [addSource, setAddSource] = useState<'coach' | 'athlete'>('athlete')
   const [addTarget, setAddTarget] = useState('20')
   const [addReps, setAddReps] = useState('')
   const [addMode, setAddMode] = useState<HomeworkTrackMode | ''>('')
-  const [addCatalogId, setAddCatalogId] = useState('')
   const [addGrip, setAddGrip] = useState('')
   const [addNotes, setAddNotes] = useState('')
   const [pendingWrist, setPendingWrist] = useState<HomeworkItem | null>(null)
@@ -658,6 +655,12 @@ export function HomeworkPanel({
     // stopItem is stable enough for Escape
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hwPage, activeItemId])
+
+  useEffect(() => {
+    if (!openPage) return
+    setHwPage(openPage)
+    onOpenPageConsumed?.()
+  }, [openPage, onOpenPageConsumed])
 
   const libraryShapes = useMemo(
     () => allLibraryShapes().slice().sort((a, b) => a.name.localeCompare(b.name)),
@@ -981,10 +984,53 @@ export function HomeworkPanel({
     }
   }
 
+  const applyBackCare = (painLevel: number, bodyPart?: string) => {
+    if (bodyPart && !/back/i.test(bodyPart)) return
+    const names: string[] = []
+    for (const id of catalogIdsForBackPain(painLevel)) {
+      const before = items.some((i) => i.catalogId === id)
+      const item = addCatalogItem(id, 'athlete')
+      if (item && !before) names.push(item.customLabel ?? id)
+    }
+    if (names.length) {
+      showFlash(`Added to homework: ${names.join(' and ')}`)
+    }
+  }
+
+  const addFromPick = (pick: HomeworkPick) => {
+    if (!athleteId) return
+    const item = buildHomeworkItem(athleteId, {
+      pick,
+      source: addSource,
+      notes: addNotes,
+      mode: addMode,
+      targetSeconds: Number(addTarget) || undefined,
+      targetReps: Number(addReps) || undefined,
+      grip: addGrip || undefined,
+      coachExercises,
+    })
+    if (!item) return
+    if (visibleItems.some((h) => homeworkDedupeKey(h) === homeworkDedupeKey(item))) {
+      showFlash('That drill is already on this homework list.')
+      return
+    }
+    setItems(addHomeworkItem(item))
+    setAddNotes('')
+    setAddMode('')
+    setAddReps('')
+    setAddGrip('')
+    showFlash(`${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${homeworkTitle(item)}`)
+  }
+
   const addCatalogItem = (catalogId: string, source: HomeworkSource = 'athlete') => {
     if (!athleteId) return
     const cat = getCatalogItem(catalogId)
     if (!cat) return
+    const existing = items.find((i) => i.catalogId === catalogId)
+    if (existing || alreadyHasCatalog(items, catalogId)) {
+      showFlash(`${cat.name} is already on the list`)
+      return existing
+    }
     const item: HomeworkItem = {
       id: createId('hw'),
       athleteId,
@@ -1068,120 +1114,6 @@ export function HomeworkPanel({
     setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
     if (activeItemId === updated.id) onRequestShape(updated.shapeId)
     showFlash('Leveled up — Hollow is now trained with arms up!')
-  }
-
-  const addItem = () => {
-    if (!athleteId) return
-    const typed = addTyped.trim()
-    const seq = FLOW_SEQUENCES.find((s) => s.id === addSequenceId)
-    const drill = listPublicDrills().find((d) => d.id === addDrillId)
-    const cat = getCatalogItem(addCatalogId)
-    const coachEx = addCatalogId.startsWith('cx:')
-      ? coachExercises.find((e) => e.id === addCatalogId.slice(3))
-      : undefined
-    if (!typed && !addShapeId && !seq && !drill && !cat && !coachEx) return
-    const nextShapeId = cat
-      ? catalogShapeId(cat.id)
-      : coachEx
-        ? customHomeworkShapeId(coachEx.name)
-      : drill
-      ? drillHomeworkShapeId(drill.id)
-      : seq
-        ? sequenceHomeworkShapeId(seq.id)
-        : typed
-          ? customHomeworkShapeId(typed)
-          : addShapeId
-    const probe = {
-      athleteId,
-      shapeId: nextShapeId,
-      customLabel: cat
-        ? cat.name
-        : coachEx
-          ? coachEx.name
-          : drill
-            ? drill.title
-            : seq
-              ? seq.name
-              : typed || undefined,
-      catalogId: cat?.id,
-      coachExerciseId: coachEx?.id,
-      source: addSource,
-      id: '',
-      createdAt: '',
-    }
-    if (visibleItems.some((h) => homeworkDedupeKey(h) === homeworkDedupeKey(probe))) {
-      showFlash('That drill is already on this homework list.')
-      return
-    }
-    const target = Number(addTarget)
-    const defaultNotes =
-      nextShapeId === 'rainbow_bridge'
-        ? 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
-        : nextShapeId === 'side_plank'
-          ? 'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other. Top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; or bend them and put weight on the bottom knee. Both sides. Work toward a minute.'
-        : nextShapeId === 'long_bridge'
-          ? 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
-          : nextShapeId === 'seated_pike'
-            ? 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Snap-open drill: pike → hollow arms down → arch (supine).'
-            : nextShapeId === 'zombie'
-              ? 'Standing hollow, arms in front, ears covered. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Same finish as the seated pike with zombie arms.'
-            : nextShapeId === 'pike_open_shoulders'
-              ? 'Arms up by the ears, shoulders open. Legs together, knees straight, toes pointed. Pike–tuck–hollow–arch; rock back to candlestick; pike–tuck for arms behind the ears on a back tuck.'
-              : nextShapeId === 'tuck_open_shoulders'
-                ? 'From an open-shoulder pike: bend the knees, pull the feet in. Flex the feet, keep reaching arms behind the ears, slightly rounded hollow back. Pike–tuck–hollow–arch; lemon squeezes (hollow ↔ tuck). The torso rounds more on a back tuck or a tucked candle.'
-                : nextShapeId === 'tucked_candle'
-                  ? 'Same tuck, rolled back so the weight is on the shoulders and arms — like a candlestick, but tucked. Arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Space between chin and chest is fine. Shins toward the wall keeps heels off the butt; tighter knees speed rotation — work both. Rolls and back-tuck drills.'
-                  : nextShapeId === 'candlestick'
-                    ? 'Shoulder stand: open hips, ribs in, straight line from shoulders to pointed toes. Arms by the ears on the floor.'
-                    : nextShapeId === 'arch'
-                      ? 'Tight arch on the back. Arms press the floor behind the ears. Hips push up. Knees stay straight. Squeeze the ankles together and point the toes — that is the usual miss.'
-          : ''
-    const notes =
-      addNotes.trim() ||
-      cat?.notes ||
-      coachEx?.notes ||
-      (drill ? drill.notes : seq ? seq.description : defaultNotes)
-    const trackMode: HomeworkTrackMode | undefined =
-      addMode ||
-      cat?.trackMode ||
-      coachEx?.trackMode ||
-      (typed && !addShapeId && !seq && !drill ? 'reps' : undefined)
-    const item: HomeworkItem = {
-      id: createId('hw'),
-      athleteId,
-      shapeId: nextShapeId,
-      ...(cat
-        ? { catalogId: cat.id, customLabel: cat.name, allowWeight: cat.allowWeight }
-        : coachEx
-          ? { coachExerciseId: coachEx.id, customLabel: coachEx.name }
-        : drill
-          ? { customLabel: drill.title }
-          : seq
-            ? { customLabel: seq.name }
-            : typed
-              ? { customLabel: typed }
-              : {}),
-      source: addSource,
-      ...(trackMode ? { trackMode } : {}),
-      ...(addGrip ? { grip: addGrip } : {}),
-      ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
-      ...(Number(addReps) > 0 ? { targetReps: Number(addReps) } : cat?.targetReps ? { targetReps: cat.targetReps } : {}),
-      ...(notes ? { notes } : {}),
-      createdAt: new Date().toISOString(),
-    }
-    setItems(addHomeworkItem(item))
-    setAddNotes('')
-    setAddTyped('')
-    setAddSequenceId('')
-    setAddDrillId('')
-    setAddCatalogId('')
-    setAddMode('')
-    setAddReps('')
-    setAddGrip('')
-    const shapeName = homeworkTitle(item)
-    showFlash(
-      `${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${shapeName}`,
-    )
   }
 
   const removeItem = (item: HomeworkItem) => {
@@ -1310,6 +1242,7 @@ export function HomeworkPanel({
               ...otherTrainItems.filter((item) => !strengthItems.some((s) => s.id === item.id)),
             ]}
             onPick={(item) => startItem(item)}
+            onAddHomework={() => setHwPage('add')}
           />
         </HwOverlay>
       )}
@@ -1372,7 +1305,11 @@ export function HomeworkPanel({
                 ...entry,
               })
               setInjuryLogs(loadInjuryLogs(athleteId))
-              onUpdateAthlete?.({ injuryActive: true })
+              onUpdateAthlete?.({
+                injuryActive: true,
+                ...( /back/i.test(entry.bodyPart) ? { hasBackPain: true } : {}),
+              })
+              applyBackCare(entry.painLevel, entry.bodyPart)
             }}
             onSaveJournal={(entry) => {
               if (!athleteId) return
@@ -1383,12 +1320,19 @@ export function HomeworkPanel({
                 ...entry,
               })
               setPainJournal(loadPainJournal(athleteId))
+              applyBackCare(entry.painLevel, 'low back')
             }}
             onTrain={(item) => startItem(item)}
             onAddBackCare={(catalogId) => {
-              const item = addCatalogItem(catalogId, 'athlete')
-              if (item) startItem(item)
+              addCatalogItem(catalogId, 'athlete')
             }}
+            onStartSession={() => setHwPage('train')}
+            encourageSlowReps={shouldEncourageSlowReps(
+              logs.filter((l) => {
+                const item = items.find((i) => i.id === l.homeworkId)
+                return item?.catalogId === 'back_extension'
+              }),
+            )}
           />
         </HwOverlay>
       )}
@@ -2027,6 +1971,15 @@ export function HomeworkPanel({
               </>
               )}
             </div>
+            {item.source === 'auto' && item.id === coreItems[coreItems.length - 1]?.id && (
+              <button
+                type="button"
+                onClick={() => setHwPage('add')}
+                className="w-full rounded-xl border border-dashed border-[var(--accent)]/40 bg-[#102820] px-3 py-3 text-left text-sm font-semibold text-[var(--accent)]"
+              >
+                Want something else? Add homework — other exercises
+              </button>
+            )}
             </Fragment>
           )
         })}
@@ -2040,224 +1993,41 @@ export function HomeworkPanel({
           title="Make your own library"
           onDone={() => setHwPage('home')}
         >
-      <CollapsibleSection inset title="Add homework" hint="Coach or athlete can add another drill">
-      <div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <select
-            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
-            value={addCatalogId}
-            onChange={(e) => {
-              setAddCatalogId(e.target.value)
-              if (e.target.value) {
-                setAddShapeId('')
-                setAddSequenceId('')
-                setAddDrillId('')
-                const cat = getCatalogItem(e.target.value)
-                if (cat) {
-                  setAddMode(cat.trackMode)
-                  setAddReps(cat.targetReps ? String(cat.targetReps) : '')
-                  setAddTarget(cat.targetSeconds ? String(cat.targetSeconds) : addTarget)
-                }
-              }
+          <AddHomeworkForm
+            libraryShapes={libraryShapes}
+            coachExercises={coachExercises}
+            isCoach={isCoachProfile(athlete)}
+            source={addSource}
+            onSource={setAddSource}
+            notes={addNotes}
+            onNotes={setAddNotes}
+            mode={addMode}
+            onMode={setAddMode}
+            target={addTarget}
+            onTarget={setAddTarget}
+            reps={addReps}
+            onReps={setAddReps}
+            newExName={newExName}
+            onNewExName={setNewExName}
+            newExMode={newExMode}
+            onNewExMode={setNewExMode}
+            onSaveExercise={() => {
+              if (!athlete?.id || !newExName.trim()) return
+              addCoachExercise({
+                coachId: athlete.id,
+                name: newExName.trim(),
+                trackMode: newExMode,
+              })
+              setCoachExercises(loadCoachExercises(athlete.id))
+              setNewExName('')
+              showFlash('Exercise added to your assign list.')
             }}
-          >
-            <option value="">Rep / hold exercise…</option>
-            {HOMEWORK_CATALOG.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} · {c.trackMode === 'hold' ? 'hold' : c.trackMode === 'reps' ? 'reps' : 'hold or reps'}
-              </option>
-            ))}
-            {coachExercises.map((ex) => (
-              <option key={ex.id} value={`cx:${ex.id}`}>
-                {ex.name} (yours)
-              </option>
-            ))}
-          </select>
-          <select
-            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
-            value={addShapeId}
-            onChange={(e) => {
-              setAddShapeId(e.target.value)
-              if (e.target.value) {
-                setAddSequenceId('')
-                setAddDrillId('')
-              }
+            onRemoveExercise={(id) => {
+              removeCoachExercise(id)
+              setCoachExercises(loadCoachExercises(athlete?.id))
             }}
-          >
-            <option value="">Pick a shape…</option>
-            {libraryShapes.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
-            value={addSequenceId}
-            onChange={(e) => {
-              setAddSequenceId(e.target.value)
-              if (e.target.value) {
-                setAddShapeId('')
-                setAddDrillId('')
-              }
-            }}
-          >
-            <option value="">Or a class flow…</option>
-            {FLOW_SEQUENCES.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5"
-            value={addDrillId}
-            onChange={(e) => {
-              setAddDrillId(e.target.value)
-              if (e.target.value) {
-                setAddShapeId('')
-                setAddSequenceId('')
-              }
-            }}
-          >
-            <option value="">Or a drill…</option>
-            {listPublicDrills().map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.title}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-1 text-xs text-[var(--muted)]">
-            hold goal
-            <input
-              type="number"
-              min={0}
-              className="w-14 rounded border border-[var(--panel-border)] bg-[#0d1218] px-1.5 py-1"
-              value={addTarget}
-              onChange={(e) => setAddTarget(e.target.value)}
-            />
-            s
-          </label>
-          <label className="flex items-center gap-1 text-xs text-[var(--muted)]">
-            reps
-            <input
-              type="number"
-              min={0}
-              className="w-14 rounded border border-[var(--panel-border)] bg-[#0d1218] px-1.5 py-1"
-              value={addReps}
-              onChange={(e) => setAddReps(e.target.value)}
-            />
-          </label>
-          <select
-            className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
-            value={addMode}
-            onChange={(e) => setAddMode((e.target.value || '') as HomeworkTrackMode | '')}
-          >
-            <option value="">Track: default</option>
-            <option value="hold">Holds</option>
-            <option value="reps">Reps</option>
-            <option value="hold_or_reps">Holds and reps</option>
-          </select>
-          <select
-            className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
-            value={addSource}
-            onChange={(e) =>
-              setAddSource(e.target.value === 'athlete' ? 'athlete' : 'coach')
-            }
-            title="Who is adding this drill"
-          >
-            <option value="coach">Coach assigns</option>
-            <option value="athlete">Athlete picks</option>
-          </select>
-          <button
-            type="button"
-            onClick={addItem}
-            className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-medium text-white"
-          >
-            Add
-          </button>
-        </div>
-        <input
-          className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
-          placeholder="Or type a skill / drill instead of picking a shape"
-          value={addTyped}
-          onChange={(e) => setAddTyped(e.target.value)}
-        />
-        <input
-          className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-xs"
-          placeholder="Optional note (e.g. 3 sets before bed)"
-          value={addNotes}
-          onChange={(e) => setAddNotes(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') addItem()
-          }}
-        />
-        {isCoachProfile(athlete) && (
-          <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
-            <p className="text-xs font-semibold text-[var(--text)]">Your custom exercises</p>
-            <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-              Name a skill and choose holds, reps, or both. Assigned custom skills
-              log reps and quality reps — they are not hold-only.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <input
-                className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
-                placeholder="Exercise name"
-                value={newExName}
-                onChange={(e) => setNewExName(e.target.value)}
-              />
-              <select
-                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-xs"
-                value={newExMode}
-                onChange={(e) => setNewExMode(e.target.value as HomeworkTrackMode)}
-              >
-                <option value="reps">Reps</option>
-                <option value="hold">Holds</option>
-                <option value="hold_or_reps">Holds and reps</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!athlete?.id || !newExName.trim()) return
-                  addCoachExercise({
-                    coachId: athlete.id,
-                    name: newExName.trim(),
-                    trackMode: newExMode,
-                  })
-                  setCoachExercises(loadCoachExercises(athlete.id))
-                  setNewExName('')
-                  showFlash('Exercise added to your assign list.')
-                }}
-                className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
-              >
-                Save exercise
-              </button>
-            </div>
-            {coachExercises.length > 0 && (
-              <ul className="mt-2 space-y-1 text-xs">
-                {coachExercises.map((ex) => (
-                  <li key={ex.id} className="flex items-center justify-between gap-2">
-                    <span>
-                      {ex.name} · {ex.trackMode.replace(/_/g, ' ')}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-[var(--bad)] underline"
-                      onClick={() => {
-                        removeCoachExercise(ex.id)
-                        setCoachExercises(loadCoachExercises(athlete?.id))
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-      </CollapsibleSection>
+            onAdd={addFromPick}
+          />
         </HwOverlay>
       )}
 

@@ -14,6 +14,7 @@ type Props = {
   strength: HomeworkItem[]
   other: HomeworkItem[]
   onPick: (item: HomeworkItem) => void
+  onAddHomework?: () => void
 }
 
 function Card({
@@ -56,7 +57,7 @@ function Card({
   )
 }
 
-export function TrainPicker({ assigned, core, strength, other, onPick }: Props) {
+export function TrainPicker({ assigned, core, strength, other, onPick, onAddHomework }: Props) {
   const groups: Group[] = [
     {
       title: 'Coach assigned',
@@ -105,6 +106,15 @@ export function TrainPicker({ assigned, core, strength, other, onPick }: Props) 
               <Card key={item.id} item={item} onPick={onPick} />
             ))}
           </div>
+          {group.title === 'Core drills' && onAddHomework ? (
+            <button
+              type="button"
+              onClick={onAddHomework}
+              className="mt-1 text-left text-sm font-semibold text-[var(--accent)] underline"
+            >
+              Want something else? Add homework — other exercises
+            </button>
+          ) : null}
         </section>
       ))}
     </div>

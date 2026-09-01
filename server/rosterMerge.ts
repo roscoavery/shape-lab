@@ -20,6 +20,15 @@ export type Athlete = {
   childName?: string
   hasBackPain?: boolean
   injuryActive?: boolean
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  parentPhone?: string
+  cartwheelLeg?: 'left' | 'right'
+  harderShape?: 'hollow' | 'superman'
+  openShoulderHardness?: 1 | 2 | 3 | 4 | 5
+  photoDataUrl?: string
 }
 
 const RYAN_PROFILE_ID = 'ath_ryan'
@@ -172,6 +181,15 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     role,
     hasBackPain: newer.hasBackPain ?? older.hasBackPain,
     injuryActive: newer.injuryActive ?? older.injuryActive,
+    firstName: newer.firstName || older.firstName,
+    lastName: newer.lastName || older.lastName,
+    email: newer.email || older.email,
+    phone: newer.phone || older.phone,
+    parentPhone: newer.parentPhone || older.parentPhone,
+    cartwheelLeg: newer.cartwheelLeg || older.cartwheelLeg,
+    harderShape: newer.harderShape || older.harderShape,
+    openShoulderHardness: newer.openShoulderHardness ?? older.openShoulderHardness,
+    photoDataUrl: newer.photoDataUrl || older.photoDataUrl,
     createdAt: older.createdAt || newer.createdAt,
   }
 }

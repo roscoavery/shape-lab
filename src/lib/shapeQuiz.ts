@@ -258,17 +258,7 @@ export function buildShapeQuiz(
       const shape = picturePool[pi++]!
       const photo = pickReferencePhoto(photos, shape.id, null)
       if (!photo?.dataUrl) continue
-      const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
-      questions.push({
-        id: `pic_${shape.id}_${questions.length}`,
-        kind: 'picture',
-        shapeId: shape.id,
-        prompt: 'What position is this?',
-        photoUrl: photo.dataUrl,
-        stillId: photo.id,
-        choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
-        answerId: shape.id,
-      })
+      questions.push(pictureQuestion(shape, photo, source, questions.length))
     } else if (di < describePool.length) {
       const shape = describePool[di++]!
       const body = quizDescribeBody(shape, athleteText?.(shape))
@@ -289,21 +279,55 @@ export function buildShapeQuiz(
       const shape = picturePool[pi++]!
       const photo = pickReferencePhoto(photos, shape.id, null)
       if (!photo?.dataUrl) continue
-      const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
-      questions.push({
-        id: `pic_${shape.id}_${questions.length}`,
-        kind: 'picture',
-        shapeId: shape.id,
-        prompt: 'What position is this?',
-        photoUrl: photo.dataUrl,
-        stillId: photo.id,
-        choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
-        answerId: shape.id,
-      })
+      questions.push(pictureQuestion(shape, photo, source, questions.length))
     } else {
       break
     }
   }
 
   return questions
+}
+
+function isHandsStill(photo: { dataUrl?: string | null; id?: string | null }, shapeId: string): boolean {
+  if (shapeId === 'hands_push_through') return true
+  const hay = `${photo.dataUrl ?? ''} ${photo.id ?? ''}`
+  return hay.includes('hands_push_through')
+}
+
+function pictureQuestion(
+  shape: ShapeDef,
+  photo: NonNullable<ReturnType<typeof pickReferencePhoto>>,
+  source: ShapeDef[],
+  index: number,
+): QuizQuestion {
+  if (isHandsStill(photo, shape.id)) {
+    const usedFor = Math.random() < 0.5 ? 'zombie' : 'seated_pike'
+    const other = usedFor === 'zombie' ? 'seated_pike' : 'zombie'
+    const answer = getShape(usedFor) ?? shape
+    const pool = source.filter((s) => s.id !== other && s.id !== 'hands_push_through')
+    const opts = shuffle([answer, ...distractors(answer, pool, 3)])
+      .filter((s) => s.id !== other)
+      .slice(0, 4)
+    return {
+      id: `pic_hands_${usedFor}_${index}`,
+      kind: 'picture',
+      shapeId: 'hands_push_through',
+      prompt: 'Select a shape this hand position is used for',
+      photoUrl: photo.dataUrl,
+      stillId: photo.id,
+      choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
+      answerId: usedFor,
+    }
+  }
+  const opts = shuffle([shape, ...distractors(shape, source, 3)]).slice(0, 4)
+  return {
+    id: `pic_${shape.id}_${index}`,
+    kind: 'picture',
+    shapeId: shape.id,
+    prompt: 'What position is this?',
+    photoUrl: photo.dataUrl,
+    stillId: photo.id,
+    choices: opts.map((s) => ({ id: s.id, label: quizLabel(s) })),
+    answerId: shape.id,
+  }
 }

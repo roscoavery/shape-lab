@@ -55,6 +55,8 @@ type EduView =
   | { kind: 'scroll' }
   | { kind: 'physics' }
 
+export type LearnIntent = 'shapes' | 'quiz' | 'scroll'
+
 type Props = {
   referencePhotos: ReferencePhoto[]
   athleteId: string | null
@@ -62,6 +64,11 @@ type Props = {
   persistIgToApp?: boolean
   onReferencesChange: (photos: ReferencePhoto[]) => void
   signedIn?: Athlete | null
+  athletes?: Athlete[]
+  intent?: LearnIntent | null
+  onIntentConsumed?: () => void
+  presetQuizTaker?: { firstName: string; lastName: string; athleteId?: string } | null
+  onQuizTaker?: (taker: { firstName: string; lastName: string; athleteId?: string }) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -73,6 +80,11 @@ export function EducationPanel({
   persistIgToApp = false,
   onReferencesChange,
   signedIn = null,
+  athletes = [],
+  intent = null,
+  onIntentConsumed,
+  presetQuizTaker = null,
+  onQuizTaker,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
@@ -84,6 +96,14 @@ export function EducationPanel({
   const canAddGymShape = Boolean(signedIn && isCoachProfile(signedIn))
 
   useEffect(() => subscribeCoachContent(() => setCatalogTick((n) => n + 1)), [])
+
+  useEffect(() => {
+    if (!intent) return
+    if (intent === 'shapes') setView({ kind: 'shapes' })
+    if (intent === 'quiz') setView({ kind: 'quiz', pool: 'pathway' })
+    if (intent === 'scroll') setView({ kind: 'scroll' })
+    onIntentConsumed?.()
+  }, [intent, onIntentConsumed])
 
   useEffect(() => {
     if (!athleteId) {
@@ -288,6 +308,9 @@ export function EducationPanel({
           referencePhotos={referencePhotos}
           pool={view.pool === 'arm-positions' ? 'arm-positions' : 'pathway'}
           onExit={goHome}
+          athletes={athletes}
+          presetTaker={presetQuizTaker}
+          onTakerReady={onQuizTaker}
         />
       )}
 

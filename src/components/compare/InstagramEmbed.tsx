@@ -19,6 +19,9 @@ import {
   fetchInstagramManifest,
   isQuotaError,
   loadCachedInstagramBlob,
+  peekCachedInstagramBlob,
+  prefetchIgSlide,
+  rememberInstagramBlob,
   slideCacheId,
   type IgSlide,
 } from '../../lib/igCache'
@@ -231,10 +234,7 @@ export function InstagramEmbed({
     }
 
     let cancelled = false
-    setLoading(true)
     setError(null)
-    setSlides([])
-    setFromCache(false)
     setSaved(false)
     setQuotaWarn(false)
     setResolvedBy(null)
@@ -256,9 +256,18 @@ export function InstagramEmbed({
       setLoading(false)
     }
 
+    const warm = itemId ? peekCachedInstagramBlob(itemId) : null
+    if (warm) {
+      setFromCache(true)
+      setLoading(false)
+      showBlob(warm, 'video', true)
+    } else {
+      setLoading(true)
+    }
+
     void (async () => {
-      let playedFromCache = false
-      if (itemId) {
+      let playedFromCache = Boolean(warm)
+      if (itemId && !warm) {
         const cached = await loadCachedInstagramBlob(itemId)
         if (cancelled) return
         if (cached) {
@@ -317,11 +326,19 @@ export function InstagramEmbed({
     }
 
     void (async () => {
-      setLoading(true)
       setError(null)
       try {
         const cacheKey = itemId ? slideCacheId(itemId, index) : null
-        if (cacheKey) {
+        const mem = cacheKey ? peekCachedInstagramBlob(cacheKey) : null
+        if (mem) {
+          revoke()
+          const objectUrl = URL.createObjectURL(mem)
+          objectUrlRef.current = objectUrl
+          setSrc(objectUrl)
+          setKind(current.kind)
+          setFromCache(true)
+          setLoading(false)
+        } else if (cacheKey) {
           const cached = await loadCachedInstagramBlob(cacheKey)
           if (cancelled) return
           if (cached) {
@@ -334,28 +351,35 @@ export function InstagramEmbed({
             setLoading(false)
             return
           }
+          if (!src) setLoading(true)
+        } else if (!src) {
+          setLoading(true)
         }
-        if (!current.url) {
+        if (mem) {
+          /* already showing */
+        } else if (!current.url) {
           setLoading(false)
           return
-        }
-        const blob = await fetchIgMediaBlob(current.url)
-        if (cancelled) return
-        if (cacheKey) {
-          try {
-            await putBlob(cacheKey, blob)
-            if (!cancelled && cacheKey === itemId) onCachedRef.current?.(itemId)
-          } catch (err) {
-            if (isQuotaError(err)) setQuotaWarn(true)
+        } else {
+          const blob = await fetchIgMediaBlob(current.url)
+          if (cancelled) return
+          if (cacheKey) {
+            rememberInstagramBlob(cacheKey, blob)
+            try {
+              await putBlob(cacheKey, blob)
+              if (!cancelled && cacheKey === itemId) onCachedRef.current?.(itemId)
+            } catch (err) {
+              if (isQuotaError(err)) setQuotaWarn(true)
+            }
           }
+          revoke()
+          const objectUrl = URL.createObjectURL(blob)
+          objectUrlRef.current = objectUrl
+          setSrc(objectUrl)
+          setKind(current.kind)
+          setFromCache(false)
+          setLoading(false)
         }
-        revoke()
-        const objectUrl = URL.createObjectURL(blob)
-        objectUrlRef.current = objectUrl
-        setSrc(objectUrl)
-        setKind(current.kind)
-        setFromCache(false)
-        setLoading(false)
       } catch (err) {
         if (cancelled) return
         setError(err instanceof Error ? err.message : 'Could not open that slide.')
@@ -363,14 +387,10 @@ export function InstagramEmbed({
       }
     })()
 
-    const neighbor = slides[index + 1] ?? slides[index - 1]
-    if (neighbor?.url && itemId) {
-      const nextKey = slideCacheId(itemId, index + 1 < slides.length ? index + 1 : index - 1)
-      void loadCachedInstagramBlob(nextKey).then((cached) => {
-        if (cached || !neighbor.url) return
-        void fetchIgMediaBlob(neighbor.url)
-          .then((blob) => putBlob(nextKey, blob))
-          .catch(() => {})
+    if (itemId) {
+      slides.forEach((slide, i) => {
+        if (i === index) return
+        prefetchIgSlide(itemId, i, slide.url)
       })
     }
 

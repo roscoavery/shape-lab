@@ -20,6 +20,8 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   arms_open_shoulders: 'feet_together_open_shoulders.jpg',
   c_shape: 'c_shape.jpg',
   handstand: 'handstand.jpg',
+  // Chest-to-wall (stomach-to-wall) handstand — placeholder still Ryan can replace.
+  wall_handstand: 'wall_handstand.jpg',
   candlestick: ['candlestick.jpg', 'candlestick_drill.jpg'],
   tucked_candle: ['tucked_candle.jpg', 'tucked_candle_b.jpg'],
   arch: 'arch.jpg',
@@ -57,6 +59,7 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'tucked_candle_b.jpg': 'Second view',
   'candlestick.jpg': 'Handstand roll',
   'candlestick_drill.jpg': 'Shoulder stand',
+  'wall_handstand.jpg': 'Chest to wall',
 }
 
 export function shippedFileList(shapeId: string): string[] {
