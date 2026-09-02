@@ -60,7 +60,7 @@ export function ClassStopwatch({
 
   const [mode, setMode] = useState<Mode>('hold')
   const [holdId, setHoldId] = useState<HoldId>('hollow')
-  const [side, setSide] = useState<'left' | 'right' | 'both'>('both')
+  const [side, setSide] = useState<'left' | 'right'>('left')
   const [selected, setSelected] = useState<string[]>(() => pool.map((a) => a.id))
   const [running, setRunning] = useState(false)
   const [ms, setMs] = useState(0)
@@ -130,18 +130,20 @@ export function ClassStopwatch({
       setFlash('Pick at least one athlete.')
       return
     }
+    const holdName =
+      drill.autoKey === 'side_plank' ? `${drill.label} · ${side}` : drill.label
     const n = logClassHoldForAthletes({
       athleteIds: selected,
       autoKey: drill.autoKey,
       seconds: secs,
-      label: drill.label,
+      label: holdName,
       className,
       meetingId: meeting?.id,
-      side: drill.autoKey === 'side_plank' && side !== 'both' ? side : undefined,
+      side: drill.autoKey === 'side_plank' ? side : undefined,
     })
     reset()
     setFlash(
-      `Logged ${drill.label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+      `Logged ${holdName} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
     )
   }
 
@@ -234,37 +236,53 @@ export function ClassStopwatch({
       {mode === 'hold' && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {CLASS_HOLD_DRILLS.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => setHoldId(d.id)}
-                className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                  holdId === d.id
-                    ? 'bg-[var(--accent)] text-[#06281f]'
-                    : 'bg-white/8'
-                }`}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-          {holdId === 'side_plank' && (
-            <div className="flex gap-2">
-              {(['left', 'right', 'both'] as const).map((s) => (
+            {CLASS_HOLD_DRILLS.map((d) =>
+              d.id === 'side_plank' ? (
+                <div
+                  key={d.id}
+                  className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8"
+                >
+                  {(['left', 'right'] as const).map((s) => {
+                    const on = holdId === 'side_plank' && side === s
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        aria-pressed={on}
+                        aria-label={s === 'left' ? 'Left side plank' : 'Right side plank'}
+                        onClick={() => {
+                          setHoldId('side_plank')
+                          setSide(s)
+                        }}
+                        className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
+                          s === 'right' ? 'border-l border-white/15' : ''
+                        } ${
+                          on
+                            ? 'bg-[var(--accent)] text-[#06281f]'
+                            : 'text-white/90'
+                        }`}
+                      >
+                        {s === 'left' ? 'Left plank' : 'Right plank'}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
                 <button
-                  key={s}
+                  key={d.id}
                   type="button"
-                  onClick={() => setSide(s)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    side === s ? 'bg-white/20' : 'text-white/50'
+                  onClick={() => setHoldId(d.id)}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                    holdId === d.id
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'bg-white/8'
                   }`}
                 >
-                  {s === 'both' ? 'Both sides' : s === 'left' ? 'Left' : 'Right'}
+                  {d.label}
                 </button>
-              ))}
-            </div>
-          )}
+              ),
+            )}
+          </div>
           <p className="text-center font-mono text-5xl font-bold tabular-nums">
             {formatWatch(ms)}
           </p>
