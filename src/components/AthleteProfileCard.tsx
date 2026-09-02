@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete, ProfileGesture } from '../types'
 import { AthleteAvatar } from './AthleteAvatar'
 import { profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
@@ -7,7 +7,6 @@ import {
   canGiveHi5,
   isAthleteProfile,
   isCoachProfile,
-  isGymAdmin,
   profileRole,
   roleLabel,
 } from '../lib/profileRole'
@@ -15,7 +14,10 @@ import { childNamesLabel, parentsOf } from '../lib/parentLink'
 import {
   listFeedPosts,
   postOnChannel,
-  toggleFeedHi5,
+  profilePasses,
+  profilePosts,
+  publishFeedPostResult,
+  toggleFeedRepost,
   type FeedPost,
 } from '../lib/feedPosts'
 import { WinComposer } from './feed/WinComposer'
@@ -24,9 +26,22 @@ import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
-import { mentionLabel, profileHandle } from '../lib/profileHandle'
+import { mentionLabel, profileHandle, taggedIdsFromText } from '../lib/profileHandle'
 import { MentionText } from './MentionText'
 import { ProfileHighlights } from './stories/ProfileHighlights'
+import { StoryComposer } from './stories/StoryComposer'
+import { StoryViewer } from './stories/StoryViewer'
+import {
+  loadStories,
+  markStoriesSeen,
+  storiesByAuthor,
+  type GymStory,
+  type StoriesFile,
+} from '../lib/stories'
+import { fileToClipBlob, recordQuickClip } from '../lib/quickClip'
+
+type Tab = 'posts' | 'passes' | 'stories'
+type Compose = 'story' | 'post' | 'pass' | null
 
 type Props = {
   athlete: Athlete
@@ -49,11 +64,17 @@ export function AthleteProfileCard({
   onAddWin,
   onAthleteChange,
 }: Props) {
-  const [wins, setWins] = useState<FeedPost[]>([])
+  const [posts, setPosts] = useState<FeedPost[]>([])
+  const [storiesFile, setStoriesFile] = useState<StoriesFile>({ stories: [], highlights: [] })
+  const [tab, setTab] = useState<Tab>('posts')
+  const [compose, setCompose] = useState<Compose>(null)
+  const [watchStories, setWatchStories] = useState<GymStory[] | null>(null)
+  const [watchPass, setWatchPass] = useState<FeedPost | null>(null)
   const [note, setNote] = useState('')
   const [win, setWin] = useState('')
   const [big, setBig] = useState(false)
   const [winError, setWinError] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<string | null>(null)
   const facts = profileFactLines(athlete)
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
@@ -62,24 +83,26 @@ export function AthleteProfileCard({
   const own = viewer?.id === athlete.id
   const coach = isCoachProfile(viewer)
   const gestureOk =
-    Boolean(viewer) &&
-    !own &&
-    canGiveHi5(viewer) &&
-    isAthleteProfile(athlete)
+    Boolean(viewer) && !own && canGiveHi5(viewer) && isAthleteProfile(athlete)
+  const handle = mentionLabel(athlete)
+  const live = useMemo(
+    () => storiesByAuthor(storiesFile, athlete.id, true),
+    [storiesFile, athlete.id],
+  )
+  const minePosts = useMemo(() => profilePosts(posts, athlete.id), [posts, athlete.id])
+  const minePasses = useMemo(() => profilePasses(posts, athlete.id), [posts, athlete.id])
 
-  const [confirm, setConfirm] = useState<string | null>(null)
+  const reloadFeed = () => {
+    void listFeedPosts().then(setPosts)
+  }
+  const reloadStories = () => {
+    void loadStories().then(setStoriesFile)
+  }
 
   useEffect(() => {
-    void listFeedPosts().then((posts) =>
-      setWins(
-        posts.filter(
-          (p) =>
-            postOnChannel(p, 'wins') &&
-            (p.authorId === athlete.id || p.taggedIds.includes(athlete.id)),
-        ),
-      ),
-    )
-  }, [athlete.id, athlete.coachNotes?.length])
+    reloadFeed()
+    reloadStories()
+  }, [athlete.id])
 
   const gesture = async (kind: ProfileGesture['kind']) => {
     if (!viewer || viewer.id === athlete.id) return
@@ -92,8 +115,7 @@ export function AthleteProfileCard({
     }
     onAthleteChange?.({ ...athlete, gestures: [row, ...(athlete.gestures ?? [])].slice(0, 80) })
     const who = givenName(athlete)
-    const youDid =
-      kind === 'hi5' ? `You high-fived ${who}` : `You fist bumped ${who}`
+    const youDid = kind === 'hi5' ? `You high-fived ${who}` : `You fist bumped ${who}`
     const theyGot =
       kind === 'hi5'
         ? `${givenName(viewer)} high-fived you`
@@ -109,65 +131,113 @@ export function AthleteProfileCard({
     window.setTimeout(() => setConfirm((cur) => (cur === youDid ? null : cur)), 4200)
   }
 
+  const openStories = () => {
+    if (live.length) {
+      markStoriesSeen(live.map((s) => s.id))
+      setWatchStories(live)
+      return
+    }
+    if (own) setCompose('story')
+  }
+
   const body = (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <AthleteAvatar athlete={athlete} size="lg" />
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold tracking-tight">
+    <div className="flex flex-col gap-5">
+      <header className="flex items-start gap-4">
+        <button type="button" onClick={openStories} className="shrink-0">
+          <span
+            className={`block rounded-full p-[3px] ${
+              live.length
+                ? 'bg-gradient-to-tr from-[#f77737] via-[#e1306c] to-[#5cf0c8]'
+                : 'bg-white/15'
+            }`}
+          >
+            <span className="relative block rounded-full bg-black p-[2px]">
+              <AthleteAvatar athlete={athlete} size="xl" />
+              {own && (
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-[#06281f]">
+                  +
+                </span>
+              )}
+            </span>
+          </span>
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--profile-accent,var(--accent))]">
+            {roleLabel(athlete)}
+          </p>
+          <h2 className="mt-0.5 text-2xl font-bold tracking-tight">
             {athlete.name}
             {contest ? ' 🤸' : ''}
           </h2>
-          <p className="text-sm text-[var(--muted)]">{roleLabel(athlete)}</p>
-          <p className="mt-0.5 text-sm font-medium text-[var(--accent)]">{mentionLabel(athlete)}</p>
+          <p className="text-sm font-medium text-[var(--accent)]">{handle}</p>
           {athlete.instagramHandle && profileHandle(athlete) !== athlete.instagramHandle && (
             <p className="text-xs text-[var(--muted)]">IG @{athlete.instagramHandle}</p>
           )}
-          {parentsOf(athlete.id, athletes).length > 0 && (
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Parent{parentsOf(athlete.id, athletes).length === 1 ? '' : 's'}:{' '}
-              {parentsOf(athlete.id, athletes).map((p) => p.name).join(', ')}
-            </p>
-          )}
-          {profileRole(athlete) === 'parent' && childNamesLabel(athlete, athletes) && (
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Parent of {childNamesLabel(athlete, athletes)}
-            </p>
-          )}
-          {first && (
-            <p className="mt-2 text-base font-medium italic text-[var(--text)]">“{first}”</p>
-          )}
-          {contest && (
-            <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--profile-accent, var(--accent))' }}>
-              Handstand contest anyone?
-            </p>
-          )}
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <Stat n={minePosts.length} label="Posts" onClick={() => setTab('posts')} />
+            <Stat n={minePasses.length} label="Passes" onClick={() => setTab('passes')} />
+            <Stat n={live.length} label="Stories" onClick={() => setTab('stories')} />
+          </div>
         </div>
-      </div>
+      </header>
+
+      {first && (
+        <p className="text-base font-medium italic leading-snug text-[var(--text)]">“{first}”</p>
+      )}
+      {facts.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {facts.slice(0, 6).map((row) => (
+            <span
+              key={row.label}
+              className="rounded-full bg-black/30 px-2.5 py-1 text-[11px] text-[var(--muted)]"
+            >
+              <span className="text-white/70">{row.label}</span> {row.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {parentsOf(athlete.id, athletes).length > 0 && (
+        <p className="text-xs text-[var(--muted)]">
+          Parent{parentsOf(athlete.id, athletes).length === 1 ? '' : 's'}:{' '}
+          {parentsOf(athlete.id, athletes).map((p) => p.name).join(', ')}
+        </p>
+      )}
+      {profileRole(athlete) === 'parent' && childNamesLabel(athlete, athletes) && (
+        <p className="text-xs text-[var(--muted)]">Parent of {childNamesLabel(athlete, athletes)}</p>
+      )}
+      {contest && (
+        <p className="text-sm font-semibold" style={{ color: 'var(--profile-accent, var(--accent))' }}>
+          Handstand contest anyone?
+        </p>
+      )}
+
+      {own && (
+        <div className="grid grid-cols-3 gap-2">
+          <ShareBtn label="Story" hint="24 hours" onClick={() => setCompose('story')} />
+          <ShareBtn label="Post" hint="Feed + page" onClick={() => setCompose('post')} />
+          <ShareBtn label="Pass" hint="Short clip" onClick={() => setCompose('pass')} />
+        </div>
+      )}
 
       {gestureOk && viewer && (
-        <div className="space-y-2">
-          <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void gesture('hi5')}
+            className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
+          >
+            High five
+          </button>
+          {coach && (
             <button
               type="button"
-              onClick={() => void gesture('hi5')}
+              onClick={() => void gesture('fist')}
               className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
             >
-              High five
+              Fist bump
             </button>
-            {coach && (
-              <button
-                type="button"
-                onClick={() => void gesture('fist')}
-                className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
-              >
-                Fist bump
-              </button>
-            )}
-          </div>
-          {confirm && (
-            <p className="text-sm font-semibold text-[var(--accent)]">{confirm}</p>
           )}
+          {confirm && <p className="text-sm font-semibold text-[var(--accent)]">{confirm}</p>}
         </div>
       )}
 
@@ -181,130 +251,112 @@ export function AthleteProfileCard({
         </p>
       )}
 
-      {facts.length > 0 ? (
-        <dl className="grid gap-2 sm:grid-cols-2">
-          {facts.map((row) => (
-            <div key={row.label} className="rounded-xl bg-black/25 px-3 py-2">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                {row.label}
-              </dt>
-              <dd className="mt-0.5 text-sm font-medium">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="text-sm text-[var(--muted)]">
-          No cartwheel, twist, or gym answers on this profile yet. They land
-          here after My profile or the class-station line.
-        </p>
-      )}
-
       <ProfileHighlights athlete={athlete} viewer={viewer} athletes={athletes} />
 
-      {(own || coach) && (
-        <section>
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--profile-accent, var(--accent))' }}>
-            Post to feed
-          </p>
-          <div className="mt-2">
-            <WinComposer
-              athlete={viewer && coach && !own ? viewer : athlete}
-              athletes={athletes}
-              taggedIds={own ? [] : [athlete.id]}
-              channels={['gym']}
-              placeholder={own ? 'A thought or a hit. Tag with @handle or @"Name".' : `Post about ${athlete.name}… Tag with @handle or @"Name".`}
-              submitLabel="Post to feed"
-              onPosted={() => {
-                void listFeedPosts().then((posts) =>
-                  setWins(
-                    posts.filter(
-                      (p) =>
-                        postOnChannel(p, 'wins') &&
-                        (p.authorId === athlete.id || p.taggedIds.includes(athlete.id)),
-                    ),
-                  ),
-                )
-              }}
-            />
+      {compose === 'post' && viewer && (
+        <section className="rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              New post
+            </p>
+            <button type="button" onClick={() => setCompose(null)} className="text-xs text-[var(--muted)]">
+              Close
+            </button>
           </div>
+          <WinComposer
+            athlete={viewer}
+            athletes={athletes}
+            taggedIds={own ? [] : [athlete.id]}
+            channels={['gym']}
+            placeholder='A thought, a hit, or a clip. Tag with @handle or @"Name".'
+            submitLabel="Share post"
+            onPosted={() => {
+              setCompose(null)
+              reloadFeed()
+            }}
+          />
         </section>
       )}
+      {compose === 'pass' && viewer && (
+        <PassComposer
+          athlete={viewer}
+          athletes={athletes}
+          onClose={() => setCompose(null)}
+          onPosted={() => {
+            setCompose(null)
+            reloadFeed()
+          }}
+        />
+      )}
+      {compose === 'story' && viewer && (
+        <StoryComposer
+          athlete={viewer}
+          athletes={athletes}
+          onClose={() => setCompose(null)}
+          onPosted={() => {
+            setCompose(null)
+            reloadStories()
+          }}
+        />
+      )}
 
-      <section>
-        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--profile-accent, var(--accent))' }}>
-          Wins
-        </p>
-        {wins.length === 0 ? (
-          <p className="mt-1 text-sm text-[var(--muted)]">No wins posted for them yet.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {wins.slice(0, 12).map((p) => {
-              const targets = viewer
-                ? hi5AthletesOnPost(p, athletes, viewer.id)
-                : []
-              const gave = viewer ? (p.hi5s ?? []).includes(viewer.id) : false
-              return (
-                <li key={p.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
-                  <p>
-                    <MentionText text={p.caption} athletes={athletes} />
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                    {p.sharedByName ? `shared by ${p.sharedByName} · ` : ''}
-                    {new Date(p.createdAt).toLocaleString()}
-                    {(p.hi5s ?? []).length > 0
-                      ? ` · ${(p.hi5s ?? []).length} high five${(p.hi5s ?? []).length === 1 ? '' : 's'}`
-                      : ''}
-                  </p>
-                  {viewer && canGiveHi5(viewer) && targets.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void toggleFeedHi5(p.id, viewer.id).then((next) => {
-                          if (!next) return
-                          setWins((prev) =>
-                            prev.map((row) => (row.id === next.id ? { ...row, hi5s: next.hi5s } : row)),
-                          )
-                          const on = (next.hi5s ?? []).includes(viewer.id)
-                          if (!on) return
-                          const names = targets.map((t) => givenName(t)).join(', ')
-                          const youDid = `You high-fived ${names}`
-                          setConfirm(youDid)
-                          window.setTimeout(
-                            () => setConfirm((cur) => (cur === youDid ? null : cur)),
-                            4200,
-                          )
-                          for (const t of targets) {
-                            void pushNotice({
-                              toId: t.id,
-                              kind: 'hi5',
-                              title: `${givenName(viewer)} high-fived you`,
-                              body: youDid,
-                              href: 'wins',
-                            })
-                          }
-                        })
-                      }}
-                      className="mt-2 text-xs font-semibold text-[var(--accent)]"
-                    >
-                      {gave ? 'High-fived' : 'High five'}
-                    </button>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </section>
+      <div className="flex border-b border-white/10">
+        {(
+          [
+            ['posts', 'Posts'],
+            ['passes', 'Passes'],
+            ['stories', 'Stories'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`flex-1 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.16em] ${
+              tab === id
+                ? 'border-b-2 border-[var(--accent)] text-white'
+                : 'text-[var(--muted)]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'posts' && (
+        <PostsGrid
+          items={minePosts}
+          athlete={athlete}
+          viewer={viewer}
+          athletes={athletes}
+          onChange={setPosts}
+        />
+      )}
+      {tab === 'passes' && (
+        <PassesGrid
+          items={minePasses}
+          athlete={athlete}
+          viewer={viewer}
+          onOpen={setWatchPass}
+          onChange={setPosts}
+        />
+      )}
+      {tab === 'stories' && (
+        <StoriesGrid
+          items={live}
+          own={own}
+          onAdd={() => setCompose('story')}
+          onOpen={(items) => {
+            markStoriesSeen(items.map((s) => s.id))
+            setWatchStories(items)
+          }}
+        />
+      )}
 
       {viewer && (isCoachProfile(viewer) || notes.length > 0) && (
         <section>
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--profile-accent, var(--accent))' }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Notes
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            {isGymAdmin(viewer)
-              ? 'Every coach note on this athlete.'
-              : 'Notes you wrote while working with them.'}
           </p>
           {notes.length === 0 ? (
             <p className="mt-1 text-sm text-[var(--muted)]">No notes filed yet.</p>
@@ -364,11 +416,7 @@ export function AthleteProfileCard({
                 className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
               />
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={big}
-                  onChange={(e) => setBig(e.target.checked)}
-                />
+                <input type="checkbox" checked={big} onChange={(e) => setBig(e.target.checked)} />
                 Big win — also the gym feed
               </label>
               {winError && <p className="text-sm text-[var(--bad)]">{winError}</p>}
@@ -388,6 +436,20 @@ export function AthleteProfileCard({
           )}
         </section>
       )}
+
+      {watchStories && (
+        <StoryViewer
+          items={watchStories}
+          athletes={athletes}
+          viewer={viewer}
+          highlights={viewer ? storiesFile.highlights.filter((h) => h.ownerId === viewer.id) : []}
+          onClose={() => setWatchStories(null)}
+          onHighlightSaved={reloadStories}
+        />
+      )}
+      {watchPass && (
+        <PassViewer post={watchPass} onClose={() => setWatchPass(null)} />
+      )}
     </div>
   )
 
@@ -398,7 +460,7 @@ export function AthleteProfileCard({
       <div className="fixed inset-0 z-[85] flex flex-col text-[var(--text)]" style={shellStyle}>
         <header className="flex items-center justify-between gap-3 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--profile-accent)' }}>
-            Profile
+            {handle}
           </p>
           {onClose && (
             <button
@@ -429,16 +491,348 @@ export function AthleteProfileCard({
   )
 }
 
-function hi5AthletesOnPost(post: FeedPost, people: Athlete[], viewerId: string): Athlete[] {
-  const ids = new Set<string>()
-  const author = people.find((a) => a.id === post.authorId)
-  if (author && isAthleteProfile(author)) ids.add(author.id)
-  for (const id of post.taggedIds) {
-    const tagged = people.find((a) => a.id === id)
-    if (tagged && isAthleteProfile(tagged)) ids.add(id)
+function Stat({ n, label, onClick }: { n: number; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-xl bg-black/25 py-2">
+      <span className="block text-lg font-bold leading-none">{n}</span>
+      <span className="mt-1 block text-[10px] uppercase tracking-wider text-[var(--muted)]">{label}</span>
+    </button>
+  )
+}
+
+function ShareBtn({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-white/10 bg-black/30 px-2 py-2.5 text-center"
+    >
+      <span className="block text-sm font-bold">{label}</span>
+      <span className="block text-[10px] text-[var(--muted)]">{hint}</span>
+    </button>
+  )
+}
+
+function PostsGrid({
+  items,
+  athlete,
+  viewer,
+  athletes,
+  onChange,
+}: {
+  items: FeedPost[]
+  athlete: Athlete
+  viewer: Athlete | null
+  athletes: Athlete[]
+  onChange: (next: FeedPost[] | ((prev: FeedPost[]) => FeedPost[])) => void
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-[var(--muted)]">
+        No posts on this profile yet. Only what they share lands here.
+      </p>
+    )
   }
-  ids.delete(viewerId)
-  return [...ids]
-    .map((id) => people.find((a) => a.id === id))
-    .filter((a): a is Athlete => Boolean(a))
+  return (
+    <ul className="space-y-3">
+      {items.map((p) => {
+        const reposted = viewer ? (p.reposts ?? []).includes(viewer.id) : false
+        const win = postOnChannel(p, 'wins')
+        return (
+          <li key={p.id} className="overflow-hidden rounded-2xl bg-black/30">
+            {p.url && p.kind !== 'text' && p.kind !== 'collage' && (
+              <video src={p.url} controls playsInline className="max-h-80 w-full bg-black object-contain" />
+            )}
+            <div className="px-3 py-3">
+              {win && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Win</p>
+              )}
+              {p.authorId !== athlete.id && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Repost</p>
+              )}
+              {p.caption && (
+                <p className="text-sm">
+                  <MentionText text={p.caption} athletes={athletes} />
+                </p>
+              )}
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                {new Date(p.createdAt).toLocaleString()}
+              </p>
+              {viewer && viewer.id !== p.authorId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void toggleFeedRepost(p.id, viewer.id).then((next) => {
+                      if (!next) return
+                      onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
+                    })
+                  }}
+                  className="mt-2 text-xs font-semibold text-[var(--accent)]"
+                >
+                  {reposted ? 'On your profile' : 'Repost to your profile'}
+                </button>
+              )}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function PassesGrid({
+  items,
+  athlete,
+  viewer,
+  onOpen,
+  onChange,
+}: {
+  items: FeedPost[]
+  athlete: Athlete
+  viewer: Athlete | null
+  onOpen: (post: FeedPost) => void
+  onChange: (next: FeedPost[] | ((prev: FeedPost[]) => FeedPost[])) => void
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-[var(--muted)]">
+        No passes yet. A pass is a short vertical clip — Shape Lab’s take on a reel.
+      </p>
+    )
+  }
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {items.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => onOpen(p)}
+          className="relative aspect-[9/16] overflow-hidden bg-black"
+        >
+          {p.url ? (
+            <video src={p.url} muted playsInline className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full items-center justify-center px-1 text-[10px] text-white/70">
+              {p.caption || 'Pass'}
+            </span>
+          )}
+          {p.authorId !== athlete.id && (
+            <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold">
+              Repost
+            </span>
+          )}
+          {viewer && viewer.id !== p.authorId && (
+            <span
+              role="presentation"
+              onClick={(e) => {
+                e.stopPropagation()
+                void toggleFeedRepost(p.id, viewer.id).then((next) => {
+                  if (!next) return
+                  onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
+                })
+              }}
+              className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-[var(--accent)]"
+            >
+              {(p.reposts ?? []).includes(viewer.id) ? 'Yours' : '+'}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function StoriesGrid({
+  items,
+  own,
+  onAdd,
+  onOpen,
+}: {
+  items: GymStory[]
+  own: boolean
+  onAdd: () => void
+  onOpen: (items: GymStory[]) => void
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center">
+        <p className="text-sm text-[var(--muted)]">
+          Stories live 24 hours. Highlights on this page keep the ones they save.
+        </p>
+        {own && (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f]"
+          >
+            Add a story
+          </button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {own && (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex aspect-[9/16] flex-col items-center justify-center rounded-lg border border-dashed border-white/25 text-sm text-white/70"
+        >
+          +
+          <span className="mt-1 text-[10px]">Story</span>
+        </button>
+      )}
+      {items.map((s, i) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onOpen(items.slice(i).concat(items.slice(0, i)))}
+          className="relative aspect-[9/16] overflow-hidden bg-black"
+        >
+          {s.mime.startsWith('image/') ? (
+            <img src={s.url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <video src={s.url} muted playsInline className="h-full w-full object-cover" />
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PassComposer({
+  athlete,
+  athletes,
+  onClose,
+  onPosted,
+}: {
+  athlete: Athlete
+  athletes: Athlete[]
+  onClose: () => void
+  onPosted: () => void
+}) {
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [caption, setCaption] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const post = async (blob: Blob) => {
+    setBusy('Posting…')
+    try {
+      const tags = taggedIdsFromText(caption, athletes)
+      const result = await publishFeedPostResult({
+        authorId: athlete.id,
+        caption,
+        taggedIds: tags,
+        blob,
+        channels: ['passes', 'gym'],
+      })
+      if (!result.post) throw new Error(result.error || 'Could not post that pass.')
+      for (const id of tags) {
+        if (id === athlete.id) continue
+        void pushNotice({
+          toId: id,
+          kind: 'share',
+          title: `${athlete.name} tagged you in a pass`,
+          body: caption.trim() || 'Open their profile.',
+          href: 'feed',
+        })
+      }
+      onPosted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not post that pass.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/25 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+          New pass
+        </p>
+        <button type="button" onClick={onClose} className="text-xs text-[var(--muted)]">
+          Close
+        </button>
+      </div>
+      <p className="text-sm text-[var(--muted)]">
+        A short vertical clip — Shape Lab’s version of a reel or Short. It lands
+        on this profile under Passes and on the gym feed.
+      </p>
+      <input
+        value={caption}
+        onChange={(e) => setCaption(e.target.value)}
+        maxLength={180}
+        placeholder='Caption — @handle or @"Name"'
+        className="mt-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={Boolean(busy)}
+          onClick={() => {
+            setError(null)
+            setBusy('Recording…')
+            void recordQuickClip(15)
+              .then((blob) => post(blob))
+              .catch((err) => {
+                setBusy(null)
+                setError(err instanceof Error ? err.message : 'Could not record.')
+              })
+          }}
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f] disabled:opacity-40"
+        >
+          {busy === 'Recording…' ? 'Recording 15s…' : 'Record 15s'}
+        </button>
+        <button
+          type="button"
+          disabled={Boolean(busy)}
+          onClick={() => fileRef.current?.click()}
+          className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold disabled:opacity-40"
+        >
+          From Photos
+        </button>
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          setError(null)
+          void fileToClipBlob(file)
+            .then((blob) => post(blob))
+            .catch((err) => setError(err instanceof Error ? err.message : 'Could not use that file.'))
+        }}
+      />
+      {busy && busy !== 'Recording…' && <p className="mt-2 text-sm text-[var(--accent)]">{busy}</p>}
+      {error && <p className="mt-2 text-sm text-[var(--bad)]">{error}</p>}
+    </section>
+  )
+}
+
+function PassViewer({ post, onClose }: { post: FeedPost; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[280] flex flex-col bg-black text-white">
+      <div className="flex items-center justify-between px-4 py-3">
+        <p className="text-sm font-semibold">Pass</p>
+        <button type="button" onClick={onClose} className="text-sm text-white/70">
+          Close
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        {post.url ? (
+          <video src={post.url} autoPlay controls playsInline className="max-h-full max-w-full object-contain" />
+        ) : (
+          <p className="px-6 text-center">{post.caption}</p>
+        )}
+      </div>
+      {post.caption && <p className="px-4 py-3 text-sm">{post.caption}</p>}
+    </div>
+  )
 }

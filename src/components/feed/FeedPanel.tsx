@@ -10,8 +10,10 @@ import {
   postOnChannel,
   publishFeedPostResult,
   publishTextPostResult,
+  isPassPost,
   toggleFeedHi5,
   toggleFeedLike,
+  toggleFeedRepost,
   type FeedChannel,
   type FeedPost,
   removeFeedPost,
@@ -412,7 +414,9 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                       {author?.name ?? 'Unknown profile'}
                     </p>
                     <p className="text-[11px] text-[var(--muted)]">
-                      {post.kind === 'collage'
+                      {isPassPost(post)
+                        ? 'Pass · '
+                        : post.kind === 'collage'
                         ? 'Shared a class collage · '
                         : post.sharedByName
                           ? `shared by ${post.sharedByName} · `
@@ -501,6 +505,22 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                       {(post.likes ?? []).includes(athlete.id) ? 'Liked' : 'Like'}
                       {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
                     </button>
+                    {athlete.id !== post.authorId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void toggleFeedRepost(post.id, athlete.id).then((next) => {
+                            if (!next) return
+                            setPosts((prev) => prev.map((p) => (p.id === next.id ? next : p)))
+                            const on = (next.reposts ?? []).includes(athlete.id)
+                            setNotice(on ? 'On your profile.' : 'Removed from your profile.')
+                          })
+                        }}
+                        className="text-xs font-semibold text-[var(--accent)]"
+                      >
+                        {(post.reposts ?? []).includes(athlete.id) ? 'On your profile' : 'Repost'}
+                      </button>
+                    )}
                     {canGiveHi5(athlete) && hi5Athletes(post, athletes, athlete.id).length > 0 && (
                       <button
                         type="button"

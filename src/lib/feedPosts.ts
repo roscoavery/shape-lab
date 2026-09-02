@@ -3,7 +3,7 @@ import type { CollageShare } from './collages'
 
 export const FEED_CAPTION_MAX = 800
 
-export type FeedChannel = 'gym' | 'wins'
+export type FeedChannel = 'gym' | 'wins' | 'passes'
 
 export type FeedPost = {
   id: string
@@ -24,6 +24,8 @@ export type FeedPost = {
   /** Coach posted this as the athlete's win. */
   sharedById?: string
   sharedByName?: string
+  /** Profiles who put this on their own page. */
+  reposts?: string[]
 }
 
 export function postChannels(post: Pick<FeedPost, 'channels'>): FeedChannel[] {
@@ -32,6 +34,25 @@ export function postChannels(post: Pick<FeedPost, 'channels'>): FeedChannel[] {
 
 export function postOnChannel(post: Pick<FeedPost, 'channels'>, channel: FeedChannel): boolean {
   return postChannels(post).includes(channel)
+}
+
+export function isPassPost(post: Pick<FeedPost, 'channels'>): boolean {
+  return postOnChannel(post, 'passes')
+}
+
+/** What this profile shared — authored or reposted, not merely tagged. */
+export function profileSharedPosts(posts: FeedPost[], profileId: string): FeedPost[] {
+  return posts.filter(
+    (p) => p.authorId === profileId || (p.reposts ?? []).includes(profileId),
+  )
+}
+
+export function profilePosts(posts: FeedPost[], profileId: string): FeedPost[] {
+  return profileSharedPosts(posts, profileId).filter((p) => !isPassPost(p))
+}
+
+export function profilePasses(posts: FeedPost[], profileId: string): FeedPost[] {
+  return profileSharedPosts(posts, profileId).filter((p) => isPassPost(p))
 }
 
 export async function listFeedPosts(): Promise<FeedPost[]> {
@@ -188,6 +209,20 @@ export async function toggleFeedHi5(postId: string, actorId: string): Promise<Fe
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'hi5', id: postId, authorId: actorId }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as FeedPost
+  } catch {
+    return null
+  }
+}
+
+export async function toggleFeedRepost(postId: string, actorId: string): Promise<FeedPost | null> {
+  try {
+    const res = await fetch('/api/feed?kind=repost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'repost', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
     return (await res.json()) as FeedPost

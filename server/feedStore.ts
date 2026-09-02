@@ -24,15 +24,18 @@ export type DiskFeedPost = {
   file?: string
   kind?: 'video' | 'collage' | 'text'
   collage?: DiskCollageShare
-  channels?: ('gym' | 'wins')[]
+  channels?: ('gym' | 'wins' | 'passes')[]
   likes?: string[]
   /** Profile ids who high-fived the athlete(s) on this post. */
   hi5s?: string[]
   sharedById?: string
   sharedByName?: string
+  reposts?: string[]
 }
 
-function cleanChannels(raw: unknown): ('gym' | 'wins')[] {
+type FeedChannel = 'gym' | 'wins' | 'passes'
+
+function cleanChannels(raw: unknown): FeedChannel[] {
   const list = Array.isArray(raw)
     ? raw
     : typeof raw === 'string'
@@ -40,7 +43,7 @@ function cleanChannels(raw: unknown): ('gym' | 'wins')[] {
       : []
   const next = list
     .map((x) => (typeof x === 'string' ? x.trim() : ''))
-    .filter((x): x is 'gym' | 'wins' => x === 'gym' || x === 'wins')
+    .filter((x): x is FeedChannel => x === 'gym' || x === 'wins' || x === 'passes')
   return [...new Set(next.length ? next : (['gym'] as const))]
 }
 
@@ -295,10 +298,17 @@ export async function toggleFeedHi5(
   return toggleFeedMark(postId, actorId, 'hi5s')
 }
 
+export async function toggleFeedRepost(
+  postId: string,
+  actorId: string,
+): Promise<DiskFeedPost | null> {
+  return toggleFeedMark(postId, actorId, 'reposts')
+}
+
 async function toggleFeedMark(
   postId: string,
   actorId: string,
-  field: 'likes' | 'hi5s',
+  field: 'likes' | 'hi5s' | 'reposts',
 ): Promise<DiskFeedPost | null> {
   const sid = safeId(postId)
   const who = safeId(actorId)

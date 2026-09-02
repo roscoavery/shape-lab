@@ -30,6 +30,7 @@ import {
   sendFeedFile,
   toggleFeedHi5,
   toggleFeedLike,
+  toggleFeedRepost,
 } from './feedStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, writeSocialFile } from './socialStore.ts'
@@ -357,7 +358,8 @@ export async function handleShapeLabApi(
         url.searchParams.get('kind') === 'collage' ||
         url.searchParams.get('kind') === 'text' ||
         url.searchParams.get('kind') === 'like' ||
-        url.searchParams.get('kind') === 'hi5'
+        url.searchParams.get('kind') === 'hi5' ||
+        url.searchParams.get('kind') === 'repost'
       ) {
         let body: {
           kind?: string
@@ -385,19 +387,31 @@ export async function handleShapeLabApi(
               .map((s) => s.trim())
               .filter(Boolean)
         const kind = body.kind ?? url.searchParams.get('kind') ?? ''
-        if (kind === 'like' || kind === 'hi5') {
+        if (kind === 'like' || kind === 'hi5' || kind === 'repost') {
           const saved =
             kind === 'hi5'
               ? await toggleFeedHi5(
                   body.id ?? url.searchParams.get('id') ?? '',
                   body.authorId ?? url.searchParams.get('authorId') ?? '',
                 )
+              : kind === 'repost'
+                ? await toggleFeedRepost(
+                    body.id ?? url.searchParams.get('id') ?? '',
+                    body.authorId ?? url.searchParams.get('authorId') ?? '',
+                  )
               : await toggleFeedLike(
                   body.id ?? url.searchParams.get('id') ?? '',
                   body.authorId ?? url.searchParams.get('authorId') ?? '',
                 )
           if (!saved) {
-            sendJson(res, 400, { error: kind === 'hi5' ? 'Could not high-five that post.' : 'Could not like that post.' })
+            sendJson(res, 400, {
+              error:
+                kind === 'hi5'
+                  ? 'Could not high-five that post.'
+                  : kind === 'repost'
+                    ? 'Could not add that to your profile.'
+                    : 'Could not like that post.',
+            })
             return true
           }
           sendJson(res, 200, {
