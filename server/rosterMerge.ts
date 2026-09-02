@@ -508,7 +508,17 @@ export function mergeRosterLists(
   remote: RosterLists,
   hints: Record<string, ProfileHint> = {},
 ): RosterLists {
-  const removed = normalizeRemovedIds([...local.removedAthleteIds, ...remote.removedAthleteIds])
+  const incomingLiving = new Set(remote.athletes.map((a) => a.id))
+  const serverCount = local.athletes.length
+  const incomingCount = remote.athletes.length
+  // A phone that only has Ryan + a couple names cannot delete the rest of the gym.
+  const acceptClientRemovals =
+    incomingCount === 0 || incomingCount >= Math.max(1, Math.ceil(serverCount * 0.8))
+  const clientRemovals = acceptClientRemovals ? remote.removedAthleteIds : []
+  const removed = normalizeRemovedIds([
+    ...local.removedAthleteIds,
+    ...clientRemovals,
+  ]).filter((id) => !incomingLiving.has(id))
   const dismissedHomeworkKeys = [
     ...new Set([...local.dismissedHomeworkKeys, ...remote.dismissedHomeworkKeys]),
   ]

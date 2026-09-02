@@ -196,7 +196,12 @@ export async function handleShapeLabApi(
       try {
         const body = await readRequestBody(req)
         const saved = await writeRosterFile(JSON.parse(body))
-        sendJson(res, 200, saved)
+        sendJson(res, 200, {
+          kind: 'shape-lab-roster',
+          ok: true,
+          athleteCount: saved.athletes.length,
+          exportedAt: saved.exportedAt,
+        })
       } catch (err) {
         sendJson(res, 503, {
           error:

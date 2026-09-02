@@ -144,7 +144,10 @@ function trySave(write: () => void) {
 function persistLists(lists: RosterLists): Athlete[] {
   const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord))
   saveAthletes(athletes)
-  trySave(() => saveRemovedAthleteIds(lists.removedAthleteIds))
+  const livingIds = new Set(athletes.map((a) => a.id))
+  trySave(() =>
+    saveRemovedAthleteIds(lists.removedAthleteIds.filter((id) => !livingIds.has(id))),
+  )
   trySave(() => saveDismissedHomeworkKeys(lists.dismissedHomeworkKeys))
   trySave(() => saveInjuryLogs(lists.injuryLogs as InjuryEntry[]))
   trySave(() => savePainJournal(lists.painJournals as PainJournalEntry[]))
@@ -252,7 +255,12 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
   }
   const applied = applyRosterSnapshot(server)
   enableServerRosterPush()
-  const merged = localRosterSnapshot()
-  if (merged.athletes.some((a) => !isRyanAthlete(a))) await pushServerRoster(merged)
+  const local = localRosterSnapshot()
+  // Only write back when this device has more living profiles than the gym
+  // file — that heals a Blob that never received the full roster. A smaller
+  // phone snapshot used to PUT stale removed IDs and hide everyone else.
+  if (local.athletes.length > (server.athletes?.length ?? 0)) {
+    await pushServerRoster(local)
+  }
   return { ...applied, fromServer: true, error: null }
 }

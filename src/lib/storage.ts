@@ -64,6 +64,7 @@ function pushRosterSoon() {
 
 export function loadAthletes(): Athlete[] {
   const stored = readJson<Athlete[]>(ATHLETES_KEY, [])
+  if (memoryAthletes && memoryAthletes.length > stored.length) return memoryAthletes
   if (stored.length > 0) return stored
   return memoryAthletes ?? []
 }
