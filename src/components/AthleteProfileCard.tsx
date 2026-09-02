@@ -24,6 +24,7 @@ import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
+import { ProfileHighlights } from './stories/ProfileHighlights'
 
 type Props = {
   athlete: Athlete
@@ -191,6 +192,8 @@ export function AthleteProfileCard({
           here after My profile or the class-station line.
         </p>
       )}
+
+      <ProfileHighlights athlete={athlete} viewer={viewer} athletes={athletes} />
 
       {(own || coach) && (
         <section>

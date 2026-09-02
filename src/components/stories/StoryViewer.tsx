@@ -126,8 +126,8 @@ export function StoryViewer({
             Save this story as a highlight
           </p>
           <p className="text-[11px] text-white/55">
-            Highlights stay after the 24-hour story clock. Name a new one or add
-            this clip to one you already have.
+            Saving a highlight keeps this clip on your profile after the
+            24-hour story clock.
           </p>
           {highlights.length > 0 && (
             <select

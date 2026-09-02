@@ -40,8 +40,8 @@ export function StoryComposer({ athlete, onClose, onPosted }: Props) {
         </p>
         <h3 className="mt-1 text-lg font-semibold">Add to your story</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Lives at the top of Reference scroll for 24 hours. Name a highlight
-          below if you want this clip to stay after the story ends.
+          Lives on Feed and Reference scroll for 24 hours. Name a highlight
+          below if you want this clip to stay on your profile.
         </p>
         <input
           value={caption}
