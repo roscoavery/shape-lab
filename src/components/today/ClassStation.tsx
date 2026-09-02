@@ -22,6 +22,11 @@ import {
 } from '../../lib/classStation'
 import { AthleteName } from '../AthleteAvatar'
 import { StationSnapshot } from './StationSnapshot'
+import {
+  loadGuestParks,
+  makeShapeTestPark,
+  parkPhaseLabel,
+} from '../../lib/shapeTestPark'
 
 type Props = {
   athletes: Athlete[]
@@ -163,6 +168,38 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
 
   const idx = stepIndex(draft.step)
   const progress = `${idx + 1} / ${STEPS.length}`
+  const typedName = Boolean(first.trim() && last.trim())
+  const draftNamed = Boolean(draft.firstName.trim() && draft.lastName.trim())
+  const canPark = draftNamed || typedName
+
+  const leave = () => {
+    if (typedName && (!draftNamed || draft.step === 'who')) {
+      persist({
+        ...draft,
+        firstName: first.trim(),
+        lastName: last.trim(),
+        step: draft.step === 'who' ? 'parentPhone' : draft.step,
+      })
+    } else if (draftNamed) {
+      persist(draft)
+    }
+    onClose()
+  }
+
+  const parkedRoster = roster.filter((a) => {
+    if (!a.shapeTestPark) return false
+    const alreadyDraft = drafts.some(
+      (d) =>
+        (d.athleteId && d.athleteId === a.id) ||
+        namesMatch(a, d.firstName, d.lastName),
+    )
+    return !alreadyDraft
+  })
+  const guestParks = loadGuestParks().filter((g) => {
+    const onRoster = roster.some((a) => namesMatch(a, g.firstName, g.lastName))
+    const alreadyDraft = drafts.some((d) => namesMatch(d, g.firstName, g.lastName))
+    return !onRoster && !alreadyDraft
+  })
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-[#07110e] text-[var(--text)]">
@@ -178,13 +215,10 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
           </p>
         </div>
         <div className="flex gap-2">
-          {draft.step !== 'who' && (
+          {canPark && (
             <button
               type="button"
-              onClick={() => {
-                persist(draft)
-                onClose()
-              }}
+              onClick={leave}
               className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold"
             >
               Finish later
@@ -192,7 +226,7 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => (canPark ? leave() : onClose())}
             className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
           >
             Close
@@ -240,6 +274,58 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
                   onChange={(e) => setFilter(e.target.value)}
                 />
                 <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+                  {parkedRoster
+                    .filter((a) => !q || a.name.toLowerCase().includes(q))
+                    .map((a) => (
+                      <button
+                        key={`park-${a.id}`}
+                        type="button"
+                        onClick={() => onStartShapeTest(a)}
+                        className="flex w-full items-center justify-between rounded-2xl border border-[var(--accent)]/40 bg-[#102820] px-4 py-3 text-left"
+                      >
+                        <span>
+                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                            Finish later · {parkPhaseLabel(a.shapeTestPark!)}
+                          </span>
+                          <span className="text-lg font-semibold">
+                            <AthleteName athlete={a} size="md" />
+                          </span>
+                        </span>
+                        <span className="text-xs text-white/50">Continue</span>
+                      </button>
+                    ))}
+                  {guestParks
+                    .filter((g) => {
+                      const name = displayPersonName(g.firstName, g.lastName).toLowerCase()
+                      return !q || name.includes(q)
+                    })
+                    .map((g) => (
+                      <button
+                        key={`gpark-${g.firstName}-${g.lastName}`}
+                        type="button"
+                        onClick={() =>
+                          onStartShapeTest({
+                            id: '',
+                            name: displayPersonName(g.firstName, g.lastName),
+                            firstName: g.firstName,
+                            lastName: g.lastName,
+                            createdAt: g.park.updatedAt,
+                            shapeTestPark: g.park,
+                          })
+                        }
+                        className="flex w-full items-center justify-between rounded-2xl border border-[var(--accent)]/40 bg-[#102820] px-4 py-3 text-left"
+                      >
+                        <span>
+                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                            Finish later · {parkPhaseLabel(g.park)}
+                          </span>
+                          <span className="text-lg font-semibold">
+                            {displayPersonName(g.firstName, g.lastName)}
+                          </span>
+                        </span>
+                        <span className="text-xs text-white/50">Continue</span>
+                      </button>
+                    ))}
                   {visibleDrafts.map((d) => (
                     <button
                       key={d.id}
@@ -565,8 +651,13 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
               type="button"
               onClick={() => {
                 const athlete = commitAthlete()
+                const parked = {
+                  ...athlete,
+                  shapeTestPark: makeShapeTestPark('intake'),
+                }
+                onSaveAthlete(parked, 'update')
                 setDrafts(removeStationDraft(draft.id))
-                onStartShapeTest(athlete)
+                onStartShapeTest(parked)
               }}
               className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
             >
@@ -574,10 +665,7 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
             </button>
             <button
               type="button"
-              onClick={() => {
-                persist({ ...draft, step: 'done' })
-                onClose()
-              }}
+              onClick={leave}
               className="h-14 rounded-2xl border border-white/15 text-base font-semibold"
             >
               Finish later
@@ -615,17 +703,6 @@ function Question({
 }
 
 function stationHasAnswers(draft: StationDraft): boolean {
-  const first = draft.firstName.trim()
-  const last = draft.lastName.trim()
-  if (!first || !last) return false
-  return Boolean(
-    draft.cartwheelLeg ||
-      draft.harderShape ||
-      draft.openShoulderHardness ||
-      draft.twistDirection ||
-      draft.dominantHand ||
-      draft.skateStance ||
-      draft.photoDataUrl,
-  )
+  return Boolean(draft.firstName.trim() && draft.lastName.trim())
 }
 

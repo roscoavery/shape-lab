@@ -15,6 +15,15 @@ import { PreTestIntake } from './learn/PreTestIntake'
 import { displayPersonName } from '../lib/classStation'
 import { makeShapeTestRecord } from '../lib/quizGrades'
 import type { ShapeTestRecord } from '../types'
+import {
+  clearGuestPark,
+  makeShapeTestPark,
+  parkQuestions,
+  readTakerPark,
+  reviveQuestions,
+  upsertGuestPark,
+  type ShapeTestPark,
+} from '../lib/shapeTestPark'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -25,6 +34,7 @@ type Props = {
   onTakerReady?: (taker: QuizTaker) => void
   onGrade?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
+  onPark?: () => void
 }
 
 export function ShapeQuiz({
@@ -36,13 +46,19 @@ export function ShapeQuiz({
   onTakerReady,
   onGrade,
   onAthleteChange,
+  onPark,
 }: Props) {
   const { copyFor } = useShapeCopy()
+  const parkedAtOpen = readTakerPark(presetTaker, athletes)
   const [taker, setTaker] = useState<QuizTaker | null>(presetTaker)
-  const [intakeDone, setIntakeDone] = useState(false)
-  const [format, setFormat] = useState<QuizFormat | null>(null)
+  const [intakeDone, setIntakeDone] = useState(
+    () => parkedAtOpen?.phase === 'format' || parkedAtOpen?.phase === 'quiz',
+  )
+  const [format, setFormat] = useState<QuizFormat | null>(() =>
+    parkedAtOpen?.phase === 'quiz' ? parkedAtOpen.format ?? null : null,
+  )
   const [seed, setSeed] = useState(0)
-  const questions = useMemo(
+  const generated = useMemo(
     () =>
       format
         ? buildShapeQuiz(
@@ -56,9 +72,20 @@ export function ShapeQuiz({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [referencePhotos, seed, pool, copyFor, format],
   )
-  const [index, setIndex] = useState(0)
-  const [picked, setPicked] = useState<string | null>(null)
-  const [pickedIds, setPickedIds] = useState<(string | null)[]>([])
+  const [parkedQuestions, setParkedQuestions] = useState<QuizQuestion[] | null>(() =>
+    parkedAtOpen?.phase === 'quiz' && parkedAtOpen.questions?.length
+      ? reviveQuestions(parkedAtOpen.questions, referencePhotos)
+      : null,
+  )
+  const questions = parkedQuestions ?? generated
+  const [index, setIndex] = useState(() => parkedAtOpen?.index ?? 0)
+  const [picked, setPicked] = useState<string | null>(() => {
+    if (!parkedAtOpen) return null
+    if (parkedAtOpen.picked) return parkedAtOpen.picked
+    const i = parkedAtOpen.index ?? 0
+    return parkedAtOpen.pickedIds?.[i] ?? null
+  })
+  const [pickedIds, setPickedIds] = useState<(string | null)[]>(() => parkedAtOpen?.pickedIds ?? [])
   const [done, setDone] = useState(false)
 
   const q: QuizQuestion | undefined = questions[index]
@@ -74,13 +101,33 @@ export function ShapeQuiz({
           : null
   const title = formatTitle ? `${baseTitle} · ${formatTitle}` : baseTitle
 
+  const rosterAthlete = taker?.athleteId
+    ? athletes.find((a) => a.id === taker.athleteId) ?? null
+    : null
+
+  const writePark = (park: ShapeTestPark) => {
+    if (rosterAthlete) {
+      onAthleteChange?.({ ...rosterAthlete, shapeTestPark: park })
+      return
+    }
+    if (taker) upsertGuestPark(taker.firstName, taker.lastName, park)
+  }
+
+  const parkAndLeave = (park: ShapeTestPark) => {
+    writePark(park)
+    if (onPark) onPark()
+    else onExit()
+  }
+
   const begin = (next: QuizFormat) => {
+    setParkedQuestions(null)
     setFormat(next)
     setSeed((n) => n + 1)
     setIndex(0)
     setPicked(null)
     setPickedIds([])
     setDone(false)
+    writePark(makeShapeTestPark('quiz', { format: next, pool }))
   }
 
   const restartSame = () => {
@@ -89,11 +136,13 @@ export function ShapeQuiz({
   }
 
   const changeType = () => {
+    setParkedQuestions(null)
     setFormat(null)
     setIndex(0)
     setPicked(null)
     setPickedIds([])
     setDone(false)
+    writePark(makeShapeTestPark('format', { pool }))
   }
 
   const recordPick = (id: string) => {
@@ -101,9 +150,29 @@ export function ShapeQuiz({
     setPickedIds((prev) => {
       const next = prev.length === total ? [...prev] : questions.map(() => null)
       next[index] = id
+      writePark(
+        makeShapeTestPark('quiz', {
+          format: format ?? undefined,
+          pool,
+          index,
+          picked: id,
+          pickedIds: next,
+          questions: parkQuestions(questions),
+        }),
+      )
       return next
     })
   }
+
+  const finishLaterBtn = (onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-lg border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
+    >
+      Finish later
+    </button>
+  )
 
   if (!taker) {
     return (
@@ -119,19 +188,32 @@ export function ShapeQuiz({
     )
   }
 
-  const rosterAthlete = taker.athleteId
-    ? athletes.find((a) => a.id === taker.athleteId) ?? null
-    : null
   if (rosterAthlete && !intakeDone) {
     return (
       <PreTestIntake
         athlete={rosterAthlete}
         athletes={athletes}
         photos={referencePhotos}
-        onSave={(next) => onAthleteChange?.(next)}
+        onSave={(next) => {
+          onAthleteChange?.({
+            ...next,
+            shapeTestPark: next.shapeTestPark ?? makeShapeTestPark('intake', { pool }),
+          })
+        }}
         onDone={(next) => {
-          onAthleteChange?.(next)
+          onAthleteChange?.({
+            ...next,
+            shapeTestPark: makeShapeTestPark('format', { pool }),
+          })
           setIntakeDone(true)
+        }}
+        onPark={(next) => {
+          onAthleteChange?.({
+            ...next,
+            shapeTestPark: makeShapeTestPark('intake', { pool }),
+          })
+          if (onPark) onPark()
+          else onExit()
         }}
       />
     )
@@ -140,9 +222,12 @@ export function ShapeQuiz({
   if (!format) {
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
-          {baseTitle} · {displayPersonName(taker.firstName, taker.lastName)}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
+            {baseTitle} · {displayPersonName(taker.firstName, taker.lastName)}
+          </p>
+          {finishLaterBtn(() => parkAndLeave(makeShapeTestPark('format', { pool })))}
+        </div>
         <h3 className="mt-1 text-xl font-semibold text-[var(--text)]">How do you want to take it?</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Pictures are the easy way — name the coach stills. Descriptions and mixed
@@ -246,9 +331,23 @@ export function ShapeQuiz({
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
           {title} · {q!.kind === 'picture' ? 'Name what you see' : 'Name what is being described'}
         </p>
-        <p className="text-xs text-[var(--muted)]">
-          {index + 1} / {total}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-[var(--muted)]">
+            {index + 1} / {total}
+          </p>
+          {finishLaterBtn(() =>
+            parkAndLeave(
+              makeShapeTestPark('quiz', {
+                format,
+                pool,
+                index,
+                picked,
+                pickedIds,
+                questions: parkQuestions(questions),
+              }),
+            ),
+          )}
+        </div>
       </div>
 
       {q!.kind === 'picture' && (
@@ -308,11 +407,23 @@ export function ShapeQuiz({
                 }, 0)
                 if (taker) {
                   onGrade?.(taker, makeShapeTestRecord(pool, format, score, total))
+                  if (!taker.athleteId) clearGuestPark(taker.firstName, taker.lastName)
                 }
                 setDone(true)
               } else {
-                setIndex((i) => i + 1)
+                const nextIndex = index + 1
+                setIndex(nextIndex)
                 setPicked(null)
+                writePark(
+                  makeShapeTestPark('quiz', {
+                    format,
+                    pool,
+                    index: nextIndex,
+                    picked: null,
+                    pickedIds,
+                    questions: parkQuestions(questions),
+                  }),
+                )
               }
             }}
           >

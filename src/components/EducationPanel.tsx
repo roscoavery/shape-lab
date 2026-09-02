@@ -74,6 +74,7 @@ type Props = {
   onQuizTaker?: (taker: { firstName: string; lastName: string; athleteId?: string }) => void
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
+  onParkQuiz?: () => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -92,6 +93,7 @@ export function EducationPanel({
   onQuizTaker,
   onRecordQuiz,
   onAthleteChange,
+  onParkQuiz,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
@@ -322,6 +324,10 @@ export function EducationPanel({
           onTakerReady={onQuizTaker}
           onGrade={onRecordQuiz}
           onAthleteChange={onAthleteChange}
+          onPark={() => {
+            goHome()
+            onParkQuiz?.()
+          }}
         />
       )}
 

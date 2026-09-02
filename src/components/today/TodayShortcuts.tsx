@@ -128,7 +128,8 @@ export function TodayShortcuts({ onGo, showStation = true }: Props) {
           </span>
           <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
             One question at a time. Name, parent phone, cartwheel leg, then the
-            test. Finish later if the line moves.
+            test. Finish later on any screen — next rotation picks up the same
+            answers.
           </span>
         </button>
       )}

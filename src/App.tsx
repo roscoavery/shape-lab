@@ -997,6 +997,12 @@ export default function App() {
             setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
             void syncAthleteProfileToResearch(next, activeProfile?.id ?? next.id)
           }}
+          onParkQuiz={() => {
+            setQuizPreset(null)
+            setLearnIntent(null)
+            goTab('today')
+            setStationOpen(true)
+          }}
         />
       )}
 
@@ -1376,7 +1382,7 @@ export default function App() {
           setQuizPreset({
             firstName: athlete.firstName || parts.firstName,
             lastName: athlete.lastName || parts.lastName,
-            athleteId: athlete.id,
+            athleteId: athlete.id || undefined,
           })
           setStationOpen(false)
           setLearnIntent('quiz')

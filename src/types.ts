@@ -242,6 +242,11 @@ export type Athlete = {
   coachNotes?: AthleteCoachNote[]
   /** Recent shape-test scores (oldest first, newest last). */
   shapeTests?: ShapeTestRecord[]
+  /**
+   * In-progress New athlete · shape test. Finish later parks here so the
+   * next rotation can continue without losing pictures-test answers.
+   */
+  shapeTestPark?: import('./lib/shapeTestPark').ShapeTestPark
 }
 
 export type FavoriteColor =

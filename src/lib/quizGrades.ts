@@ -1,6 +1,7 @@
 import type { Athlete, ShapeTestRecord } from '../types'
 import type { QuizFormat, QuizPool } from './shapeQuiz'
 import { createId } from './storage'
+import { clearGuestPark } from './shapeTestPark'
 
 const GUEST_KEY = 'shape-lab.guest-quiz-grades.v1'
 
@@ -24,6 +25,7 @@ export function appendShapeTest(athlete: Athlete, record: ShapeTestRecord): Athl
   return {
     ...athlete,
     shapeTests: mergeShapeTests(athlete.shapeTests, [record]),
+    shapeTestPark: undefined,
   }
 }
 
@@ -86,6 +88,7 @@ export function rememberGuestGrade(first: string, last: string, record: ShapeTes
   const map = loadGuestMap()
   map[key] = mergeShapeTests(map[key], [record])
   saveGuestMap(map)
+  clearGuestPark(first, last)
 }
 
 export function peekGuestGrades(first: string, last: string): ShapeTestRecord[] {

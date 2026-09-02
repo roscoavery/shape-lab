@@ -19,18 +19,45 @@ type Props = {
   photos: ReferencePhoto[]
   onSave: (next: Athlete) => void
   onDone: (next: Athlete) => void
+  onPark?: (next: Athlete) => void
 }
 
-export function PreTestIntake({ athlete, athletes, photos, onSave, onDone }: Props) {
+export function PreTestIntake({ athlete, athletes, photos, onSave, onDone, onPark }: Props) {
   const pending = pendingIntake(athlete)
   const [index, setIndex] = useState(0)
   const [phone, setPhone] = useState(athlete.parentPhone || '')
   const q = pending[index]
 
+  const parkNow = (from: Athlete = athlete) => {
+    let next = from
+    if (q?.kind === 'skip-phone' && phone.trim()) {
+      next = applyIntakeField(from, 'parentPhone', phone.trim())
+      next = upsertIntakeAnswer(next, {
+        questionId: q.id,
+        prompt: q.prompt,
+        answer: phone.trim(),
+        askedAt: new Date().toISOString(),
+      })
+      onSave(next)
+    }
+    onPark?.(next)
+  }
+
   if (!q) {
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="text-xl font-semibold">Ready for the shape test</h3>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <h3 className="text-xl font-semibold">Ready for the shape test</h3>
+          {onPark && (
+            <button
+              type="button"
+              onClick={() => parkNow(athlete)}
+              className="shrink-0 rounded-lg border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
+            >
+              Finish later
+            </button>
+          )}
+        </div>
         <p className="mt-2 text-sm text-[var(--muted)]">Pictures first — name what you see.</p>
         <button
           type="button"
@@ -85,9 +112,20 @@ export function PreTestIntake({ athlete, athletes, photos, onSave, onDone }: Pro
 
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-        Before the test · {index + 1} / {pending.length}
-      </p>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+          Before the test · {index + 1} / {pending.length}
+        </p>
+        {onPark && (
+          <button
+            type="button"
+            onClick={() => parkNow()}
+            className="shrink-0 rounded-lg border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
+          >
+            Finish later
+          </button>
+        )}
+      </div>
       <h3 className="mt-1 text-xl font-semibold">{q.prompt}</h3>
       {q.stillShapeId && (
         <div className="mt-4 overflow-hidden rounded-xl bg-[#0d1218]">
