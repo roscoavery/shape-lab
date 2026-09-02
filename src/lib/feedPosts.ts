@@ -55,14 +55,24 @@ export function profilePasses(posts: FeedPost[], profileId: string): FeedPost[] 
   return profileSharedPosts(posts, profileId).filter((p) => isPassPost(p))
 }
 
+let feedCache: FeedPost[] | null = null
+
+function rememberFeedPost(post: FeedPost | null) {
+  if (!post) return
+  const prev = feedCache ?? []
+  feedCache = [post, ...prev.filter((row) => row.id !== post.id)]
+}
+
 export async function listFeedPosts(): Promise<FeedPost[]> {
   try {
     const res = await fetch('/api/feed')
-    if (!res.ok) return []
+    if (!res.ok) return feedCache ?? []
     const data = (await res.json()) as { posts?: FeedPost[] }
-    return Array.isArray(data.posts) ? data.posts : []
+    const posts = Array.isArray(data.posts) ? data.posts : []
+    feedCache = posts
+    return posts
   } catch {
-    return []
+    return feedCache ?? []
   }
 }
 
@@ -79,7 +89,11 @@ async function readFeedResponse(res: Response): Promise<PublishResult> {
   if (!res.ok) {
     return { post: null, error: data && 'error' in data && data.error ? data.error : 'Could not post that.' }
   }
-  if (data && 'id' in data && data.id) return { post: data as FeedPost, error: null }
+  if (data && 'id' in data && data.id) {
+    const post = data as FeedPost
+    rememberFeedPost(post)
+    return { post, error: null }
+  }
   return { post: null, error: 'Could not post that.' }
 }
 
@@ -153,7 +167,9 @@ export async function publishCollagePost(params: {
       }),
     })
     if (!res.ok) return null
-    return (await res.json()) as FeedPost
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
   } catch {
     return null
   }
@@ -211,7 +227,9 @@ export async function toggleFeedHi5(postId: string, actorId: string): Promise<Fe
       body: JSON.stringify({ kind: 'hi5', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
-    return (await res.json()) as FeedPost
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
   } catch {
     return null
   }
@@ -225,7 +243,9 @@ export async function toggleFeedRepost(postId: string, actorId: string): Promise
       body: JSON.stringify({ kind: 'repost', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
-    return (await res.json()) as FeedPost
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
   } catch {
     return null
   }
@@ -239,7 +259,9 @@ export async function toggleFeedLike(postId: string, actorId: string): Promise<F
       body: JSON.stringify({ kind: 'like', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
-    return (await res.json()) as FeedPost
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
   } catch {
     return null
   }

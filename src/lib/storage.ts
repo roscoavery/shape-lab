@@ -49,6 +49,13 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+/** Last roster applied from the gym link — used if this phone cannot store the full JSON. */
+let memoryAthletes: Athlete[] | null = null
+
+function athletesWithoutPhotos(athletes: Athlete[]): Athlete[] {
+  return athletes.map(({ photoDataUrl: _photo, ...rest }) => rest)
+}
+
 function pushRosterSoon() {
   void import('./rosterSync')
     .then((m) => m.pushServerRoster())
@@ -56,11 +63,22 @@ function pushRosterSoon() {
 }
 
 export function loadAthletes(): Athlete[] {
-  return readJson<Athlete[]>(ATHLETES_KEY, [])
+  const stored = readJson<Athlete[]>(ATHLETES_KEY, [])
+  if (stored.length > 0) return stored
+  return memoryAthletes ?? []
 }
 
 export function saveAthletes(athletes: Athlete[]) {
-  writeJson(ATHLETES_KEY, athletes)
+  memoryAthletes = athletes
+  try {
+    writeJson(ATHLETES_KEY, athletes)
+  } catch {
+    try {
+      writeJson(ATHLETES_KEY, athletesWithoutPhotos(athletes))
+    } catch {
+      /* keep the in-memory roster so this tab still shows every profile */
+    }
+  }
 }
 
 export function loadRemovedAthleteIds(): string[] {

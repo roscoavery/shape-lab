@@ -102,6 +102,8 @@ Use **Create Deployment** (or Redeploy) on the **same Vercel project** that alre
 
 That replaces the app on the existing address. It does **not** mint a new `*.vercel.app` hostname. A new link only appears if you create a new project or run `vercel deploy --temporary`.
 
+Open **that exact Production URL** on every phone. Preview, Cloudflare tunnels, and `localhost` each have their own empty store — they will not show the gym that already lives on `temporary-racing-sulfur-78x9doy.vercel.app`. The app now waits for the gym file before showing Profiles; if the file cannot load it says so instead of looking like only Ryan exists.
+
 On the **same Production URL**, with Blob connected, every device shares:
 
 - New athlete profiles and later edits (name, gyms, laterality, photos, coach notes)

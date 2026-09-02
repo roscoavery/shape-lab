@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
+import { GymBootScreen } from './components/GymBootScreen'
 import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
@@ -84,7 +85,8 @@ import {
   saveTab,
   type AppTab,
 } from './lib/storage'
-import { localRosterSnapshot, pushServerRoster, syncRosterWithServer, isServerRosterPushEnabled } from './lib/rosterSync'
+import { hydrateGymAtBoot, localHasGymRoster, type PersistInfo } from './lib/gymHydrate'
+import { localRosterSnapshot, pushServerRoster, isServerRosterPushEnabled } from './lib/rosterSync'
 import {
   getLessonPlan,
   getLessonSession,
@@ -184,6 +186,10 @@ export default function App() {
   const skipNextRef = useRef<(() => void) | null>(null)
   const [athleteGate, setAthleteGate] = useState<Athlete | null>(null)
   const [lessonTick, setLessonTick] = useState(0)
+  const [gymBoot, setGymBoot] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [gymBootError, setGymBootError] = useState<string | null>(null)
+  const [gymPersist, setGymPersist] = useState<PersistInfo | null>(null)
+  const [gymBootTick, setGymBootTick] = useState(0)
 
   useEffect(() => {
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
@@ -289,38 +295,54 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    let retries = 0
-    const run = () =>
-      syncRosterWithServer().then(async (synced) => {
+    const applyRoster = async (synced: {
+      athletes: Athlete[]
+      fromServer: boolean
+    }) => {
+      const raw =
+        synced.athletes.length > 0
+          ? ensureRyanInAthletes(synced.athletes)
+          : ensureRyanInAthletes(loadAthletes())
+      const next = await withRyanPasscode(raw)
+      if (cancelled) return next
+      rosterReadyRef.current = synced.fromServer && isServerRosterPushEnabled()
+      setAthletes(next)
+      const unlocked = unlockedProfileId()
+      if (unlocked && next.some((a) => a.id === unlocked)) {
+        setActiveAthleteId(unlocked)
+      } else {
+        setActiveAthleteId(null)
+        setAthleteGate(null)
+      }
+      return next
+    }
+    const run = async () => {
+      setGymBoot('loading')
+      setGymBootError(null)
+      for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
+        const synced = await hydrateGymAtBoot()
         if (cancelled) return
-        const raw =
-          synced.athletes.length > 0
-            ? ensureRyanInAthletes(synced.athletes)
-            : ensureRyanInAthletes(loadAthletes())
-        const next = await withRyanPasscode(raw)
-        if (cancelled) return
-        // Only mark ready after GET succeeded. Otherwise a Ryan-only tab would PUT and wipe the gym.
-        rosterReadyRef.current = isServerRosterPushEnabled()
-        setAthletes(next)
-        const unlocked = unlockedProfileId()
-        if (unlocked && next.some((a) => a.id === unlocked)) {
-          setActiveAthleteId(unlocked)
-        } else {
-          setActiveAthleteId(null)
-          setAthleteGate(null)
+        setGymPersist(synced.persist)
+        await applyRoster(synced)
+        if (synced.fromServer) {
+          setGymBoot('ready')
+          return
         }
-        if (!isServerRosterPushEnabled() && !cancelled && retries < 12) {
-          retries += 1
-          window.setTimeout(() => {
-            if (!cancelled) void run()
-          }, 2500)
+        if (localHasGymRoster()) {
+          setGymBoot('ready')
+          return
         }
-      })
+        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+      }
+      if (cancelled) return
+      setGymBootError('Could not load the gym file from this URL.')
+      setGymBoot('error')
+    }
     void run()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [gymBootTick])
 
   useEffect(() => {
     saveSettings(settings)
@@ -548,6 +570,20 @@ export default function App() {
   const homeworkAthlete = athletes.find((a) => a.id === homeworkAthleteId) ?? null
   const personalCompare =
     Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
+
+  if (gymBoot !== 'ready') {
+    return (
+      <GymBootScreen
+        phase={gymBoot === 'error' ? 'error' : 'loading'}
+        error={gymBootError}
+        persist={gymPersist}
+        onRetry={gymBoot === 'error' ? () => setGymBootTick((n) => n + 1) : undefined}
+        onContinueLocal={
+          gymBoot === 'error' ? () => setGymBoot('ready') : undefined
+        }
+      />
+    )
+  }
 
   return (
     <OverlayStillProvider>

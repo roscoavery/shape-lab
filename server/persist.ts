@@ -109,7 +109,16 @@ export async function readText(rel: string): Promise<string | null> {
   return null
 }
 
+function assertDurableWrite(): void {
+  if (persistMode() === 'tmp' && process.env.VERCEL) {
+    throw new Error(
+      'Gym data cannot persist on this Vercel project without a Blob store. Connect Storage → Blob and redeploy Production on the same URL.',
+    )
+  }
+}
+
 export async function writeText(rel: string, text: string): Promise<void> {
+  assertDurableWrite()
   const buf = Buffer.from(text, 'utf8')
   mem.set(rel, buf)
   if (useBlob()) {
@@ -162,6 +171,7 @@ export async function readBin(rel: string): Promise<Buffer | null> {
 }
 
 export async function writeBin(rel: string, buf: Buffer, contentType: string): Promise<void> {
+  assertDurableWrite()
   mem.set(rel, buf)
   if (useBlob()) {
     await writeBlob(rel, buf, contentType)

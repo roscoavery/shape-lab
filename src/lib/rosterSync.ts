@@ -26,7 +26,7 @@ import {
   rosterListsFromUnknown,
   type RosterLists,
 } from '../../server/rosterMerge.ts'
-import { ensureRyanInAthletes } from './ryanProfile'
+import { ensureRyanInAthletes, isRyanAthlete } from './ryanProfile'
 import {
   loadActiveAthleteId,
   loadAllHomework,
@@ -133,34 +133,42 @@ export function localRosterSnapshot(): RosterBackup {
   }
 }
 
+function trySave(write: () => void) {
+  try {
+    write()
+  } catch {
+    /* quota — in-memory roster still applied */
+  }
+}
+
 function persistLists(lists: RosterLists): Athlete[] {
   const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord))
   saveAthletes(athletes)
-  saveRemovedAthleteIds(lists.removedAthleteIds)
-  saveDismissedHomeworkKeys(lists.dismissedHomeworkKeys)
-  saveInjuryLogs(lists.injuryLogs as InjuryEntry[])
-  savePainJournal(lists.painJournals as PainJournalEntry[])
-  saveCoachExercises(lists.coachExercises as CoachExercise[])
-  saveAllHomework(lists.homework as HomeworkItem[])
-  try {
+  trySave(() => saveRemovedAthleteIds(lists.removedAthleteIds))
+  trySave(() => saveDismissedHomeworkKeys(lists.dismissedHomeworkKeys))
+  trySave(() => saveInjuryLogs(lists.injuryLogs as InjuryEntry[]))
+  trySave(() => savePainJournal(lists.painJournals as PainJournalEntry[]))
+  trySave(() => saveCoachExercises(lists.coachExercises as CoachExercise[]))
+  trySave(() => saveAllHomework(lists.homework as HomeworkItem[]))
+  trySave(() => {
     localStorage.setItem(
       'shape-lab.homeworkLogs.v1',
       JSON.stringify(lists.homeworkLogs.slice(0, 1000)),
     )
-  } catch {
-    /* quota */
-  }
-  saveAllTaskProgress(lists.taskProgress as Record<string, AthleteTaskProgress>)
+  })
+  trySave(() => saveAllTaskProgress(lists.taskProgress as Record<string, AthleteTaskProgress>))
   for (const p of Object.values(lists.flowProgress)) {
     if (p && typeof p === 'object' && 'athleteId' in (p as object)) {
-      saveFlowProgress(p as FlowProgress)
+      trySave(() => saveFlowProgress(p as FlowProgress))
     }
   }
   if (lists.attempts.length > 0) {
-    saveAttempts(
-      (lists.attempts as AttemptRecord[])
-        .filter((a) => a && typeof a.id === 'string')
-        .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || '')),
+    trySave(() =>
+      saveAttempts(
+        (lists.attempts as AttemptRecord[])
+          .filter((a) => a && typeof a.id === 'string')
+          .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || '')),
+      ),
     )
   }
   const mergedLibs: CompareLibraries = { ...loadCompareLibraries() }
@@ -168,15 +176,25 @@ function persistLists(lists: RosterLists): Athlete[] {
     if (!id || !Array.isArray(cols)) continue
     mergedLibs[id] = cols as RefCollection[]
   }
-  saveCompareLibraries(mergedLibs)
+  trySave(() => saveCompareLibraries(mergedLibs))
   return athletes
+}
+
+/** True when this browser already has gym profiles besides the Ryan stub. */
+export function localHasGymRoster(): boolean {
+  return loadAthletes().some((a) => !isRyanAthlete(a))
 }
 
 export function applyRosterSnapshot(data: RosterBackup): {
   athletes: Athlete[]
   activeAthleteId: string | null
 } {
-  const merged = mergeRosterLists(listsFromLocal(), rosterListsFromUnknown(data))
+  const remote = rosterListsFromUnknown(data)
+  // A new phone is Ryan-only. Take the gym file as-is so empty localStorage
+  // cannot dilute profiles, notes, or homework that already live on the link.
+  const merged = localHasGymRoster()
+    ? mergeRosterLists(listsFromLocal(), remote)
+    : remote
   const athletes = persistLists(merged)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('shape-lab-roster-applied'))
@@ -214,21 +232,27 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
   }
 }
 
-export async function syncRosterWithServer(): Promise<{
+export type RosterSyncResult = {
   athletes: Athlete[]
   activeAthleteId: string | null
-}> {
+  fromServer: boolean
+  error: string | null
+}
+
+export async function syncRosterWithServer(): Promise<RosterSyncResult> {
   const server = await pullServerRoster()
   if (!server) {
     // GET failed. Do not PUT — that is how a Ryan-only tab wiped the gym.
     return {
       athletes: ensureRyanInAthletes(loadAthletes()),
       activeAthleteId: loadActiveAthleteId(),
+      fromServer: false,
+      error: 'Could not load the gym file from this URL.',
     }
   }
   const applied = applyRosterSnapshot(server)
   enableServerRosterPush()
   const merged = localRosterSnapshot()
-  if (merged.athletes.length > 0) await pushServerRoster(merged)
-  return applied
+  if (merged.athletes.some((a) => !isRyanAthlete(a))) await pushServerRoster(merged)
+  return { ...applied, fromServer: true, error: null }
 }

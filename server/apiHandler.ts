@@ -193,9 +193,18 @@ export async function handleShapeLabApi(
       return true
     }
     if (req.method === 'PUT') {
-      const body = await readRequestBody(req)
-      const saved = await writeRosterFile(JSON.parse(body))
-      sendJson(res, 200, saved)
+      try {
+        const body = await readRequestBody(req)
+        const saved = await writeRosterFile(JSON.parse(body))
+        sendJson(res, 200, saved)
+      } catch (err) {
+        sendJson(res, 503, {
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Could not save the gym file on this link.',
+        })
+      }
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

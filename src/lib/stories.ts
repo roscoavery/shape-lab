@@ -28,17 +28,21 @@ export type StoriesFile = {
   highlights: StoryHighlight[]
 }
 
+let storiesCache: StoriesFile | null = null
+
 export async function loadStories(): Promise<StoriesFile> {
   try {
     const res = await fetch('/api/stories')
-    if (!res.ok) return { stories: [], highlights: [] }
+    if (!res.ok) return storiesCache ?? { stories: [], highlights: [] }
     const data = (await res.json()) as StoriesFile
-    return {
+    const next: StoriesFile = {
       stories: Array.isArray(data.stories) ? data.stories : [],
       highlights: Array.isArray(data.highlights) ? data.highlights : [],
     }
+    storiesCache = next
+    return next
   } catch {
-    return { stories: [], highlights: [] }
+    return storiesCache ?? { stories: [], highlights: [] }
   }
 }
 

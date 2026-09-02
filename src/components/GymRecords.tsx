@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../types'
 import { athleteContact } from '../lib/gymBackup'
-import { enableServerRosterPush, localRosterSnapshot, pushServerRoster } from '../lib/rosterSync'
+import {
+  enableServerRosterPush,
+  isServerRosterPushEnabled,
+  localRosterSnapshot,
+  pushServerRoster,
+} from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import { roleLabel } from '../lib/profileRole'
 import { AthleteAvatar } from './AthleteAvatar'
@@ -32,7 +37,9 @@ export function GymRecords({ athletes }: Props) {
 
   useEffect(() => {
     if (athletes.length === 0) return
-    enableServerRosterPush()
+    // Only push after a successful GET. Enabling push from a Ryan-only phone
+    // used to look like “saved” while the gym file never loaded.
+    if (!isServerRosterPushEnabled()) return
     void pushServerRoster(localRosterSnapshot()).catch(() => {})
   }, [athletes.length])
 
