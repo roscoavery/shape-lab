@@ -206,6 +206,12 @@ export type Athlete = {
    */
   worksWithCoachIds?: string[]
   /**
+   * When true or missing, the profile shows who they work with.
+   * False keeps that list off the public page. Listed coaches still
+   * see homework.
+   */
+  showCoachesOnProfile?: boolean
+  /**
    * Asked when a coach or parent makes a profile. Opens the back-care
    * homework path (journal, glute bridges, back extensions).
    */
@@ -571,6 +577,8 @@ export type HomeworkLog = {
   kind?: 'hold' | 'sequence' | 'reps' | 'set' | 'journal'
   /** Sequence completions, or counted reps for a strength drill. */
   reps?: number
+  /** How many sets this log covers (reps are per set). */
+  sets?: number
   /** Reps the athlete counted as quality (form they would show a coach). */
   qualityReps?: number
   grip?: string

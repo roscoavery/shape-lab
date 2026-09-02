@@ -69,6 +69,7 @@ export function AthletePanel({
   const [newGym, setNewGym] = useState('')
   const [newLinkedIds, setNewLinkedIds] = useState<string[]>([])
   const [newCoachIds, setNewCoachIds] = useState<string[]>([])
+  const [newShowCoaches, setNewShowCoaches] = useState(true)
   const [newBackPain, setNewBackPain] = useState<boolean | null>(null)
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
@@ -152,7 +153,7 @@ export function AthletePanel({
       passcodeHash,
       role,
       ...(role === 'athlete' && newCoachIds.length > 0
-        ? { worksWithCoachIds: newCoachIds }
+        ? { worksWithCoachIds: newCoachIds, showCoachesOnProfile: newShowCoaches }
         : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
       shapeTests: takeGuestGrades(firstName, lastName),
@@ -175,6 +176,7 @@ export function AthletePanel({
     setNewGym('')
     setNewLinkedIds([])
     setNewCoachIds([])
+    setNewShowCoaches(true)
     setPasscode('')
     setPasscodeAgain('')
     setNewRole('athlete')
@@ -466,6 +468,8 @@ export function AthletePanel({
             athletes={athletes}
             selected={newCoachIds}
             onChange={setNewCoachIds}
+            showOnProfile={newShowCoaches}
+            onShowOnProfile={setNewShowCoaches}
           />
         )}
         {newRole === 'parent' && (
@@ -610,6 +614,14 @@ export function AthletePanel({
                 onChangeAthletes(
                   athletes.map((a) =>
                     a.id === active.id ? { ...a, worksWithCoachIds } : a,
+                  ),
+                )
+              }
+              showOnProfile={active.showCoachesOnProfile !== false}
+              onShowOnProfile={(showCoachesOnProfile) =>
+                onChangeAthletes(
+                  athletes.map((a) =>
+                    a.id === active.id ? { ...a, showCoachesOnProfile } : a,
                   ),
                 )
               }

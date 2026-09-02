@@ -113,12 +113,17 @@ export function logClassRepsForAthletes(opts: {
   athleteIds: string[]
   catalogId: string
   reps: number
+  sets?: number
   label: string
   className?: string
   meetingId?: string
 }): number {
   let n = 0
-  const sourceLabel = classLabel(opts.label, opts.className)
+  const sets = opts.sets && opts.sets > 1 ? opts.sets : undefined
+  const sourceLabel = classLabel(
+    sets ? `${opts.label} · ${sets}×${opts.reps}` : opts.label,
+    opts.className,
+  )
   for (const athleteId of opts.athleteIds) {
     const hw = ensureCatalogHomework(athleteId, opts.catalogId)
     if (!hw) continue
@@ -132,6 +137,7 @@ export function logClassRepsForAthletes(opts: {
       kind: 'reps',
       totalHoldSeconds: 0,
       reps: opts.reps,
+      ...(sets ? { sets } : {}),
       score: 0,
       loggedFrom: 'class',
       sourceLabel,
@@ -202,6 +208,7 @@ export function logClassExtraForAthletes(opts: {
   extra: ClassExtraExercise
   seconds?: number
   reps?: number
+  sets?: number
   className?: string
   meetingId?: string
 }): number {
@@ -209,9 +216,12 @@ export function logClassExtraForAthletes(opts: {
   const hold = opts.extra.trackMode === 'hold'
   const amount = hold ? opts.seconds : opts.reps
   if (!Number.isFinite(amount) || (amount ?? 0) <= 0) return 0
+  const sets = opts.sets && opts.sets > 1 ? opts.sets : undefined
   const detail = hold
     ? opts.extra.label
-    : `${opts.extra.label} · ${opts.reps} reps`
+    : sets
+      ? `${opts.extra.label} · ${sets}×${opts.reps}`
+      : `${opts.extra.label} · ${opts.reps} reps`
   const sourceLabel = classLabel(detail, opts.className)
   for (const athleteId of opts.athleteIds) {
     const hw = ensureExtraHomework(athleteId, opts.extra)
@@ -225,7 +235,7 @@ export function logClassExtraForAthletes(opts: {
       method: 'manual',
       kind: hold ? 'hold' : 'reps',
       totalHoldSeconds: hold ? Number((opts.seconds ?? 0).toFixed(2)) : 0,
-      ...(hold ? {} : { reps: opts.reps }),
+      ...(hold ? {} : { reps: opts.reps, ...(sets ? { sets } : {}) }),
       score: 0,
       loggedFrom: 'class',
       sourceLabel,

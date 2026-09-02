@@ -79,6 +79,7 @@ export function logLessonRepsOnAthleteHomework(args: {
   lessonId: string
   extra: ClassExtraExercise
   reps: number
+  sets?: number
 }): HomeworkLog | null {
   if (!args.athleteId || args.reps <= 0) return null
   const items = ensureAutoHomework(args.athleteId)
@@ -125,13 +126,17 @@ export function logLessonRepsOnAthleteHomework(args: {
     kind: 'reps',
     totalHoldSeconds: 0,
     reps: args.reps,
+    ...(args.sets && args.sets > 1 ? { sets: args.sets } : {}),
     score: 0,
     loggedFrom: 'lesson',
     lessonId: args.lessonId,
     coachId: args.coachId,
     coachName: args.coachName,
     trackMode: 'reps',
-    sourceLabel: `Lesson · ${args.extra.label}`,
+    sourceLabel:
+      args.sets && args.sets > 1
+        ? `Lesson · ${args.extra.label} · ${args.sets}×${args.reps}`
+        : `Lesson · ${args.extra.label}`,
   }
   addHomeworkLog(log)
   return log

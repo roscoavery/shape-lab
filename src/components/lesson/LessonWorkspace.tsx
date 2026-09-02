@@ -3,7 +3,7 @@ import { getShape } from '../../config/shapes'
 import { formatSeconds, useHoldTimer } from '../../hooks/useHoldTimer'
 import { homeworkLooksReady } from '../../lib/homeworkPose'
 import { logLessonHoldOnAthleteHomework, logLessonRepsOnAthleteHomework } from '../../lib/lessonHomework'
-import { mergeExtras } from '../../lib/classExercises'
+import { makeClassExtra, mergeExtras } from '../../lib/classExercises'
 import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
 import {
   addLessonHold,
@@ -172,6 +172,9 @@ export function LessonWorkspace({
 
   const [repCounts, setRepCounts] = useState<Record<string, string>>({})
   const [repFlash, setRepFlash] = useState<string | null>(null)
+  const [otherName, setOtherName] = useState('')
+  const [otherReps, setOtherReps] = useState('')
+  const [otherSets, setOtherSets] = useState('1')
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()
     const offering = meeting ? getOffering(meeting.offeringId) : null
@@ -386,9 +389,8 @@ export function LessonWorkspace({
             Log this time
           </button>
         </div>
-        {extraReps.length > 0 && (
-          <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
-            <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps</p>
+        <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
+            <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps / sets</p>
             {repFlash && (
               <p className="mt-1 text-sm font-semibold text-[var(--accent)]">{repFlash}</p>
             )}
@@ -436,9 +438,69 @@ export function LessonWorkspace({
                   </button>
                 </li>
               ))}
+              <li className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-2">
+                <input
+                  className="h-10 min-w-[8rem] flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+                  placeholder="Other exercise"
+                  value={otherName}
+                  onChange={(e) => setOtherName(e.target.value)}
+                />
+                <input
+                  inputMode="numeric"
+                  value={otherSets}
+                  onChange={(e) => setOtherSets(e.target.value)}
+                  placeholder="Sets"
+                  className="h-10 w-16 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+                />
+                <input
+                  inputMode="numeric"
+                  value={otherReps}
+                  onChange={(e) => setOtherReps(e.target.value)}
+                  placeholder="Reps"
+                  className="h-10 w-16 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+                />
+                <button
+                  type="button"
+                  className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-xs font-semibold text-white"
+                  onClick={() => {
+                    const label = otherName.trim()
+                    const n = Number(otherReps)
+                    if (!label) {
+                      setRepFlash('Type the exercise they just did.')
+                      return
+                    }
+                    if (!Number.isFinite(n) || n <= 0) {
+                      setRepFlash(`Type how many ${label} they did.`)
+                      return
+                    }
+                    const extra = makeClassExtra({ kind: 'custom', label, trackMode: 'reps' })
+                    if (!extra) return
+                    const nSets = Number(otherSets)
+                    let logged = 0
+                    for (const id of peopleIds) {
+                      const row = logLessonRepsOnAthleteHomework({
+                        athleteId: id,
+                        coachId: session.coachId,
+                        coachName,
+                        lessonId: session.id,
+                        extra,
+                        reps: n,
+                        sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
+                      })
+                      if (row) logged += 1
+                    }
+                    setTick((t) => t + 1)
+                    setOtherName('')
+                    setRepFlash(
+                      `Logged ${Number(otherSets) > 1 ? `${otherSets}×` : ''}${n} ${label} for ${logged} athlete${logged === 1 ? '' : 's'}.`,
+                    )
+                  }}
+                >
+                  Log other
+                </button>
+              </li>
             </ul>
           </div>
-        )}
         {!holdTopic.label.trim() && (
           <p className="mt-2 text-xs text-[var(--muted)]">Select or type the skill before you log.</p>
         )}

@@ -16,11 +16,12 @@ import {
   logClassSkillForAthlete,
 } from '../../lib/classSessionLog'
 import type { ClassExtraExercise } from '../../types'
+import { makeClassExtra } from '../../lib/classExercises'
 import { publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
-type Mode = 'hold' | 'vups' | 'skill' | `extra:${string}`
+type Mode = 'hold' | 'vups' | 'skill' | 'other' | `extra:${string}`
 
 type HoldId = (typeof CLASS_HOLD_DRILLS)[number]['id']
 
@@ -76,6 +77,9 @@ export function ClassStopwatch({
   const [offer, setOffer] = useState<number | null>(null)
   const [manual, setManual] = useState('')
   const [reps, setReps] = useState('10')
+  const [sets, setSets] = useState('1')
+  const [otherName, setOtherName] = useState('')
+  const [otherKind, setOtherKind] = useState<'hold' | 'reps'>('reps')
   const [skillAthleteId, setSkillAthleteId] = useState(pool[0]?.id ?? '')
   const [skillText, setSkillText] = useState('')
   const [postWins, setPostWins] = useState(true)
@@ -184,14 +188,67 @@ export function ClassStopwatch({
       setFlash('Pick at least one athlete.')
       return
     }
+    const nSets = Number(sets)
     const n = logClassExtraForAthletes({
       athleteIds: selected,
       extra,
       reps: nReps,
+      sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
       className,
       meetingId: meeting?.id,
     })
-    setFlash(`Logged ${nReps} ${extra.label} for ${n} athlete${n === 1 ? '' : 's'}.`)
+    setFlash(
+      `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${extra.label} for ${n} athlete${n === 1 ? '' : 's'}.`,
+    )
+  }
+
+  const logOther = () => {
+    const label = otherName.trim()
+    if (!label) {
+      setFlash('Type the exercise they just did.')
+      return
+    }
+    if (selected.length === 0) {
+      setFlash('Pick at least one athlete.')
+      return
+    }
+    const extra = makeClassExtra({ kind: 'custom', label, trackMode: otherKind })
+    if (!extra) return
+    if (otherKind === 'hold') {
+      const secs = Number(manual || offer)
+      if (!Number.isFinite(secs) || secs <= 0) {
+        setFlash('Type the seconds, or start and stop the clock on Core holds first.')
+        return
+      }
+      const n = logClassExtraForAthletes({
+        athleteIds: selected,
+        extra,
+        seconds: secs,
+        className,
+        meetingId: meeting?.id,
+      })
+      reset()
+      setFlash(`Logged ${label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
+      return
+    }
+    const nReps = Number(reps)
+    const nSets = Number(sets)
+    if (!Number.isFinite(nReps) || nReps <= 0) {
+      setFlash(`Enter how many ${label} they did.`)
+      return
+    }
+    const n = logClassExtraForAthletes({
+      athleteIds: selected,
+      extra,
+      reps: nReps,
+      sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
+      className,
+      meetingId: meeting?.id,
+    })
+    setOtherName('')
+    setFlash(
+      `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
+    )
   }
 
   const logVups = () => {
@@ -204,9 +261,11 @@ export function ClassStopwatch({
       setFlash('Pick at least one athlete.')
       return
     }
+    const nSets = Number(sets)
     const n = logClassRepsForAthletes({
       athleteIds: selected,
       catalogId: 'v_up',
+      sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
       reps: nReps,
       label: `V-ups · ${nReps} reps`,
       className,
@@ -263,6 +322,7 @@ export function ClassStopwatch({
             ['hold', 'Core holds'],
             ['vups', 'V-ups'],
             ['skill', 'New skill / win'],
+            ['other', 'Other'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -448,17 +508,30 @@ export function ClassStopwatch({
             <p className="text-sm text-white/60">
               {extra.label} counts change by class. Type how many this group just did.
             </p>
-            <label className="block text-sm">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                Reps
-              </span>
-              <input
-                inputMode="numeric"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
-              />
-            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Sets
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={sets}
+                  onChange={(e) => setSets(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Reps / set
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+            </div>
             <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
             <button
               type="button"
@@ -471,14 +544,107 @@ export function ClassStopwatch({
         )
       })()}
 
+      {mode === 'other' && (
+        <>
+          <p className="text-sm text-white/60">
+            Type what they just did if it is not on the clock. Log a hold or a
+            set — it lands on their homework as in class.
+          </p>
+          <input
+            className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
+            placeholder="Bear crawls, 10 push-ups, candlestick…"
+            value={otherName}
+            onChange={(e) => setOtherName(e.target.value)}
+          />
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOtherKind('hold')}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                otherKind === 'hold' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+              }`}
+            >
+              Hold time
+            </button>
+            <button
+              type="button"
+              onClick={() => setOtherKind('reps')}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                otherKind === 'reps' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+              }`}
+            >
+              Reps / sets
+            </button>
+          </div>
+          {otherKind === 'hold' ? (
+            <label className="block text-sm">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                Seconds
+              </span>
+              <input
+                inputMode="decimal"
+                value={manual}
+                onChange={(e) => setManual(e.target.value)}
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+              />
+            </label>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Sets
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={sets}
+                  onChange={(e) => setSets(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Reps / set
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+            </div>
+          )}
+          <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+          <button
+            type="button"
+            onClick={logOther}
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+          >
+            Log {otherName.trim() || 'other'} for selected
+          </button>
+        </>
+      )}
+
       {mode === 'vups' && (
         <>
           <p className="text-sm text-white/60">
             V-up counts change by class. Type the number this group just did.
           </p>
+          <div className="grid grid-cols-2 gap-2">
           <label className="block text-sm">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
-              Reps
+              Sets
+            </span>
+            <input
+              inputMode="numeric"
+              value={sets}
+              onChange={(e) => setSets(e.target.value)}
+              className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+              Reps / set
             </span>
             <input
               inputMode="numeric"
@@ -487,6 +653,7 @@ export function ClassStopwatch({
               className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
             />
           </label>
+          </div>
           <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
           <button
             type="button"

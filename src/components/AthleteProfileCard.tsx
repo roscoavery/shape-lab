@@ -34,7 +34,12 @@ import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
 import { CoachAthleteActivity } from './CoachAthleteActivity'
-import { canSeePrivateCoaching, coachesLabel, coachesOf } from '../lib/coachLink'
+import {
+  canSeePrivateCoaching,
+  coachesLabel,
+  coachesOf,
+  showsCoachesOnProfile,
+} from '../lib/coachLink'
 import {
   loadStories,
   markStoriesSeen,
@@ -222,9 +227,12 @@ export function AthleteProfileCard({
           ))}
         </div>
       )}
-      {theirCoaches.length > 0 && isAthleteProfile(athlete) && (
+      {theirCoaches.length > 0 &&
+        isAthleteProfile(athlete) &&
+        (showsCoachesOnProfile(athlete) || own || privateOk) && (
         <p className="text-xs text-[var(--muted)]">
-          Coaches: {coachesLabel(athlete, athletes)}
+          Coaches{!showsCoachesOnProfile(athlete) && own ? ' (only you and them see this)' : ''}:{' '}
+          {coachesLabel(athlete, athletes)}
         </p>
       )}
       {parentsOf(athlete.id, athletes).length > 0 && (

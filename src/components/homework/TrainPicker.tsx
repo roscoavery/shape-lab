@@ -15,6 +15,7 @@ type Props = {
   other: HomeworkItem[]
   onPick: (item: HomeworkItem) => void
   onAddHomework?: () => void
+  onOther?: () => void
 }
 
 function Card({
@@ -57,7 +58,15 @@ function Card({
   )
 }
 
-export function TrainPicker({ assigned, core, strength, other, onPick, onAddHomework }: Props) {
+export function TrainPicker({
+  assigned,
+  core,
+  strength,
+  other,
+  onPick,
+  onAddHomework,
+  onOther,
+}: Props) {
   const groups: Group[] = [
     {
       title: 'Coach assigned',
@@ -106,14 +115,35 @@ export function TrainPicker({ assigned, core, strength, other, onPick, onAddHome
               <Card key={item.id} item={item} onPick={onPick} />
             ))}
           </div>
-          {group.title === 'Core drills' && onAddHomework ? (
-            <button
-              type="button"
-              onClick={onAddHomework}
-              className="mt-1 text-left text-sm font-semibold text-[var(--accent)] underline"
-            >
-              Want something else? Add homework — other exercises
-            </button>
+          {group.title === 'Core drills' && (onOther || onAddHomework) ? (
+            <div className="mt-1 flex flex-col gap-1">
+              {onOther && (
+                <button
+                  type="button"
+                  onClick={onOther}
+                  className="rounded-xl border border-dashed border-[var(--accent)]/40 bg-[#102820] px-3 py-3 text-left"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    Other
+                  </span>
+                  <span className="mt-0.5 block text-base font-semibold text-[var(--text)]">
+                    Type or pick another exercise
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                    Log a hold or a set for something that is not on this list.
+                  </span>
+                </button>
+              )}
+              {onAddHomework && (
+                <button
+                  type="button"
+                  onClick={onAddHomework}
+                  className="text-left text-sm font-semibold text-[var(--accent)] underline"
+                >
+                  Want it on your list? Add homework
+                </button>
+              )}
+            </div>
           ) : null}
         </section>
       ))}

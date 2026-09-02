@@ -116,6 +116,22 @@ export function buildHomeworkItem(
   }
 }
 
+/** Find an existing homework card or add one from a pick. */
+export function ensureHomeworkForPick(
+  athleteId: string,
+  pick: HomeworkPick,
+  source: HomeworkSource = 'athlete',
+): HomeworkItem | null {
+  const item = buildHomeworkItem(athleteId, { pick, source })
+  if (!item) return null
+  const existing = loadAllHomework().find(
+    (h) => h.athleteId === athleteId && homeworkDedupeKey(h) === homeworkDedupeKey(item),
+  )
+  if (existing) return existing
+  addHomeworkItem(item)
+  return item
+}
+
 export function assignHomeworkToAthletes(
   athleteIds: string[],
   draft: HomeworkAssignDraft,

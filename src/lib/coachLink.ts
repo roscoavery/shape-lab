@@ -47,6 +47,11 @@ export function canSeePrivateCoaching(
   return false
 }
 
+/** Missing or true = names show on the public profile. */
+export function showsCoachesOnProfile(athlete: Athlete | null | undefined): boolean {
+  return athlete?.showCoachesOnProfile !== false
+}
+
 export function coachesLabel(athlete: Athlete, athletes: Athlete[]): string {
   const names = coachesOf(athlete, athletes).map((c) => c.name.split(' ')[0] || c.name)
   if (names.length === 0) return ''
@@ -98,6 +103,7 @@ export function formatHomeworkLogLine(log: HomeworkLog, item?: HomeworkItem | nu
   const title = item ? homeworkTitle(item) : log.sourceLabel || log.shapeId
   if (log.kind === 'journal' && log.journal) return `${title}: ${log.journal}`
   if (log.kind === 'reps' || (log.reps && log.reps > 0 && log.kind !== 'hold')) {
+    if (log.sets && log.sets > 1) return `${title} · ${log.sets}×${log.reps}`
     return `${title} · ${log.reps} rep${log.reps === 1 ? '' : 's'}`
   }
   if (log.kind === 'sequence') {

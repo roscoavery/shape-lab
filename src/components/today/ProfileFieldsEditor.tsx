@@ -64,6 +64,8 @@ export function ProfileFieldsEditor({
           selected={athlete.worksWithCoachIds ?? []}
           excludeId={athlete.id}
           onChange={(worksWithCoachIds) => patch({ worksWithCoachIds })}
+          showOnProfile={athlete.showCoachesOnProfile !== false}
+          onShowOnProfile={(showCoachesOnProfile) => patch({ showCoachesOnProfile })}
         />
       )}
       {showPhoto && (

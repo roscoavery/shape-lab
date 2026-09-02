@@ -43,7 +43,8 @@ import { RepSession } from './homework/RepSession'
 import { CarePanel } from './homework/CarePanel'
 import { AddHomeworkForm, type HomeworkPick } from './homework/AddHomeworkForm'
 import { alreadyHasCatalog, catalogIdsForBackPain, shouldEncourageSlowReps } from '../lib/backCare'
-import { buildHomeworkItem } from '../lib/homeworkAssign'
+import { buildHomeworkItem, ensureHomeworkForPick } from '../lib/homeworkAssign'
+import { ExerciseSetLog, OTHER_EXERCISE } from './homework/ExerciseSetLog'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
@@ -339,7 +340,9 @@ function HoldTimesBoard({
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
                     {log.reps
-                      ? ` · ${log.reps} rep${log.reps === 1 ? '' : 's'}${
+                      ? ` · ${
+                          log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} rep${log.reps === 1 ? '' : 's'}`
+                        }${
                           log.qualityReps != null ? ` (${log.qualityReps} quality)` : ''
                         }`
                       : ''}
@@ -1021,26 +1024,6 @@ export function HomeworkPanel({
     setWatchOffer(null)
   }
 
-  const logWatchTime = () => {
-    const item = visibleItems.find((i) => i.id === manualItemId) ?? visibleItems[0]
-    if (!item) {
-      showFlash('Select a drill to log this time on.')
-      return
-    }
-    if (watchOffer == null || watchOffer <= 0) {
-      showFlash('Start and stop the stopwatch first.')
-      return
-    }
-    const secs = Number(manualSeconds)
-    if (!Number.isFinite(secs) || secs <= 0) {
-      showFlash('Enter the hold time in seconds.')
-      return
-    }
-    logManual(item, secs)
-    resetWatch()
-    setWatchOffer(null)
-  }
-
   const logManual = (item: HomeworkItem, secondsOverride?: number) => {
     if (!athleteId) return
     if (logLockRef.current) return
@@ -1167,6 +1150,7 @@ export function HomeworkPanel({
     input: {
       reps: number
       qualityReps: number
+      sets?: number
       holdSeconds?: number
       grip?: string
       weightLb?: number
@@ -1192,6 +1176,7 @@ export function HomeworkPanel({
             : 'reps',
       totalHoldSeconds: input.holdSeconds ?? 0,
       reps: input.reps || undefined,
+      sets: input.sets && input.sets > 1 ? input.sets : undefined,
       qualityReps: input.qualityReps || undefined,
       grip: input.grip,
       weightLb: input.weightLb,
@@ -1223,9 +1208,53 @@ export function HomeworkPanel({
     }
     const bits = [
       input.holdSeconds ? `${input.holdSeconds}s hold` : null,
-      input.reps ? `${input.reps} reps` : null,
+      input.reps
+        ? input.sets && input.sets > 1
+          ? `${input.sets}×${input.reps}`
+          : `${input.reps} reps`
+        : null,
     ].filter(Boolean)
     showFlash(`Logged ${homeworkTitle(item)} — ${bits.join(' + ')}`)
+  }
+
+  const logPickedSet = (
+    itemId: string,
+    input: {
+      reps: number
+      qualityReps: number
+      sets: number
+      holdSeconds?: number
+      trackMode: HomeworkTrackMode
+    },
+  ) => {
+    const item = items.find((row) => row.id === itemId) ?? visibleItems.find((row) => row.id === itemId)
+    if (!item) {
+      showFlash('Pick the exercise this set was for.')
+      return
+    }
+    logRepSet(item, input)
+  }
+
+  const logOtherPickedSet = (input: {
+    catalogId?: string
+    name: string
+    trackMode: HomeworkTrackMode
+    reps: number
+    qualityReps: number
+    sets: number
+    holdSeconds?: number
+  }) => {
+    if (!athleteId) return
+    const pick = input.catalogId
+      ? { kind: 'catalog' as const, id: input.catalogId, name: input.name }
+      : { kind: 'typed' as const, name: input.name }
+    const item = ensureHomeworkForPick(athleteId, pick, parentLogging ? 'parent' : 'athlete')
+    if (!item) {
+      showFlash('Could not add that exercise.')
+      return
+    }
+    setManualItemId(item.id)
+    logRepSet(item, input)
   }
 
   const levelUpHollow = (item: HomeworkItem) => {
@@ -1293,12 +1322,14 @@ export function HomeworkPanel({
           worksWithCoachIds(athlete).length === 0 &&
           onUpdateAthlete && (
             <div className="mt-3">
-              <CoachPicker
-                athletes={athletes}
-                selected={worksWithCoachIds(athlete)}
-                excludeId={athlete.id}
-                onChange={(worksWithCoachIds) => onUpdateAthlete({ worksWithCoachIds })}
-              />
+          <CoachPicker
+            athletes={athletes}
+            selected={worksWithCoachIds(athlete)}
+            excludeId={athlete.id}
+            onChange={(worksWithCoachIds) => onUpdateAthlete({ worksWithCoachIds })}
+            showOnProfile={athlete.showCoachesOnProfile !== false}
+            onShowOnProfile={(showCoachesOnProfile) => onUpdateAthlete({ showCoachesOnProfile })}
+          />
             </div>
           )}
       </div>
@@ -1346,7 +1377,7 @@ export function HomeworkPanel({
             Stopwatch
           </span>
           <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
-            Time a hold, then log it to a drill.
+            Time a hold or log reps and sets. Pick the exercise, or Other.
           </span>
         </button>
         <button
@@ -1399,6 +1430,10 @@ export function HomeworkPanel({
             ]}
             onPick={(item) => startItem(item)}
             onAddHomework={() => setHwPage('add')}
+            onOther={() => {
+              setManualItemId(OTHER_EXERCISE)
+              setHwPage('watch')
+            }}
           />
         </HwOverlay>
       )}
@@ -1496,7 +1531,7 @@ export function HomeworkPanel({
       {hwPage === 'watch' && (
         <HwOverlay
           eyebrow="Homework · Stopwatch"
-          title="Time a hold, then log it"
+          title="Time a hold or log a set"
           onDone={() => setHwPage('home')}
         >
 
@@ -1542,42 +1577,33 @@ export function HomeworkPanel({
           </button>
         </div>
         {watchOffer != null && watchOffer > 0 && (
-          <div className="mt-3 space-y-2 border-t border-[var(--panel-border)] pt-2">
-            <p className="text-sm text-[var(--text)]">
-              Stopped at {formatSeconds(watchOffer)}. Log that time, or type a different one.
-            </p>
-            <select
-              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
-              value={manualItemId ?? visibleItems[0]?.id ?? ''}
-              onChange={(e) => setManualItemId(e.target.value)}
-            >
-              {visibleItems.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {homeworkTitle(i)}
-                </option>
-              ))}
-            </select>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="number"
-                min={0.1}
-                step={0.1}
-                className="w-28 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm tabular-nums"
-                value={manualSeconds}
-                onChange={(e) => setManualSeconds(e.target.value)}
-                aria-label="Seconds to log"
-              />
-              <span className="text-xs text-[var(--muted)]">seconds</span>
-              <button
-                type="button"
-                onClick={logWatchTime}
-                className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white"
-              >
-                Log time
-              </button>
-            </div>
-          </div>
+          <p className="mt-2 text-sm text-[var(--text)]">
+            Stopped at {formatSeconds(watchOffer)}. Log that hold below, or switch to reps / sets.
+          </p>
         )}
+        <div className="mt-3 border-t border-[var(--panel-border)] pt-3">
+          <ExerciseSetLog
+            items={visibleItems}
+            selectedId={manualItemId ?? visibleItems[0]?.id ?? OTHER_EXERCISE}
+            onSelectId={setManualItemId}
+            holdSeconds={manualSeconds}
+            onHoldSeconds={setManualSeconds}
+            onLog={(input) => {
+              logPickedSet(input.itemId, input)
+              if (input.holdSeconds) {
+                resetWatch()
+                setWatchOffer(null)
+              }
+            }}
+            onOther={(input) => {
+              logOtherPickedSet(input)
+              if (input.holdSeconds) {
+                resetWatch()
+                setWatchOffer(null)
+              }
+            }}
+          />
+        </div>
       </div>
         </HwOverlay>
       )}
@@ -1776,6 +1802,23 @@ export function HomeworkPanel({
             >
               Done
             </button>
+          </div>
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Skip the camera
+            </p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Still training {homeworkTitle(activeItem)}. Type a hold or a set and log it.
+            </p>
+            <ExerciseSetLog
+              items={[activeItem]}
+              selectedId={activeItem.id}
+              onSelectId={() => {}}
+              tone="studio"
+              allowOther={false}
+              onLog={(input) => logPickedSet(activeItem.id, input)}
+              onOther={(input) => logOtherPickedSet(input)}
+            />
           </div>
         </div>
             </div>

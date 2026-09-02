@@ -21,6 +21,7 @@ export type Athlete = {
   childName?: string
   linkedAthleteIds?: string[]
   worksWithCoachIds?: string[]
+  showCoachesOnProfile?: boolean
   hasBackPain?: boolean
   injuryActive?: boolean
   firstName?: string
@@ -280,6 +281,7 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     childName: newer.childName || older.childName,
     linkedAthleteIds: mergeIdList(newer.linkedAthleteIds, older.linkedAthleteIds),
     worksWithCoachIds: mergeIdList(newer.worksWithCoachIds, older.worksWithCoachIds),
+    showCoachesOnProfile: newer.showCoachesOnProfile ?? older.showCoachesOnProfile,
     instagramHandle: newer.instagramHandle || older.instagramHandle,
     shapeLabHandle: newer.shapeLabHandle || older.shapeLabHandle,
     notes: newer.notes || older.notes,
