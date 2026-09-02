@@ -9,7 +9,9 @@ import { isUsablePhotoSrc, makeShippedPhotos, pickCoachStill } from './shippedRe
 import type { ReferencePhoto } from '../types'
 
 export function isIgStill(photo: ReferencePhoto): boolean {
-  return photo.library === 'ig'
+  if (photo.library === 'ig') return true
+  // Older device stills lived only in the IG IndexedDB and omitted library.
+  return !photo.library && photo.id.startsWith('ig_')
 }
 
 /** Stable id for a typed shape name that is not in the scored library. */

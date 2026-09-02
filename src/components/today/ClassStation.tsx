@@ -88,6 +88,7 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
     const saved = { ...next, updatedAt: new Date().toISOString() }
     setDraft(saved)
     setDrafts(upsertStationDraft(saved))
+    if (stationHasAnswers(saved)) commitAthlete(saved)
     return saved
   }
 
@@ -119,43 +120,44 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
     })
   }
 
-  const commitAthlete = (): Athlete => {
-    const name = displayPersonName(draft.firstName, draft.lastName)
+  const commitAthlete = (from: StationDraft = draft): Athlete => {
+    const name = displayPersonName(from.firstName, from.lastName)
     const existing =
-      (draft.athleteId ? athletes.find((a) => a.id === draft.athleteId) : undefined) ??
-      roster.find((a) => namesMatch(a, draft.firstName, draft.lastName))
+      (from.athleteId ? athletes.find((a) => a.id === from.athleteId) : undefined) ??
+      roster.find((a) => namesMatch(a, from.firstName, from.lastName))
     const athlete: Athlete = {
-      id: existing?.id ?? createId('ath'),
+      ...(existing ?? {
+        id: createId('ath'),
+        name,
+        createdAt: new Date().toISOString(),
+      }),
       name,
-      firstName: draft.firstName.trim(),
-      lastName: draft.lastName.trim(),
-      parentPhone: draft.parentPhone,
-      email: draft.email || existing?.email,
-      phone: draft.phone || existing?.phone,
-      cartwheelLeg: draft.cartwheelLeg,
-      harderShape: draft.harderShape,
-      openShoulderHardness: draft.openShoulderHardness,
+      firstName: from.firstName.trim(),
+      lastName: from.lastName.trim(),
+      parentPhone: from.parentPhone || existing?.parentPhone,
+      email: from.email || existing?.email,
+      phone: from.phone || existing?.phone,
+      cartwheelLeg: from.cartwheelLeg ?? existing?.cartwheelLeg,
+      harderShape: from.harderShape ?? existing?.harderShape,
+      openShoulderHardness: from.openShoulderHardness ?? existing?.openShoulderHardness,
       role: existing?.role ?? 'athlete',
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-      notes: existing?.notes,
-      gymName: existing?.gymName,
-      instagramHandle: existing?.instagramHandle,
-      passcodeHash: existing?.passcodeHash,
-      hasBackPain: existing?.hasBackPain,
-      injuryActive: existing?.injuryActive,
-      photoDataUrl: draft.photoDataUrl || existing?.photoDataUrl,
-      twistDirection: draft.twistDirection || existing?.twistDirection,
-      twistBetterSide: draft.twistBetterSide || existing?.twistBetterSide,
-      dominantHand: draft.dominantHand || existing?.dominantHand,
-      skateStance: draft.skateStance || existing?.skateStance,
-      coachNotes: existing?.coachNotes,
+      photoDataUrl: from.photoDataUrl || existing?.photoDataUrl,
+      twistDirection: from.twistDirection || existing?.twistDirection,
+      twistBetterSide: from.twistBetterSide || existing?.twistBetterSide,
+      dominantHand: from.dominantHand || existing?.dominantHand,
+      skateStance: from.skateStance || existing?.skateStance,
       shapeTests: mergeShapeTests(
         existing?.shapeTests,
-        takeGuestGrades(draft.firstName, draft.lastName),
+        takeGuestGrades(from.firstName, from.lastName),
       ),
     }
     onSaveAthlete(athlete, existing ? 'update' : 'create')
-    setGuests(forgetQuizGuest(draft.firstName, draft.lastName))
+    setGuests(forgetQuizGuest(from.firstName, from.lastName))
+    if (from.athleteId !== athlete.id) {
+      const withId = { ...from, athleteId: athlete.id, updatedAt: new Date().toISOString() }
+      setDraft(withId)
+      setDrafts(upsertStationDraft(withId))
+    }
     return athlete
   }
 
@@ -609,6 +611,21 @@ function Question({
         Back
       </button>
     </div>
+  )
+}
+
+function stationHasAnswers(draft: StationDraft): boolean {
+  const first = draft.firstName.trim()
+  const last = draft.lastName.trim()
+  if (!first || !last) return false
+  return Boolean(
+    draft.cartwheelLeg ||
+      draft.harderShape ||
+      draft.openShoulderHardness ||
+      draft.twistDirection ||
+      draft.dominantHand ||
+      draft.skateStance ||
+      draft.photoDataUrl,
   )
 }
 

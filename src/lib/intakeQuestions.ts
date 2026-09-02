@@ -20,30 +20,37 @@ export type IntakeQuestion = {
   weekly?: boolean
 }
 
-const HOLD_OPTS: IntakeChoice[] = [
+export const HOLD_OPTS: IntakeChoice[] = [
   { value: 'under_10', label: 'Under 10 seconds' },
   { value: 'over_10', label: 'Over 10 seconds' },
   { value: 'over_20', label: 'Over 20 seconds' },
   { value: 'contest', label: 'I definitely might win a handstand contest' },
 ]
 
-const HOLD_SIMPLE: IntakeChoice[] = [
+export const HOLD_SIMPLE: IntakeChoice[] = [
   { value: 'under_10', label: 'Under 10 seconds' },
   { value: 'over_10', label: 'Over 10 seconds' },
   { value: 'over_20', label: 'Over 20 seconds' },
   { value: 'contest', label: 'I could win a contest at this' },
 ]
 
-const WALL_OPTS: IntakeChoice[] = [
+export const WALL_OPTS: IntakeChoice[] = [
   { value: 'under_min', label: 'Under a minute' },
   { value: 'over_min', label: 'Over a minute' },
 ]
 
-const VUP_OPTS: IntakeChoice[] = [
+export const VUP_OPTS: IntakeChoice[] = [
   { value: 'under_10', label: 'Under 10' },
   { value: 'over_10', label: 'Over 10' },
   { value: 'over_20', label: 'Over 20' },
   { value: 'over_30', label: 'Over 30' },
+]
+
+export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
+  { value: 'fresh', label: 'Fresh' },
+  { value: 'ok', label: 'Okay' },
+  { value: 'sore', label: 'Sore' },
+  { value: 'tired', label: 'Tired' },
 ]
 
 /** Permanent pre-test questions. Weekly extras go in WEEKLY_INTAKE. */
@@ -118,12 +125,7 @@ export const WEEKLY_INTAKE: IntakeQuestion[] = [
     prompt: 'How is your body feeling for tumbling this week?',
     kind: 'choice',
     weekly: true,
-    options: [
-      { value: 'fresh', label: 'Fresh' },
-      { value: 'ok', label: 'Okay' },
-      { value: 'sore', label: 'Sore' },
-      { value: 'tired', label: 'Tired' },
-    ],
+    options: WEEK_ENERGY_OPTS,
   },
 ]
 

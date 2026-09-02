@@ -49,7 +49,6 @@ type Props = {
 export function ComparePanel({
   onSaveIgStill,
   referencePhotos,
-  persistIgToApp = false,
   athleteId = null,
   athleteName = null,
   gymEditor = false,
@@ -190,7 +189,7 @@ export function ComparePanel({
   }, [])
 
   return (
-    <IgStillContext.Provider value={{ saveCrop, persistToApp: persistIgToApp }}>
+    <IgStillContext.Provider value={{ saveCrop, persistToApp: true }}>
     <CompareLayoutContext.Provider value={layout}>
       <div
         className={

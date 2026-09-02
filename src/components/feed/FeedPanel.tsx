@@ -10,6 +10,7 @@ import {
   postOnChannel,
   publishFeedPostResult,
   publishTextPostResult,
+  toggleFeedHi5,
   toggleFeedLike,
   type FeedChannel,
   type FeedPost,
@@ -25,7 +26,8 @@ import {
   saveCollage,
   type Collage,
 } from '../../lib/collages'
-import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
+import { canGiveHi5, isAthleteProfile, isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
+import { givenName } from '../../lib/classStation'
 import { childAthletes } from '../../lib/parentLink'
 import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
@@ -455,7 +457,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   </p>
                 )}
                 {athlete && (
-                  <div className="px-4 pb-3">
+                  <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
                     <button
                       type="button"
                       onClick={() => {
@@ -479,6 +481,45 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                       {(post.likes ?? []).includes(athlete.id) ? 'Liked' : 'Like'}
                       {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
                     </button>
+                    {canGiveHi5(athlete) && hi5Athletes(post, athletes, athlete.id).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targets = hi5Athletes(post, athletes, athlete.id)
+                          void toggleFeedHi5(post.id, athlete.id).then((next) => {
+                            if (!next) return
+                            setPosts((prev) =>
+                              prev.map((p) => (p.id === next.id ? { ...p, hi5s: next.hi5s } : p)),
+                            )
+                            const on = (next.hi5s ?? []).includes(athlete.id)
+                            if (!on || targets.length === 0) return
+                            const names = targets.map((t) => givenName(t)).join(', ')
+                            const youDid =
+                              targets.length === 1
+                                ? `You high-fived ${names}`
+                                : `You high-fived ${names}`
+                            setNotice(youDid)
+                            window.setTimeout(
+                              () => setNotice((cur) => (cur === youDid ? null : cur)),
+                              4200,
+                            )
+                            for (const t of targets) {
+                              void pushNotice({
+                                toId: t.id,
+                                kind: 'hi5',
+                                title: `${givenName(athlete)} high-fived you`,
+                                body: youDid,
+                                href: postOnChannel(next, 'wins') ? 'wins' : 'feed',
+                              })
+                            }
+                          })
+                        }}
+                        className="text-xs font-semibold text-[var(--accent)]"
+                      >
+                        {(post.hi5s ?? []).includes(athlete.id) ? 'High-fived' : 'High five'}
+                        {(post.hi5s ?? []).length > 0 ? ` · ${(post.hi5s ?? []).length}` : ''}
+                      </button>
+                    )}
                   </div>
                 )}
                 {taggedPeople.length > 0 && (
@@ -599,4 +640,18 @@ function RoleBadge({ athlete }: { athlete: Athlete | null }) {
       {roleLabel(athlete)}
     </span>
   )
+}
+
+function hi5Athletes(post: FeedPost, people: Athlete[], viewerId?: string): Athlete[] {
+  const ids = new Set<string>()
+  const author = people.find((a) => a.id === post.authorId)
+  if (author && isAthleteProfile(author)) ids.add(author.id)
+  for (const id of post.taggedIds) {
+    const tagged = people.find((a) => a.id === id)
+    if (tagged && isAthleteProfile(tagged)) ids.add(id)
+  }
+  if (viewerId) ids.delete(viewerId)
+  return [...ids]
+    .map((id) => people.find((a) => a.id === id))
+    .filter((a): a is Athlete => Boolean(a))
 }

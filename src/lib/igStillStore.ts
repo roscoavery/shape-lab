@@ -1,6 +1,6 @@
 /**
  * IG shape crops — IndexedDB on this device, plus the gym-computer copy
- * when the Ryan profile saves (POST /api/ig-stills).
+ * (POST /api/ig-stills) so every gym link has the same library.
  */
 
 import type { ReferencePhoto } from '../types'
@@ -49,31 +49,41 @@ export function subscribeIgStills(fn: (photos: ReferencePhoto[]) => void): () =>
   }
 }
 
+function asIgStill(p: ReferencePhoto | null | undefined): ReferencePhoto | null {
+  if (!p || typeof p.dataUrl !== 'string' || !p.dataUrl) return null
+  if (p.library && p.library !== 'ig') return null
+  return { ...p, library: 'ig' }
+}
+
 export function mergeIgStills(
   photos: ReferencePhoto[],
   ig: ReferencePhoto[],
 ): ReferencePhoto[] {
   const igIds = new Set(ig.map((p) => p.id))
   const rest = photos.filter((p) => p.library !== 'ig' || !igIds.has(p.id))
-  const leftoverIg = rest.filter((p) => p.library === 'ig')
-  const coach = rest.filter((p) => p.library !== 'ig')
-  return [...ig, ...leftoverIg, ...coach]
+  const leftoverIg = rest.filter((p) => p.library === 'ig' || (!p.library && p.id.startsWith('ig_')))
+  const coach = rest.filter((p) => p.library && p.library !== 'ig')
+  return [...ig, ...leftoverIg.map((p) => ({ ...p, library: 'ig' as const })), ...coach]
 }
 
 function unionIgLists(local: ReferencePhoto[], remote: ReferencePhoto[]): ReferencePhoto[] {
   const map = new Map<string, ReferencePhoto>()
-  for (const p of local) map.set(p.id, p)
+  for (const p of local) {
+    const row = asIgStill(p)
+    if (row) map.set(row.id, row)
+  }
   for (const p of remote) {
-    const prev = map.get(p.id)
-    map.set(p.id, {
+    const row = asIgStill(p)
+    if (!row) continue
+    const prev = map.get(row.id)
+    map.set(row.id, {
       ...prev,
-      ...p,
+      ...row,
       persistedToApp: true,
-      dataUrl: prev?.dataUrl?.startsWith('data:') ? prev.dataUrl : p.dataUrl,
+      dataUrl: prev?.dataUrl?.startsWith('data:') ? prev.dataUrl : row.dataUrl,
     })
   }
   return [...map.values()]
-    .filter((p) => p && p.library === 'ig' && typeof p.dataUrl === 'string')
     .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     .slice(0, MAX_IG)
 }
@@ -83,7 +93,8 @@ async function loadAllFromDb(): Promise<ReferencePhoto[]> {
   const tx = db.transaction(STORE, 'readonly')
   const rows = await reqToPromise(tx.objectStore(STORE).getAll() as IDBRequest<ReferencePhoto[]>)
   return (rows ?? [])
-    .filter((p) => p && p.library === 'ig' && typeof p.dataUrl === 'string')
+    .map((p) => asIgStill(p))
+    .filter((p): p is ReferencePhoto => Boolean(p))
     .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     .slice(0, MAX_IG)
 }
@@ -110,6 +121,16 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
   const remote = await pullServerIgStills()
   memory = unionIgLists(local, remote)
   emit()
+  const unsaved = memory.filter(
+    (p) => !p.persistedToApp && typeof p.dataUrl === 'string' && p.dataUrl.startsWith('data:image'),
+  )
+  for (const photo of unsaved) {
+    const saved = await postServerStill(photo)
+    if (!saved) continue
+    memory = [saved, ...memory.filter((p) => p.id !== saved.id)].slice(0, MAX_IG)
+    await writeLocal(saved)
+  }
+  if (unsaved.length > 0) emit()
   return memory
 }
 
@@ -150,12 +171,14 @@ export async function addIgStill(
   memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
   emit()
   await writeLocal(next)
-  if (opts?.persistToApp) {
+  const persist = opts?.persistToApp !== false
+  if (persist) {
     const saved = await postServerStill(next)
     if (saved) {
       next = saved
       memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
       emit()
+      await writeLocal(next)
     }
   }
   return next

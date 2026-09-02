@@ -4,6 +4,15 @@
  * extra ideas go in the Research tab inbox until they become a study here.
  */
 
+import { FAVORITE_COLORS } from '../lib/profileTheme'
+import {
+  HOLD_OPTS,
+  HOLD_SIMPLE,
+  VUP_OPTS,
+  WALL_OPTS,
+  WEEK_ENERGY_OPTS,
+} from '../lib/intakeQuestions'
+
 export type FieldKind = 'choice' | 'yesno' | 'number' | 'text' | 'multi'
 
 export type StudyOption = {
@@ -329,32 +338,44 @@ export const RESEARCH_STUDIES: StudyDef[] = [
       {
         id: 'favoriteColor',
         label: 'Favorite color',
-        kind: 'text',
+        kind: 'choice',
+        options: FAVORITE_COLORS.map((c) => ({ value: c.id, label: c.label })),
       },
       {
         id: 'handstandFloor',
         label: 'Handstand with no wall',
-        kind: 'text',
+        kind: 'choice',
+        options: HOLD_OPTS,
       },
       {
         id: 'handstandWall',
         label: 'Handstand with a wall',
-        kind: 'text',
+        kind: 'choice',
+        options: WALL_OPTS,
       },
       {
         id: 'hollowHold',
         label: 'Hollow hold guess',
-        kind: 'text',
+        kind: 'choice',
+        options: HOLD_SIMPLE,
       },
       {
         id: 'supermanHold',
         label: 'Superman hold guess',
-        kind: 'text',
+        kind: 'choice',
+        options: HOLD_SIMPLE,
       },
       {
         id: 'vUps',
         label: 'V-ups',
-        kind: 'text',
+        kind: 'choice',
+        options: VUP_OPTS,
+      },
+      {
+        id: 'weekEnergy',
+        label: 'How the body feels this week',
+        kind: 'choice',
+        options: WEEK_ENERGY_OPTS,
       },
       {
         id: 'notes',

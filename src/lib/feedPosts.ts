@@ -19,6 +19,8 @@ export type FeedPost = {
   /** Missing = gym feed (older posts). Wins can also appear on gym. */
   channels?: FeedChannel[]
   likes?: string[]
+  /** Who high-fived the athlete(s) on this post. */
+  hi5s?: string[]
   /** Coach posted this as the athlete's win. */
   sharedById?: string
   sharedByName?: string
@@ -177,6 +179,20 @@ export async function publishTextPostResult(params: {
     return readFeedResponse(res)
   } catch {
     return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+  }
+}
+
+export async function toggleFeedHi5(postId: string, actorId: string): Promise<FeedPost | null> {
+  try {
+    const res = await fetch('/api/feed?kind=hi5', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'hi5', id: postId, authorId: actorId }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as FeedPost
+  } catch {
+    return null
   }
 }
 

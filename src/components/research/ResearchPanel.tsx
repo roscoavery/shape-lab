@@ -27,10 +27,13 @@ import {
 import {
   countChoice,
   countMulti,
+  gymFacts,
+  intakeCrosstabs,
   integerHistogram,
   lateralityCrosstabs,
   majorityLine,
   numberValues,
+  shapeFeelCrosstabs,
   studyFinding,
   summarizeNumbers,
   type CountRow,
@@ -42,6 +45,7 @@ import { discussDigest } from '../../lib/discussStats'
 import { discussTopicById } from '../../config/discussTopics'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
+import { syncRosterToResearch } from '../../lib/profileResearch'
 
 type View =
   | { page: 'list' }
@@ -63,16 +67,18 @@ export function ResearchPanel({ athletes, athlete }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    void loadResearch().then((next) => {
+    void (async () => {
+      await syncRosterToResearch(athletes)
+      const next = await loadResearch()
       if (!cancelled) setFile(next)
-    })
+    })()
     void loadDiscuss().then((next) => {
       if (!cancelled) setDiscuss(next)
     })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [athletes])
 
   useEffect(() => {
     if (view.page !== 'lounge') return
@@ -108,6 +114,8 @@ export function ResearchPanel({ athletes, athlete }: Props) {
 
   const lateralityStudy = studyById('laterality')
   const fearStudy = studyById('fear-blocks')
+  const feelStudy = studyById('shape-feel')
+  const intakeStudy = studyById('pre-test-intake')
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -182,6 +190,8 @@ export function ResearchPanel({ athletes, athlete }: Props) {
           file={file}
           lateralityStudy={lateralityStudy}
           fearStudy={fearStudy}
+          feelStudy={feelStudy}
+          intakeStudy={intakeStudy}
         />
       )}
       {view.page === 'ideas' && (
@@ -201,27 +211,67 @@ function StudyList({
   file: ResearchFile
   onOpen: (id: string) => void
 }) {
+  const feel = observationsForStudy(file, 'shape-feel')
+  const laterality = observationsForStudy(file, 'laterality')
+  const intake = observationsForStudy(file, 'pre-test-intake')
+  const facts = gymFacts({
+    feel,
+    laterality,
+    intake,
+    feelStudy: studyById('shape-feel'),
+    lateralityStudy: studyById('laterality'),
+    intakeStudy: studyById('pre-test-intake'),
+  })
   return (
-    <ul className="space-y-3">
-      {RESEARCH_STUDIES.map((study) => {
-        const rows = observationsForStudy(file, study.id)
-        return (
-          <li key={study.id}>
-            <button
-              type="button"
-              onClick={() => onOpen(study.id)}
-              className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4 text-left"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                {study.title}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--text)]">{study.question}</p>
-              <p className="mt-2 text-sm text-[var(--muted)]">{studyFinding(study, rows)}</p>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
+    <div className="space-y-3">
+      <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+          Gym facts
+        </p>
+        <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">
+          From New athlete · shape test
+        </h3>
+        {facts.length === 0 ? (
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            No station or pre-test answers logged yet. Finish later or start the
+            shape test — cartwheel, harder hold, twist, handstand guesses, and
+            weekly energy show up here as counts.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {facts.map((line) => (
+              <li
+                key={line}
+                className="rounded-xl bg-black/25 px-3 py-2 text-sm leading-relaxed text-[var(--text)]"
+              >
+                {line}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-xs text-[var(--muted)]">n is this gym — not a cause.</p>
+      </section>
+      <ul className="space-y-3">
+        {RESEARCH_STUDIES.map((study) => {
+          const rows = observationsForStudy(file, study.id)
+          return (
+            <li key={study.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(study.id)}
+                className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4 text-left"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                  {study.title}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text)]">{study.question}</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">{studyFinding(study, rows)}</p>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -859,31 +909,45 @@ function CorrelationsPage({
   file,
   lateralityStudy,
   fearStudy,
+  feelStudy,
+  intakeStudy,
 }: {
   file: ResearchFile
   lateralityStudy: StudyDef
   fearStudy?: StudyDef
+  feelStudy?: StudyDef
+  intakeStudy?: StudyDef
 }) {
   const tables = useMemo(() => {
     const laterality = observationsForStudy(file, lateralityStudy.id)
     const fear = fearStudy ? observationsForStudy(file, fearStudy.id) : []
-    return lateralityCrosstabs(laterality, lateralityStudy, fear, fearStudy)
-  }, [file, lateralityStudy, fearStudy])
+    const feel = feelStudy ? observationsForStudy(file, feelStudy.id) : []
+    const intake = intakeStudy ? observationsForStudy(file, intakeStudy.id) : []
+    return [
+      ...lateralityCrosstabs(laterality, lateralityStudy, fear, fearStudy),
+      ...(feelStudy
+        ? shapeFeelCrosstabs(feel, feelStudy, laterality, lateralityStudy, intake, intakeStudy)
+        : []),
+      ...(intakeStudy ? intakeCrosstabs(intake, intakeStudy) : []),
+    ]
+  }, [file, lateralityStudy, fearStudy, feelStudy, intakeStudy])
   const lateralityCount = observationsForStudy(file, lateralityStudy.id).length
+  const feelCount = feelStudy ? observationsForStudy(file, feelStudy.id).length : 0
+  const intakeCount = intakeStudy ? observationsForStudy(file, intakeStudy.id).length : 0
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <h3 className="text-lg font-semibold text-[var(--text)]">Correlations</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Laterality fields live on one form so we can cross them without guessing. Fear
-          joins when the same athlete is in both studies. Empty cells are zeros. These
-          tables do not prove that one thing causes another.
+          Laterality, shape-feel, and pre-test answers cross when the same athlete is in
+          both logs. Empty cells are zeros. These tables do not prove that one thing
+          causes another.
         </p>
       </section>
-      {lateralityCount === 0 ? (
+      {lateralityCount === 0 && feelCount === 0 && intakeCount === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
-          Log laterality first — handedness, front foot, twist, doubles, triples, skate.
-          Crosstabs show up here.
+          Log a New athlete · shape test or a laterality observation first. Crosstabs
+          show up here.
         </p>
       ) : tables.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">

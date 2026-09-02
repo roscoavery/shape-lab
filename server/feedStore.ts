@@ -26,6 +26,8 @@ export type DiskFeedPost = {
   collage?: DiskCollageShare
   channels?: ('gym' | 'wins')[]
   likes?: string[]
+  /** Profile ids who high-fived the athlete(s) on this post. */
+  hi5s?: string[]
   sharedById?: string
   sharedByName?: string
 }
@@ -283,16 +285,31 @@ export async function toggleFeedLike(
   postId: string,
   actorId: string,
 ): Promise<DiskFeedPost | null> {
+  return toggleFeedMark(postId, actorId, 'likes')
+}
+
+export async function toggleFeedHi5(
+  postId: string,
+  actorId: string,
+): Promise<DiskFeedPost | null> {
+  return toggleFeedMark(postId, actorId, 'hi5s')
+}
+
+async function toggleFeedMark(
+  postId: string,
+  actorId: string,
+  field: 'likes' | 'hi5s',
+): Promise<DiskFeedPost | null> {
   const sid = safeId(postId)
   const who = safeId(actorId)
   if (!sid || !who) return null
   const meta = await readFeedFile()
   const found = meta.posts.find((p) => p.id === sid)
   if (!found) return null
-  const likes = new Set(found.likes ?? [])
-  if (likes.has(who)) likes.delete(who)
-  else likes.add(who)
-  found.likes = [...likes]
+  const set = new Set(found[field] ?? [])
+  if (set.has(who)) set.delete(who)
+  else set.add(who)
+  found[field] = [...set]
   await writeMeta(meta.posts)
   return found
 }

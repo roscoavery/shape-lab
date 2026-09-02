@@ -60,6 +60,7 @@ import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
 import { FavoritesProvider } from './lib/favorites'
 import type { IgCropDraft } from './components/compare/IgStillContext'
+import { IgStillProvider } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
 import { useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
@@ -379,7 +380,6 @@ export default function App() {
 
   const saveIgStill = useCallback((draft: IgCropDraft) => {
     const athlete = athletes.find((a) => a.id === activeAthleteId) ?? null
-    const persistToApp = Boolean(athlete)
     const photo: ReferencePhoto = {
       id: createId('ig'),
       shapeId: draft.shapeId,
@@ -389,9 +389,9 @@ export default function App() {
       label: draft.label,
       createdAt: new Date().toISOString(),
       library: 'ig',
-      persistedToApp: persistToApp,
+      persistedToApp: true,
     }
-    void addIgStill(photo, { persistToApp })
+    void addIgStill(photo, { persistToApp: true })
   }, [activeAthleteId, athletes])
 
   useEffect(() => {
@@ -550,6 +550,7 @@ export default function App() {
 
   return (
     <OverlayStillProvider>
+    <IgStillProvider persistToApp onSave={saveIgStill}>
     <ShapeCopyProvider canEdit={ryanEdit}>
     <StillCropProvider canEdit={ryanEdit}>
     <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
@@ -1401,6 +1402,7 @@ export default function App() {
     </GymLibraryProvider>
     </StillCropProvider>
     </ShapeCopyProvider>
+    </IgStillProvider>
     </OverlayStillProvider>
   )
 }

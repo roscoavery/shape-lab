@@ -176,6 +176,22 @@ export function studyFinding(study: StudyDef, observations: Observation[]): stri
       }
     }
   }
+  if (study.id === 'shape-feel') {
+    const harder = study.fields.find((f) => f.id === 'harderShape')
+    if (harder) return `n = ${n}. ${majorityLine(countChoice(observations, harder))}`
+  }
+  if (study.id === 'pre-test-intake') {
+    const floor = study.fields.find((f) => f.id === 'handstandFloor')
+    if (floor) {
+      const rows = countChoice(observations, floor)
+      const contest = rows.find((r) => r.value === 'contest')
+      const total = rows.reduce((a, r) => a + r.n, 0)
+      if (contest && contest.n > 0 && total) {
+        return `n = ${n}. ${contest.n} of ${total} think they could win a handstand contest.`
+      }
+      return `n = ${n}. ${majorityLine(rows)}`
+    }
+  }
   return `n = ${n}.`
 }
 
@@ -385,4 +401,222 @@ export function lateralityCrosstabs(
     }
   }
   return tables.filter((t): t is Crosstab => Boolean(t))
+}
+
+export function shapeFeelCrosstabs(
+  feel: Observation[],
+  feelStudy: StudyDef,
+  laterality?: Observation[],
+  lateralityStudy?: StudyDef,
+  intake?: Observation[],
+  intakeStudy?: StudyDef,
+): Crosstab[] {
+  const cartwheel = field(feelStudy, 'cartwheelLeg')
+  const harder = field(feelStudy, 'harderShape')
+  const shoulder = field(feelStudy, 'openShoulderHardness')
+  const tables: (Crosstab | null)[] = []
+  if (cartwheel && harder) {
+    tables.push(
+      crosstab(
+        feel,
+        cartwheel,
+        harder,
+        'Cartwheel × harder hold',
+        'Left vs right cartwheel against who finds hollow harder vs Superman.',
+      ),
+    )
+  }
+  if (harder && shoulder) {
+    tables.push(
+      crosstab(
+        feel,
+        harder,
+        shoulder,
+        'Harder hold × open-shoulder rating',
+        'Whether hollow-hard athletes also rate a fully open shoulder as harder.',
+      ),
+    )
+  }
+  if (laterality && lateralityStudy && cartwheel) {
+    const twist = field(lateralityStudy, 'twistDirection')
+    if (twist) {
+      tables.push(
+        crosstab(
+          joinBySubject(feel, laterality),
+          cartwheel,
+          twist,
+          'Cartwheel × twist',
+          'Class-station cartwheel leg against the twist they already have.',
+        ),
+      )
+    }
+  }
+  if (intake && intakeStudy && harder) {
+    const hollow = field(intakeStudy, 'hollowHold')
+    const superman = field(intakeStudy, 'supermanHold')
+    if (hollow) {
+      tables.push(
+        crosstab(
+          joinBySubject(feel, intake),
+          harder,
+          hollow,
+          'Harder hold × hollow guess',
+          'Who says hollow is harder vs how long they think they can hold one.',
+        ),
+      )
+    }
+    if (superman) {
+      tables.push(
+        crosstab(
+          joinBySubject(feel, intake),
+          harder,
+          superman,
+          'Harder hold × Superman guess',
+          'Who says Superman is harder vs their Superman hold guess.',
+        ),
+      )
+    }
+  }
+  return tables.filter((t): t is Crosstab => Boolean(t))
+}
+
+export function intakeCrosstabs(intake: Observation[], intakeStudy: StudyDef): Crosstab[] {
+  const floor = field(intakeStudy, 'handstandFloor')
+  const wall = field(intakeStudy, 'handstandWall')
+  const hollow = field(intakeStudy, 'hollowHold')
+  const superHold = field(intakeStudy, 'supermanHold')
+  const energy = field(intakeStudy, 'weekEnergy')
+  const tables: (Crosstab | null)[] = []
+  if (floor && wall) {
+    tables.push(
+      crosstab(
+        intake,
+        floor,
+        wall,
+        'Floor handstand × wall minute',
+        'Contest energy against whether they already hold a wall minute.',
+      ),
+    )
+  }
+  if (hollow && superHold) {
+    tables.push(
+      crosstab(
+        intake,
+        hollow,
+        superHold,
+        'Hollow guess × Superman guess',
+        'Whether the two hold guesses travel together.',
+      ),
+    )
+  }
+  if (energy && floor) {
+    tables.push(
+      crosstab(
+        intake,
+        energy,
+        floor,
+        'This week’s energy × floor handstand',
+        'Weekly check-in against the handstand guess from the shape test.',
+      ),
+    )
+  }
+  return tables.filter((t): t is Crosstab => Boolean(t))
+}
+
+function topChoiceLine(observations: Observation[], fieldDef: StudyField | undefined): string | null {
+  if (!fieldDef) return null
+  const rows = countChoice(observations, fieldDef)
+  const total = rows.reduce((a, r) => a + r.n, 0)
+  if (total === 0) return null
+  return majorityLine(rows)
+}
+
+/** Short gym facts for the Research studies list — n is this gym. */
+export function gymFacts(params: {
+  feel: Observation[]
+  laterality: Observation[]
+  intake: Observation[]
+  feelStudy?: StudyDef
+  lateralityStudy?: StudyDef
+  intakeStudy?: StudyDef
+}): string[] {
+  const { feel, laterality, intake, feelStudy, lateralityStudy, intakeStudy } = params
+  const out: string[] = []
+  if (feelStudy) {
+    const cart = topChoiceLine(feel, field(feelStudy, 'cartwheelLeg'))
+    if (cart) out.push(`Cartwheel: ${cart}`)
+    const harder = topChoiceLine(feel, field(feelStudy, 'harderShape'))
+    if (harder) out.push(`Harder hold: ${harder}`)
+    const shoulder = field(feelStudy, 'openShoulderHardness')
+    if (shoulder) {
+      const rows = countChoice(feel, shoulder)
+      const five = rows.find((r) => r.value === '5')
+      const total = rows.reduce((a, r) => a + r.n, 0)
+      if (five && five.n > 0 && total) {
+        out.push(
+          `${five.n} of ${total} still cannot get a fully open shoulder (they picked 5).`,
+        )
+      }
+    }
+  }
+  if (lateralityStudy) {
+    const twist = topChoiceLine(laterality, field(lateralityStudy, 'twistDirection'))
+    if (twist) out.push(`Twist: ${twist}`)
+  }
+  if (intakeStudy) {
+    const floorField = field(intakeStudy, 'handstandFloor')
+    const wallField = field(intakeStudy, 'handstandWall')
+    if (floorField) {
+      const rows = countChoice(intake, floorField)
+      const contest = rows.find((r) => r.value === 'contest')
+      const total = rows.reduce((a, r) => a + r.n, 0)
+      if (contest && contest.n > 0 && total) {
+        let line = `${contest.n} of ${total} think they could win a handstand contest`
+        if (wallField) {
+          const paired = intake.filter(
+            (o) => o.answers.handstandFloor === 'contest' && o.answers.handstandWall === 'over_min',
+          )
+          if (paired.length > 0) {
+            line += ` — ${paired.length} of them also hold a wall minute`
+          }
+        }
+        out.push(`${line}.`)
+      }
+    }
+    const vups = topChoiceLine(intake, field(intakeStudy, 'vUps'))
+    if (vups) out.push(`V-ups: ${vups}`)
+    const energy = topChoiceLine(intake, field(intakeStudy, 'weekEnergy'))
+    if (energy) out.push(`This week: ${energy}`)
+    const color = topChoiceLine(intake, field(intakeStudy, 'favoriteColor'))
+    if (color) out.push(`Favorite color: ${color}`)
+  }
+  if (feelStudy && lateralityStudy) {
+    const cartwheel = field(feelStudy, 'cartwheelLeg')
+    const twist = field(lateralityStudy, 'twistDirection')
+    const joined = joinBySubject(feel, laterality)
+    if (cartwheel && twist && joined.length >= 2) {
+      const table = crosstab(
+        joined,
+        cartwheel,
+        twist,
+        'Cartwheel × twist',
+        '',
+      )
+      if (table) {
+        let best = { n: 0, row: '', col: '' }
+        table.rows.forEach((row, ri) => {
+          table.cols.forEach((col, ci) => {
+            const n = table.cells[ri]?.[ci] ?? 0
+            if (n > best.n) best = { n, row: row.label, col: col.label }
+          })
+        })
+        if (best.n > 0) {
+          out.push(
+            `Most common pairing: ${best.row.toLowerCase()} cartwheel with ${best.col.toLowerCase()} (${best.n} of ${table.n}).`,
+          )
+        }
+      }
+    }
+  }
+  return out
 }

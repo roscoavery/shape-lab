@@ -28,6 +28,17 @@ export function isCoachProfile(athlete: Athlete | null | undefined): boolean {
   return role === 'coach' || role === 'gym_owner'
 }
 
+export function isAthleteProfile(athlete: Athlete | null | undefined): boolean {
+  return profileRole(athlete) === 'athlete'
+}
+
+/** Athletes, coaches, and gym owners can high-five an athlete. Parents cannot. */
+export function canGiveHi5(viewer: Athlete | null | undefined): boolean {
+  if (!viewer) return false
+  const role = profileRole(viewer)
+  return role === 'athlete' || role === 'coach' || role === 'gym_owner'
+}
+
 /** Ryan only — gym Compare library, shape copy, still crops, gym collages. */
 export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
   return isRyanAthlete(athlete)

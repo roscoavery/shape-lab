@@ -28,6 +28,7 @@ import {
   deleteFeedPost,
   postsForClient,
   sendFeedFile,
+  toggleFeedHi5,
   toggleFeedLike,
 } from './feedStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
@@ -346,7 +347,8 @@ export async function handleShapeLabApi(
         ct.includes('json') ||
         url.searchParams.get('kind') === 'collage' ||
         url.searchParams.get('kind') === 'text' ||
-        url.searchParams.get('kind') === 'like'
+        url.searchParams.get('kind') === 'like' ||
+        url.searchParams.get('kind') === 'hi5'
       ) {
         let body: {
           kind?: string
@@ -374,13 +376,19 @@ export async function handleShapeLabApi(
               .map((s) => s.trim())
               .filter(Boolean)
         const kind = body.kind ?? url.searchParams.get('kind') ?? ''
-        if (kind === 'like') {
-          const saved = await toggleFeedLike(
-            body.id ?? url.searchParams.get('id') ?? '',
-            body.authorId ?? url.searchParams.get('authorId') ?? '',
-          )
+        if (kind === 'like' || kind === 'hi5') {
+          const saved =
+            kind === 'hi5'
+              ? await toggleFeedHi5(
+                  body.id ?? url.searchParams.get('id') ?? '',
+                  body.authorId ?? url.searchParams.get('authorId') ?? '',
+                )
+              : await toggleFeedLike(
+                  body.id ?? url.searchParams.get('id') ?? '',
+                  body.authorId ?? url.searchParams.get('authorId') ?? '',
+                )
           if (!saved) {
-            sendJson(res, 400, { error: 'Could not like that post.' })
+            sendJson(res, 400, { error: kind === 'hi5' ? 'Could not high-five that post.' : 'Could not like that post.' })
             return true
           }
           sendJson(res, 200, {

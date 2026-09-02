@@ -1416,7 +1416,7 @@ function IgShapesLibrary({
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {total === 0
-            ? 'None saved yet. Open Compare, pause the clip, tap Screenshot.'
+            ? 'None saved yet. Screenshot a clip (Shot on Compare, Learn scroll, or a reel) — it lands here and on every gym link.'
             : `${total} still${total === 1 ? '' : 's'} in ${groups.length} shape${groups.length === 1 ? '' : 's'}.`}
         </p>
         <div className="mt-3">
@@ -1427,13 +1427,11 @@ function IgShapesLibrary({
             inset
           >
             <p className="text-sm leading-relaxed text-[var(--muted)]">
-              These stills are cropped from Compare — looping Instagram clips, uploaded
-              reference video, or athlete replay. They do not replace the coach stills in
-              Shape library. On Tasks, Homework, or Coach, pick any of these (or any coach
-              still) as a ghost overlay on the camera. Stills saved while the{' '}
-              <strong className="text-[var(--text)]">Ryan</strong> profile is selected are
-              stored on this gym computer, so a new browser or phone link still has them.
-              Other profiles keep crops on this device only.
+              These stills are cropped from Compare, Learn scroll, and reels — looping
+              Instagram clips, uploaded reference video, or athlete replay. They do not
+              replace the coach stills in Shape library. Every Screenshot / Shot saves
+              into this library and onto the gym computer, so a new browser or phone
+              link still has them. Only Ryan can rename or delete gym-wide stills.
             </p>
           </CollapsibleSection>
         </div>

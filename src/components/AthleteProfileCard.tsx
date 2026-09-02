@@ -3,11 +3,19 @@ import type { Athlete, ProfileGesture } from '../types'
 import { AthleteAvatar } from './AthleteAvatar'
 import { profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
 import { canWriteCoachNotes, visibleCoachNotes } from '../lib/athleteNotes'
-import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../lib/profileRole'
+import {
+  canGiveHi5,
+  isAthleteProfile,
+  isCoachProfile,
+  isGymAdmin,
+  profileRole,
+  roleLabel,
+} from '../lib/profileRole'
 import { childNamesLabel, parentsOf } from '../lib/parentLink'
 import {
   listFeedPosts,
   postOnChannel,
+  toggleFeedHi5,
   type FeedPost,
 } from '../lib/feedPosts'
 import { WinComposer } from './feed/WinComposer'
@@ -50,6 +58,11 @@ export function AthleteProfileCard({
   const contest = handstandContest(athlete)
   const own = viewer?.id === athlete.id
   const coach = isCoachProfile(viewer)
+  const gestureOk =
+    Boolean(viewer) &&
+    !own &&
+    canGiveHi5(viewer) &&
+    isAthleteProfile(athlete)
 
   const [confirm, setConfirm] = useState<string | null>(null)
 
@@ -125,7 +138,7 @@ export function AthleteProfileCard({
         </div>
       </div>
 
-      {coach && viewer && viewer.id !== athlete.id && (
+      {gestureOk && viewer && (
         <div className="space-y-2">
           <div className="flex gap-2">
             <button
@@ -135,13 +148,15 @@ export function AthleteProfileCard({
             >
               High five
             </button>
-            <button
-              type="button"
-              onClick={() => void gesture('fist')}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
-            >
-              Fist bump
-            </button>
+            {coach && (
+              <button
+                type="button"
+                onClick={() => void gesture('fist')}
+                className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
+              >
+                Fist bump
+              </button>
+            )}
           </div>
           {confirm && (
             <p className="text-sm font-semibold text-[var(--accent)]">{confirm}</p>
@@ -213,15 +228,58 @@ export function AthleteProfileCard({
           <p className="mt-1 text-sm text-[var(--muted)]">No wins posted for them yet.</p>
         ) : (
           <ul className="mt-2 space-y-2">
-            {wins.slice(0, 12).map((p) => (
-              <li key={p.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
-                <p>{p.caption}</p>
-                <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                  {p.sharedByName ? `shared by ${p.sharedByName} · ` : ''}
-                  {new Date(p.createdAt).toLocaleString()}
-                </p>
-              </li>
-            ))}
+            {wins.slice(0, 12).map((p) => {
+              const targets = viewer
+                ? hi5AthletesOnPost(p, athletes, viewer.id)
+                : []
+              const gave = viewer ? (p.hi5s ?? []).includes(viewer.id) : false
+              return (
+                <li key={p.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
+                  <p>{p.caption}</p>
+                  <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                    {p.sharedByName ? `shared by ${p.sharedByName} · ` : ''}
+                    {new Date(p.createdAt).toLocaleString()}
+                    {(p.hi5s ?? []).length > 0
+                      ? ` · ${(p.hi5s ?? []).length} high five${(p.hi5s ?? []).length === 1 ? '' : 's'}`
+                      : ''}
+                  </p>
+                  {viewer && canGiveHi5(viewer) && targets.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void toggleFeedHi5(p.id, viewer.id).then((next) => {
+                          if (!next) return
+                          setWins((prev) =>
+                            prev.map((row) => (row.id === next.id ? { ...row, hi5s: next.hi5s } : row)),
+                          )
+                          const on = (next.hi5s ?? []).includes(viewer.id)
+                          if (!on) return
+                          const names = targets.map((t) => givenName(t)).join(', ')
+                          const youDid = `You high-fived ${names}`
+                          setConfirm(youDid)
+                          window.setTimeout(
+                            () => setConfirm((cur) => (cur === youDid ? null : cur)),
+                            4200,
+                          )
+                          for (const t of targets) {
+                            void pushNotice({
+                              toId: t.id,
+                              kind: 'hi5',
+                              title: `${givenName(viewer)} high-fived you`,
+                              body: youDid,
+                              href: 'wins',
+                            })
+                          }
+                        })
+                      }}
+                      className="mt-2 text-xs font-semibold text-[var(--accent)]"
+                    >
+                      {gave ? 'High-fived' : 'High five'}
+                    </button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
@@ -357,4 +415,18 @@ export function AthleteProfileCard({
       {body}
     </section>
   )
+}
+
+function hi5AthletesOnPost(post: FeedPost, people: Athlete[], viewerId: string): Athlete[] {
+  const ids = new Set<string>()
+  const author = people.find((a) => a.id === post.authorId)
+  if (author && isAthleteProfile(author)) ids.add(author.id)
+  for (const id of post.taggedIds) {
+    const tagged = people.find((a) => a.id === id)
+    if (tagged && isAthleteProfile(tagged)) ids.add(id)
+  }
+  ids.delete(viewerId)
+  return [...ids]
+    .map((id) => people.find((a) => a.id === id))
+    .filter((a): a is Athlete => Boolean(a))
 }

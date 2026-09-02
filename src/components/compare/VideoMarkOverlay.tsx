@@ -667,11 +667,7 @@ export function VideoMarkOverlay({
       setTool(null)
       setCursor('default')
     }
-    setNotice(
-      igSave?.persistToApp
-        ? 'Saved into the app — every browser and link will have this still.'
-        : 'Saved to IG shapes on this device. Select Ryan to save into the app for every link.',
-    )
+    setNotice('Saved into IG shapes — every gym link will have this still.')
     window.setTimeout(() => setNotice(null), 4000)
   }
 
