@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../../types'
-import { listCollages, type Collage } from '../../lib/collages'
+import { listCollages, saveCollage, type Collage, type CollageSlot } from '../../lib/collages'
 import { ShareReference } from '../share/ShareReference'
 import { CollageStage } from '../classes/CollageStage'
 import { useGymLibrary } from '../../lib/gymLibrary'
+import { isCoachProfile } from '../../lib/profileRole'
 
 type Props = {
   viewer: Athlete | null
@@ -29,7 +30,8 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
           </p>
           <h3 className="text-lg font-semibold">Collages</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Open a board from Today. Edit and share live under Team → Classes.
+            Play one tile, switch to another, pick a different gym clip, or drop in
+            a quick record / Photos upload. Save to Photos exports the board.
           </p>
         </div>
         <button
@@ -94,6 +96,21 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
               setFullscreen(false)
             }}
             canEdit={false}
+            canAssign
+            viewerId={viewer?.id ?? null}
+            onSlots={(slots: CollageSlot[]) => {
+              const next = { ...playing, slots, updatedAt: new Date().toISOString() }
+              setPlaying(next)
+              const persist =
+                Boolean(viewer) &&
+                (isCoachProfile(viewer) || playing.ownerId === viewer?.id || !playing.ownerId)
+              if (!persist) return
+              void saveCollage(next).then((saved) => {
+                if (!saved) return
+                setPlaying(saved)
+                setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
+              })
+            }}
           />
         </div>
       )}

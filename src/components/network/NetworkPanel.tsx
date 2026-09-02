@@ -8,17 +8,21 @@ import type { Athlete } from '../../types'
 import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
 import { AthleteName } from '../AthleteAvatar'
 import {
+  createGroupThread,
   followerCount,
   followingCount,
   isFollowing,
+  isGroupThread,
   loadSocial,
   otherParticipant,
   saveSocial,
+  sendGroupMessage,
   sendMessage,
   threadsFor,
   toggleFollow,
   type SocialFile,
 } from '../../lib/social'
+import { MessageSharePicker } from './MessageSharePicker'
 import { coachAthleteMessageAllowed, isCoachToAthlete } from '../../lib/coachShare'
 import { childNamesLabel } from '../../lib/parentLink'
 import {
@@ -156,7 +160,7 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
           social={social}
           toId={threadToId}
           onToId={setThreadToId}
-          onSend={(toId, text, shareUrl) => {
+          onSend={(toId, text, shareUrl, shareTitle) => {
             if (!athlete) return
             const to = athletes.find((a) => a.id === toId)
             const gate = coachAthleteMessageAllowed({
@@ -172,10 +176,47 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
                 toId,
                 text,
                 shareUrl,
+                shareTitle,
                 from: athlete,
                 to,
               }),
             )
+            const who = toId
+            void pushNotice({
+              toId: who,
+              kind: 'share',
+              title: `${athlete.name} messaged you`,
+              body: text || shareTitle || 'Open Messages.',
+              href: 'network',
+            })
+          }}
+          onSendGroup={(threadId, text, shareUrl, shareTitle) => {
+            if (!athlete) return
+            const thread = social.threads.find((t) => t.id === threadId)
+            const next = sendGroupMessage(social, {
+              threadId,
+              fromId: athlete.id,
+              text,
+              shareUrl,
+              shareTitle,
+            })
+            void persistSocial(next)
+            for (const id of thread?.participantIds ?? []) {
+              if (id === athlete.id) continue
+              void pushNotice({
+                toId: id,
+                kind: 'share',
+                title: `${athlete.name} messaged the group`,
+                body: text || shareTitle || 'Open Messages.',
+                href: 'network',
+              })
+            }
+          }}
+          onCreateGroup={(title, memberIds) => {
+            if (!athlete) return
+            const next = createGroupThread(social, { fromId: athlete.id, memberIds, title })
+            void persistSocial(next)
+            return next.threads[0]?.id
           }}
         />
       )}
@@ -301,30 +342,48 @@ function MessagesPage({
   toId,
   onToId,
   onSend,
+  onSendGroup,
+  onCreateGroup,
 }: {
   athletes: Athlete[]
   me: Athlete | null
   social: SocialFile
   toId: string
   onToId: (id: string) => void
-  onSend: (toId: string, text: string, shareUrl?: string) => void
+  onSend: (toId: string, text: string, shareUrl?: string, shareTitle?: string) => void
+  onSendGroup: (threadId: string, text: string, shareUrl?: string, shareTitle?: string) => void
+  onCreateGroup: (title: string, memberIds: string[]) => string | void
 }) {
   const [text, setText] = useState('')
   const [shareUrl, setShareUrl] = useState('')
+  const [shareTitle, setShareTitle] = useState('')
   const [blocked, setBlocked] = useState<string | null>(null)
+  const [groupOpen, setGroupOpen] = useState(false)
+  const [groupTitle, setGroupTitle] = useState('')
+  const [groupMembers, setGroupMembers] = useState<string[]>([])
+  const [activeThreadId, setActiveThreadId] = useState('')
 
   const mine = me ? threadsFor(social, me.id) : []
   const active = useMemo(() => {
+    if (activeThreadId) return mine.find((t) => t.id === activeThreadId) ?? null
     if (!me || !toId) return null
-    return mine.find((t) => t.participantIds.includes(toId)) ?? null
-  }, [mine, me, toId])
+    return mine.find((t) => !isGroupThread(t) && t.participantIds.includes(toId)) ?? null
+  }, [mine, me, toId, activeThreadId])
 
   if (!me) return null
 
   const toPerson = athletes.find((a) => a.id === toId)
-  const coachShareOnly = isCoachToAthlete(me, toPerson)
+  const group = Boolean(active && isGroupThread(active))
+  const coachShareOnly = !group && isCoachToAthlete(me, toPerson)
 
   const send = () => {
+    if (active && isGroupThread(active)) {
+      onSendGroup(active.id, text, shareUrl.trim() || undefined, shareTitle || undefined)
+      setText('')
+      setShareUrl('')
+      setShareTitle('')
+      return
+    }
     if (!toId) return
     const gate = coachAthleteMessageAllowed({
       from: me,
@@ -337,9 +396,10 @@ function MessagesPage({
       return
     }
     setBlocked(null)
-    onSend(toId, text, shareUrl.trim() || undefined)
+    onSend(toId, text, shareUrl.trim() || undefined, shareTitle || undefined)
     setText('')
     setShareUrl('')
+    setShareTitle('')
   }
 
   return (
@@ -352,20 +412,32 @@ function MessagesPage({
           <p className="text-xs text-[var(--muted)]">None yet. Pick someone to message.</p>
         )}
         {mine.map((t) => {
-          const otherId = otherParticipant(t, me.id)
+          const groupChat = isGroupThread(t)
+          const otherId = groupChat ? '' : otherParticipant(t, me.id)
           const other = athletes.find((a) => a.id === otherId)
+          const label = groupChat
+            ? t.title ||
+              t.participantIds
+                .map((id) => athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? '')
+                .filter(Boolean)
+                .join(', ')
+            : (other?.name ?? otherId)
+          const selected = active?.id === t.id
           return (
             <button
               key={t.id}
               type="button"
-              onClick={() => onToId(otherId)}
+              onClick={() => {
+                setActiveThreadId(t.id)
+                if (!groupChat) onToId(otherId)
+              }}
               className={`block w-full rounded-lg px-2 py-1.5 text-left text-sm ${
-                toId === otherId
+                selected
                   ? 'bg-[var(--accent-dim)] text-white'
                   : 'text-[var(--muted)] hover:text-[var(--text)]'
               }`}
             >
-              {other?.name ?? otherId}
+              {groupChat ? `Group · ${label}` : label}
             </button>
           )
         })}
@@ -374,7 +446,10 @@ function MessagesPage({
           <select
             className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-[var(--text)]"
             value={toId}
-            onChange={(e) => onToId(e.target.value)}
+            onChange={(e) => {
+              setActiveThreadId('')
+              onToId(e.target.value)
+            }}
           >
             <option value="">Pick a profile…</option>
             {athletes
@@ -386,12 +461,74 @@ function MessagesPage({
               ))}
           </select>
         </label>
+        <button
+          type="button"
+          onClick={() => setGroupOpen((v) => !v)}
+          className="mt-2 text-xs font-semibold text-[var(--accent)]"
+        >
+          {groupOpen ? 'Cancel group' : 'New group'}
+        </button>
+        {groupOpen && (
+          <div className="mt-2 space-y-2 rounded-lg border border-[var(--panel-border)] p-2">
+            <input
+              value={groupTitle}
+              onChange={(e) => setGroupTitle(e.target.value)}
+              placeholder="Group name — Ellie’s parents…"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
+            />
+            <div className="flex max-h-32 flex-col gap-1 overflow-y-auto">
+              {athletes
+                .filter((a) => a.id !== me.id)
+                .map((a) => {
+                  const on = groupMembers.includes(a.id)
+                  return (
+                    <label key={a.id} className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() =>
+                          setGroupMembers((prev) =>
+                            on ? prev.filter((id) => id !== a.id) : [...prev, a.id],
+                          )
+                        }
+                      />
+                      {a.name} · {roleLabel(a)}
+                    </label>
+                  )
+                })}
+            </div>
+            <button
+              type="button"
+              disabled={groupMembers.length < 1}
+              onClick={() => {
+                const id = onCreateGroup(groupTitle, groupMembers)
+                if (id) setActiveThreadId(id)
+                setGroupOpen(false)
+                setGroupTitle('')
+                setGroupMembers([])
+              }}
+              className="rounded-lg bg-[var(--accent-dim)] px-2 py-1 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              Start group
+            </button>
+          </div>
+        )}
       </div>
       <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-        {!toId ? (
+        {!toId && !group ? (
           <p className="text-sm text-[var(--muted)]">Choose someone to start talking.</p>
         ) : (
           <>
+            <p className="mb-2 text-sm font-semibold text-[var(--text)]">
+              {group
+                ? active?.title ||
+                  active?.participantIds
+                    .map((id) => athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? '')
+                    .filter(Boolean)
+                    .join(', ') ||
+                  'Group'
+                : toPerson?.name}
+            </p>
             <div className="mb-3 max-h-64 space-y-2 overflow-y-auto panel-scroll">
               {(active?.messages ?? []).map((m) => (
                 <div
@@ -402,11 +539,14 @@ function MessagesPage({
                       : 'mr-8 bg-[#0d1218] text-[var(--muted)]'
                   }`}
                 >
-                  <p>{m.text}</p>
+                  {m.shareTitle && (
+                    <p className="text-[11px] font-semibold text-[var(--accent)]">{m.shareTitle}</p>
+                  )}
+                  {m.text && <p>{m.text}</p>}
                   {m.shareUrl && (
                     isInternalShareUrl(m.shareUrl) ? (
                       <p className="mt-1 truncate text-[11px] text-[var(--accent)]">
-                        {shareUrlLabel(m.shareUrl, m.text || 'Reference')}
+                        {shareUrlLabel(m.shareUrl, m.shareTitle || m.text || 'Reference')}
                       </p>
                     ) : (
                     <a
@@ -463,6 +603,15 @@ function MessagesPage({
                 />
               </>
             )}
+            {shareTitle && (
+              <p className="mt-2 text-xs text-[var(--accent)]">Attached: {shareTitle}</p>
+            )}
+            <MessageSharePicker
+              onPick={(pick) => {
+                setShareUrl(pick.url)
+                setShareTitle(pick.title)
+              }}
+            />
             {blocked && <p className="mt-2 text-xs text-[var(--bad)]">{blocked}</p>}
             <button
               type="button"

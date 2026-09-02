@@ -18,11 +18,13 @@ export type DiskMessage = {
   createdAt: string
   text: string
   shareUrl?: string
+  shareTitle?: string
 }
 
 export type DiskThread = {
   id: string
-  participantIds: [string, string]
+  participantIds: string[]
+  title?: string
   updatedAt: string
   messages: DiskMessage[]
 }
@@ -77,8 +79,8 @@ function cleanMessage(raw: unknown): DiskMessage | null {
   const id = safeId(o.id)
   const authorId = safeId(o.authorId)
   const text = cleanText(o.text, 800)
-  if (!id || !authorId || !text) return null
-  const shareUrl = cleanText(o.shareUrl, 400)
+  const shareUrl = cleanShare(o.shareUrl)
+  if (!id || !authorId || (!text && !shareUrl)) return null
   const msg: DiskMessage = {
     id,
     authorId,
@@ -86,10 +88,21 @@ function cleanMessage(raw: unknown): DiskMessage | null {
       typeof o.createdAt === 'string' && o.createdAt
         ? o.createdAt
         : new Date().toISOString(),
-    text,
+    text: text || cleanText(o.shareTitle, 80) || 'Shared a reference',
   }
-  if (shareUrl && /^https?:\/\//i.test(shareUrl)) msg.shareUrl = shareUrl
+  if (shareUrl) msg.shareUrl = shareUrl
+  const shareTitle = cleanText(o.shareTitle, 80)
+  if (shareTitle) msg.shareTitle = shareTitle
   return msg
+}
+
+function cleanShare(raw: unknown): string {
+  const u = cleanText(raw, 500)
+  if (!u) return ''
+  if (/^https?:\/\//i.test(u)) return u
+  if (u.startsWith('shape-lab:')) return u
+  if (u.startsWith('/')) return u
+  return ''
 }
 
 function cleanThread(raw: unknown): DiskThread | null {
@@ -99,8 +112,8 @@ function cleanThread(raw: unknown): DiskThread | null {
   const parts = Array.isArray(o.participantIds)
     ? o.participantIds.map(safeId).filter((x): x is string => Boolean(x))
     : []
-  const unique = [...new Set(parts)].sort()
-  if (!id || unique.length !== 2) return null
+  const unique = [...new Set(parts)]
+  if (!id || unique.length < 2 || unique.length > 12) return null
   const messages = Array.isArray(o.messages)
     ? o.messages
         .map(cleanMessage)
@@ -108,9 +121,11 @@ function cleanThread(raw: unknown): DiskThread | null {
         .filter((m) => unique.includes(m.authorId))
         .slice(-200)
     : []
+  const title = cleanText(o.title, 60)
   return {
     id,
-    participantIds: [unique[0]!, unique[1]!],
+    participantIds: unique,
+    ...(title ? { title } : {}),
     updatedAt:
       typeof o.updatedAt === 'string' && o.updatedAt
         ? o.updatedAt

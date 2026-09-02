@@ -797,16 +797,45 @@ export default function App() {
         <div className="flex flex-col gap-3">
           {!hwStudio && activeAthleteId ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
-              <p className="text-sm text-[var(--text)]">
-                Signed in as{' '}
-                <strong>
-                  {athletes.find((a) => a.id === activeAthleteId)?.name ?? 'athlete'}
-                </strong>
-                <span className="text-[var(--muted)]">
-                  {' '}
-                  — holds you log stay on this profile
-                </span>
-              </p>
+              {activeProfile && profileRole(activeProfile) === 'parent' ? (
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm text-[var(--text)]">
+                    Signed in as <strong>{activeProfile.name}</strong>
+                    <span className="text-[var(--muted)]">
+                      {' '}
+                      — logging homework for{' '}
+                      <strong>{homeworkAthlete?.name ?? 'your athlete'}</strong>
+                    </span>
+                  </p>
+                  {parentKids.length > 1 && (
+                    <label className="block text-[11px] text-[var(--muted)]">
+                      Which athlete
+                      <select
+                        className="ml-2 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1 text-sm text-[var(--text)]"
+                        value={homeworkAthleteId ?? ''}
+                        onChange={(e) => setParentFocusId(e.target.value || null)}
+                      >
+                        {parentKids.map((k) => (
+                          <option key={k.id} value={k.id}>
+                            {k.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--text)]">
+                  Signed in as{' '}
+                  <strong>
+                    {athletes.find((a) => a.id === activeAthleteId)?.name ?? 'athlete'}
+                  </strong>
+                  <span className="text-[var(--muted)]">
+                    {' '}
+                    — holds you log stay on this profile
+                  </span>
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => requestSelectAthlete(null)}
@@ -827,6 +856,7 @@ export default function App() {
           <HomeworkPanel
             athleteId={homeworkAthleteId}
             athlete={homeworkAthlete}
+            viewer={activeProfile}
             onUpdateAthlete={(patch) => {
               if (!homeworkAthleteId) return
               setAthleteRoster(

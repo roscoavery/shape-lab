@@ -18,8 +18,9 @@ type Props = {
   libraryShapes: ShapeDef[]
   coachExercises: CoachExercise[]
   isCoach: boolean
-  source: 'coach' | 'athlete'
-  onSource: (source: 'coach' | 'athlete') => void
+  isParent?: boolean
+  source: 'coach' | 'athlete' | 'parent'
+  onSource: (source: 'coach' | 'athlete' | 'parent') => void
   notes: string
   onNotes: (notes: string) => void
   mode: HomeworkTrackMode | ''
@@ -58,6 +59,7 @@ export function AddHomeworkForm({
   libraryShapes,
   coachExercises,
   isCoach,
+  isParent = false,
   source,
   onSource,
   notes,
@@ -284,10 +286,14 @@ export function AddHomeworkForm({
           <select
             className="mt-1 h-11 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
             value={source}
-            onChange={(e) => onSource(e.target.value === 'athlete' ? 'athlete' : 'coach')}
+            onChange={(e) => {
+              const v = e.target.value
+              onSource(v === 'parent' ? 'parent' : v === 'athlete' ? 'athlete' : 'coach')
+            }}
           >
             <option value="athlete">Athlete picks</option>
             <option value="coach">Coach assigns</option>
+            {(isParent || source === 'parent') && <option value="parent">Parent logs</option>}
           </select>
         </label>
       </div>

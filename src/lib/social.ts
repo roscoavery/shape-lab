@@ -15,11 +15,13 @@ export type DirectMessage = {
   createdAt: string
   text: string
   shareUrl?: string
+  shareTitle?: string
 }
 
 export type MessageThread = {
   id: string
-  participantIds: [string, string]
+  participantIds: string[]
+  title?: string
   updatedAt: string
   messages: DirectMessage[]
 }
@@ -107,13 +109,76 @@ export function toggleFollow(file: SocialFile, followerId: string, followingId: 
 
 export function threadWith(file: SocialFile, a: string, b: string): MessageThread | undefined {
   const pair = [a, b].sort()
-  return file.threads.find(
-    (t) => t.participantIds[0] === pair[0] && t.participantIds[1] === pair[1],
-  )
+  return file.threads.find((t) => {
+    if (t.participantIds.length !== 2) return false
+    const ids = [...t.participantIds].sort()
+    return ids[0] === pair[0] && ids[1] === pair[1]
+  })
 }
 
 export function threadsFor(file: SocialFile, profileId: string): MessageThread[] {
-  return file.threads.filter((t) => t.participantIds.includes(profileId))
+  return file.threads
+    .filter((t) => t.participantIds.includes(profileId))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+export function isGroupThread(thread: MessageThread): boolean {
+  return thread.participantIds.length > 2 || Boolean(thread.title)
+}
+
+export function createGroupThread(
+  file: SocialFile,
+  params: { fromId: string; memberIds: string[]; title: string },
+): SocialFile {
+  const members = [...new Set([params.fromId, ...params.memberIds])].filter(Boolean)
+  if (members.length < 2) return file
+  const now = new Date().toISOString()
+  const thread: MessageThread = {
+    id: createId('th'),
+    participantIds: members,
+    title: params.title.trim().slice(0, 60) || undefined,
+    updatedAt: now,
+    messages: [],
+  }
+  return { ...file, threads: [thread, ...file.threads] }
+}
+
+export function sendGroupMessage(
+  file: SocialFile,
+  params: {
+    threadId: string
+    fromId: string
+    text: string
+    shareUrl?: string
+    shareTitle?: string
+  },
+): SocialFile {
+  const thread = file.threads.find((t) => t.id === params.threadId)
+  if (!thread || !thread.participantIds.includes(params.fromId)) return file
+  const share = params.shareUrl?.trim()
+  const text = (params.text.trim() || (share ? params.shareTitle || 'Shared a reference' : '')).slice(
+    0,
+    MESSAGE_MAX,
+  )
+  if (!text && !share) return file
+  const now = new Date().toISOString()
+  const msg: DirectMessage = {
+    id: createId('msg'),
+    authorId: params.fromId,
+    createdAt: now,
+    text,
+    ...(share ? { shareUrl: share } : {}),
+    ...(params.shareTitle?.trim() ? { shareTitle: params.shareTitle.trim().slice(0, 80) } : {}),
+  }
+  const next: MessageThread = {
+    ...thread,
+    updatedAt: now,
+    messages: [...thread.messages, msg],
+  }
+  return {
+    ...file,
+    threads: [next, ...file.threads.filter((t) => t.id !== thread.id)],
+  }
 }
 
 export function sendMessage(
@@ -123,6 +188,7 @@ export function sendMessage(
     toId: string
     text: string
     shareUrl?: string
+    shareTitle?: string
     from?: { role?: Athlete['role']; name?: string } | null
     to?: { role?: Athlete['role'] } | null
   },
@@ -142,7 +208,10 @@ export function sendMessage(
     authorId: params.fromId,
     createdAt: now,
     text,
-    ...(params.shareUrl?.trim() ? { shareUrl: params.shareUrl.trim() } : {}),
+    ...(share ? { shareUrl: share } : {}),
+    ...(params.shareTitle?.trim() || share
+      ? { shareTitle: (params.shareTitle || params.text).trim().slice(0, 80) || undefined }
+      : {}),
   }
   const existing = threadWith(file, params.fromId, params.toId)
   if (existing) {

@@ -303,7 +303,7 @@ export function EducationPanel({
         />
       )}
 
-      {view.kind === 'scroll' && <ReferenceFeed athlete={signedIn} />}
+      {view.kind === 'scroll' && <ReferenceFeed athlete={signedIn} athletes={athletes} />}
 
       {view.kind === 'glossary' && (
         <ShapeGlossary

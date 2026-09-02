@@ -18,6 +18,8 @@ export type AthleteVideoSource =
   | 'tasks2'
   | 'form-analysis'
   | 'lesson'
+  | 'collage'
+  | 'story'
 
 export type DiskAthleteVideo = {
   id: string
@@ -57,6 +59,8 @@ const SOURCES = new Set<AthleteVideoSource>([
   'tasks2',
   'form-analysis',
   'lesson',
+  'collage',
+  'story',
 ])
 
 function safeId(id: string): string | null {

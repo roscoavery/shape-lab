@@ -7,6 +7,8 @@ export type AthleteVideoSource =
   | 'tasks2'
   | 'form-analysis'
   | 'lesson'
+  | 'collage'
+  | 'story'
 
 export type AthleteVideo = {
   id: string
@@ -32,6 +34,8 @@ export const SOURCE_LABEL: Record<AthleteVideoSource, string> = {
   tasks2: 'Tasks 2',
   'form-analysis': 'Form analysis',
   lesson: 'Lesson',
+  collage: 'Collage',
+  story: 'Story',
 }
 
 export async function listAthleteVideos(athleteId: string): Promise<AthleteVideo[]> {

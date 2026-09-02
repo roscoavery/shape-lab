@@ -59,6 +59,13 @@ import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
+import {
+  addHighlight,
+  addStoryFromBody,
+  readStoryRequestBuffer,
+  sendStoryFile,
+  storiesForClient,
+} from './storyStore.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
@@ -90,6 +97,8 @@ const API_PATHS = new Set([
   '/api/coach-content',
   '/api/coach-media',
   '/api/coach-media-file',
+  '/api/stories',
+  '/api/story-file',
 ])
 
 function requestUrl(req: IncomingMessage): URL {
@@ -630,6 +639,62 @@ export async function handleShapeLabApi(
     const id = url.searchParams.get('id') ?? ''
     if (!(await sendCoachMediaFile(id, res))) {
       sendJson(res, 404, { error: 'File not found' })
+    }
+    return true
+  }
+  if (path === '/api/stories') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await storiesForClient())
+      return true
+    }
+    if (req.method === 'POST') {
+      const kind = url.searchParams.get('kind') ?? ''
+      if (kind === 'highlight') {
+        try {
+          const raw = await readRequestBody(req)
+          const body = raw ? (JSON.parse(raw) as { id?: string; ownerId?: string; title?: string; storyIds?: string[] }) : {}
+          const saved = await addHighlight({
+            id: body.id ?? '',
+            ownerId: body.ownerId ?? '',
+            title: body.title ?? '',
+            storyIds: Array.isArray(body.storyIds) ? body.storyIds : [],
+          })
+          if (!saved) {
+            sendJson(res, 400, { error: 'Pick a story and a highlight name.' })
+            return true
+          }
+          sendJson(res, 200, saved)
+        } catch {
+          sendJson(res, 400, { error: 'Could not save that highlight.' })
+        }
+        return true
+      }
+      try {
+        const buf = await readStoryRequestBuffer(req)
+        const saved = await addStoryFromBody({
+          id: url.searchParams.get('id') ?? '',
+          authorId: url.searchParams.get('authorId') ?? '',
+          caption: url.searchParams.get('caption') ?? '',
+          mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
+          buf,
+        })
+        if (!saved) {
+          sendJson(res, 400, { error: 'Could not post that story.' })
+          return true
+        }
+        sendJson(res, 200, saved)
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not post that story.' })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or POST' })
+    return true
+  }
+  if (path === '/api/story-file') {
+    const id = url.searchParams.get('id') ?? ''
+    if (!(await sendStoryFile(id, res))) {
+      sendJson(res, 404, { error: 'Story not found' })
     }
     return true
   }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GymClipPlayer } from '../GymClipPlayer'
-import { CollageClipPicker } from './CollageClipPicker'
+import { CollageSlotFill } from './CollageSlotFill'
 import { evenGrid, type Collage, type CollageSlot } from '../../lib/collages'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import {
@@ -26,6 +26,8 @@ export function CollageStage({
   onClose,
   onSlots,
   canEdit,
+  canAssign = false,
+  viewerId = null,
   onEditVideos,
   onDuplicate,
   editor,
@@ -38,6 +40,9 @@ export function CollageStage({
   onClose: () => void
   onSlots?: (slots: CollageSlot[]) => void
   canEdit: boolean
+  /** Pick, record, or upload a clip into a tile — Today uses this without full edit. */
+  canAssign?: boolean
+  viewerId?: string | null
   onEditVideos?: () => void
   onDuplicate?: () => void
   editor?: OrganizeEditor
@@ -209,7 +214,7 @@ export function CollageStage({
             onClick={() => void runExport()}
             className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[#06281f]"
           >
-            Export
+            Save to Photos
           </button>
           {onEditVideos && (
             <button
@@ -301,7 +306,9 @@ export function CollageStage({
                 : s,
             ),
           )
+          setPlayingSlot(i)
         }
+        const allowAssign = (canEdit || canAssign) && Boolean(onSlots)
         return (
           <div
             key={`slot-${i}`}
@@ -343,7 +350,7 @@ export function CollageStage({
                   Play
                 </span>
                 <span className="text-[12px] font-semibold text-white">{nameForUrl(slot.url)}</span>
-                <span className="text-[11px] text-white/50">Loads this clip only</span>
+                <span className="text-[11px] text-white/50">Tap another tile to switch clips</span>
               </button>
             )}
             {(playingSlot === i || cinema) && slot.url ? (
@@ -360,12 +367,12 @@ export function CollageStage({
             ) : null}
             {!cinema && (
               <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
-                {canEdit && onSlots ? (
-                  <CollageClipPicker
+                {allowAssign ? (
+                  <CollageSlotFill
                     url={slot.url}
                     clipId={slot.clipId}
                     clips={clips}
-                    compact
+                    viewerId={viewerId}
                     onPick={assignClip}
                   />
                 ) : (

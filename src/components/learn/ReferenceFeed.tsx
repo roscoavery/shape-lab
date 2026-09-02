@@ -17,12 +17,14 @@ import { itemMatchesQuery } from '../../lib/clipStore'
 import type { Athlete } from '../../types'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { postedByFromUrl } from '../../lib/socialUrls'
+import { StoryRail } from '../stories/StoryRail'
 
 type Props = {
   athlete?: Athlete | null
+  athletes?: Athlete[]
 }
 
-export function ReferenceFeed({ athlete = null }: Props) {
+export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const { clips, loading } = useGymLibrary()
   const favorites = useFavorites()
   const [active, setActive] = useState(0)
@@ -91,24 +93,35 @@ export function ReferenceFeed({ athlete = null }: Props) {
     })
   }, [visible])
 
+  const rail = (
+    <StoryRail athlete={athlete} athletes={athletes.length ? athletes : athlete ? [athlete] : []} />
+  )
+
   if (loading && clips.length === 0) {
     return (
-      <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
-        Loading the gym reference library…
-      </p>
+      <div className="space-y-3">
+        {rail}
+        <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
+          Loading the gym reference library…
+        </p>
+      </div>
     )
   }
 
   if (clips.length === 0) {
     return (
-      <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
-        No gym URLs yet. Unlock Ryan to paste clips into the gym library, or unlock a coach profile to add URLs in your own collections.
-      </p>
+      <div className="space-y-3">
+        {rail}
+        <p className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-6 text-sm text-[var(--muted)]">
+          No gym URLs yet. Unlock Ryan to paste clips into the gym library, or unlock a coach profile to add URLs in your own collections.
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="space-y-3">
+      {rail}
       <CollapsibleSection
         title="Reference scroll"
         hint="Same library as Compare. Search, collect, or add to a collage."

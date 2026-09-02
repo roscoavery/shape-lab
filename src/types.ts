@@ -454,7 +454,7 @@ export type TaskRunReport = {
 }
 
 /** Who put a homework item on the athlete's list. */
-export type HomeworkSource = 'auto' | 'coach' | 'athlete'
+export type HomeworkSource = 'auto' | 'coach' | 'athlete' | 'parent'
 
 /** How an assigned or catalog drill is trained and logged. */
 export type HomeworkTrackMode = 'hold' | 'reps' | 'hold_or_reps' | 'journal'

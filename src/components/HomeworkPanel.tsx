@@ -23,7 +23,7 @@ import {
   needsWristPrep,
 } from '../config/homeworkCatalog'
 import { isPhoneBrowser } from '../lib/delayCameraPipeline'
-import { isCoachProfile } from '../lib/profileRole'
+import { isCoachProfile, profileRole } from '../lib/profileRole'
 import {
   addCoachExercise,
   addInjuryEntry,
@@ -104,6 +104,8 @@ type PlankSide = 'left' | 'right' | 'both'
 type Props = {
   athleteId: string | null
   athlete?: Athlete | null
+  /** Signed-in profile. Parents log onto their linked athlete. */
+  viewer?: Athlete | null
   onUpdateAthlete?: (patch: Partial<Athlete>) => void
   score: ScoreResult
   /** Shape the camera is currently scoring (App state) */
@@ -138,6 +140,8 @@ function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
       return { label: 'Coach', cls: 'bg-[#2c3a52] text-[var(--text)]' }
     case 'athlete':
       return { label: 'Athlete', cls: 'bg-[#233043] text-[var(--muted)]' }
+    case 'parent':
+      return { label: 'Parent', cls: 'bg-[#3a2c1a] text-[#f0d9a8]' }
   }
 }
 
@@ -587,6 +591,7 @@ function HwOverlay({
 export function HomeworkPanel({
   athleteId,
   athlete = null,
+  viewer = null,
   onUpdateAthlete,
   score,
   currentShapeId,
@@ -608,7 +613,7 @@ export function HomeworkPanel({
   const [plankSide, setPlankSide] = useState<PlankSide>('left')
   const [flash, setFlash] = useState<string | null>(null)
   const [libTick, setLibTick] = useState(0)
-  const [addSource, setAddSource] = useState<'coach' | 'athlete'>('athlete')
+  const [addSource, setAddSource] = useState<'coach' | 'athlete' | 'parent'>('athlete')
   const [addTarget, setAddTarget] = useState('20')
   const [addReps, setAddReps] = useState('')
   const [addMode, setAddMode] = useState<HomeworkTrackMode | ''>('')
@@ -687,6 +692,16 @@ export function HomeworkPanel({
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [athleteId, athlete?.id])
+
+  const signedIn = viewer ?? athlete
+  const parentLogging =
+    profileRole(viewer) === 'parent' && Boolean(athlete) && viewer?.id !== athlete?.id
+
+  useEffect(() => {
+    if (isCoachProfile(signedIn)) setAddSource('coach')
+    else if (profileRole(signedIn) === 'parent') setAddSource('parent')
+    else setAddSource('athlete')
+  }, [signedIn?.id])
 
   useEffect(() => {
     const open = hwPage !== 'home' || Boolean(activeItemId)
@@ -1085,7 +1100,11 @@ export function HomeworkPanel({
     setAddMode('')
     setAddReps('')
     setAddGrip('')
-    showFlash(`${addSource === 'coach' ? 'Coach added' : 'Athlete picked'}: ${homeworkTitle(item)}`)
+    showFlash(
+      `${
+        addSource === 'coach' ? 'Coach added' : addSource === 'parent' ? 'Parent added' : 'Athlete picked'
+      }: ${homeworkTitle(item)}`,
+    )
   }
 
   const addCatalogItem = (catalogId: string, source: HomeworkSource = 'athlete') => {
@@ -1229,7 +1248,16 @@ export function HomeworkPanel({
         </h2>
         {athlete && (
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Signed in as <AthleteName athlete={athlete} size="xs" />
+            {parentLogging && viewer ? (
+              <>
+                Logging homework for <AthleteName athlete={athlete} size="xs" /> as
+                parent ({viewer.name.split(' ')[0]})
+              </>
+            ) : (
+              <>
+                Signed in as <AthleteName athlete={athlete} size="xs" />
+              </>
+            )}
           </p>
         )}
       </div>
@@ -2091,7 +2119,8 @@ export function HomeworkPanel({
           <AddHomeworkForm
             libraryShapes={libraryShapes}
             coachExercises={coachExercises}
-            isCoach={isCoachProfile(athlete)}
+            isCoach={isCoachProfile(signedIn)}
+            isParent={profileRole(signedIn) === 'parent'}
             source={addSource}
             onSource={setAddSource}
             notes={addNotes}
