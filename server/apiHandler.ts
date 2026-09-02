@@ -676,6 +676,10 @@ export async function handleShapeLabApi(
           authorId: url.searchParams.get('authorId') ?? '',
           caption: url.searchParams.get('caption') ?? '',
           mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
+          taggedIds: (url.searchParams.get('tagged') ?? '')
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean),
           buf,
         })
         if (!saved) {

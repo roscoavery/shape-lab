@@ -11,6 +11,7 @@ export type GymStory = {
   mime: string
   url: string
   live: boolean
+  taggedIds?: string[]
 }
 
 export type StoryHighlight = {
@@ -60,6 +61,7 @@ export async function publishStory(opts: {
   authorId: string
   blob: Blob
   caption?: string
+  taggedIds?: string[]
 }): Promise<GymStory> {
   const id = createId('stry')
   const mime = opts.blob.type || 'video/webm'
@@ -68,6 +70,7 @@ export async function publishStory(opts: {
     authorId: opts.authorId,
     caption: opts.caption ?? '',
     mime,
+    tagged: (opts.taggedIds ?? []).join(','),
   })
   const res = await fetch(`/api/stories?${qs.toString()}`, {
     method: 'POST',

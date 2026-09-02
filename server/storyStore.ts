@@ -23,6 +23,7 @@ export type DiskStory = {
   file: string
   sizeBytes: number
   url?: string
+  taggedIds?: string[]
 }
 
 export type DiskHighlight = {
@@ -122,6 +123,7 @@ export async function addStoryFromBody(params: {
   createdAt?: string
   mime: string
   buf: Buffer
+  taggedIds?: string[]
 }): Promise<(DiskStory & { url: string; live: boolean }) | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -145,6 +147,10 @@ export async function addStoryFromBody(params: {
     mime,
     file,
     sizeBytes: params.buf.length,
+    taggedIds: (params.taggedIds ?? [])
+      .map((id) => safeId(id))
+      .filter((id): id is string => Boolean(id))
+      .slice(0, 12),
   }
   const meta = await readStoriesFile()
   const next = await writeMeta({

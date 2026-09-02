@@ -2,14 +2,17 @@ import { useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { fileToClipBlob, recordQuickClip } from '../../lib/quickClip'
 import { publishStory, saveHighlight } from '../../lib/stories'
+import { taggedIdsFromText } from '../../lib/profileHandle'
+import { pushNotice } from '../../lib/notify'
 
 type Props = {
   athlete: Athlete
+  athletes?: Athlete[]
   onClose: () => void
   onPosted: () => void
 }
 
-export function StoryComposer({ athlete, onClose, onPosted }: Props) {
+export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [caption, setCaption] = useState('')
   const [highlightName, setHighlightName] = useState('')
@@ -19,10 +22,21 @@ export function StoryComposer({ athlete, onClose, onPosted }: Props) {
   const post = async (blob: Blob) => {
     setBusy('Posting…')
     try {
-      const story = await publishStory({ authorId: athlete.id, blob, caption })
+      const taggedIds = taggedIdsFromText(caption, athletes)
+      const story = await publishStory({ authorId: athlete.id, blob, caption, taggedIds })
       const title = highlightName.trim()
       if (title) {
         await saveHighlight({ ownerId: athlete.id, title, storyIds: [story.id] })
+      }
+      for (const id of taggedIds) {
+        if (id === athlete.id) continue
+        void pushNotice({
+          toId: id,
+          kind: 'share',
+          title: `${athlete.name} tagged you in a story`,
+          body: caption.trim() || 'Open Feed or Reference scroll.',
+          href: 'feed',
+        })
       }
       onPosted()
     } catch (err) {
@@ -40,14 +54,15 @@ export function StoryComposer({ athlete, onClose, onPosted }: Props) {
         </p>
         <h3 className="mt-1 text-lg font-semibold">Add to your story</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Lives on Feed and Reference scroll for 24 hours. Name a highlight
-          below if you want this clip to stay on your profile.
+          Lives on Feed and Reference scroll for 24 hours. Tag someone with
+          @handle or @"Full Name". Name a highlight below if you want this clip
+          to stay on your profile.
         </p>
         <input
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           maxLength={120}
-          placeholder="Optional caption"
+          placeholder='Optional caption — @handle or @"Full Name"'
           className="mt-3 w-full rounded-lg border border-[var(--panel-border)] bg-black/40 px-3 py-2 text-sm"
         />
         <input

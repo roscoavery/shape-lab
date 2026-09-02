@@ -63,6 +63,7 @@ export function AthletePanel({
   const [newEmail, setNewEmail] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [newHandle, setNewHandle] = useState('')
+  const [newShapeHandle, setNewShapeHandle] = useState('')
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
   const [newGym, setNewGym] = useState('')
   const [newLinkedIds, setNewLinkedIds] = useState<string[]>([])
@@ -70,6 +71,7 @@ export function AthletePanel({
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
   const [handle, setHandle] = useState('')
+  const [shapeHandle, setShapeHandle] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [parentPhone, setParentPhone] = useState('')
@@ -85,6 +87,7 @@ export function AthletePanel({
 
   useEffect(() => {
     setHandle(active?.instagramHandle ?? '')
+    setShapeHandle(active?.shapeLabHandle ?? '')
     setGymName(active?.gymName ?? '')
     setLinkedIds(active?.linkedAthleteIds ?? [])
     setEmail(active?.email ?? '')
@@ -92,7 +95,7 @@ export function AthletePanel({
     setParentPhone(active?.parentPhone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
-  }, [active?.id, active?.instagramHandle, active?.gymName, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
+  }, [active?.id, active?.instagramHandle, active?.shapeLabHandle, active?.gymName, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
 
   const flash = (msg: string, ms = 2800) => {
     setSaved(msg)
@@ -141,6 +144,7 @@ export function AthletePanel({
       email: newEmail.trim(),
       phone: newPhone.trim(),
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
+      shapeLabHandle: normalizeInstagramHandle(newShapeHandle) || undefined,
       gymName: newGym.trim() || undefined,
       createdAt: new Date().toISOString(),
       passcodeHash,
@@ -162,6 +166,7 @@ export function AthletePanel({
     setNewEmail('')
     setNewPhone('')
     setNewHandle('')
+    setNewShapeHandle('')
     setNewGym('')
     setNewLinkedIds([])
     setPasscode('')
@@ -179,6 +184,7 @@ export function AthletePanel({
   const saveDetails = () => {
     if (!active) return
     const instagramHandle = normalizeInstagramHandle(handle) || undefined
+    const shapeLabHandle = normalizeInstagramHandle(shapeHandle) || undefined
     const nextGym = gymName.trim() || undefined
     const next =
       profileRole(active) === 'parent'
@@ -190,6 +196,7 @@ export function AthletePanel({
           ? {
               ...next,
               instagramHandle,
+              shapeLabHandle,
               gymName: nextGym,
               email: email.trim() || undefined,
               phone: phone.trim() || undefined,
@@ -199,7 +206,7 @@ export function AthletePanel({
       ),
     )
     const bits = [
-      instagramHandle ? `@${instagramHandle}` : null,
+      shapeLabHandle ? `@${shapeLabHandle}` : instagramHandle ? `@${instagramHandle}` : null,
       nextGym,
       next.childName ? `athlete ${next.childName}` : null,
       email.trim() || null,
@@ -297,7 +304,9 @@ export function AthletePanel({
             <option key={a.id} value={a.id}>
               {`${a.name} · ${roleLabel(a)}`}
               {a.gymName ? ` · ${a.gymName}` : ''}
-              {a.instagramHandle ? ` (@${a.instagramHandle})` : ''}
+              {a.shapeLabHandle || a.instagramHandle
+                ? ` (@${a.shapeLabHandle || a.instagramHandle})`
+                : ''}
               {last ? ` · last test ${formatQuizScore(last)}` : ''}
             </option>
           )
@@ -422,6 +431,15 @@ export function AthletePanel({
           placeholder="Instagram @handle (optional)"
           value={newHandle}
           onChange={(e) => setNewHandle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void add()
+          }}
+        />
+        <input
+          className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          placeholder="Shape Lab @handle (optional — Instagram @ is used if blank)"
+          value={newShapeHandle}
+          onChange={(e) => setNewShapeHandle(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void add()
           }}
@@ -629,6 +647,19 @@ export function AthletePanel({
               if (e.key === 'Enter') saveDetails()
             }}
           />
+          <input
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Shape Lab @handle (optional — Instagram @ is used if blank)"
+            value={shapeHandle}
+            onChange={(e) => setShapeHandle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveDetails()
+            }}
+          />
+          <p className="text-[11px] text-[var(--muted)]">
+            Tag this profile with {shapeHandle || handle ? `@${normalizeInstagramHandle(shapeHandle || handle)}` : `@"${active.name}"`}
+            {' '}in stories, Feed, and Wins.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { Athlete } from '../../types'
 import { givenName } from '../../lib/classStation'
 import { saveHighlight, type GymStory, type StoryHighlight } from '../../lib/stories'
+import { MentionText } from '../MentionText'
 
 type Props = {
   items: GymStory[]
@@ -115,8 +116,8 @@ export function StoryViewer({
           className="absolute inset-y-0 right-0 w-2/3"
         />
         {story.caption && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-24 px-4 text-center text-sm font-medium">
-            {story.caption}
+          <p className="pointer-events-auto absolute inset-x-0 bottom-24 z-10 px-4 text-center text-sm font-medium">
+            <MentionText text={story.caption} athletes={athletes} />
           </p>
         )}
       </div>

@@ -13,6 +13,7 @@ export type Athlete = {
   name: string
   notes?: string
   instagramHandle?: string
+  shapeLabHandle?: string
   createdAt: string
   passcodeHash?: string
   role?: ProfileKind
@@ -245,6 +246,7 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     childName: newer.childName || older.childName,
     linkedAthleteIds: mergeIdList(newer.linkedAthleteIds, older.linkedAthleteIds),
     instagramHandle: newer.instagramHandle || older.instagramHandle,
+    shapeLabHandle: newer.shapeLabHandle || older.shapeLabHandle,
     notes: newer.notes || older.notes,
     role,
     hasBackPain: newer.hasBackPain ?? older.hasBackPain,

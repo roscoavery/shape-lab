@@ -33,6 +33,9 @@ import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { CollageStage } from '../classes/CollageStage'
 import { StoryRail } from '../stories/StoryRail'
+import { MentionText } from '../MentionText'
+import { mentionLabel, taggedIdsFromText } from '../../lib/profileHandle'
+import { useViewProfile } from '../ProfilePeekContext'
 
 type Props = {
   athletes: Athlete[]
@@ -61,6 +64,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const gymAdmin = isGymAdmin(athlete)
   const ryan = findRyan(athletes)
   const { nameForUrl } = useGymLibrary()
+  const viewProfile = useViewProfile()
   const parentKidIds =
     athlete && profileRole(athlete) === 'parent'
       ? new Set(childAthletes(athlete, athletes).map((k) => k.id))
@@ -138,18 +142,19 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
         }
       }
     }
+    const taggedIds = taggedIdsFromText(caption, athletes, tagged)
     const result = blob
       ? await publishFeedPostResult({
           authorId: athlete.id,
           caption: caption.trim(),
-          taggedIds: tagged,
+          taggedIds,
           blob,
           channels,
         })
       : await publishTextPostResult({
           authorId: athlete.id,
           caption: caption.trim(),
-          taggedIds: tagged,
+          taggedIds,
           channels,
         })
     setBusy(false)
@@ -171,7 +176,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
           ? 'Posted to Wins.'
           : 'Posted to the gym feed.',
     )
-    for (const id of tagged) {
+    for (const id of taggedIds) {
       if (id === athlete.id) continue
       void pushNotice({
         toId: id,
@@ -263,15 +268,24 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
               onChange={(e) => setCaption(e.target.value)}
               placeholder={
                 wins
-                  ? 'What did they just do? Firsts belong here. Video optional.'
+                  ? 'What did they just do? Tag with @handle or @"Full Name". Video optional.'
                   : coach
-                    ? 'A thought, a hit, or a note about class. Video is optional. Tag the athlete below.'
-                    : 'A thought or what you hit. Video is optional. Ryan is tagged as coach unless you change it.'
+                    ? 'A thought, a hit, or a note about class. Tag with @handle or @"Full Name".'
+                    : 'A thought or what you hit. Tag with @handle or @"Full Name".'
               }
               rows={3}
               maxLength={FEED_CAPTION_MAX}
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             />
+            {caption.trim() && taggedIdsFromText(caption, athletes).length > 0 && (
+              <p className="text-[11px] text-[var(--accent)]">
+                Tagging{' '}
+                {taggedIdsFromText(caption, athletes)
+                  .map((id) => athletes.find((a) => a.id === id)?.name)
+                  .filter(Boolean)
+                  .join(', ')}
+              </p>
+            )}
             <label className="block">
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Video (optional)
@@ -459,7 +473,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                         : ''
                     }`}
                   >
-                    {post.caption}
+                    <MentionText text={post.caption} athletes={athletes} />
                   </p>
                 )}
                 {athlete && (
@@ -531,13 +545,15 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                 {taggedPeople.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-4 pb-3">
                     {taggedPeople.map((a) => (
-                      <span
+                      <button
                         key={a.id}
+                        type="button"
+                        onClick={() => viewProfile(a.id)}
                         className="rounded-full bg-[#0d1218] px-2 py-0.5 text-[11px] text-[var(--muted)]"
                       >
                         <AthleteName athlete={a} size="xs" />
-                        <span className="ml-1">· {roleLabel(a)}</span>
-                      </span>
+                        <span className="ml-1">{mentionLabel(a)}</span>
+                      </button>
                     ))}
                   </div>
                 )}

@@ -128,6 +128,7 @@ export function StoryRail({ athlete, athletes }: Props) {
       {compose && athlete && (
         <StoryComposer
           athlete={athlete}
+          athletes={athletes}
           onClose={() => setCompose(false)}
           onPosted={() => {
             setCompose(false)

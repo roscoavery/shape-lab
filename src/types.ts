@@ -180,6 +180,11 @@ export type Athlete = {
   notes?: string
   /** Instagram username without @. Used for Story captions and tagging Ryan. */
   instagramHandle?: string
+  /**
+   * Shape Lab @handle without @. If empty, the Instagram handle is the
+   * Shape Lab handle. Tag with @handle or @"Full Name".
+   */
+  shapeLabHandle?: string
   createdAt: string
   /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
   passcodeHash?: string

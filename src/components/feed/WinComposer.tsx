@@ -14,6 +14,7 @@ import {
 } from '../../lib/feedPosts'
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
 import { pushNotice } from '../../lib/notify'
+import { taggedIdsFromText } from '../../lib/profileHandle'
 
 type Props = {
   athlete: Athlete
@@ -27,6 +28,7 @@ type Props = {
 
 export function WinComposer({
   athlete,
+  athletes = [],
   taggedIds = [],
   channels,
   placeholder,
@@ -65,18 +67,19 @@ export function WinComposer({
         }
       }
     }
+    const tags = taggedIdsFromText(text, athletes, taggedIds)
     const result = blob
       ? await publishFeedPostResult({
           authorId: athlete.id,
           caption: text,
-          taggedIds,
+          taggedIds: tags,
           blob,
           channels,
         })
       : await publishTextPostResult({
           authorId: athlete.id,
           caption: text,
-          taggedIds,
+          taggedIds: tags,
           channels,
         })
     setBusy(false)
@@ -89,7 +92,7 @@ export function WinComposer({
     setLibraryId(null)
     setPickLib(false)
     onPosted(result.post)
-    for (const id of taggedIds) {
+    for (const id of tags) {
       if (id === athlete.id) continue
       void pushNotice({
         toId: id,

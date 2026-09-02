@@ -24,6 +24,8 @@ import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
+import { mentionLabel, profileHandle } from '../lib/profileHandle'
+import { MentionText } from './MentionText'
 import { ProfileHighlights } from './stories/ProfileHighlights'
 
 type Props = {
@@ -117,6 +119,10 @@ export function AthleteProfileCard({
             {contest ? ' 🤸' : ''}
           </h2>
           <p className="text-sm text-[var(--muted)]">{roleLabel(athlete)}</p>
+          <p className="mt-0.5 text-sm font-medium text-[var(--accent)]">{mentionLabel(athlete)}</p>
+          {athlete.instagramHandle && profileHandle(athlete) !== athlete.instagramHandle && (
+            <p className="text-xs text-[var(--muted)]">IG @{athlete.instagramHandle}</p>
+          )}
           {parentsOf(athlete.id, athletes).length > 0 && (
             <p className="mt-1 text-xs text-[var(--muted)]">
               Parent{parentsOf(athlete.id, athletes).length === 1 ? '' : 's'}:{' '}
@@ -203,9 +209,10 @@ export function AthleteProfileCard({
           <div className="mt-2">
             <WinComposer
               athlete={viewer && coach && !own ? viewer : athlete}
+              athletes={athletes}
               taggedIds={own ? [] : [athlete.id]}
               channels={['gym']}
-              placeholder={own ? 'A thought or a hit. Clip optional.' : `Post about ${athlete.name}…`}
+              placeholder={own ? 'A thought or a hit. Tag with @handle or @"Name".' : `Post about ${athlete.name}… Tag with @handle or @"Name".`}
               submitLabel="Post to feed"
               onPosted={() => {
                 void listFeedPosts().then((posts) =>
@@ -238,7 +245,9 @@ export function AthleteProfileCard({
               const gave = viewer ? (p.hi5s ?? []).includes(viewer.id) : false
               return (
                 <li key={p.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
-                  <p>{p.caption}</p>
+                  <p>
+                    <MentionText text={p.caption} athletes={athletes} />
+                  </p>
                   <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                     {p.sharedByName ? `shared by ${p.sharedByName} · ` : ''}
                     {new Date(p.createdAt).toLocaleString()}

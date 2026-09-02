@@ -59,6 +59,7 @@ import { ResearchPanel } from './components/research/ResearchPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
 import { FavoritesProvider } from './lib/favorites'
+import { ProfilePeekProvider } from './components/ProfilePeekContext'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { IgStillProvider } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
@@ -557,6 +558,7 @@ export default function App() {
     <ClipEditProvider viewer={activeProfile} athletes={athletes}>
     <ClipLoopsProvider>
     <FavoritesProvider>
+    <ProfilePeekProvider onView={setViewingAthleteId}>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -1426,6 +1428,7 @@ export default function App() {
         }}
       />
     )}
+    </ProfilePeekProvider>
     </FavoritesProvider>
     </ClipLoopsProvider>
     </ClipEditProvider>
