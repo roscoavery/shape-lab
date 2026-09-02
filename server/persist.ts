@@ -1,12 +1,13 @@
 /**
  * JSON / binary storage that works on the gym computer (data/) and on Vercel.
  * Local: write data/*.json as today.
- * Production: Vercel Blob when BLOB_READ_WRITE_TOKEN is set; otherwise /tmp
- * plus an in-process cache so a warm function keeps writes.
+ * Production: Vercel Blob when a store is connected (private preferred);
+ * otherwise /tmp plus an in-process cache so a warm function keeps writes.
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { Readable } from 'node:stream'
 
 const ROOT = process.cwd()
 const TMP = path.join('/tmp', 'shape-lab-data')
@@ -31,7 +32,7 @@ function canWrite(dir: string): boolean {
 }
 
 function useBlob(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)
 }
 
 export type PersistMode = 'blob' | 'disk' | 'tmp'
@@ -43,21 +44,54 @@ export function persistMode(): PersistMode {
   return 'tmp'
 }
 
+async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const node = Readable.fromWeb(stream as import('node:stream/web').ReadableStream)
+  const chunks: Buffer[] = []
+  for await (const chunk of node) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+  return Buffer.concat(chunks)
+}
+
+async function readBlob(rel: string): Promise<Buffer | null> {
+  const { get } = await import('@vercel/blob')
+  for (const access of ['private', 'public'] as const) {
+    try {
+      const hit = await get(rel, { access, useCache: false })
+      if (hit?.statusCode === 200 && hit.stream) {
+        return await streamToBuffer(hit.stream)
+      }
+    } catch {
+      /* try the other access mode */
+    }
+  }
+  return null
+}
+
+async function writeBlob(rel: string, body: string | Buffer, contentType: string): Promise<void> {
+  const { put } = await import('@vercel/blob')
+  const options = {
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType,
+    cacheControlMaxAge: 60,
+  } as const
+  try {
+    await put(rel, body, { ...options, access: 'private' })
+  } catch {
+    await put(rel, body, { ...options, access: 'public' })
+  }
+}
+
 export async function readText(rel: string): Promise<string | null> {
   const cached = mem.get(rel)
   if (cached) return cached.toString('utf8')
   if (useBlob()) {
     try {
-      const { list } = await import('@vercel/blob')
-      const { blobs } = await list({ prefix: rel, limit: 5 })
-      const hit = blobs.find((b) => b.pathname === rel || b.pathname.endsWith(rel))
-      if (hit?.url) {
-        const res = await fetch(hit.url)
-        if (res.ok) {
-          const text = await res.text()
-          mem.set(rel, Buffer.from(text, 'utf8'))
-          return text
-        }
+      const buf = await readBlob(rel)
+      if (buf) {
+        mem.set(rel, buf)
+        return buf.toString('utf8')
       }
     } catch {
       /* fall through */
@@ -79,13 +113,7 @@ export async function writeText(rel: string, text: string): Promise<void> {
   const buf = Buffer.from(text, 'utf8')
   mem.set(rel, buf)
   if (useBlob()) {
-    const { put } = await import('@vercel/blob')
-    await put(rel, text, {
-      access: 'public',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: 'application/json',
-    })
+    await writeBlob(rel, text, 'application/json')
     return
   }
   const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
@@ -112,16 +140,10 @@ export async function readBin(rel: string): Promise<Buffer | null> {
   if (cached) return cached
   if (useBlob()) {
     try {
-      const { list } = await import('@vercel/blob')
-      const { blobs } = await list({ prefix: rel, limit: 5 })
-      const hit = blobs.find((b) => b.pathname === rel || b.pathname.endsWith(rel))
-      if (hit?.url) {
-        const res = await fetch(hit.url)
-        if (res.ok) {
-          const buf = Buffer.from(await res.arrayBuffer())
-          mem.set(rel, buf)
-          return buf
-        }
+      const buf = await readBlob(rel)
+      if (buf) {
+        mem.set(rel, buf)
+        return buf
       }
     } catch {
       /* fall through */
@@ -142,13 +164,7 @@ export async function readBin(rel: string): Promise<Buffer | null> {
 export async function writeBin(rel: string, buf: Buffer, contentType: string): Promise<void> {
   mem.set(rel, buf)
   if (useBlob()) {
-    const { put } = await import('@vercel/blob')
-    await put(rel, buf, {
-      access: 'public',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType,
-    })
+    await writeBlob(rel, buf, contentType)
     return
   }
   const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
@@ -160,12 +176,8 @@ export async function removeFile(rel: string): Promise<void> {
   mem.delete(rel)
   if (useBlob()) {
     try {
-      const { del, list } = await import('@vercel/blob')
-      const { blobs } = await list({ prefix: rel, limit: 5 })
-      const urls = blobs
-        .filter((b) => b.pathname === rel || b.pathname.endsWith(rel))
-        .map((b) => b.url)
-      if (urls.length) await del(urls)
+      const { del } = await import('@vercel/blob')
+      await del(rel)
     } catch {
       /* ignore */
     }

@@ -62,8 +62,9 @@ Sign in with the claim URL, then in the Vercel project connect [github.com/rosco
 How to add it:
 
 1. Vercel project → **Storage** → create a **Blob** store.
-2. Copy `BLOB_READ_WRITE_TOKEN` into the project **Environment Variables** (Production).
-3. Redeploy.
+2. Keep **Private** (phones stay off the public internet).
+3. Check **Add a read-write token env var to this connection**.
+4. Create, then redeploy **Production** on the same gym URL.
 
 No other secrets are required. Instagram / TikTok resolve uses public Cobalt instances (yt-dlp is not available on Vercel).
 
