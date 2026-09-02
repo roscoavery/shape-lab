@@ -311,6 +311,9 @@ export function AthletePanel({
             viewer={viewer ?? active}
             athletes={athletes}
             variant="embed"
+            onAthleteChange={(next) =>
+              onChangeAthletes(athletes.map((a) => (a.id === next.id ? next : a)))
+            }
             onAddNote={
               viewer && isCoachProfile(viewer)
                 ? (text) =>

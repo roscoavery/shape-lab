@@ -20,9 +20,11 @@ type Props = {
   viewer: Athlete | null | undefined
   draft: ChalkboardDraft
   compact?: boolean
+  /** Skip the toggle — show the class picker (used inside Share). */
+  embedded?: boolean
 }
 
-export function PostToChalkboard({ viewer, draft, compact = false }: Props) {
+export function PostToChalkboard({ viewer, draft, compact = false, embedded = false }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [open, setOpen] = useState(false)
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
@@ -75,8 +77,11 @@ export function PostToChalkboard({ viewer, draft, compact = false }: Props) {
     setOpen(false)
   }
 
+  const formOpen = embedded || open
+
   return (
     <div className={compact ? '' : 'space-y-1'}>
+      {!embedded && (
       <button
         type="button"
         onClick={() => {
@@ -91,7 +96,8 @@ export function PostToChalkboard({ viewer, draft, compact = false }: Props) {
       >
         {open ? 'Cancel chalkboard' : 'Post to chalkboard'}
       </button>
-      {open && (
+      )}
+      {formOpen && (
         <div className="mt-2 space-y-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <p className="text-[11px] text-[var(--muted)]">
             {draft.title} · pick the class type this belongs on.

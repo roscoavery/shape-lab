@@ -29,7 +29,7 @@ import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { PhoneReelViewer } from '../PhoneReelViewer'
-import { PostToChalkboard } from '../chalkboard/PostToChalkboard'
+import { ShareReference } from '../share/ShareReference'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -801,9 +801,9 @@ function CollageList({
                 </button>
               )}
               {athlete && (
-                <PostToChalkboard
+                <ShareReference
                   viewer={athlete}
-                  compact
+                  variant="compact"
                   draft={{ kind: 'collage', title: c.name, collageId: c.id }}
                 />
               )}

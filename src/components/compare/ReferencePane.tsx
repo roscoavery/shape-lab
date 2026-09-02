@@ -55,6 +55,8 @@ import { prefetchNeighborClips } from '../../lib/igCache'
 import { VideoWorkbench } from './VideoWorkbench'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { ShareReference } from '../share/ShareReference'
+import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
@@ -1012,6 +1014,12 @@ export function ReferencePane({
                 onCopied={setNotice}
               />
             )}
+            {item.url && (
+              <ShareReference
+                variant="row"
+                draft={clipShareDraft(item.name, item.url, item.trimStart, item.trimEnd)}
+              />
+            )}
           </>
         )}
         {!opts.quiet && canEditCollection(opts.collection) && (
@@ -1127,6 +1135,19 @@ export function ReferencePane({
         >
           Full screen
         </button>
+      )}
+      {!pip && activeItem?.url && (
+        <div className="absolute bottom-2 left-2 z-[40]">
+          <ShareReference
+            variant="reel"
+            draft={clipShareDraft(
+              activeItem.name,
+              activeItem.url,
+              activeItem.trimStart,
+              activeItem.trimEnd,
+            )}
+          />
+        </div>
       )}
       {clipHudOpen && fill && !pip && (
         <div className="absolute inset-y-0 right-0 z-[50] flex w-[min(17.5rem,58%)] flex-col bg-black/92 text-white shadow-[-16px_0_40px_rgba(0,0,0,0.55)]">

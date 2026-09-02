@@ -130,6 +130,9 @@ export function ClassAthleteDesk({
             viewer={coach}
             athletes={athletes}
             variant="embed"
+            onAthleteChange={(next) =>
+              onAthletesChange(athletes.map((a) => (a.id === next.id ? next : a)))
+            }
             onAddNote={saveNote}
             onAddWin={(text, big) => void saveWin(text, big)}
           />

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../../types'
 import { listCollages, type Collage } from '../../lib/collages'
-import { isCoachProfile } from '../../lib/profileRole'
-import { PostToChalkboard } from '../chalkboard/PostToChalkboard'
+import { ShareReference } from '../share/ShareReference'
 import { CollageStage } from '../classes/CollageStage'
 import { useGymLibrary } from '../../lib/gymLibrary'
 
@@ -16,7 +15,6 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
   const [collages, setCollages] = useState<Collage[]>([])
   const [playing, setPlaying] = useState<Collage | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  const coach = Boolean(viewer && isCoachProfile(viewer))
 
   useEffect(() => {
     void listCollages(viewer?.id).then(setCollages)
@@ -68,10 +66,10 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
                 >
                   Play
                 </button>
-                {coach && viewer && (
-                  <PostToChalkboard
+                {viewer && (
+                  <ShareReference
                     viewer={viewer}
-                    compact
+                    variant="compact"
                     draft={{
                       kind: 'collage',
                       title: c.name,

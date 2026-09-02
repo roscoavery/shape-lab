@@ -9,6 +9,9 @@ export type NotifyKind =
   | 'fist'
   | 'prove'
   | 'nudge'
+  | 'share'
+
+export const NOTICE_EVENT = 'shape-lab:notice'
 
 export type GymNotice = {
   id: string
@@ -59,6 +62,9 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
     })
   } catch {
     /* keep the UI going */
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(NOTICE_EVENT, { detail: row }))
   }
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     try {

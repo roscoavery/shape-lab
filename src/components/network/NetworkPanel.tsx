@@ -35,6 +35,7 @@ import { DISCUSS_TOPICS, discussTopicById } from '../../config/discussTopics'
 import { discussDigest } from '../../lib/discussStats'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { pushNotice } from '../../lib/notify'
+import { isInternalShareUrl, shareUrlLabel } from '../../lib/shareReference'
 
 type Page = 'people' | 'messages' | 'lounge'
 
@@ -403,6 +404,11 @@ function MessagesPage({
                 >
                   <p>{m.text}</p>
                   {m.shareUrl && (
+                    isInternalShareUrl(m.shareUrl) ? (
+                      <p className="mt-1 truncate text-[11px] text-[var(--accent)]">
+                        {shareUrlLabel(m.shareUrl, m.text || 'Reference')}
+                      </p>
+                    ) : (
                     <a
                       href={m.shareUrl}
                       target="_blank"
@@ -411,6 +417,7 @@ function MessagesPage({
                     >
                       {m.shareUrl}
                     </a>
+                    )
                   )}
                 </div>
               ))}

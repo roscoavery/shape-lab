@@ -17,7 +17,7 @@ import {
 import type { Athlete, DrillClip } from '../types'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
-import { PostToChalkboard } from './chalkboard/PostToChalkboard'
+import { ShareReference } from './share/ShareReference'
 
 type Props = {
   signedIn: Athlete | null
@@ -134,9 +134,9 @@ export function DrillLibraryPanel({ signedIn }: Props) {
                 <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">Open</span>
               </button>
               <div className="px-2.5 pb-2">
-                <PostToChalkboard
+                <ShareReference
                   viewer={signedIn}
-                  compact
+                  variant="compact"
                   draft={{
                     kind: 'drill',
                     title: d.title || 'Drill',
@@ -206,7 +206,7 @@ function DrillWatch({
         </div>
       )}
 
-      <PostToChalkboard
+      <ShareReference
         viewer={signedIn}
         draft={{
           kind: 'drill',

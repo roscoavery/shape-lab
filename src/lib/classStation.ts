@@ -75,6 +75,15 @@ export function displayPersonName(first: string, last: string): string {
   return `${first.trim()} ${last.trim()}`.trim()
 }
 
+/** First name for confirmations — “you fist bumped Ellie”. */
+export function givenName(person: { firstName?: string; name?: string } | null | undefined): string {
+  if (!person) return 'them'
+  const first = (person.firstName || '').trim()
+  if (first) return first
+  const fromFull = (person.name || '').trim().split(/\s+/).filter(Boolean)[0]
+  return fromFull || 'them'
+}
+
 export function splitPersonName(name: string): { firstName: string; lastName: string } {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return { firstName: '', lastName: '' }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppSettings, Athlete } from '../types'
 import type { AppTab } from '../lib/storage'
 import {
+  NOTICE_EVENT,
   loadNotices,
   markNoticesRead,
   noticesFor,
@@ -23,9 +24,30 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
   const [list, setList] = useState<GymNotice[]>([])
 
   useEffect(() => {
-    if (!athlete || !settings.notificationsEnabled) return
-    void loadNotices().then((all) => setList(noticesFor(all, athlete.id)))
-  }, [athlete?.id, settings.notificationsEnabled])
+    if (!athlete) return
+    let cancelled = false
+    const refresh = () => {
+      void loadNotices().then((all) => {
+        if (!cancelled) setList(noticesFor(all, athlete.id))
+      })
+    }
+    refresh()
+    const onNotice = (e: Event) => {
+      const row = (e as CustomEvent<GymNotice>).detail
+      if (row && row.toId === athlete.id) {
+        setList((prev) => [row, ...prev.filter((n) => n.id !== row.id)])
+      } else {
+        refresh()
+      }
+    }
+    window.addEventListener(NOTICE_EVENT, onNotice)
+    const id = window.setInterval(refresh, 8000)
+    return () => {
+      cancelled = true
+      window.removeEventListener(NOTICE_EVENT, onNotice)
+      window.clearInterval(id)
+    }
+  }, [athlete?.id])
 
   useEffect(() => {
     if (!athlete || !settings.notificationsEnabled) return
@@ -47,7 +69,7 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
     }).then((row) => setList((prev) => [row, ...prev]))
   }, [athlete?.id, settings.notificationsEnabled])
 
-  if (!athlete || !settings.notificationsEnabled) return null
+  if (!athlete) return null
   const unread = list.filter((n) => !n.read).length
 
   return (
@@ -87,7 +109,9 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
                     }}
                     className="block w-full px-3 py-2 text-left"
                   >
-                    <p className="text-sm font-semibold">{n.title}</p>
+                    <p className={`text-sm font-semibold ${n.read ? '' : 'text-[var(--accent)]'}`}>
+                      {n.title}
+                    </p>
                     <p className="text-xs text-[var(--muted)]">{n.body}</p>
                   </button>
                 </li>

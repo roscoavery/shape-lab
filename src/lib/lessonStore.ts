@@ -216,6 +216,18 @@ export function addLessonNote(
   return saveLessonSession({ ...found, notes: [note, ...found.notes].slice(0, 200) })
 }
 
+export function hideLessonRecap(id: string): LessonSession | null {
+  const found = getLessonSession(id)
+  if (!found) return null
+  return saveLessonSession({ ...found, hiddenAt: new Date().toISOString() })
+}
+
+export function unhideLessonRecap(id: string): LessonSession | null {
+  const found = getLessonSession(id)
+  if (!found) return null
+  return saveLessonSession({ ...found, hiddenAt: undefined })
+}
+
 export function addLessonHold(sessionId: string, hold: Omit<LessonHold, 'id' | 'createdAt'>): LessonSession | null {
   const found = getLessonSession(sessionId)
   if (!found) return null

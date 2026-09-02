@@ -39,8 +39,8 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShapeExplorer } from './learn/ShapeExplorer'
-import { PostToChalkboard } from './chalkboard/PostToChalkboard'
-import { pickCoachStill } from '../lib/shippedRefs'
+import { ShareReference } from './share/ShareReference'
+import { shapeStillDraft } from '../lib/shareReference'
 import type { Athlete, ReferencePhoto, ShapeDef, ShapeTestRecord } from '../types'
 import type { QuizTaker } from './learn/QuizWho'
 
@@ -258,6 +258,7 @@ export function EducationPanel({
             onOpen={openShape}
             onExplore={(id) => setExploreId(id)}
             referencePhotos={referencePhotos}
+            signedIn={signedIn}
           />
         </>
       )}
@@ -641,6 +642,7 @@ function ShapeLibrary({
   onOpen,
   onExplore,
   referencePhotos,
+  signedIn = null,
 }: {
   shapes: ShapeDef[]
   pathwayIds: Set<string>
@@ -651,6 +653,7 @@ function ShapeLibrary({
   onOpen: (id: string) => void
   onExplore: (id: string) => void
   referencePhotos: ReferencePhoto[]
+  signedIn?: Athlete | null
 }) {
   const { copyFor } = useShapeCopy()
   return (
@@ -713,10 +716,11 @@ function ShapeLibrary({
           const onPath = pathwayIds.has(shape.id)
           return (
             <li key={shape.id}>
+              <div className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)]">
               <button
                 type="button"
                 onClick={() => onOpen(shape.id)}
-                className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] text-left transition hover:border-[var(--accent-dim)]"
+                className="flex w-full flex-1 flex-col text-left transition hover:border-[var(--accent-dim)]"
               >
                 <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[#0d1218]">
                   <ReferenceStill
@@ -750,6 +754,14 @@ function ShapeLibrary({
                   </p>
                 </div>
               </button>
+              <div className="px-2 pb-2">
+                <ShareReference
+                  viewer={signedIn}
+                  variant="compact"
+                  draft={shapeStillDraft(shape.id, referencePhotos, shape.name)}
+                />
+              </div>
+              </div>
             </li>
           )
         })}
@@ -811,9 +823,9 @@ function ShapeLinkedDrills({ shapeId, signedIn }: { shapeId: string; signedIn?: 
                   {d.src && <PortraitVideoPlayer src={d.src} title={d.title} size="embed" />}
                   {d.notes && <ExpandableNotes text={d.notes} previewLines={1} />}
                   {signedIn && (
-                    <PostToChalkboard
+                    <ShareReference
                       viewer={signedIn}
-                      compact
+                      variant="compact"
                       draft={{
                         kind: 'drill',
                         title: d.title || 'Drill',
@@ -989,16 +1001,9 @@ function ShapeDetail({
         </div>
         {signedIn && (
           <div className="mt-3">
-            <PostToChalkboard
+            <ShareReference
               viewer={signedIn}
-              draft={{
-                kind: 'still',
-                title: shape.name,
-                stillId: pickCoachStill(referencePhotos, shape.id)?.id ?? `default_${shape.id}_0`,
-                shapeId: shape.id,
-                photoSrc:
-                  pickCoachStill(referencePhotos, shape.id)?.dataUrl || undefined,
-              }}
+              draft={shapeStillDraft(shape.id, referencePhotos, shape.name)}
             />
           </div>
         )}
@@ -1031,9 +1036,9 @@ function ShapeDetail({
                   </div>
                 )}
                 {signedIn && (
-                  <PostToChalkboard
+                  <ShareReference
                     viewer={signedIn}
-                    compact
+                    variant="compact"
                     draft={{
                       kind: 'ig-still',
                       title: still.label || shape.name,
@@ -1475,9 +1480,9 @@ function IgShapesLibrary({
                 </div>
                 {signedIn && (
                   <div className="px-2 pb-2">
-                    <PostToChalkboard
+                    <ShareReference
                       viewer={signedIn}
-                      compact
+                      variant="compact"
                       draft={{
                         kind: 'ig-still',
                         title: still.label || group.name,

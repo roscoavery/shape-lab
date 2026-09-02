@@ -17,6 +17,7 @@ import type { ReferencePhoto } from '../types'
 import { HScrollRow } from './HScrollRow'
 import { CroppedStill } from './CroppedStill'
 import { useOverlayStill } from './OverlayStillContext'
+import { ShareReference } from './share/ShareReference'
 
 type Props = {
   photos: ReferencePhoto[]
@@ -282,6 +283,18 @@ export function StillOverlayPicker({
           >
             Clear
           </button>
+          {selected && (
+            <ShareReference
+              variant="compact"
+              draft={{
+                kind: selected.library === 'ig' ? 'ig-still' : 'still',
+                title: selected.name,
+                stillId: selected.photoId,
+                shapeId: selected.shapeId,
+                photoSrc: selected.src,
+              }}
+            />
+          )}
         </div>
       )}
     </>

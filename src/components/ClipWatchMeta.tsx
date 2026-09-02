@@ -3,19 +3,31 @@ import { useGymLibrary } from '../lib/gymLibrary'
 import { saveClipMeta } from '../lib/clipMeta'
 import { isCoachProfile, isGymAdmin } from '../lib/profileRole'
 import { useClipLoopsOptional } from '../lib/clipLoops'
-import { PostToChalkboard } from './chalkboard/PostToChalkboard'
+import { ShareReference } from './share/ShareReference'
+import { clipShareDraft } from '../lib/shareReference'
 import type { Athlete } from '../types'
 
-const ViewerCtx = createContext<Athlete | null>(null)
+type ClipEditValue = {
+  viewer: Athlete | null
+  athletes: Athlete[]
+}
+
+const ClipEditCtx = createContext<ClipEditValue>({ viewer: null, athletes: [] })
 
 export function ClipEditProvider({
   viewer,
+  athletes = [],
   children,
 }: {
   viewer: Athlete | null
+  athletes?: Athlete[]
   children: ReactNode
 }) {
-  return <ViewerCtx.Provider value={viewer}>{children}</ViewerCtx.Provider>
+  return <ClipEditCtx.Provider value={{ viewer, athletes }}>{children}</ClipEditCtx.Provider>
+}
+
+export function useClipEditor(): ClipEditValue {
+  return useContext(ClipEditCtx)
 }
 
 type Props = {
@@ -24,8 +36,8 @@ type Props = {
 }
 
 export function ClipWatchMeta({ url, viewer }: Props) {
-  const ctxViewer = useContext(ViewerCtx)
-  const who = viewer ?? ctxViewer
+  const ctx = useClipEditor()
+  const who = viewer ?? ctx.viewer
   const { clipForUrl, nameForUrl, refresh } = useGymLibrary()
   const clip = clipForUrl(url)
   const gymAdmin = isGymAdmin(who)
@@ -38,19 +50,14 @@ export function ClipWatchMeta({ url, viewer }: Props) {
   const [note, setNote] = useState<string | null>(null)
   const canEdit = Boolean(who && (gymAdmin || coach) && url)
   const title = clip?.name || nameForUrl(url) || 'Reference clip'
-  const chalkboard = who && isCoachProfile(who) && url ? (
-    <PostToChalkboard
+  const share = url ? (
+    <ShareReference
       viewer={who}
+      variant="compact"
       draft={
         loop
-          ? {
-              kind: 'loop',
-              title: `${title} · ${loop.name}`,
-              url,
-              loopA: loop.a,
-              loopB: loop.b,
-            }
-          : { kind: 'clip', title, url }
+          ? clipShareDraft(`${title} · ${loop.name}`, url, loop.a, loop.b)
+          : clipShareDraft(title, url)
       }
     />
   ) : null
@@ -66,7 +73,7 @@ export function ClipWatchMeta({ url, viewer }: Props) {
         {clip?.name ? (
           <p className="truncate text-xs text-[var(--muted)]">{clip.name}</p>
         ) : null}
-        {chalkboard}
+        {share}
       </div>
     )
   }
@@ -119,7 +126,7 @@ export function ClipWatchMeta({ url, viewer }: Props) {
         {busy ? 'Saving…' : gymAdmin ? 'Save gym name' : 'Save my name / tags'}
       </button>
       {note && <p className="text-[11px] text-[var(--muted)]">{note}</p>}
-      {chalkboard}
+      {share}
     </div>
   )
 }

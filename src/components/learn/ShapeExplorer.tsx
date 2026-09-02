@@ -8,6 +8,8 @@ import { createPortal } from 'react-dom'
 import type { ReferencePhoto, ShapeDef } from '../../types'
 import { useShapeCopy } from '../ShapeCopyContext'
 import { CoachStillGallery } from '../ReferenceStill'
+import { ShareReference } from '../share/ShareReference'
+import { shapeStillDraft } from '../../lib/shareReference'
 
 type Mode = 'carousel' | 'story' | 'slideshow'
 
@@ -200,6 +202,12 @@ export function ShapeExplorer({ shapes, startId, photos, onClose }: Props) {
       ) : (
         <p className="mt-1 text-sm text-white/55">{shape.description}</p>
       )}
+      <div className="pointer-events-auto mt-3">
+        <ShareReference
+          variant="reel"
+          draft={shapeStillDraft(shape.id, photos, shape.name)}
+        />
+      </div>
     </div>
   )
 

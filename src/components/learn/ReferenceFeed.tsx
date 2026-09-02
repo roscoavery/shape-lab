@@ -7,6 +7,8 @@ import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { ShareReference } from '../share/ShareReference'
+import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
@@ -208,6 +210,7 @@ export function ReferenceFeed({ athlete = null }: Props) {
                     persistUrl={clip.url}
                     compact
                     quiet
+                    shareChrome={false}
                     markup={false}
                     postedBy={clip.postedBy || postedByFromUrl(clip.url)}
                   />
@@ -255,7 +258,12 @@ export function ReferenceFeed({ athlete = null }: Props) {
                   <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <ClipOrganizeMenu
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ShareReference
+                      variant="reel"
+                      draft={clipShareDraft(clip.name, clip.url)}
+                    />
+                    <ClipOrganizeMenu
                     variant="feed"
                     clip={{
                       name: clip.name,
@@ -268,6 +276,7 @@ export function ReferenceFeed({ athlete = null }: Props) {
                     gymAdmin={isGymAdmin(athlete)}
                     onCopied={setFlash}
                   />
+                  </div>
                   <p className="text-[11px] text-white/40">
                     {i + 1} / {visible.length}
                   </p>

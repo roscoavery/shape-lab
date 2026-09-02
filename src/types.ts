@@ -619,6 +619,8 @@ export type LessonSession = {
   coachId: string
   startedAt: string
   endedAt?: string
+  /** Coach or athlete hid this recap from the default Today list. */
+  hiddenAt?: string
   notes: LessonNote[]
   holds: LessonHold[]
 }

@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom'
 import { GymClipPlayer } from './GymClipPlayer'
 import { FavoriteStar } from './FavoriteStar'
 import { ClipOrganizeMenu } from './library/ClipOrganizeMenu'
+import { ShareReference } from './share/ShareReference'
+import { clipShareDraft } from '../lib/shareReference'
 import { useFavorites } from '../lib/favorites'
 import { kindFromUrl, type RefItemKind } from '../lib/clipStore'
 import type { OrganizeEditor } from '../lib/organizeLibrary'
@@ -147,6 +149,7 @@ export function PhoneReelViewer({
                       loopB={clip.loopB}
                       compact
                       quiet
+                      shareChrome={false}
                       markup
                       markupSwipeSafe
                       postedBy={handle}
@@ -186,6 +189,15 @@ export function PhoneReelViewer({
                         ) : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-center gap-2">
+                        <ShareReference
+                          variant="reel"
+                          draft={clipShareDraft(
+                            clip.name,
+                            clip.url,
+                            clip.loopA,
+                            clip.loopB,
+                          )}
+                        />
                         <FavoriteStar
                           fill
                           on={favorites.isUrlFavorite(favKey)}

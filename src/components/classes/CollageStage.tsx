@@ -13,6 +13,7 @@ import {
 import { collageCellAspect, packedGridSize } from '../../lib/collageLayout'
 import { saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { ShareReference } from '../share/ShareReference'
 import { kindFromUrl } from '../../lib/clipStore'
 import { postedByFromUrl } from '../../lib/socialUrls'
 import type { OrganizeEditor } from '../../lib/organizeLibrary'
@@ -228,6 +229,10 @@ export function CollageStage({
               Duplicate
             </button>
           )}
+          <ShareReference
+            variant="reel"
+            draft={{ kind: 'collage', title: collage.name, collageId: collage.id }}
+          />
           {fullscreen && (
             <button
               type="button"
@@ -313,6 +318,7 @@ export function CollageStage({
                 loopB={slot.loopB}
                 compact
                 quiet
+                shareChrome={false}
                 bare={cinema}
                 active={loadAll || playingSlot === i}
                 markup={false}

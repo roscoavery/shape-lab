@@ -4,6 +4,9 @@ import { VideoWorkbench } from './compare/VideoWorkbench'
 import { socialPlatform } from '../lib/socialUrls'
 import { prefetchInstagram } from '../lib/igCache'
 import { ClipWatchMeta } from './ClipWatchMeta'
+import { ShareReference } from './share/ShareReference'
+import { clipShareDraft } from '../lib/shareReference'
+import { useGymLibrary } from '../lib/gymLibrary'
 
 type Props = {
   url: string
@@ -23,6 +26,8 @@ type Props = {
   overlayChrome?: boolean
   postedBy?: string | null
   onPostedBy?: (handle: string) => void
+  /** Overlay Share on fill players. Off for reels that already have Share in chrome. */
+  shareChrome?: boolean
 }
 
 export function GymClipPlayer({
@@ -43,10 +48,22 @@ export function GymClipPlayer({
   overlayChrome,
   postedBy,
   onPostedBy,
+  shareChrome,
 }: Props) {
   useEffect(() => {
     if (socialPlatform(url) && itemId) void prefetchInstagram(url, itemId)
   }, [url, itemId])
+  const persist = persistUrl || url
+  const { nameForUrl } = useGymLibrary()
+  const showShare = shareChrome ?? (fill && !bare)
+  const share = showShare ? (
+    <div className="pointer-events-auto absolute left-2 top-2 z-30">
+      <ShareReference
+        variant="reel"
+        draft={clipShareDraft(nameForUrl(persist) || 'Reference clip', persist, loopA, loopB)}
+      />
+    </div>
+  ) : null
   const social = socialPlatform(url)
   if (social) {
     const embed = (
@@ -70,7 +87,12 @@ export function GymClipPlayer({
         onPostedBy={onPostedBy}
       />
     )
-    return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : (
+    return fill ? (
+      <div className="relative h-full min-h-0 w-full">
+        {embed}
+        {share}
+      </div>
+    ) : (
       <div className="space-y-2">
         {embed}
         {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
@@ -97,7 +119,10 @@ export function GymClipPlayer({
     />
   )
   return fill ? (
-    <div className="h-full min-h-0 w-full">{bench}</div>
+    <div className="relative h-full min-h-0 w-full">
+      {bench}
+      {share}
+    </div>
   ) : (
     <div className="space-y-2">
       {bench}

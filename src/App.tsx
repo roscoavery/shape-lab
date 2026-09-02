@@ -553,7 +553,7 @@ export default function App() {
     <ShapeCopyProvider canEdit={ryanEdit}>
     <StillCropProvider canEdit={ryanEdit}>
     <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
-    <ClipEditProvider viewer={activeProfile}>
+    <ClipEditProvider viewer={activeProfile} athletes={athletes}>
     <ClipLoopsProvider>
     <FavoritesProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">

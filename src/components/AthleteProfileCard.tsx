@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Athlete } from '../types'
+import type { Athlete, ProfileGesture } from '../types'
 import { AthleteAvatar } from './AthleteAvatar'
 import { profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
 import { canWriteCoachNotes, visibleCoachNotes } from '../lib/athleteNotes'
@@ -15,7 +15,7 @@ import { profileThemeStyle } from '../lib/profileTheme'
 import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
-import type { ProfileGesture } from '../types'
+import { givenName } from '../lib/classStation'
 
 type Props = {
   athlete: Athlete
@@ -51,6 +51,8 @@ export function AthleteProfileCard({
   const own = viewer?.id === athlete.id
   const coach = isCoachProfile(viewer)
 
+  const [confirm, setConfirm] = useState<string | null>(null)
+
   useEffect(() => {
     void listFeedPosts().then((posts) =>
       setWins(
@@ -73,13 +75,22 @@ export function AthleteProfileCard({
       createdAt: new Date().toISOString(),
     }
     onAthleteChange?.({ ...athlete, gestures: [row, ...(athlete.gestures ?? [])].slice(0, 80) })
-    void pushNotice({
+    const who = givenName(athlete)
+    const youDid =
+      kind === 'hi5' ? `You high-fived ${who}` : `You fist bumped ${who}`
+    const theyGot =
+      kind === 'hi5'
+        ? `${givenName(viewer)} high-fived you`
+        : `${givenName(viewer)} fist bumped you`
+    setConfirm(youDid)
+    await pushNotice({
       toId: athlete.id,
       kind,
-      title: kind === 'hi5' ? `${viewer.name} hit you a high five` : `${viewer.name} fist bumped you`,
-      body: 'Open their profile and send one back.',
-      href: 'history',
+      title: theyGot,
+      body: `${youDid}. Open Alerts on their profile to send one back.`,
+      href: 'today',
     })
+    window.setTimeout(() => setConfirm((cur) => (cur === youDid ? null : cur)), 4200)
   }
 
   const body = (
@@ -115,21 +126,26 @@ export function AthleteProfileCard({
       </div>
 
       {coach && viewer && viewer.id !== athlete.id && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => void gesture('hi5')}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
-          >
-            High five
-          </button>
-          <button
-            type="button"
-            onClick={() => void gesture('fist')}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
-          >
-            Fist bump
-          </button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void gesture('hi5')}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
+            >
+              High five
+            </button>
+            <button
+              type="button"
+              onClick={() => void gesture('fist')}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
+            >
+              Fist bump
+            </button>
+          </div>
+          {confirm && (
+            <p className="text-sm font-semibold text-[var(--accent)]">{confirm}</p>
+          )}
         </div>
       )}
 

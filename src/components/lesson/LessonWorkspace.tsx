@@ -202,6 +202,11 @@ export function LessonWorkspace({
           viewer={coach}
           athletes={athletes}
           variant="embed"
+          onAthleteChange={
+            onAthletesChange
+              ? (next) => onAthletesChange(athletes.map((a) => (a.id === next.id ? next : a)))
+              : undefined
+          }
           onAddNote={
             coach && onAthletesChange
               ? (text) => {

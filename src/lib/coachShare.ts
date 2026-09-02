@@ -34,10 +34,19 @@ export function coachAthleteMessageAllowed(params: {
         'Coaches share a reference with an athlete — or give a high five, fist bump, or like. Direct messages stay off.',
     }
   }
-  if (!/^https?:\/\//i.test(url) && !url.startsWith('/') && !url.startsWith('blob:')) {
+  if (!isShareableReference(url)) {
     return { ok: false, reason: 'Paste a public video or Shape Lab reference URL to share.' }
   }
   return { ok: true }
+}
+
+export function isShareableReference(url: string): boolean {
+  const u = url.trim()
+  if (!u) return false
+  if (/^https?:\/\//i.test(u)) return true
+  if (u.startsWith('/') || u.startsWith('blob:') || u.startsWith('data:')) return true
+  if (u.startsWith('shape-lab:')) return true
+  return false
 }
 
 export function coachShareCaption(text: string): string {
