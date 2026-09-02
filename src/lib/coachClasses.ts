@@ -34,6 +34,8 @@ export type Weekday = (typeof WEEKDAYS)[number]
 export type CoachClassOffering = {
   id: string
   coachId: string
+  /** Coaches listed on this class. coachId stays the creator. */
+  coachIds?: string[]
   name: string
   weekday: Weekday
   time: string
@@ -89,6 +91,11 @@ function normalizeOffering(raw: Partial<CoachClassOffering>): CoachClassOffering
   return {
     id: raw.id,
     coachId: raw.coachId || '',
+    coachIds: Array.isArray(raw.coachIds)
+      ? raw.coachIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
+      : raw.coachId
+        ? [raw.coachId]
+        : [],
     name: raw.name,
     weekday: (raw.weekday as Weekday) || 'Monday',
     time: raw.time || '',
@@ -156,6 +163,23 @@ export function classLabel(offering: Pick<CoachClassOffering, 'name' | 'weekday'
   return time ? `${offering.name} (${offering.weekday} ${time})` : `${offering.name} (${offering.weekday})`
 }
 
+export function offeringCoachIds(offering: Pick<CoachClassOffering, 'coachId' | 'coachIds'>): string[] {
+  return [...new Set([offering.coachId, ...(offering.coachIds ?? [])].filter(Boolean))]
+}
+
+export function classCoachesLabel(
+  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds'>,
+  athletes: Athlete[],
+): string {
+  const names = offeringCoachIds(offering)
+    .map((id) => athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? '')
+    .filter(Boolean)
+  if (names.length === 0) return ''
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names[0]} + ${names.length - 1}`
+}
+
 export function loadCoachClassFile(): CoachClassFile {
   return read()
 }
@@ -199,6 +223,7 @@ export function ensureDefaultClassTypes(coachId?: string | null): CoachClassOffe
 export function saveOffering(input: {
   id?: string
   coachId: string
+  coachIds?: string[]
   name: string
   weekday: Weekday
   time: string
@@ -206,9 +231,15 @@ export function saveOffering(input: {
 }): CoachClassOffering {
   const file = read()
   const existing = input.id ? file.offerings.find((o) => o.id === input.id) : undefined
+  const coachIds = [
+    ...new Set(
+      (input.coachIds ?? existing?.coachIds ?? [input.coachId || existing?.coachId || '']).filter(Boolean),
+    ),
+  ]
   const row: CoachClassOffering = {
     id: existing?.id ?? createId('cls'),
-    coachId: input.coachId || existing?.coachId || '',
+    coachId: input.coachId || existing?.coachId || coachIds[0] || '',
+    coachIds,
     name: input.name.trim(),
     weekday: input.weekday,
     time: input.time.trim(),
@@ -217,6 +248,22 @@ export function saveOffering(input: {
     rosterIds: input.rosterIds ?? existing?.rosterIds ?? [],
   }
   file.offerings = [row, ...file.offerings.filter((o) => o.id !== row.id)]
+  write(file)
+  return row
+}
+
+export function setOfferingCoaches(id: string, coachIds: string[]): CoachClassOffering | null {
+  const file = read()
+  const existing = file.offerings.find((o) => o.id === id)
+  if (!existing) return null
+  const ids = [...new Set(coachIds.filter(Boolean))]
+  const row: CoachClassOffering = {
+    ...existing,
+    coachIds: ids,
+    coachId: ids.includes(existing.coachId) ? existing.coachId : ids[0] || existing.coachId,
+    updatedAt: new Date().toISOString(),
+  }
+  file.offerings = file.offerings.map((o) => (o.id === id ? row : o))
   write(file)
   return row
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
-import { profileRole } from '../../lib/profileRole'
+import { isCoachProfile, profileRole } from '../../lib/profileRole'
 import {
   WEEKDAYS,
   attendeeLabel,
@@ -15,7 +15,10 @@ import {
   removeOffering,
   resolveAttendeeAthletes,
   rosterAthletes,
+  classCoachesLabel,
+  offeringCoachIds,
   saveOffering,
+  setOfferingCoaches,
   setOfferingRoster,
   startClassMeeting,
   subscribeCoachClasses,
@@ -145,6 +148,9 @@ export function ClassSession({
                     <span className="block text-xl font-bold">{o.name}</span>
                     <span className="text-sm font-medium opacity-80">
                       {o.weekday} {o.time}
+                      {classCoachesLabel(o, athletes)
+                        ? ` · ${classCoachesLabel(o, athletes)}`
+                        : ''}
                       {o.rosterIds.length
                         ? ` · ${o.rosterIds.length} on roster`
                         : ' · add a roster'}
@@ -428,7 +434,9 @@ function QuickAddClass({
   const [weekday, setWeekday] = useState<Weekday>('Monday')
   const [time, setTime] = useState('5pm')
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const coaches = athletes.filter((a) => isCoachProfile(a))
   const [roster, setRoster] = useState<string[]>([])
+  const [coachIds, setCoachIds] = useState<string[]>([coachId])
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-sm text-white/70">
@@ -459,6 +467,14 @@ function QuickAddClass({
           onChange={(e) => setTime(e.target.value)}
         />
       </div>
+      <RosterPicker
+        label="Coaches on this class"
+        athletes={coaches}
+        selected={coachIds}
+        onChange={setCoachIds}
+        onText="Coaching"
+        offText="Add"
+      />
       <RosterPicker athletes={kids} selected={roster} onChange={setRoster} />
       <button
         type="button"
@@ -466,6 +482,7 @@ function QuickAddClass({
         onClick={() => {
           saveOffering({
             coachId,
+            coachIds: coachIds.length ? coachIds : [coachId],
             name: name.trim(),
             weekday,
             time: time.trim() || '5pm',
@@ -485,18 +502,24 @@ function RosterPicker({
   athletes,
   selected,
   onChange,
+  label = 'Class roster',
+  onText = 'On roster',
+  offText = 'Add',
 }: {
   athletes: Athlete[]
   selected: string[]
   onChange: (next: string[]) => void
+  label?: string
+  onText?: string
+  offText?: string
 }) {
   return (
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-        Class roster
+        {label}
       </p>
       {athletes.length === 0 ? (
-        <p className="mt-1 text-sm text-white/55">No athlete profiles yet.</p>
+        <p className="mt-1 text-sm text-white/55">No profiles yet.</p>
       ) : (
         <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
           {athletes.map((a) => {
@@ -513,7 +536,7 @@ function RosterPicker({
                   }`}
                 >
                   <AthleteName athlete={a} />
-                  <span className="text-xs">{on ? 'On roster' : 'Add'}</span>
+                  <span className="text-xs">{on ? onText : offText}</span>
                 </button>
               </li>
             )
@@ -542,6 +565,7 @@ function ScheduleEditor({
   const [time, setTime] = useState('5pm')
   const [editId, setEditId] = useState<string | null>(null)
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const coaches = athletes.filter((a) => isCoachProfile(a))
   const editing = offerings.find((o) => o.id === editId) ?? null
 
   return (
@@ -602,7 +626,7 @@ function ScheduleEditor({
                   className="text-xs underline"
                   onClick={() => setEditId(editId === o.id ? null : o.id)}
                 >
-                  {editId === o.id ? 'Hide roster' : 'Roster'}
+                  {editId === o.id ? 'Done' : 'Edit'}
                 </button>
                 <button
                   type="button"
@@ -617,10 +641,24 @@ function ScheduleEditor({
               </div>
             </div>
             <p className="mt-1 text-xs text-white/50">
+              {classCoachesLabel(o, athletes)
+                ? `Coaches: ${classCoachesLabel(o, athletes)} · `
+                : ''}
               {o.rosterIds.length} athlete{o.rosterIds.length === 1 ? '' : 's'} on this class
             </p>
             {editing?.id === o.id && (
-              <div className="mt-2">
+              <div className="mt-2 flex flex-col gap-3">
+                <RosterPicker
+                  label="Coaches on this class"
+                  athletes={coaches}
+                  selected={offeringCoachIds(o)}
+                  onChange={(next) => {
+                    setOfferingCoaches(o.id, next.length ? next : [coachId])
+                    onChanged()
+                  }}
+                  onText="Coaching"
+                  offText="Add"
+                />
                 <RosterPicker
                   athletes={kids}
                   selected={o.rosterIds}

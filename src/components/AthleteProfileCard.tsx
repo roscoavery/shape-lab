@@ -18,6 +18,7 @@ import {
   profilePosts,
   publishFeedPostResult,
   toggleFeedRepost,
+  removeFeedPost,
   type FeedPost,
 } from '../lib/feedPosts'
 import { WinComposer } from './feed/WinComposer'
@@ -31,9 +32,11 @@ import { MentionText } from './MentionText'
 import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
+import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
 import {
   loadStories,
   markStoriesSeen,
+  seenStoryIds,
   storiesByAuthor,
   type GymStory,
   type StoriesFile,
@@ -70,6 +73,9 @@ export function AthleteProfileCard({
   const [compose, setCompose] = useState<Compose>(null)
   const [watchStories, setWatchStories] = useState<GymStory[] | null>(null)
   const [watchPass, setWatchPass] = useState<FeedPost | null>(null)
+  const [storySheet, setStorySheet] = useState(false)
+  const [editAnswers, setEditAnswers] = useState(false)
+  const [seenTick, setSeenTick] = useState(0)
   const [note, setNote] = useState('')
   const [win, setWin] = useState('')
   const [big, setBig] = useState(false)
@@ -89,6 +95,11 @@ export function AthleteProfileCard({
     () => storiesByAuthor(storiesFile, athlete.id, true),
     [storiesFile, athlete.id],
   )
+  const unseenLive = useMemo(() => {
+    void seenTick
+    const seen = seenStoryIds()
+    return live.some((s) => !seen.has(s.id))
+  }, [live, seenTick])
   const minePosts = useMemo(() => profilePosts(posts, athlete.id), [posts, athlete.id])
   const minePasses = useMemo(() => profilePasses(posts, athlete.id), [posts, athlete.id])
 
@@ -131,13 +142,20 @@ export function AthleteProfileCard({
     window.setTimeout(() => setConfirm((cur) => (cur === youDid ? null : cur)), 4200)
   }
 
+  const viewStories = () => {
+    if (!live.length) return
+    markStoriesSeen(live.map((s) => s.id))
+    setSeenTick((n) => n + 1)
+    setWatchStories(live)
+    setStorySheet(false)
+  }
+
   const openStories = () => {
-    if (live.length) {
-      markStoriesSeen(live.map((s) => s.id))
-      setWatchStories(live)
+    if (own) {
+      setStorySheet(true)
       return
     }
-    if (own) setCompose('story')
+    viewStories()
   }
 
   const body = (
@@ -147,7 +165,9 @@ export function AthleteProfileCard({
           <span
             className={`block rounded-full p-[3px] ${
               live.length
-                ? 'bg-gradient-to-tr from-[#f77737] via-[#e1306c] to-[#5cf0c8]'
+                ? unseenLive
+                  ? 'bg-gradient-to-tr from-[#f77737] via-[#e1306c] to-[#5cf0c8]'
+                  : 'bg-white/30'
                 : 'bg-white/15'
             }`}
           >
@@ -216,6 +236,69 @@ export function AthleteProfileCard({
           <ShareBtn label="Story" hint="24 hours" onClick={() => setCompose('story')} />
           <ShareBtn label="Post" hint="Feed + page" onClick={() => setCompose('post')} />
           <ShareBtn label="Pass" hint="Short clip" onClick={() => setCompose('pass')} />
+        </div>
+      )}
+      {own && onAthleteChange && (
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => setEditAnswers((v) => !v)}
+            className="self-start rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
+          >
+            {editAnswers ? 'Done editing' : 'Edit photo and answers'}
+          </button>
+          {editAnswers && (
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <ProfileFieldsEditor athlete={athlete} onChange={onAthleteChange} />
+            </div>
+          )}
+        </div>
+      )}
+      {storySheet && own && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-3">
+            <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Your story
+            </p>
+            {live.length > 0 && (
+              <button
+                type="button"
+                onClick={viewStories}
+                className="mt-1 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold"
+              >
+                View story
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setStorySheet(false)
+                setCompose('story')
+              }}
+              className="w-full rounded-xl px-3 py-3 text-left text-sm font-semibold"
+            >
+              Add to story
+            </button>
+            {onAthleteChange && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStorySheet(false)
+                  setEditAnswers(true)
+                }}
+                className="w-full rounded-xl px-3 py-3 text-left text-sm font-semibold"
+              >
+                Edit profile photo
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setStorySheet(false)}
+              className="mt-1 w-full rounded-xl px-3 py-2 text-sm text-[var(--muted)]"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -460,7 +543,7 @@ export function AthleteProfileCard({
       <div className="fixed inset-0 z-[85] flex flex-col text-[var(--text)]" style={shellStyle}>
         <header className="flex items-center justify-between gap-3 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--profile-accent)' }}>
-            {handle}
+            {own ? 'My profile' : handle}
           </p>
           {onClose && (
             <button
@@ -558,6 +641,7 @@ function PostsGrid({
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 {new Date(p.createdAt).toLocaleString()}
               </p>
+              <div className="mt-2 flex flex-wrap gap-3">
               {viewer && viewer.id !== p.authorId && (
                 <button
                   type="button"
@@ -567,11 +651,25 @@ function PostsGrid({
                       onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
                     })
                   }}
-                  className="mt-2 text-xs font-semibold text-[var(--accent)]"
+                  className="text-xs font-semibold text-[var(--accent)]"
                 >
                   {reposted ? 'On your profile' : 'Repost to your profile'}
                 </button>
               )}
+              {viewer && (viewer.id === p.authorId || viewer.id === athlete.id) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void removeFeedPost(p.id, viewer.id, false).then((ok) => {
+                      if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
+                    })
+                  }}
+                  className="text-xs font-semibold text-[var(--muted)] underline"
+                >
+                  Remove
+                </button>
+              )}
+              </div>
             </div>
           </li>
         )
@@ -634,6 +732,20 @@ function PassesGrid({
               className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-[var(--accent)]"
             >
               {(p.reposts ?? []).includes(viewer.id) ? 'Yours' : '+'}
+            </span>
+          )}
+          {viewer && (viewer.id === p.authorId || viewer.id === athlete.id) && (
+            <span
+              role="presentation"
+              onClick={(e) => {
+                e.stopPropagation()
+                void removeFeedPost(p.id, viewer.id, false).then((ok) => {
+                  if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
+                })
+              }}
+              className="absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-semibold"
+            >
+              Remove
             </span>
           )}
         </button>

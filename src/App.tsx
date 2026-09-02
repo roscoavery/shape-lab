@@ -37,7 +37,6 @@ import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
-import { MyProfile } from './components/today/MyProfile'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
@@ -1386,10 +1385,13 @@ export default function App() {
       />
     )}
     {profileOpen && activeProfile && (
-      <MyProfile
+      <AthleteProfileCard
         athlete={activeProfile}
+        viewer={activeProfile}
+        athletes={athletes}
+        variant="overlay"
         onClose={() => setProfileOpen(false)}
-        onSave={(next) => {
+        onAthleteChange={(next) => {
           setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
           void syncAthleteProfileToResearch(next, next.id)
         }}
@@ -1444,9 +1446,12 @@ export default function App() {
               }
             : undefined
         }
-        onAthleteChange={(next) =>
+        onAthleteChange={(next) => {
           setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
-        }
+          if (activeProfile && next.id === activeProfile.id) {
+            void syncAthleteProfileToResearch(next, next.id)
+          }
+        }}
       />
     )}
     {classSessionOpen && activeProfile && isCoachProfile(activeProfile) && (
