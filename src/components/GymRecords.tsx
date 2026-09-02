@@ -4,6 +4,7 @@ import {
   applyGymBackup,
   athleteContact,
   buildGymBackup,
+  downloadContactsSheet,
   downloadGymBackup,
   parseGymBackup,
 } from '../lib/gymBackup'
@@ -192,6 +193,20 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         >
           Download gym backup
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => downloadContactsSheet(athletes)}
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+        >
+          Download contacts sheet
+        </button>
+        <a
+          href="/api/contacts"
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+        >
+          Open readable contact list
+        </a>
         <button
           type="button"
           disabled={busy}

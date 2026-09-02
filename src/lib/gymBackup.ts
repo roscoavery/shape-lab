@@ -67,6 +67,26 @@ export function downloadGymBackup(backup: GymBackup) {
   URL.revokeObjectURL(url)
 }
 
+export function downloadContactsSheet(athletes: Athlete[]) {
+  const header = ['Name', 'Role', 'Phone', 'Parent phone', 'Email']
+  const lines = [
+    header.join(','),
+    ...athletes.map((athlete) => {
+      const row = athleteContact(athlete)
+      return [row.name, row.role, row.phone, row.parentPhone, row.email]
+        .map((cell) => (/[",\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell))
+        .join(',')
+    }),
+  ]
+  const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `shape-lab-contacts-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function athleteContact(athlete: Athlete): {
   name: string
   role: string

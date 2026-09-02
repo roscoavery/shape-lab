@@ -81,6 +81,21 @@ If GitHub is connected to the Vercel project, that push is enough. Otherwise:
 npx vercel --prod --yes
 ```
 
+### Redeploy without making a new link
+
+Use **Create Deployment** (or Redeploy) on the **same Vercel project** that already owns `temporary-racing-sulfur-78x9doy.vercel.app`.
+
+1. Open that project (the one whose Production URL is the gym link you already use).
+2. Pick branch **`v2-rebuild`**.
+3. Deploy to **Production** — not Preview, not a new project, not “temporary”.
+4. Wait until it says Ready, then hard-refresh the **same** gym URL.
+
+That replaces the app on the existing address. It does **not** mint a new `*.vercel.app` hostname. A new link only appears if you create a new project or run `vercel deploy --temporary`.
+
+The `/api/roster` URL is the raw backup file. Browsers show it as code on purpose. Use **File → Save As** and keep `roster.json`, or after this deploy open `/api/contacts` for a normal table and **Download spreadsheet**.
+
+**More → Profiles** is where **Gym records**, **Save this phone to the gym link**, and **Download gym backup** live.
+
 ### Gym computer (local Cloudflare tunnel)
 
 `*.trycloudflare.com` hostnames are one-shot. A **named** tunnel is only needed if you want phones to hit the gym PC instead of Vercel. The gym PC must stay on.

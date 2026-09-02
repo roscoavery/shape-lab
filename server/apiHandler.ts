@@ -53,12 +53,15 @@ import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
 import { persistMode } from './persist.ts'
+import { sendContactsPage } from './contactsPage.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
   '/api/roster',
+  '/api/contacts',
+  '/api/contacts.csv',
   '/api/persist',
   '/api/ig-stills',
   '/api/ig-still-file',
@@ -156,6 +159,14 @@ export async function handleShapeLabApi(
       mode,
       lasting: mode === 'blob' || mode === 'disk',
     })
+    return true
+  }
+  if (path === '/api/contacts' || path === '/api/contacts.csv') {
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { error: 'Use GET' })
+      return true
+    }
+    await sendContactsPage(req, res, path.endsWith('.csv') ? 'csv' : 'html')
     return true
   }
   if (path === '/api/roster') {
