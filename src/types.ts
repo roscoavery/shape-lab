@@ -213,6 +213,14 @@ export type Athlete = {
   openShoulderHardness?: 1 | 2 | 3 | 4 | 5
   /** Optional class-station snapshot (data URL). */
   photoDataUrl?: string
+  /** Which way they twist — or not yet / both ways. */
+  twistDirection?: 'left' | 'right' | 'both' | 'not_yet'
+  /** If they twist both ways, which side is better. */
+  twistBetterSide?: 'left' | 'right'
+  /** Writing / throwing hand. Ambidextrous is allowed. */
+  dominantHand?: 'left' | 'right' | 'ambidextrous'
+  /** Skateboard stance: regular = left foot forward, goofy = right. */
+  skateStance?: 'regular' | 'goofy'
   /** Recent shape-test scores (oldest first, newest last). */
   shapeTests?: ShapeTestRecord[]
 }
@@ -390,7 +398,7 @@ export type TaskRunReport = {
 export type HomeworkSource = 'auto' | 'coach' | 'athlete'
 
 /** How an assigned or catalog drill is trained and logged. */
-export type HomeworkTrackMode = 'hold' | 'reps' | 'hold_or_reps'
+export type HomeworkTrackMode = 'hold' | 'reps' | 'hold_or_reps' | 'journal'
 
 /**
  * One homework drill on an athlete's list.
@@ -475,7 +483,7 @@ export type HomeworkLog = {
   /** Overall shape score (0–100) at log time; 0 for manual entries */
   score: number
   /** Class-flow sequence run vs a timed hold vs a set of reps. Missing = hold. */
-  kind?: 'hold' | 'sequence' | 'reps' | 'set'
+  kind?: 'hold' | 'sequence' | 'reps' | 'set' | 'journal'
   /** Sequence completions, or counted reps for a strength drill. */
   reps?: number
   /** Reps the athlete counted as quality (form they would show a coach). */
@@ -489,10 +497,14 @@ export type HomeworkLog = {
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
   /** Lesson holds land on the athlete’s homework, labeled with the coach. */
-  loggedFrom?: 'lesson'
+  loggedFrom?: 'lesson' | 'class'
   lessonId?: string
   coachId?: string
   coachName?: string
+  /** Short label shown on the homework log — e.g. “In class · Hollow”. */
+  sourceLabel?: string
+  classMeetingId?: string
+  className?: string
 }
 
 export type LessonBlockKind = 'hold' | 'compare' | 'talk'

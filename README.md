@@ -11,8 +11,11 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - **Compare** reference videos side-by-side with a delay cam. Videos is three full-screen buttons: **Replay with reference cam**, **Athlete camera**, and **Reference library** (player + list; make your own collections).
 - **Classes** named drill collages (up to 6 gym URLs, captions, A/B loops, even full-screen split). Share a board to the gym feed so other coaches can save it into their class library.
 - **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach
+- **Wins** a separate spam-friendly feed for firsts and small hits, with a **big win** checkbox to also post on the gym feed
+- **My profile** (Today) — add or take a photo, answer the class-station questions, plus twist direction, dominant hand, and skate stance. Answers sync into Research.
+- **Class clock** (Today) — homework-style stopwatch that logs hollow / Superman / side plank / wall handstand holds, V-up reps, and typed skills onto each selected athlete’s homework as **in class**
 - **Network** follow people on this gym, message them (optional clip URL), and a **coach lounge** for tumbling philosophy
-- **Research** gym studies (laterality, standing-full mats, reasons, fear) with counts and correlations, plus a digest of lounge threads — n is this gym
+- **Research** gym studies (laterality, shape feel, standing-full mats, reasons, fear) with counts and correlations, plus a digest of lounge threads — n is this gym
 - Speak live corrections (toggleable voice coaching)
 - Save attempts, progress, and reference photos in the browser (`localStorage`)
 - Run simple multi-shape **sequences**

@@ -4,6 +4,7 @@ import { athleteContact } from '../lib/gymBackup'
 import { enableServerRosterPush, localRosterSnapshot, pushServerRoster } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import { roleLabel } from '../lib/profileRole'
+import { AthleteAvatar } from './AthleteAvatar'
 
 type PersistInfo = {
   mode: 'blob' | 'disk' | 'tmp'
@@ -110,15 +111,7 @@ export function GymRecords({ athletes }: Props) {
             {contacts.map((row) => (
               <tr key={row.athlete.id} className="border-t border-[var(--panel-border)]">
                 <td className="px-3 py-2">
-                  {row.athlete.photoDataUrl ? (
-                    <img
-                      src={row.athlete.photoDataUrl}
-                      alt=""
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-[var(--muted)]">—</span>
-                  )}
+                  <AthleteAvatar athlete={row.athlete} size="md" />
                 </td>
                 <td className="px-3 py-2 font-medium text-[var(--text)]">{row.name}</td>
                 <td className="px-3 py-2 text-[var(--muted)]">{roleLabel(row.athlete)}</td>

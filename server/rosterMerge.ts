@@ -29,6 +29,10 @@ export type Athlete = {
   harderShape?: 'hollow' | 'superman'
   openShoulderHardness?: 1 | 2 | 3 | 4 | 5
   photoDataUrl?: string
+  twistDirection?: 'left' | 'right' | 'both' | 'not_yet'
+  twistBetterSide?: 'left' | 'right'
+  dominantHand?: 'left' | 'right' | 'ambidextrous'
+  skateStance?: 'regular' | 'goofy'
   shapeTests?: ShapeTestRecord[]
 }
 
@@ -200,6 +204,10 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     harderShape: newer.harderShape || older.harderShape,
     openShoulderHardness: newer.openShoulderHardness ?? older.openShoulderHardness,
     photoDataUrl: newer.photoDataUrl || older.photoDataUrl,
+    twistDirection: newer.twistDirection || older.twistDirection,
+    twistBetterSide: newer.twistBetterSide || older.twistBetterSide,
+    dominantHand: newer.dominantHand || older.dominantHand,
+    skateStance: newer.skateStance || older.skateStance,
     shapeTests: mergeShapeTests(newer.shapeTests, older.shapeTests),
     createdAt: older.createdAt || newer.createdAt,
   }

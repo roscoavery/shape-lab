@@ -3,6 +3,8 @@ import type { CollageShare } from './collages'
 
 export const FEED_CAPTION_MAX = 800
 
+export type FeedChannel = 'gym' | 'wins'
+
 export type FeedPost = {
   id: string
   authorId: string
@@ -14,6 +16,16 @@ export type FeedPost = {
   url: string
   kind?: 'video' | 'collage' | 'text'
   collage?: CollageShare
+  /** Missing = gym feed (older posts). Wins can also appear on gym. */
+  channels?: FeedChannel[]
+}
+
+export function postChannels(post: Pick<FeedPost, 'channels'>): FeedChannel[] {
+  return post.channels?.length ? post.channels : ['gym']
+}
+
+export function postOnChannel(post: Pick<FeedPost, 'channels'>, channel: FeedChannel): boolean {
+  return postChannels(post).includes(channel)
 }
 
 export async function listFeedPosts(): Promise<FeedPost[]> {
@@ -32,6 +44,7 @@ export async function publishFeedPost(params: {
   caption: string
   taggedIds: string[]
   blob: Blob
+  channels?: FeedChannel[]
 }): Promise<FeedPost | null> {
   const id = createId('post')
   const mime = params.blob.type.includes('mp4') ? 'video/mp4' : 'video/webm'
@@ -42,6 +55,7 @@ export async function publishFeedPost(params: {
     taggedIds: params.taggedIds.join(','),
     mime,
     createdAt: new Date().toISOString(),
+    channels: (params.channels ?? ['gym']).join(','),
   })
   try {
     const res = await fetch(`/api/feed?${qs.toString()}`, {
@@ -61,6 +75,7 @@ export async function publishCollagePost(params: {
   caption: string
   taggedIds?: string[]
   collage: CollageShare
+  channels?: FeedChannel[]
 }): Promise<FeedPost | null> {
   const id = createId('post')
   try {
@@ -75,6 +90,7 @@ export async function publishCollagePost(params: {
         taggedIds: params.taggedIds ?? [],
         createdAt: new Date().toISOString(),
         collage: params.collage,
+        channels: params.channels ?? ['gym'],
       }),
     })
     if (!res.ok) return null
@@ -88,6 +104,7 @@ export async function publishTextPost(params: {
   authorId: string
   caption: string
   taggedIds: string[]
+  channels?: FeedChannel[]
 }): Promise<FeedPost | null> {
   const id = createId('post')
   try {
@@ -101,6 +118,7 @@ export async function publishTextPost(params: {
         caption: params.caption.slice(0, FEED_CAPTION_MAX),
         taggedIds: params.taggedIds,
         createdAt: new Date().toISOString(),
+        channels: params.channels ?? ['gym'],
       }),
     })
     if (!res.ok) return null

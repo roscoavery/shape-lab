@@ -78,6 +78,7 @@ import {
 } from '../lib/homeworkLabel'
 import { getHomeworkFlow, overallFlowScore } from '../lib/homeworkFlow'
 import { CollapsibleSection } from './CollapsibleSection'
+import { AthleteName } from './AthleteAvatar'
 import { ExpandableNotes } from './ExpandableNotes'
 import { HoldProperTimes } from './HoldProperTimes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
@@ -331,6 +332,14 @@ function HoldTimesBoard({
                           ? `lesson with ${log.coachName}`
                           : 'lesson'}
                       </span>
+                    )}
+                    {log.loggedFrom === 'class' && (
+                      <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                        {log.sourceLabel ?? 'in class'}
+                      </span>
+                    )}
+                    {log.kind === 'journal' && log.journal && (
+                      <span className="ml-1.5 text-[var(--text)]">{log.journal}</span>
                     )}
                     {isManual && (
                       <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
@@ -856,6 +865,11 @@ export function HomeworkPanel({
     }
     setPendingWrist(null)
     const mode = homeworkTrackMode(item)
+    if (mode === 'journal') {
+      setOpenIds((prev) => new Set(prev).add(item.id))
+      showFlash('Class skills log on this card. Add a new one from Today → Class clock.')
+      return
+    }
     const hasCameraShape = Boolean(getShape(item.shapeId)) && !isCatalogHomework(item)
     if (mode === 'reps' || (mode === 'hold_or_reps' && !hasCameraShape) || isCustomHomework(item)) {
       setActiveItemId(item.id)
@@ -1213,6 +1227,11 @@ export function HomeworkPanel({
         <h2 className="text-lg font-semibold text-[var(--text)]">
           Train a drill, then get out of the way
         </h2>
+        {athlete && (
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Signed in as <AthleteName athlete={athlete} size="xs" />
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">

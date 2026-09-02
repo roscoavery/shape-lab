@@ -6,6 +6,7 @@ import { allLibraryShapes } from '../../config/shapes'
 import { addCoachExercise, loadCoachExercises, removeCoachExercise } from '../../lib/careStore'
 import { assignHomeworkToAthletes, homeworkPickTitle } from '../../lib/homeworkAssign'
 import { AddHomeworkForm, type HomeworkPick } from '../homework/AddHomeworkForm'
+import { AthleteName } from '../AthleteAvatar'
 
 type Props = {
   meeting: ClassMeeting
@@ -113,7 +114,7 @@ export function AssignClassHomework({ meeting, offering, athletes, coach, onDone
                     checked={selected.has(a.id)}
                     onChange={() => toggle(a.id)}
                   />
-                  <span className="font-semibold">{a.name}</span>
+                  <AthleteName athlete={a} nameClassName="font-semibold" />
                 </label>
               </li>
             ))}

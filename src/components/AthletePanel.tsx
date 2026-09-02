@@ -27,6 +27,7 @@ import {
   takeGuestGrades,
   quizKindLabel,
 } from '../lib/quizGrades'
+import { AthleteAvatar, AthleteName } from './AthleteAvatar'
 
 type Props = {
   athletes: Athlete[]
@@ -252,6 +253,11 @@ export function AthletePanel({
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
         {active ? `${roleLabel(active)} profile` : 'Profile'}
       </p>
+      {active && (
+        <div className="mb-2">
+          <AthleteName athlete={active} size="md" nameClassName="font-semibold" />
+        </div>
+      )}
       <select
         className="mb-3 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
         value={activeId ?? ''}
@@ -469,19 +475,15 @@ export function AthletePanel({
         <div className="mt-3 flex flex-col gap-2">
           {active.photoDataUrl ? (
             <div className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
-              <img
-                src={active.photoDataUrl}
-                alt=""
-                className="h-16 w-16 rounded-full object-cover"
-              />
+              <AthleteAvatar athlete={active} size="lg" />
               <p className="text-sm text-[var(--muted)]">
-                Class-station snapshot for {active.name}. It lives on this profile,
-                not in the camera roll.
+                Snapshot for {active.name}. It lives on this profile, not in the
+                camera roll. Change it on Today → My profile.
               </p>
             </div>
           ) : (
             <p className="text-xs text-[var(--muted)]">
-              No class-station snapshot on this profile yet.
+              No snapshot on this profile yet. Add one on Today → My profile.
             </p>
           )}
           <input

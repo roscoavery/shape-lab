@@ -13,6 +13,7 @@ import {
 } from '../lib/athletePasscode'
 import { isRyanAthlete } from '../lib/ryanProfile'
 import { roleLabel } from '../lib/profileRole'
+import { AthleteName } from './AthleteAvatar'
 
 type Props = {
   athlete: Athlete
@@ -57,7 +58,9 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           {admin ? 'Unlock gym admin' : 'Unlock profile'}
         </p>
-        <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">{athlete.name}</h3>
+        <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">
+          <AthleteName athlete={athlete} size="md" />
+        </h3>
         <p className="text-xs text-[var(--muted)]">
           {roleLabel(athlete)}
           {athlete.gymName ? ` · ${athlete.gymName}` : ''}

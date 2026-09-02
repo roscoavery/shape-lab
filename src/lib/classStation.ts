@@ -6,6 +6,10 @@
 export type CartwheelLeg = 'left' | 'right'
 export type HarderShape = 'hollow' | 'superman'
 export type OpenShoulderHardness = 1 | 2 | 3 | 4 | 5
+export type TwistDirection = 'left' | 'right' | 'both' | 'not_yet'
+export type TwistBetterSide = 'left' | 'right'
+export type DominantHand = 'left' | 'right' | 'ambidextrous'
+export type SkateStance = 'regular' | 'goofy'
 
 export type StationStep =
   | 'who'
@@ -13,6 +17,10 @@ export type StationStep =
   | 'cartwheel'
   | 'harder'
   | 'shoulder'
+  | 'twist'
+  | 'twistBetter'
+  | 'hand'
+  | 'skate'
   | 'photo'
   | 'done'
 
@@ -27,6 +35,10 @@ export type StationDraft = {
   cartwheelLeg?: CartwheelLeg
   harderShape?: HarderShape
   openShoulderHardness?: OpenShoulderHardness
+  twistDirection?: TwistDirection
+  twistBetterSide?: TwistBetterSide
+  dominantHand?: DominantHand
+  skateStance?: SkateStance
   photoDataUrl?: string
   step: StationStep
   updatedAt: string

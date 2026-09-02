@@ -28,6 +28,8 @@ import {
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
 import { LessonNoteBar } from '../lesson/LessonNoteBar'
+import { AthleteName } from '../AthleteAvatar'
+import { ClassStopwatch } from './ClassStopwatch'
 
 type Props = {
   coach: Athlete
@@ -325,9 +327,17 @@ function LiveClass({
                 key={`${row.athleteId ?? row.firstName}-${i}`}
                 className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
               >
-                <span>
-                  <span className="font-semibold">{attendeeLabel(row, athletes)}</span>
-                  <span className="ml-2 text-xs text-white/45">
+                <span className="flex min-w-0 items-center gap-2">
+                  {row.athleteId ? (
+                    <AthleteName
+                      athlete={athletes.find((a) => a.id === row.athleteId) ?? {
+                        name: attendeeLabel(row, athletes),
+                      }}
+                    />
+                  ) : (
+                    <span className="font-semibold">{attendeeLabel(row, athletes)}</span>
+                  )}
+                  <span className="ml-1 shrink-0 text-xs text-white/45">
                     {row.athleteId ? 'Profile' : 'Name only'}
                   </span>
                 </span>
@@ -348,6 +358,12 @@ function LiveClass({
           </ul>
         )}
       </div>
+
+      <ClassStopwatch
+        athletes={athletes}
+        signedIn={athletes.find((a) => a.id === coachId) ?? null}
+        coach
+      />
 
       <section className="rounded-2xl border border-white/10 bg-white/5 p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
@@ -492,7 +508,7 @@ function RosterPicker({
                     on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-black/30 text-white/80'
                   }`}
                 >
-                  <span>{a.name}</span>
+                  <AthleteName athlete={a} />
                   <span className="text-xs">{on ? 'On roster' : 'Add'}</span>
                 </button>
               </li>

@@ -76,7 +76,7 @@ export const RESEARCH_STUDIES: StudyDef[] = [
         options: [
           { value: 'right', label: 'Right' },
           { value: 'left', label: 'Left' },
-          { value: 'both', label: 'Both' },
+          { value: 'both', label: 'Ambidextrous' },
         ],
       },
       {
@@ -95,6 +95,7 @@ export const RESEARCH_STUDIES: StudyDef[] = [
         options: [
           { value: 'left', label: 'Twist left' },
           { value: 'right', label: 'Twist right' },
+          { value: 'not_yet', label: 'Not twisting yet' },
         ],
       },
       {
@@ -106,6 +107,14 @@ export const RESEARCH_STUDIES: StudyDef[] = [
           { value: 'yes', label: 'Yes' },
           { value: 'no', label: 'No' },
         ],
+      },
+      {
+        id: 'twistBetterSide',
+        label: 'Better twist side',
+        kind: 'choice',
+        help: 'If they can twist both ways, which side is stronger.',
+        options: LEFT_RIGHT,
+        showIf: { fieldId: 'twistBothWays', values: ['yes'] },
       },
       {
         id: 'doubleFull',
@@ -134,12 +143,71 @@ export const RESEARCH_STUDIES: StudyDef[] = [
         ],
       },
       {
+        id: 'skateStance',
+        label: 'Skateboard stance',
+        kind: 'choice',
+        help: 'Regular is left foot forward. Goofy is right foot forward.',
+        options: [
+          { value: 'regular', label: 'Regular (left foot forward)' },
+          { value: 'goofy', label: 'Goofy (right foot forward)' },
+        ],
+        showIf: { fieldId: 'skateboards', values: ['yes'] },
+      },
+      {
         id: 'skateFrontFoot',
         label: 'Skate foot in front',
         kind: 'choice',
         required: true,
         options: LEFT_RIGHT,
         showIf: { fieldId: 'skateboards', values: ['yes'] },
+      },
+    ],
+  },
+  {
+    id: 'shape-feel',
+    title: 'Shape feel',
+    question:
+      'Which cartwheel leg, which hold feels harder, and how hard is a fully open shoulder?',
+    hypothesis:
+      'Cartwheel leg often matches tumble front foot. Who finds hollow harder vs Superman may show up on homework hold times. A high open-shoulder rating often pairs with a tighter bridge.',
+    method:
+      'Asked on the class-station line and on My Profile. One log per athlete. Update it when the answer changes.',
+    caveats:
+      'Self-report from a busy class line, not a measured test. n is this gym.',
+    fields: [
+      {
+        id: 'cartwheelLeg',
+        label: 'Cartwheel leg forward',
+        kind: 'choice',
+        required: true,
+        options: [
+          { value: 'left', label: 'Left leg forward' },
+          { value: 'right', label: 'Right leg forward' },
+        ],
+      },
+      {
+        id: 'harderShape',
+        label: 'Which hold feels harder',
+        kind: 'choice',
+        required: true,
+        options: [
+          { value: 'hollow', label: 'Hollow' },
+          { value: 'superman', label: 'Superman' },
+        ],
+      },
+      {
+        id: 'openShoulderHardness',
+        label: 'How hard is a fully open shoulder',
+        kind: 'choice',
+        required: true,
+        help: '1 is easy. 5 is “I cannot get there yet.”',
+        options: [
+          { value: '1', label: '1 · easy' },
+          { value: '2', label: '2' },
+          { value: '3', label: '3' },
+          { value: '4', label: '4' },
+          { value: '5', label: '5 · cannot get there yet' },
+        ],
       },
     ],
   },

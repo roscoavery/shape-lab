@@ -24,6 +24,19 @@ export type DiskFeedPost = {
   file?: string
   kind?: 'video' | 'collage' | 'text'
   collage?: DiskCollageShare
+  channels?: ('gym' | 'wins')[]
+}
+
+function cleanChannels(raw: unknown): ('gym' | 'wins')[] {
+  const list = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(',')
+      : []
+  const next = list
+    .map((x) => (typeof x === 'string' ? x.trim() : ''))
+    .filter((x): x is 'gym' | 'wins' => x === 'gym' || x === 'wins')
+  return [...new Set(next.length ? next : (['gym'] as const))]
 }
 
 export type DiskFeed = {
@@ -126,6 +139,7 @@ export async function addFeedPostFromBody(params: {
   createdAt?: string
   mime: string
   buf: Buffer
+  channels?: unknown
 }): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -147,6 +161,7 @@ export async function addFeedPostFromBody(params: {
     sizeBytes: params.buf.length,
     file,
     kind: 'video',
+    channels: cleanChannels(params.channels),
   }
   const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -182,6 +197,7 @@ export async function addCollageFeedPost(params: {
   taggedIds: string[]
   createdAt?: string
   collage: unknown
+  channels?: unknown
 }): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -201,6 +217,7 @@ export async function addCollageFeedPost(params: {
     sizeBytes: 0,
     kind: 'collage',
     collage,
+    channels: cleanChannels(params.channels),
   }
   const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -219,6 +236,7 @@ export async function addTextFeedPost(params: {
   caption: string
   taggedIds: string[]
   createdAt?: string
+  channels?: unknown
 }): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -237,6 +255,7 @@ export async function addTextFeedPost(params: {
     mime: 'text/plain',
     sizeBytes: 0,
     kind: 'text',
+    channels: cleanChannels(params.channels),
   }
   const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))

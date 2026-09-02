@@ -7,11 +7,14 @@ import type { Athlete } from '../../types'
 import {
   FEED_CAPTION_MAX,
   listFeedPosts,
+  postOnChannel,
   publishFeedPost,
   publishTextPost,
-  removeFeedPost,
+  type FeedChannel,
   type FeedPost,
+  removeFeedPost,
 } from '../../lib/feedPosts'
+import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import {
   collageFromShare,
   libraryHasShare,
@@ -27,9 +30,10 @@ import { CollageStage } from '../classes/CollageStage'
 type Props = {
   athletes: Athlete[]
   athlete: Athlete | null
+  channel?: FeedChannel
 }
 
-export function FeedPanel({ athletes, athlete }: Props) {
+export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [library, setLibrary] = useState<Collage[]>([])
   const [caption, setCaption] = useState('')
@@ -41,6 +45,8 @@ export function FeedPanel({ athletes, athlete }: Props) {
   const [previewFull, setPreviewFull] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [bigWin, setBigWin] = useState(false)
+  const wins = channel === 'wins'
   const coach = isCoachProfile(athlete)
   const gymAdmin = isGymAdmin(athlete)
   const ryan = findRyan(athletes)
@@ -91,17 +97,21 @@ export function FeedPanel({ athletes, athlete }: Props) {
     }
     setBusy(true)
     setError(null)
+    const channels: FeedChannel[] =
+      wins && bigWin ? ['wins', 'gym'] : wins ? ['wins'] : ['gym']
     const posted = file
       ? await publishFeedPost({
           authorId: athlete.id,
           caption: caption.trim(),
           taggedIds: tagged,
           blob: file,
+          channels,
         })
       : await publishTextPost({
           authorId: athlete.id,
           caption: caption.trim(),
           taggedIds: tagged,
+          channels,
         })
     setBusy(false)
     if (!posted) {
@@ -111,7 +121,13 @@ export function FeedPanel({ athletes, athlete }: Props) {
     setPosts((prev) => [posted, ...prev])
     setCaption('')
     setFile(null)
-    setNotice('Posted to the gym feed.')
+    setNotice(
+      wins && bigWin
+        ? 'Posted to Wins and the gym feed.'
+        : wins
+          ? 'Posted to Wins.'
+          : 'Posted to the gym feed.',
+    )
   }
 
   const saveSharedCollage = async (post: FeedPost) => {
@@ -143,7 +159,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
   const drop = async (post: FeedPost) => {
     if (!athlete) return
     if (!gymAdmin && post.authorId !== athlete.id) return
-    if (!confirm('Remove this post from the gym feed?')) return
+    if (!confirm(wins ? 'Remove this from Wins?' : 'Remove this post from the gym feed?')) return
     if (await removeFeedPost(post.id, athlete.id, gymAdmin)) {
       setPosts((prev) => prev.filter((p) => p.id !== post.id))
     }
@@ -153,9 +169,16 @@ export function FeedPanel({ athletes, athlete }: Props) {
     <div className="mx-auto max-w-xl space-y-4">
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-          Gym feed
+          {wins ? 'Wins' : 'Gym feed'}
         </p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">Accomplishments</h2>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">
+          {wins ? 'Spam the little hits' : 'Accomplishments'}
+        </h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {wins
+            ? 'A place for firsts, stuck landings, and “they finally got it.” Check big win only when it should also show on the gym feed.'
+            : 'Bigger gym posts — collages, videos, and the wins someone marked as big.'}
+        </p>
       </section>
 
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
@@ -173,6 +196,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
             }}
           >
             <div className="flex items-center gap-2">
+              <AthleteAvatar athlete={athlete} size="sm" />
               <RoleBadge athlete={athlete} />
               <span className="text-sm font-semibold text-[var(--text)]">{athlete.name}</span>
             </div>
@@ -180,9 +204,11 @@ export function FeedPanel({ athletes, athlete }: Props) {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder={
-                coach
-                  ? 'A thought, a hit, or a note about class. Video is optional. Tag the athlete below.'
-                  : 'A thought or what you hit. Video is optional. Ryan is tagged as coach unless you change it.'
+                wins
+                  ? 'What did they just do? Firsts belong here. Video optional.'
+                  : coach
+                    ? 'A thought, a hit, or a note about class. Video is optional. Tag the athlete below.'
+                    : 'A thought or what you hit. Video is optional. Ryan is tagged as coach unless you change it.'
               }
               rows={3}
               maxLength={FEED_CAPTION_MAX}
@@ -218,13 +244,23 @@ export function FeedPanel({ athletes, athlete }: Props) {
                             : 'border border-[var(--panel-border)] text-[var(--muted)]'
                         }`}
                       >
-                        {a.name}
+                        <AthleteName athlete={a} size="xs" />
                         <span className="ml-1 opacity-70">{roleLabel(a)}</span>
                       </button>
                     )
                   })}
                 </div>
               </div>
+            )}
+            {wins && (
+              <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                <input
+                  type="checkbox"
+                  checked={bigWin}
+                  onChange={(e) => setBigWin(e.target.checked)}
+                />
+                Big win — also post to the gym feed
+              </label>
             )}
             {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
             {notice && <p className="text-sm text-[var(--accent)]">{notice}</p>}
@@ -233,20 +269,21 @@ export function FeedPanel({ athletes, athlete }: Props) {
               disabled={busy}
               className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
             >
-              {busy ? 'Posting…' : 'Post to feed'}
+              {busy ? 'Posting…' : wins ? 'Post to Wins' : 'Post to feed'}
             </button>
           </form>
         )}
       </section>
 
-      {posts.length === 0 ? (
+      {posts.filter((p) => postOnChannel(p, channel)).length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
-          No posts yet. A thought, a first hit of the day, or a class collage from
-          Classes can live here.
+          {wins
+            ? 'No wins yet. Log a skill from Today → Class clock, or write one here.'
+            : 'No posts yet. A thought, a first hit of the day, or a class collage from Classes can live here.'}
         </p>
       ) : (
         <ul className="space-y-4">
-          {posts.map((post) => {
+          {posts.filter((p) => postOnChannel(p, channel)).map((post) => {
             const author = authorOf(post.authorId)
             const taggedPeople = post.taggedIds
               .map((id) => authorOf(id))
@@ -257,6 +294,7 @@ export function FeedPanel({ athletes, athlete }: Props) {
                 className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
               >
                 <div className="flex items-center gap-2 px-4 py-3">
+                  <AthleteAvatar athlete={author} size="sm" />
                   <RoleBadge athlete={author} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--text)]">
@@ -332,7 +370,8 @@ export function FeedPanel({ athletes, athlete }: Props) {
                         key={a.id}
                         className="rounded-full bg-[#0d1218] px-2 py-0.5 text-[11px] text-[var(--muted)]"
                       >
-                        @{a.name} · {roleLabel(a)}
+                        <AthleteName athlete={a} size="xs" />
+                        <span className="ml-1">· {roleLabel(a)}</span>
                       </span>
                     ))}
                   </div>

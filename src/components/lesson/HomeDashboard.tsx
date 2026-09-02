@@ -12,6 +12,8 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
+import { AthleteName } from '../AthleteAvatar'
+import { ClassStopwatch } from '../today/ClassStopwatch'
 import {
   classLabel,
   endClassMeeting,
@@ -28,6 +30,7 @@ type Props = {
   onOpenLesson?: (session: LessonSession) => void
   onShortcut?: (id: TodayShortcutId) => void
   onStartClass?: () => void
+  onOpenProfile?: () => void
 }
 
 export function HomeDashboard({
@@ -37,11 +40,16 @@ export function HomeDashboard({
   onStartLesson,
   onShortcut,
   onStartClass,
+  onOpenProfile,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withId, setWithId] = useState<string | null>(null)
   const [editing, setEditing] = useState<LessonPlan | null>(null)
   const [refresh, setRefresh] = useState(0)
+  const [unlockQuery, setUnlockQuery] = useState('')
+  const [unlockMore, setUnlockMore] = useState(false)
+  const [lessonQuery, setLessonQuery] = useState('')
+  const [lessonMore, setLessonMore] = useState(false)
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
@@ -57,6 +65,24 @@ export function HomeDashboard({
       }),
     [athletes, signedIn],
   )
+
+  const filteredUnlock = useMemo(() => {
+    const q = unlockQuery.trim().toLowerCase()
+    if (!q) return athletes
+    return athletes.filter((a) => a.name.toLowerCase().includes(q))
+  }, [athletes, unlockQuery])
+  const visibleUnlock = unlockMore ? filteredUnlock : filteredUnlock.slice(0, 6)
+
+  const filteredLesson = useMemo(() => {
+    const q = lessonQuery.trim().toLowerCase()
+    if (!q) return roster
+    return roster.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        roleLabel(a).toLowerCase().includes(q),
+    )
+  }, [roster, lessonQuery])
+  const visibleLesson = lessonMore ? filteredLesson : filteredLesson.slice(0, 6)
 
   const withAthlete = roster.find((a) => a.id === withId) ?? null
   const plans = withAthlete ? plansForAthlete(withAthlete.id) : []
@@ -75,19 +101,36 @@ export function HomeDashboard({
             and lesson videos. Open <strong className="text-[var(--text)]">More → Profiles</strong>{' '}
             if you still need to create one.
           </p>
+          {athletes.length > 6 && (
+            <input
+              className="mt-4 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 text-sm"
+              placeholder="Search a name"
+              value={unlockQuery}
+              onChange={(e) => setUnlockQuery(e.target.value)}
+            />
+          )}
           <div className="mt-4 flex flex-col gap-2">
-            {athletes.slice(0, 12).map((a) => (
+            {visibleUnlock.map((a) => (
               <button
                 key={a.id}
                 type="button"
                 onClick={() => onUnlock(a.id)}
-                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
+                className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
               >
-                <span className="font-medium">{a.name}</span>
+                <AthleteName athlete={a} />
                 <span className="text-[var(--muted)]"> · {roleLabel(a)}</span>
               </button>
             ))}
           </div>
+          {filteredUnlock.length > 6 && (
+            <button
+              type="button"
+              onClick={() => setUnlockMore((v) => !v)}
+              className="mt-2 text-sm font-semibold text-[var(--accent)]"
+            >
+              {unlockMore ? 'Show less' : `Show ${filteredUnlock.length - 6} more`}
+            </button>
+          )}
           {athletes.length === 0 && (
             <p className="mt-3 text-sm text-[var(--muted)]">No profiles on this gym yet.</p>
           )}
@@ -102,11 +145,22 @@ export function HomeDashboard({
       <div className="mx-auto grid max-w-3xl gap-4">
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
-          <h2 className="text-xl font-semibold">Hi {signedIn.name}</h2>
+          <h2 className="mt-1 flex items-center gap-2 text-xl font-semibold">
+            <AthleteName athlete={signedIn} size="md" />
+          </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
             Homework lives under Practice. Lessons your coach ran — notes, hold
             times, and videos — show here.
           </p>
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="mt-3 rounded-lg bg-[var(--accent-dim)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              My profile
+            </button>
+          )}
         </section>
         {onShortcut && <TodayShortcuts onGo={onShortcut} showStation={false} />}
         {myPlans.length > 0 && (
@@ -139,8 +193,21 @@ export function HomeDashboard({
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
-        <h2 className="text-xl font-semibold">Start a lesson or a class</h2>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
+            <h2 className="text-xl font-semibold">Start a lesson or a class</h2>
+          </div>
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm font-semibold"
+            >
+              My profile
+            </button>
+          )}
+        </div>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Start lesson is one athlete. Start class is the hour you are teaching
           — Connections (Monday 5pm) — so shape-test names and homework land on
@@ -202,32 +269,60 @@ export function HomeDashboard({
             No athletes yet. Add one under More → Profiles.
           </p>
         ) : (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {roster.map((a) => (
+          <>
+            <input
+              className="mt-3 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 text-sm"
+              placeholder="Search an athlete"
+              value={lessonQuery}
+              onChange={(e) => setLessonQuery(e.target.value)}
+            />
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {visibleLesson.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => {
+                    setWithId(a.id)
+                    setEditing(null)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ${
+                    withId === a.id
+                      ? 'border-[var(--accent)] bg-[#102820]'
+                      : 'border-[var(--panel-border)] bg-[#121820] hover:border-[var(--accent-dim)]'
+                  }`}
+                >
+                  <AthleteName athlete={a} nameClassName="font-medium" />
+                  <span className="ml-auto shrink-0 text-xs text-[var(--muted)]">
+                    {roleLabel(a)}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {filteredLesson.length === 0 && (
+              <p className="mt-2 text-sm text-[var(--muted)]">No names match that search.</p>
+            )}
+            {filteredLesson.length > 6 && (
               <button
-                key={a.id}
                 type="button"
-                onClick={() => {
-                  setWithId(a.id)
-                  setEditing(null)
-                }}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                  withId === a.id
-                    ? 'border-[var(--accent)] bg-[#102820]'
-                    : 'border-[var(--panel-border)] bg-[#121820] hover:border-[var(--accent-dim)]'
-                }`}
+                onClick={() => setLessonMore((v) => !v)}
+                className="mt-2 text-sm font-semibold text-[var(--accent)]"
               >
-                <span className="font-medium">{a.name.trim() || 'Untitled'}</span>
-                <span className="block text-xs text-[var(--muted)]">{roleLabel(a)}</span>
+                {lessonMore ? 'Show less' : `Show ${filteredLesson.length - 6} more`}
               </button>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </section>
 
+      {coach && (
+        <ClassStopwatch athletes={athletes} signedIn={signedIn} coach />
+      )}
+
       {withAthlete && !editing && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-          <h3 className="font-semibold">{withAthlete.name}</h3>
+          <h3 className="font-semibold">
+            <AthleteName athlete={withAthlete} size="md" />
+          </h3>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

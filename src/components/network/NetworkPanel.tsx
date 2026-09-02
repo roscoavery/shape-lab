@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile, roleLabel } from '../../lib/profileRole'
+import { AthleteName } from '../AthleteAvatar'
 import {
   followerCount,
   followingCount,
@@ -208,8 +209,9 @@ function PeoplePage({
           >
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-[var(--text)]">
-                {person.name}{' '}
+                <AthleteName athlete={person} nameClassName="font-semibold" />
                 <span className="text-xs font-normal text-[var(--muted)]">
+                  {' '}
                   · {roleLabel(person)}
                 </span>
               </p>

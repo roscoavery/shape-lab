@@ -9,6 +9,7 @@ import {
   splitPersonName,
 } from '../../lib/classStation'
 import { formatQuizScore, lastGuestGrade, lastShapeTest } from '../../lib/quizGrades'
+import { AthleteName } from '../AthleteAvatar'
 
 export type QuizTaker = {
   athleteId?: string
@@ -128,7 +129,7 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
                   }
                   className="flex w-full items-center justify-between rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3 text-left"
                 >
-                  <span className="text-base font-semibold">{a.name}</span>
+                  <AthleteName athlete={a} size="md" nameClassName="text-base font-semibold" />
                   {last ? (
                     <span className="text-xs font-medium text-[var(--accent)]">
                       Last: {formatQuizScore(last)}

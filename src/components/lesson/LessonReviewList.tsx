@@ -7,6 +7,7 @@ import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
 import { groupLessonWork } from './SkillPicker'
+import { AthleteName } from '../AthleteAvatar'
 
 type Props = {
   sessions: LessonSession[]
@@ -62,7 +63,10 @@ export function LessonReviewList({
               >
                 <div>
                   <p className="text-sm font-semibold">
-                    {athlete?.name ?? 'Athlete'}
+                    <AthleteName
+                      athlete={athlete ?? { name: 'Athlete' }}
+                      nameClassName="font-semibold"
+                    />
                     <span className="font-normal text-[var(--muted)]">
                       {' '}
                       with {coach?.name ?? 'coach'}

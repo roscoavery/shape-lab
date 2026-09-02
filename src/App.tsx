@@ -35,6 +35,8 @@ import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
+import { ClassStopwatch } from './components/today/ClassStopwatch'
+import { MyProfile } from './components/today/MyProfile'
 import { markClassAttendance } from './lib/coachClasses'
 import { splitPersonName } from './lib/classStation'
 import { appendShapeTest, rememberGuestGrade } from './lib/quizGrades'
@@ -100,6 +102,7 @@ import {
   subscribeIgStills,
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
+import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { isCoachProfile, isGymAdmin } from './lib/profileRole'
 import {
   isProfileUnlocked,
@@ -139,6 +142,8 @@ export default function App() {
   } | null>(null)
   const [stationOpen, setStationOpen] = useState(false)
   const [classSessionOpen, setClassSessionOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [clockOpen, setClockOpen] = useState(false)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -555,6 +560,10 @@ export default function App() {
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
                 onStartClass={() => setClassSessionOpen(true)}
+                onOpenProfile={() => {
+                  if (activeProfile) setProfileOpen(true)
+                  else requestSelectAthlete(athletes[0]?.id ?? null)
+                }}
                 onShortcut={(id) => {
                   if (id === 'library') {
                     setLearnIntent('shapes')
@@ -569,10 +578,17 @@ export default function App() {
                     goTab('learn')
                   } else if (id === 'feed') {
                     goTab('feed')
+                  } else if (id === 'wins') {
+                    goTab('wins')
                   } else if (id === 'homework') {
                     goTab('homework')
                   } else if (id === 'station') {
                     setStationOpen(true)
+                  } else if (id === 'profile') {
+                    if (activeProfile) setProfileOpen(true)
+                    else requestSelectAthlete(athletes[0]?.id ?? null)
+                  } else if (id === 'clock') {
+                    setClockOpen(true)
                   }
                 }}
               />
@@ -914,6 +930,15 @@ export default function App() {
         <FeedPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+          channel="gym"
+        />
+      )}
+
+      {tab === 'wins' && (
+        <FeedPanel
+          athletes={athletes}
+          athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+          channel="wins"
         />
       )}
 
@@ -1192,6 +1217,7 @@ export default function App() {
           } else {
             setAthleteRoster(athletes.map((a) => (a.id === athlete.id ? { ...a, ...athlete } : a)))
           }
+          void syncAthleteProfileToResearch(athlete, activeProfile?.id ?? athlete.id)
           markClassAttendance({
             athleteId: athlete.id,
             firstName: athlete.firstName || splitPersonName(athlete.name).firstName,
@@ -1210,6 +1236,25 @@ export default function App() {
           setLearnIntent('quiz')
           goTab('learn')
         }}
+      />
+    )}
+    {profileOpen && activeProfile && (
+      <MyProfile
+        athlete={activeProfile}
+        onClose={() => setProfileOpen(false)}
+        onSave={(next) => {
+          setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
+          void syncAthleteProfileToResearch(next, next.id)
+        }}
+      />
+    )}
+    {clockOpen && (
+      <ClassStopwatch
+        athletes={athletes}
+        signedIn={activeProfile}
+        coach={Boolean(activeProfile && isCoachProfile(activeProfile))}
+        variant="overlay"
+        onClose={() => setClockOpen(false)}
       />
     )}
     {classSessionOpen && activeProfile && isCoachProfile(activeProfile) && (

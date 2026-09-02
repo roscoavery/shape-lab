@@ -4,8 +4,11 @@ export type TodayShortcutId =
   | 'replay'
   | 'scroll'
   | 'feed'
+  | 'wins'
   | 'station'
   | 'homework'
+  | 'profile'
+  | 'clock'
 
 type Props = {
   onGo: (id: TodayShortcutId) => void
@@ -58,6 +61,30 @@ const TOOLS: {
     hint: 'What the gym posted — collages and hits.',
     className:
       'from-[#fda4af] via-[#fb7185] to-[#9f1239] text-[#2a0b12] shadow-[0_16px_40px_rgba(251,113,133,0.22)]',
+  },
+  {
+    id: 'wins',
+    eyebrow: 'Gym',
+    title: 'Wins',
+    hint: 'Spam the little hits. Big ones can jump to the main feed.',
+    className:
+      'from-[#fde68a] via-[#f59e0b] to-[#92400e] text-[#2a1703] shadow-[0_16px_40px_rgba(245,158,11,0.22)]',
+  },
+  {
+    id: 'profile',
+    eyebrow: 'You',
+    title: 'My profile',
+    hint: 'Photo, cartwheel, twist, hand, skate stance.',
+    className:
+      'from-[#e9d5ff] via-[#c084fc] to-[#6b21a8] text-[#2e1065] shadow-[0_16px_40px_rgba(192,132,252,0.22)]',
+  },
+  {
+    id: 'clock',
+    eyebrow: 'Floor',
+    title: 'Class clock',
+    hint: 'Time a hold and log it for everyone here.',
+    className:
+      'from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.22)]',
   },
   {
     id: 'homework',

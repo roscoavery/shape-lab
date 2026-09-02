@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { Athlete } from '../../types'
 import { createId } from '../../lib/storage'
 import { mergeShapeTests, takeGuestGrades } from '../../lib/quizGrades'
@@ -12,11 +12,16 @@ import {
   removeStationDraft,
   splitPersonName,
   upsertStationDraft,
+  type DominantHand,
   type HarderShape,
   type OpenShoulderHardness,
+  type SkateStance,
   type StationDraft,
   type StationStep,
+  type TwistDirection,
 } from '../../lib/classStation'
+import { AthleteName } from '../AthleteAvatar'
+import { StationSnapshot } from './StationSnapshot'
 
 type Props = {
   athletes: Athlete[]
@@ -31,6 +36,10 @@ const STEPS: StationStep[] = [
   'cartwheel',
   'harder',
   'shoulder',
+  'twist',
+  'twistBetter',
+  'hand',
+  'skate',
   'photo',
   'done',
 ]
@@ -101,6 +110,11 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       cartwheelLeg: draft.cartwheelLeg || existing?.cartwheelLeg,
       harderShape: draft.harderShape || existing?.harderShape,
       openShoulderHardness: draft.openShoulderHardness ?? existing?.openShoulderHardness,
+      twistDirection: draft.twistDirection || existing?.twistDirection,
+      twistBetterSide: draft.twistBetterSide || existing?.twistBetterSide,
+      dominantHand: draft.dominantHand || existing?.dominantHand,
+      skateStance: draft.skateStance || existing?.skateStance,
+      photoDataUrl: draft.photoDataUrl || existing?.photoDataUrl,
       step: 'parentPhone',
     })
   }
@@ -130,6 +144,10 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       hasBackPain: existing?.hasBackPain,
       injuryActive: existing?.injuryActive,
       photoDataUrl: draft.photoDataUrl || existing?.photoDataUrl,
+      twistDirection: draft.twistDirection || existing?.twistDirection,
+      twistBetterSide: draft.twistBetterSide || existing?.twistBetterSide,
+      dominantHand: draft.dominantHand || existing?.dominantHand,
+      skateStance: draft.skateStance || existing?.skateStance,
       shapeTests: mergeShapeTests(
         existing?.shapeTests,
         takeGuestGrades(draft.firstName, draft.lastName),
@@ -263,9 +281,9 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
                         const parts = splitPersonName(a.name)
                         pickName(a.firstName || parts.firstName, a.lastName || parts.lastName, a.id)
                       }}
-                      className="flex w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-lg font-semibold"
+                      className="flex w-full items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-lg font-semibold"
                     >
-                      {a.name}
+                      <AthleteName athlete={a} size="md" />
                     </button>
                   ))}
                   {visibleDrafts.length + visibleGuests.length + visibleRoster.length === 0 && (
@@ -389,7 +407,7 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
                 <button
                   key={n}
                   type="button"
-                  onClick={() => go('photo', { openShoulderHardness: n as OpenShoulderHardness })}
+                  onClick={() => go('twist', { openShoulderHardness: n as OpenShoulderHardness })}
                   className="h-20 rounded-2xl bg-white/8 text-2xl font-bold hover:bg-[var(--accent)] hover:text-[#06281f]"
                 >
                   {n}
@@ -399,11 +417,123 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
           </Question>
         )}
 
+        {draft.step === 'twist' && (
+          <Question
+            title="Which way do you twist?"
+            hint="Left, right, both ways, or not yet."
+            onBack={() => go('shoulder')}
+          >
+            <div className="grid gap-3">
+              {(
+                [
+                  ['left', 'Left'],
+                  ['right', 'Right'],
+                  ['both', 'I can twist both ways'],
+                  ['not_yet', "I'm not twisting yet"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() =>
+                    id === 'both'
+                      ? go('twistBetter', { twistDirection: id })
+                      : go('hand', { twistDirection: id as TwistDirection, twistBetterSide: undefined })
+                  }
+                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'twistBetter' && (
+          <Question
+            title="Which is your better side?"
+            hint="You can twist both ways — pick the stronger one."
+            onBack={() => go('twist')}
+          >
+            <div className="grid gap-3">
+              {(
+                [
+                  ['left', 'Left is better'],
+                  ['right', 'Right is better'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => go('hand', { twistBetterSide: id })}
+                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'hand' && (
+          <Question
+            title="Dominant hand?"
+            hint="Writing or throwing hand. Ambidextrous is fine."
+            onBack={() => go(draft.twistDirection === 'both' ? 'twistBetter' : 'twist')}
+          >
+            <div className="grid gap-3">
+              {(
+                [
+                  ['right', 'Right'],
+                  ['left', 'Left'],
+                  ['ambidextrous', 'Ambidextrous'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => go('skate', { dominantHand: id as DominantHand })}
+                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'skate' && (
+          <Question
+            title="Which way would you ride a skateboard?"
+            hint="Regular is left foot forward. Goofy is right foot forward."
+            onBack={() => go('hand')}
+          >
+            <div className="grid gap-3">
+              <button
+                type="button"
+                onClick={() => go('photo', { skateStance: 'regular' as SkateStance })}
+                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+              >
+                Regular
+                <span className="mt-1 block text-sm font-medium opacity-70">Left foot forward</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => go('photo', { skateStance: 'goofy' as SkateStance })}
+                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+              >
+                Goofy
+                <span className="mt-1 block text-sm font-medium opacity-70">Right foot forward</span>
+              </button>
+            </div>
+          </Question>
+        )}
+
         {draft.step === 'photo' && (
           <Question
             title="Quick snapshot?"
             hint="Optional. Opens this iPad’s camera so we can tell two kids with the same first name apart."
-            onBack={() => go('shoulder')}
+            onBack={() => go('skate')}
           >
             <StationSnapshot
               photoDataUrl={draft.photoDataUrl}
@@ -481,146 +611,3 @@ function Question({
   )
 }
 
-function cameraErrorMessage(err: unknown): string {
-  const name = err instanceof DOMException ? err.name : ''
-  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-    return 'Camera permission was blocked. Allow the camera, then try again.'
-  }
-  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-    return 'No camera found on this device.'
-  }
-  if (name === 'NotReadableError' || name === 'TrackStartError') {
-    return 'The camera is already in use. Close the other camera view and try again.'
-  }
-  if (name === 'SecurityError') {
-    return 'This page needs HTTPS (or localhost) before the camera can open.'
-  }
-  return err instanceof Error ? err.message : 'Could not open the camera.'
-}
-
-function stopStream(stream: MediaStream | null) {
-  stream?.getTracks().forEach((track) => track.stop())
-}
-
-function StationSnapshot({
-  photoDataUrl,
-  onCapture,
-}: {
-  photoDataUrl?: string
-  onCapture: (dataUrl: string) => void
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const [live, setLive] = useState(false)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    return () => {
-      stopStream(streamRef.current)
-      streamRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!live || !streamRef.current) return
-    const video = videoRef.current
-    if (!video) return
-    video.srcObject = streamRef.current
-    void video
-      .play()
-      .then(() => setReady(true))
-      .catch((err) => setError(cameraErrorMessage(err)))
-  }, [live])
-
-  const openCamera = async () => {
-    setError(null)
-    setBusy(true)
-    setReady(false)
-    try {
-      stopStream(streamRef.current)
-      streamRef.current = null
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: 'user' },
-          width: { ideal: 1280 },
-          height: { ideal: 1280 },
-        },
-      })
-      streamRef.current = stream
-      setLive(true)
-    } catch (err) {
-      setLive(false)
-      setReady(false)
-      setError(cameraErrorMessage(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const snap = () => {
-    const video = videoRef.current
-    if (!video || video.videoWidth < 2) {
-      setError('Wait for the preview, then tap Capture.')
-      return
-    }
-    const size = Math.min(video.videoWidth, video.videoHeight)
-    const sx = (video.videoWidth - size) / 2
-    const sy = (video.videoHeight - size) / 2
-    const canvas = document.createElement('canvas')
-    canvas.width = 640
-    canvas.height = 640
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.drawImage(video, sx, sy, size, size, 0, 0, 640, 640)
-    onCapture(canvas.toDataURL('image/jpeg', 0.86))
-    stopStream(streamRef.current)
-    streamRef.current = null
-    setLive(false)
-    setReady(false)
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {photoDataUrl && !live ? (
-        <img
-          src={photoDataUrl}
-          alt=""
-          className="mx-auto h-40 w-40 rounded-full object-cover"
-        />
-      ) : live ? (
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          autoPlay
-          className="mx-auto h-56 w-56 rounded-full bg-black object-cover"
-        />
-      ) : (
-        <p className="text-sm text-white/55">Skip if the line is moving.</p>
-      )}
-      {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
-      {live ? (
-        <button
-          type="button"
-          disabled={!ready}
-          onClick={snap}
-          className="h-14 rounded-2xl border border-white/15 text-base font-semibold disabled:opacity-40"
-        >
-          {ready ? 'Capture' : 'Opening camera…'}
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void openCamera()}
-          className="h-14 rounded-2xl border border-white/15 text-base font-semibold disabled:opacity-40"
-        >
-          {busy ? 'Opening camera…' : photoDataUrl ? 'Retake' : 'Open camera'}
-        </button>
-      )}
-    </div>
-  )
-}

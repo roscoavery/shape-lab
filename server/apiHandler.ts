@@ -350,6 +350,7 @@ export async function handleShapeLabApi(
           createdAt?: string
           id?: string
           collage?: unknown
+          channels?: unknown
         }
         const taggedIds = Array.isArray(body.taggedIds)
           ? body.taggedIds
@@ -365,6 +366,7 @@ export async function handleShapeLabApi(
             caption: body.caption ?? url.searchParams.get('caption') ?? '',
             taggedIds,
             createdAt: body.createdAt,
+            channels: body.channels ?? url.searchParams.get('channels'),
           })
           if (!saved) {
             sendJson(res, 400, { error: 'Write a caption to post without a video.' })
@@ -380,6 +382,7 @@ export async function handleShapeLabApi(
           taggedIds,
           createdAt: body.createdAt,
           collage: body.collage,
+          channels: body.channels ?? url.searchParams.get('channels'),
         })
         if (!saved) {
           sendJson(res, 400, { error: 'Could not share that collage.' })
@@ -398,6 +401,7 @@ export async function handleShapeLabApi(
         createdAt: url.searchParams.get('createdAt') ?? undefined,
         mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
         buf,
+        channels: url.searchParams.get('channels'),
       })
       if (!saved) {
         sendJson(res, 400, { error: 'Could not save that post.' })

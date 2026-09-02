@@ -264,6 +264,8 @@ export function lateralityCrosstabs(
   const foot = field(lateralityStudy, 'tumbleFrontFoot')
   const twist = field(lateralityStudy, 'twistDirection')
   const skate = field(lateralityStudy, 'skateFrontFoot')
+  const skateStance = field(lateralityStudy, 'skateStance')
+  const better = field(lateralityStudy, 'twistBetterSide')
   const doubleFull = field(lateralityStudy, 'doubleFull')
   const triple = field(lateralityStudy, 'triple')
   const tables: (Crosstab | null)[] = []
@@ -308,6 +310,39 @@ export function lateralityCrosstabs(
         skate,
         'Tumble front foot × skate stance',
         'Among people who also skate — does the same foot stay in front?',
+      ),
+    )
+  }
+  if (foot && skateStance) {
+    tables.push(
+      crosstab(
+        laterality,
+        foot,
+        skateStance,
+        'Tumble front foot × regular / goofy',
+        'Hurdle foot against how they would ride a skateboard.',
+      ),
+    )
+  }
+  if (hand && skateStance) {
+    tables.push(
+      crosstab(
+        laterality,
+        hand,
+        skateStance,
+        'Handedness × skate stance',
+        'Dominant hand against regular vs goofy.',
+      ),
+    )
+  }
+  if (twist && better) {
+    tables.push(
+      crosstab(
+        laterality,
+        twist,
+        better,
+        'Usual twist × better side',
+        'For athletes who can twist both ways — which side they call better.',
       ),
     )
   }
