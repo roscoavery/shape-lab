@@ -1,14 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Athlete } from '../types'
-import {
-  applyGymBackup,
-  athleteContact,
-  buildGymBackup,
-  downloadContactsSheet,
-  downloadGymBackup,
-  parseGymBackup,
-} from '../lib/gymBackup'
-import { loadResearch } from '../lib/research'
+import { athleteContact } from '../lib/gymBackup'
 import { enableServerRosterPush, localRosterSnapshot, pushServerRoster } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import { roleLabel } from '../lib/profileRole'
@@ -23,10 +15,8 @@ type Props = {
   onAthletes: (next: Athlete[]) => void
 }
 
-export function GymRecords({ athletes, onAthletes }: Props) {
-  const fileRef = useRef<HTMLInputElement | null>(null)
+export function GymRecords({ athletes }: Props) {
   const [persist, setPersist] = useState<PersistInfo | null>(null)
-  const [researchCount, setResearchCount] = useState<number | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -37,7 +27,12 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         if (data?.mode) setPersist(data)
       })
       .catch(() => {})
-    void loadResearch().then((file) => setResearchCount(file.observations.length))
+  }, [athletes.length])
+
+  useEffect(() => {
+    if (athletes.length === 0) return
+    enableServerRosterPush()
+    void pushServerRoster(localRosterSnapshot()).catch(() => {})
   }, [athletes.length])
 
   const contacts = athletes.map((a) => ({
@@ -57,48 +52,13 @@ export function GymRecords({ athletes, onAthletes }: Props) {
     try {
       enableServerRosterPush()
       await pushServerRoster(localRosterSnapshot())
-      const backup = await buildGymBackup()
-      await applyGymBackup(backup)
       flash(
         persist?.lasting
-          ? `Saved ${athletes.length} profiles and ${backup.research.observations.length} research answers to this gym link.`
-          : `Pushed ${athletes.length} profiles from this phone. This Vercel link has no lasting store yet — download a backup too, and add a Blob token on the claimed project.`,
+          ? `Saved ${athletes.length} profiles on this gym link. They stay here for the next class.`
+          : `Saved ${athletes.length} profiles on this gym link. Add a Blob store on this Vercel project so they still show up tomorrow.`,
       )
     } catch {
-      flash('Could not reach the gym link. Download a backup from this phone.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const exportBackup = async () => {
-    setBusy(true)
-    try {
-      const backup = await buildGymBackup()
-      downloadGymBackup(backup)
-      flash(
-        `Downloaded ${backup.roster.athletes.length} profiles and ${backup.research.observations.length} research answers.`,
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const importFile = async (file: File) => {
-    setBusy(true)
-    try {
-      const parsed = parseGymBackup(JSON.parse(await file.text()))
-      if (!parsed) {
-        flash('That file is not a Shape Lab gym backup.')
-        return
-      }
-      const { athletes: next } = await applyGymBackup(parsed)
-      onAthletes(next)
-      flash(
-        `Loaded ${parsed.roster.athletes.length} profiles and ${parsed.research.observations.length} research answers.`,
-      )
-    } catch {
-      flash('Could not read that backup file.')
+      flash('Could not reach the gym link from this phone. Stay on the same URL and try again.')
     } finally {
       setBusy(false)
     }
@@ -106,33 +66,31 @@ export function GymRecords({ athletes, onAthletes }: Props) {
 
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-      <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Gym records</p>
-      <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Phones, emails, research</h3>
+      <p className="text-xs uppercase tracking-wider text-[var(--muted)]">This gym</p>
+      <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Athletes on this link</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-        Profiles live on the phone that created them and try to copy to this link. A
-        temporary Vercel URL only keeps that copy if the project has a Blob store.
-        Claiming the link does not create Blob by itself.
+        Names, parent phones, and class photos stay in the app on this same gym URL.
+        New profiles save here automatically. You do not need a spreadsheet.
       </p>
 
       {persist && !persist.lasting && (
         <p className="mt-3 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
-          This link is ephemeral. New profiles will vanish after a cold start.
-          On Vercel: Storage → Blob → copy <code className="text-xs">BLOB_READ_WRITE_TOKEN</code> into
-          Environment Variables → Redeploy. Until then, download a backup from the
-          class iPad.
+          This Vercel project is not keeping profiles overnight yet. In this project:
+          Storage → Create Database → Blob. That adds{' '}
+          <code className="text-xs">BLOB_READ_WRITE_TOKEN</code>. Then redeploy
+          Production on this same URL. After that, class sign-ups stay in the app.
         </p>
       )}
       {persist?.lasting && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
-          This link has a lasting store. Profiles saved here should show up tomorrow
-          on the same URL.
+          This gym link is keeping profiles. Athletes who sign up here will still be
+          here next class.
         </p>
       )}
 
       <p className="mt-3 text-sm text-[var(--muted)]">
-        {athletes.length} profile{athletes.length === 1 ? '' : 's'} on this phone
+        {athletes.length} profile{athletes.length === 1 ? '' : 's'}
         {withPhone ? ` · ${withPhone} with a phone or email` : ''}
-        {researchCount != null ? ` · ${researchCount} research answer${researchCount === 1 ? '' : 's'}` : ''}
       </p>
 
       <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--panel-border)]">
@@ -176,56 +134,15 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3">
         <button
           type="button"
           disabled={busy}
           onClick={() => void saveToLink()}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
         >
-          Save this phone to the gym link
+          Save profiles to this gym
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void exportBackup()}
-          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
-        >
-          Download gym backup
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => downloadContactsSheet(athletes)}
-          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
-        >
-          Download contacts sheet
-        </button>
-        <a
-          href="/api/contacts"
-          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
-        >
-          Open readable contact list
-        </a>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
-        >
-          Load a backup
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            e.target.value = ''
-            if (file) void importFile(file)
-          }}
-        />
       </div>
       {status && <p className="mt-2 text-sm text-[var(--accent)]">{status}</p>}
     </section>

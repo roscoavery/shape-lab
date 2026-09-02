@@ -1004,10 +1004,9 @@ export default function App() {
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">What this is</h2>
             <p>
               Shape Lab is a free gymnastics shape-coaching app. Profiles, phones, and
-              homework save on this phone and copy to the gym link. On a claimed Vercel
-              project that has a Blob token, that copy lasts. A temporary link without
-              Blob only keeps server data while the function stays warm. More → Profiles
-              has the contact list and a gym backup.
+              homework stay in the app on this gym link. Add a Blob store on the claimed
+              Vercel project so class sign-ups are still here tomorrow. Open More →
+              Profiles to see everyone on this gym.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

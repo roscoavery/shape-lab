@@ -92,9 +92,7 @@ Use **Create Deployment** (or Redeploy) on the **same Vercel project** that alre
 
 That replaces the app on the existing address. It does **not** mint a new `*.vercel.app` hostname. A new link only appears if you create a new project or run `vercel deploy --temporary`.
 
-The `/api/roster` URL is the raw backup file. Browsers show it as code on purpose. Use **File → Save As** and keep `roster.json`, or after this deploy open `/api/contacts` for a normal table and **Download spreadsheet**.
-
-**More → Profiles** is where **Gym records**, **Save this phone to the gym link**, and **Download gym backup** live.
+Athlete names, parent phones, and class photos stay **in the app** on **More → Profiles**. You do not need a spreadsheet. The same gym URL keeps storing new sign-ups once this project has a Blob store (Storage → Blob → redeploy Production).
 
 ### Gym computer (local Cloudflare tunnel)
 
