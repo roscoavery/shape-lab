@@ -138,6 +138,7 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-[#0d1218] text-[11px] uppercase tracking-wider text-[var(--muted)]">
             <tr>
+              <th className="px-3 py-2 font-medium">Photo</th>
               <th className="px-3 py-2 font-medium">Name</th>
               <th className="px-3 py-2 font-medium">Role</th>
               <th className="px-3 py-2 font-medium">Phone</th>
@@ -149,6 +150,17 @@ export function GymRecords({ athletes, onAthletes }: Props) {
           <tbody>
             {contacts.map((row) => (
               <tr key={row.athlete.id} className="border-t border-[var(--panel-border)]">
+                <td className="px-3 py-2">
+                  {row.athlete.photoDataUrl ? (
+                    <img
+                      src={row.athlete.photoDataUrl}
+                      alt=""
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[var(--muted)]">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 font-medium text-[var(--text)]">{row.name}</td>
                 <td className="px-3 py-2 text-[var(--muted)]">{roleLabel(row.athlete)}</td>
                 <td className="px-3 py-2">{row.phone || '—'}</td>

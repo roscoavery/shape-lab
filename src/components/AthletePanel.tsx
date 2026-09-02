@@ -60,6 +60,7 @@ export function AthletePanel({
   const [handle, setHandle] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [parentPhone, setParentPhone] = useState('')
   const [gymName, setGymName] = useState('')
   const [childName, setChildName] = useState('')
   const guests = loadQuizGuests()
@@ -75,9 +76,10 @@ export function AthletePanel({
     setChildName(active?.childName ?? '')
     setEmail(active?.email ?? '')
     setPhone(active?.phone ?? '')
+    setParentPhone(active?.parentPhone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
-  }, [active?.id, active?.instagramHandle, active?.gymName, active?.childName])
+  }, [active?.id, active?.instagramHandle, active?.gymName, active?.childName, active?.email, active?.phone, active?.parentPhone])
 
   const flash = (msg: string, ms = 2800) => {
     setSaved(msg)
@@ -173,6 +175,7 @@ export function AthletePanel({
               childName: nextChild,
               email: email.trim() || undefined,
               phone: phone.trim() || undefined,
+              parentPhone: parentPhone.trim() || undefined,
             }
           : a,
       ),
@@ -460,6 +463,23 @@ export function AthletePanel({
 
       {active && (
         <div className="mt-3 flex flex-col gap-2">
+          {active.photoDataUrl ? (
+            <div className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
+              <img
+                src={active.photoDataUrl}
+                alt=""
+                className="h-16 w-16 rounded-full object-cover"
+              />
+              <p className="text-sm text-[var(--muted)]">
+                Class-station snapshot for {active.name}. It lives on this profile,
+                not in the camera roll.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--muted)]">
+              No class-station snapshot on this profile yet.
+            </p>
+          )}
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             placeholder="Email"
@@ -473,6 +493,13 @@ export function AthletePanel({
             inputMode="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+          />
+          <input
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Parent phone"
+            inputMode="tel"
+            value={parentPhone}
+            onChange={(e) => setParentPhone(e.target.value)}
           />
           {(profileRole(active) === 'gym_owner' ||
             profileRole(active) === 'coach' ||
