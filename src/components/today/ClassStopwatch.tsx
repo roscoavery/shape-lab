@@ -275,33 +275,37 @@ export function ClassStopwatch({
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
                 ? 'bg-[var(--accent)] text-[#06281f]'
-                : 'border border-white/15 text-white/75'
+                : 'bg-white/8 text-white/80'
             }`}
           >
             {label}
           </button>
         ))}
-        {extraReps.map((ex) => {
-          const id = `extra:${ex.id}` as Mode
-          return (
-            <button
-              key={ex.id}
-              type="button"
-              onClick={() => {
-                setMode(id)
-                setExtraHoldId(null)
-              }}
-              className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-                mode === id
-                  ? 'bg-[var(--accent)] text-[#06281f]'
-                  : 'border border-white/15 text-white/75'
-              }`}
-            >
-              {ex.label}
-            </button>
-          )
-        })}
       </div>
+      {extraReps.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {extraReps.map((ex) => {
+            const id = `extra:${ex.id}` as Mode
+            return (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => {
+                  setMode(id)
+                  setExtraHoldId(null)
+                }}
+                className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+                  mode === id
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'bg-white/8 text-white/80'
+                }`}
+              >
+                {ex.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {mode === 'hold' && (
         <>
