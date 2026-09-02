@@ -190,8 +190,10 @@ export type Athlete = {
   role?: 'gym_owner' | 'coach' | 'athlete' | 'parent'
   /** Gym they own, coach at, or train at. */
   gymName?: string
-  /** Parent profiles: the athlete they came for. */
+  /** Parent profiles: the athlete they came for (display name). */
   childName?: string
+  /** Parent profiles: roster ids of the kids they came with. */
+  linkedAthleteIds?: string[]
   /**
    * Asked when a coach or parent makes a profile. Opens the back-care
    * homework path (journal, glute bridges, back extensions).
@@ -221,10 +223,51 @@ export type Athlete = {
   dominantHand?: 'left' | 'right' | 'ambidextrous'
   /** Skateboard stance: regular = left foot forward, goofy = right. */
   skateStance?: 'regular' | 'goofy'
+  /** Favorite color — themes their public profile. */
+  favoriteColor?: FavoriteColor
+  handstandFloor?: HoldGuess
+  handstandWall?: WallHoldGuess
+  hollowHold?: HoldGuess
+  supermanHold?: HoldGuess
+  vUps?: VUpGuess
+  /** Weekly / intake answers kept for research and profile building. */
+  intakeAnswers?: IntakeAnswer[]
+  gestures?: ProfileGesture[]
   /** Coach / admin notes filed while working with this athlete. */
   coachNotes?: AthleteCoachNote[]
   /** Recent shape-test scores (oldest first, newest last). */
   shapeTests?: ShapeTestRecord[]
+}
+
+export type FavoriteColor =
+  | 'red'
+  | 'orange'
+  | 'gold'
+  | 'lime'
+  | 'teal'
+  | 'sky'
+  | 'indigo'
+  | 'violet'
+  | 'pink'
+  | 'slate'
+
+export type HoldGuess = 'under_10' | 'over_10' | 'over_20' | 'contest'
+export type WallHoldGuess = 'under_min' | 'over_min'
+export type VUpGuess = 'under_10' | 'over_10' | 'over_20' | 'over_30'
+
+export type IntakeAnswer = {
+  questionId: string
+  prompt: string
+  answer: string
+  askedAt: string
+}
+
+export type ProfileGesture = {
+  id: string
+  kind: 'hi5' | 'fist'
+  fromId: string
+  fromName: string
+  createdAt: string
 }
 
 export type AthleteCoachNote = {
@@ -298,6 +341,8 @@ export type AppSettings = {
   showAngles: boolean
   /** Speak live corrections during Tasks mode (throttled ~4s). */
   voiceEnabled: boolean
+  /** In-app + browser reminders (homework, likes, follows, wins). */
+  notificationsEnabled: boolean
 }
 
 /**

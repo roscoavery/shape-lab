@@ -25,6 +25,9 @@ export type DiskFeedPost = {
   kind?: 'video' | 'collage' | 'text'
   collage?: DiskCollageShare
   channels?: ('gym' | 'wins')[]
+  likes?: string[]
+  sharedById?: string
+  sharedByName?: string
 }
 
 function cleanChannels(raw: unknown): ('gym' | 'wins')[] {
@@ -55,7 +58,7 @@ const EMPTY: DiskFeed = {
 
 function safeId(id: string): string | null {
   const s = id.trim()
-  if (!s || s.length > 80) return null
+  if (!s || s.length > 120) return null
   if (!/^[a-zA-Z0-9_-]+$/.test(s)) return null
   return s
 }
@@ -140,6 +143,8 @@ export async function addFeedPostFromBody(params: {
   mime: string
   buf: Buffer
   channels?: unknown
+  sharedById?: string
+  sharedByName?: string
 }): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -162,6 +167,10 @@ export async function addFeedPostFromBody(params: {
     file,
     kind: 'video',
     channels: cleanChannels(params.channels),
+    ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
+    ...(typeof params.sharedByName === 'string' && params.sharedByName.trim()
+      ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
+      : {}),
   }
   const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -237,6 +246,8 @@ export async function addTextFeedPost(params: {
   taggedIds: string[]
   createdAt?: string
   channels?: unknown
+  sharedById?: string
+  sharedByName?: string
 }): Promise<DiskFeedPost | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
@@ -256,16 +267,34 @@ export async function addTextFeedPost(params: {
     sizeBytes: 0,
     kind: 'text',
     channels: cleanChannels(params.channels),
+    likes: [],
+    ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
+    ...(typeof params.sharedByName === 'string' && params.sharedByName.trim()
+      ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
+      : {}),
   }
   const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
   const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const pruned = kept.slice(MAX_POSTS)
-  for (const drop of pruned) {
-    if (!drop.file) continue
-    await removeFile(blobRel(drop.file))
-  }
   await writeMeta(kept.slice(0, MAX_POSTS))
   return post
+}
+
+export async function toggleFeedLike(
+  postId: string,
+  actorId: string,
+): Promise<DiskFeedPost | null> {
+  const sid = safeId(postId)
+  const who = safeId(actorId)
+  if (!sid || !who) return null
+  const meta = await readFeedFile()
+  const found = meta.posts.find((p) => p.id === sid)
+  if (!found) return null
+  const likes = new Set(found.likes ?? [])
+  if (likes.has(who)) likes.delete(who)
+  else likes.add(who)
+  found.likes = [...likes]
+  await writeMeta(meta.posts)
+  return found
 }
 
 export async function sendFeedFile(id: string, res: ServerResponse): Promise<boolean> {

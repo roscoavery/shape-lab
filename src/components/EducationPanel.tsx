@@ -39,6 +39,8 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShapeExplorer } from './learn/ShapeExplorer'
+import { PostToChalkboard } from './chalkboard/PostToChalkboard'
+import { pickCoachStill } from '../lib/shippedRefs'
 import type { Athlete, ReferencePhoto, ShapeDef, ShapeTestRecord } from '../types'
 import type { QuizTaker } from './learn/QuizWho'
 
@@ -71,6 +73,7 @@ type Props = {
   presetQuizTaker?: { firstName: string; lastName: string; athleteId?: string } | null
   onQuizTaker?: (taker: { firstName: string; lastName: string; athleteId?: string }) => void
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
+  onAthleteChange?: (next: Athlete) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -88,6 +91,7 @@ export function EducationPanel({
   presetQuizTaker = null,
   onQuizTaker,
   onRecordQuiz,
+  onAthleteChange,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: 'shapes' })
   const [query, setQuery] = useState('')
@@ -268,6 +272,7 @@ export function EducationPanel({
           onOpenTask={openTask}
           onOpenShape={openShape}
           onExplore={() => setExploreId(view.shapeId)}
+          signedIn={signedIn}
         />
       )}
 
@@ -315,6 +320,7 @@ export function EducationPanel({
           presetTaker={presetQuizTaker}
           onTakerReady={onQuizTaker}
           onGrade={onRecordQuiz}
+          onAthleteChange={onAthleteChange}
         />
       )}
 
@@ -325,6 +331,7 @@ export function EducationPanel({
           referencePhotos={referencePhotos}
           onReferencesChange={onReferencesChange}
           persistIgToApp={persistIgToApp}
+          signedIn={signedIn}
         />
       )}
 
@@ -757,7 +764,7 @@ function ShapeLibrary({
   )
 }
 
-function ShapeLinkedDrills({ shapeId }: { shapeId: string }) {
+function ShapeLinkedDrills({ shapeId, signedIn }: { shapeId: string; signedIn?: Athlete | null }) {
   const [tick, setTick] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
@@ -803,6 +810,19 @@ function ShapeLinkedDrills({ shapeId }: { shapeId: string }) {
                 <div className="mt-2 grid gap-2">
                   {d.src && <PortraitVideoPlayer src={d.src} title={d.title} size="embed" />}
                   {d.notes && <ExpandableNotes text={d.notes} previewLines={1} />}
+                  {signedIn && (
+                    <PostToChalkboard
+                      viewer={signedIn}
+                      compact
+                      draft={{
+                        kind: 'drill',
+                        title: d.title || 'Drill',
+                        url: d.src || undefined,
+                        drillId: d.id,
+                        shapeId,
+                      }}
+                    />
+                  )}
                   {!d.src && (
                     <p className="text-xs text-[var(--muted)]">No clip on this drill yet.</p>
                   )}
@@ -825,6 +845,7 @@ function ShapeDetail({
   onOpenTask,
   onOpenShape,
   onExplore,
+  signedIn = null,
 }: {
   shapeId: string
   orderedShapeIds: string[]
@@ -834,6 +855,7 @@ function ShapeDetail({
   onOpenTask: (taskId: string) => void
   onOpenShape: (shapeId: string) => void
   onExplore: () => void
+  signedIn?: Athlete | null
 }) {
   const { copyFor, canEdit } = useShapeCopy()
   const shape = getShape(shapeId)
@@ -965,9 +987,24 @@ function ShapeDetail({
             onOpen={onOpenShape}
           />
         </div>
+        {signedIn && (
+          <div className="mt-3">
+            <PostToChalkboard
+              viewer={signedIn}
+              draft={{
+                kind: 'still',
+                title: shape.name,
+                stillId: pickCoachStill(referencePhotos, shape.id)?.id ?? `default_${shape.id}_0`,
+                shapeId: shape.id,
+                photoSrc:
+                  pickCoachStill(referencePhotos, shape.id)?.dataUrl || undefined,
+              }}
+            />
+          </div>
+        )}
       </div>
 
-      <ShapeLinkedDrills shapeId={shape.id} />
+      <ShapeLinkedDrills shapeId={shape.id} signedIn={signedIn} />
 
       {igForShape.length > 0 && (
         <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -975,28 +1012,39 @@ function ShapeDetail({
             IG shapes
           </h4>
           <div className="grid gap-2 sm:grid-cols-2">
-            {igForShape.map((still) =>
-              canEdit ? (
-                <StillCropEditor
-                  key={still.id}
-                  photo={still}
-                  alt={still.label ?? shape.name}
-                  imgClass="min-h-48 max-h-64 w-full object-contain"
-                />
-              ) : (
-                <div
-                  key={still.id}
-                  className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#0d1218]"
-                >
-                  <CroppedStill
-                    src={still.dataUrl}
-                    stillId={still.id}
+            {igForShape.map((still) => (
+              <div key={still.id} className="space-y-2">
+                {canEdit ? (
+                  <StillCropEditor
+                    photo={still}
                     alt={still.label ?? shape.name}
-                    className="h-full w-full object-contain"
+                    imgClass="min-h-48 max-h-64 w-full object-contain"
                   />
-                </div>
-              ),
-            )}
+                ) : (
+                  <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-[#0d1218]">
+                    <CroppedStill
+                      src={still.dataUrl}
+                      stillId={still.id}
+                      alt={still.label ?? shape.name}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                )}
+                {signedIn && (
+                  <PostToChalkboard
+                    viewer={signedIn}
+                    compact
+                    draft={{
+                      kind: 'ig-still',
+                      title: still.label || shape.name,
+                      stillId: still.id,
+                      shapeId: shape.id,
+                      photoSrc: still.dataUrl,
+                    }}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1306,10 +1354,12 @@ function IgShapesLibrary({
   referencePhotos,
   onReferencesChange,
   persistIgToApp,
+  signedIn = null,
 }: {
   referencePhotos: ReferencePhoto[]
   onReferencesChange: (photos: ReferencePhoto[]) => void
   persistIgToApp: boolean
+  signedIn?: Athlete | null
 }) {
   const groups = groupIgStillsByShape(referencePhotos)
   const total = groups.reduce((n, g) => n + g.stills.length, 0)
@@ -1423,6 +1473,21 @@ function IgShapesLibrary({
                     Delete
                   </button>
                 </div>
+                {signedIn && (
+                  <div className="px-2 pb-2">
+                    <PostToChalkboard
+                      viewer={signedIn}
+                      compact
+                      draft={{
+                        kind: 'ig-still',
+                        title: still.label || group.name,
+                        stillId: still.id,
+                        shapeId: still.shapeId,
+                        photoSrc: still.dataUrl,
+                      }}
+                    />
+                  </div>
+                )}
                 {still.notes && editingId !== still.id && (
                   <p className="whitespace-pre-wrap border-t border-[var(--panel-border)] px-2 py-2 text-xs leading-relaxed text-[var(--text)]">
                     {still.notes}

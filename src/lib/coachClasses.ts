@@ -6,6 +6,18 @@
 import type { Athlete, LessonNote } from '../types'
 import { createId } from './storage'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
+import { RYAN_PROFILE_ID } from './ryanProfile'
+
+export const DEFAULT_CLASS_TYPES: {
+  id: string
+  name: string
+  weekday: Weekday
+  time: string
+}[] = [
+  { id: 'cls_connections', name: 'Connections', weekday: 'Monday', time: '5pm' },
+  { id: 'cls_elevate', name: 'Elevate', weekday: 'Wednesday', time: '4pm' },
+  { id: 'cls_reps_logan', name: 'Reps w/ Logan', weekday: 'Thursday', time: '6pm' },
+]
 
 export const WEEKDAYS = [
   'Sunday',
@@ -156,6 +168,32 @@ export function loadOfferings(_coachId?: string | null): CoachClassOffering[] {
 export function getOffering(id: string | null | undefined): CoachClassOffering | null {
   if (!id) return null
   return read().offerings.find((o) => o.id === id) ?? null
+}
+
+/** Connections, Elevate, and Reps w/ Logan — skip names that already exist. */
+export function ensureDefaultClassTypes(coachId?: string | null): CoachClassOffering[] {
+  const file = read()
+  const byName = new Set(file.offerings.map((o) => o.name.trim().toLowerCase()))
+  const byId = new Set(file.offerings.map((o) => o.id))
+  const owner = coachId?.trim() || RYAN_PROFILE_ID
+  let added = false
+  for (const seed of DEFAULT_CLASS_TYPES) {
+    if (byId.has(seed.id) || byName.has(seed.name.toLowerCase())) continue
+    file.offerings.push({
+      id: seed.id,
+      coachId: owner,
+      name: seed.name,
+      weekday: seed.weekday,
+      time: seed.time,
+      createdAt: new Date().toISOString(),
+      rosterIds: [],
+    })
+    byName.add(seed.name.toLowerCase())
+    byId.add(seed.id)
+    added = true
+  }
+  if (added) write(file)
+  return file.offerings
 }
 
 export function saveOffering(input: {
@@ -400,9 +438,15 @@ async function pushCoachClasses() {
 export async function hydrateCoachClasses(): Promise<void> {
   try {
     const res = await fetch('/api/coach-classes')
-    if (!res.ok) return
+    if (!res.ok) {
+      ensureDefaultClassTypes(RYAN_PROFILE_ID)
+      return
+    }
     const data = (await res.json()) as CoachClassFile
-    if (data?.kind !== 'shape-lab-coach-classes') return
+    if (data?.kind !== 'shape-lab-coach-classes') {
+      ensureDefaultClassTypes(RYAN_PROFILE_ID)
+      return
+    }
     const local = read()
     const offerings = mergeById(
       local.offerings,
@@ -420,7 +464,8 @@ export async function hydrateCoachClasses(): Promise<void> {
         ? data.activeMeetingId
         : local.activeMeetingId
     write({ ...local, offerings, meetings, activeMeetingId: live ?? null }, false)
+    ensureDefaultClassTypes(RYAN_PROFILE_ID)
   } catch {
-    /* first load */
+    ensureDefaultClassTypes(RYAN_PROFILE_ID)
   }
 }

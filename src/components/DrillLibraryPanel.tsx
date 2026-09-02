@@ -17,6 +17,7 @@ import {
 import type { Athlete, DrillClip } from '../types'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
+import { PostToChalkboard } from './chalkboard/PostToChalkboard'
 
 type Props = {
   signedIn: Athlete | null
@@ -53,6 +54,7 @@ export function DrillLibraryPanel({ signedIn }: Props) {
     return (
       <DrillWatch
         drill={watching}
+        signedIn={signedIn}
         onBack={() => setScreen({ kind: 'list' })}
         onEdit={() => {
           setErr(null)
@@ -131,6 +133,19 @@ export function DrillLibraryPanel({ signedIn }: Props) {
                 </span>
                 <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">Open</span>
               </button>
+              <div className="px-2.5 pb-2">
+                <PostToChalkboard
+                  viewer={signedIn}
+                  compact
+                  draft={{
+                    kind: 'drill',
+                    title: d.title || 'Drill',
+                    url: d.src || undefined,
+                    drillId: d.id,
+                    shapeId: d.shapeId,
+                  }}
+                />
+              </div>
             </li>
           ))}
         </ul>
@@ -141,10 +156,12 @@ export function DrillLibraryPanel({ signedIn }: Props) {
 
 function DrillWatch({
   drill,
+  signedIn,
   onBack,
   onEdit,
 }: {
   drill: DrillClip
+  signedIn: Athlete
   onBack: () => void
   onEdit: () => void
 }) {
@@ -188,6 +205,17 @@ function DrillWatch({
           <ExpandableNotes text={drill.notes} previewLines={1} />
         </div>
       )}
+
+      <PostToChalkboard
+        viewer={signedIn}
+        draft={{
+          kind: 'drill',
+          title: drill.title || 'Drill',
+          url: drill.src || undefined,
+          drillId: drill.id,
+          shapeId: drill.shapeId,
+        }}
+      />
 
       {!SHIPPED_DRILL_IDS.has(drill.id) && (
         <button

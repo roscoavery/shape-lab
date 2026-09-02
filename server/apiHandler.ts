@@ -28,6 +28,7 @@ import {
   deleteFeedPost,
   postsForClient,
   sendFeedFile,
+  toggleFeedLike,
 } from './feedStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, writeSocialFile } from './socialStore.ts'
@@ -55,6 +56,8 @@ import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coach
 import { persistMode } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
+import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
+import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
@@ -75,12 +78,14 @@ const API_PATHS = new Set([
   '/api/collages',
   '/api/feed',
   '/api/feed-file',
+  '/api/notices',
   '/api/research',
   '/api/social',
   '/api/discuss',
   '/api/coach-library',
   '/api/lessons',
   '/api/coach-classes',
+  '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-media',
   '/api/coach-media-file',
@@ -340,9 +345,10 @@ export async function handleShapeLabApi(
       if (
         ct.includes('json') ||
         url.searchParams.get('kind') === 'collage' ||
-        url.searchParams.get('kind') === 'text'
+        url.searchParams.get('kind') === 'text' ||
+        url.searchParams.get('kind') === 'like'
       ) {
-        const body = JSON.parse(await readRequestBody(req)) as {
+        let body: {
           kind?: string
           authorId?: string
           caption?: string
@@ -351,6 +357,15 @@ export async function handleShapeLabApi(
           id?: string
           collage?: unknown
           channels?: unknown
+          sharedById?: string
+          sharedByName?: string
+        } = {}
+        try {
+          const raw = await readRequestBody(req)
+          body = raw ? (JSON.parse(raw) as typeof body) : {}
+        } catch {
+          sendJson(res, 400, { error: 'That post did not save. Try again.' })
+          return true
         }
         const taggedIds = Array.isArray(body.taggedIds)
           ? body.taggedIds
@@ -359,6 +374,21 @@ export async function handleShapeLabApi(
               .map((s) => s.trim())
               .filter(Boolean)
         const kind = body.kind ?? url.searchParams.get('kind') ?? ''
+        if (kind === 'like') {
+          const saved = await toggleFeedLike(
+            body.id ?? url.searchParams.get('id') ?? '',
+            body.authorId ?? url.searchParams.get('authorId') ?? '',
+          )
+          if (!saved) {
+            sendJson(res, 400, { error: 'Could not like that post.' })
+            return true
+          }
+          sendJson(res, 200, {
+            ...saved,
+            url: saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : '',
+          })
+          return true
+        }
         if (kind === 'text') {
           const saved = await addTextFeedPost({
             id: body.id ?? url.searchParams.get('id') ?? '',
@@ -367,6 +397,8 @@ export async function handleShapeLabApi(
             taggedIds,
             createdAt: body.createdAt,
             channels: body.channels ?? url.searchParams.get('channels'),
+            sharedById: body.sharedById ?? url.searchParams.get('sharedById') ?? undefined,
+            sharedByName: body.sharedByName ?? url.searchParams.get('sharedByName') ?? undefined,
           })
           if (!saved) {
             sendJson(res, 400, { error: 'Write a caption to post without a video.' })
@@ -402,6 +434,8 @@ export async function handleShapeLabApi(
         mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
         buf,
         channels: url.searchParams.get('channels'),
+        sharedById: url.searchParams.get('sharedById') ?? undefined,
+        sharedByName: url.searchParams.get('sharedByName') ?? undefined,
       })
       if (!saved) {
         sendJson(res, 400, { error: 'Could not save that post.' })
@@ -473,6 +507,29 @@ export async function handleShapeLabApi(
     }
     return true
   }
+  if (path === '/api/notices') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, { kind: 'shape-lab-notices', notices: await noticesForClient() })
+      return true
+    }
+    if (req.method === 'POST') {
+      const body = JSON.parse(await readRequestBody(req))
+      const saved = await addNotice(body)
+      if (!saved) {
+        sendJson(res, 400, { error: 'Could not save that reminder.' })
+        return true
+      }
+      sendJson(res, 200, saved)
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = JSON.parse(await readRequestBody(req)) as { ids?: string[] }
+      sendJson(res, 200, { notices: await markNoticesRead(body.ids) })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, or PUT' })
+    return true
+  }
   if (path === '/api/library') {
     if (req.method === 'GET') {
       sendJson(res, 200, await readLibraryFile())
@@ -508,6 +565,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeCoachClassesFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/chalkboards') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readChalkboardsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeChalkboardsFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

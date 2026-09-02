@@ -40,8 +40,9 @@ import { MyProfile } from './components/today/MyProfile'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
-import { publishTextPost } from './lib/feedPosts'
-import { markClassAttendance } from './lib/coachClasses'
+import { publishTextPostResult } from './lib/feedPosts'
+import { ClipEditProvider } from './components/ClipWatchMeta'
+import { NotifyBell } from './components/NotifyBell'
 import { splitPersonName } from './lib/classStation'
 import { appendShapeTest, rememberGuestGrade } from './lib/quizGrades'
 import type { LearnIntent } from './components/EducationPanel'
@@ -92,11 +93,13 @@ import {
   subscribeLessons,
 } from './lib/lessonStore'
 import { hydrateCoachContent } from './lib/coachContentStore'
+import { hydrateChalkboards } from './lib/chalkboard'
 import {
   classLabel,
   getActiveMeeting,
   getOffering,
   hydrateCoachClasses,
+  markClassAttendance,
   subscribeCoachClasses,
 } from './lib/coachClasses'
 import {
@@ -107,7 +110,9 @@ import {
 } from './lib/igStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
-import { isCoachProfile, isGymAdmin } from './lib/profileRole'
+import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
+import { childAthletes } from './lib/parentLink'
+import { coachShareLabel } from './lib/coachShare'
 import {
   isProfileUnlocked,
   lockAllProfiles,
@@ -155,6 +160,7 @@ export default function App() {
     const id = loadActiveAthleteId()
     return id && isProfileUnlocked(id) ? id : null
   })
+  const [parentFocusId, setParentFocusId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
@@ -180,6 +186,7 @@ export default function App() {
   useEffect(() => {
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
     void hydrateCoachClasses().then(() => setLessonTick((n) => n + 1))
+    void hydrateChalkboards()
     void hydrateCoachContent()
     const unsubLessons = subscribeLessons(() => setLessonTick((n) => n + 1))
     const unsubClasses = subscribeCoachClasses(() => setLessonTick((n) => n + 1))
@@ -494,6 +501,16 @@ export default function App() {
         Voice
       </label>
       <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        <input
+          type="checkbox"
+          checked={settings.notificationsEnabled}
+          onChange={(e) =>
+            setSettings((s) => ({ ...s, notificationsEnabled: e.target.checked }))
+          }
+        />
+        Reminders
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
         Quality threshold
         <input
           type="number"
@@ -520,6 +537,14 @@ export default function App() {
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
   const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
+  const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
+  const homeworkAthleteId =
+    activeProfile && profileRole(activeProfile) === 'parent'
+      ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
+        ? parentFocusId
+        : parentKids[0]?.id ?? null
+      : activeAthleteId
+  const homeworkAthlete = athletes.find((a) => a.id === homeworkAthleteId) ?? null
   const personalCompare =
     Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
 
@@ -528,6 +553,7 @@ export default function App() {
     <ShapeCopyProvider canEdit={ryanEdit}>
     <StillCropProvider canEdit={ryanEdit}>
     <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
+    <ClipEditProvider viewer={activeProfile}>
     <ClipLoopsProvider>
     <FavoritesProvider>
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
@@ -538,6 +564,7 @@ export default function App() {
           </h1>
         </div>
         <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
+        <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
       </header>
 
       {tab === 'today' && (
@@ -571,6 +598,10 @@ export default function App() {
                 onStartClass={() => setClassSessionOpen(true)}
                 onViewProfile={setViewingAthleteId}
                 onAthletesChange={setAthleteRoster}
+                onParentHomework={(id) => {
+                  setParentFocusId(id)
+                  goTab('homework')
+                }}
                 onOpenProfile={() => {
                   if (activeProfile) setProfileOpen(true)
                   else requestSelectAthlete(athletes[0]?.id ?? null)
@@ -600,6 +631,8 @@ export default function App() {
                     else requestSelectAthlete(athletes[0]?.id ?? null)
                   } else if (id === 'clock') {
                     setClockOpen(true)
+                  } else if (id === 'collages') {
+                    goTab('classes')
                   }
                 }}
               />
@@ -791,12 +824,12 @@ export default function App() {
             />
           ) : null}
           <HomeworkPanel
-            athleteId={activeAthleteId}
-            athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+            athleteId={homeworkAthleteId}
+            athlete={homeworkAthlete}
             onUpdateAthlete={(patch) => {
-              if (!activeAthleteId) return
+              if (!homeworkAthleteId) return
               setAthleteRoster(
-                athletes.map((a) => (a.id === activeAthleteId ? { ...a, ...patch } : a)),
+                athletes.map((a) => (a.id === homeworkAthleteId ? { ...a, ...patch } : a)),
               )
             }}
             score={score}
@@ -881,6 +914,10 @@ export default function App() {
               return
             }
             rememberGuestGrade(taker.firstName, taker.lastName, record)
+          }}
+          onAthleteChange={(next) => {
+            setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
+            void syncAthleteProfileToResearch(next, activeProfile?.id ?? next.id)
           }}
         />
       )}
@@ -1093,6 +1130,23 @@ export default function App() {
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Reminders</h2>
+            <p className="mb-3">
+              Homework nudges, likes, follows, wins, and high-fives. Turn them off
+              here or with the Reminders checkbox on camera screens.
+            </p>
+            <label className="flex items-center gap-2 text-[var(--text)]">
+              <input
+                type="checkbox"
+                checked={settings.notificationsEnabled}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, notificationsEnabled: e.target.checked }))
+                }
+              />
+              Notifications on
+            </label>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Network</h2>
             <p>
               <strong className="text-[var(--text)]">Network</strong> is follow, message, and
@@ -1275,6 +1329,7 @@ export default function App() {
       <AthleteProfileCard
         athlete={athletes.find((a) => a.id === viewingAthleteId) ?? { id: viewingAthleteId, name: 'Athlete', createdAt: '' }}
         viewer={activeProfile}
+        athletes={athletes}
         variant="overlay"
         onClose={() => setViewingAthleteId(null)}
         onAddNote={
@@ -1291,13 +1346,14 @@ export default function App() {
         onAddWin={
           activeProfile && isCoachProfile(activeProfile)
             ? async (text, big) => {
-                const who = athletes.find((a) => a.id === viewingAthleteId)
                 logClassSkillForAthlete({ athleteId: viewingAthleteId, text })
-                await publishTextPost({
-                  authorId: activeProfile.id,
-                  caption: `${who?.name ?? 'Athlete'}: ${text}`,
+                await publishTextPostResult({
+                  authorId: viewingAthleteId,
+                  caption: text,
                   taggedIds: [viewingAthleteId],
                   channels: big ? ['wins', 'gym'] : ['wins'],
+                  sharedById: activeProfile.id,
+                  sharedByName: coachShareLabel(activeProfile),
                 })
                 setAthleteRoster(
                   addCoachNotesToAthletes(athletes, [viewingAthleteId], {
@@ -1308,6 +1364,9 @@ export default function App() {
                 )
               }
             : undefined
+        }
+        onAthleteChange={(next) =>
+          setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
         }
       />
     )}
@@ -1338,6 +1397,7 @@ export default function App() {
     )}
     </FavoritesProvider>
     </ClipLoopsProvider>
+    </ClipEditProvider>
     </GymLibraryProvider>
     </StillCropProvider>
     </ShapeCopyProvider>

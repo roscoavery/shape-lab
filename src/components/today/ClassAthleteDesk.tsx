@@ -4,7 +4,8 @@ import { AthleteName } from '../AthleteAvatar'
 import { AthleteProfileCard } from '../AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
 import { logClassSkillForAthlete } from '../../lib/classSessionLog'
-import { publishTextPost } from '../../lib/feedPosts'
+import { publishTextPostResult } from '../../lib/feedPosts'
+import { coachShareLabel } from '../../lib/coachShare'
 
 type Props = {
   athletes: Athlete[]
@@ -62,11 +63,13 @@ export function ClassAthleteDesk({
       className,
       meetingId,
     })
-    await publishTextPost({
-      authorId: coach.id,
-      caption: `${selected.name}: ${text}`,
+    await publishTextPostResult({
+      authorId: selected.id,
+      caption: text,
       taggedIds: [selected.id],
       channels: big ? ['wins', 'gym'] : ['wins'],
+      sharedById: coach.id,
+      sharedByName: coachShareLabel(coach),
     })
     onAthletesChange(
       addCoachNotesToAthletes(athletes, [selected.id], {
@@ -125,6 +128,7 @@ export function ClassAthleteDesk({
           <AthleteProfileCard
             athlete={selected}
             viewer={coach}
+            athletes={athletes}
             variant="embed"
             onAddNote={saveNote}
             onAddWin={(text, big) => void saveWin(text, big)}

@@ -3,6 +3,7 @@ import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
 import { socialPlatform } from '../lib/socialUrls'
 import { prefetchInstagram } from '../lib/igCache'
+import { ClipWatchMeta } from './ClipWatchMeta'
 
 type Props = {
   url: string
@@ -69,7 +70,12 @@ export function GymClipPlayer({
         onPostedBy={onPostedBy}
       />
     )
-    return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : embed
+    return fill ? <div className="h-full min-h-0 w-full">{embed}</div> : (
+      <div className="space-y-2">
+        {embed}
+        {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
+      </div>
+    )
   }
   const bench = (
     <VideoWorkbench
@@ -90,5 +96,12 @@ export function GymClipPlayer({
       overlayChrome={overlayChrome}
     />
   )
-  return fill ? <div className="h-full min-h-0 w-full">{bench}</div> : bench
+  return fill ? (
+    <div className="h-full min-h-0 w-full">{bench}</div>
+  ) : (
+    <div className="space-y-2">
+      {bench}
+      {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
+    </div>
+  )
 }

@@ -29,6 +29,7 @@ import { AssignClassHomework } from './AssignClassHomework'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
+import { ChalkboardPanel } from './ChalkboardPanel'
 
 type Props = {
   coach: Athlete
@@ -395,6 +396,8 @@ function LiveClass({
         onAthletesChange={onAthletesChange}
       />
 
+      <ChalkboardPanel viewer={coach} offeringId={offering?.id} />
+
       <ClassStopwatch
         athletes={athletes}
         signedIn={coach}
@@ -433,7 +436,7 @@ function QuickAddClass({
       </p>
       <input
         className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
-        placeholder="Class name — Connections"
+        placeholder="Class type — Connections, Elevate, Reps w/ Logan"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
@@ -546,13 +549,14 @@ function ScheduleEditor({
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Classes I teach</h2>
         <p className="mt-2 text-sm text-white/65">
-          These save to the gym link. Add a roster so Start class only shows
-          who is in that hour.
+          These save to the gym link. Name the class type — Connections,
+          Elevate, Reps w/ Logan, or your own — and the time you teach it.
+          Add a roster so Start class only shows who is in that hour.
         </p>
       </div>
       <input
         className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
-        placeholder="Class name — Connections"
+        placeholder="Class type — Connections, Elevate, Reps w/ Logan"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />

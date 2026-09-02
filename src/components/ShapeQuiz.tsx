@@ -11,6 +11,7 @@ import type { Athlete, ReferencePhoto } from '../types'
 import { QuizReview } from './learn/QuizReview'
 import { ReferenceStill } from './ReferenceStill'
 import { QuizWho, type QuizTaker } from './learn/QuizWho'
+import { PreTestIntake } from './learn/PreTestIntake'
 import { displayPersonName } from '../lib/classStation'
 import { makeShapeTestRecord } from '../lib/quizGrades'
 import type { ShapeTestRecord } from '../types'
@@ -23,6 +24,7 @@ type Props = {
   presetTaker?: QuizTaker | null
   onTakerReady?: (taker: QuizTaker) => void
   onGrade?: (taker: QuizTaker, record: ShapeTestRecord) => void
+  onAthleteChange?: (next: Athlete) => void
 }
 
 export function ShapeQuiz({
@@ -33,9 +35,11 @@ export function ShapeQuiz({
   presetTaker = null,
   onTakerReady,
   onGrade,
+  onAthleteChange,
 }: Props) {
   const { copyFor } = useShapeCopy()
   const [taker, setTaker] = useState<QuizTaker | null>(presetTaker)
+  const [intakeDone, setIntakeDone] = useState(false)
   const [format, setFormat] = useState<QuizFormat | null>(null)
   const [seed, setSeed] = useState(0)
   const questions = useMemo(
@@ -115,6 +119,24 @@ export function ShapeQuiz({
     )
   }
 
+  const rosterAthlete = taker.athleteId
+    ? athletes.find((a) => a.id === taker.athleteId) ?? null
+    : null
+  if (rosterAthlete && !intakeDone) {
+    return (
+      <PreTestIntake
+        athlete={rosterAthlete}
+        athletes={athletes}
+        photos={referencePhotos}
+        onSave={(next) => onAthleteChange?.(next)}
+        onDone={(next) => {
+          onAthleteChange?.(next)
+          setIntakeDone(true)
+        }}
+      />
+    )
+  }
+
   if (!format) {
     return (
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -123,22 +145,34 @@ export function ShapeQuiz({
         </p>
         <h3 className="mt-1 text-xl font-semibold text-[var(--text)]">How do you want to take it?</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Pictures are coach stills. Descriptions are body-position notes with the
-          shape’s name taken out, so the question cannot read “this is a tuck.”
-          Take them separately, or mix both.
+          Pictures are the easy way — name the coach stills. Descriptions and mixed
+          sit underneath if you want a harder test.
         </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          {QUIZ_FORMATS.map((opt) => (
+        <div className="mt-4 flex flex-col gap-2">
+          {QUIZ_FORMATS.filter((o) => o.id === 'picture').map((opt) => (
             <button
               key={opt.id}
               type="button"
               onClick={() => begin(opt.id)}
-              className="rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-4 text-left transition hover:border-[var(--accent-dim)]"
+              className="rounded-2xl bg-[var(--accent)] px-5 py-6 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
             >
-              <p className="font-semibold text-[var(--text)]">{opt.title}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted)]">{opt.blurb}</p>
+              <p className="text-2xl font-bold">{opt.title}</p>
+              <p className="mt-1 text-sm font-medium opacity-80">{opt.blurb}</p>
             </button>
           ))}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {QUIZ_FORMATS.filter((o) => o.id !== 'picture').map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => begin(opt.id)}
+                className="rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3 text-left text-sm hover:border-[var(--accent-dim)]"
+              >
+                <p className="font-semibold text-[var(--text)]">{opt.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">{opt.blurb}</p>
+              </button>
+            ))}
+          </div>
         </div>
         <button type="button" className="mt-4 text-sm text-[var(--accent)]" onClick={onExit}>
           Back to Learn

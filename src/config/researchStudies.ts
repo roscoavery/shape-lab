@@ -315,6 +315,54 @@ export const RESEARCH_STUDIES: StudyDef[] = [
       },
     ],
   },
+  {
+    id: 'pre-test-intake',
+    title: 'Before the shape test',
+    question:
+      'Favorite color, handstand / hollow / Superman guesses, V-ups, and weekly check-ins asked on New athlete · shape test.',
+    hypothesis:
+      'Kids who think they can win a handstand contest and already hold a wall minute are the ones who should be dared. V-up over 30 needs a live prove-it. Weekly energy tracks with homework logs.',
+    method:
+      'Asked before the pictures test. Answers live on the athlete profile and here. Add a weekly prompt in src/lib/intakeQuestions.ts.',
+    caveats: 'Self-report in line, not a timed test. n is this gym.',
+    fields: [
+      {
+        id: 'favoriteColor',
+        label: 'Favorite color',
+        kind: 'text',
+      },
+      {
+        id: 'handstandFloor',
+        label: 'Handstand with no wall',
+        kind: 'text',
+      },
+      {
+        id: 'handstandWall',
+        label: 'Handstand with a wall',
+        kind: 'text',
+      },
+      {
+        id: 'hollowHold',
+        label: 'Hollow hold guess',
+        kind: 'text',
+      },
+      {
+        id: 'supermanHold',
+        label: 'Superman hold guess',
+        kind: 'text',
+      },
+      {
+        id: 'vUps',
+        label: 'V-ups',
+        kind: 'text',
+      },
+      {
+        id: 'notes',
+        label: 'Weekly and extra answers',
+        kind: 'text',
+      },
+    ],
+  },
 ]
 
 export function studyById(id: string): StudyDef | undefined {

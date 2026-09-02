@@ -83,5 +83,32 @@ export async function syncAthleteProfileToResearch(
     }
   }
 
+  const pretest = studyById('pre-test-intake')
+  if (pretest) {
+    const existing = observationFor(next, pretest.id, athlete.id)
+    const answers: Record<string, ResearchAnswer> = { ...(existing?.answers ?? {}) }
+    if (athlete.favoriteColor) answers.favoriteColor = athlete.favoriteColor
+    if (athlete.handstandFloor) answers.handstandFloor = athlete.handstandFloor
+    if (athlete.handstandWall) answers.handstandWall = athlete.handstandWall
+    if (athlete.hollowHold) answers.hollowHold = athlete.hollowHold
+    if (athlete.supermanHold) answers.supermanHold = athlete.supermanHold
+    if (athlete.vUps) answers.vUps = athlete.vUps
+    if (athlete.intakeAnswers && athlete.intakeAnswers.length > 0) {
+      answers.notes = athlete.intakeAnswers
+        .slice(0, 16)
+        .map((a) => `${a.prompt} → ${a.answer}`)
+        .join('\n')
+    }
+    if (Object.keys(answers).length > 0) {
+      next = upsertObservation(next, {
+        study: pretest,
+        subjectId: athlete.id,
+        recorderId: who,
+        answers,
+        existing,
+      })
+    }
+  }
+
   if (next !== file) await saveResearch(next)
 }

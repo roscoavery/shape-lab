@@ -1,6 +1,10 @@
+import { handstandContest } from '../lib/intakeQuestions'
+
 type AvatarAthlete = {
   name: string
   photoDataUrl?: string
+  handstandFloor?: string
+  handstandWall?: string
 }
 
 const SIZE = {
@@ -60,11 +64,13 @@ export function AthleteName({
   className?: string
   nameClassName?: string
 }) {
+  const contest = athlete ? handstandContest(athlete) : false
   return (
     <span className={`inline-flex min-w-0 items-center gap-2 ${className}`}>
       <AthleteAvatar athlete={athlete} size={size} />
       <span className={`truncate ${nameClassName}`}>
         {athlete?.name?.trim() || 'Untitled'}
+        {contest ? ' 🤸' : ''}
       </span>
     </span>
   )

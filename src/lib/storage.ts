@@ -99,6 +99,7 @@ export function loadSettings(): AppSettings {
     mirrorVideo: true,
     showAngles: false,
     voiceEnabled: true,
+    notificationsEnabled: true,
   }
   const raw = readJson<Partial<AppSettings> & { voiceCoaching?: boolean }>(SETTINGS_KEY, {})
   // Migrate older voiceCoaching key if present
@@ -109,6 +110,7 @@ export function loadSettings(): AppSettings {
     mirrorVideo: raw.mirrorVideo ?? true,
     showAngles: raw.showAngles ?? false,
     voiceEnabled,
+    notificationsEnabled: raw.notificationsEnabled ?? true,
   }
 }
 

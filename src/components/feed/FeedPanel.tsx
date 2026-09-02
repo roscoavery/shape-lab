@@ -8,12 +8,15 @@ import {
   FEED_CAPTION_MAX,
   listFeedPosts,
   postOnChannel,
-  publishFeedPost,
-  publishTextPost,
+  publishFeedPostResult,
+  publishTextPostResult,
+  toggleFeedLike,
   type FeedChannel,
   type FeedPost,
   removeFeedPost,
 } from '../../lib/feedPosts'
+import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
+import { pushNotice } from '../../lib/notify'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import {
   collageFromShare,
@@ -22,7 +25,8 @@ import {
   saveCollage,
   type Collage,
 } from '../../lib/collages'
-import { isCoachProfile, isGymAdmin, roleLabel } from '../../lib/profileRole'
+import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
+import { childAthletes } from '../../lib/parentLink'
 import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { CollageStage } from '../classes/CollageStage'
@@ -39,6 +43,9 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const [caption, setCaption] = useState('')
   const [tagged, setTagged] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
+  const [libVideos, setLibVideos] = useState<AthleteVideo[]>([])
+  const [libId, setLibId] = useState<string | null>(null)
+  const [pickLib, setPickLib] = useState(false)
   const [busy, setBusy] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [preview, setPreview] = useState<Collage | null>(null)
@@ -51,6 +58,18 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const gymAdmin = isGymAdmin(athlete)
   const ryan = findRyan(athletes)
   const { nameForUrl } = useGymLibrary()
+  const parentKidIds =
+    athlete && profileRole(athlete) === 'parent'
+      ? new Set(childAthletes(athlete, athletes).map((k) => k.id))
+      : null
+
+  const visiblePosts = posts.filter((p) => {
+    if (!postOnChannel(p, channel)) return false
+    if (wins && parentKidIds) {
+      return parentKidIds.has(p.authorId) || p.taggedIds.some((id) => parentKidIds.has(id))
+    }
+    return true
+  })
 
   useEffect(() => {
     void listFeedPosts().then(setPosts)
@@ -58,6 +77,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
 
   useEffect(() => {
     void listCollages(athlete?.id).then(setLibrary)
+  }, [athlete?.id])
+
+  useEffect(() => {
+    if (!athlete) return
+    void listAthleteVideos(athlete.id).then(setLibVideos)
   }, [athlete?.id])
 
   useEffect(() => {
@@ -91,7 +115,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
       setError('Unlock a profile to post.')
       return
     }
-    if (!file && !caption.trim()) {
+    if (!file && !libId && !caption.trim()) {
       setError('Write a caption, or attach a video.')
       return
     }
@@ -99,28 +123,44 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
     setError(null)
     const channels: FeedChannel[] =
       wins && bigWin ? ['wins', 'gym'] : wins ? ['wins'] : ['gym']
-    const posted = file
-      ? await publishFeedPost({
+    let blob: Blob | null = file
+    if (!blob && libId) {
+      const clip = libVideos.find((v) => v.id === libId)
+      if (clip) {
+        try {
+          const res = await fetch(clip.url)
+          if (res.ok) blob = await res.blob()
+        } catch {
+          blob = null
+        }
+      }
+    }
+    const result = blob
+      ? await publishFeedPostResult({
           authorId: athlete.id,
           caption: caption.trim(),
           taggedIds: tagged,
-          blob: file,
+          blob,
           channels,
         })
-      : await publishTextPost({
+      : await publishTextPostResult({
           authorId: athlete.id,
           caption: caption.trim(),
           taggedIds: tagged,
           channels,
         })
     setBusy(false)
-    if (!posted) {
-      setError(file ? 'Could not post that video. Try a shorter clip.' : 'Could not post that.')
+    if (!result.post) {
+      setError(
+        result.error ||
+          (blob ? 'Could not post that video. Try a shorter clip.' : 'Could not post that.'),
+      )
       return
     }
-    setPosts((prev) => [posted, ...prev])
+    setPosts((prev) => [result.post!, ...prev])
     setCaption('')
     setFile(null)
+    setLibId(null)
     setNotice(
       wins && bigWin
         ? 'Posted to Wins and the gym feed.'
@@ -128,6 +168,16 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
           ? 'Posted to Wins.'
           : 'Posted to the gym feed.',
     )
+    for (const id of tagged) {
+      if (id === athlete.id) continue
+      void pushNotice({
+        toId: id,
+        kind: 'win',
+        title: wins ? `${athlete.name} logged a win with you` : `${athlete.name} tagged you`,
+        body: caption.trim() || 'Open the feed.',
+        href: wins ? 'wins' : 'feed',
+      })
+    }
   }
 
   const saveSharedCollage = async (post: FeedPost) => {
@@ -218,12 +268,51 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Video (optional)
               </span>
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime,video/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-xs text-[var(--muted)]"
-              />
+              <div className="flex flex-wrap gap-2">
+                <label className="cursor-pointer rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">
+                  From Photos
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    onChange={(e) => {
+                      setFile(e.target.files?.[0] ?? null)
+                      setLibId(null)
+                    }}
+                    className="sr-only"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setPickLib((v) => !v)}
+                  className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
+                >
+                  From video library
+                </button>
+              </div>
+              {file && <p className="mt-1 text-xs text-[var(--muted)]">{file.name}</p>}
+              {pickLib && (
+                <div className="mt-2 max-h-36 overflow-y-auto rounded-lg border border-[var(--panel-border)]">
+                  {libVideos.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-[var(--muted)]">No library clips on this profile yet.</p>
+                  ) : (
+                    libVideos.slice(0, 16).map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => {
+                          setLibId(v.id)
+                          setFile(null)
+                        }}
+                        className={`block w-full px-3 py-2 text-left text-xs ${
+                          libId === v.id ? 'bg-[var(--accent-dim)] text-white' : ''
+                        }`}
+                      >
+                        {v.name} · {new Date(v.createdAt).toLocaleDateString()}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </label>
             {tagChoices.length > 0 && (
               <div>
@@ -275,7 +364,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
         )}
       </section>
 
-      {posts.filter((p) => postOnChannel(p, channel)).length === 0 ? (
+      {visiblePosts.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
           {wins
             ? 'No wins yet. Log a skill from Today → Class clock, or write one here.'
@@ -283,7 +372,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
         </p>
       ) : (
         <ul className="space-y-4">
-          {posts.filter((p) => postOnChannel(p, channel)).map((post) => {
+          {visiblePosts.map((post) => {
             const author = authorOf(post.authorId)
             const taggedPeople = post.taggedIds
               .map((id) => authorOf(id))
@@ -303,9 +392,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                     <p className="text-[11px] text-[var(--muted)]">
                       {post.kind === 'collage'
                         ? 'Shared a class collage · '
-                        : post.kind === 'text'
-                          ? 'Thought · '
-                          : ''}
+                        : post.sharedByName
+                          ? `shared by ${post.sharedByName} · `
+                          : post.kind === 'text'
+                            ? 'Thought · '
+                            : ''}
                       {new Date(post.createdAt).toLocaleString()}
                       {taggedPeople.length > 0
                         ? ` · with ${taggedPeople.map((a) => a.name).join(', ')}`
@@ -362,6 +453,33 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   >
                     {post.caption}
                   </p>
+                )}
+                {athlete && (
+                  <div className="px-4 pb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void toggleFeedLike(post.id, athlete.id).then((next) => {
+                          if (!next) return
+                          setPosts((prev) => prev.map((p) => (p.id === next.id ? { ...p, likes: next.likes } : p)))
+                          const liked = (next.likes ?? []).includes(athlete.id)
+                          if (liked && next.authorId !== athlete.id) {
+                            void pushNotice({
+                              toId: next.authorId,
+                              kind: 'like',
+                              title: `${athlete.name} liked your post`,
+                              body: next.caption || 'Open the feed.',
+                              href: postOnChannel(next, 'wins') ? 'wins' : 'feed',
+                            })
+                          }
+                        })
+                      }}
+                      className="text-xs font-semibold text-[var(--accent)]"
+                    >
+                      {(post.likes ?? []).includes(athlete.id) ? 'Liked' : 'Like'}
+                      {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
+                    </button>
+                  </div>
                 )}
                 {taggedPeople.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-4 pb-3">

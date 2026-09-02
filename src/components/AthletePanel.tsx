@@ -31,6 +31,7 @@ import {
 import { AthleteAvatar, AthleteName } from './AthleteAvatar'
 import { AthleteProfileCard } from './AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../lib/athleteNotes'
+import { withLinkedAthletes } from '../lib/parentLink'
 
 type Props = {
   athletes: Athlete[]
@@ -64,7 +65,7 @@ export function AthletePanel({
   const [newHandle, setNewHandle] = useState('')
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
   const [newGym, setNewGym] = useState('')
-  const [newChild, setNewChild] = useState('')
+  const [newLinkedIds, setNewLinkedIds] = useState<string[]>([])
   const [newBackPain, setNewBackPain] = useState<boolean | null>(null)
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
@@ -73,7 +74,7 @@ export function AthletePanel({
   const [phone, setPhone] = useState('')
   const [parentPhone, setParentPhone] = useState('')
   const [gymName, setGymName] = useState('')
-  const [childName, setChildName] = useState('')
+  const [linkedIds, setLinkedIds] = useState<string[]>([])
   const guests = loadQuizGuests()
   void canSeeAllProfiles
   const [legacyPin, setLegacyPin] = useState('')
@@ -85,13 +86,13 @@ export function AthletePanel({
   useEffect(() => {
     setHandle(active?.instagramHandle ?? '')
     setGymName(active?.gymName ?? '')
-    setChildName(active?.childName ?? '')
+    setLinkedIds(active?.linkedAthleteIds ?? [])
     setEmail(active?.email ?? '')
     setPhone(active?.phone ?? '')
     setParentPhone(active?.parentPhone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
-  }, [active?.id, active?.instagramHandle, active?.gymName, active?.childName, active?.email, active?.phone, active?.parentPhone])
+  }, [active?.id, active?.instagramHandle, active?.gymName, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
 
   const flash = (msg: string, ms = 2800) => {
     setSaved(msg)
@@ -141,17 +142,20 @@ export function AthletePanel({
       phone: newPhone.trim(),
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       gymName: newGym.trim() || undefined,
-      childName: role === 'parent' ? newChild.trim() || undefined : undefined,
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
       shapeTests: takeGuestGrades(firstName, lastName),
     }
+    const saved =
+      role === 'parent'
+        ? withLinkedAthletes(athlete, newLinkedIds, athletes)
+        : athlete
     markProfileUnlocked(id)
     forgetQuizGuest(firstName, lastName)
-    onChangeAthletes([...athletes, athlete])
-    onSelect(athlete.id)
+    onChangeAthletes([...athletes, saved])
+    onSelect(saved.id)
     setName('')
     setFirstName('')
     setLastName('')
@@ -159,15 +163,15 @@ export function AthletePanel({
     setNewPhone('')
     setNewHandle('')
     setNewGym('')
-    setNewChild('')
+    setNewLinkedIds([])
     setPasscode('')
     setPasscodeAgain('')
     setNewRole('athlete')
     setNewBackPain(null)
     flash(
       role === 'coach' || role === 'gym_owner'
-        ? `${athlete.name} is ready as ${roleLabel(athlete)}. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
-        : `${athlete.name} is ready as ${roleLabel(athlete)}. Use that 4-digit passcode on any link.`,
+        ? `${saved.name} is ready as ${roleLabel(saved)}. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
+        : `${saved.name} is ready as ${roleLabel(saved)}. Use that 4-digit passcode on any link.`,
       role === 'coach' || role === 'gym_owner' ? 4200 : 2800,
     )
   }
@@ -176,15 +180,17 @@ export function AthletePanel({
     if (!active) return
     const instagramHandle = normalizeInstagramHandle(handle) || undefined
     const nextGym = gymName.trim() || undefined
-    const nextChild = profileRole(active) === 'parent' ? childName.trim() || undefined : active.childName
+    const next =
+      profileRole(active) === 'parent'
+        ? withLinkedAthletes(active, linkedIds, athletes)
+        : active
     onChangeAthletes(
       athletes.map((a) =>
         a.id === active.id
           ? {
-              ...a,
+              ...next,
               instagramHandle,
               gymName: nextGym,
-              childName: nextChild,
               email: email.trim() || undefined,
               phone: phone.trim() || undefined,
               parentPhone: parentPhone.trim() || undefined,
@@ -195,7 +201,7 @@ export function AthletePanel({
     const bits = [
       instagramHandle ? `@${instagramHandle}` : null,
       nextGym,
-      nextChild ? `athlete ${nextChild}` : null,
+      next.childName ? `athlete ${next.childName}` : null,
       email.trim() || null,
       phone.trim() || null,
     ].filter(Boolean)
@@ -303,6 +309,7 @@ export function AthletePanel({
           <AthleteProfileCard
             athlete={active}
             viewer={viewer ?? active}
+            athletes={athletes}
             variant="embed"
             onAddNote={
               viewer && isCoachProfile(viewer)
@@ -428,14 +435,10 @@ export function AthletePanel({
           />
         )}
         {newRole === 'parent' && (
-          <input
-            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            placeholder="Your athlete’s name (optional)"
-            value={newChild}
-            onChange={(e) => setNewChild(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
+          <ParentAthletePicker
+            athletes={athletes}
+            selected={newLinkedIds}
+            onChange={setNewLinkedIds}
           />
         )}
         {(newRole === 'coach' || newRole === 'parent' || newRole === 'gym_owner') && (
@@ -565,14 +568,10 @@ export function AthletePanel({
             />
           )}
           {profileRole(active) === 'parent' && (
-            <input
-              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-              placeholder="Your athlete’s name (optional)"
-              value={childName}
-              onChange={(e) => setChildName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveDetails()
-              }}
+            <ParentAthletePicker
+              athletes={athletes.filter((a) => a.id !== active.id)}
+              selected={linkedIds}
+              onChange={setLinkedIds}
             />
           )}
           {(profileRole(active) === 'coach' ||
@@ -684,6 +683,51 @@ export function AthletePanel({
         tapping the name. Only one profile stays unlocked in this tab. Creating
         the same name again selects the existing profile.
       </p>
+    </div>
+  )
+}
+
+function ParentAthletePicker({
+  athletes,
+  selected,
+  onChange,
+}: {
+  athletes: Athlete[]
+  selected: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  return (
+    <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+      <p className="text-xs font-semibold text-[var(--text)]">Who is your athlete?</p>
+      <p className="mt-1 text-[11px] text-[var(--muted)]">
+        Coaches will see you as their parent. You can open their wins, homework, and lessons.
+      </p>
+      {kids.length === 0 ? (
+        <p className="mt-2 text-xs text-[var(--muted)]">No athlete profiles on this gym yet.</p>
+      ) : (
+        <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+          {kids.map((a) => {
+            const on = selected.includes(a.id)
+            return (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(on ? selected.filter((id) => id !== a.id) : [...selected, a.id])
+                  }
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${
+                    on ? 'bg-[var(--accent)] text-[#06281f]' : 'text-[var(--muted)]'
+                  }`}
+                >
+                  <AthleteName athlete={a} />
+                  <span className="text-[11px]">{on ? 'Linked' : 'Select'}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

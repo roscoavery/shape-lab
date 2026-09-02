@@ -12,8 +12,15 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
+import { PracticeNudge } from '../today/PracticeNudge'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
+import { ChalkboardPanel } from '../today/ChalkboardPanel'
+import { TodayCollages } from '../today/TodayCollages'
+import {
+  childAthletes,
+  childNamesLabel,
+} from '../../lib/parentLink'
 import {
   classLabel,
   endClassMeeting,
@@ -33,6 +40,7 @@ type Props = {
   onOpenProfile?: () => void
   onViewProfile?: (id: string) => void
   onAthletesChange?: (next: Athlete[]) => void
+  onParentHomework?: (athleteId: string) => void
 }
 
 export function HomeDashboard({
@@ -45,6 +53,7 @@ export function HomeDashboard({
   onOpenProfile,
   onViewProfile,
   onAthletesChange,
+  onParentHomework,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withId, setWithId] = useState<string | null>(null)
@@ -165,10 +174,18 @@ export function HomeDashboard({
           <h2 className="mt-1 flex items-center gap-2 text-xl font-semibold">
             <AthleteName athlete={signedIn} size="md" />
           </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Homework lives under Practice. Lessons your coach ran — notes, hold
-            times, and videos — show here.
-          </p>
+          {profileRole(signedIn) === 'parent' ? (
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {childAthletes(signedIn, athletes).length
+                ? `You are linked as parent of ${childNamesLabel(signedIn, athletes)}. Wins, homework, and lessons for those athletes show here.`
+                : 'Select who your athlete is on Profiles so coaches know you are their parent, and so you can see their wins, homework, and activity.'}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Homework lives under Practice. Lessons your coach ran — notes, hold
+              times, and videos — show here.
+            </p>
+          )}
           {onOpenProfile && (
             <button
               type="button"
@@ -179,8 +196,56 @@ export function HomeDashboard({
             </button>
           )}
         </section>
+        {profileRole(signedIn) === 'parent' && childAthletes(signedIn, athletes).length > 0 && (
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+              Your athletes
+            </p>
+            <ul className="mt-3 space-y-2">
+              {childAthletes(signedIn, athletes).map((kid) => (
+                <li
+                  key={kid.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
+                >
+                  <AthleteName athlete={kid} nameClassName="font-semibold" />
+                  <span className="flex gap-2">
+                    {onViewProfile && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[var(--accent)]"
+                        onClick={() => onViewProfile(kid.id)}
+                      >
+                        Wins & profile
+                      </button>
+                    )}
+                    {onParentHomework && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[var(--accent)]"
+                        onClick={() => onParentHomework(kid.id)}
+                      >
+                        Homework
+                      </button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <ChalkboardPanel viewer={signedIn} onToday />
+        {onShortcut && (
+          <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
+        )}
+        {onShortcut && profileRole(signedIn) !== 'parent' && (
+          <PracticeNudge
+            athlete={signedIn}
+            onTrain={() => onShortcut('homework')}
+            onReview={() => onShortcut('library')}
+          />
+        )}
         {onShortcut && <TodayShortcuts onGo={onShortcut} showStation={false} />}
-        {myPlans.length > 0 && (
+        {myPlans.length > 0 && profileRole(signedIn) !== 'parent' && (
           <CollapsibleSection
             title="View lesson plan"
             hint={`${myPlans.length} plan${myPlans.length === 1 ? '' : 's'} on the board`}
@@ -196,12 +261,20 @@ export function HomeDashboard({
           </CollapsibleSection>
         )}
         <LessonReviewList
-          sessions={mine}
+          sessions={
+            profileRole(signedIn) === 'parent'
+              ? childAthletes(signedIn, athletes).flatMap((k) => sessionsForAthlete(k.id))
+              : mine
+          }
           athletes={athletes}
           viewer={signedIn}
           canEdit={false}
-          title="Recap of lessons"
-          emptyText="No lessons saved yet. After a coach ends a lesson, notes and videos show here."
+          title={profileRole(signedIn) === 'parent' ? 'Their lessons' : 'Recap of lessons'}
+          emptyText={
+            profileRole(signedIn) === 'parent'
+              ? 'When a coach ends a lesson with your athlete, notes and videos show here.'
+              : 'No lessons saved yet. After a coach ends a lesson, notes and videos show here.'
+          }
           onChanged={() => setRefresh((n) => n + 1)}
           onViewProfile={onViewProfile}
         />
@@ -229,8 +302,9 @@ export function HomeDashboard({
         </div>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Start lesson is one athlete. Start class is the hour you are teaching
-          — Connections (Monday 5pm) — so shape-test names and homework land on
-          that roster.
+          — Connections, Elevate, or Reps w/ Logan — so shape-test names and
+          homework land on that roster. The chalkboard for that class opens on
+          this page without taking it over.
         </p>
         {onStartClass && liveClass && liveOffering && (
           <div className="mt-3 rounded-2xl border border-[var(--accent)] bg-[#102820] px-4 py-4">
@@ -346,6 +420,11 @@ export function HomeDashboard({
 
       {coach && (
         <ClassStopwatch athletes={athletes} signedIn={signedIn} coach />
+      )}
+
+      <ChalkboardPanel viewer={signedIn} onToday />
+      {onShortcut && (
+        <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
       )}
 
       {withAthlete && !editing && (

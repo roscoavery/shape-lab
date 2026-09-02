@@ -18,6 +18,7 @@ export type Athlete = {
   role?: ProfileKind
   gymName?: string
   childName?: string
+  linkedAthleteIds?: string[]
   hasBackPain?: boolean
   injuryActive?: boolean
   firstName?: string
@@ -33,8 +34,41 @@ export type Athlete = {
   twistBetterSide?: 'left' | 'right'
   dominantHand?: 'left' | 'right' | 'ambidextrous'
   skateStance?: 'regular' | 'goofy'
+  favoriteColor?:
+    | 'red'
+    | 'orange'
+    | 'gold'
+    | 'lime'
+    | 'teal'
+    | 'sky'
+    | 'indigo'
+    | 'violet'
+    | 'pink'
+    | 'slate'
+  handstandFloor?: 'under_10' | 'over_10' | 'over_20' | 'contest'
+  handstandWall?: 'under_min' | 'over_min'
+  hollowHold?: 'under_10' | 'over_10' | 'over_20' | 'contest'
+  supermanHold?: 'under_10' | 'over_10' | 'over_20' | 'contest'
+  vUps?: 'under_10' | 'over_10' | 'over_20' | 'over_30'
+  intakeAnswers?: IntakeAnswer[]
+  gestures?: ProfileGesture[]
   coachNotes?: AthleteCoachNote[]
   shapeTests?: ShapeTestRecord[]
+}
+
+type IntakeAnswer = {
+  questionId: string
+  prompt: string
+  answer: string
+  askedAt: string
+}
+
+type ProfileGesture = {
+  id: string
+  kind: 'hi5' | 'fist'
+  fromId: string
+  fromName: string
+  createdAt: string
 }
 
 type AthleteCoachNote = {
@@ -100,6 +134,12 @@ function asAthletes(list: unknown): Athlete[] {
 function asIdList(list: unknown): string[] {
   if (!Array.isArray(list)) return []
   return list.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+}
+
+function mergeIdList(a?: string[], b?: string[]): string[] | undefined {
+  const next = [...new Set([...(a ?? []), ...(b ?? [])].filter((id) => typeof id === 'string' && id))]
+  if (next.length === 0) return a ?? b
+  return next
 }
 
 function homeworkDedupeKey(item: Record<string, unknown>): string {
@@ -203,6 +243,7 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     passcodeHash: newer.passcodeHash || older.passcodeHash,
     gymName: newer.gymName || older.gymName,
     childName: newer.childName || older.childName,
+    linkedAthleteIds: mergeIdList(newer.linkedAthleteIds, older.linkedAthleteIds),
     instagramHandle: newer.instagramHandle || older.instagramHandle,
     notes: newer.notes || older.notes,
     role,
@@ -221,6 +262,14 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     twistBetterSide: newer.twistBetterSide || older.twistBetterSide,
     dominantHand: newer.dominantHand || older.dominantHand,
     skateStance: newer.skateStance || older.skateStance,
+    favoriteColor: newer.favoriteColor || older.favoriteColor,
+    handstandFloor: newer.handstandFloor || older.handstandFloor,
+    handstandWall: newer.handstandWall || older.handstandWall,
+    hollowHold: newer.hollowHold || older.hollowHold,
+    supermanHold: newer.supermanHold || older.supermanHold,
+    vUps: newer.vUps || older.vUps,
+    intakeAnswers: mergeIntakeAnswers(newer.intakeAnswers, older.intakeAnswers),
+    gestures: mergeGestures(newer.gestures, older.gestures),
     coachNotes: mergeCoachNotes(newer.coachNotes, older.coachNotes),
     shapeTests: mergeShapeTests(newer.shapeTests, older.shapeTests),
     createdAt: older.createdAt || newer.createdAt,
@@ -232,6 +281,35 @@ function mergeCoachNotes(
   b: AthleteCoachNote[] | undefined,
 ): AthleteCoachNote[] | undefined {
   const byId = new Map<string, AthleteCoachNote>()
+  for (const row of [...(a ?? []), ...(b ?? [])]) {
+    if (!row || typeof row.id !== 'string' || !row.id) continue
+    byId.set(row.id, row)
+  }
+  if (byId.size === 0) return a ?? b
+  return [...byId.values()]
+    .sort((x, y) => (y.createdAt || '').localeCompare(x.createdAt || ''))
+    .slice(0, 80)
+}
+
+function mergeIntakeAnswers(
+  a: IntakeAnswer[] | undefined,
+  b: IntakeAnswer[] | undefined,
+): IntakeAnswer[] | undefined {
+  const byId = new Map<string, IntakeAnswer>()
+  for (const row of [...(b ?? []), ...(a ?? [])]) {
+    if (!row || typeof row.questionId !== 'string' || !row.questionId) continue
+    const keep = byId.get(row.questionId)
+    if (!keep || (row.askedAt || '') >= (keep.askedAt || '')) byId.set(row.questionId, row)
+  }
+  if (byId.size === 0) return a ?? b
+  return [...byId.values()].sort((x, y) => (y.askedAt || '').localeCompare(x.askedAt || '')).slice(0, 80)
+}
+
+function mergeGestures(
+  a: ProfileGesture[] | undefined,
+  b: ProfileGesture[] | undefined,
+): ProfileGesture[] | undefined {
+  const byId = new Map<string, ProfileGesture>()
   for (const row of [...(a ?? []), ...(b ?? [])]) {
     if (!row || typeof row.id !== 'string' || !row.id) continue
     byId.set(row.id, row)

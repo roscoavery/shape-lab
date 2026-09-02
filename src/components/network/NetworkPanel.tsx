@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
-import { isCoachProfile, roleLabel } from '../../lib/profileRole'
+import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
 import { AthleteName } from '../AthleteAvatar'
 import {
   followerCount,
@@ -19,6 +19,8 @@ import {
   toggleFollow,
   type SocialFile,
 } from '../../lib/social'
+import { coachAthleteMessageAllowed, isCoachToAthlete } from '../../lib/coachShare'
+import { childNamesLabel } from '../../lib/parentLink'
 import {
   DISCUSS_BODY_MAX,
   DISCUSS_REASON_MAX,
@@ -32,6 +34,7 @@ import {
 import { DISCUSS_TOPICS, discussTopicById } from '../../config/discussTopics'
 import { discussDigest } from '../../lib/discussStats'
 import { SegmentedTabs } from '../SegmentedTabs'
+import { pushNotice } from '../../lib/notify'
 
 type Page = 'people' | 'messages' | 'lounge'
 
@@ -126,7 +129,17 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
           onViewProfile={onViewProfile}
           onFollow={(id) => {
             if (!athlete) return
+            const was = isFollowing(social, athlete.id, id)
             void persistSocial(toggleFollow(social, athlete.id, id))
+            if (!was) {
+              void pushNotice({
+                toId: id,
+                kind: 'follow',
+                title: `${athlete.name} followed you`,
+                body: 'Open Network to follow them back.',
+                href: 'network',
+              })
+            }
           }}
           onMessage={(id) => {
             setThreadToId(id)
@@ -144,7 +157,24 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
           onToId={setThreadToId}
           onSend={(toId, text, shareUrl) => {
             if (!athlete) return
-            void persistSocial(sendMessage(social, { fromId: athlete.id, toId, text, shareUrl }))
+            const to = athletes.find((a) => a.id === toId)
+            const gate = coachAthleteMessageAllowed({
+              from: athlete,
+              to,
+              text,
+              shareUrl,
+            })
+            if (!gate.ok) return
+            void persistSocial(
+              sendMessage(social, {
+                fromId: athlete.id,
+                toId,
+                text,
+                shareUrl,
+                from: athlete,
+                to,
+              }),
+            )
           }}
         />
       )}
@@ -220,10 +250,10 @@ function PeoplePage({
                 </span>
               </p>
               <p className="text-[11px] text-[var(--muted)]">
-                {[person.gymName, person.childName ? `athlete ${person.childName}` : null]
+                {[person.gymName, childNamesLabel(person, athletes) ? `parent of ${childNamesLabel(person, athletes)}` : person.childName ? `athlete ${person.childName}` : null]
                   .filter(Boolean)
                   .join(' · ')}
-                {person.gymName || person.childName ? ' · ' : ''}
+                {person.gymName || person.childName || childNamesLabel(person, athletes) ? ' · ' : ''}
                 {followerCount(social, person.id)} follower
                 {followerCount(social, person.id) === 1 ? '' : 's'} · following{' '}
                 {followingCount(social, person.id)}
@@ -280,6 +310,7 @@ function MessagesPage({
 }) {
   const [text, setText] = useState('')
   const [shareUrl, setShareUrl] = useState('')
+  const [blocked, setBlocked] = useState<string | null>(null)
 
   const mine = me ? threadsFor(social, me.id) : []
   const active = useMemo(() => {
@@ -289,8 +320,22 @@ function MessagesPage({
 
   if (!me) return null
 
+  const toPerson = athletes.find((a) => a.id === toId)
+  const coachShareOnly = isCoachToAthlete(me, toPerson)
+
   const send = () => {
-    if (!toId || !text.trim()) return
+    if (!toId) return
+    const gate = coachAthleteMessageAllowed({
+      from: me,
+      to: toPerson,
+      text,
+      shareUrl,
+    })
+    if (!gate.ok) {
+      setBlocked(gate.reason)
+      return
+    }
+    setBlocked(null)
     onSend(toId, text, shareUrl.trim() || undefined)
     setText('')
     setShareUrl('')
@@ -370,26 +415,54 @@ function MessagesPage({
                 </div>
               ))}
             </div>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              maxLength={800}
-              placeholder="Write a message…"
-              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            />
-            <input
-              value={shareUrl}
-              onChange={(e) => setShareUrl(e.target.value)}
-              placeholder="Optional — paste a public video URL to share"
-              className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            />
+            {coachShareOnly ? (
+              <>
+                <p className="mb-2 text-sm text-[var(--muted)]">
+                  Coaches share a reference with athletes — or give a high five, fist bump, or like on a win. Direct messages stay off.
+                </p>
+                <input
+                  value={shareUrl}
+                  onChange={(e) => setShareUrl(e.target.value)}
+                  placeholder="Paste a public video or Shape Lab reference URL"
+                  className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                />
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  maxLength={120}
+                  placeholder="Optional caption on the share"
+                  className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                />
+              </>
+            ) : (
+              <>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  rows={3}
+                  maxLength={800}
+                  placeholder={
+                    profileRole(me) === 'athlete'
+                      ? 'Send a video URL or share a win…'
+                      : 'Write a message…'
+                  }
+                  className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                />
+                <input
+                  value={shareUrl}
+                  onChange={(e) => setShareUrl(e.target.value)}
+                  placeholder="Optional — paste a public video URL to share"
+                  className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                />
+              </>
+            )}
+            {blocked && <p className="mt-2 text-xs text-[var(--bad)]">{blocked}</p>}
             <button
               type="button"
               onClick={send}
               className="mt-2 rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-medium text-white"
             >
-              Send
+              {coachShareOnly ? 'Share reference' : 'Send'}
             </button>
           </>
         )}

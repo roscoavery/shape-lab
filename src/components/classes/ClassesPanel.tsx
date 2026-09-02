@@ -29,6 +29,7 @@ import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { PostToChalkboard } from '../chalkboard/PostToChalkboard'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -344,6 +345,7 @@ export function ClassesPanel({ athlete }: Props) {
     },
     onShareCaption: setShareCaption,
     onShare: (c: Collage) => void shareToFeed(c),
+    athlete,
   }
 
   return (
@@ -721,6 +723,7 @@ function CollageList({
   onShareCancel,
   onShareCaption,
   onShare,
+  athlete,
 }: {
   title: string
   collages: Collage[]
@@ -739,6 +742,7 @@ function CollageList({
   onShareCancel: () => void
   onShareCaption: (value: string) => void
   onShare: (c: Collage) => void
+  athlete: Athlete | null
 }) {
   return (
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
@@ -795,6 +799,13 @@ function CollageList({
                 >
                   Share to feed
                 </button>
+              )}
+              {athlete && (
+                <PostToChalkboard
+                  viewer={athlete}
+                  compact
+                  draft={{ kind: 'collage', title: c.name, collageId: c.id }}
+                />
               )}
               {canManage(c) && (
                 <button

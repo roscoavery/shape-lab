@@ -9,6 +9,7 @@ export type TodayShortcutId =
   | 'homework'
   | 'profile'
   | 'clock'
+  | 'collages'
 
 type Props = {
   onGo: (id: TodayShortcutId) => void
@@ -85,6 +86,14 @@ const TOOLS: {
     hint: 'Time a hold and log it for everyone here.',
     className:
       'from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.22)]',
+  },
+  {
+    id: 'collages',
+    eyebrow: 'Class',
+    title: 'Collages',
+    hint: 'Drill boards of gym clips — play them from Today.',
+    className:
+      'from-[#fbcfe8] via-[#f472b6] to-[#9d174d] text-[#2a0a18] shadow-[0_16px_40px_rgba(244,114,182,0.22)]',
   },
   {
     id: 'homework',

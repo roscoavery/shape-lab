@@ -18,6 +18,10 @@ export type FeedPost = {
   collage?: CollageShare
   /** Missing = gym feed (older posts). Wins can also appear on gym. */
   channels?: FeedChannel[]
+  likes?: string[]
+  /** Coach posted this as the athlete's win. */
+  sharedById?: string
+  sharedByName?: string
 }
 
 export function postChannels(post: Pick<FeedPost, 'channels'>): FeedChannel[] {
@@ -39,6 +43,23 @@ export async function listFeedPosts(): Promise<FeedPost[]> {
   }
 }
 
+export type PublishResult = { post: FeedPost | null; error: string | null }
+
+async function readFeedResponse(res: Response): Promise<PublishResult> {
+  const text = await res.text()
+  let data: FeedPost | { error?: string } | null = null
+  try {
+    data = text ? (JSON.parse(text) as FeedPost | { error?: string }) : null
+  } catch {
+    return { post: null, error: res.ok ? 'The gym link sent a broken reply.' : `Could not post (${res.status}).` }
+  }
+  if (!res.ok) {
+    return { post: null, error: data && 'error' in data && data.error ? data.error : 'Could not post that.' }
+  }
+  if (data && 'id' in data && data.id) return { post: data as FeedPost, error: null }
+  return { post: null, error: 'Could not post that.' }
+}
+
 export async function publishFeedPost(params: {
   authorId: string
   caption: string
@@ -46,8 +67,22 @@ export async function publishFeedPost(params: {
   blob: Blob
   channels?: FeedChannel[]
 }): Promise<FeedPost | null> {
+  const got = await publishFeedPostResult(params)
+  return got.post
+}
+
+export async function publishFeedPostResult(params: {
+  authorId: string
+  caption: string
+  taggedIds: string[]
+  blob: Blob
+  channels?: FeedChannel[]
+  sharedById?: string
+  sharedByName?: string
+}): Promise<PublishResult> {
   const id = createId('post')
-  const mime = params.blob.type.includes('mp4') ? 'video/mp4' : 'video/webm'
+  const raw = params.blob.type || ''
+  const mime = raw.includes('mp4') || raw.includes('quicktime') ? 'video/mp4' : 'video/webm'
   const qs = new URLSearchParams({
     id,
     authorId: params.authorId,
@@ -56,6 +91,8 @@ export async function publishFeedPost(params: {
     mime,
     createdAt: new Date().toISOString(),
     channels: (params.channels ?? ['gym']).join(','),
+    ...(params.sharedById ? { sharedById: params.sharedById } : {}),
+    ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
   })
   try {
     const res = await fetch(`/api/feed?${qs.toString()}`, {
@@ -63,10 +100,9 @@ export async function publishFeedPost(params: {
       headers: { 'Content-Type': mime },
       body: params.blob,
     })
-    if (!res.ok) return null
-    return (await res.json()) as FeedPost
+    return readFeedResponse(res)
   } catch {
-    return null
+    return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
   }
 }
 
@@ -105,21 +141,51 @@ export async function publishTextPost(params: {
   caption: string
   taggedIds: string[]
   channels?: FeedChannel[]
+  sharedById?: string
+  sharedByName?: string
 }): Promise<FeedPost | null> {
+  const got = await publishTextPostResult(params)
+  return got.post
+}
+
+export async function publishTextPostResult(params: {
+  authorId: string
+  caption: string
+  taggedIds: string[]
+  channels?: FeedChannel[]
+  sharedById?: string
+  sharedByName?: string
+}): Promise<PublishResult> {
   const id = createId('post')
+  const payload = {
+    kind: 'text',
+    id,
+    authorId: params.authorId,
+    caption: params.caption.slice(0, FEED_CAPTION_MAX),
+    taggedIds: params.taggedIds,
+    createdAt: new Date().toISOString(),
+    channels: params.channels ?? ['gym'],
+    ...(params.sharedById ? { sharedById: params.sharedById } : {}),
+    ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
+  }
   try {
     const res = await fetch('/api/feed?kind=text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        kind: 'text',
-        id,
-        authorId: params.authorId,
-        caption: params.caption.slice(0, FEED_CAPTION_MAX),
-        taggedIds: params.taggedIds,
-        createdAt: new Date().toISOString(),
-        channels: params.channels ?? ['gym'],
-      }),
+      body: JSON.stringify(payload),
+    })
+    return readFeedResponse(res)
+  } catch {
+    return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+  }
+}
+
+export async function toggleFeedLike(postId: string, actorId: string): Promise<FeedPost | null> {
+  try {
+    const res = await fetch('/api/feed?kind=like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'like', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
     return (await res.json()) as FeedPost

@@ -1,4 +1,5 @@
 import { createId } from './storage'
+import type { Athlete } from '../types'
 
 export const MESSAGE_MAX = 800
 
@@ -122,10 +123,18 @@ export function sendMessage(
     toId: string
     text: string
     shareUrl?: string
+    from?: { role?: Athlete['role']; name?: string } | null
+    to?: { role?: Athlete['role'] } | null
   },
 ): SocialFile {
-  const text = params.text.trim().slice(0, MESSAGE_MAX)
-  if (!text || params.fromId === params.toId) return file
+  const share = params.shareUrl?.trim()
+  const fromRole = params.from?.role
+  const toRole = params.to?.role
+  const coachToAthlete =
+    (fromRole === 'coach' || fromRole === 'gym_owner') && toRole === 'athlete'
+  if (coachToAthlete && !share) return file
+  const text = (params.text.trim() || (share ? 'Shared a reference' : '')).slice(0, MESSAGE_MAX)
+  if ((!text && !share) || params.fromId === params.toId) return file
   const pair = [params.fromId, params.toId].sort() as [string, string]
   const now = new Date().toISOString()
   const msg: DirectMessage = {

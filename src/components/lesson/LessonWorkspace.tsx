@@ -18,6 +18,7 @@ import { AthleteProfileCard } from '../AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
 import { logClassSkillForAthlete } from '../../lib/classSessionLog'
 import { publishTextPost } from '../../lib/feedPosts'
+import { coachShareLabel } from '../../lib/coachShare'
 
 type Props = {
   session: LessonSession
@@ -199,6 +200,7 @@ export function LessonWorkspace({
         <AthleteProfileCard
           athlete={athlete}
           viewer={coach}
+          athletes={athletes}
           variant="embed"
           onAddNote={
             coach && onAthletesChange
@@ -220,10 +222,12 @@ export function LessonWorkspace({
               ? async (text, big) => {
                   logClassSkillForAthlete({ athleteId: athlete.id, text })
                   await publishTextPost({
-                    authorId: coach.id,
-                    caption: `${athlete.name}: ${text}`,
+                    authorId: athlete.id,
+                    caption: text,
                     taggedIds: [athlete.id],
                     channels: big ? ['wins', 'gym'] : ['wins'],
+                    sharedById: coach.id,
+                    sharedByName: coachShareLabel(coach),
                   })
                   if (onAthletesChange) {
                     onAthletesChange(

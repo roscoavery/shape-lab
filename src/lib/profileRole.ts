@@ -46,7 +46,7 @@ export function roleHint(kind: ProfileKind): string {
     case 'coach':
       return 'Coaches unlock to use Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections — they show on this profile only. Ryan’s gym collections, shape descriptions, and picture sizes stay as he left them.'
     case 'parent':
-      return 'Parents unlock to follow their athlete, watch Compare, and use Homework / Learn. Name the athlete you came with so coaches know who you belong to.'
+      return 'Parents unlock to follow their athlete, watch Compare, and use Homework / Learn. Select who your athlete is so coaches know you are their parent, and so you can see their wins, homework, and activity.'
     default:
       return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember.'
   }

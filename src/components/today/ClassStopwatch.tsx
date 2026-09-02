@@ -13,7 +13,8 @@ import {
   logClassRepsForAthletes,
   logClassSkillForAthlete,
 } from '../../lib/classSessionLog'
-import { publishTextPost } from '../../lib/feedPosts'
+import { publishTextPostResult } from '../../lib/feedPosts'
+import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
 type Mode = 'hold' | 'vups' | 'skill'
@@ -183,11 +184,13 @@ export function ClassStopwatch({
     const who = athletes.find((a) => a.id === skillAthleteId)
     if (postWins && signedIn) {
       const channels: ('gym' | 'wins')[] = bigWin ? ['wins', 'gym'] : ['wins']
-      await publishTextPost({
-        authorId: signedIn.id,
-        caption: `${who?.name ?? 'Athlete'}: ${text}`,
+      await publishTextPostResult({
+        authorId: skillAthleteId,
+        caption: text,
         taggedIds: [skillAthleteId],
         channels,
+        sharedById: signedIn.id,
+        sharedByName: coachShareLabel(signedIn),
       })
     }
     setSkillText('')

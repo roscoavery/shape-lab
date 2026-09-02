@@ -49,7 +49,9 @@ export function skateLine(athlete: Athlete): string | null {
 
 export function harderShapeLine(athlete: Athlete): string | null {
   if (!athlete.harderShape) return null
-  return athlete.harderShape === 'hollow' ? 'Hollow feels harder' : 'Superman feels harder'
+  return athlete.harderShape === 'hollow'
+    ? 'Hollow is harder than Superman'
+    : 'Superman feels harder than hollow'
 }
 
 export function profileFactLines(athlete: Athlete): { label: string; value: string }[] {
