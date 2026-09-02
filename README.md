@@ -13,11 +13,12 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach
 - **Wins** a separate spam-friendly feed for firsts and small hits, with a **big win** checkbox to also post on the gym feed
 - **My profile** (Today) — add or take a photo, answer the class-station questions, plus twist direction, dominant hand, and skate stance. Answers sync into Research.
+- **Public profiles** — anyone can open a profile (View on Today, Network, or a class list) and see the photo, gyms, round-off / twist, the open-shoulder first line, and wins. Coaches see notes they wrote; gym admin sees every note. Class and lesson desks keep those notes on the athlete after class ends.
 - **Class clock** (Today) — homework-style stopwatch that logs hollow / Superman / side plank / wall handstand holds, V-up reps, and typed skills onto each selected athlete’s homework as **in class**
 - **Network** follow people on this gym, message them (optional clip URL), and a **coach lounge** for tumbling philosophy
 - **Research** gym studies (laterality, shape feel, standing-full mats, reasons, fear) with counts and correlations, plus a digest of lounge threads — n is this gym
 - Speak live corrections (toggleable voice coaching)
-- Save attempts, progress, and reference photos in the browser (`localStorage`)
+- Save attempts, progress, and reference photos in the browser (`localStorage`) as a cache; the gym URL stores the same records when Blob is connected
 - Run simple multi-shape **sequences**
 
 ## Quick start
@@ -60,7 +61,7 @@ Sign in with the claim URL, then in the Vercel project connect [github.com/rosco
 
 | Variable | Required | What it does |
 | --- | --- | --- |
-| `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster, Compare library, feed, stills, research, and videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Claiming a temporary `*.vercel.app` link does **not** add this. Without it, new profiles stay on that phone and vanish from the server on a cold start. |
+| `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster (profiles, photos, notes, homework + class-clock logs), Compare library, feed + Wins, stills, research, lessons, classes, and athlete/feed videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Claiming a temporary `*.vercel.app` link does **not** add this. Without it, new profiles stay on that phone and vanish from the server on a cold start. |
 
 How to add it:
 
@@ -96,7 +97,19 @@ Use **Create Deployment** (or Redeploy) on the **same Vercel project** that alre
 
 That replaces the app on the existing address. It does **not** mint a new `*.vercel.app` hostname. A new link only appears if you create a new project or run `vercel deploy --temporary`.
 
-Athlete names, parent phones, and class photos stay **in the app** on **More → Profiles**. You do not need a spreadsheet. The same gym URL keeps storing new sign-ups once this project has a Blob store (Storage → Blob → redeploy Production).
+On the **same Production URL**, with Blob connected, every device shares:
+
+- New athlete profiles and later edits (name, gyms, laterality, photos, coach notes)
+- Homework items and every logged activity (including class-clock holds)
+- Feed and Wins posts
+- Videos the app records or uploads (delay cam, compare, lesson, feed)
+- Lessons, class meetings, research, Compare library, and shape-library crops
+
+Unlock/passcode stays on that phone. The records themselves are gym-wide. Preview or tunnel links are different origins and do not share that store.
+
+Shape-library crop sizes ship in the app (the framings set on Aug 28). Later crop edits merge on top and do not wipe those defaults.
+
+Athlete names, parent phones, and class photos stay **in the app** on **More → Profiles**. You do not need a spreadsheet.
 
 ### Gym computer (local Cloudflare tunnel)
 

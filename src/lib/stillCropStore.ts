@@ -1,3 +1,4 @@
+import { SHIPPED_STILL_CROPS, mergeStillCrops } from './shippedStillCrops'
 import type { StillCropRect } from './stillCrop'
 
 export type StillCropFile = {
@@ -10,14 +11,14 @@ export type StillCropFile = {
 export async function pullStillCrops(): Promise<Record<string, StillCropRect>> {
   try {
     const res = await fetch('/api/still-crops')
-    if (!res.ok) return {}
+    if (!res.ok) return { ...SHIPPED_STILL_CROPS }
     const data = (await res.json()) as StillCropFile
     if (!data || data.kind !== 'shape-lab-still-crops' || typeof data.crops !== 'object') {
-      return {}
+      return { ...SHIPPED_STILL_CROPS }
     }
-    return data.crops
+    return mergeStillCrops(SHIPPED_STILL_CROPS, data.crops)
   } catch {
-    return {}
+    return { ...SHIPPED_STILL_CROPS }
   }
 }
 
@@ -31,10 +32,10 @@ export async function pushStillCrops(
       kind: 'shape-lab-still-crops',
       version: 1,
       updatedAt: new Date().toISOString(),
-      crops,
+      crops: mergeStillCrops(SHIPPED_STILL_CROPS, crops),
     }),
   })
   if (!res.ok) throw new Error('Could not save still crops to the app.')
   const data = (await res.json()) as StillCropFile
-  return data.crops ?? crops
+  return mergeStillCrops(SHIPPED_STILL_CROPS, data.crops ?? crops)
 }

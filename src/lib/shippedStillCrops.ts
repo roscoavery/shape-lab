@@ -1,0 +1,94 @@
+/**
+ * Ryan's shape-library display crops (Aug 28, 2026).
+ * These ship in the JS bundle so a missing or empty Blob file cannot
+ * un-crop the stills. Original JPEGs stay untouched.
+ */
+
+import {
+  clampStillCrop,
+  isFullStillCrop,
+  type StillCropRect,
+} from './stillCrop'
+
+export const SHIPPED_STILL_CROPS: Record<string, StillCropRect> = {
+  default_long_bridge_0: {
+    x: 0.016525687014772313,
+    y: 0.031745907617005575,
+    w: 0.9669490132752461,
+    h: 0.9523812339419142,
+  },
+  default_lever_0: {
+    x: 0.0020556868793808526,
+    y: 0.2100830078125,
+    w: 0.9979443131206192,
+    h: 0.4818115234375,
+  },
+  default_lunge_land_0: {
+    x: 0.037815557462032724,
+    y: 0.08826904296875,
+    w: 0.9621844425379673,
+    h: 0.733447265625,
+  },
+  default_feet_together_open_shoulders_0: {
+    x: 0.07405081775700935,
+    y: 0.10164794921875,
+    w: 0.8004770439361857,
+    h: 0.8168212890625001,
+  },
+  default_lunge_start_0: {
+    x: 0.027753141884491832,
+    y: 0.09375,
+    w: 0.9554540901540596,
+    h: 0.64508056640625,
+  },
+  default_passe_0: {
+    x: 0.04861746814763435,
+    y: 0.03380126953125,
+    w: 0.7949572411653038,
+    h: 0.873486328125,
+  },
+  default_handstand_0: {
+    x: 0.2065260842581776,
+    y: 0.23125,
+    w: 0.5783115850430782,
+    h: 0.5067138671875,
+  },
+  default_hollow_arms_up_0: {
+    x: 0.0008143915194217406,
+    y: 0.4699951171875,
+    w: 0.9991856084805782,
+    h: 0.25308837890625,
+  },
+  default_hollow_arms_down_0: {
+    x: 0.03662708318122081,
+    y: 0.4912353515625,
+    w: 0.9633729168187792,
+    h: 0.21439208984375002,
+  },
+  default_mountain_climber_0: {
+    x: 0.20095346040814838,
+    y: 0.3409423828125,
+    w: 0.6067557361638434,
+    h: 0.38359374999999996,
+  },
+  default_c_shape_0: {
+    x: 0.4447614397321429,
+    y: 0.24170487451737452,
+    w: 0.27109375,
+    h: 0.7582951254826255,
+  },
+}
+
+export function mergeStillCrops(
+  ...maps: Array<Record<string, StillCropRect> | null | undefined>
+): Record<string, StillCropRect> {
+  const out: Record<string, StillCropRect> = {}
+  for (const map of maps) {
+    if (!map) continue
+    for (const [id, rect] of Object.entries(map)) {
+      if (!id || !rect || isFullStillCrop(rect)) continue
+      out[id] = clampStillCrop(rect)
+    }
+  }
+  return out
+}

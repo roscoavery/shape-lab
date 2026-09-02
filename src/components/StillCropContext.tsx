@@ -13,6 +13,7 @@ import {
   type StillCropRect,
 } from '../lib/stillCrop'
 import { stillCropLookupIds } from '../lib/shippedRefs'
+import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../lib/shippedStillCrops'
 import { pullStillCrops, pushStillCrops } from '../lib/stillCropStore'
 
 type StillCropCtx = {
@@ -31,10 +32,14 @@ export function StillCropProvider({
   children: ReactNode
   canEdit: boolean
 }) {
-  const [crops, setCrops] = useState<Record<string, StillCropRect>>({})
+  const [crops, setCrops] = useState<Record<string, StillCropRect>>(() => ({
+    ...SHIPPED_STILL_CROPS,
+  }))
 
   useEffect(() => {
-    void pullStillCrops().then(setCrops)
+    void pullStillCrops().then((next) => {
+      setCrops(mergeStillCrops(SHIPPED_STILL_CROPS, next))
+    })
   }, [])
 
   const cropFor = useCallback(
@@ -50,11 +55,11 @@ export function StillCropProvider({
 
   const saveCrop = useCallback(
     async (stillId: string, crop: StillCropRect | null) => {
-      const next = { ...crops }
+      const next = mergeStillCrops(SHIPPED_STILL_CROPS, crops)
       if (!crop || isFullStillCrop(crop)) delete next[stillId]
       else next[stillId] = clampStillCrop(crop)
       const saved = await pushStillCrops(next)
-      setCrops(saved)
+      setCrops(mergeStillCrops(SHIPPED_STILL_CROPS, saved))
     },
     [crops],
   )
@@ -74,8 +79,14 @@ export function useStillCrop(): StillCropCtx {
   if (!ctx) {
     return {
       canEdit: false,
-      crops: {},
-      cropFor: () => null,
+      crops: { ...SHIPPED_STILL_CROPS },
+      cropFor: (stillId) => {
+        for (const id of stillCropLookupIds(stillId)) {
+          const c = SHIPPED_STILL_CROPS[id]
+          if (c && !isFullStillCrop(c)) return c
+        }
+        return null
+      },
       saveCrop: async () => {},
     }
   }

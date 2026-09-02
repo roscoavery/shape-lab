@@ -353,6 +353,15 @@ export function HomeDashboard({
           <h3 className="font-semibold">
             <AthleteName athlete={withAthlete} size="md" />
           </h3>
+          {onViewProfile && (
+            <button
+              type="button"
+              className="mt-1 text-xs font-semibold text-[var(--accent)] underline"
+              onClick={() => onViewProfile(withAthlete.id)}
+            >
+              View profile
+            </button>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

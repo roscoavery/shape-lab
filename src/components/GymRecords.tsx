@@ -70,22 +70,25 @@ export function GymRecords({ athletes }: Props) {
       <p className="text-xs uppercase tracking-wider text-[var(--muted)]">This gym</p>
       <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Athletes on this link</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-        Names, parent phones, and class photos stay in the app on this same gym URL.
-        New profiles save here automatically. You do not need a spreadsheet.
+        On this same gym URL, every device reads and writes the same gym file:
+        new athlete profiles and edits, photos, coach notes, homework and class-clock
+        logs, feed and Wins posts, lessons, classes, research, and videos the app
+        records or uploads. You do not need a spreadsheet.
       </p>
 
       {persist && !persist.lasting && (
         <p className="mt-3 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
-          This Vercel project is not keeping profiles overnight yet. In this project:
-          Storage → Create Database → Blob. That adds{' '}
-          <code className="text-xs">BLOB_READ_WRITE_TOKEN</code>. Then redeploy
-          Production on this same URL. After that, class sign-ups stay in the app.
+          This Vercel project is not keeping gym data overnight yet. In this project:
+          Storage → Create Database → Blob. Check{' '}
+          <code className="text-xs">Add a read-write token</code>. Then redeploy
+          Production on this same URL. Until that is on, phones can look saved and
+          then go blank after a cold start.
         </p>
       )}
       {persist?.lasting && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
-          This gym link is keeping profiles. Athletes who sign up here will still be
-          here next class.
+          This gym link is keeping profiles, notes, homework logs, feed/Wins, and
+          videos. Use this same URL on every device.
         </p>
       )}
 
