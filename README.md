@@ -347,7 +347,7 @@ On a phone, **Reference library → Clips** puts search and suggested keywords *
 
 ## Gym feed
 
-**Feed** is a gym wall. Unlock a profile, write a caption, optionally attach a video, and tag people. A thought does not need a clip. **Coach** profiles tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps gym-admin edits: the shared Compare library, Learn shape copy, still crops / picture sizes. Other coaches keep their own Compare collections and class boards.
+**Feed** is a gym wall. Stories and highlights sit at the top — same rings as Learn → Reference scroll. Unlock a profile, write a caption, optionally attach a video, and tag people. A thought does not need a clip. **Coach** profiles tag athletes. **Athlete** profiles tag their coach (Ryan is selected by default). From **Classes**, share a collage to the feed; other coaches tap **Save to my class library** to copy it into Classes. Posts live on this gym computer (`/api/feed`). Ryan keeps gym-admin edits: the shared Compare library, Learn shape copy, still crops / picture sizes. Other coaches keep their own Compare collections and class boards.
 
 ## Network
 
