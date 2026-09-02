@@ -5,6 +5,7 @@ import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
 import {
   PROFILE_KINDS,
+  isCoachProfile,
   profileRole,
   roleHint,
   roleLabel,
@@ -28,6 +29,8 @@ import {
   quizKindLabel,
 } from '../lib/quizGrades'
 import { AthleteAvatar, AthleteName } from './AthleteAvatar'
+import { AthleteProfileCard } from './AthleteProfileCard'
+import { addCoachNotesToAthletes } from '../lib/athleteNotes'
 
 type Props = {
   athletes: Athlete[]
@@ -38,6 +41,8 @@ type Props = {
   allowDelete?: boolean
   /** Gym admin sees every profile. Everyone else only sees their own. */
   canSeeAllProfiles?: boolean
+  onViewProfile?: (id: string) => void
+  viewer?: Athlete | null
 }
 
 export function AthletePanel({
@@ -47,6 +52,8 @@ export function AthletePanel({
   onSelect,
   allowDelete = false,
   canSeeAllProfiles = false,
+  onViewProfile,
+  viewer = null,
 }: Props) {
   const [newProfileOpen, setNewProfileOpen] = useState(false)
   const [name, setName] = useState('')
@@ -258,6 +265,20 @@ export function AthletePanel({
           <AthleteName athlete={active} size="md" nameClassName="font-semibold" />
         </div>
       )}
+      {canSeeAllProfiles && onViewProfile && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {athletes.slice(0, 24).map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => onViewProfile(a.id)}
+              className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+            >
+              <AthleteName athlete={a} size="xs" />
+            </button>
+          ))}
+        </div>
+      )}
       <select
         className="mb-3 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
         value={activeId ?? ''}
@@ -276,6 +297,27 @@ export function AthletePanel({
           )
         })}
       </select>
+
+      {active && (
+        <div className="mb-3">
+          <AthleteProfileCard
+            athlete={active}
+            viewer={viewer ?? active}
+            variant="embed"
+            onAddNote={
+              viewer && isCoachProfile(viewer)
+                ? (text) =>
+                    onChangeAthletes(
+                      addCoachNotesToAthletes(athletes, [active.id], {
+                        author: viewer,
+                        text,
+                      }),
+                    )
+                : undefined
+            }
+          />
+        </div>
+      )}
 
       <button
         type="button"

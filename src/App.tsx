@@ -37,6 +37,10 @@ import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { MyProfile } from './components/today/MyProfile'
+import { AthleteProfileCard } from './components/AthleteProfileCard'
+import { addCoachNotesToAthletes } from './lib/athleteNotes'
+import { logClassSkillForAthlete } from './lib/classSessionLog'
+import { publishTextPost } from './lib/feedPosts'
 import { markClassAttendance } from './lib/coachClasses'
 import { splitPersonName } from './lib/classStation'
 import { appendShapeTest, rememberGuestGrade } from './lib/quizGrades'
@@ -144,6 +148,7 @@ export default function App() {
   const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
+  const [viewingAthleteId, setViewingAthleteId] = useState<string | null>(null)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
@@ -542,8 +547,12 @@ export default function App() {
               <LessonWorkspace
                 session={liveLesson}
                 plan={liveLessonPlan}
+                athlete={liveLessonAthlete}
                 athleteName={liveLessonAthlete.name}
+                coach={liveLessonCoach ?? activeProfile}
                 coachName={liveLessonCoach?.name ?? 'Coach'}
+                athletes={athletes}
+                onAthletesChange={setAthleteRoster}
                 score={score}
                 currentShapeId={shape.id}
                 timingActive={false}
@@ -560,6 +569,8 @@ export default function App() {
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
                 onStartClass={() => setClassSessionOpen(true)}
+                onViewProfile={setViewingAthleteId}
+                onAthletesChange={setAthleteRoster}
                 onOpenProfile={() => {
                   if (activeProfile) setProfileOpen(true)
                   else requestSelectAthlete(athletes[0]?.id ?? null)
@@ -946,6 +957,7 @@ export default function App() {
         <NetworkPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+          onViewProfile={setViewingAthleteId}
         />
       )}
 
@@ -1031,6 +1043,8 @@ export default function App() {
             onSelect={requestSelectAthlete}
             allowDelete
             canSeeAllProfiles={ryanEdit}
+            onViewProfile={setViewingAthleteId}
+            viewer={activeProfile}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
           <VideoLibraryPanel
@@ -1257,10 +1271,52 @@ export default function App() {
         onClose={() => setClockOpen(false)}
       />
     )}
+    {viewingAthleteId && (
+      <AthleteProfileCard
+        athlete={athletes.find((a) => a.id === viewingAthleteId) ?? { id: viewingAthleteId, name: 'Athlete', createdAt: '' }}
+        viewer={activeProfile}
+        variant="overlay"
+        onClose={() => setViewingAthleteId(null)}
+        onAddNote={
+          activeProfile && isCoachProfile(activeProfile)
+            ? (text) =>
+                setAthleteRoster(
+                  addCoachNotesToAthletes(athletes, [viewingAthleteId], {
+                    author: activeProfile,
+                    text,
+                  }),
+                )
+            : undefined
+        }
+        onAddWin={
+          activeProfile && isCoachProfile(activeProfile)
+            ? async (text, big) => {
+                const who = athletes.find((a) => a.id === viewingAthleteId)
+                logClassSkillForAthlete({ athleteId: viewingAthleteId, text })
+                await publishTextPost({
+                  authorId: activeProfile.id,
+                  caption: `${who?.name ?? 'Athlete'}: ${text}`,
+                  taggedIds: [viewingAthleteId],
+                  channels: big ? ['wins', 'gym'] : ['wins'],
+                })
+                setAthleteRoster(
+                  addCoachNotesToAthletes(athletes, [viewingAthleteId], {
+                    author: activeProfile,
+                    text: `Win · ${text}`,
+                    topicLabel: 'Win',
+                  }),
+                )
+              }
+            : undefined
+        }
+      />
+    )}
     {classSessionOpen && activeProfile && isCoachProfile(activeProfile) && (
       <ClassSession
         coach={activeProfile}
         athletes={athletes}
+        onAthletesChange={setAthleteRoster}
+        onViewProfile={setViewingAthleteId}
         onClose={() => setClassSessionOpen(false)}
         onOpenStation={() => setStationOpen(true)}
         onOpenShapeTest={() => {

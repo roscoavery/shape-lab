@@ -7,6 +7,7 @@ import { addCoachExercise, loadCoachExercises, removeCoachExercise } from '../..
 import { assignHomeworkToAthletes, homeworkPickTitle } from '../../lib/homeworkAssign'
 import { AddHomeworkForm, type HomeworkPick } from '../homework/AddHomeworkForm'
 import { AthleteName } from '../AthleteAvatar'
+import { ClassAthleteDesk } from './ClassAthleteDesk'
 
 type Props = {
   meeting: ClassMeeting
@@ -14,9 +15,17 @@ type Props = {
   athletes: Athlete[]
   coach: Athlete
   onDone: () => void
+  onAthletesChange: (next: Athlete[]) => void
 }
 
-export function AssignClassHomework({ meeting, offering, athletes, coach, onDone }: Props) {
+export function AssignClassHomework({
+  meeting,
+  offering,
+  athletes,
+  coach,
+  onDone,
+  onAthletesChange,
+}: Props) {
   const present = resolveAttendeeAthletes(meeting, athletes)
   const guests = meeting.attendees.filter(
     (row) => !row.athleteId && !present.some((a) => a.name.toLowerCase() === `${row.firstName} ${row.lastName}`.toLowerCase()),
@@ -77,10 +86,21 @@ export function AssignClassHomework({ meeting, offering, athletes, coach, onDone
         </h2>
         <p className="mt-2 text-sm text-white/65">
           Assign one exercise to everyone who has a profile, or uncheck names
-          for individual homework. Names without a profile stay on the
-          attendance list until you make one.
+          for individual homework. Notes and wins still land on the athlete
+          after class is over.
         </p>
       </div>
+
+      <ClassAthleteDesk
+        athletes={athletes}
+        present={present}
+        coach={coach}
+        className={offering ? classLabel(offering) : 'Class'}
+        meetingId={meeting.id}
+        onAthletesChange={onAthletesChange}
+        title="Notes and wins after class"
+        hint="Same desk as during class. Pick who it is about, then write."
+      />
 
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">

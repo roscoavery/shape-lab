@@ -148,6 +148,7 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       twistBetterSide: draft.twistBetterSide || existing?.twistBetterSide,
       dominantHand: draft.dominantHand || existing?.dominantHand,
       skateStance: draft.skateStance || existing?.skateStance,
+      coachNotes: existing?.coachNotes,
       shapeTests: mergeShapeTests(
         existing?.shapeTests,
         takeGuestGrades(draft.firstName, draft.lastName),

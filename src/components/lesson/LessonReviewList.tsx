@@ -8,25 +8,35 @@ import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
 import { groupLessonWork } from './SkillPicker'
 import { AthleteName } from '../AthleteAvatar'
+import { AthleteProfileCard } from '../AthleteProfileCard'
+import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
+import { logClassSkillForAthlete } from '../../lib/classSessionLog'
+import { publishTextPost } from '../../lib/feedPosts'
 
 type Props = {
   sessions: LessonSession[]
   athletes: Athlete[]
   coaches?: Athlete[]
+  viewer?: Athlete | null
   canEdit: boolean
   title?: string
   emptyText?: string
   onChanged?: () => void
+  onAthletesChange?: (next: Athlete[]) => void
+  onViewProfile?: (id: string) => void
 }
 
 export function LessonReviewList({
   sessions,
   athletes,
   coaches,
+  viewer = null,
   canEdit,
   title = 'Lesson review',
   emptyText = 'No ended lessons yet.',
   onChanged,
+  onAthletesChange,
+  onViewProfile,
 }: Props) {
   const ended = sessions.filter((s) => s.endedAt)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -81,6 +91,61 @@ export function LessonReviewList({
               </button>
               {open && (
                 <div className="flex flex-col gap-2 border-t border-[var(--panel-border)] px-3 py-3">
+                  {athlete && (
+                    <AthleteProfileCard
+                      athlete={athlete}
+                      viewer={viewer ?? coach ?? null}
+                      variant="embed"
+                      onAddNote={
+                        canEdit && viewer && onAthletesChange
+                          ? (text) => {
+                              onAthletesChange(
+                                addCoachNotesToAthletes(athletes, [athlete.id], {
+                                  author: viewer,
+                                  text,
+                                  lessonId: s.id,
+                                }),
+                              )
+                              addLessonNote(s.id, text, 'general')
+                              onChanged?.()
+                            }
+                          : undefined
+                      }
+                      onAddWin={
+                        canEdit && viewer
+                          ? async (text, big) => {
+                              logClassSkillForAthlete({ athleteId: athlete.id, text })
+                              await publishTextPost({
+                                authorId: viewer.id,
+                                caption: `${athlete.name}: ${text}`,
+                                taggedIds: [athlete.id],
+                                channels: big ? ['wins', 'gym'] : ['wins'],
+                              })
+                              if (onAthletesChange) {
+                                onAthletesChange(
+                                  addCoachNotesToAthletes(athletes, [athlete.id], {
+                                    author: viewer,
+                                    text: `Win · ${text}`,
+                                    lessonId: s.id,
+                                    topicLabel: 'Win',
+                                  }),
+                                )
+                              }
+                              onChanged?.()
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                  {athlete && onViewProfile && (
+                    <button
+                      type="button"
+                      className="self-start text-xs font-semibold text-[var(--accent)] underline"
+                      onClick={() => onViewProfile(athlete.id)}
+                    >
+                      Open full profile
+                    </button>
+                  )}
                   <CollapsibleSection
                     inset
                     title="Recap of this lesson"
@@ -141,6 +206,16 @@ export function LessonReviewList({
                           coachId={s.coachId}
                           onAdd={(text, topic) => {
                             addLessonNote(s.id, text, 'general', topic)
+                            if (viewer && onAthletesChange) {
+                              onAthletesChange(
+                                addCoachNotesToAthletes(athletes, [s.athleteId], {
+                                  author: viewer,
+                                  text,
+                                  lessonId: s.id,
+                                  topicLabel: topic.label,
+                                }),
+                              )
+                            }
                             onChanged?.()
                           }}
                         />

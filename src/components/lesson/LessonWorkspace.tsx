@@ -6,7 +6,7 @@ import { logLessonHoldOnAthleteHomework } from '../../lib/lessonHomework'
 import { addLessonHold, addLessonNote, endLessonSession } from '../../lib/lessonStore'
 import { DEFAULT_FORM_STANDARD } from '../../lib/storage'
 import { HoldProperTimes } from '../HoldProperTimes'
-import type { Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
+import type { Athlete, Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
@@ -14,12 +14,20 @@ import { LessonNoteBar } from './LessonNoteBar'
 import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { rememberTypedHold } from '../../lib/typedHolds'
 import { SkillPicker, emptySkillTopic, groupLessonWork, type SkillTopic } from './SkillPicker'
+import { AthleteProfileCard } from '../AthleteProfileCard'
+import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
+import { logClassSkillForAthlete } from '../../lib/classSessionLog'
+import { publishTextPost } from '../../lib/feedPosts'
 
 type Props = {
   session: LessonSession
   plan: LessonPlan | null
+  athlete: Athlete | null
   athleteName: string
+  coach: Athlete | null
   coachName: string
+  athletes: Athlete[]
+  onAthletesChange?: (next: Athlete[]) => void
   score: ScoreResult
   currentShapeId: string
   timingActive: boolean
@@ -41,8 +49,12 @@ function applyTopicToCamera(topic: SkillTopic, onRequestShape: (id: string) => v
 export function LessonWorkspace({
   session,
   plan,
+  athlete,
   athleteName,
+  coach,
   coachName,
+  athletes,
+  onAthletesChange,
   score,
   currentShapeId,
   timingActive,
@@ -182,6 +194,52 @@ export function LessonWorkspace({
           </button>
         </div>
       </section>
+
+      {athlete && (
+        <AthleteProfileCard
+          athlete={athlete}
+          viewer={coach}
+          variant="embed"
+          onAddNote={
+            coach && onAthletesChange
+              ? (text) => {
+                  onAthletesChange(
+                    addCoachNotesToAthletes(athletes, [athlete.id], {
+                      author: coach,
+                      text,
+                      lessonId: session.id,
+                    }),
+                  )
+                  const next = addLessonNote(session.id, text, 'general')
+                  if (next) onSessionChange(next)
+                }
+              : undefined
+          }
+          onAddWin={
+            coach
+              ? async (text, big) => {
+                  logClassSkillForAthlete({ athleteId: athlete.id, text })
+                  await publishTextPost({
+                    authorId: coach.id,
+                    caption: `${athlete.name}: ${text}`,
+                    taggedIds: [athlete.id],
+                    channels: big ? ['wins', 'gym'] : ['wins'],
+                  })
+                  if (onAthletesChange) {
+                    onAthletesChange(
+                      addCoachNotesToAthletes(athletes, [athlete.id], {
+                        author: coach,
+                        text: `Win · ${text}`,
+                        lessonId: session.id,
+                        topicLabel: 'Win',
+                      }),
+                    )
+                  }
+                }
+              : undefined
+          }
+        />
+      )}
 
       {plan && plan.blocks.length > 0 && (
         <CollapsibleSection
@@ -395,6 +453,16 @@ export function LessonWorkspace({
               if (topic.kind === 'custom') rememberTypedHold(session.coachId, topic.label)
               const next = addLessonNote(session.id, text, 'general', topic)
               if (next) onSessionChange(next)
+              if (coach && onAthletesChange) {
+                onAthletesChange(
+                  addCoachNotesToAthletes(athletes, [session.athleteId], {
+                    author: coach,
+                    text,
+                    lessonId: session.id,
+                    topicLabel: topic.label,
+                  }),
+                )
+              }
             }}
           />
         </div>

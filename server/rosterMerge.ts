@@ -33,7 +33,20 @@ export type Athlete = {
   twistBetterSide?: 'left' | 'right'
   dominantHand?: 'left' | 'right' | 'ambidextrous'
   skateStance?: 'regular' | 'goofy'
+  coachNotes?: AthleteCoachNote[]
   shapeTests?: ShapeTestRecord[]
+}
+
+type AthleteCoachNote = {
+  id: string
+  authorId: string
+  authorName: string
+  text: string
+  createdAt: string
+  meetingId?: string
+  lessonId?: string
+  className?: string
+  topicLabel?: string
 }
 
 type ShapeTestRecord = {
@@ -208,9 +221,25 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     twistBetterSide: newer.twistBetterSide || older.twistBetterSide,
     dominantHand: newer.dominantHand || older.dominantHand,
     skateStance: newer.skateStance || older.skateStance,
+    coachNotes: mergeCoachNotes(newer.coachNotes, older.coachNotes),
     shapeTests: mergeShapeTests(newer.shapeTests, older.shapeTests),
     createdAt: older.createdAt || newer.createdAt,
   }
+}
+
+function mergeCoachNotes(
+  a: AthleteCoachNote[] | undefined,
+  b: AthleteCoachNote[] | undefined,
+): AthleteCoachNote[] | undefined {
+  const byId = new Map<string, AthleteCoachNote>()
+  for (const row of [...(a ?? []), ...(b ?? [])]) {
+    if (!row || typeof row.id !== 'string' || !row.id) continue
+    byId.set(row.id, row)
+  }
+  if (byId.size === 0) return a ?? b
+  return [...byId.values()]
+    .sort((x, y) => (y.createdAt || '').localeCompare(x.createdAt || ''))
+    .slice(0, 80)
 }
 
 function mergeShapeTests(

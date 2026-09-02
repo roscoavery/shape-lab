@@ -221,8 +221,22 @@ export type Athlete = {
   dominantHand?: 'left' | 'right' | 'ambidextrous'
   /** Skateboard stance: regular = left foot forward, goofy = right. */
   skateStance?: 'regular' | 'goofy'
+  /** Coach / admin notes filed while working with this athlete. */
+  coachNotes?: AthleteCoachNote[]
   /** Recent shape-test scores (oldest first, newest last). */
   shapeTests?: ShapeTestRecord[]
+}
+
+export type AthleteCoachNote = {
+  id: string
+  authorId: string
+  authorName: string
+  text: string
+  createdAt: string
+  meetingId?: string
+  lessonId?: string
+  className?: string
+  topicLabel?: string
 }
 
 export type ShapeTestRecord = {

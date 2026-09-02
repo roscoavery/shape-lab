@@ -31,6 +31,8 @@ type Props = {
   onShortcut?: (id: TodayShortcutId) => void
   onStartClass?: () => void
   onOpenProfile?: () => void
+  onViewProfile?: (id: string) => void
+  onAthletesChange?: (next: Athlete[]) => void
 }
 
 export function HomeDashboard({
@@ -41,6 +43,8 @@ export function HomeDashboard({
   onShortcut,
   onStartClass,
   onOpenProfile,
+  onViewProfile,
+  onAthletesChange,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withId, setWithId] = useState<string | null>(null)
@@ -111,15 +115,28 @@ export function HomeDashboard({
           )}
           <div className="mt-4 flex flex-col gap-2">
             {visibleUnlock.map((a) => (
-              <button
+              <div
                 key={a.id}
-                type="button"
-                onClick={() => onUnlock(a.id)}
-                className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
+                className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
               >
-                <AthleteName athlete={a} />
-                <span className="text-[var(--muted)]"> · {roleLabel(a)}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onUnlock(a.id)}
+                  className="min-w-0 flex-1 text-left hover:text-[var(--accent)]"
+                >
+                  <AthleteName athlete={a} />
+                  <span className="text-[var(--muted)]"> · {roleLabel(a)}</span>
+                </button>
+                {onViewProfile && (
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs font-semibold text-[var(--accent)]"
+                    onClick={() => onViewProfile(a.id)}
+                  >
+                    View
+                  </button>
+                )}
+              </div>
             ))}
           </div>
           {filteredUnlock.length > 6 && (
@@ -181,10 +198,12 @@ export function HomeDashboard({
         <LessonReviewList
           sessions={mine}
           athletes={athletes}
+          viewer={signedIn}
           canEdit={false}
           title="Recap of lessons"
           emptyText="No lessons saved yet. After a coach ends a lesson, notes and videos show here."
           onChanged={() => setRefresh((n) => n + 1)}
+          onViewProfile={onViewProfile}
         />
       </div>
     )
@@ -278,24 +297,35 @@ export function HomeDashboard({
             />
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {visibleLesson.map((a) => (
-                <button
+                <div
                   key={a.id}
-                  type="button"
-                  onClick={() => {
-                    setWithId(a.id)
-                    setEditing(null)
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ${
+                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
                     withId === a.id
                       ? 'border-[var(--accent)] bg-[#102820]'
-                      : 'border-[var(--panel-border)] bg-[#121820] hover:border-[var(--accent-dim)]'
+                      : 'border-[var(--panel-border)] bg-[#121820]'
                   }`}
                 >
-                  <AthleteName athlete={a} nameClassName="font-medium" />
-                  <span className="ml-auto shrink-0 text-xs text-[var(--muted)]">
-                    {roleLabel(a)}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWithId(a.id)
+                      setEditing(null)
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <AthleteName athlete={a} nameClassName="font-medium" />
+                    <span className="block text-xs text-[var(--muted)]">{roleLabel(a)}</span>
+                  </button>
+                  {onViewProfile && (
+                    <button
+                      type="button"
+                      className="shrink-0 text-xs font-semibold text-[var(--accent)]"
+                      onClick={() => onViewProfile(a.id)}
+                    >
+                      View
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
             {filteredLesson.length === 0 && (
@@ -390,10 +420,13 @@ export function HomeDashboard({
       <LessonReviewList
         sessions={sessionsForCoach(signedIn.id)}
         athletes={athletes}
+        viewer={signedIn}
         canEdit
         title="Recap of lessons"
         emptyText="When you end a lesson, it lands here — notes, videos, more notes, and homework."
         onChanged={() => setRefresh((n) => n + 1)}
+        onAthletesChange={onAthletesChange}
+        onViewProfile={onViewProfile}
       />
     </div>
   )

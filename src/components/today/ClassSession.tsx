@@ -3,7 +3,6 @@ import type { Athlete } from '../../types'
 import { profileRole } from '../../lib/profileRole'
 import {
   WEEKDAYS,
-  addClassNote,
   attendeeLabel,
   classLabel,
   endClassMeeting,
@@ -27,9 +26,9 @@ import {
 } from '../../lib/coachClasses'
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
-import { LessonNoteBar } from '../lesson/LessonNoteBar'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
+import { ClassAthleteDesk } from './ClassAthleteDesk'
 
 type Props = {
   coach: Athlete
@@ -37,11 +36,21 @@ type Props = {
   onOpenStation: () => void
   onOpenShapeTest: () => void
   onClose: () => void
+  onAthletesChange: (next: Athlete[]) => void
+  onViewProfile?: (id: string) => void
 }
 
 type Screen = 'pick' | 'live' | 'assign' | 'schedule'
 
-export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, onClose }: Props) {
+export function ClassSession({
+  coach,
+  athletes,
+  onOpenStation,
+  onOpenShapeTest,
+  onClose,
+  onAthletesChange,
+  onViewProfile,
+}: Props) {
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
   const [screen, setScreen] = useState<Screen>('pick')
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
@@ -175,10 +184,12 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
             meeting={getMeeting(live.id) ?? live}
             offering={offeringFor(live.offeringId)}
             athletes={athletes}
-            coachId={coach.id}
+            coach={coach}
             onStation={onOpenStation}
             onShapeTest={onOpenShapeTest}
             onChanged={refresh}
+            onAthletesChange={onAthletesChange}
+            onViewProfile={onViewProfile}
             onEnd={() => {
               const done = endClassMeeting(live.id)
               setEnded(done)
@@ -194,6 +205,7 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
             athletes={athletes}
             coach={coach}
             onDone={onClose}
+            onAthletesChange={onAthletesChange}
           />
         )}
       </div>
@@ -205,19 +217,23 @@ function LiveClass({
   meeting,
   offering,
   athletes,
-  coachId,
+  coach,
   onStation,
   onShapeTest,
   onChanged,
+  onAthletesChange,
+  onViewProfile,
   onEnd,
 }: {
   meeting: ClassMeeting
   offering?: CoachClassOffering
   athletes: Athlete[]
-  coachId: string
+  coach: Athlete
   onStation: () => void
   onShapeTest: () => void
   onChanged: () => void
+  onAthletesChange: (next: Athlete[]) => void
+  onViewProfile?: (id: string) => void
   onEnd: () => void
 }) {
   const [pickId, setPickId] = useState('')
@@ -341,64 +357,49 @@ function LiveClass({
                     {row.athleteId ? 'Profile' : 'Name only'}
                   </span>
                 </span>
-                {row.athleteId && (
-                  <button
-                    type="button"
-                    className="text-xs text-[var(--bad)] underline"
-                    onClick={() => {
-                      removeClassAttendance(meeting.id, row.athleteId!)
-                      onChanged()
-                    }}
-                  >
-                    Remove
-                  </button>
-                )}
+                <span className="flex shrink-0 gap-2">
+                  {row.athleteId && onViewProfile && (
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--accent)] underline"
+                      onClick={() => onViewProfile(row.athleteId!)}
+                    >
+                      View
+                    </button>
+                  )}
+                  {row.athleteId && (
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--bad)] underline"
+                      onClick={() => {
+                        removeClassAttendance(meeting.id, row.athleteId!)
+                        onChanged()
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <ClassStopwatch
+      <ClassAthleteDesk
         athletes={athletes}
-        signedIn={athletes.find((a) => a.id === coachId) ?? null}
-        coach
+        present={present}
+        coach={coach}
+        className={offering ? classLabel(offering) : 'Class'}
+        meetingId={meeting.id}
+        onAthletesChange={onAthletesChange}
       />
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-          Class notes
-        </p>
-        <p className="mt-1 mb-2 text-sm text-white/60">
-          Same as a lesson note — what this group should remember.
-        </p>
-        <LessonNoteBar
-          coachId={coachId}
-          placeholder="Note for this class…"
-          onAdd={(text, topic) => {
-            addClassNote(meeting.id, text, {
-              kind: topic.kind,
-              id: topic.id,
-              label: topic.label,
-            })
-            onChanged()
-          }}
-        />
-        {(meeting.notes ?? []).length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {meeting.notes.map((note) => (
-              <li key={note.id} className="rounded-lg bg-black/30 px-3 py-2 text-sm">
-                {note.topicLabel && (
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                    {note.topicLabel}
-                  </p>
-                )}
-                <p>{note.text}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ClassStopwatch
+        athletes={athletes}
+        signedIn={coach}
+        coach
+      />
 
       <button
         type="button"

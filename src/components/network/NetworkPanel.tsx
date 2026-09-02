@@ -38,9 +38,10 @@ type Page = 'people' | 'messages' | 'lounge'
 type Props = {
   athletes: Athlete[]
   athlete: Athlete | null
+  onViewProfile?: (id: string) => void
 }
 
-export function NetworkPanel({ athletes, athlete }: Props) {
+export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
   const [page, setPage] = useState<Page>('people')
   const [social, setSocial] = useState<SocialFile | null>(null)
   const [discuss, setDiscuss] = useState<DiscussFile | null>(null)
@@ -122,6 +123,7 @@ export function NetworkPanel({ athletes, athlete }: Props) {
           athletes={athletes}
           me={athlete}
           social={social}
+          onViewProfile={onViewProfile}
           onFollow={(id) => {
             if (!athlete) return
             void persistSocial(toggleFollow(social, athlete.id, id))
@@ -183,12 +185,14 @@ function PeoplePage({
   social,
   onFollow,
   onMessage,
+  onViewProfile,
 }: {
   athletes: Athlete[]
   me: Athlete | null
   social: SocialFile
   onFollow: (id: string) => void
   onMessage: (id: string) => void
+  onViewProfile?: (id: string) => void
 }) {
   const others = athletes.filter((a) => a.id !== me?.id)
   if (others.length === 0) {
@@ -225,6 +229,15 @@ function PeoplePage({
                 {followingCount(social, person.id)}
               </p>
             </div>
+            {onViewProfile && (
+              <button
+                type="button"
+                onClick={() => onViewProfile(person.id)}
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
+              >
+                View
+              </button>
+            )}
             {me && (
               <>
                 <button
