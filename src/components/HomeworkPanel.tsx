@@ -1244,7 +1244,7 @@ export function HomeworkPanel({
           Homework
         </p>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Train a drill, then get out of the way
+          Train a drill, then log the hold
         </h2>
         {athlete && (
           <p className="mt-1 text-sm text-[var(--muted)]">
