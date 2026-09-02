@@ -295,6 +295,7 @@ export function emptyPlan(athleteId: string, coachId: string): LessonPlan {
     coachId,
     title: 'Lesson plan',
     blocks: [],
+    extraExercises: [],
     createdAt: now,
     updatedAt: now,
   }

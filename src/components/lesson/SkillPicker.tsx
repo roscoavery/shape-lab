@@ -4,7 +4,7 @@ import { SEQUENCES } from '../../config/sequences'
 import { getCoachShape, listCoachShapes } from '../../lib/coachContentStore'
 import { lessonScoreShapes, quickHoldShapes } from '../../lib/lessonShapes'
 import { listTypedHolds, rememberTypedHold } from '../../lib/typedHolds'
-import type { LessonNote, LessonSession } from '../../types'
+import type { ClassExtraExercise, LessonNote, LessonSession } from '../../types'
 
 export type SkillTopic = {
   kind: 'shape' | 'sequence' | 'custom' | 'coach'
@@ -22,6 +22,8 @@ type Props = {
   compactHolds?: boolean
   /** Typed skills stay on this coach — other coaches do not see them. */
   coachId?: string | null
+  /** Extra holds pinned on this class or lesson — shown under the four core drills. */
+  extraHolds?: ClassExtraExercise[]
 }
 
 const SHAPE_OPTIONS = lessonScoreShapes()
@@ -38,6 +40,7 @@ export function SkillPicker({
   label = 'What did you work on',
   compactHolds = false,
   coachId = null,
+  extraHolds = [],
 }: Props) {
   const coachShapes = listCoachShapes()
   const [typedTick, setTypedTick] = useState(0)
@@ -107,6 +110,40 @@ export function SkillPicker({
             )
           })}
         </div>
+        {extraHolds.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Also on this lesson
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {extraHolds.map((ex) => {
+                const on =
+                  (ex.kind === 'shape' && value.kind === 'shape' && value.id === ex.refId) ||
+                  (value.kind === 'custom' && value.label === ex.label)
+                return (
+                  <button
+                    key={ex.id}
+                    type="button"
+                    onClick={() =>
+                      onChange(
+                        ex.kind === 'shape' && ex.refId
+                          ? { kind: 'shape', id: ex.refId, label: ex.label, scoreShapeId: ex.refId }
+                          : { kind: 'custom', label: ex.label },
+                      )
+                    }
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                      on
+                        ? 'bg-[var(--accent)] text-[#06281f]'
+                        : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
+                    }`}
+                  >
+                    {ex.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         <input
           className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           placeholder="Or type another skill name — saved for you only"

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getShape } from '../../config/shapes'
 import { formatSeconds, useHoldTimer } from '../../hooks/useHoldTimer'
 import { homeworkLooksReady } from '../../lib/homeworkPose'
-import { logLessonHoldOnAthleteHomework } from '../../lib/lessonHomework'
+import { logLessonHoldOnAthleteHomework, logLessonRepsOnAthleteHomework } from '../../lib/lessonHomework'
+import { mergeExtras } from '../../lib/classExercises'
+import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
 import {
   addLessonHold,
   addLessonNote,
@@ -167,6 +169,16 @@ export function LessonWorkspace({
       else hold.reset()
     }
   }
+
+  const [repCounts, setRepCounts] = useState<Record<string, string>>({})
+  const [repFlash, setRepFlash] = useState<string | null>(null)
+  const extras = useMemo(() => {
+    const meeting = getActiveMeeting()
+    const offering = meeting ? getOffering(meeting.offeringId) : null
+    return mergeExtras(plan?.extraExercises, offering?.extraExercises)
+  }, [plan?.extraExercises, tick])
+  const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
+  const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
 
   const grouped = useMemo(() => groupLessonWork(session), [session])
   const scoreShapes = useMemo(() => lessonScoreShapes(), [])
@@ -334,6 +346,7 @@ export function LessonWorkspace({
             compactHolds
             allowSequence={false}
             coachId={session.coachId}
+            extraHolds={extraHolds}
           />
         </div>
         <p className="mt-3 text-4xl font-black tabular-nums tracking-tight">
@@ -373,6 +386,59 @@ export function LessonWorkspace({
             Log this time
           </button>
         </div>
+        {extraReps.length > 0 && (
+          <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
+            <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps</p>
+            {repFlash && (
+              <p className="mt-1 text-sm font-semibold text-[var(--accent)]">{repFlash}</p>
+            )}
+            <ul className="mt-2 flex flex-col gap-2">
+              {extraReps.map((ex) => (
+                <li key={ex.id} className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-[7rem] text-sm font-semibold">{ex.label}</span>
+                  <input
+                    inputMode="numeric"
+                    value={repCounts[ex.id] ?? ''}
+                    onChange={(e) =>
+                      setRepCounts((prev) => ({ ...prev, [ex.id]: e.target.value }))
+                    }
+                    placeholder="Reps"
+                    className="h-10 w-20 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-xs font-semibold text-white"
+                    onClick={() => {
+                      const n = Number(repCounts[ex.id])
+                      if (!Number.isFinite(n) || n <= 0) {
+                        setRepFlash(`Type how many ${ex.label} they did.`)
+                        return
+                      }
+                      let logged = 0
+                      for (const id of peopleIds) {
+                        const row = logLessonRepsOnAthleteHomework({
+                          athleteId: id,
+                          coachId: session.coachId,
+                          coachName,
+                          lessonId: session.id,
+                          extra: ex,
+                          reps: n,
+                        })
+                        if (row) logged += 1
+                      }
+                      setTick((t) => t + 1)
+                      setRepFlash(
+                        `Logged ${n} ${ex.label} for ${logged} athlete${logged === 1 ? '' : 's'}.`,
+                      )
+                    }}
+                  >
+                    Log for {athleteName}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {!holdTopic.label.trim() && (
           <p className="mt-2 text-xs text-[var(--muted)]">Select or type the skill before you log.</p>
         )}

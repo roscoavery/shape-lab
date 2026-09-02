@@ -406,7 +406,11 @@ export function homeworkDedupeKey(
 ): string {
   const aid = item.athleteId || '_'
   const auto = inferAutoKey(item as HomeworkItem)
-  if (auto === 'hollow' || item.autoKey === 'hollow') return `${aid}::hollow`
+  // Only the auto hollow card collapses arms-down / arms-up. A class extra
+  // like "Hollow arms up" keeps its own homework card.
+  if (item.autoKey === 'hollow' || (item.source === 'auto' && auto === 'hollow')) {
+    return `${aid}::hollow`
+  }
   if (item.shapeId.startsWith('seq:') || item.shapeId.startsWith('drill:')) {
     return `${aid}::${item.shapeId}`
   }

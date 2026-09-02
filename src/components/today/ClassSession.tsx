@@ -19,6 +19,7 @@ import {
   offeringCoachIds,
   saveOffering,
   setOfferingCoaches,
+  setOfferingExtras,
   setOfferingRoster,
   startClassMeeting,
   subscribeCoachClasses,
@@ -33,6 +34,8 @@ import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
+import { ClassExtraPicker } from './ClassExtraPicker'
+import type { ClassExtraExercise } from '../../types'
 
 type Props = {
   coach: Athlete
@@ -437,6 +440,7 @@ function QuickAddClass({
   const coaches = athletes.filter((a) => isCoachProfile(a))
   const [roster, setRoster] = useState<string[]>([])
   const [coachIds, setCoachIds] = useState<string[]>([coachId])
+  const [extras, setExtras] = useState<ClassExtraExercise[]>([])
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-sm text-white/70">
@@ -476,6 +480,7 @@ function QuickAddClass({
         offText="Add"
       />
       <RosterPicker athletes={kids} selected={roster} onChange={setRoster} />
+      <ClassExtraPicker extras={extras} onChange={setExtras} />
       <button
         type="button"
         disabled={!name.trim()}
@@ -487,6 +492,7 @@ function QuickAddClass({
             weekday,
             time: time.trim() || '5pm',
             rosterIds: roster,
+            extraExercises: extras,
           })
           onSaved()
         }}
@@ -645,6 +651,9 @@ function ScheduleEditor({
                 ? `Coaches: ${classCoachesLabel(o, athletes)} · `
                 : ''}
               {o.rosterIds.length} athlete{o.rosterIds.length === 1 ? '' : 's'} on this class
+              {o.extraExercises?.length
+                ? ` · also ${o.extraExercises.map((ex) => ex.label).join(', ')}`
+                : ''}
             </p>
             {editing?.id === o.id && (
               <div className="mt-2 flex flex-col gap-3">
@@ -664,6 +673,13 @@ function ScheduleEditor({
                   selected={o.rosterIds}
                   onChange={(next) => {
                     setOfferingRoster(o.id, next)
+                    onChanged()
+                  }}
+                />
+                <ClassExtraPicker
+                  extras={o.extraExercises ?? []}
+                  onChange={(next) => {
+                    setOfferingExtras(o.id, next)
                     onChanged()
                   }}
                 />

@@ -10,9 +10,10 @@ import {
   addHomeworkLog,
   createId,
   ensureAutoHomework,
+  homeworkDedupeKey,
   loadAllHomework,
 } from './storage'
-import type { HomeworkItem, HomeworkLog } from '../types'
+import type { ClassExtraExercise, HomeworkItem, HomeworkLog } from '../types'
 
 export const CLASS_SKILLS_TITLE = 'Class skills & wins'
 
@@ -134,6 +135,101 @@ export function logClassRepsForAthletes(opts: {
       score: 0,
       loggedFrom: 'class',
       sourceLabel,
+      ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
+      ...(opts.className ? { className: opts.className } : {}),
+    }
+    addHomeworkLog(log)
+    n += 1
+  }
+  return n
+}
+
+function ensureExtraHomework(athleteId: string, extra: ClassExtraExercise): HomeworkItem | null {
+  if (extra.kind === 'catalog' && extra.refId) {
+    return ensureCatalogHomework(athleteId, extra.refId)
+  }
+  const existing = loadAllHomework()
+  if (extra.kind === 'shape' && extra.refId) {
+    const shapeId = extra.refId
+    const found = existing.find(
+      (h) =>
+        h.athleteId === athleteId &&
+        h.shapeId === shapeId &&
+        h.source !== 'auto' &&
+        !h.autoKey,
+    )
+    if (found) return found
+    const item: HomeworkItem = {
+      id: createId('hw'),
+      athleteId,
+      shapeId,
+      customLabel: extra.label,
+      source: 'coach',
+      trackMode: extra.trackMode,
+      createdAt: new Date().toISOString(),
+      notes: `Pinned on class · ${extra.label}.`,
+    }
+    addHomeworkItem(item)
+    return item
+  }
+  const label = extra.label.trim()
+  if (!label) return null
+  const shapeId = customHomeworkShapeId(label)
+  const probe: Pick<HomeworkItem, 'athleteId' | 'shapeId'> & { customLabel?: string } = {
+    athleteId,
+    shapeId,
+    customLabel: label,
+  }
+  const key = homeworkDedupeKey(probe)
+  const found = existing.find((h) => h.athleteId === athleteId && homeworkDedupeKey(h) === key)
+  if (found) return found
+  const item: HomeworkItem = {
+    id: createId('hw'),
+    athleteId,
+    shapeId,
+    customLabel: label,
+    source: 'coach',
+    trackMode: extra.trackMode,
+    createdAt: new Date().toISOString(),
+    notes: `Pinned on class · ${label}.`,
+  }
+  addHomeworkItem(item)
+  return item
+}
+
+export function logClassExtraForAthletes(opts: {
+  athleteIds: string[]
+  extra: ClassExtraExercise
+  seconds?: number
+  reps?: number
+  className?: string
+  meetingId?: string
+}): number {
+  let n = 0
+  const hold = opts.extra.trackMode === 'hold'
+  const amount = hold ? opts.seconds : opts.reps
+  if (!Number.isFinite(amount) || (amount ?? 0) <= 0) return 0
+  const detail = hold
+    ? opts.extra.label
+    : `${opts.extra.label} · ${opts.reps} reps`
+  const sourceLabel = classLabel(detail, opts.className)
+  for (const athleteId of opts.athleteIds) {
+    const hw = ensureExtraHomework(athleteId, opts.extra)
+    if (!hw) continue
+    const log: HomeworkLog = {
+      id: createId('hwlog'),
+      athleteId,
+      homeworkId: hw.id,
+      shapeId: hw.shapeId,
+      date: new Date().toISOString(),
+      method: 'manual',
+      kind: hold ? 'hold' : 'reps',
+      totalHoldSeconds: hold ? Number((opts.seconds ?? 0).toFixed(2)) : 0,
+      ...(hold ? {} : { reps: opts.reps }),
+      score: 0,
+      loggedFrom: 'class',
+      sourceLabel,
+      trackMode: opts.extra.trackMode,
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
     }

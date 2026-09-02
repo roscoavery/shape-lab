@@ -3,7 +3,8 @@
  * live meetings, and notes — gym-wide via /api/coach-classes.
  */
 
-import type { Athlete, LessonNote } from '../types'
+import type { Athlete, ClassExtraExercise, LessonNote } from '../types'
+import { normalizeClassExtras } from './classExercises'
 import { createId } from './storage'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
 import { RYAN_PROFILE_ID } from './ryanProfile'
@@ -43,6 +44,11 @@ export type CoachClassOffering = {
   updatedAt?: string
   /** Standing roster — who is usually in this class. */
   rosterIds: string[]
+  /**
+   * Extra holds / reps shown on this class clock next to the four core drills.
+   * Hollow / Superman / side plank / wall handstand stay as they are.
+   */
+  extraExercises?: ClassExtraExercise[]
 }
 
 export type ClassAttendee = {
@@ -102,6 +108,7 @@ function normalizeOffering(raw: Partial<CoachClassOffering>): CoachClassOffering
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt,
     rosterIds: Array.isArray(raw.rosterIds) ? raw.rosterIds.filter((id) => typeof id === 'string') : [],
+    extraExercises: normalizeClassExtras(raw.extraExercises),
   }
 }
 
@@ -228,6 +235,7 @@ export function saveOffering(input: {
   weekday: Weekday
   time: string
   rosterIds?: string[]
+  extraExercises?: ClassExtraExercise[]
 }): CoachClassOffering {
   const file = read()
   const existing = input.id ? file.offerings.find((o) => o.id === input.id) : undefined
@@ -246,6 +254,9 @@ export function saveOffering(input: {
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     rosterIds: input.rosterIds ?? existing?.rosterIds ?? [],
+    extraExercises: normalizeClassExtras(
+      input.extraExercises ?? existing?.extraExercises ?? [],
+    ),
   }
   file.offerings = [row, ...file.offerings.filter((o) => o.id !== row.id)]
   write(file)
@@ -261,6 +272,23 @@ export function setOfferingCoaches(id: string, coachIds: string[]): CoachClassOf
     ...existing,
     coachIds: ids,
     coachId: ids.includes(existing.coachId) ? existing.coachId : ids[0] || existing.coachId,
+    updatedAt: new Date().toISOString(),
+  }
+  file.offerings = file.offerings.map((o) => (o.id === id ? row : o))
+  write(file)
+  return row
+}
+
+export function setOfferingExtras(
+  id: string,
+  extraExercises: ClassExtraExercise[],
+): CoachClassOffering | null {
+  const file = read()
+  const existing = file.offerings.find((o) => o.id === id)
+  if (!existing) return null
+  const row: CoachClassOffering = {
+    ...existing,
+    extraExercises: normalizeClassExtras(extraExercises),
     updatedAt: new Date().toISOString(),
   }
   file.offerings = file.offerings.map((o) => (o.id === id ? row : o))

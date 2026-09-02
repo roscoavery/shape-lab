@@ -576,6 +576,19 @@ export type HomeworkLog = {
   className?: string
 }
 
+/**
+ * Extra exercise a coach pins on a class or lesson clock.
+ * Not one of the four core drills — those stay hardcoded.
+ */
+export type ClassExtraExercise = {
+  id: string
+  kind: 'catalog' | 'shape' | 'custom'
+  /** Catalog id or library shape id. Unused for a typed custom name. */
+  refId?: string
+  label: string
+  trackMode: 'hold' | 'reps'
+}
+
 export type LessonBlockKind = 'hold' | 'compare' | 'talk'
 
 export type LessonBlock = {
@@ -596,6 +609,11 @@ export type LessonPlan = {
   blocks: LessonBlock[]
   createdAt: string
   updatedAt: string
+  /**
+   * Extra holds / reps shown next to the four core drills on this lesson.
+   * Core hollow / Superman / side plank / wall handstand stay as they are.
+   */
+  extraExercises?: ClassExtraExercise[]
 }
 
 export type LessonNoteTopicKind = 'shape' | 'sequence' | 'custom' | 'coach'

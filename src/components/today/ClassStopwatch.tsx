@@ -6,18 +6,21 @@ import {
   getActiveMeeting,
   getOffering,
   resolveAttendeeAthletes,
+  subscribeCoachClasses,
 } from '../../lib/coachClasses'
 import {
   CLASS_HOLD_DRILLS,
+  logClassExtraForAthletes,
   logClassHoldForAthletes,
   logClassRepsForAthletes,
   logClassSkillForAthlete,
 } from '../../lib/classSessionLog'
+import type { ClassExtraExercise } from '../../types'
 import { publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
-type Mode = 'hold' | 'vups' | 'skill'
+type Mode = 'hold' | 'vups' | 'skill' | `extra:${string}`
 
 type HoldId = (typeof CLASS_HOLD_DRILLS)[number]['id']
 
@@ -43,6 +46,8 @@ export function ClassStopwatch({
   variant = 'card',
   onClose,
 }: Props) {
+  const [, setClassTick] = useState(0)
+  useEffect(() => subscribeCoachClasses(() => setClassTick((n) => n + 1)), [])
   const meeting = getActiveMeeting()
   const offering = meeting ? getOffering(meeting.offeringId) : null
   const className = offering ? classLabel(offering) : undefined
@@ -58,8 +63,12 @@ export function ClassStopwatch({
         ? [signedIn]
         : []
 
+  const extras = offering?.extraExercises ?? []
+  const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
+  const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
   const [mode, setMode] = useState<Mode>('hold')
   const [holdId, setHoldId] = useState<HoldId>('hollow')
+  const [extraHoldId, setExtraHoldId] = useState<string | null>(null)
   const [side, setSide] = useState<'left' | 'right'>('left')
   const [selected, setSelected] = useState<string[]>(() => pool.map((a) => a.id))
   const [running, setRunning] = useState(false)
@@ -118,9 +127,10 @@ export function ClassStopwatch({
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  const activeExtra = (id: string | null): ClassExtraExercise | undefined =>
+    extras.find((ex) => ex.id === id)
+
   const logHold = () => {
-    const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
-    if (!drill) return
     const secs = Number(manual || offer)
     if (!Number.isFinite(secs) || secs <= 0) {
       setFlash('Start and stop the clock, or type the seconds.')
@@ -130,6 +140,23 @@ export function ClassStopwatch({
       setFlash('Pick at least one athlete.')
       return
     }
+    const pinned = extraHoldId ? activeExtra(extraHoldId) : undefined
+    if (pinned && pinned.trackMode === 'hold') {
+      const n = logClassExtraForAthletes({
+        athleteIds: selected,
+        extra: pinned,
+        seconds: secs,
+        className,
+        meetingId: meeting?.id,
+      })
+      reset()
+      setFlash(
+        `Logged ${pinned.label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+      )
+      return
+    }
+    const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
+    if (!drill) return
     const holdName =
       drill.autoKey === 'side_plank' ? `${drill.label} · ${side}` : drill.label
     const n = logClassHoldForAthletes({
@@ -145,6 +172,26 @@ export function ClassStopwatch({
     setFlash(
       `Logged ${holdName} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
     )
+  }
+
+  const logExtraReps = (extra: ClassExtraExercise) => {
+    const nReps = Number(reps)
+    if (!Number.isFinite(nReps) || nReps <= 0) {
+      setFlash(`Enter how many ${extra.label} they did.`)
+      return
+    }
+    if (selected.length === 0) {
+      setFlash('Pick at least one athlete.')
+      return
+    }
+    const n = logClassExtraForAthletes({
+      athleteIds: selected,
+      extra,
+      reps: nReps,
+      className,
+      meetingId: meeting?.id,
+    })
+    setFlash(`Logged ${nReps} ${extra.label} for ${n} athlete${n === 1 ? '' : 's'}.`)
   }
 
   const logVups = () => {
@@ -221,7 +268,10 @@ export function ClassStopwatch({
           <button
             key={id}
             type="button"
-            onClick={() => setMode(id)}
+            onClick={() => {
+              setMode(id)
+              setExtraHoldId(null)
+            }}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
                 ? 'bg-[var(--accent)] text-[#06281f]'
@@ -231,6 +281,26 @@ export function ClassStopwatch({
             {label}
           </button>
         ))}
+        {extraReps.map((ex) => {
+          const id = `extra:${ex.id}` as Mode
+          return (
+            <button
+              key={ex.id}
+              type="button"
+              onClick={() => {
+                setMode(id)
+                setExtraHoldId(null)
+              }}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+                mode === id
+                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  : 'border border-white/15 text-white/75'
+              }`}
+            >
+              {ex.label}
+            </button>
+          )
+        })}
       </div>
 
       {mode === 'hold' && (
@@ -243,7 +313,7 @@ export function ClassStopwatch({
                   className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8"
                 >
                   {(['left', 'right'] as const).map((s) => {
-                    const on = holdId === 'side_plank' && side === s
+                    const on = !extraHoldId && holdId === 'side_plank' && side === s
                     return (
                       <button
                         key={s}
@@ -253,6 +323,7 @@ export function ClassStopwatch({
                         onClick={() => {
                           setHoldId('side_plank')
                           setSide(s)
+                          setExtraHoldId(null)
                         }}
                         className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
                           s === 'right' ? 'border-l border-white/15' : ''
@@ -271,9 +342,12 @@ export function ClassStopwatch({
                 <button
                   key={d.id}
                   type="button"
-                  onClick={() => setHoldId(d.id)}
+                  onClick={() => {
+                    setHoldId(d.id)
+                    setExtraHoldId(null)
+                  }}
                   className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                    holdId === d.id
+                    !extraHoldId && holdId === d.id
                       ? 'bg-[var(--accent)] text-[#06281f]'
                       : 'bg-white/8'
                   }`}
@@ -283,6 +357,33 @@ export function ClassStopwatch({
               ),
             )}
           </div>
+          {extraHolds.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                Also on this class
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {extraHolds.map((ex) => {
+                  const on = extraHoldId === ex.id
+                  return (
+                    <button
+                      key={ex.id}
+                      type="button"
+                      onClick={() => {
+                        setExtraHoldId(ex.id)
+                        setMode('hold')
+                      }}
+                      className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                        on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+                      }`}
+                    >
+                      {ex.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <p className="text-center font-mono text-5xl font-bold tabular-nums">
             {formatWatch(ms)}
           </p>
@@ -330,10 +431,41 @@ export function ClassStopwatch({
             onClick={logHold}
             className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
           >
-            Log hold for selected
+            Log {extraHoldId ? activeExtra(extraHoldId)?.label ?? 'hold' : 'hold'} for selected
           </button>
         </>
       )}
+
+      {mode.startsWith('extra:') && (() => {
+        const extra = activeExtra(mode.slice(6))
+        if (!extra || extra.trackMode !== 'reps') return null
+        return (
+          <>
+            <p className="text-sm text-white/60">
+              {extra.label} counts change by class. Type how many this group just did.
+            </p>
+            <label className="block text-sm">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                Reps
+              </span>
+              <input
+                inputMode="numeric"
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+              />
+            </label>
+            <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+            <button
+              type="button"
+              onClick={() => logExtraReps(extra)}
+              className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            >
+              Log {extra.label} for selected
+            </button>
+          </>
+        )
+      })()}
 
       {mode === 'vups' && (
         <>

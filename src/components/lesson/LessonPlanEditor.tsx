@@ -3,7 +3,8 @@ import { getShape } from '../../config/shapes'
 import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { DEFAULT_FORM_STANDARD, createId } from '../../lib/storage'
 import { upsertLessonPlan } from '../../lib/lessonStore'
-import type { LessonBlock, LessonBlockKind, LessonPlan } from '../../types'
+import type { ClassExtraExercise, LessonBlock, LessonBlockKind, LessonPlan } from '../../types'
+import { ClassExtraPicker } from '../today/ClassExtraPicker'
 
 type Props = {
   plan: LessonPlan
@@ -27,6 +28,7 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
   const [shapeId, setShapeId] = useState(HOLD_SHAPES[0]?.id ?? 'hollow_arms_down')
   const [seconds, setSeconds] = useState(20)
   const [talk, setTalk] = useState('')
+  const [extras, setExtras] = useState<ClassExtraExercise[]>(plan.extraExercises ?? [])
 
   const shapeOptions = useMemo(() => {
     const ids = new Set(HOLD_SHAPES.map((s) => s.id))
@@ -80,6 +82,7 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
       ...plan,
       title: title.trim() || `Lesson for ${athleteName}`,
       blocks,
+      extraExercises: extras,
     })
     onSaved(next)
   }
@@ -196,6 +199,10 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
         >
           Add to plan
         </button>
+      </div>
+
+      <div className="mt-4">
+        <ClassExtraPicker extras={extras} onChange={setExtras} tone="panel" />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
