@@ -620,7 +620,10 @@ export type LessonHold = {
 export type LessonSession = {
   id: string
   planId: string | null
+  /** First athlete. Kept so older recaps still load. */
   athleteId: string
+  /** Everyone in this lesson. Missing on older sessions = just athleteId. */
+  athleteIds?: string[]
   coachId: string
   startedAt: string
   endedAt?: string

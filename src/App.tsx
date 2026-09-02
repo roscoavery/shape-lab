@@ -95,6 +95,8 @@ import {
   loadActiveLessonId,
   startLessonSession,
   subscribeLessons,
+  lessonAthleteIds,
+  lessonNameList,
 } from './lib/lessonStore'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateChalkboards } from './lib/chalkboard'
@@ -369,7 +371,12 @@ export default function App() {
 
   const liveLesson = getLessonSession(loadActiveLessonId())
   const liveLessonPlan = getLessonPlan(liveLesson?.planId ?? null)
-  const liveLessonAthlete = athletes.find((a) => a.id === liveLesson?.athleteId) ?? null
+  const liveLessonAthletes = liveLesson
+    ? lessonAthleteIds(liveLesson)
+        .map((id) => athletes.find((a) => a.id === id) ?? null)
+        .filter((a): a is Athlete => Boolean(a))
+    : []
+  const liveLessonAthlete = liveLessonAthletes[0] ?? null
   const liveLessonCoach = athletes.find((a) => a.id === liveLesson?.coachId) ?? null
   void lessonTick
 
@@ -394,10 +401,12 @@ export default function App() {
     setCompareFullTick((tick) => tick + 1)
   }
 
-  const startLesson = (athleteId: string, planId?: string | null) => {
+  const startLesson = (athleteIds: string[], planId?: string | null) => {
     const coach = athletes.find((a) => a.id === activeAthleteId) ?? null
     if (!coach || !isCoachProfile(coach)) return
-    startLessonSession({ athleteId, coachId: coach.id, planId })
+    const ids = athleteIds.filter(Boolean)
+    if (ids.length === 0) return
+    startLessonSession({ athleteIds: ids, coachId: coach.id, planId })
     setLessonTick((n) => n + 1)
   }
 
@@ -609,12 +618,13 @@ export default function App() {
       {tab === 'today' && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
-            {liveLesson && !liveLesson.endedAt && liveLessonAthlete ? (
+            {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
               <LessonWorkspace
                 session={liveLesson}
                 plan={liveLessonPlan}
                 athlete={liveLessonAthlete}
-                athleteName={liveLessonAthlete.name}
+                athleteName={lessonNameList(liveLessonAthletes.map((a) => a.name))}
+                lessonAthletes={liveLessonAthletes}
                 coach={liveLessonCoach ?? activeProfile}
                 coachName={liveLessonCoach?.name ?? 'Coach'}
                 athletes={athletes}

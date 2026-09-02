@@ -126,6 +126,29 @@ export function deleteLessonPlan(id: string) {
   )
 }
 
+export function lessonAthleteIds(
+  session: Pick<LessonSession, 'athleteId' | 'athleteIds'>,
+): string[] {
+  const extra = Array.isArray(session.athleteIds) ? session.athleteIds : []
+  return [...new Set([session.athleteId, ...extra].filter(Boolean))]
+}
+
+export function sessionIncludesAthlete(
+  session: Pick<LessonSession, 'athleteId' | 'athleteIds'>,
+  athleteId: string,
+): boolean {
+  return lessonAthleteIds(session).includes(athleteId)
+}
+
+export function lessonNameList(names: string[]): string {
+  const clean = names.map((n) => n.trim()).filter(Boolean)
+  if (clean.length === 0) return 'athletes'
+  if (clean.length === 1) return clean[0]
+  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`
+  if (clean.length === 3) return `${clean[0]}, ${clean[1]}, and ${clean[2]}`
+  return `${clean[0]}, ${clean[1]}, and ${clean.length - 2} more`
+}
+
 export function plansForAthlete(athleteId: string): LessonPlan[] {
   return loadLessonPlans()
     .filter((p) => p.athleteId === athleteId)
@@ -134,7 +157,7 @@ export function plansForAthlete(athleteId: string): LessonPlan[] {
 
 export function sessionsForAthlete(athleteId: string): LessonSession[] {
   return loadLessonSessions()
-    .filter((s) => s.athleteId === athleteId)
+    .filter((s) => sessionIncludesAthlete(s, athleteId))
     .sort((a, b) => (b.endedAt ?? b.startedAt).localeCompare(a.endedAt ?? a.startedAt))
 }
 
@@ -155,14 +178,21 @@ export function getLessonPlan(id: string | null): LessonPlan | null {
 }
 
 export function startLessonSession(opts: {
-  athleteId: string
+  athleteId?: string
+  athleteIds?: string[]
   coachId: string
   planId?: string | null
 }): LessonSession {
+  const athleteIds = [...new Set((opts.athleteIds ?? [opts.athleteId]).filter((id): id is string => Boolean(id)))]
+  const athleteId = athleteIds[0]
+  if (!athleteId) {
+    throw new Error('Start a lesson with at least one athlete.')
+  }
   const session: LessonSession = {
     id: createId('les'),
     planId: opts.planId ?? null,
-    athleteId: opts.athleteId,
+    athleteId,
+    athleteIds,
     coachId: opts.coachId,
     startedAt: new Date().toISOString(),
     notes: [],

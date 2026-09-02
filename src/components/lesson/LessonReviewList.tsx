@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { addLessonNote, hideLessonRecap, unhideLessonRecap } from '../../lib/lessonStore'
+import {
+  addLessonNote,
+  hideLessonRecap,
+  unhideLessonRecap,
+  lessonAthleteIds,
+  lessonNameList,
+  sessionIncludesAthlete,
+} from '../../lib/lessonStore'
 import type { Athlete, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { HoldProperTimes } from '../HoldProperTimes'
@@ -62,13 +69,19 @@ export function LessonReviewList({
   }
 
   const canHideSession = (s: LessonSession) =>
-    canEdit || viewer?.id === s.athleteId || viewer?.id === s.coachId
+    canEdit ||
+    Boolean(viewer && sessionIncludesAthlete(s, viewer.id)) ||
+    viewer?.id === s.coachId
 
   const renderList = (list: LessonSession[]) => (
     <ul className="mt-3 flex flex-col gap-3">
       {list.map((s) => {
-        const athlete = athletes.find((a) => a.id === s.athleteId)
+        const people = lessonAthleteIds(s)
+          .map((id) => athletes.find((a) => a.id === id) ?? null)
+          .filter((a): a is Athlete => Boolean(a))
+        const athlete = people[0] ?? athletes.find((a) => a.id === s.athleteId)
         const coach = athletes.find((a) => a.id === s.coachId)
+        const peopleLabel = lessonNameList(people.map((a) => a.name))
         const open = openId === s.id
         const groups = groupLessonWork(s)
         const hideable = canHideSession(s)
@@ -82,10 +95,14 @@ export function LessonReviewList({
               >
                 <div>
                   <p className="text-sm font-semibold">
+                    {people.length > 1 ? (
+                      <span>{peopleLabel}</span>
+                    ) : (
                     <AthleteName
                       athlete={athlete ?? { name: 'Athlete' }}
                       nameClassName="font-semibold"
                     />
+                    )}
                     <span className="font-normal text-[var(--muted)]">
                       {' '}
                       with {coach?.name ?? 'coach'}
@@ -115,9 +132,10 @@ export function LessonReviewList({
             </div>
             {open && (
               <div className="flex flex-col gap-2 border-t border-[var(--panel-border)] px-3 py-3">
-                {athlete && (
+                {people.map((person) => (
                   <AthleteProfileCard
-                    athlete={athlete}
+                    key={person.id}
+                    athlete={person}
                     viewer={viewer ?? coach ?? null}
                     athletes={athletes}
                     variant="embed"
@@ -131,7 +149,7 @@ export function LessonReviewList({
                       canEdit && viewer && onAthletesChange
                         ? (text) => {
                             onAthletesChange(
-                              addCoachNotesToAthletes(athletes, [athlete.id], {
+                              addCoachNotesToAthletes(athletes, [person.id], {
                                 author: viewer,
                                 text,
                                 lessonId: s.id,
@@ -145,18 +163,18 @@ export function LessonReviewList({
                     onAddWin={
                       canEdit && viewer
                         ? async (text, big) => {
-                            logClassSkillForAthlete({ athleteId: athlete.id, text })
+                            logClassSkillForAthlete({ athleteId: person.id, text })
                             await publishTextPost({
-                              authorId: athlete.id,
+                              authorId: person.id,
                               caption: text,
-                              taggedIds: [athlete.id],
+                              taggedIds: [person.id],
                               channels: big ? ['wins', 'gym'] : ['wins'],
                               sharedById: viewer.id,
                               sharedByName: coachShareLabel(viewer),
                             })
                             if (onAthletesChange) {
                               onAthletesChange(
-                                addCoachNotesToAthletes(athletes, [athlete.id], {
+                                addCoachNotesToAthletes(athletes, [person.id], {
                                   author: viewer,
                                   text: `Win · ${text}`,
                                   lessonId: s.id,
@@ -169,8 +187,8 @@ export function LessonReviewList({
                         : undefined
                     }
                   />
-                )}
-                {athlete && onViewProfile && (
+                ))}
+                {people.length === 1 && athlete && onViewProfile && (
                   <button
                     type="button"
                     className="self-start text-xs font-semibold text-[var(--accent)] underline"
@@ -241,7 +259,7 @@ export function LessonReviewList({
                           addLessonNote(s.id, text, 'general', topic)
                           if (viewer && onAthletesChange) {
                             onAthletesChange(
-                              addCoachNotesToAthletes(athletes, [s.athleteId], {
+                              addCoachNotesToAthletes(athletes, lessonAthleteIds(s), {
                                 author: viewer,
                                 text,
                                 lessonId: s.id,
@@ -260,7 +278,7 @@ export function LessonReviewList({
                     >
                       <AssignHomeworkBar
                         hideHeading
-                        athleteId={s.athleteId}
+                        athleteIds={lessonAthleteIds(s)}
                         coachId={s.coachId}
                         defaultNotes={s.notes[0]?.text}
                         defaultShapeId={

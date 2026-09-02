@@ -14,7 +14,8 @@ import { listPublicDrills, subscribeCoachContent } from '../../lib/coachContentS
 import type { HomeworkSource, HomeworkTrackMode } from '../../types'
 
 type Props = {
-  athleteId: string
+  athleteId?: string
+  athleteIds?: string[]
   coachId?: string
   defaultShapeId?: string
   defaultNotes?: string
@@ -24,6 +25,7 @@ type Props = {
 
 export function AssignHomeworkBar({
   athleteId,
+  athleteIds,
   coachId,
   defaultShapeId,
   defaultNotes,
@@ -71,9 +73,18 @@ export function AssignHomeworkBar({
         : label
           ? customHomeworkShapeId(label)
           : shapeId
-    const existing = ensureAutoHomework(athleteId)
+    const ids = [...new Set((athleteIds?.length ? athleteIds : athleteId ? [athleteId] : []).filter(Boolean))]
+    if (ids.length === 0) {
+      setFlash('Pick who this homework is for.')
+      return
+    }
+    let assigned = 0
+    let already = 0
+    let lastTitle = ''
+    for (const id of ids) {
+    const existing = ensureAutoHomework(id)
     const probe = {
-      athleteId,
+      athleteId: id,
       shapeId: nextShapeId,
       customLabel: cat
         ? cat.name
@@ -91,8 +102,8 @@ export function AssignHomeworkBar({
       createdAt: '',
     }
     if (existing.some((h) => homeworkDedupeKey(h) === homeworkDedupeKey(probe))) {
-      setFlash('That drill is already on their homework.')
-      return
+      already += 1
+      continue
     }
     const target = Number(seconds)
     const targetReps = Number(reps)
@@ -101,7 +112,7 @@ export function AssignHomeworkBar({
       mode || cat?.trackMode || coachEx?.trackMode || (label && !shapeId && !seq && !drill ? 'reps' : undefined)
     addHomeworkItem({
       id: createId('hw'),
-      athleteId,
+      athleteId: id,
       shapeId: nextShapeId,
       ...(cat
         ? { catalogId: cat.id, customLabel: cat.name, allowWeight: cat.allowWeight }
@@ -122,7 +133,18 @@ export function AssignHomeworkBar({
           : {}),
       ...(notes.trim() || seqNotes ? { notes: notes.trim() || seqNotes } : {}),
     })
-    setFlash(`Assigned ${homeworkTitle(probe)}. They pick it under Practice → Homework → Train now.`)
+    assigned += 1
+    lastTitle = homeworkTitle(probe)
+    }
+    if (assigned === 0 && already > 0) {
+      setFlash('That drill is already on their homework.')
+      return
+    }
+    setFlash(
+      assigned > 1
+        ? `Assigned ${lastTitle} to ${assigned} athletes. They pick it under Practice → Homework → Train now.`
+        : `Assigned ${lastTitle}. They pick it under Practice → Homework → Train now.`,
+    )
     setNotes('')
     setSeconds('')
     setReps('')

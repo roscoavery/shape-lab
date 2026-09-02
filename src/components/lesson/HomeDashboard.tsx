@@ -33,7 +33,7 @@ type Props = {
   athletes: Athlete[]
   signedIn: Athlete | null
   onUnlock: (id: string) => void
-  onStartLesson: (athleteId: string, planId?: string | null) => void
+  onStartLesson: (athleteIds: string[], planId?: string | null) => void
   onOpenLesson?: (session: LessonSession) => void
   onShortcut?: (id: TodayShortcutId) => void
   onStartClass?: () => void
@@ -56,7 +56,7 @@ export function HomeDashboard({
   onParentHomework,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
-  const [withId, setWithId] = useState<string | null>(null)
+  const [withIds, setWithIds] = useState<string[]>([])
   const [editing, setEditing] = useState<LessonPlan | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [unlockQuery, setUnlockQuery] = useState('')
@@ -99,8 +99,25 @@ export function HomeDashboard({
   }, [roster, lessonQuery])
   const visibleLesson = lessonMore ? filteredLesson : filteredLesson.slice(0, 6)
 
-  const withAthlete = roster.find((a) => a.id === withId) ?? null
+  const withAthletes = withIds
+    .map((id) => roster.find((a) => a.id === id) ?? null)
+    .filter((a): a is Athlete => Boolean(a))
+  const withAthlete = withAthletes[0] ?? null
   const plans = withAthlete ? plansForAthlete(withAthlete.id) : []
+  const toggleLessonAthlete = (id: string) => {
+    setWithIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    setEditing(null)
+    setPickHint(false)
+  }
+  const lessonFirstNames = withAthletes.map((a) => a.name.split(' ')[0] || a.name)
+  const lessonWithLabel =
+    lessonFirstNames.length === 0
+      ? ''
+      : lessonFirstNames.length === 1
+        ? `With ${lessonFirstNames[0]}`
+        : lessonFirstNames.length === 2
+          ? `With ${lessonFirstNames[0]} and ${lessonFirstNames[1]}`
+          : `With ${lessonFirstNames[0]} + ${lessonFirstNames.length - 1}`
   const mine = signedIn && !coach ? sessionsForAthlete(signedIn.id) : []
   const myPlans = signedIn && !coach ? plansForAthlete(signedIn.id) : []
 
@@ -303,7 +320,7 @@ export function HomeDashboard({
           )}
         </div>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Start lesson is one athlete. Start class is the hour you are teaching
+          Start lesson is who you are with — one athlete or several. Start class is the hour you are teaching
           — Connections, Elevate, or Reps w/ Logan — so shape-test names and
           homework land on that roster. The chalkboard for that class opens on
           this page without taking it over.
@@ -361,24 +378,24 @@ export function HomeDashboard({
           <button
             type="button"
             onClick={() => {
-              if (!withAthlete) {
+              if (withAthletes.length === 0) {
                 setPickHint(true)
                 setLessonMore(true)
                 pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                 return
               }
-              onStartLesson(withAthlete.id, plans[0]?.id ?? null)
+              onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)
             }}
             className="w-full rounded-2xl bg-gradient-to-br from-[#7ad4ff] via-[#3aa8e8] to-[#156a96] px-4 py-4 text-left text-[#042433] shadow-[0_16px_40px_rgba(58,168,232,0.28)]"
           >
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
-              1:1
+              Lesson
             </span>
             <span className="mt-1 block text-2xl font-bold">Start lesson</span>
             <span className="mt-1 block text-sm font-medium opacity-80">
-              {withAthlete
-                ? `With ${withAthlete.name.split(' ')[0]}`
-                : 'Pick who you are with, then go'}
+              {withAthletes.length
+                ? lessonWithLabel
+                : 'Tap everyone in this lesson, then go'}
             </span>
           </button>
         </div>
@@ -392,9 +409,9 @@ export function HomeDashboard({
         >
           <h3 className="text-lg font-semibold">Who are you with?</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            {pickHint && !withAthlete
-              ? 'Tap an athlete, then Start lesson.'
-              : 'Pick the athlete for a 1:1. Class roster is separate.'}
+            {pickHint && withAthletes.length === 0
+              ? 'Tap every athlete in this lesson, then Start lesson.'
+              : 'Tap one or more athletes. Class roster is separate.'}
           </p>
         {roster.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
@@ -413,18 +430,14 @@ export function HomeDashboard({
                 <div
                   key={a.id}
                   className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                    withId === a.id
+                    withIds.includes(a.id)
                       ? 'border-[var(--accent)] bg-[#102820]'
                       : 'border-[var(--panel-border)] bg-[#121820]'
                   }`}
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setWithId(a.id)
-                      setEditing(null)
-                      setPickHint(false)
-                    }}
+                    onClick={() => toggleLessonAthlete(a.id)}
                     className="min-w-0 flex-1 text-left"
                   >
                     <AthleteName athlete={a} nameClassName="font-medium" />
@@ -462,9 +475,15 @@ export function HomeDashboard({
       {withAthlete && !editing && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
           <h3 className="font-semibold">
-            Lesson with <AthleteName athlete={withAthlete} size="md" />
+            Lesson with{' '}
+            {withAthletes.map((a, i) => (
+              <span key={a.id}>
+                {i > 0 ? i === withAthletes.length - 1 ? ' and ' : ', ' : ''}
+                <AthleteName athlete={a} size="md" />
+              </span>
+            ))}
           </h3>
-          {onViewProfile && (
+          {onViewProfile && withAthletes.length === 1 && (
             <button
               type="button"
               className="mt-1 text-xs font-semibold text-[var(--accent)] underline"
@@ -476,7 +495,7 @@ export function HomeDashboard({
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => onStartLesson(withAthlete.id, plans[0]?.id ?? null)}
+              onClick={() => onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)}
               className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
             >
               Start lesson
@@ -511,7 +530,7 @@ export function HomeDashboard({
                     <button
                       type="button"
                       className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
-                      onClick={() => onStartLesson(withAthlete.id, p.id)}
+                      onClick={() => onStartLesson(withAthletes.map((a) => a.id), p.id)}
                     >
                       Use plan
                     </button>

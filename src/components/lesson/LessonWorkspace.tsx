@@ -3,7 +3,12 @@ import { getShape } from '../../config/shapes'
 import { formatSeconds, useHoldTimer } from '../../hooks/useHoldTimer'
 import { homeworkLooksReady } from '../../lib/homeworkPose'
 import { logLessonHoldOnAthleteHomework } from '../../lib/lessonHomework'
-import { addLessonHold, addLessonNote, endLessonSession } from '../../lib/lessonStore'
+import {
+  addLessonHold,
+  addLessonNote,
+  endLessonSession,
+  lessonAthleteIds,
+} from '../../lib/lessonStore'
 import { DEFAULT_FORM_STANDARD } from '../../lib/storage'
 import { HoldProperTimes } from '../HoldProperTimes'
 import type { Athlete, Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
@@ -25,6 +30,7 @@ type Props = {
   plan: LessonPlan | null
   athlete: Athlete | null
   athleteName: string
+  lessonAthletes?: Athlete[]
   coach: Athlete | null
   coachName: string
   athletes: Athlete[]
@@ -52,6 +58,7 @@ export function LessonWorkspace({
   plan,
   athlete,
   athleteName,
+  lessonAthletes,
   coach,
   coachName,
   athletes,
@@ -141,18 +148,20 @@ export function LessonWorkspace({
     })
     if (next) {
       if (holdTopic.kind === 'custom') rememberTypedHold(session.coachId, label)
-      logLessonHoldOnAthleteHomework({
-        athleteId: session.athleteId,
-        coachId: session.coachId,
-        coachName,
-        lessonId: session.id,
-        shapeId: holdTopic.id || `custom:${label.toLowerCase()}`,
-        shapeName: label,
-        totalHoldSeconds: Number(seconds.toFixed(1)),
-        properHoldSeconds: Number(proper.toFixed(1)),
-        score: scoreValue,
-        method,
-      })
+      for (const id of peopleIds) {
+        logLessonHoldOnAthleteHomework({
+          athleteId: id,
+          coachId: session.coachId,
+          coachName,
+          lessonId: session.id,
+          shapeId: holdTopic.id || `custom:${label.toLowerCase()}`,
+          shapeName: label,
+          totalHoldSeconds: Number(seconds.toFixed(1)),
+          properHoldSeconds: Number(proper.toFixed(1)),
+          score: scoreValue,
+          method,
+        })
+      }
       onSessionChange(next)
       if (method === 'manual') resetWatch()
       else hold.reset()
@@ -161,6 +170,10 @@ export function LessonWorkspace({
 
   const grouped = useMemo(() => groupLessonWork(session), [session])
   const scoreShapes = useMemo(() => lessonScoreShapes(), [])
+  const people = lessonAthletes?.length ? lessonAthletes : athlete ? [athlete] : []
+  const peopleIds = people.length ? people.map((a) => a.id) : lessonAthleteIds(session)
+  const [videoAthleteId, setVideoAthleteId] = useState(peopleIds[0] ?? session.athleteId)
+  const videoAthlete = people.find((a) => a.id === videoAthleteId) ?? people[0] ?? athlete
 
   return (
     <div className="flex flex-col gap-3">
@@ -173,7 +186,7 @@ export function LessonWorkspace({
         <p className="mt-1 text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the stopwatch yourself. Pick the body
           position so the live score grades that shape if the camera is on.{' '}
-          {athleteName} sees notes grouped by skill after you end.
+          {athleteName} {people.length > 1 ? 'see' : 'sees'} notes grouped by skill after you end.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -196,9 +209,10 @@ export function LessonWorkspace({
         </div>
       </section>
 
-      {athlete && (
+      {people.map((person) => (
         <AthleteProfileCard
-          athlete={athlete}
+          key={person.id}
+          athlete={person}
           viewer={coach}
           athletes={athletes}
           variant="embed"
@@ -211,7 +225,7 @@ export function LessonWorkspace({
             coach && onAthletesChange
               ? (text) => {
                   onAthletesChange(
-                    addCoachNotesToAthletes(athletes, [athlete.id], {
+                    addCoachNotesToAthletes(athletes, [person.id], {
                       author: coach,
                       text,
                       lessonId: session.id,
@@ -225,18 +239,18 @@ export function LessonWorkspace({
           onAddWin={
             coach
               ? async (text, big) => {
-                  logClassSkillForAthlete({ athleteId: athlete.id, text })
+                  logClassSkillForAthlete({ athleteId: person.id, text })
                   await publishTextPost({
-                    authorId: athlete.id,
+                    authorId: person.id,
                     caption: text,
-                    taggedIds: [athlete.id],
+                    taggedIds: [person.id],
                     channels: big ? ['wins', 'gym'] : ['wins'],
                     sharedById: coach.id,
                     sharedByName: coachShareLabel(coach),
                   })
                   if (onAthletesChange) {
                     onAthletesChange(
-                      addCoachNotesToAthletes(athletes, [athlete.id], {
+                      addCoachNotesToAthletes(athletes, [person.id], {
                         author: coach,
                         text: `Win · ${text}`,
                         lessonId: session.id,
@@ -248,7 +262,7 @@ export function LessonWorkspace({
               : undefined
           }
         />
-      )}
+      ))}
 
       {plan && plan.blocks.length > 0 && (
         <CollapsibleSection
@@ -451,8 +465,10 @@ export function LessonWorkspace({
         hint={`File what ${athleteName} should remember, grouped by skill.`}
       >
         <p className="text-sm text-[var(--muted)]">
-          One note per thought is fine. File each on the shape or sequence so {athleteName}{' '}
-          can find “remember this” next to that skill.
+          One note per thought is fine. File each on the shape or sequence so{' '}
+          {people.length > 1 ? 'they' : athleteName} can find “remember this” next to that
+          skill
+          {people.length > 1 ? ' — notes land on every athlete in this lesson' : ''}.
         </p>
         <div className="mt-3">
           <LessonNoteBar
@@ -464,7 +480,7 @@ export function LessonWorkspace({
               if (next) onSessionChange(next)
               if (coach && onAthletesChange) {
                 onAthletesChange(
-                  addCoachNotesToAthletes(athletes, [session.athleteId], {
+                  addCoachNotesToAthletes(athletes, peopleIds, {
                     author: coach,
                     text,
                     lessonId: session.id,
@@ -482,7 +498,7 @@ export function LessonWorkspace({
         hint="Add a drill they will see under Practice → Homework."
       >
         <AssignHomeworkBar
-          athleteId={session.athleteId}
+          athleteIds={peopleIds}
           coachId={session.coachId}
           hideHeading
         />
@@ -526,9 +542,27 @@ export function LessonWorkspace({
         title="Video library"
         hint="Lesson clips saved from delay cam and Compare."
       >
+        {people.length > 1 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {people.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => setVideoAthleteId(person.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  videoAthleteId === person.id
+                    ? 'border-[var(--accent)] bg-[#102820] text-[var(--accent)]'
+                    : 'border-[var(--panel-border)]'
+                }`}
+              >
+                {person.name.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        )}
         <VideoLibraryPanel
-          athleteId={session.athleteId}
-          athleteName={athleteName}
+          athleteId={videoAthlete?.id ?? session.athleteId}
+          athleteName={videoAthlete?.name ?? athleteName}
           refreshKey={tick}
           folder="lesson"
           lessonId={session.id}
