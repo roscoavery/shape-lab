@@ -143,7 +143,11 @@ export function notifyCoachesOfHomeworkLog(log: HomeworkLog) {
   const line = formatHomeworkLogLine(log, item)
   const first = givenName(who)
   if (log.loggedFrom === 'class' || log.loggedFrom === 'lesson') return
-  for (const coachId of worksWithCoachIds(who)) {
+  const coachIds = new Set(worksWithCoachIds(who))
+  for (const row of roster) {
+    if (isGymAdmin(row)) coachIds.add(row.id)
+  }
+  for (const coachId of coachIds) {
     if (coachId === log.athleteId) continue
     void pushNotice({
       toId: coachId,

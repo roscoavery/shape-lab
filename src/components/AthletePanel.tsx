@@ -152,7 +152,7 @@ export function AthletePanel({
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
-      ...(role === 'athlete' && newCoachIds.length > 0
+      ...(role === 'athlete'
         ? { worksWithCoachIds: newCoachIds, showCoachesOnProfile: newShowCoaches }
         : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
