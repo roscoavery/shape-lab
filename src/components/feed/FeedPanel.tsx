@@ -32,6 +32,7 @@ import { childAthletes } from '../../lib/parentLink'
 import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { CollageStage } from '../classes/CollageStage'
+import { StoryRail } from '../stories/StoryRail'
 
 type Props = {
   athletes: Athlete[]
@@ -219,6 +220,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
+      {!wins && (
+        <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-3">
+          <StoryRail athlete={athlete} athletes={athletes} />
+        </section>
+      )}
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           {wins ? 'Wins' : 'Gym feed'}
