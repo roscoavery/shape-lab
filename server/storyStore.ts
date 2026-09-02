@@ -58,11 +58,30 @@ function safeId(id: string): string | null {
   return s
 }
 
+function normalizeStoryMime(mime: string): string {
+  const m = (mime || '').toLowerCase()
+  if (m.includes('png')) return 'image/png'
+  if (m.includes('webp')) return 'image/webp'
+  if (m.includes('gif')) return 'image/gif'
+  if (m.includes('heic')) return 'image/heic'
+  if (m.includes('heif')) return 'image/heif'
+  if (m.includes('jpeg') || m.includes('jpg')) return 'image/jpeg'
+  if (m.includes('mp4') || m.includes('m4v') || m.includes('mpeg')) return 'video/mp4'
+  if (m.includes('quicktime') || m.includes('mov')) return 'video/quicktime'
+  if (m.includes('webm')) return 'video/webm'
+  if (m.startsWith('image/')) return 'image/jpeg'
+  return 'video/mp4'
+}
+
 function extForMime(mime: string): string {
   if (mime.includes('png')) return '.png'
   if (mime.includes('webp')) return '.webp'
+  if (mime.includes('gif')) return '.gif'
+  if (mime.includes('heic')) return '.heic'
+  if (mime.includes('heif')) return '.heif'
   if (mime.includes('jpeg') || mime.includes('jpg')) return '.jpg'
-  if (mime.includes('mp4')) return '.mp4'
+  if (mime.includes('mp4') || mime.includes('m4v')) return '.mp4'
+  if (mime.includes('quicktime')) return '.mov'
   return '.webm'
 }
 
@@ -127,14 +146,15 @@ export async function addStoryFromBody(params: {
 }): Promise<(DiskStory & { url: string; live: boolean }) | null> {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
-  if (!id || !authorId || !params.buf.length || params.buf.length > MAX_BYTES) return null
-  const mime = params.mime.includes('image/')
-    ? params.mime.includes('png')
-      ? 'image/png'
-      : 'image/jpeg'
-    : params.mime.includes('mp4')
-      ? 'video/mp4'
-      : 'video/webm'
+  if (!id) throw new Error('That story id is not valid. Try again.')
+  if (!authorId) throw new Error('Unlock a profile, then post the story again.')
+  if (!params.buf.length) {
+    throw new Error('That clip was empty. Try a shorter video or a photo from Photos.')
+  }
+  if (params.buf.length > MAX_BYTES) {
+    throw new Error('That clip is too large for a story. Keep it under about 18 MB.')
+  }
+  const mime = normalizeStoryMime(params.mime)
   const file = `${id}${extForMime(mime)}`
   await writeBin(blobRel(file), params.buf, mime)
   const createdAt = params.createdAt || new Date().toISOString()

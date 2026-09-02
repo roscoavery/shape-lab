@@ -6,7 +6,7 @@
 import type { Athlete, HomeworkItem, HomeworkLog, LessonSession } from '../types'
 import { isCoachProfile, isGymAdmin, profileRole } from './profileRole'
 import { parentSeesAthlete } from './parentLink'
-import { classLabel, loadMeetings, loadOfferings } from './coachClasses'
+import { attendeeCountsOnProfile, classLabel, loadMeetings, loadOfferings } from './coachClasses'
 import { namesMatch } from './classStation'
 import { sessionsForAthlete } from './lessonStore'
 import { homeworkTitle } from './homeworkLabel'
@@ -75,6 +75,7 @@ export function classAttendanceForAthlete(
   const out: ClassAttendanceRow[] = []
   for (const meeting of meetings) {
     const here = meeting.attendees.some((row) => {
+      if (!attendeeCountsOnProfile(meeting, row)) return false
       if (row.athleteId && row.athleteId === athlete.id) return true
       return namesMatch(row, athlete.firstName ?? '', athlete.lastName ?? '') ||
         namesMatch(athlete, row.firstName, row.lastName)

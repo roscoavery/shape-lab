@@ -30,6 +30,7 @@ import {
 } from '../../lib/coachClasses'
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
+import { EndClassPrompt } from './EndClassPrompt'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
@@ -61,6 +62,7 @@ export function ClassSession({
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
   const [screen, setScreen] = useState<Screen>('pick')
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
+  const [endAsk, setEndAsk] = useState(false)
   const [tick, setTick] = useState(0)
 
   const refresh = () => {
@@ -130,8 +132,9 @@ export function ClassSession({
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Start a class</h2>
               <p className="mt-2 text-sm text-white/65">
-                Pick the class you are on the floor for. That class roster is
-                who you assign homework to — not the whole gym.
+                Pick the class you are on the floor for. Add who is here
+                tonight. Ending class asks whether to write Class nights —
+                opening Start and End alone does not log anyone.
               </p>
             </div>
             {offerings.length === 0 ? (
@@ -200,11 +203,26 @@ export function ClassSession({
             onChanged={refresh}
             onAthletesChange={onAthletesChange}
             onViewProfile={onViewProfile}
-            onEnd={() => {
-              const done = endClassMeeting(live.id)
+            onAskEnd={() => setEndAsk(true)}
+          />
+        )}
+
+        {endAsk && live && (
+          <EndClassPrompt
+            count={live.attendees.length}
+            onLog={() => {
+              const done = endClassMeeting(live.id, { logAttendance: true })
+              setEndAsk(false)
               setEnded(done)
               setScreen('assign')
             }}
+            onSkip={() => {
+              const done = endClassMeeting(live.id, { logAttendance: false })
+              setEndAsk(false)
+              setEnded(done)
+              setScreen('assign')
+            }}
+            onStay={() => setEndAsk(false)}
           />
         )}
 
@@ -233,7 +251,7 @@ function LiveClass({
   onChanged,
   onAthletesChange,
   onViewProfile,
-  onEnd,
+  onAskEnd,
 }: {
   meeting: ClassMeeting
   offering?: CoachClassOffering
@@ -244,7 +262,7 @@ function LiveClass({
   onChanged: () => void
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
-  onEnd: () => void
+  onAskEnd: () => void
 }) {
   const [pickId, setPickId] = useState('')
   const pool = useMemo(() => {
@@ -270,8 +288,8 @@ function LiveClass({
           {offering ? classLabel(offering) : 'Class'}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          {meeting.attendees.length} on tonight&apos;s list. Add or remove from
-          this class only — not the whole gym.
+          {meeting.attendees.length} marked here tonight. This list is for the
+          hour and homework — Class nights only write when you log at End class.
         </p>
       </div>
 
@@ -339,6 +357,32 @@ function LiveClass({
           Add
         </button>
       </div>
+      {offering &&
+        offering.rosterIds.some((id) => !present.some((p) => p.id === id)) && (
+          <button
+            type="button"
+            onClick={() => {
+              for (const id of offering.rosterIds) {
+                if (present.some((p) => p.id === id)) continue
+                const a = athletes.find((row) => row.id === id)
+                if (!a) continue
+                const parts = splitPersonName(a.name)
+                markClassAttendance({
+                  meetingId: meeting.id,
+                  athleteId: a.id,
+                  firstName: a.firstName || parts.firstName,
+                  lastName: a.lastName || parts.lastName,
+                  source: 'roster',
+                  logged: false,
+                })
+              }
+              onChanged()
+            }}
+            className="self-start text-xs font-semibold text-[var(--accent)] underline"
+          >
+            Add everyone on the roster
+          </button>
+        )}
 
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
@@ -415,7 +459,7 @@ function LiveClass({
 
       <button
         type="button"
-        onClick={onEnd}
+        onClick={onAskEnd}
         className="mt-2 h-14 rounded-2xl border-2 border-[var(--bad)] bg-[#2a1518] text-lg font-bold text-[var(--bad)]"
       >
         End class · assign homework

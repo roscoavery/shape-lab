@@ -57,6 +57,12 @@ export type ClassAttendee = {
   lastName: string
   source: 'profile' | 'shape_test' | 'manual' | 'roster'
   at: string
+  /**
+   * On the athlete’s Class nights list. Missing on old ended meetings
+   * means logged. Live “here tonight” rows start false until End class
+   * asks to log them.
+   */
+  logged?: boolean
 }
 
 export type ClassMeeting = {
@@ -67,6 +73,8 @@ export type ClassMeeting = {
   endedAt?: string
   attendees: ClassAttendee[]
   notes: LessonNote[]
+  /** Set when the coach chooses Log / Don’t log at End class. */
+  attendanceLogged?: boolean
 }
 
 export type CoachClassFile = {
@@ -112,6 +120,23 @@ function normalizeOffering(raw: Partial<CoachClassOffering>): CoachClassOffering
   }
 }
 
+function normalizeAttendee(raw: Partial<ClassAttendee>): ClassAttendee | null {
+  if (!raw) return null
+  const firstName = typeof raw.firstName === 'string' ? raw.firstName : ''
+  const lastName = typeof raw.lastName === 'string' ? raw.lastName : ''
+  if (!raw.athleteId && !firstName && !lastName) return null
+  return {
+    athleteId: typeof raw.athleteId === 'string' ? raw.athleteId : undefined,
+    firstName,
+    lastName,
+    source: raw.source === 'shape_test' || raw.source === 'manual' || raw.source === 'roster'
+      ? raw.source
+      : 'profile',
+    at: raw.at || new Date().toISOString(),
+    logged: typeof raw.logged === 'boolean' ? raw.logged : undefined,
+  }
+}
+
 function normalizeMeeting(raw: Partial<ClassMeeting>): ClassMeeting | null {
   if (!raw?.id || !raw.offeringId) return null
   return {
@@ -120,9 +145,24 @@ function normalizeMeeting(raw: Partial<ClassMeeting>): ClassMeeting | null {
     coachId: raw.coachId || '',
     startedAt: raw.startedAt || new Date().toISOString(),
     endedAt: raw.endedAt,
-    attendees: Array.isArray(raw.attendees) ? raw.attendees : [],
+    attendees: Array.isArray(raw.attendees)
+      ? raw.attendees.map(normalizeAttendee).filter((a): a is ClassAttendee => Boolean(a))
+      : [],
     notes: Array.isArray(raw.notes) ? raw.notes : [],
+    attendanceLogged:
+      typeof raw.attendanceLogged === 'boolean' ? raw.attendanceLogged : undefined,
   }
+}
+
+/** Profile Class nights — live “here tonight” and unlogged ends stay off. */
+export function attendeeCountsOnProfile(
+  meeting: Pick<ClassMeeting, 'endedAt' | 'attendanceLogged'>,
+  row: Pick<ClassAttendee, 'logged'>,
+): boolean {
+  if (row.logged === false) return false
+  if (row.logged === true) return true
+  if (meeting.attendanceLogged === false) return false
+  return Boolean(meeting.endedAt)
 }
 
 function read(): CoachClassFile {
@@ -341,21 +381,19 @@ export function getActiveMeeting(_coachId?: string | null): ClassMeeting | null 
 
 export function startClassMeeting(offering: CoachClassOffering): ClassMeeting {
   const file = read()
+  const open = file.activeMeetingId
+    ? file.meetings.find((m) => m.id === file.activeMeetingId && !m.endedAt)
+    : null
+  if (open) return open
   const now = new Date().toISOString()
-  const attendees: ClassAttendee[] = offering.rosterIds.map((athleteId) => ({
-    athleteId,
-    firstName: '',
-    lastName: '',
-    source: 'roster' as const,
-    at: now,
-  }))
   const meeting: ClassMeeting = {
     id: createId('mtg'),
     offeringId: offering.id,
     coachId: offering.coachId,
     startedAt: now,
-    attendees,
+    attendees: [],
     notes: [],
+    attendanceLogged: false,
   }
   file.meetings = [meeting, ...file.meetings].slice(0, 200)
   file.activeMeetingId = meeting.id
@@ -363,11 +401,20 @@ export function startClassMeeting(offering: CoachClassOffering): ClassMeeting {
   return meeting
 }
 
-export function endClassMeeting(id: string): ClassMeeting | null {
+export function endClassMeeting(
+  id: string,
+  opts?: { logAttendance?: boolean },
+): ClassMeeting | null {
   const file = read()
   const meeting = file.meetings.find((m) => m.id === id)
   if (!meeting) return null
+  const log = opts?.logAttendance === true
   meeting.endedAt = new Date().toISOString()
+  meeting.attendanceLogged = log
+  meeting.attendees = meeting.attendees.map((a) => ({
+    ...a,
+    logged: log ? true : a.logged === true,
+  }))
   if (file.activeMeetingId === id) file.activeMeetingId = null
   write(file)
   return meeting
@@ -379,6 +426,8 @@ export function markClassAttendance(input: {
   lastName: string
   source: ClassAttendee['source']
   meetingId?: string | null
+  /** Profile / admin edit. Live class leaves this false until End class. */
+  logged?: boolean
 }): ClassMeeting | null {
   const file = read()
   const meeting = input.meetingId
@@ -386,9 +435,10 @@ export function markClassAttendance(input: {
     : file.activeMeetingId
       ? file.meetings.find((m) => m.id === file.activeMeetingId && !m.endedAt)
       : null
-  if (!meeting || meeting.endedAt) return null
+  if (!meeting) return null
   const first = input.firstName.trim()
   const last = input.lastName.trim()
+  const logged = input.logged ?? Boolean(meeting.endedAt)
   const already = meeting.attendees.some((a) => {
     if (input.athleteId && a.athleteId === input.athleteId) return true
     return first && last ? namesMatch(a, first, last) : false
@@ -402,18 +452,30 @@ export function markClassAttendance(input: {
         lastName: last,
         source: input.source,
         at: new Date().toISOString(),
+        logged,
       },
     ]
+    if (logged) meeting.attendanceLogged = true
     write(file)
-  } else if (input.athleteId) {
+  } else {
     let changed = false
     meeting.attendees = meeting.attendees.map((a) => {
-      if (a.athleteId === input.athleteId || (first && last && namesMatch(a, first, last))) {
-        if (!a.athleteId) changed = true
-        return { ...a, athleteId: a.athleteId || input.athleteId }
+      const match =
+        (input.athleteId && a.athleteId === input.athleteId) ||
+        (first && last && namesMatch(a, first, last))
+      if (!match) return a
+      const next = {
+        ...a,
+        athleteId: a.athleteId || input.athleteId,
+        logged: input.logged !== undefined ? input.logged : a.logged,
       }
-      return a
+      if (next.athleteId !== a.athleteId || next.logged !== a.logged) changed = true
+      return next
     })
+    if (logged) {
+      meeting.attendanceLogged = true
+      changed = true
+    }
     if (changed) write(file)
   }
   return meeting
@@ -422,8 +484,10 @@ export function markClassAttendance(input: {
 export function removeClassAttendance(meetingId: string, athleteId: string): ClassMeeting | null {
   const file = read()
   const meeting = file.meetings.find((m) => m.id === meetingId)
-  if (!meeting || meeting.endedAt) return null
+  if (!meeting) return null
+  const before = meeting.attendees.length
   meeting.attendees = meeting.attendees.filter((a) => a.athleteId !== athleteId)
+  if (meeting.attendees.length === before) return meeting
   write(file)
   return meeting
 }

@@ -61,14 +61,31 @@ export function highlightStories(file: StoriesFile, highlight: StoryHighlight): 
   return highlight.storyIds.map((id) => map.get(id)).filter((s): s is GymStory => Boolean(s))
 }
 
+function storyMime(blob: Blob): string {
+  const raw = (blob.type || '').toLowerCase().split(';')[0]!.trim()
+  if (raw.startsWith('image/') || raw.startsWith('video/')) return raw
+  return 'video/mp4'
+}
+
 export async function publishStory(opts: {
   authorId: string
   blob: Blob
   caption?: string
   taggedIds?: string[]
 }): Promise<GymStory> {
+  if (!opts.authorId.trim()) {
+    throw new Error('Unlock a profile, then post the story again.')
+  }
+  if (!opts.blob.size) {
+    throw new Error('That clip was empty. Try a shorter video or a photo from Photos.')
+  }
+  if (opts.blob.size > 18 * 1024 * 1024) {
+    throw new Error('That clip is too large for a story. Keep it under about 18 MB.')
+  }
   const id = createId('stry')
-  const mime = opts.blob.type || 'video/webm'
+  const mime = storyMime(opts.blob)
+  const body =
+    opts.blob.type === mime ? opts.blob : new Blob([opts.blob], { type: mime })
   const qs = new URLSearchParams({
     id,
     authorId: opts.authorId,
@@ -79,13 +96,50 @@ export async function publishStory(opts: {
   const res = await fetch(`/api/stories?${qs.toString()}`, {
     method: 'POST',
     headers: { 'Content-Type': mime },
-    body: opts.blob,
+    body,
   })
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string }
     throw new Error(err.error || 'Could not post that story.')
   }
   return (await res.json()) as GymStory
+}
+
+export async function publishStoryFromUrl(opts: {
+  authorId: string
+  url: string
+  caption?: string
+  taggedIds?: string[]
+}): Promise<GymStory> {
+  const blob = await blobFromShareUrl(opts.url)
+  return publishStory({
+    authorId: opts.authorId,
+    blob,
+    caption: opts.caption,
+    taggedIds: opts.taggedIds,
+  })
+}
+
+async function blobFromShareUrl(raw: string): Promise<Blob> {
+  const url = raw.trim()
+  if (!url) throw new Error('This still needs a clip to post to a story.')
+  if (url.startsWith('shape-lab:')) {
+    throw new Error(
+      'A collage is several clips. Open Play and Save to Photos, or share one panel’s clip to your story.',
+    )
+  }
+  const { fetchInstagramVideo } = await import('./igCache')
+  const { socialPlatform } = await import('./socialUrls')
+  if (socialPlatform(url)) {
+    const { blob } = await fetchInstagramVideo(url)
+    if (!blob.size) throw new Error('Could not load that Instagram clip for a story.')
+    return blob
+  }
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Could not load that clip to post to a story.')
+  const blob = await res.blob()
+  if (!blob.size) throw new Error('That clip was empty.')
+  return blob
 }
 
 export async function saveHighlight(opts: {

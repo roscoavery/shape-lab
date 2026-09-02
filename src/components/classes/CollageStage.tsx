@@ -63,7 +63,6 @@ export function CollageStage({
   )
   const [cellAspect, setCellAspect] = useState(9 / 16)
   const [playingSlot, setPlayingSlot] = useState<number | null>(null)
-  const [loadAll, setLoadAll] = useState(false)
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
 
@@ -79,6 +78,29 @@ export function CollageStage({
   useEffect(() => {
     setChrome(!fullscreen)
   }, [fullscreen])
+
+  useEffect(() => {
+    const root = gridRef.current
+    if (!root) return
+    const playAll = () => {
+      const videos = [...root.querySelectorAll('video')] as HTMLVideoElement[]
+      for (const v of videos) {
+        v.muted = true
+        v.playsInline = true
+        v.setAttribute('playsinline', 'true')
+        v.setAttribute('webkit-playsinline', 'true')
+        if (v.paused) void v.play().catch(() => {})
+      }
+    }
+    playAll()
+    const id = window.setInterval(playAll, 700)
+    const mo = new MutationObserver(playAll)
+    mo.observe(root, { childList: true, subtree: true })
+    return () => {
+      window.clearInterval(id)
+      mo.disconnect()
+    }
+  }, [collage.id, collage.slots.map((s) => s.url).join('|'), fullscreen])
 
   useEffect(() => {
     const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
@@ -120,7 +142,6 @@ export function CollageStage({
   }, [fullscreen, chrome])
 
   const runExport = async () => {
-    setLoadAll(true)
     await new Promise((resolve) => window.setTimeout(resolve, 120))
     const videos = [...(gridRef.current?.querySelectorAll('video') ?? [])] as HTMLVideoElement[]
     if (videos.length === 0) {
@@ -315,8 +336,7 @@ export function CollageStage({
             className="relative min-h-0 min-w-0 overflow-hidden bg-black"
             style={spanLast ? { gridColumn: '1 / -1' } : undefined}
           >
-            {loadAll || playingSlot === i ? (
-              <GymClipPlayer
+            <GymClipPlayer
                 url={slot.url}
                 itemId={slot.clipId || `${collage.id}-${i}`}
                 fill
@@ -326,11 +346,11 @@ export function CollageStage({
                 compact
                 quiet
                 shareChrome={false}
-                bare={cinema}
-                active={loadAll || playingSlot === i}
+                bare={cinema && !allowAssign}
+                active
                 markup={false}
                 onAbChange={
-                  canEdit && onSlots && !cinema
+                  canEdit && onSlots
                     ? (a, b) => {
                         const slots = collage.slots.map((s, idx) =>
                           idx === i ? { ...s, loopA: a, loopB: b } : s,
@@ -340,23 +360,11 @@ export function CollageStage({
                     : undefined
                 }
               />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPlayingSlot(i)}
-                className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#0d1218] px-3 text-center"
-              >
-                <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black">
-                  Play
-                </span>
-                <span className="text-[12px] font-semibold text-white">{nameForUrl(slot.url)}</span>
-                <span className="text-[11px] text-white/50">Tap another tile to switch clips</span>
-              </button>
-            )}
-            {(playingSlot === i || cinema) && slot.url ? (
+            {slot.url ? (
               <button
                 type="button"
                 onClick={() => {
+                  setPlayingSlot(i)
                   setReelIndex(i)
                   setReelOpen(true)
                 }}
@@ -365,16 +373,20 @@ export function CollageStage({
                 Full screen
               </button>
             ) : null}
-            {!cinema && (
-              <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
+            <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
                 {allowAssign ? (
-                  <CollageSlotFill
-                    url={slot.url}
-                    clipId={slot.clipId}
-                    clips={clips}
-                    viewerId={viewerId}
-                    onPick={assignClip}
-                  />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
+                      This panel
+                    </p>
+                    <CollageSlotFill
+                      url={slot.url}
+                      clipId={slot.clipId}
+                      clips={clips}
+                      viewerId={viewerId}
+                      onPick={assignClip}
+                    />
+                  </div>
                 ) : (
                   <p className="text-[11px] font-semibold text-white">{nameForUrl(slot.url)}</p>
                 )}
@@ -382,7 +394,6 @@ export function CollageStage({
                   <p className="text-[12px] text-[var(--accent)]">{slot.caption}</p>
                 ) : null}
               </div>
-            )}
           </div>
         )
       })}

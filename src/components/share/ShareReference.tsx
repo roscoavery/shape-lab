@@ -14,6 +14,7 @@ import { coachAthleteMessageAllowed, coachShareCaption } from '../../lib/coachSh
 import { publishTextPostResult } from '../../lib/feedPosts'
 import { pushNotice } from '../../lib/notify'
 import { isInternalShareUrl, referenceShareUrl, shareUrlLabel } from '../../lib/shareReference'
+import { publishStoryFromUrl } from '../../lib/stories'
 import { useClipEditor } from '../ClipWatchMeta'
 import { givenName } from '../../lib/classStation'
 
@@ -41,7 +42,7 @@ export function ShareReference({
   const [caption, setCaption] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [tab, setTab] = useState<'board' | 'people' | 'feed'>('people')
+  const [tab, setTab] = useState<'board' | 'people' | 'feed' | 'story'>('people')
 
   const url = (shareUrl || referenceShareUrl(draft)).trim()
   const coach = Boolean(viewer && isCoachProfile(viewer))
@@ -127,6 +128,34 @@ export function ShareReference({
     setCaption('')
   }
 
+  const postStory = async () => {
+    if (!viewer) {
+      setNote('Unlock a profile to post a story.')
+      return
+    }
+    if (!url || isInternalShareUrl(url)) {
+      setNote(
+        'A collage is several clips at once. Open Play and Save to Photos, or share one panel’s clip to your story.',
+      )
+      return
+    }
+    setBusy(true)
+    setNote(null)
+    try {
+      await publishStoryFromUrl({
+        authorId: viewer.id,
+        url,
+        caption: caption.trim() || draft.title,
+      })
+      setNote(`Posted “${draft.title}” to your story.`)
+      setCaption('')
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : 'Could not post that story.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const sheet =
     open && typeof document !== 'undefined'
       ? createPortal(
@@ -176,6 +205,7 @@ export function ShareReference({
                         ['people', 'Athlete / coach'],
                         ['board', 'Chalkboard'],
                         ['feed', 'Feed'],
+                        ['story', 'Story'],
                       ] as const
                     ).map(([id, label]) => (
                       <button
@@ -256,6 +286,24 @@ export function ShareReference({
                         className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-50"
                       >
                         {busy ? 'Posting…' : 'Share to feed'}
+                      </button>
+                    </div>
+                  )}
+
+                  {tab === 'story' && (
+                    <div className="mt-3">
+                      <p className="text-xs text-[var(--muted)]">
+                        {isInternalShareUrl(url)
+                          ? 'Collages are four clips. Save the board to Photos, or open one panel and post that clip.'
+                          : 'Lives on Feed and Reference scroll for 24 hours.'}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={busy || !url || isInternalShareUrl(url)}
+                        onClick={() => void postStory()}
+                        className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-50"
+                      >
+                        {busy ? 'Posting…' : 'Post to your story'}
                       </button>
                     </div>
                   )}

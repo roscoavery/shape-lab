@@ -167,10 +167,27 @@ function VideoWorkbenchInner({
 
   useEffect(() => {
     const v = videoRef.current
-    if (!v || active === undefined) return
-    if (active) void v.play().catch(() => {})
-    else v.pause()
-  }, [active])
+    if (!v) return
+    const shouldPlay = active === true || (active === undefined && autoPlay)
+    if (!shouldPlay) {
+      if (active === false) v.pause()
+      return
+    }
+    v.muted = true
+    v.playsInline = true
+    v.setAttribute('playsinline', 'true')
+    v.setAttribute('webkit-playsinline', 'true')
+    const kick = () => {
+      void v.play().catch(() => {})
+    }
+    kick()
+    v.addEventListener('canplay', kick)
+    v.addEventListener('loadeddata', kick)
+    return () => {
+      v.removeEventListener('canplay', kick)
+      v.removeEventListener('loadeddata', kick)
+    }
+  }, [active, autoPlay, src])
 
   // Smooth slider + A/B loop enforcement via rAF
   useEffect(() => {
@@ -636,6 +653,7 @@ function VideoWorkbenchInner({
           loop={loop && !loopingAb}
           muted
           playsInline
+          autoPlay={autoPlay}
           preload="auto"
           onLoadedMetadata={onLoadedMetadata}
           onDurationChange={onDurationChange}

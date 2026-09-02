@@ -30,7 +30,7 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
           </p>
           <h3 className="text-lg font-semibold">Collages</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Play one tile, switch to another, pick a different gym clip, or drop in
+            All panels play at once. Change the gym clip on any tile, or drop in
             a quick record / Photos upload. Save to Photos exports the board.
           </p>
         </div>

@@ -15,6 +15,7 @@ import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
+import { EndClassPrompt } from '../today/EndClassPrompt'
 import { ChalkboardPanel } from '../today/ChalkboardPanel'
 import { TodayCollages } from '../today/TodayCollages'
 import {
@@ -77,6 +78,7 @@ export function HomeDashboard({
   const [lessonQuery, setLessonQuery] = useState('')
   const [lessonMore, setLessonMore] = useState(false)
   const [pickHint, setPickHint] = useState(false)
+  const [endAsk, setEndAsk] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
@@ -347,8 +349,8 @@ export function HomeDashboard({
               {classLabel(liveOffering)}
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {liveClass.attendees.length} on tonight&apos;s roster. Close this
-              only after you tap End class.
+              {liveClass.attendees.length} marked here tonight. End class asks
+              whether to write Class nights — it does not log the roster by itself.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -360,17 +362,29 @@ export function HomeDashboard({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  endClassMeeting(liveClass.id)
-                  setRefresh((n) => n + 1)
-                  onStartClass()
-                }}
+                onClick={() => setEndAsk(true)}
                 className="rounded-lg border border-[var(--bad)] px-4 py-2 text-sm font-semibold text-[var(--bad)]"
               >
                 End class
               </button>
             </div>
           </div>
+        )}
+        {endAsk && liveClass && (
+          <EndClassPrompt
+            count={liveClass.attendees.length}
+            onLog={() => {
+              endClassMeeting(liveClass.id, { logAttendance: true })
+              setEndAsk(false)
+              setRefresh((n) => n + 1)
+            }}
+            onSkip={() => {
+              endClassMeeting(liveClass.id, { logAttendance: false })
+              setEndAsk(false)
+              setRefresh((n) => n + 1)
+            }}
+            onStay={() => setEndAsk(false)}
+          />
         )}
         <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
           {onStartClass && !liveClass && (

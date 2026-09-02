@@ -217,7 +217,7 @@ export function ClassStopwatch({
     if (otherKind === 'hold') {
       const secs = Number(manual || offer)
       if (!Number.isFinite(secs) || secs <= 0) {
-        setFlash('Type the seconds, or start and stop the clock on Core holds first.')
+        setFlash('Start and stop the clock, or type the seconds.')
         return
       }
       const n = logClassExtraForAthletes({
@@ -448,47 +448,15 @@ export function ClassStopwatch({
               </div>
             </div>
           )}
-          <p className="text-center font-mono text-5xl font-bold tabular-nums">
-            {formatWatch(ms)}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {!running ? (
-              <button
-                type="button"
-                onClick={start}
-                className="rounded-xl bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[#06281f]"
-              >
-                Start
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={stop}
-                className="rounded-xl bg-[var(--bad)] px-5 py-2 text-sm font-bold text-white"
-              >
-                Stop
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={reset}
-              className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold"
-            >
-              Reset
-            </button>
-          </div>
-          <label className="block text-sm">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
-              Seconds to log
-            </span>
-            <input
-              inputMode="decimal"
-              value={manual}
-              onChange={(e) => setManual(e.target.value)}
-              placeholder="Or type the time"
-              className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3"
-            />
-          </label>
+          <HoldClock
+            ms={ms}
+            running={running}
+            manual={manual}
+            onManual={setManual}
+            onStart={start}
+            onStop={stop}
+            onReset={reset}
+          />
           <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
           <button
             type="button"
@@ -547,8 +515,8 @@ export function ClassStopwatch({
       {mode === 'other' && (
         <>
           <p className="text-sm text-white/60">
-            Type what they just did if it is not on the clock. Log a hold or a
-            set — it lands on their homework as in class.
+            Type what they just did if it is not on the clock. Holds use the
+            same start / stop watch as core holds. Reps take sets × count.
           </p>
           <input
             className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
@@ -577,17 +545,15 @@ export function ClassStopwatch({
             </button>
           </div>
           {otherKind === 'hold' ? (
-            <label className="block text-sm">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                Seconds
-              </span>
-              <input
-                inputMode="decimal"
-                value={manual}
-                onChange={(e) => setManual(e.target.value)}
-                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
-              />
-            </label>
+            <HoldClock
+              ms={ms}
+              running={running}
+              manual={manual}
+              onManual={setManual}
+              onStart={start}
+              onStop={stop}
+              onReset={reset}
+            />
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-sm">
@@ -765,6 +731,70 @@ export function ClassStopwatch({
       </p>
       <div className="mt-4">{body}</div>
     </section>
+  )
+}
+
+function HoldClock({
+  ms,
+  running,
+  manual,
+  onManual,
+  onStart,
+  onStop,
+  onReset,
+}: {
+  ms: number
+  running: boolean
+  manual: string
+  onManual: (v: string) => void
+  onStart: () => void
+  onStop: () => void
+  onReset: () => void
+}) {
+  return (
+    <>
+      <p className="text-center font-mono text-5xl font-bold tabular-nums">
+        {formatWatch(ms)}
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {!running ? (
+          <button
+            type="button"
+            onClick={onStart}
+            className="rounded-xl bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[#06281f]"
+          >
+            Start
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onStop}
+            className="rounded-xl bg-[var(--bad)] px-5 py-2 text-sm font-bold text-white"
+          >
+            Stop
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold"
+        >
+          Reset
+        </button>
+      </div>
+      <label className="block text-sm">
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+          Seconds to log
+        </span>
+        <input
+          inputMode="decimal"
+          value={manual}
+          onChange={(e) => onManual(e.target.value)}
+          placeholder="Or type the time"
+          className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3"
+        />
+      </label>
+    </>
   )
 }
 

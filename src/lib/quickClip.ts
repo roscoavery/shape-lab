@@ -39,14 +39,34 @@ export async function recordQuickClip(seconds = 8): Promise<Blob> {
   }
 }
 
+export function guessClipMime(file: Pick<File, 'type' | 'name'>): string {
+  const typed = (file.type || '').toLowerCase().split(';')[0]!.trim()
+  if (typed && typed !== 'application/octet-stream') return typed
+  const name = (file.name || '').toLowerCase()
+  if (name.endsWith('.mov')) return 'video/quicktime'
+  if (name.endsWith('.m4v') || name.endsWith('.mp4')) return 'video/mp4'
+  if (name.endsWith('.webm')) return 'video/webm'
+  if (name.endsWith('.heic')) return 'image/heic'
+  if (name.endsWith('.heif')) return 'image/heif'
+  if (name.endsWith('.png')) return 'image/png'
+  if (name.endsWith('.webp')) return 'image/webp'
+  if (name.endsWith('.gif')) return 'image/gif'
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg'
+  return ''
+}
+
 export async function fileToClipBlob(file: File): Promise<Blob> {
-  if (!file.type.startsWith('video/') && !file.type.startsWith('image/')) {
+  const mime = guessClipMime(file)
+  if (!mime.startsWith('video/') && !mime.startsWith('image/')) {
     throw new Error('Pick a video or a photo from your library.')
   }
   if (file.size > 48 * 1024 * 1024) {
     throw new Error('That file is too large for this gym link. Keep it under about 45 MB.')
   }
-  return file
+  if (file.size < 24) {
+    throw new Error('That file was empty. Try another clip from Photos.')
+  }
+  return mime && mime !== file.type ? new File([file], file.name || 'clip', { type: mime }) : file
 }
 
 export async function saveQuickClip(opts: {
