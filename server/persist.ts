@@ -34,6 +34,15 @@ function useBlob(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 }
 
+export type PersistMode = 'blob' | 'disk' | 'tmp'
+
+/** Where gym JSON actually lasts. `tmp` is gone after a Vercel cold start. */
+export function persistMode(): PersistMode {
+  if (useBlob()) return 'blob'
+  if (canWrite(path.dirname(diskPath('data/roster.json')))) return 'disk'
+  return 'tmp'
+}
+
 export async function readText(rel: string): Promise<string | null> {
   const cached = mem.get(rel)
   if (cached) return cached.toString('utf8')

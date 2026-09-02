@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
+import { GymRecords } from './components/GymRecords'
 import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
@@ -980,6 +981,7 @@ export default function App() {
 
       {tab === 'history' && (
         <div className="mx-auto grid max-w-3xl gap-4">
+          <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />
           <AthletePanel
             athletes={athletes}
             activeId={activeAthleteId}
@@ -1001,10 +1003,11 @@ export default function App() {
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">What this is</h2>
             <p>
-              Shape Lab is a free, local-first prototype for gymnastics shape coaching. It uses
-              MediaPipe Pose in your browser — no paid APIs, no account required. Attempts,
-              athlete profiles, curriculum progress, and reference photos stay on this device via
-              localStorage.
+              Shape Lab is a free gymnastics shape-coaching app. Profiles, phones, and
+              homework save on this phone and copy to the gym link. On a claimed Vercel
+              project that has a Blob token, that copy lasts. A temporary link without
+              Blob only keeps server data while the function stays warm. More → Profiles
+              has the contact list and a gym backup.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

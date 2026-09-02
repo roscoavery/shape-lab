@@ -52,12 +52,14 @@ import {
 import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
+import { persistMode } from './persist.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
   '/api/roster',
+  '/api/persist',
   '/api/ig-stills',
   '/api/ig-still-file',
   '/api/shape-copy',
@@ -146,6 +148,14 @@ export async function handleShapeLabApi(
     if (!(await sendIgStillFile(id, res))) {
       sendJson(res, 404, { error: 'Still file not found' })
     }
+    return true
+  }
+  if (path === '/api/persist') {
+    const mode = persistMode()
+    sendJson(res, 200, {
+      mode,
+      lasting: mode === 'blob' || mode === 'disk',
+    })
     return true
   }
   if (path === '/api/roster') {

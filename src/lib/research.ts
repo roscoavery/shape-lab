@@ -36,11 +36,13 @@ const EMPTY: ResearchFile = {
   ideas: [],
 }
 
-export async function loadResearch(): Promise<ResearchFile> {
+const RESEARCH_CACHE_KEY = 'shape-lab.research.v1'
+
+function readCachedResearch(): ResearchFile {
   try {
-    const res = await fetch('/api/research')
-    if (!res.ok) return { ...EMPTY }
-    const data = (await res.json()) as ResearchFile
+    const raw = localStorage.getItem(RESEARCH_CACHE_KEY)
+    if (!raw) return { ...EMPTY }
+    const data = JSON.parse(raw) as ResearchFile
     if (!data || data.kind !== 'shape-lab-research') return { ...EMPTY }
     return {
       ...EMPTY,
@@ -53,17 +55,72 @@ export async function loadResearch(): Promise<ResearchFile> {
   }
 }
 
+function writeCachedResearch(file: ResearchFile) {
+  try {
+    localStorage.setItem(RESEARCH_CACHE_KEY, JSON.stringify(file))
+  } catch {
+    /* quota */
+  }
+}
+
+function mergeResearch(a: ResearchFile, b: ResearchFile): ResearchFile {
+  const byObs = new Map<string, Observation>()
+  for (const row of [...a.observations, ...b.observations]) {
+    if (!row?.id) continue
+    const key = `${row.studyId}::${row.subjectId}`
+    const prev = byObs.get(key)
+    if (!prev || (row.updatedAt || '') >= (prev.updatedAt || '')) byObs.set(key, row)
+  }
+  const byIdea = new Map<string, StudyIdea>()
+  for (const row of [...a.ideas, ...b.ideas]) {
+    if (row?.id) byIdea.set(row.id, row)
+  }
+  return {
+    kind: 'shape-lab-research',
+    version: 1,
+    exportedAt: a.exportedAt || b.exportedAt || '',
+    observations: [...byObs.values()],
+    ideas: [...byIdea.values()],
+  }
+}
+
+export async function loadResearch(): Promise<ResearchFile> {
+  const cached = readCachedResearch()
+  try {
+    const res = await fetch('/api/research')
+    if (!res.ok) return cached
+    const data = (await res.json()) as ResearchFile
+    if (!data || data.kind !== 'shape-lab-research') return cached
+    const server: ResearchFile = {
+      ...EMPTY,
+      ...data,
+      observations: Array.isArray(data.observations) ? data.observations : [],
+      ideas: Array.isArray(data.ideas) ? data.ideas : [],
+    }
+    const merged = mergeResearch(cached, server)
+    writeCachedResearch(merged)
+    return merged
+  } catch {
+    return cached
+  }
+}
+
 export async function saveResearch(file: ResearchFile): Promise<ResearchFile | null> {
+  const mergedLocal = mergeResearch(readCachedResearch(), file)
+  writeCachedResearch(mergedLocal)
   try {
     const res = await fetch('/api/research', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
+      body: JSON.stringify(mergedLocal),
     })
-    if (!res.ok) return null
-    return (await res.json()) as ResearchFile
+    if (!res.ok) return mergedLocal
+    const saved = (await res.json()) as ResearchFile
+    const merged = mergeResearch(mergedLocal, saved)
+    writeCachedResearch(merged)
+    return merged
   } catch {
-    return null
+    return mergedLocal
   }
 }
 

@@ -57,7 +57,7 @@ Sign in with the claim URL, then in the Vercel project connect [github.com/rosco
 
 | Variable | Required | What it does |
 | --- | --- | --- |
-| `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster, Compare library, feed, stills, and videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Without it, writes live only in a warm function (`/tmp`) and disappear on cold start. |
+| `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster, Compare library, feed, stills, research, and videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Claiming a temporary `*.vercel.app` link does **not** add this. Without it, new profiles stay on that phone and vanish from the server on a cold start. |
 
 How to add it:
 

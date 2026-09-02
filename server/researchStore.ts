@@ -167,9 +167,15 @@ function writeShape(input: {
 
 export async function writeResearchFile(raw: unknown): Promise<DiskResearch> {
   const body = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const next = writeShape({
+  const current = await readResearchFile()
+  const incoming = writeShape({
     observations: Array.isArray(body.observations) ? body.observations : [],
     ideas: Array.isArray(body.ideas) ? body.ideas : [],
+    exportedAt: new Date().toISOString(),
+  })
+  const next = writeShape({
+    observations: [...current.observations, ...incoming.observations],
+    ideas: [...current.ideas, ...incoming.ideas],
     exportedAt: new Date().toISOString(),
   })
   await writeJson(FILE, next)
