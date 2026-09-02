@@ -9,9 +9,11 @@ import {
   formatVideoDay,
   groupVideosByDate,
   listAthleteVideos,
+  listClassVideos,
   SOURCE_LABEL,
   type AthleteVideo,
 } from '../lib/athleteVideoStore'
+import { classLabel, loadOfferings, subscribeCoachClasses } from '../lib/coachClasses'
 import { emptyCoachSkillRef, saveCoachSkillRef, uploadCoachMedia } from '../lib/coachContentStore'
 import { ClipTrimmer } from './coach/ClipTrimmer'
 
@@ -28,6 +30,7 @@ type Props = {
   canSaveReference?: boolean
   /** Skip the outer heading — parent already titled this block. */
   embedded?: boolean
+  showClassFolders?: boolean
 }
 
 async function copyToCoachMedia(src: string, ownerId: string, name: string): Promise<string> {
@@ -52,6 +55,7 @@ export function VideoLibraryPanel({
   coachName = null,
   canSaveReference = false,
   embedded = false,
+  showClassFolders = false,
 }: Props) {
   const [videos, setVideos] = useState<AthleteVideo[]>([])
   const [playing, setPlaying] = useState<string | null>(null)
@@ -59,16 +63,24 @@ export function VideoLibraryPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
+  const [classId, setClassId] = useState<string | null>(null)
+  const [offerings, setOfferings] = useState(() => loadOfferings())
+
+  useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
 
   useEffect(() => {
+    if (classId) {
+      void listClassVideos(classId).then(setVideos)
+      return
+    }
     if (!athleteId) {
       setVideos([])
       return
     }
     void listAthleteVideos(athleteId).then(setVideos)
-  }, [athleteId, refreshKey])
+  }, [athleteId, refreshKey, classId])
 
-  if (!athleteId) {
+  if (!athleteId && !classId) {
     const empty = (
       <p className="text-sm text-[var(--muted)]">
         Unlock a profile to see clips saved from lessons, Compare, homework, and
@@ -103,11 +115,46 @@ export function VideoLibraryPanel({
         <>
           <h3 className="text-lg font-semibold">Video library</h3>
           <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-            {athleteName ? `${athleteName} · ` : ''}
-            {folder === 'lesson'
+            {classId
+              ? 'This class folder. Replay-cam saves land here while that class is running.'
+              : athleteName
+                ? `${athleteName} · `
+                : ''}
+            {!classId && folder === 'lesson'
               ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
-              : 'Saved into this profile. Grouped by date.'}
+              : !classId
+                ? 'Saved into this profile. Grouped by date.'
+                : ''}
           </p>
+          {showClassFolders && offerings.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setClassId(null)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  !classId
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-[var(--panel-border)]'
+                }`}
+              >
+                This profile
+              </button>
+              {offerings.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setClassId(o.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    classId === o.id
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-[var(--panel-border)]'
+                  }`}
+                >
+                  {classLabel(o)}
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
       {error && (
@@ -168,7 +215,7 @@ export function VideoLibraryPanel({
                         <button
                           type="button"
                           onClick={() => {
-                            void deleteAthleteVideo(v.id, athleteId)
+                            void deleteAthleteVideo(v.id, v.athleteId || athleteId || '')
                               .then(() => setVideos((prev) => prev.filter((x) => x.id !== v.id)))
                               .catch(() => setError('Could not delete that clip.'))
                           }}
@@ -212,7 +259,7 @@ export function VideoLibraryPanel({
                                   trimStart: start,
                                   trimEnd: end,
                                   lessonId: v.lessonId ?? lessonId ?? undefined,
-                                  athleteId,
+                                  athleteId: v.athleteId || athleteId || undefined,
                                   athleteName: athleteName ?? undefined,
                                 })
                                 setFlash(`Saved “${name}” to skill references. Open Compare to play it with the UG clips.`)

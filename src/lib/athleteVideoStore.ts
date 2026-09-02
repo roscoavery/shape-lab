@@ -21,6 +21,8 @@ export type AthleteVideo = {
   lessonId?: string
   skillId?: string
   skillLabel?: string
+  classId?: string
+  className?: string
 }
 
 export const SOURCE_LABEL: Record<AthleteVideoSource, string> = {
@@ -43,6 +45,17 @@ export async function listAthleteVideos(athleteId: string): Promise<AthleteVideo
   }
 }
 
+export async function listClassVideos(classId: string): Promise<AthleteVideo[]> {
+  try {
+    const res = await fetch(`/api/athlete-videos?classId=${encodeURIComponent(classId)}`)
+    if (!res.ok) return []
+    const data = (await res.json()) as { videos?: AthleteVideo[] }
+    return Array.isArray(data.videos) ? data.videos : []
+  } catch {
+    return []
+  }
+}
+
 export async function uploadAthleteVideo(opts: {
   athleteId: string
   blob: Blob
@@ -52,6 +65,8 @@ export async function uploadAthleteVideo(opts: {
   lessonId?: string | null
   skillId?: string | null
   skillLabel?: string | null
+  classId?: string | null
+  className?: string | null
 }): Promise<AthleteVideo> {
   const id = createId('vid')
   const mime = opts.blob.type || 'video/webm'
@@ -60,8 +75,10 @@ export async function uploadAthleteVideo(opts: {
   const skillLabelQ = opts.skillLabel
     ? `&skillLabel=${encodeURIComponent(opts.skillLabel)}`
     : ''
+  const classQ = opts.classId ? `&classId=${encodeURIComponent(opts.classId)}` : ''
+  const classNameQ = opts.className ? `&className=${encodeURIComponent(opts.className)}` : ''
   const res = await fetch(
-    `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(opts.athleteId)}&name=${encodeURIComponent(opts.name)}&source=${encodeURIComponent(opts.source)}&mime=${encodeURIComponent(mime)}&durationSec=${encodeURIComponent(String(opts.durationSec ?? ''))}${lessonQ}${skillQ}${skillLabelQ}`,
+    `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(opts.athleteId)}&name=${encodeURIComponent(opts.name)}&source=${encodeURIComponent(opts.source)}&mime=${encodeURIComponent(mime)}&durationSec=${encodeURIComponent(String(opts.durationSec ?? ''))}${lessonQ}${skillQ}${skillLabelQ}${classQ}${classNameQ}`,
     {
       method: 'POST',
       headers: { 'Content-Type': mime },

@@ -12,6 +12,13 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
+import {
+  classLabel,
+  endClassMeeting,
+  getActiveMeeting,
+  getOffering,
+  subscribeCoachClasses,
+} from '../../lib/coachClasses'
 
 type Props = {
   athletes: Athlete[]
@@ -37,6 +44,9 @@ export function HomeDashboard({
   const [refresh, setRefresh] = useState(0)
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
+  useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
+  const liveClass = coach ? getActiveMeeting() : null
+  const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
 
   const roster = useMemo(
     () =>
@@ -136,7 +146,41 @@ export function HomeDashboard({
           — Connections (Monday 5pm) — so shape-test names and homework land on
           that roster.
         </p>
-        {onStartClass && (
+        {onStartClass && liveClass && liveOffering && (
+          <div className="mt-3 rounded-2xl border border-[var(--accent)] bg-[#102820] px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+              Class is running
+            </p>
+            <p className="mt-1 text-2xl font-bold text-[var(--text)]">
+              {classLabel(liveOffering)}
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {liveClass.attendees.length} on tonight&apos;s roster. Close this
+              only after you tap End class.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onStartClass}
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+              >
+                Open running class
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  endClassMeeting(liveClass.id)
+                  setRefresh((n) => n + 1)
+                  onStartClass()
+                }}
+                className="rounded-lg border border-[var(--bad)] px-4 py-2 text-sm font-semibold text-[var(--bad)]"
+              >
+                End class
+              </button>
+            </div>
+          </div>
+        )}
+        {onStartClass && !liveClass && (
           <button
             type="button"
             onClick={onStartClass}
@@ -147,8 +191,8 @@ export function HomeDashboard({
             </span>
             <span className="mt-1 block text-2xl font-bold">Start class</span>
             <span className="mt-1 block text-sm font-medium opacity-80">
-              Pick the class you teach tonight, track who is here, assign
-              homework to the whole group at the end.
+              Pick the class you teach tonight. Only that class roster gets
+              homework — not every name on the gym.
             </span>
           </button>
         )}

@@ -32,6 +32,8 @@ export type DiskAthleteVideo = {
   lessonId?: string
   skillId?: string
   skillLabel?: string
+  classId?: string
+  className?: string
 }
 
 export type DiskAthleteVideoLibrary = {
@@ -93,9 +95,13 @@ async function writeMeta(videos: DiskAthleteVideo[]): Promise<DiskAthleteVideoLi
   return next
 }
 
-export async function videosForClient(athleteId?: string): Promise<DiskAthleteVideo[]> {
+export async function videosForClient(
+  athleteId?: string,
+  classId?: string,
+): Promise<DiskAthleteVideo[]> {
   const all = (await readAthleteVideoMeta()).videos
-  const list = athleteId ? all.filter((v) => v.athleteId === athleteId) : all
+  let list = athleteId ? all.filter((v) => v.athleteId === athleteId) : all
+  if (classId) list = list.filter((v) => v.classId === classId)
   return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
@@ -132,6 +138,8 @@ export async function addAthleteVideoFromBody(params: {
   lessonId?: string
   skillId?: string
   skillLabel?: string
+  classId?: string
+  className?: string
 }): Promise<DiskAthleteVideo | null> {
   const id = safeId(params.id)
   const athleteId = safeId(params.athleteId)
@@ -159,6 +167,10 @@ export async function addAthleteVideoFromBody(params: {
     ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
     ...(params.skillLabel?.trim()
       ? { skillLabel: params.skillLabel.trim().slice(0, 120) }
+      : {}),
+    ...(safeId(params.classId ?? '') ? { classId: safeId(params.classId ?? '')! } : {}),
+    ...(params.className?.trim()
+      ? { className: params.className.trim().slice(0, 120) }
       : {}),
   }
   const meta = await readAthleteVideoMeta()

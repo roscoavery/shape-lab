@@ -617,6 +617,16 @@ export function addHomeworkLog(log: HomeworkLog): void {
   pushRosterSoon()
 }
 
+export function removeHomeworkLog(id: string): HomeworkLog | null {
+  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  const found = all.find((l) => l.id === id) ?? null
+  if (!found) return null
+  writeJson(HOMEWORK_LOGS_KEY, all.filter((l) => l.id !== id))
+  emitHomework()
+  pushRosterSoon()
+  return found
+}
+
 // ---------------------------------------------------------------------------
 // Reference photos (base64 data URLs in localStorage)
 // ---------------------------------------------------------------------------

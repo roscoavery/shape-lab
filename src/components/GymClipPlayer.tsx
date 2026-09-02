@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
 import { socialPlatform } from '../lib/socialUrls'
+import { prefetchInstagram } from '../lib/igCache'
 
 type Props = {
   url: string
@@ -42,6 +43,9 @@ export function GymClipPlayer({
   postedBy,
   onPostedBy,
 }: Props) {
+  useEffect(() => {
+    if (socialPlatform(url) && itemId) void prefetchInstagram(url, itemId)
+  }, [url, itemId])
   const social = socialPlatform(url)
   if (social) {
     const embed = (

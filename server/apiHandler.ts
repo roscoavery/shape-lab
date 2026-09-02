@@ -54,6 +54,7 @@ import { readCoachContentFile, writeCoachContentFile } from './coachContentStore
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
 import { persistMode } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
+import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 
 const API_PATHS = new Set([
   '/api/ig-resolve',
@@ -79,6 +80,7 @@ const API_PATHS = new Set([
   '/api/discuss',
   '/api/coach-library',
   '/api/lessons',
+  '/api/coach-classes',
   '/api/coach-content',
   '/api/coach-media',
   '/api/coach-media-file',
@@ -214,7 +216,8 @@ export async function handleShapeLabApi(
   if (path === '/api/athlete-videos') {
     if (req.method === 'GET') {
       const athleteId = url.searchParams.get('athleteId') ?? ''
-      const videos = (await videosForClient(athleteId || undefined)).map((v) => ({
+      const classId = url.searchParams.get('classId') ?? ''
+      const videos = (await videosForClient(athleteId || undefined, classId || undefined)).map((v) => ({
         ...v,
         url: `/api/athlete-video-file?id=${encodeURIComponent(v.id)}`,
       }))
@@ -237,6 +240,8 @@ export async function handleShapeLabApi(
         lessonId: url.searchParams.get('lessonId') ?? undefined,
         skillId: url.searchParams.get('skillId') ?? undefined,
         skillLabel: url.searchParams.get('skillLabel') ?? undefined,
+        classId: url.searchParams.get('classId') ?? undefined,
+        className: url.searchParams.get('className') ?? undefined,
       })
       if (!saved) {
         sendJson(res, 400, { error: 'Could not save that video.' })
@@ -486,6 +491,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeLessonsFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-classes') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachClassesFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeCoachClassesFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

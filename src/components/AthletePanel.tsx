@@ -35,6 +35,8 @@ type Props = {
   onSelect: (id: string | null) => void
   /** Destructive profile controls belong only on More → Profiles. */
   allowDelete?: boolean
+  /** Gym admin sees every profile. Everyone else only sees their own. */
+  canSeeAllProfiles?: boolean
 }
 
 export function AthletePanel({
@@ -43,6 +45,7 @@ export function AthletePanel({
   onChangeAthletes,
   onSelect,
   allowDelete = false,
+  canSeeAllProfiles = false,
 }: Props) {
   const [newProfileOpen, setNewProfileOpen] = useState(false)
   const [name, setName] = useState('')
@@ -64,6 +67,7 @@ export function AthletePanel({
   const [gymName, setGymName] = useState('')
   const [childName, setChildName] = useState('')
   const guests = loadQuizGuests()
+  void canSeeAllProfiles
   const [legacyPin, setLegacyPin] = useState('')
   const [legacyPinAgain, setLegacyPinAgain] = useState('')
   const [saved, setSaved] = useState<string | null>(null)

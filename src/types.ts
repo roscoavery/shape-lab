@@ -475,7 +475,7 @@ export type HomeworkLog = {
   /** Overall shape score (0–100) at log time; 0 for manual entries */
   score: number
   /** Class-flow sequence run vs a timed hold vs a set of reps. Missing = hold. */
-  kind?: 'hold' | 'sequence' | 'reps'
+  kind?: 'hold' | 'sequence' | 'reps' | 'set'
   /** Sequence completions, or counted reps for a strength drill. */
   reps?: number
   /** Reps the athlete counted as quality (form they would show a coach). */

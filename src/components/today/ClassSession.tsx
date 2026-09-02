@@ -3,24 +3,31 @@ import type { Athlete } from '../../types'
 import { profileRole } from '../../lib/profileRole'
 import {
   WEEKDAYS,
+  addClassNote,
   attendeeLabel,
   classLabel,
   endClassMeeting,
   getActiveMeeting,
+  getMeeting,
   loadMeetings,
   loadOfferings,
   markClassAttendance,
+  removeClassAttendance,
   removeOffering,
   resolveAttendeeAthletes,
+  rosterAthletes,
   saveOffering,
+  setOfferingRoster,
   startClassMeeting,
   subscribeCoachClasses,
+  toggleOfferingRoster,
   type ClassMeeting,
   type CoachClassOffering,
   type Weekday,
 } from '../../lib/coachClasses'
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
+import { LessonNoteBar } from '../lesson/LessonNoteBar'
 
 type Props = {
   coach: Athlete
@@ -33,18 +40,21 @@ type Props = {
 type Screen = 'pick' | 'live' | 'assign' | 'schedule'
 
 export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, onClose }: Props) {
-  const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings(coach.id))
+  const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
   const [screen, setScreen] = useState<Screen>('pick')
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
+  const [tick, setTick] = useState(0)
 
   const refresh = () => {
-    setOfferings(loadOfferings(coach.id))
+    setOfferings(loadOfferings())
+    setTick((n) => n + 1)
   }
 
-  useEffect(() => subscribeCoachClasses(refresh), [coach.id])
+  useEffect(() => subscribeCoachClasses(refresh), [])
 
-  const live = getActiveMeeting(coach.id)
-  const recent = loadMeetings(coach.id).filter((m) => m.endedAt).slice(0, 4)
+  const live = getActiveMeeting()
+  const recent = loadMeetings().filter((m) => m.endedAt).slice(0, 4)
+  void tick
 
   useEffect(() => {
     if (live) setScreen('live')
@@ -57,12 +67,14 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-            Today · Class
+            {live ? 'Class is running' : screen === 'assign' ? 'Class ended' : 'Today · Class'}
           </p>
           <p className="text-sm text-white/60">
             {live
-              ? classLabel(offeringFor(live.offeringId) ?? { ...offerings[0], name: 'Class', weekday: 'Monday', time: '' } as CoachClassOffering)
-              : 'Which class are you running?'}
+              ? classLabel(offeringFor(live.offeringId) ?? { name: 'Class', weekday: 'Monday', time: '' })
+              : screen === 'assign'
+                ? 'Homework for who was here'
+                : 'Which class are you running?'}
           </p>
         </div>
         <button
@@ -70,23 +82,28 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
           onClick={onClose}
           className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
         >
-          Close
+          {live ? 'Keep class running' : 'Close'}
         </button>
       </header>
+
+      {live && (
+        <div className="mx-4 mb-2 rounded-xl border border-[var(--accent)]/50 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
+          Live now · {classLabel(offeringFor(live.offeringId) ?? { name: 'Class', weekday: 'Monday', time: '' })}
+          . This hour stays open until you tap End class.
+        </div>
+      )}
 
       <div className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col overflow-y-auto px-4 pb-10">
         {screen === 'schedule' && (
           <ScheduleEditor
             coachId={coach.id}
             offerings={offerings}
+            athletes={athletes}
             onBack={() => {
               refresh()
               setScreen('pick')
             }}
-            onSaved={() => {
-              refresh()
-              setScreen('pick')
-            }}
+            onChanged={refresh}
           />
         )}
 
@@ -95,17 +112,12 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Start a class</h2>
               <p className="mt-2 text-sm text-white/65">
-                Pick the class you are on the floor for. Athletes who take the
-                shape test or get a profile during this hour land on the
-                attendance list so you can assign homework to everyone — or
-                just a few — when you wrap.
+                Pick the class you are on the floor for. That class roster is
+                who you assign homework to — not the whole gym.
               </p>
             </div>
             {offerings.length === 0 ? (
-              <QuickAddClass
-                coachId={coach.id}
-                onSaved={() => refresh()}
-              />
+              <QuickAddClass coachId={coach.id} athletes={athletes} onSaved={() => refresh()} />
             ) : (
               <div className="flex flex-col gap-2">
                 {offerings.map((o) => (
@@ -121,6 +133,9 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
                     <span className="block text-xl font-bold">{o.name}</span>
                     <span className="text-sm font-medium opacity-80">
                       {o.weekday} {o.time}
+                      {o.rosterIds.length
+                        ? ` · ${o.rosterIds.length} on roster`
+                        : ' · add a roster'}
                     </span>
                   </button>
                 ))}
@@ -131,17 +146,19 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
               onClick={() => setScreen('schedule')}
               className="rounded-2xl border border-white/15 px-4 py-3 text-sm font-semibold"
             >
-              {offerings.length ? 'Edit classes I teach' : 'Add a class I teach'}
+              {offerings.length ? 'Edit classes and rosters' : 'Add a class I teach'}
             </button>
             {recent.length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-                  Recent
+                  Ended recently
                 </p>
                 <ul className="mt-2 space-y-1 text-sm text-white/65">
                   {recent.map((m) => (
                     <li key={m.id}>
-                      {classLabel(offeringFor(m.offeringId) ?? ({ name: 'Class', weekday: 'Monday', time: '' } as CoachClassOffering))}{' '}
+                      {classLabel(
+                        offeringFor(m.offeringId) ?? { name: 'Class', weekday: 'Monday', time: '' },
+                      )}{' '}
                       · {m.attendees.length} athlete{m.attendees.length === 1 ? '' : 's'}
                     </li>
                   ))}
@@ -153,12 +170,13 @@ export function ClassSession({ coach, athletes, onOpenStation, onOpenShapeTest, 
 
         {screen === 'live' && live && (
           <LiveClass
-            meeting={live}
+            meeting={getMeeting(live.id) ?? live}
             offering={offeringFor(live.offeringId)}
             athletes={athletes}
+            coachId={coach.id}
             onStation={onOpenStation}
             onShapeTest={onOpenShapeTest}
-            onAdd={markClassAttendance}
+            onChanged={refresh}
             onEnd={() => {
               const done = endClassMeeting(live.id)
               setEnded(done)
@@ -185,38 +203,47 @@ function LiveClass({
   meeting,
   offering,
   athletes,
+  coachId,
   onStation,
   onShapeTest,
-  onAdd,
+  onChanged,
   onEnd,
 }: {
   meeting: ClassMeeting
   offering?: CoachClassOffering
   athletes: Athlete[]
+  coachId: string
   onStation: () => void
   onShapeTest: () => void
-  onAdd: typeof markClassAttendance
+  onChanged: () => void
   onEnd: () => void
 }) {
   const [pickId, setPickId] = useState('')
-  const roster = useMemo(
-    () => athletes.filter((a) => profileRole(a) === 'athlete' || !a.role),
-    [athletes],
-  )
+  const pool = useMemo(() => {
+    const roster = rosterAthletes(offering, athletes)
+    if (roster.length > 0) return roster
+    return athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  }, [athletes, offering])
   const present = resolveAttendeeAthletes(meeting, athletes)
+  const extras = athletes.filter(
+    (a) =>
+      (profileRole(a) === 'athlete' || !a.role) &&
+      !present.some((p) => p.id === a.id) &&
+      !pool.some((p) => p.id === a.id),
+  )
 
   return (
     <div className="flex flex-col gap-4 pt-2">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-          Live
+          Running
         </p>
         <h2 className="text-3xl font-bold tracking-tight">
           {offering ? classLabel(offering) : 'Class'}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          {meeting.attendees.length} here so far. Shape-test names land
-          automatically. You can also tap a profile in.
+          {meeting.attendees.length} on tonight&apos;s list. Add or remove from
+          this class only — not the whole gym.
         </p>
       </div>
 
@@ -249,12 +276,13 @@ function LiveClass({
           value={pickId}
           onChange={(e) => setPickId(e.target.value)}
         >
-          <option value="">Add a profile who is here…</option>
-          {roster
+          <option value="">Add someone who is here…</option>
+          {[...pool, ...extras]
             .filter((a) => !present.some((p) => p.id === a.id))
             .map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
+                {offering?.rosterIds.includes(a.id) ? '' : ' · not on roster'}
               </option>
             ))}
         </select>
@@ -262,17 +290,21 @@ function LiveClass({
           type="button"
           disabled={!pickId}
           onClick={() => {
-            const a = roster.find((row) => row.id === pickId)
+            const a = athletes.find((row) => row.id === pickId)
             if (!a) return
             const parts = splitPersonName(a.name)
-            onAdd({
+            markClassAttendance({
               meetingId: meeting.id,
               athleteId: a.id,
               firstName: a.firstName || parts.firstName,
               lastName: a.lastName || parts.lastName,
-              source: 'manual',
+              source: offering?.rosterIds.includes(a.id) ? 'roster' : 'manual',
             })
+            if (offering && !offering.rosterIds.includes(a.id)) {
+              toggleOfferingRoster(offering.id, a.id)
+            }
             setPickId('')
+            onChanged()
           }}
           className="rounded-xl bg-white/10 px-3 text-sm font-semibold disabled:opacity-40"
         >
@@ -282,32 +314,80 @@ function LiveClass({
 
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-          Here today
+          Here tonight
         </p>
         {meeting.attendees.length === 0 ? (
-          <p className="mt-2 text-sm text-white/55">Nobody checked in yet.</p>
+          <p className="mt-2 text-sm text-white/55">Nobody on this class list yet.</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {meeting.attendees.map((row, i) => (
               <li
                 key={`${row.athleteId ?? row.firstName}-${i}`}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
               >
-                <span className="font-semibold">{attendeeLabel(row, athletes)}</span>
-                <span className="ml-2 text-xs text-white/45">
-                  {row.athleteId ? 'Profile' : 'Name only'} ·{' '}
-                  {row.source === 'shape_test' ? 'shape test' : row.source}
+                <span>
+                  <span className="font-semibold">{attendeeLabel(row, athletes)}</span>
+                  <span className="ml-2 text-xs text-white/45">
+                    {row.athleteId ? 'Profile' : 'Name only'}
+                  </span>
                 </span>
+                {row.athleteId && (
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--bad)] underline"
+                    onClick={() => {
+                      removeClassAttendance(meeting.id, row.athleteId!)
+                      onChanged()
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
       </div>
 
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+          Class notes
+        </p>
+        <p className="mt-1 mb-2 text-sm text-white/60">
+          Same as a lesson note — what this group should remember.
+        </p>
+        <LessonNoteBar
+          coachId={coachId}
+          placeholder="Note for this class…"
+          onAdd={(text, topic) => {
+            addClassNote(meeting.id, text, {
+              kind: topic.kind,
+              id: topic.id,
+              label: topic.label,
+            })
+            onChanged()
+          }}
+        />
+        {(meeting.notes ?? []).length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {meeting.notes.map((note) => (
+              <li key={note.id} className="rounded-lg bg-black/30 px-3 py-2 text-sm">
+                {note.topicLabel && (
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    {note.topicLabel}
+                  </p>
+                )}
+                <p>{note.text}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <button
         type="button"
         onClick={onEnd}
-        className="mt-2 h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
+        className="mt-2 h-14 rounded-2xl border-2 border-[var(--bad)] bg-[#2a1518] text-lg font-bold text-[var(--bad)]"
       >
         End class · assign homework
       </button>
@@ -317,18 +397,22 @@ function LiveClass({
 
 function QuickAddClass({
   coachId,
+  athletes,
   onSaved,
 }: {
   coachId: string
+  athletes: Athlete[]
   onSaved: () => void
 }) {
   const [name, setName] = useState('Connections')
   const [weekday, setWeekday] = useState<Weekday>('Monday')
   const [time, setTime] = useState('5pm')
+  const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const [roster, setRoster] = useState<string[]>([])
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-sm text-white/70">
-        Name the class you are on the floor for. Example: Connections, Monday, 5pm.
+        Name the class, then tap who is usually in it. Tonight you only pick from that list.
       </p>
       <input
         className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
@@ -355,17 +439,67 @@ function QuickAddClass({
           onChange={(e) => setTime(e.target.value)}
         />
       </div>
+      <RosterPicker athletes={kids} selected={roster} onChange={setRoster} />
       <button
         type="button"
         disabled={!name.trim()}
         onClick={() => {
-          saveOffering({ coachId, name: name.trim(), weekday, time: time.trim() || '5pm' })
+          saveOffering({
+            coachId,
+            name: name.trim(),
+            weekday,
+            time: time.trim() || '5pm',
+            rosterIds: roster,
+          })
           onSaved()
         }}
         className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
       >
-        Save and show this class
+        Save this class
       </button>
+    </div>
+  )
+}
+
+function RosterPicker({
+  athletes,
+  selected,
+  onChange,
+}: {
+  athletes: Athlete[]
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+        Class roster
+      </p>
+      {athletes.length === 0 ? (
+        <p className="mt-1 text-sm text-white/55">No athlete profiles yet.</p>
+      ) : (
+        <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+          {athletes.map((a) => {
+            const on = selected.includes(a.id)
+            return (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(on ? selected.filter((id) => id !== a.id) : [...selected, a.id])
+                  }
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
+                    on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-black/30 text-white/80'
+                  }`}
+                >
+                  <span>{a.name}</span>
+                  <span className="text-xs">{on ? 'On roster' : 'Add'}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -373,24 +507,30 @@ function QuickAddClass({
 function ScheduleEditor({
   coachId,
   offerings,
+  athletes,
   onBack,
-  onSaved,
+  onChanged,
 }: {
   coachId: string
   offerings: CoachClassOffering[]
+  athletes: Athlete[]
   onBack: () => void
-  onSaved: () => void
+  onChanged: () => void
 }) {
   const [name, setName] = useState('')
   const [weekday, setWeekday] = useState<Weekday>('Monday')
   const [time, setTime] = useState('5pm')
+  const [editId, setEditId] = useState<string | null>(null)
+  const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const editing = offerings.find((o) => o.id === editId) ?? null
 
   return (
     <div className="flex flex-col gap-4 pt-4">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Classes I teach</h2>
         <p className="mt-2 text-sm text-white/65">
-          Name, day, and time. Today will show them as Connections (Monday 5pm).
+          These save to the gym link. Add a roster so Start class only shows
+          who is in that hour.
         </p>
       </div>
       <input
@@ -424,26 +564,52 @@ function ScheduleEditor({
         onClick={() => {
           saveOffering({ coachId, name: name.trim(), weekday, time: time.trim() || '5pm' })
           setName('')
-          onSaved()
+          onChanged()
         }}
         className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
       >
         Save class
       </button>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {offerings.map((o) => (
-          <li
-            key={o.id}
-            className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-          >
-            <span className="font-semibold">{classLabel(o)}</span>
-            <button
-              type="button"
-              className="text-xs text-[var(--bad)] underline"
-              onClick={() => removeOffering(o.id)}
-            >
-              Remove
-            </button>
+          <li key={o.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold">{classLabel(o)}</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => setEditId(editId === o.id ? null : o.id)}
+                >
+                  {editId === o.id ? 'Hide roster' : 'Roster'}
+                </button>
+                <button
+                  type="button"
+                  className="text-xs text-[var(--bad)] underline"
+                  onClick={() => {
+                    removeOffering(o.id)
+                    onChanged()
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-white/50">
+              {o.rosterIds.length} athlete{o.rosterIds.length === 1 ? '' : 's'} on this class
+            </p>
+            {editing?.id === o.id && (
+              <div className="mt-2">
+                <RosterPicker
+                  athletes={kids}
+                  selected={o.rosterIds}
+                  onChange={(next) => {
+                    setOfferingRoster(o.id, next)
+                    onChanged()
+                  }}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>

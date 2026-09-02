@@ -49,6 +49,7 @@ import {
   HOLLOW_PROGRESS_TARGET_SECONDS,
   addHomeworkItem,
   addHomeworkLog,
+  removeHomeworkLog,
   createId,
   flowHistoryForSequence,
   dedupeHomeworkItems,
@@ -248,10 +249,13 @@ function HomeworkProgressStrip({
 function HoldTimesBoard({
   logs,
   isPlank,
+  onRemove,
 }: {
   logs: HomeworkLog[]
   isPlank: boolean
+  onRemove?: (id: string) => void
 }) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   const last = lastHoldSeconds(logs)
   const best = bestHoldSeconds(logs)
   const bestLeft = isPlank ? bestHoldSeconds(logs, 'left') : 0
@@ -316,6 +320,11 @@ function HoldTimesBoard({
                   <span className="text-[12px] text-[var(--muted)]">
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
+                    {log.reps
+                      ? ` · ${log.reps} rep${log.reps === 1 ? '' : 's'}${
+                          log.qualityReps != null ? ` (${log.qualityReps} quality)` : ''
+                        }`
+                      : ''}
                     {log.loggedFrom === 'lesson' && (
                       <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
                         {log.coachName
@@ -325,14 +334,46 @@ function HoldTimesBoard({
                     )}
                     {isManual && (
                       <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
-                        stopwatch
+                        logged
                       </span>
                     )}
                   </span>
-                  <HoldProperTimes
-                    total={log.totalHoldSeconds}
-                    proper={!isManual ? proper : null}
-                  />
+                  <span className="flex items-center gap-2">
+                    <HoldProperTimes
+                      total={log.totalHoldSeconds}
+                      proper={!isManual ? proper : null}
+                    />
+                    {onRemove &&
+                      (confirmId === log.id ? (
+                        <span className="flex gap-1">
+                          <button
+                            type="button"
+                            className="rounded bg-[var(--bad)] px-2 py-0.5 text-[10px] font-semibold text-white"
+                            onClick={() => {
+                              onRemove(log.id)
+                              setConfirmId(null)
+                            }}
+                          >
+                            Are you sure?
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[10px] text-[var(--muted)] underline"
+                            onClick={() => setConfirmId(null)}
+                          >
+                            Keep
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-[10px] text-[var(--muted)] underline"
+                          onClick={() => setConfirmId(log.id)}
+                        >
+                          Remove
+                        </button>
+                      ))}
+                  </span>
                 </li>
               )
             })}
@@ -585,6 +626,7 @@ export function HomeworkPanel({
     'home' | 'pick' | 'watch' | 'add' | 'train' | 'wrist' | 'reps' | 'care'
   >('home')
   const watchStartRef = useRef<number | null>(null)
+  const logLockRef = useRef(false)
   const watchAccRef = useRef(0)
 
   const breakdownsRef = useRef<HomeworkBreakdown[]>([])
@@ -786,7 +828,7 @@ export function HomeworkPanel({
 
   const showFlash = (msg: string) => {
     setFlash(msg)
-    setTimeout(() => setFlash(null), 2500)
+    window.setTimeout(() => setFlash(null), 5000)
   }
 
   const resetSession = () => {
@@ -853,6 +895,7 @@ export function HomeworkPanel({
 
   const logSession = () => {
     if (!athleteId || !activeItem) return
+    if (logLockRef.current) return
     if (hold.totalHoldSeconds < 0.5) {
       showFlash('Nothing to log yet — hold the shape first.')
       return
@@ -872,9 +915,13 @@ export function HomeworkPanel({
       score: score.overall,
       ...(isPlank && plankSide !== 'both' ? { side: plankSide } : {}),
     }
+    logLockRef.current = true
     addHomeworkLog(log)
     setLogs((prev) => [log, ...prev])
     resetSession()
+    window.setTimeout(() => {
+      logLockRef.current = false
+    }, 1500)
     const shapeName = homeworkTitle(activeItem)
     const prior = lastHoldSeconds(
       (logsByItem.get(activeItem.id) ?? []).filter((row) => row.id !== log.id),
@@ -940,6 +987,7 @@ export function HomeworkPanel({
 
   const logManual = (item: HomeworkItem, secondsOverride?: number) => {
     if (!athleteId) return
+    if (logLockRef.current) return
     const secs = secondsOverride ?? Number(manualSeconds)
     if (!Number.isFinite(secs) || secs <= 0) {
       showFlash('Enter the hold time in seconds.')
@@ -961,11 +1009,15 @@ export function HomeworkPanel({
       score: 0,
       ...(isPlank && manualSide !== 'both' ? { side: manualSide } : {}),
     }
+    logLockRef.current = true
     addHomeworkLog(log)
     setLogs((prev) =>
       [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
     )
     setManualItemId(null)
+    window.setTimeout(() => {
+      logLockRef.current = false
+    }, 1500)
     const prior = lastHoldSeconds(
       (logsByItem.get(item.id) ?? []).filter((row) => row.id !== log.id),
       isPlank && manualSide !== 'both' ? manualSide : undefined,
@@ -1064,6 +1116,7 @@ export function HomeworkPanel({
     },
   ) => {
     if (!athleteId) return
+    if (logLockRef.current) return
     const log: HomeworkLog = {
       id: createId('hwlog'),
       athleteId,
@@ -1071,7 +1124,12 @@ export function HomeworkPanel({
       shapeId: item.shapeId,
       date: new Date().toISOString(),
       method: 'manual',
-      kind: input.holdSeconds && !input.reps ? 'hold' : 'reps',
+      kind:
+        input.holdSeconds && input.reps
+          ? 'set'
+          : input.holdSeconds && !input.reps
+            ? 'hold'
+            : 'reps',
       totalHoldSeconds: input.holdSeconds ?? 0,
       reps: input.reps || undefined,
       qualityReps: input.qualityReps || undefined,
@@ -1082,8 +1140,12 @@ export function HomeworkPanel({
       trackMode: input.trackMode,
       score: 0,
     }
+    logLockRef.current = true
     addHomeworkLog(log)
     setLogs((prev) => [log, ...prev])
+    window.setTimeout(() => {
+      logLockRef.current = false
+    }, 1500)
     if (input.journal || input.painLevel != null) {
       addPainJournalEntry({
         id: createId('pj'),
@@ -1099,13 +1161,11 @@ export function HomeworkPanel({
       })
       setPainJournal(loadPainJournal(athleteId))
     }
-    showFlash(
-      input.holdSeconds
-        ? `Logged ${homeworkTitle(item)} — ${input.holdSeconds}s`
-        : `Logged ${homeworkTitle(item)} — ${input.reps} reps${
-            input.qualityReps ? ` (${input.qualityReps} quality)` : ''
-          }`,
-    )
+    const bits = [
+      input.holdSeconds ? `${input.holdSeconds}s hold` : null,
+      input.reps ? `${input.reps} reps` : null,
+    ].filter(Boolean)
+    showFlash(`Logged ${homeworkTitle(item)} — ${bits.join(' + ')}`)
   }
 
   const levelUpHollow = (item: HomeworkItem) => {
@@ -1138,6 +1198,14 @@ export function HomeworkPanel({
 
   return (
     <div className="flex flex-col gap-3">
+      {flash && (
+        <p
+          role="status"
+          className="sticky top-0 z-20 rounded-lg border border-[var(--accent)] bg-[#102820] px-3 py-3 text-sm font-semibold text-[var(--accent)] shadow-lg"
+        >
+          {flash}
+        </p>
+      )}
       <div>
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
           Homework
@@ -1778,7 +1846,15 @@ export function HomeworkPanel({
 
               {detailsOpen && (
               <>
-              <HoldTimesBoard logs={itemLogs} isPlank={isPlank} />
+              <HoldTimesBoard
+                logs={itemLogs}
+                isPlank={isPlank}
+                onRemove={(id) => {
+                  removeHomeworkLog(id)
+                  setLogs((prev) => prev.filter((row) => row.id !== id))
+                  showFlash('Removed that logged set.')
+                }}
+              />
               {trendValues.length >= 2 && (
                 <div className="mt-1 flex justify-end">
                   <Sparkline values={trendValues} target={item.targetSeconds} />
@@ -2031,11 +2107,6 @@ export function HomeworkPanel({
         </HwOverlay>
       )}
 
-      {flash && (
-        <p className="rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
-          {flash}
-        </p>
-      )}
     </div>
   )
 }

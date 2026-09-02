@@ -27,6 +27,7 @@ import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
+import { prefetchNeighborClips } from '../../lib/igCache'
 import { PhoneReelViewer } from '../PhoneReelViewer'
 import type { Athlete } from '../../types'
 
@@ -74,6 +75,15 @@ export function ClassesPanel({ athlete }: Props) {
   const editorRef = useRef<HTMLElement | null>(null)
   const canEdit = Boolean(athlete)
   const gymAdmin = isGymAdmin(athlete)
+
+  useEffect(() => {
+    const slots = playing?.slots ?? draft?.slots ?? []
+    prefetchNeighborClips(
+      slots.map((s) => ({ id: s.clipId, url: s.url })),
+      0,
+      slots.length,
+    )
+  }, [playing, draft])
 
   useEffect(() => {
     void listCollages(athlete?.id).then(setCollages)

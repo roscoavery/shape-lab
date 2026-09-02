@@ -23,9 +23,8 @@ type Props = {
 export function RepSession({ item, logs, onLog, onDone }: Props) {
   const cat = getCatalogItem(item.catalogId ?? item.shapeId)
   const mode = item.trackMode ?? cat?.trackMode ?? 'reps'
-  const [sessionMode, setSessionMode] = useState<HomeworkTrackMode>(
-    mode === 'hold_or_reps' ? 'hold' : mode,
-  )
+  const allowHold = mode === 'hold' || mode === 'hold_or_reps'
+  const allowReps = mode === 'reps' || mode === 'hold_or_reps'
   const [reps, setReps] = useState(String(item.targetReps ?? cat?.targetReps ?? ''))
   const [quality, setQuality] = useState('')
   const [holdSec, setHoldSec] = useState('')
@@ -34,8 +33,9 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
   const [pain, setPain] = useState('')
   const [journal, setJournal] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  const last = logs.find((l) => l.kind === 'reps' || (l.reps != null && l.kind !== 'sequence'))
+  const last = logs[0]
   const bestHold = useMemo(
     () => logs.reduce((best, l) => Math.max(best, l.totalHoldSeconds || 0), 0),
     [logs],
@@ -45,73 +45,75 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
     (l) =>
       (l.totalHoldSeconds ?? 0) >= 120 && (l.painLevel == null || l.painLevel === 0),
   )
-  const blockReps = isBackExt && sessionMode !== 'hold' && !painFreeTwoMin
 
   const save = () => {
-    if (blockReps) {
-      setError('Hold two pain-free minutes before back-extension reps.')
-      return
-    }
+    if (saving) return
     const r = Number(reps)
     const q = quality === '' ? r : Number(quality)
     const hold = holdSec === '' ? undefined : Number(holdSec)
     const w = weight === '' ? undefined : Number(weight)
     const p = pain === '' ? undefined : Number(pain)
-    if (sessionMode === 'hold' || sessionMode === 'hold_or_reps') {
-      if (hold == null || !Number.isFinite(hold) || hold <= 0) {
-        setError('Enter hold seconds.')
+    const hasHold = hold != null && Number.isFinite(hold) && hold > 0
+    const hasReps = Number.isFinite(r) && r > 0
+    if (allowHold && allowReps) {
+      if (!hasHold && !hasReps) {
+        setError('Enter a hold, reps, or both for this set.')
         return
       }
+    } else if (allowHold && !hasHold) {
+      setError('Enter hold seconds.')
+      return
+    } else if (allowReps && !hasReps) {
+      setError('Enter how many reps you did.')
+      return
     }
-    if (sessionMode === 'reps' || sessionMode === 'hold_or_reps') {
-      if (!Number.isFinite(r) || r <= 0) {
-        setError('Enter how many reps you did.')
-        return
-      }
-      if (!Number.isFinite(q) || q < 0) {
-        setError('Quality reps has to be a number.')
-        return
-      }
+    if (hasReps && quality !== '' && (!Number.isFinite(q) || q < 0)) {
+      setError('Quality reps has to be a number.')
+      return
     }
+    setError(null)
+    setSaving(true)
     onLog({
-      reps: Number.isFinite(r) ? r : 0,
-      qualityReps: Number.isFinite(q) ? Math.min(q, r || q) : 0,
-      holdSeconds: hold,
+      reps: hasReps ? r : 0,
+      qualityReps: hasReps && Number.isFinite(q) ? Math.min(q, r || q) : 0,
+      holdSeconds: hasHold ? hold : undefined,
       grip: grip || undefined,
       weightLb: w != null && Number.isFinite(w) ? w : undefined,
       painLevel: p != null && Number.isFinite(p) ? Math.min(10, Math.max(0, p)) : undefined,
       journal: journal.trim() || undefined,
-      trackMode: sessionMode === 'hold_or_reps' ? (hold ? 'hold' : 'reps') : sessionMode,
+      trackMode: hasHold && hasReps ? 'hold_or_reps' : hasHold ? 'hold' : 'reps',
     })
+    setHoldSec('')
+    window.setTimeout(() => setSaving(false), 1200)
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          Log {sessionMode === 'hold' ? 'a hold' : 'reps'}
+          Log a set
         </p>
         <h3 className="text-lg font-semibold text-[var(--text)]">{homeworkTitle(item)}</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {cat?.notes ??
-            item.notes ??
-            'Count the reps you would show a coach, then the ones that were quality.'}
+          {allowHold && allowReps
+            ? 'One set can be a hold, reps, or both — for example 2 minutes then 5 reps.'
+            : (cat?.notes ??
+              item.notes ??
+              'Count the reps you would show a coach, then the ones that were quality.')}
         </p>
       </div>
 
       {isBackExt && (
         <div className="rounded-lg border border-[var(--warn)]/40 bg-[#2a2312] px-3 py-2 text-sm text-[var(--text)]">
-          <p className="font-semibold text-[var(--warn)]">Back extension rule</p>
+          <p className="font-semibold text-[var(--warn)]">Back extensions</p>
           <p className="mt-1 text-[var(--muted)]">
-            Do not start reps until you can hold 2 minutes with no pain. When reps
-            start, go very slow in a tiny range. If you cannot even get on the
-            machine for an iso hold, stay off a few days, then ease back in
-            starting a little arched and working toward a straight body. Expose
-            yourself to what you can handle and build tissue tolerance without pain.
+            The usual path is a 2-minute pain-free hold before lots of reps.
+            If you already know a short set is safe, log the hold and the reps
+            you actually did. This is a record, not a lock.
           </p>
           <p className="mt-2 text-xs text-[var(--muted)]">
             Best hold on file: {bestHold > 0 ? `${bestHold.toFixed(0)}s` : 'none yet'}
-            {painFreeTwoMin ? ' · two-minute pain-free hold unlocked' : ''}
+            {painFreeTwoMin ? ' · two-minute pain-free hold on file' : ''}
           </p>
           {shouldEncourageSlowReps(logs) && (
             <p className="mt-2 text-sm text-[var(--accent)]">
@@ -130,34 +132,9 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
         </ul>
       )}
 
-      {mode === 'hold_or_reps' && (
-        <div className="flex gap-2">
-          {(['hold', 'reps'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setSessionMode(m)}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize ${
-                sessionMode === m
-                  ? 'bg-[var(--accent)] text-[#06281f]'
-                  : 'border border-[var(--panel-border)] text-[var(--muted)]'
-              }`}
-            >
-              {m === 'hold' ? 'Log a hold' : 'Log reps'}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {blockReps && (
-        <p className="rounded-lg bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
-          Hold two pain-free minutes first. That is how this drill stays safe.
-        </p>
-      )}
-
-      {(sessionMode === 'hold' || (sessionMode === 'hold_or_reps' && !blockReps)) && (
+      {allowHold && (
         <label className="text-xs text-[var(--muted)]">
-          Hold seconds
+          Hold seconds {allowReps ? '(optional if you only did reps)' : ''}
           <input
             inputMode="decimal"
             className="mt-1 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-base text-[var(--text)]"
@@ -168,10 +145,10 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
         </label>
       )}
 
-      {sessionMode !== 'hold' && !blockReps && (
+      {allowReps && (
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-[var(--muted)]">
-            Reps
+            Reps {allowHold ? '(optional if you only held)' : ''}
             <input
               inputMode="numeric"
               className="mt-1 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-base text-[var(--text)]"
@@ -249,10 +226,10 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
 
       {last && (
         <p className="text-xs text-[var(--muted)]">
-          Last time:{' '}
-          {last.reps
-            ? `${last.reps} reps${last.qualityReps != null ? ` · ${last.qualityReps} quality` : ''}`
-            : `${last.totalHoldSeconds}s`}
+          Last set:{' '}
+          {last.totalHoldSeconds ? `${last.totalHoldSeconds}s` : ''}
+          {last.totalHoldSeconds && last.reps ? ' + ' : ''}
+          {last.reps ? `${last.reps} reps` : ''}
           {last.grip ? ` · ${last.grip}` : ''}
         </p>
       )}
@@ -262,10 +239,11 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={saving}
           onClick={save}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
         >
-          Save set
+          {saving ? 'Logged' : 'Save set'}
         </button>
         <button
           type="button"

@@ -51,6 +51,7 @@ import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
+import { prefetchNeighborClips } from '../../lib/igCache'
 import { VideoWorkbench } from './VideoWorkbench'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { PhoneReelViewer } from '../PhoneReelViewer'
@@ -90,6 +91,8 @@ type Props = {
   profileId?: string | null
   /** Full-screen watch + list viewer — quieter chrome, no page card. */
   viewer?: boolean
+  handoffSrc?: string | null
+  handoffName?: string | null
 }
 
 export function ReferencePane({
@@ -97,6 +100,8 @@ export function ReferencePane({
   personalEditor = false,
   profileId = null,
   viewer = false,
+  handoffSrc = null,
+  handoffName = null,
 }: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
@@ -279,12 +284,29 @@ export function ReferencePane({
     return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, onChange)
   }, [profileId])
 
+  useEffect(() => {
+    const clips = collections.flatMap((c) =>
+      c.items
+        .filter((item) => item.url)
+        .map((item) => ({ id: item.id, url: item.url! })),
+    )
+    if (clips.length) prefetchNeighborClips(clips, 0, Math.min(4, clips.length))
+  }, [collections])
+
   const revokeSrc = () => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current)
       objectUrlRef.current = null
     }
   }
+
+  useEffect(() => {
+    if (!handoffSrc) return
+    revokeSrc()
+    setItemSrc(handoffSrc)
+    setActiveItemId(null)
+    setNotice(handoffName ? `Reference: ${handoffName}` : 'Playing the replay as the reference.')
+  }, [handoffSrc, handoffName])
 
   const selectItem = async (item: RefItem, collection?: RefCollection) => {
     setError(null)

@@ -39,6 +39,8 @@ type Props = {
   lessonId?: string | null
   skillId?: string | null
   skillLabel?: string | null
+  classId?: string | null
+  className?: string | null
   lessonBar?: ReactNode
   /** Reference handoff may request fullscreen without touching camera ownership. */
   enterFullscreenTick?: number
@@ -56,6 +58,8 @@ export function ComparePanel({
   lessonId = null,
   skillId = null,
   skillLabel = null,
+  classId = null,
+  className = null,
   lessonBar = null,
   enterFullscreenTick = 0,
 }: Props) {
@@ -73,6 +77,8 @@ export function ComparePanel({
   const [replayStart, setReplayStart] = useState(false)
   const [replayAfterGo, setReplayAfterGo] = useState<CompareFocus>('split')
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [handoffSrc, setHandoffSrc] = useState<string | null>(null)
+  const [handoffName, setHandoffName] = useState<string | null>(null)
 
   const enterReplay = (next: CompareSplit, afterGo: CompareFocus = 'split') => {
     setLibraryOpen(false)
@@ -279,6 +285,8 @@ export function ComparePanel({
                   gymEditor={gymEditor}
                   personalEditor={personalEditor}
                   profileId={athleteId}
+                  handoffSrc={handoffSrc}
+                  handoffName={handoffName}
                 />
               </ComparePipSlot>
               {splitScreen ? (
@@ -317,6 +325,13 @@ export function ComparePanel({
                   lessonId={lessonId}
                   skillId={skillId}
                   skillLabel={skillLabel}
+                  classId={classId}
+                  className={className}
+                  onPlayAsReference={(src, name) => {
+                    setHandoffSrc(src)
+                    setHandoffName(name)
+                    setFocus('ref')
+                  }}
                 />
               </ComparePipSlot>
             </div>
@@ -418,6 +433,8 @@ export function ComparePanel({
               personalEditor={personalEditor}
               profileId={athleteId}
               viewer
+              handoffSrc={handoffSrc}
+              handoffName={handoffName}
             />
           </div>
         </div>

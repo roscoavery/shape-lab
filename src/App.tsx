@@ -87,6 +87,13 @@ import {
 } from './lib/lessonStore'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import {
+  classLabel,
+  getActiveMeeting,
+  getOffering,
+  hydrateCoachClasses,
+  subscribeCoachClasses,
+} from './lib/coachClasses'
+import {
   addIgStill,
   hydrateIgStills,
   mergeIgStills,
@@ -162,8 +169,14 @@ export default function App() {
 
   useEffect(() => {
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
+    void hydrateCoachClasses().then(() => setLessonTick((n) => n + 1))
     void hydrateCoachContent()
-    return subscribeLessons(() => setLessonTick((n) => n + 1))
+    const unsubLessons = subscribeLessons(() => setLessonTick((n) => n + 1))
+    const unsubClasses = subscribeCoachClasses(() => setLessonTick((n) => n + 1))
+    return () => {
+      unsubLessons()
+      unsubClasses()
+    }
   }, [])
 
   useEffect(() => {
@@ -491,6 +504,8 @@ export default function App() {
     </div>
   )
 
+  const liveClass = getActiveMeeting()
+  const liveClassOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const ryanEdit = isRyanAthlete(
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
@@ -866,6 +881,8 @@ export default function App() {
               lessonId={liveLesson?.id ?? null}
               skillId={liveLesson ? shape.id : null}
               skillLabel={liveLesson ? shape.name : null}
+              classId={liveClass?.offeringId ?? null}
+              className={liveClassOffering ? classLabel(liveClassOffering) : null}
               lessonBar={
                 liveLesson ? (
                   <LessonNoteBar
@@ -981,18 +998,20 @@ export default function App() {
 
       {tab === 'history' && (
         <div className="mx-auto grid max-w-3xl gap-4">
-          <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />
+          {ryanEdit && <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />}
           <AthletePanel
             athletes={athletes}
             activeId={activeAthleteId}
             onChangeAthletes={setAthleteRoster}
             onSelect={requestSelectAthlete}
             allowDelete
+            canSeeAllProfiles={ryanEdit}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
           <VideoLibraryPanel
             athleteId={activeAthleteId}
             athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+            showClassFolders={Boolean(activeProfile && isCoachProfile(activeProfile))}
           />
           <CoachInbox athletes={athletes} />
         </div>
@@ -1005,8 +1024,9 @@ export default function App() {
             <p>
               Shape Lab is a free gymnastics shape-coaching app. Profiles, phones, and
               homework stay in the app on this gym link. Add a Blob store on the claimed
-              Vercel project so class sign-ups are still here tomorrow. Open More →
-              Profiles to see everyone on this gym.
+              Vercel project so class sign-ups are still here tomorrow. Only the gym
+              admin sees every profile&apos;s shared phones and photos. Your own
+              profile still shows what you entered.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
