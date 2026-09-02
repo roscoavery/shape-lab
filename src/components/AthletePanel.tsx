@@ -32,6 +32,7 @@ import { AthleteAvatar, AthleteName } from './AthleteAvatar'
 import { AthleteProfileCard } from './AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../lib/athleteNotes'
 import { withLinkedAthletes } from '../lib/parentLink'
+import { CoachPicker } from './CoachPicker'
 
 type Props = {
   athletes: Athlete[]
@@ -67,6 +68,7 @@ export function AthletePanel({
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
   const [newGym, setNewGym] = useState('')
   const [newLinkedIds, setNewLinkedIds] = useState<string[]>([])
+  const [newCoachIds, setNewCoachIds] = useState<string[]>([])
   const [newBackPain, setNewBackPain] = useState<boolean | null>(null)
   const [passcode, setPasscode] = useState('')
   const [passcodeAgain, setPasscodeAgain] = useState('')
@@ -149,6 +151,9 @@ export function AthletePanel({
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
+      ...(role === 'athlete' && newCoachIds.length > 0
+        ? { worksWithCoachIds: newCoachIds }
+        : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
       shapeTests: takeGuestGrades(firstName, lastName),
     }
@@ -169,6 +174,7 @@ export function AthletePanel({
     setNewShapeHandle('')
     setNewGym('')
     setNewLinkedIds([])
+    setNewCoachIds([])
     setPasscode('')
     setPasscodeAgain('')
     setNewRole('athlete')
@@ -455,6 +461,13 @@ export function AthletePanel({
             }}
           />
         )}
+        {newRole === 'athlete' && (
+          <CoachPicker
+            athletes={athletes}
+            selected={newCoachIds}
+            onChange={setNewCoachIds}
+          />
+        )}
         {newRole === 'parent' && (
           <ParentAthletePicker
             athletes={athletes}
@@ -586,6 +599,20 @@ export function AthletePanel({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveDetails()
               }}
+            />
+          )}
+          {profileRole(active) === 'athlete' && (
+            <CoachPicker
+              athletes={athletes}
+              selected={active.worksWithCoachIds ?? []}
+              excludeId={active.id}
+              onChange={(worksWithCoachIds) =>
+                onChangeAthletes(
+                  athletes.map((a) =>
+                    a.id === active.id ? { ...a, worksWithCoachIds } : a,
+                  ),
+                )
+              }
             />
           )}
           {profileRole(active) === 'parent' && (

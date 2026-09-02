@@ -640,6 +640,27 @@ export function addHomeworkLog(log: HomeworkLog): void {
   writeJson(HOMEWORK_LOGS_KEY, all.slice(0, 1000))
   emitHomework()
   pushRosterSoon()
+  void import('./coachLink')
+    .then((m) => m.notifyCoachesOfHomeworkLog(log))
+    .catch(() => {})
+}
+
+export function patchHomeworkLog(
+  id: string,
+  patch: Partial<HomeworkLog>,
+): HomeworkLog | null {
+  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  let found: HomeworkLog | null = null
+  const next = all.map((row) => {
+    if (row.id !== id) return row
+    found = { ...row, ...patch, id: row.id }
+    return found
+  })
+  if (!found) return null
+  writeJson(HOMEWORK_LOGS_KEY, next)
+  emitHomework()
+  pushRosterSoon()
+  return found
 }
 
 export function removeHomeworkLog(id: string): HomeworkLog | null {

@@ -59,6 +59,6 @@ export function roleHint(kind: ProfileKind): string {
     case 'parent':
       return 'Parents unlock to follow their athlete, watch Compare, and use Homework / Learn. Select who your athlete is so coaches know you are their parent, and so you can see their wins, homework, and activity.'
     default:
-      return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember.'
+      return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember. Pick the coaches you work with so they see homework you log, sequences, class nights, and lessons — and can hi-5 or fist bump those logs. Wins, posts, and stories stay public to the gym.'
   }
 }

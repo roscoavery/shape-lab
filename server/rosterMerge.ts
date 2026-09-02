@@ -20,6 +20,7 @@ export type Athlete = {
   gymName?: string
   childName?: string
   linkedAthleteIds?: string[]
+  worksWithCoachIds?: string[]
   hasBackPain?: boolean
   injuryActive?: boolean
   firstName?: string
@@ -199,6 +200,39 @@ function mergeHomework(local: unknown[], remote: unknown[]): unknown[] {
   return [...best.values()]
 }
 
+function mergeReactions(a: unknown, b: unknown): unknown[] {
+  const list = [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]
+  const byFrom = new Map<string, Record<string, unknown>>()
+  for (const row of list) {
+    if (!isRecord(row) || typeof row.fromId !== 'string') continue
+    const keep = byFrom.get(row.fromId)
+    if (!keep || String(row.createdAt || '') >= String(keep.createdAt || '')) {
+      byFrom.set(row.fromId, row)
+    }
+  }
+  return [...byFrom.values()]
+}
+
+function mergeHomeworkLogs(local: unknown[], remote: unknown[], cap: number): unknown[] {
+  const map = new Map<string, Record<string, unknown>>()
+  let i = 0
+  for (const row of [...local, ...remote]) {
+    if (!isRecord(row)) continue
+    const id = typeof row.id === 'string' && row.id ? row.id : `__anon_${i++}`
+    const prev = map.get(id)
+    if (!prev) {
+      map.set(id, row)
+      continue
+    }
+    map.set(id, {
+      ...prev,
+      ...row,
+      reactions: mergeReactions(prev.reactions, row.reactions),
+    })
+  }
+  return [...map.values()].slice(-cap)
+}
+
 function mergeByRowId(local: unknown[], remote: unknown[], cap: number): unknown[] {
   const map = new Map<string, unknown>()
   let i = 0
@@ -245,6 +279,7 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     gymName: newer.gymName || older.gymName,
     childName: newer.childName || older.childName,
     linkedAthleteIds: mergeIdList(newer.linkedAthleteIds, older.linkedAthleteIds),
+    worksWithCoachIds: mergeIdList(newer.worksWithCoachIds, older.worksWithCoachIds),
     instagramHandle: newer.instagramHandle || older.instagramHandle,
     shapeLabHandle: newer.shapeLabHandle || older.shapeLabHandle,
     notes: newer.notes || older.notes,
@@ -530,7 +565,7 @@ export function mergeRosterLists(
     {
       athletes: applyRemovals(mergeAthleteLists(local.athletes, remote.athletes), removed),
       homework,
-      homeworkLogs: mergeByRowId(local.homeworkLogs, remote.homeworkLogs, 1000),
+      homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
       taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
       flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
       attempts: mergeByRowId(local.attempts, remote.attempts, 2000),
@@ -547,7 +582,7 @@ export function mergeRosterLists(
   return {
     athletes: applyRemovals(athletes, removed),
     homework,
-    homeworkLogs: mergeByRowId(local.homeworkLogs, remote.homeworkLogs, 1000),
+    homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
     taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
     flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
     attempts: mergeByRowId(local.attempts, remote.attempts, 2000),

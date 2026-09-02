@@ -1,5 +1,7 @@
 import type { Athlete } from '../../types'
 import { StationSnapshot } from './StationSnapshot'
+import { CoachPicker } from '../CoachPicker'
+import { profileRole } from '../../lib/profileRole'
 
 type TwistDirection = NonNullable<Athlete['twistDirection']>
 type DominantHand = NonNullable<Athlete['dominantHand']>
@@ -42,14 +44,28 @@ type Props = {
   athlete: Athlete
   onChange: (next: Athlete) => void
   showPhoto?: boolean
+  athletes?: Athlete[]
 }
 
 /** Owner-only edits for photo and intake answers. Same fields as the shape-test line. */
-export function ProfileFieldsEditor({ athlete, onChange, showPhoto = true }: Props) {
+export function ProfileFieldsEditor({
+  athlete,
+  onChange,
+  showPhoto = true,
+  athletes = [],
+}: Props) {
   const patch = (next: Partial<Athlete>) => onChange({ ...athlete, ...next })
 
   return (
     <div className="flex flex-col gap-6">
+      {profileRole(athlete) === 'athlete' && athletes.length > 0 && (
+        <CoachPicker
+          athletes={athletes}
+          selected={athlete.worksWithCoachIds ?? []}
+          excludeId={athlete.id}
+          onChange={(worksWithCoachIds) => patch({ worksWithCoachIds })}
+        />
+      )}
       {showPhoto && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">Profile photo</h3>

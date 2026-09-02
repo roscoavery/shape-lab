@@ -10,6 +10,8 @@ export type NotifyKind =
   | 'prove'
   | 'nudge'
   | 'share'
+  | 'flex'
+  | 'heart'
 
 export const NOTICE_EVENT = 'shape-lab:notice'
 
@@ -22,6 +24,10 @@ export type GymNotice = {
   createdAt: string
   read: boolean
   href?: string
+  /** Homework log a coach can high-five / fist bump from Alerts. */
+  homeworkLogId?: string
+  fromId?: string
+  athleteId?: string
 }
 
 type NotifyFile = {
@@ -53,6 +59,9 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
     title: notice.title,
     body: notice.body,
     href: notice.href,
+    homeworkLogId: notice.homeworkLogId,
+    fromId: notice.fromId,
+    athleteId: notice.athleteId,
   }
   try {
     await fetch('/api/notices', {

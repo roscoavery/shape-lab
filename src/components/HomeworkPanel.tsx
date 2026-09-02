@@ -24,6 +24,9 @@ import {
 } from '../config/homeworkCatalog'
 import { isPhoneBrowser } from '../lib/delayCameraPipeline'
 import { isCoachProfile, profileRole } from '../lib/profileRole'
+import { canSeePrivateCoaching, worksWithCoachIds } from '../lib/coachLink'
+import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
+import { CoachPicker } from './CoachPicker'
 import {
   addCoachExercise,
   addInjuryEntry,
@@ -106,6 +109,7 @@ type Props = {
   athlete?: Athlete | null
   /** Signed-in profile. Parents log onto their linked athlete. */
   viewer?: Athlete | null
+  athletes?: Athlete[]
   onUpdateAthlete?: (patch: Partial<Athlete>) => void
   score: ScoreResult
   /** Shape the camera is currently scoring (App state) */
@@ -255,10 +259,18 @@ function HoldTimesBoard({
   logs,
   isPlank,
   onRemove,
+  athlete,
+  viewer,
+  athletes,
+  onLogsChange,
 }: {
   logs: HomeworkLog[]
   isPlank: boolean
   onRemove?: (id: string) => void
+  athlete?: Athlete | null
+  viewer?: Athlete | null
+  athletes?: Athlete[]
+  onLogsChange?: () => void
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const last = lastHoldSeconds(logs)
@@ -321,7 +333,8 @@ function HoldTimesBoard({
               const proper = logProperHoldSeconds(log)
               const isManual = log.method === 'manual'
               return (
-                <li key={log.id} className="flex flex-wrap items-baseline justify-between gap-2 py-1.5">
+                <li key={log.id} className="py-1.5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-[12px] text-[var(--muted)]">
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
@@ -387,6 +400,19 @@ function HoldTimesBoard({
                         </button>
                       ))}
                   </span>
+                  </div>
+                  <HomeworkLogReactions
+                    log={log}
+                    athletes={athletes ?? []}
+                    viewer={viewer ?? null}
+                    canReact={Boolean(
+                      viewer &&
+                        athlete &&
+                        isCoachProfile(viewer) &&
+                        canSeePrivateCoaching(viewer, athlete),
+                    )}
+                    onChanged={onLogsChange}
+                  />
                 </li>
               )
             })}
@@ -592,6 +618,7 @@ export function HomeworkPanel({
   athleteId,
   athlete = null,
   viewer = null,
+  athletes = [],
   onUpdateAthlete,
   score,
   currentShapeId,
@@ -1260,6 +1287,20 @@ export function HomeworkPanel({
             )}
           </p>
         )}
+        {athlete &&
+          profileRole(athlete) === 'athlete' &&
+          !parentLogging &&
+          worksWithCoachIds(athlete).length === 0 &&
+          onUpdateAthlete && (
+            <div className="mt-3">
+              <CoachPicker
+                athletes={athletes}
+                selected={worksWithCoachIds(athlete)}
+                excludeId={athlete.id}
+                onChange={(worksWithCoachIds) => onUpdateAthlete({ worksWithCoachIds })}
+              />
+            </div>
+          )}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -1896,6 +1937,10 @@ export function HomeworkPanel({
               <HoldTimesBoard
                 logs={itemLogs}
                 isPlank={isPlank}
+                athlete={athlete}
+                viewer={viewer}
+                athletes={athletes}
+                onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
                 onRemove={(id) => {
                   removeHomeworkLog(id)
                   setLogs((prev) => prev.filter((row) => row.id !== id))

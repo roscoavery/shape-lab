@@ -12,6 +12,9 @@ export type DiskNotice = {
   createdAt: string
   read: boolean
   href?: string
+  homeworkLogId?: string
+  fromId?: string
+  athleteId?: string
 }
 
 type DiskFile = {
@@ -57,6 +60,9 @@ export async function addNotice(raw: unknown): Promise<DiskNotice | null> {
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
     read: false,
     href: typeof r.href === 'string' ? r.href : undefined,
+    homeworkLogId: safeId(r.homeworkLogId) || undefined,
+    fromId: safeId(r.fromId) || undefined,
+    athleteId: safeId(r.athleteId) || undefined,
   }
   const existing = await noticesForClient()
   await writeJson(FILE, {

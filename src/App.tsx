@@ -904,6 +904,7 @@ export default function App() {
             athleteId={homeworkAthleteId}
             athlete={homeworkAthlete}
             viewer={activeProfile}
+            athletes={athletes}
             onUpdateAthlete={(patch) => {
               if (!homeworkAthleteId) return
               setAthleteRoster(

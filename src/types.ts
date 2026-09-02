@@ -200,6 +200,12 @@ export type Athlete = {
   /** Parent profiles: roster ids of the kids they came with. */
   linkedAthleteIds?: string[]
   /**
+   * Coaches this athlete works with. Those coaches can see homework logs,
+   * class attendance, and lessons. Everyone else still sees wins, posts,
+   * and stories.
+   */
+  worksWithCoachIds?: string[]
+  /**
    * Asked when a coach or parent makes a profile. Opens the back-care
    * homework path (journal, glute bridges, back extensions).
    */
@@ -527,6 +533,16 @@ export type HomeworkBreakdown = {
   feedback: string | null
 }
 
+export type HomeworkReactionKind = 'hi5' | 'fist' | 'flex' | 'like' | 'heart'
+
+/** A coach acknowledging an athlete’s logged homework. */
+export type HomeworkLogReaction = {
+  fromId: string
+  fromName: string
+  kind: HomeworkReactionKind
+  createdAt: string
+}
+
 /** One logged homework session (a completed timed hold). */
 export type HomeworkLog = {
   id: string
@@ -574,6 +590,8 @@ export type HomeworkLog = {
   sourceLabel?: string
   classMeetingId?: string
   className?: string
+  /** Coach acknowledgements — athlete sees their photo + emoji on this log. */
+  reactions?: HomeworkLogReaction[]
 }
 
 /**

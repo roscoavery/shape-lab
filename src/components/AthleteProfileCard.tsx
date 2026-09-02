@@ -33,6 +33,8 @@ import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
+import { CoachAthleteActivity } from './CoachAthleteActivity'
+import { canSeePrivateCoaching, coachesLabel, coachesOf } from '../lib/coachLink'
 import {
   loadStories,
   markStoriesSeen,
@@ -84,10 +86,14 @@ export function AthleteProfileCard({
   const facts = profileFactLines(athlete)
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
-  const write = canWriteCoachNotes(viewer) && (onAddNote || onAddWin)
+  const privateOk = canSeePrivateCoaching(viewer, athlete)
+  const writeNotes = privateOk && canWriteCoachNotes(viewer) && Boolean(onAddNote)
+  const writeWin = canWriteCoachNotes(viewer) && Boolean(onAddWin)
+  const write = writeNotes || writeWin
   const contest = handstandContest(athlete)
   const own = viewer?.id === athlete.id
   const coach = isCoachProfile(viewer)
+  const theirCoaches = coachesOf(athlete, athletes)
   const gestureOk =
     Boolean(viewer) && !own && canGiveHi5(viewer) && isAthleteProfile(athlete)
   const handle = mentionLabel(athlete)
@@ -216,6 +222,11 @@ export function AthleteProfileCard({
           ))}
         </div>
       )}
+      {theirCoaches.length > 0 && isAthleteProfile(athlete) && (
+        <p className="text-xs text-[var(--muted)]">
+          Coaches: {coachesLabel(athlete, athletes)}
+        </p>
+      )}
       {parentsOf(athlete.id, athletes).length > 0 && (
         <p className="text-xs text-[var(--muted)]">
           Parent{parentsOf(athlete.id, athletes).length === 1 ? '' : 's'}:{' '}
@@ -249,7 +260,11 @@ export function AthleteProfileCard({
           </button>
           {editAnswers && (
             <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-              <ProfileFieldsEditor athlete={athlete} onChange={onAthleteChange} />
+              <ProfileFieldsEditor
+              athlete={athlete}
+              athletes={athletes}
+              onChange={onAthleteChange}
+            />
             </div>
           )}
         </div>
@@ -436,7 +451,14 @@ export function AthleteProfileCard({
         />
       )}
 
-      {viewer && (isCoachProfile(viewer) || notes.length > 0) && (
+      <CoachAthleteActivity
+        athlete={athlete}
+        viewer={viewer}
+        athletes={athletes}
+        compact={variant === 'embed'}
+      />
+
+      {viewer && (privateOk || notes.length > 0) && (coach || notes.length > 0) && (
         <section>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Notes
@@ -468,7 +490,7 @@ export function AthleteProfileCard({
 
       {write && (
         <section className="flex flex-col gap-2">
-          {onAddNote && (
+          {writeNotes && onAddNote && (
             <div className="flex flex-col gap-2">
               <textarea
                 value={note}

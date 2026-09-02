@@ -21,6 +21,7 @@ import {
   childAthletes,
   childNamesLabel,
 } from '../../lib/parentLink'
+import { athletesOfCoach } from '../../lib/coachLink'
 import {
   classLabel,
   endClassMeeting,
@@ -28,6 +29,18 @@ import {
   getOffering,
   subscribeCoachClasses,
 } from '../../lib/coachClasses'
+
+function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
+  const seen = new Set<string>()
+  const out: LessonSession[] = []
+  const extra = athletesOfCoach(coachId, athletes).flatMap((a) => sessionsForAthlete(a.id))
+  for (const session of [...sessionsForCoach(coachId), ...extra]) {
+    if (seen.has(session.id)) continue
+    seen.add(session.id)
+    out.push(session)
+  }
+  return out
+}
 
 type Props = {
   athletes: Athlete[]
@@ -566,7 +579,7 @@ export function HomeDashboard({
       {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
 
       <LessonReviewList
-        sessions={sessionsForCoach(signedIn.id)}
+        sessions={coachRecapSessions(signedIn.id, athletes)}
         athletes={athletes}
         viewer={signedIn}
         canEdit
