@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
 import {
   emptyPlan,
@@ -63,6 +63,8 @@ export function HomeDashboard({
   const [unlockMore, setUnlockMore] = useState(false)
   const [lessonQuery, setLessonQuery] = useState('')
   const [lessonMore, setLessonMore] = useState(false)
+  const [pickHint, setPickHint] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
@@ -340,23 +342,60 @@ export function HomeDashboard({
             </div>
           </div>
         )}
-        {onStartClass && !liveClass && (
+        <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
+          {onStartClass && !liveClass && (
+            <button
+              type="button"
+              onClick={onStartClass}
+              className="w-full rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
+                Floor
+              </span>
+              <span className="mt-1 block text-2xl font-bold">Start class</span>
+              <span className="mt-1 block text-sm font-medium opacity-80">
+                Pick tonight’s class. Homework goes to that roster.
+              </span>
+            </button>
+          )}
           <button
             type="button"
-            onClick={onStartClass}
-            className="mt-3 w-full rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
+            onClick={() => {
+              if (!withAthlete) {
+                setPickHint(true)
+                setLessonMore(true)
+                pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                return
+              }
+              onStartLesson(withAthlete.id, plans[0]?.id ?? null)
+            }}
+            className="w-full rounded-2xl bg-gradient-to-br from-[#7ad4ff] via-[#3aa8e8] to-[#156a96] px-4 py-4 text-left text-[#042433] shadow-[0_16px_40px_rgba(58,168,232,0.28)]"
           >
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
-              Floor
+              1:1
             </span>
-            <span className="mt-1 block text-2xl font-bold">Start class</span>
+            <span className="mt-1 block text-2xl font-bold">Start lesson</span>
             <span className="mt-1 block text-sm font-medium opacity-80">
-              Pick the class you teach tonight. Only that class roster gets
-              homework — not every name on the gym.
+              {withAthlete
+                ? `With ${withAthlete.name.split(' ')[0]}`
+                : 'Pick who you are with, then go'}
             </span>
           </button>
-        )}
-        <h3 className="mt-5 text-lg font-semibold">Start lesson · who are you with?</h3>
+        </div>
+        <div
+          ref={pickerRef}
+          className={`mt-5 rounded-xl p-1 transition-shadow ${
+            pickHint && !withAthlete
+              ? 'shadow-[0_0_0_2px_var(--accent)]'
+              : ''
+          }`}
+        >
+          <h3 className="text-lg font-semibold">Who are you with?</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {pickHint && !withAthlete
+              ? 'Tap an athlete, then Start lesson.'
+              : 'Pick the athlete for a 1:1. Class roster is separate.'}
+          </p>
         {roster.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             No athletes yet. Add one under More → Profiles.
@@ -384,6 +423,7 @@ export function HomeDashboard({
                     onClick={() => {
                       setWithId(a.id)
                       setEditing(null)
+                      setPickHint(false)
                     }}
                     className="min-w-0 flex-1 text-left"
                   >
@@ -416,21 +456,13 @@ export function HomeDashboard({
             )}
           </>
         )}
+        </div>
       </section>
-
-      {coach && (
-        <ClassStopwatch athletes={athletes} signedIn={signedIn} coach />
-      )}
-
-      <ChalkboardPanel viewer={signedIn} onToday />
-      {onShortcut && (
-        <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
-      )}
 
       {withAthlete && !editing && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
           <h3 className="font-semibold">
-            <AthleteName athlete={withAthlete} size="md" />
+            Lesson with <AthleteName athlete={withAthlete} size="md" />
           </h3>
           {onViewProfile && (
             <button
@@ -501,6 +533,15 @@ export function HomeDashboard({
           }}
           onCancel={() => setEditing(null)}
         />
+      )}
+
+      {coach && (
+        <ClassStopwatch athletes={athletes} signedIn={signedIn} coach />
+      )}
+
+      <ChalkboardPanel viewer={signedIn} onToday />
+      {onShortcut && (
+        <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
       )}
 
       {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
