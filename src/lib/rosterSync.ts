@@ -77,6 +77,8 @@ export type RosterBackup = {
 
 /** False until GET /api/roster succeeds so a Ryan-only tab cannot clobber the gym. */
 let serverPushEnabled = false
+/** Living profiles on the last successful GET — never PUT a smaller snapshot. */
+let lastServerAthleteCount = 0
 
 export function enableServerRosterPush() {
   serverPushEnabled = true
@@ -84,6 +86,15 @@ export function enableServerRosterPush() {
 
 export function isServerRosterPushEnabled() {
   return serverPushEnabled
+}
+
+export function lastPulledAthleteCount() {
+  return lastServerAthleteCount
+}
+
+/** Skip PUTs that would shrink the gym file back to a 3-profile phone cache. */
+export function shouldPushRoster(athleteCount = loadAthletes().length) {
+  return serverPushEnabled && athleteCount >= Math.max(1, lastServerAthleteCount)
 }
 
 function localFlowMap(): Record<string, FlowProgress> {
@@ -194,11 +205,10 @@ export function applyRosterSnapshot(data: RosterBackup): {
   activeAthleteId: string | null
 } {
   const remote = rosterListsFromUnknown(data)
-  // A new phone is Ryan-only. Take the gym file, then restore anyone who
-  // still has homework / libraries so a stale removed-id list cannot hide them.
-  const merged = localHasGymRoster()
-    ? mergeRosterLists(listsFromLocal(), remote)
-    : { ...remote, athletes: restoreMissingAthletes(remote) }
+  // Always union with the gym file. A phone that already has 3 names used to
+  // treat that as "we have a roster" and keep hiding everyone else.
+  const merged = mergeRosterLists(listsFromLocal(), remote)
+  merged.athletes = restoreMissingAthletes(merged)
   const athletes = persistLists(merged)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('shape-lab-roster-applied'))
@@ -225,6 +235,7 @@ export async function pullServerRoster(): Promise<RosterBackup | null> {
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
         continue
       }
+      lastServerAthleteCount = Math.max(lastServerAthleteCount, data.athletes.length)
       return data
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
@@ -234,12 +245,13 @@ export async function pullServerRoster(): Promise<RosterBackup | null> {
 }
 
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
-  if (!serverPushEnabled) return
+  const body = snapshot ?? localRosterSnapshot()
+  if (!shouldPushRoster(body.athletes.length)) return
   try {
     await fetch('/api/roster', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(snapshot ?? localRosterSnapshot()),
+      body: JSON.stringify(body),
     })
   } catch {
     /* server down — localStorage still holds a copy on this origin */
@@ -266,6 +278,11 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
   }
   const applied = applyRosterSnapshot(server)
   enableServerRosterPush()
+  lastServerAthleteCount = Math.max(
+    lastServerAthleteCount,
+    applied.athletes.length,
+    server.athletes.length,
+  )
   const local = localRosterSnapshot()
   // Only write back when this device has more living profiles than the gym
   // file — that heals a Blob that never received the full roster. A smaller

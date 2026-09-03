@@ -88,7 +88,13 @@ import {
   type AppTab,
 } from './lib/storage'
 import { hydrateGymAtBoot, localHasGymRoster, type PersistInfo } from './lib/gymHydrate'
-import { localRosterSnapshot, pushServerRoster, isServerRosterPushEnabled } from './lib/rosterSync'
+import {
+  localRosterSnapshot,
+  pushServerRoster,
+  isServerRosterPushEnabled,
+  shouldPushRoster,
+  syncRosterWithServer,
+} from './lib/rosterSync'
 import {
   getLessonPlan,
   getLessonSession,
@@ -279,14 +285,14 @@ export default function App() {
     saveAthletes(athletes)
     if (!rosterReadyRef.current) return
     for (const a of athletes) ensureAutoHomework(a.id)
-    if (athletes.length > 0) {
+    if (athletes.length > 0 && shouldPushRoster(athletes.length)) {
       void pushServerRoster(localRosterSnapshot())
     }
   }, [athletes])
 
   useEffect(() => {
     saveActiveAthleteId(activeAthleteId)
-    if (rosterReadyRef.current && athletes.length > 0) void pushServerRoster()
+    if (rosterReadyRef.current && shouldPushRoster(athletes.length)) void pushServerRoster()
   }, [activeAthleteId, athletes.length])
 
   useEffect(() => {
@@ -347,6 +353,27 @@ export default function App() {
       cancelled = true
     }
   }, [gymBootTick])
+
+  useEffect(() => {
+    if (gymBoot !== 'ready') return
+    const pull = () => {
+      void syncRosterWithServer().then((synced) => {
+        if (!synced.fromServer || synced.athletes.length === 0) return
+        setAthletes(ensureRyanInAthletes(synced.athletes))
+      })
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') pull()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', pull)
+    const tick = window.setInterval(pull, 45_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', pull)
+      window.clearInterval(tick)
+    }
+  }, [gymBoot])
 
   useEffect(() => {
     saveSettings(settings)

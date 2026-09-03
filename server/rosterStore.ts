@@ -10,7 +10,7 @@ import {
   type ProfileHint,
   type RosterLists,
 } from './rosterMerge.ts'
-import { readJson, writeJson } from './persist.ts'
+import { readDiskJson, readJson, writeJson } from './persist.ts'
 
 const FILE = 'data/roster.json'
 
@@ -102,8 +102,7 @@ async function profileHints(): Promise<Record<string, ProfileHint>> {
   return hints
 }
 
-async function readRawRoster(): Promise<DiskRoster> {
-  const data = await readJson<DiskRoster>(FILE, { ...EMPTY })
+function normalizeRoster(data: DiskRoster | null | undefined): DiskRoster {
   if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) {
     return { ...EMPTY }
   }
@@ -130,6 +129,15 @@ async function readRawRoster(): Promise<DiskRoster> {
     painJournals: Array.isArray(data.painJournals) ? data.painJournals : [],
     coachExercises: Array.isArray(data.coachExercises) ? data.coachExercises : [],
   }
+}
+
+async function readRawRoster(): Promise<DiskRoster> {
+  const stored = normalizeRoster(await readJson<DiskRoster>(FILE, { ...EMPTY }))
+  const bundled = normalizeRoster(readDiskJson<DiskRoster>(FILE, { ...EMPTY }))
+  if (bundled.athletes.length === 0) return stored
+  if (stored.athletes.length === 0) return bundled
+  const merged = mergeRosterLists(rosterListsFromUnknown(bundled), rosterListsFromUnknown(stored))
+  return listsToDisk(merged, stored.exportedAt || bundled.exportedAt)
 }
 
 async function persistMerged(lists: RosterLists): Promise<DiskRoster> {

@@ -140,6 +140,16 @@ export async function readJson<T>(rel: string, fallback: T): Promise<T> {
   }
 }
 
+/** Bundled `data/*.json` from the deploy — used when Blob is stale or smaller. */
+export function readDiskJson<T>(rel: string, fallback: T): T {
+  try {
+    const text = fs.readFileSync(diskPath(rel), 'utf8')
+    return JSON.parse(text) as T
+  } catch {
+    return fallback
+  }
+}
+
 export async function writeJson(rel: string, data: unknown): Promise<void> {
   await writeText(rel, JSON.stringify(data, null, 2) + '\n')
 }
