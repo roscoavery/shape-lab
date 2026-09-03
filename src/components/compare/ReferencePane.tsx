@@ -128,6 +128,7 @@ export function ReferencePane({
     null,
   )
   const [dragId, setDragId] = useState<string | null>(null)
+  const [dragColId, setDragColId] = useState<string | null>(null)
   const [skillCols, setSkillCols] = useState<RefCollection[]>(() => collectionsFromSkillRefs())
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
@@ -654,21 +655,26 @@ export function ReferencePane({
     })
   }
 
-  const persistOrder = async (nextItems: RefItem[]) => {
-    if (!activeCollection || !canEditCollection(activeCollection)) return
-    if (nextItems === activeCollection.items) return
-    await updateCollection({ ...activeCollection, items: nextItems })
+  const persistOrder = async (collection: RefCollection, nextItems: RefItem[]) => {
+    if (!canEditCollection(collection)) return
+    if (nextItems === collection.items) return
+    await updateCollection({ ...collection, items: nextItems })
   }
 
-  const onMove = async (item: RefItem, dir: -1 | 1) => {
-    if (!activeCollection || searching) return
-    await persistOrder(moveItem(activeCollection.items, item.id, dir))
+  const onMove = async (item: RefItem, dir: -1 | 1, collection = activeCollection) => {
+    if (!collection) return
+    await persistOrder(collection, moveItem(collection.items, item.id, dir))
   }
 
-  const onDropOn = async (targetId: string) => {
-    if (!activeCollection || !dragId || searching) return
-    await persistOrder(reorderItems(activeCollection.items, dragId, targetId))
+  const onDropOn = async (targetId: string, collection = activeCollection) => {
+    if (!collection || !dragId || dragColId !== collection.id) {
+      setDragId(null)
+      setDragColId(null)
+      return
+    }
+    await persistOrder(collection, reorderItems(collection.items, dragId, targetId))
     setDragId(null)
+    setDragColId(null)
   }
 
   const markCached = useCallback((id: string) => {
@@ -899,25 +905,33 @@ export function ReferencePane({
         className={`flex items-center gap-1 rounded-md ${
           dragId === item.id ? 'opacity-60' : ''
         }`}
-        draggable={opts.allowReorder && !opts.quiet && renamingId !== item.id && taggingId !== item.id}
-        onDragStart={() => setDragId(item.id)}
+        draggable={opts.allowReorder && renamingId !== item.id && taggingId !== item.id}
+        onDragStart={() => {
+          setDragId(item.id)
+          setDragColId(opts.collection.id)
+        }}
         onDragOver={(e) => {
           if (!opts.allowReorder) return
           e.preventDefault()
         }}
         onDrop={(e) => {
           e.preventDefault()
-          void onDropOn(item.id)
+          void onDropOn(item.id, opts.collection)
         }}
-        onDragEnd={() => setDragId(null)}
+        onDragEnd={() => {
+          setDragId(null)
+          setDragColId(null)
+        }}
       >
-        {opts.allowReorder && !opts.quiet && (
+        {opts.allowReorder && (
           <span className="flex shrink-0 flex-col">
             <button
               type="button"
               disabled={opts.index === 0}
-              onClick={() => void onMove(item, -1)}
-              className="rounded px-1 text-xs leading-none text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-30"
+              onClick={() => void onMove(item, -1, opts.collection)}
+              className={`rounded px-1.5 py-0.5 text-sm leading-none disabled:opacity-30 ${
+                viewer ? 'text-white/70 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--text)]'
+              }`}
               aria-label={`Move ${item.name} up`}
               title="Move up"
             >
@@ -926,8 +940,10 @@ export function ReferencePane({
             <button
               type="button"
               disabled={opts.index === opts.total - 1}
-              onClick={() => void onMove(item, 1)}
-              className="rounded px-1 text-xs leading-none text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-30"
+              onClick={() => void onMove(item, 1, opts.collection)}
+              className={`rounded px-1.5 py-0.5 text-sm leading-none disabled:opacity-30 ${
+                viewer ? 'text-white/70 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--text)]'
+              }`}
               aria-label={`Move ${item.name} down`}
               title="Move down"
             >
@@ -1244,7 +1260,7 @@ export function ReferencePane({
         <div className="pointer-events-auto absolute left-2 top-14 bottom-[5.75rem] z-[42] flex w-[min(16.75rem,46vw)] flex-col overflow-hidden rounded-2xl bg-[#0b0f14]/92 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/12 backdrop-blur-xl sm:bottom-24">
           <div className="flex items-center gap-2 px-3 pt-3">
             <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
-              Clips
+              Clips{canEditCollection(activeCollection) ? ' · ↑↓ reorder' : ''}
             </p>
             <button
               type="button"
@@ -1358,7 +1374,48 @@ export function ReferencePane({
                               />
                             </form>
                           ) : (
-                            <div className="flex items-start gap-1">
+                            <div
+                              className="flex items-start gap-1"
+                              draggable={editing && !q && renamingId !== item.id && taggingId !== item.id}
+                              onDragStart={() => {
+                                setDragId(item.id)
+                                setDragColId(col.id)
+                              }}
+                              onDragOver={(e) => {
+                                if (!editing || q) return
+                                e.preventDefault()
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                void onDropOn(item.id, col)
+                              }}
+                              onDragEnd={() => {
+                                setDragId(null)
+                                setDragColId(null)
+                              }}
+                            >
+                              {editing && !q ? (
+                                <span className="flex shrink-0 flex-col self-center pl-1">
+                                  <button
+                                    type="button"
+                                    disabled={col.items[0]?.id === item.id}
+                                    onClick={() => void onMove(item, -1, col)}
+                                    className="rounded px-1.5 py-0.5 text-sm leading-none text-white/70 hover:text-white disabled:opacity-30"
+                                    aria-label={`Move ${item.name} up`}
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={col.items[col.items.length - 1]?.id === item.id}
+                                    onClick={() => void onMove(item, 1, col)}
+                                    className="rounded px-1.5 py-0.5 text-sm leading-none text-white/70 hover:text-white disabled:opacity-30"
+                                    aria-label={`Move ${item.name} down`}
+                                  >
+                                    ↓
+                                  </button>
+                                </span>
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => void selectItem(item, col)}
@@ -1390,6 +1447,15 @@ export function ReferencePane({
                                   >
                                     Tags
                                   </button>
+                                  {canDeleteItem(item, col) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void removeItem(item, col)}
+                                      className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-[#ff8a8a] hover:text-white"
+                                    >
+                                      Delete
+                                    </button>
+                                  ) : null}
                                 </div>
                               ) : null}
                             </div>
@@ -1645,7 +1711,9 @@ export function ReferencePane({
                       collection: activeCollection,
                       index,
                       total: watchList.length,
-                      allowReorder: desk === 'watch' && canEditCollection(activeCollection),
+                      allowReorder:
+                        canEditCollection(activeCollection) &&
+                        (desk === 'watch' || (!searching && !onlyFavorites)),
                       quiet: viewer,
                     }),
                   )}
