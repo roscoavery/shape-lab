@@ -194,6 +194,7 @@ export function ShapeQuiz({
         athlete={rosterAthlete}
         athletes={athletes}
         photos={referencePhotos}
+        onLeave={() => setTaker(null)}
         onSave={(next) => {
           onAthleteChange?.({
             ...next,

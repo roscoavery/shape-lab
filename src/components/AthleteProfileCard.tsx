@@ -49,6 +49,7 @@ import {
   type StoriesFile,
 } from '../lib/stories'
 import { fileToClipBlob, recordQuickClip } from '../lib/quickClip'
+import { FollowButton } from './network/FollowButton'
 
 type Tab = 'posts' | 'passes' | 'stories'
 type Compose = 'story' | 'post' | 'pass' | null
@@ -209,6 +210,11 @@ export function AthleteProfileCard({
             <Stat n={minePasses.length} label="Passes" onClick={() => setTab('passes')} />
             <Stat n={live.length} label="Stories" onClick={() => setTab('stories')} />
           </div>
+          {viewer && viewer.id !== athlete.id && (
+            <div className="mt-3">
+              <FollowButton viewer={viewer} person={athlete} variant="row" />
+            </div>
+          )}
         </div>
       </header>
 

@@ -33,7 +33,7 @@ import {
   toggleFeedRepost,
 } from './feedStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
-import { readSocialFile, writeSocialFile } from './socialStore.ts'
+import { readSocialFile, toggleFollowOnDisk, writeSocialFile } from './socialStore.ts'
 import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
 import {
   addIgStillFromBody,
@@ -529,7 +529,23 @@ export async function handleShapeLabApi(
       sendJson(res, 200, await writeSocialFile(JSON.parse(body)))
       return true
     }
-    sendJson(res, 405, { error: 'Use GET or PUT' })
+    if (req.method === 'POST') {
+      try {
+        const raw = await readRequestBody(req)
+        const body = raw ? (JSON.parse(raw) as { followerId?: string; followingId?: string }) : {}
+        sendJson(
+          res,
+          200,
+          await toggleFollowOnDisk(body.followerId ?? '', body.followingId ?? ''),
+        )
+      } catch (err) {
+        sendJson(res, 400, {
+          error: err instanceof Error ? err.message : 'Could not update that follow.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, PUT, or POST' })
     return true
   }
   if (path === '/api/discuss') {

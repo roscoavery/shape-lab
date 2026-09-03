@@ -58,6 +58,28 @@ export async function loadSocial(): Promise<SocialFile> {
   }
 }
 
+export async function toggleFollowRemote(opts: {
+  followerId: string
+  followingId: string
+}): Promise<SocialFile> {
+  if (!opts.followerId || !opts.followingId || opts.followerId === opts.followingId) {
+    throw new Error('Pick someone else to follow.')
+  }
+  const res = await fetch('/api/social', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      followerId: opts.followerId,
+      followingId: opts.followingId,
+    }),
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(err.error || 'Could not update that follow.')
+  }
+  return (await res.json()) as SocialFile
+}
+
 export async function saveSocial(file: SocialFile): Promise<SocialFile | null> {
   try {
     const res = await fetch('/api/social', {

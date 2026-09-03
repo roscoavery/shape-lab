@@ -84,7 +84,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
   },
   {
     id: 'handstandWall',
-    prompt: 'How about with a wall?',
+    prompt: 'How long can you hold a wall handstand?',
     kind: 'choice',
     once: true,
     stillShapeId: 'wall_handstand',
@@ -166,7 +166,18 @@ export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
     if (hasAnswer(athlete, id)) continue
     out.push({ ...q, id })
   }
-  return out
+  return pairWallAfterFloor(out)
+}
+
+/** Wall handstand always sits on the next card after no-wall. */
+function pairWallAfterFloor(list: IntakeQuestion[]): IntakeQuestion[] {
+  const wall = list.find((q) => q.id === 'handstandWall')
+  const floorAt = list.findIndex((q) => q.id === 'handstandFloor')
+  if (!wall) return list
+  const rest = list.filter((q) => q.id !== 'handstandWall')
+  if (floorAt === -1) return rest.concat(wall)
+  const floorNow = rest.findIndex((q) => q.id === 'handstandFloor')
+  return [...rest.slice(0, floorNow + 1), wall, ...rest.slice(floorNow + 1)]
 }
 
 export function upsertIntakeAnswer(

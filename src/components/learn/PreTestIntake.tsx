@@ -20,13 +20,23 @@ type Props = {
   onSave: (next: Athlete) => void
   onDone: (next: Athlete) => void
   onPark?: (next: Athlete) => void
+  onLeave?: () => void
 }
 
-export function PreTestIntake({ athlete, athletes, photos, onSave, onDone, onPark }: Props) {
-  const pending = pendingIntake(athlete)
+export function PreTestIntake({
+  athlete,
+  athletes,
+  photos,
+  onSave,
+  onDone,
+  onPark,
+  onLeave,
+}: Props) {
+  const [queue] = useState(() => pendingIntake(athlete))
   const [index, setIndex] = useState(0)
+  const [ready, setReady] = useState(() => pendingIntake(athlete).length === 0)
   const [phone, setPhone] = useState(athlete.parentPhone || '')
-  const q = pending[index]
+  const q = ready ? undefined : queue[index]
 
   const parkNow = (from: Athlete = athlete) => {
     let next = from
@@ -59,21 +69,43 @@ export function PreTestIntake({ athlete, athletes, photos, onSave, onDone, onPar
           )}
         </div>
         <p className="mt-2 text-sm text-[var(--muted)]">Pictures first — name what you see.</p>
-        <button
-          type="button"
-          onClick={() => onDone(athlete)}
-          className="mt-4 rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#06281f]"
-        >
-          Start the pictures test
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {queue.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setReady(false)
+                setIndex(Math.max(0, queue.length - 1))
+              }}
+              className="rounded-xl border border-[var(--panel-border)] px-4 py-3 text-sm font-semibold"
+            >
+              Back
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onDone(athlete)}
+            className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#06281f]"
+          >
+            Start the pictures test
+          </button>
+        </div>
       </section>
     )
   }
 
   const finishQuestion = (next: Athlete) => {
     onSave(next)
-    if (index + 1 >= pending.length) onDone(next)
+    if (index + 1 >= queue.length) setReady(true)
     else setIndex((i) => i + 1)
+  }
+
+  const goBack = () => {
+    if (index > 0) {
+      setIndex((i) => i - 1)
+      return
+    }
+    onLeave?.()
   }
 
   const answer = async (value: string, label?: string) => {
@@ -114,7 +146,7 @@ export function PreTestIntake({ athlete, athletes, photos, onSave, onDone, onPar
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <div className="mb-1 flex items-start justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-          Before the test · {index + 1} / {pending.length}
+          Before the test · {index + 1} / {queue.length}
         </p>
         {onPark && (
           <button
@@ -224,6 +256,17 @@ export function PreTestIntake({ athlete, athletes, photos, onSave, onDone, onPar
         <p className="mt-3 text-xs text-[var(--muted)]">
           Over 30 means you have to prove it to Coach Ryan.
         </p>
+      )}
+      {(index > 0 || onLeave) && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={goBack}
+            className="text-sm font-semibold text-white/70 underline"
+          >
+            {index === 0 ? 'Back to who is taking this' : 'Back'}
+          </button>
+        </div>
       )}
     </section>
   )

@@ -177,7 +177,39 @@ export async function writeSocialFile(data: unknown): Promise<DiskSocial> {
   if (!parsed || parsed.kind !== 'shape-lab-social') {
     throw new Error('Invalid social payload')
   }
-  const next = { ...sanitizeSocial(parsed), exportedAt: new Date().toISOString() }
+  const incoming = sanitizeSocial(parsed)
+  const current = await readSocialFile()
+  const next = {
+    ...incoming,
+    follows: dedupeFollows([...current.follows, ...incoming.follows]),
+    exportedAt: new Date().toISOString(),
+  }
+  await writeJson(FILE, next)
+  return next
+}
+
+export async function toggleFollowOnDisk(
+  followerId: string,
+  followingId: string,
+): Promise<DiskSocial> {
+  const a = safeId(followerId)
+  const b = safeId(followingId)
+  if (!a || !b || a === b) {
+    throw new Error('Pick two different profiles to follow.')
+  }
+  const current = await readSocialFile()
+  const already = current.follows.some((f) => f.followerId === a && f.followingId === b)
+  const follows = already
+    ? current.follows.filter((f) => !(f.followerId === a && f.followingId === b))
+    : [
+        { followerId: a, followingId: b, createdAt: new Date().toISOString() },
+        ...current.follows,
+      ]
+  const next: DiskSocial = {
+    ...current,
+    follows: dedupeFollows(follows),
+    exportedAt: new Date().toISOString(),
+  }
   await writeJson(FILE, next)
   return next
 }

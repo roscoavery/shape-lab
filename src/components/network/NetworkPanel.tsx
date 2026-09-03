@@ -19,7 +19,7 @@ import {
   sendGroupMessage,
   sendMessage,
   threadsFor,
-  toggleFollow,
+  toggleFollowRemote,
   type SocialFile,
 } from '../../lib/social'
 import { MessageSharePicker } from './MessageSharePicker'
@@ -60,7 +60,7 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
   useEffect(() => {
     void loadSocial().then(setSocial)
     void loadDiscuss().then(setDiscuss)
-  }, [])
+  }, [athlete?.id])
 
   const persistSocial = async (next: SocialFile) => {
     const saved = await saveSocial(next)
@@ -135,16 +135,23 @@ export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
           onFollow={(id) => {
             if (!athlete) return
             const was = isFollowing(social, athlete.id, id)
-            void persistSocial(toggleFollow(social, athlete.id, id))
-            if (!was) {
-              void pushNotice({
-                toId: id,
-                kind: 'follow',
-                title: `${athlete.name} followed you`,
-                body: 'Open Network to follow them back.',
-                href: 'network',
+            void toggleFollowRemote({ followerId: athlete.id, followingId: id })
+              .then((next) => {
+                setSocial(next)
+                setError(null)
+                if (!was) {
+                  void pushNotice({
+                    toId: id,
+                    kind: 'follow',
+                    title: `${athlete.name} followed you`,
+                    body: 'Open Network to follow them back.',
+                    href: 'network',
+                  })
+                }
               })
-            }
+              .catch((err) => {
+                setError(err instanceof Error ? err.message : 'Could not update that follow.')
+              })
           }}
           onMessage={(id) => {
             setThreadToId(id)
@@ -315,7 +322,11 @@ function PeoplePage({
                 <button
                   type="button"
                   onClick={() => onFollow(person.id)}
-                  className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs"
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    following
+                      ? 'border border-[var(--panel-border)]'
+                      : 'bg-[var(--accent)] text-[#06281f]'
+                  }`}
                 >
                   {following ? 'Following' : 'Follow'}
                 </button>
