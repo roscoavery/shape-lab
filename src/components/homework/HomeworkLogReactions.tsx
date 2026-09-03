@@ -6,6 +6,7 @@ import {
   reactionMeta,
   reactionOnLog,
 } from '../../lib/homeworkReactions'
+import { viewerOwnsHomeworkLog } from '../../lib/homeworkLogView'
 import { playGestureBurst } from '../../lib/gestureBurst'
 
 type Props = {
@@ -24,6 +25,7 @@ export function HomeworkLogReactions({
   canReact = false,
   onChanged,
 }: Props) {
+  if (viewerOwnsHomeworkLog(viewer, log)) return null
   const reactions = log.reactions ?? []
   const mine = viewer ? reactionOnLog(log, viewer.id) : undefined
 

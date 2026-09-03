@@ -126,8 +126,8 @@ export function recentHomeworkLogs(athleteId: string, limit = 12): {
   const items = loadAllHomework()
   return loadHomeworkLogs(athleteId)
     .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, limit)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-limit)
     .map((log) => {
       const item = items.find((h) => h.id === log.homeworkId)
       return { log, item, line: formatHomeworkLogLine(log, item) }

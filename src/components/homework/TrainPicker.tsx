@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { HomeworkItem, HomeworkLog, ReferencePhoto } from '../../types'
 import { homeworkTitle, homeworkTrackMode, isSequenceHomework } from '../../lib/homeworkLabel'
+import { isLogToday, logsChrono } from '../../lib/homeworkLogView'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 import { ReferenceStill } from '../ReferenceStill'
 import { CoreDrillGuide } from './CoreDrillGuide'
@@ -146,12 +147,14 @@ function DrillCard({
           {logs.length === 0 ? (
             <li className="py-1 text-xs text-white/45">Nothing logged yet.</li>
           ) : (
-            logs.slice(0, 8).map((log) => (
+            logsChrono(logs).map((log) => (
               <li
                 key={log.id}
-                className="flex items-baseline justify-between gap-2 py-1 text-xs"
+                className={`flex items-baseline justify-between gap-2 py-1 text-xs ${
+                  isLogToday(log) ? 'text-[var(--accent)]' : 'text-white/45'
+                }`}
               >
-                <span className="text-white/45">
+                <span>
                   {new Date(log.date).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',

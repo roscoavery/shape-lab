@@ -21,8 +21,9 @@ import {
   subscribeCoachClasses,
 } from '../lib/coachClasses'
 import { splitPersonName } from '../lib/classStation'
-import { isCoachProfile, isGymAdmin } from '../lib/profileRole'
+import { isGymAdmin } from '../lib/profileRole'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
+import { canReactToHomeworkLog, isLogToday } from '../lib/homeworkLogView'
 
 type Props = {
   athlete: Athlete
@@ -122,9 +123,13 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
             <ul className="mt-1 divide-y divide-white/5">
               {logs.map(({ log, line }) => (
                 <li key={log.id} className="py-1.5">
-                  <div className="flex justify-between gap-2 text-sm">
+                  <div
+                    className={`flex justify-between gap-2 text-sm ${
+                      isLogToday(log) ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
+                    }`}
+                  >
                     <span className="min-w-0">{line}</span>
-                    <span className="shrink-0 text-[11px] text-[var(--muted)]">
+                    <span className="shrink-0 text-[11px]">
                       {new Date(log.date).toLocaleDateString()}
                     </span>
                   </div>
@@ -132,12 +137,7 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
                     log={log}
                     athletes={athletes}
                     viewer={viewer}
-                    canReact={Boolean(
-                      viewer &&
-                        viewer.id !== athlete.id &&
-                        isCoachProfile(viewer) &&
-                        canSeePrivateCoaching(viewer, athlete),
-                    )}
+                    canReact={canReactToHomeworkLog(viewer, athlete, log)}
                   />
                 </li>
               ))}

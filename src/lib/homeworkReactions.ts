@@ -35,6 +35,7 @@ export function reactToHomeworkLog(
 ): HomeworkLog | null {
   const log = loadHomeworkLogs().find((row) => row.id === logId)
   if (!log) return null
+  if (from.id === log.athleteId) return log
   const next: HomeworkLogReaction = {
     fromId: from.id,
     fromName: from.name,

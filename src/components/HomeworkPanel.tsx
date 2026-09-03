@@ -24,8 +24,10 @@ import {
 } from '../config/homeworkCatalog'
 import { isPhoneBrowser } from '../lib/delayCameraPipeline'
 import { isCoachProfile, profileRole } from '../lib/profileRole'
-import { canSeePrivateCoaching, worksWithCoachIds } from '../lib/coachLink'
+import { worksWithCoachIds } from '../lib/coachLink'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
+import { HomeworkLogList } from './homework/HomeworkLogList'
+import { canReactToHomeworkLog, isLogToday, logsChrono } from '../lib/homeworkLogView'
 import { CoachPicker } from './CoachPicker'
 import {
   addCoachExercise,
@@ -282,6 +284,7 @@ function HoldTimesBoard({
   const bestRight = isPlank ? bestHoldSeconds(logs, 'right') : 0
   const lastLeft = isPlank ? lastHoldSeconds(logs, 'left') : null
   const lastRight = isPlank ? lastHoldSeconds(logs, 'right') : null
+  const listed = logsChrono(logs)
 
   return (
     <div className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#0d1614] p-3">
@@ -332,13 +335,18 @@ function HoldTimesBoard({
             )}
           </div>
           <ul className="mt-3 divide-y divide-[var(--panel-border)] border-t border-[var(--panel-border)]">
-            {logs.slice(0, 8).map((log) => {
+            {listed.map((log) => {
               const proper = logProperHoldSeconds(log)
               const isManual = log.method === 'manual'
+              const todayLog = isLogToday(log)
               return (
                 <li key={log.id} className="py-1.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-[12px] text-[var(--muted)]">
+                  <span
+                    className={`text-[12px] ${
+                      todayLog ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
+                    }`}
+                  >
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
                     {log.reps
@@ -410,12 +418,7 @@ function HoldTimesBoard({
                     log={log}
                     athletes={athletes ?? []}
                     viewer={viewer ?? null}
-                    canReact={Boolean(
-                      viewer &&
-                        athlete &&
-                        isCoachProfile(viewer) &&
-                        canSeePrivateCoaching(viewer, athlete),
-                    )}
+                    canReact={canReactToHomeworkLog(viewer, athlete, log)}
                     onChanged={onLogsChange}
                   />
                 </li>
@@ -1384,6 +1387,20 @@ export function HomeworkPanel({
 
       <HomeworkProgressStrip items={visibleItems} logsByItem={logsByItem} />
 
+      <HomeworkLogList
+        logs={logs}
+        items={visibleItems}
+        athlete={athlete}
+        viewer={viewer}
+        athletes={athletes}
+        onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
+        onRemove={(id) => {
+          removeHomeworkLog(id)
+          setLogs((prev) => prev.filter((row) => row.id !== id))
+          showFlash('Removed that logged set.')
+        }}
+      />
+
       {hwPage === 'train' && (
         <HwOverlay
           eyebrow="Train"
@@ -1577,6 +1594,21 @@ export function HomeworkPanel({
           />
         </div>
       </div>
+          <div className="mt-4">
+            <HomeworkLogList
+              logs={logs}
+              items={visibleItems}
+              athlete={athlete}
+              viewer={viewer}
+              athletes={athletes}
+              onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
+              onRemove={(id) => {
+                removeHomeworkLog(id)
+                setLogs((prev) => prev.filter((row) => row.id !== id))
+                showFlash('Removed that logged set.')
+              }}
+            />
+          </div>
         </HwOverlay>
       )}
 
