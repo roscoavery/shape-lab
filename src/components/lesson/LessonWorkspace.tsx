@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getShape } from '../../config/shapes'
-import { formatSeconds, useHoldTimer } from '../../hooks/useHoldTimer'
-import { homeworkLooksReady } from '../../lib/homeworkPose'
+import { formatSeconds } from '../../hooks/useHoldTimer'
 import { logLessonHoldOnAthleteHomework, logLessonRepsOnAthleteHomework } from '../../lib/lessonHomework'
 import { makeClassExtra, mergeExtras } from '../../lib/classExercises'
 import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
@@ -11,14 +10,12 @@ import {
   endLessonSession,
   lessonAthleteIds,
 } from '../../lib/lessonStore'
-import { DEFAULT_FORM_STANDARD } from '../../lib/storage'
 import { HoldProperTimes } from '../HoldProperTimes'
 import type { Athlete, Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
-import { CollapsibleSection } from '../CollapsibleSection'
+import { TodayDock } from '../today/TodayDock'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
-import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { rememberTypedHold } from '../../lib/typedHolds'
 import { SkillPicker, emptySkillTopic, groupLessonWork, type SkillTopic } from './SkillPicker'
 import { AthleteProfileCard } from '../AthleteProfileCard'
@@ -48,13 +45,6 @@ type Props = {
   onEnded: () => void
 }
 
-function applyTopicToCamera(topic: SkillTopic, onRequestShape: (id: string) => void) {
-  const scoreId =
-    topic.scoreShapeId ||
-    (topic.kind === 'shape' && topic.id ? topic.id : undefined)
-  if (scoreId) onRequestShape(scoreId)
-}
-
 export function LessonWorkspace({
   session,
   plan,
@@ -65,12 +55,6 @@ export function LessonWorkspace({
   coachName,
   athletes,
   onAthletesChange,
-  score,
-  currentShapeId,
-  timingActive,
-  landmarks,
-  onRequestShape,
-  onEnsureCamera,
   onGoCompare,
   onSessionChange,
   onEnded,
@@ -91,17 +75,6 @@ export function LessonWorkspace({
   const [watchMs, setWatchMs] = useState(0)
   const watchStartRef = useRef<number | null>(null)
   const watchAccRef = useRef(0)
-  const formStandard = DEFAULT_FORM_STANDARD
-  const cameraShapeId =
-    holdTopic.scoreShapeId ||
-    (holdTopic.kind === 'shape' && holdTopic.id ? holdTopic.id : currentShapeId)
-  const inShape = homeworkLooksReady(cameraShapeId, landmarks ?? null, score.overall)
-  const hold = useHoldTimer(
-    timingActive && inShape && currentShapeId === cameraShapeId,
-    score.overall,
-    formStandard,
-  )
-
   useEffect(() => {
     if (!watchRunning) return
     const id = window.setInterval(() => {
@@ -133,7 +106,6 @@ export function LessonWorkspace({
 
   const pickHold = (topic: SkillTopic) => {
     setHoldTopic(topic)
-    applyTopicToCamera(topic, onRequestShape)
   }
 
   const logHold = (seconds: number, method: 'camera' | 'manual', proper = 0, scoreValue = 0) => {
@@ -168,7 +140,6 @@ export function LessonWorkspace({
       }
       onSessionChange(next)
       if (method === 'manual') resetWatch()
-      else hold.reset()
     }
   }
 
@@ -186,7 +157,6 @@ export function LessonWorkspace({
   const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
 
   const grouped = useMemo(() => groupLessonWork(session), [session])
-  const scoreShapes = useMemo(() => lessonScoreShapes(), [])
   const people = lessonAthletes?.length ? lessonAthletes : athlete ? [athlete] : []
   const peopleIds = people.length ? people.map((a) => a.id) : lessonAthleteIds(session)
   const [videoAthleteId, setVideoAthleteId] = useState(peopleIds[0] ?? session.athleteId)
@@ -201,8 +171,7 @@ export function LessonWorkspace({
           <span className="font-normal text-[var(--muted)]"> with {coachName}</span>
         </h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {plan ? plan.title : 'Open lesson'} · start the stopwatch yourself. Pick the body
-          position so the live score grades that shape if the camera is on.{' '}
+          {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
           {athleteName} {people.length > 1 ? 'see' : 'sees'} notes grouped by skill after you end.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -282,8 +251,11 @@ export function LessonWorkspace({
       ))}
 
       {plan && plan.blocks.length > 0 && (
-        <CollapsibleSection
-          title="View lesson plan"
+        <TodayDock
+          id="lesson-plan"
+          icon="📝"
+          eyebrow="Lesson"
+          title="Lesson plan"
           hint={`${plan.blocks.length} block${plan.blocks.length === 1 ? '' : 's'} · ${plan.title}`}
         >
           <ol className="flex flex-col gap-2">
@@ -326,27 +298,24 @@ export function LessonWorkspace({
               </li>
             ))}
           </ol>
-        </CollapsibleSection>
+        </TodayDock>
       )}
 
-      <CollapsibleSection
-        title="Stopwatch / holds"
-        hint={`Start the clock when they go. Logged holds go on ${athleteName}’s homework, marked as a lesson with ${coachName}.`}
+      <TodayDock
+        id="lesson-clock"
+        icon="⏱️"
+        eyebrow="Class clock"
+        title="Holds & stopwatch"
+        hint="Time it. Log it. No camera grade."
       >
-        <p className="text-sm text-[var(--muted)]">
-          The clock does not wait for the camera. Pick the body position, tap Start
-          when they go, Stop when they come down, then log it. If you want live
-          analysis, turn the camera on — it grades the shape you selected. Every
-          log lands on {athleteName}’s homework as a lesson with {coachName} — not
-          on your admin profile.
+        <p className="text-sm text-white/55">
+          Pick the hold, Start, Stop, Log. It lands on {athleteName}’s homework as
+          a lesson with {coachName}.
         </p>
         <div className="mt-3">
           <SkillPicker
             value={holdTopic}
-            onChange={(next) => {
-              setHoldTopic(next)
-              applyTopicToCamera(next, onRequestShape)
-            }}
+            onChange={setHoldTopic}
             label="What are you holding"
             compactHolds
             allowSequence={false}
@@ -506,93 +475,14 @@ export function LessonWorkspace({
         {!holdTopic.label.trim() && (
           <p className="mt-2 text-xs text-[var(--muted)]">Select or type the skill before you log.</p>
         )}
-        {holdTopic.label.trim() && (
-          <p className="mt-3 text-sm">
-            Live score for <strong>{getShape(cameraShapeId)?.name ?? holdTopic.label}</strong>:{' '}
-            <strong>{Math.round(score.overall)}</strong>
-            <span className="text-[var(--muted)]">
-              {timingActive
-                ? inShape
-                  ? ' · in shape'
-                  : ' · camera on, waiting for the position'
-                : ' · camera off — stopwatch still works'}
-            </span>
-          </p>
-        )}
+      </TodayDock>
 
-        <div className="mt-4 border-t border-[var(--panel-border)] pt-3">
-          <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Camera analysis (optional)</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Pick any scored shape (arm-position drills are hidden for now).
-            Proper time counts at {formStandard}+. The stopwatch above does not
-            need this.
-          </p>
-          <select
-            className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            value={
-              scoreShapes.some((s) => s.id === cameraShapeId) ? cameraShapeId : ''
-            }
-            onChange={(e) => {
-              const id = e.target.value
-              if (!id) return
-              const s = scoreShapes.find((x) => x.id === id)
-              onRequestShape(id)
-              setHoldTopic({
-                kind: 'shape',
-                id,
-                label: s?.name ?? id,
-                scoreShapeId: id,
-              })
-            }}
-          >
-            <option value="">Score any shape…</option>
-            {scoreShapes.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-sm">
-            Proper{' '}
-            <strong className="text-[var(--good)]">{formatSeconds(hold.qualityHoldSeconds)}</strong>
-            <span className="text-[var(--muted)]">
-              {' '}
-              · scoring {getShape(cameraShapeId)?.name ?? cameraShapeId}
-            </span>
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm"
-              onClick={() => {
-                applyTopicToCamera(holdTopic, onRequestShape)
-                void onEnsureCamera?.()
-              }}
-            >
-              Grade this shape
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm"
-              onClick={() => {
-                applyTopicToCamera(holdTopic, onRequestShape)
-                logHold(
-                  hold.totalHoldSeconds || watchMs / 1000,
-                  'camera',
-                  hold.qualityHoldSeconds,
-                  score.overall,
-                )
-              }}
-            >
-              Save camera hold
-            </button>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
+      <TodayDock
+        id="lesson-notes"
+        icon="📌"
+        eyebrow="Lesson"
         title="Notes"
-        hint={`File what ${athleteName} should remember, grouped by skill.`}
+        hint={`What ${athleteName} should remember.`}
       >
         <p className="text-sm text-[var(--muted)]">
           One note per thought is fine. File each on the shape or sequence so{' '}
@@ -621,21 +511,27 @@ export function LessonWorkspace({
             }}
           />
         </div>
-      </CollapsibleSection>
+      </TodayDock>
 
-      <CollapsibleSection
+      <TodayDock
+        id="lesson-hw"
+        icon="⭐"
+        eyebrow="Lesson"
         title="Assign homework"
-        hint="Add a drill they will see under Practice → Homework."
+        hint="Add a drill they will see under Practice."
       >
         <AssignHomeworkBar
           athleteIds={peopleIds}
           coachId={session.coachId}
           hideHeading
         />
-      </CollapsibleSection>
+      </TodayDock>
 
-      <CollapsibleSection
-        title="Recap of lessons"
+      <TodayDock
+        id="lesson-recap"
+        icon="📒"
+        eyebrow="Lesson"
+        title="Recap"
         hint={
           grouped.length === 0
             ? 'Nothing filed yet this lesson'
@@ -666,11 +562,14 @@ export function LessonWorkspace({
             ))}
           </div>
         )}
-      </CollapsibleSection>
+      </TodayDock>
 
-      <CollapsibleSection
+      <TodayDock
+        id="lesson-video"
+        icon="🎥"
+        eyebrow="Lesson"
         title="Video library"
-        hint="Lesson clips saved from delay cam and Compare."
+        hint="Clips saved from delay cam and Compare."
       >
         {people.length > 1 && (
           <div className="mb-2 flex flex-wrap gap-2">
@@ -705,7 +604,7 @@ export function LessonWorkspace({
         >
           Refresh videos
         </button>
-      </CollapsibleSection>
+      </TodayDock>
     </div>
   )
 }

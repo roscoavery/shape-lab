@@ -50,6 +50,8 @@ import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
 import { TodayFloorCamera } from './components/today/TodayFloorCamera'
 import { TodayDock } from './components/today/TodayDock'
+import { ChalkboardPanel } from './components/today/ChalkboardPanel'
+import { TodayCollages } from './components/today/TodayCollages'
 import { WarmupPanel } from './components/warmup/WarmupPanel'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
@@ -619,6 +621,7 @@ export default function App() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
+              <div className="grid gap-4">
               <LessonWorkspace
                 session={liveLesson}
                 plan={liveLessonPlan}
@@ -638,6 +641,29 @@ export default function App() {
                 onSessionChange={() => setLessonTick((n) => n + 1)}
                 onEnded={() => setLessonTick((n) => n + 1)}
               />
+              <TodayDock
+                id="chalk"
+                icon="📋"
+                eyebrow="Today"
+                title="Prepare chalkboard"
+                hint="Pin clips and drills. Tap to open."
+              >
+                <ChalkboardPanel viewer={activeProfile} onToday embed />
+              </TodayDock>
+              <TodayDock
+                id="collage"
+                icon="🎬"
+                eyebrow="Class drills"
+                title="Collages"
+                hint="Play the board. Save it. Keep editing later."
+              >
+                <TodayCollages
+                  viewer={activeProfile}
+                  onOpenLibrary={() => goTab('classes')}
+                  embed
+                />
+              </TodayDock>
+              </div>
             ) : (
               <HomeDashboard
                 athletes={athletes}

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 
 const STORAGE_KEY = 'shape-lab.today.dock.v1'
 
-export type TodayDockId = 'clock' | 'chalk' | 'collage' | 'floor'
+export type TodayDockId = string
 
 type Stored = Partial<Record<TodayDockId, boolean>>
 
