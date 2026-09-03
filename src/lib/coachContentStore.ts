@@ -30,12 +30,31 @@ export type CoachContentFile = {
   stars: WarmupStar[]
   gymLibrary?: GymLibraryShape[]
   drills?: DrillClip[]
+  /** Stretch / warm-up ids dropped on any device — do not resurrect on merge. */
+  removedWarmupIds?: string[]
 }
 
 const listeners = new Set<() => void>()
+let memoryFile: CoachContentFile | null = null
 
 function emit() {
   for (const cb of listeners) cb()
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function applyRemovedWarmups(file: CoachContentFile): CoachContentFile {
+  const removedWarmupIds = asIdList(file.removedWarmupIds)
+  const removed = new Set(removedWarmupIds)
+  return {
+    ...file,
+    warmups: file.warmups.filter((w) => w?.id && !removed.has(w.id)),
+    stars: file.stars.filter((s) => s?.warmupId && !removed.has(s.warmupId)),
+    removedWarmupIds,
+  }
 }
 
 export function subscribeCoachContent(cb: () => void): () => void {
@@ -43,13 +62,12 @@ export function subscribeCoachContent(cb: () => void): () => void {
   return () => listeners.delete(cb)
 }
 
-function readFile(): CoachContentFile {
+function parseFile(raw: string | null): CoachContentFile {
+  if (!raw) return emptyFile()
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return emptyFile()
     const data = JSON.parse(raw) as CoachContentFile
     if (data?.kind !== 'shape-lab-coach-content') return emptyFile()
-    const parsed: CoachContentFile = {
+    return applyRemovedWarmups({
       kind: 'shape-lab-coach-content',
       version: 1,
       exportedAt: data.exportedAt ?? '',
@@ -59,12 +77,58 @@ function readFile(): CoachContentFile {
       stars: Array.isArray(data.stars) ? data.stars : [],
       gymLibrary: cleanGymLibrary(Array.isArray(data.gymLibrary) ? data.gymLibrary : []),
       drills: Array.isArray(data.drills) ? data.drills : [],
-    }
-    syncGymCache(parsed)
-    return parsed
+      removedWarmupIds: asIdList(data.removedWarmupIds),
+    })
   } catch {
     return emptyFile()
   }
+}
+
+function readStored(): CoachContentFile {
+  try {
+    return parseFile(localStorage.getItem(KEY))
+  } catch {
+    return emptyFile()
+  }
+}
+
+function readFile(): CoachContentFile {
+  const stored = readStored()
+  if (memoryFile && memoryFile.warmups.length >= stored.warmups.length) {
+    const parsed = applyRemovedWarmups({
+      ...memoryFile,
+      removedWarmupIds: [
+        ...new Set([...(stored.removedWarmupIds ?? []), ...(memoryFile.removedWarmupIds ?? [])]),
+      ],
+    })
+    syncGymCache(parsed)
+    return parsed
+  }
+  if (memoryFile && (memoryFile.warmups.length > 0 || (memoryFile.removedWarmupIds ?? []).length > 0)) {
+    const parsed = applyRemovedWarmups({
+      kind: 'shape-lab-coach-content',
+      version: 1,
+      exportedAt: memoryFile.exportedAt || stored.exportedAt,
+      shapes: mergeById(stored.shapes, memoryFile.shapes),
+      references: mergeById(stored.references ?? [], memoryFile.references ?? []),
+      warmups: mergeById(stored.warmups, memoryFile.warmups),
+      gymLibrary: cleanGymLibrary(mergeById(stored.gymLibrary ?? [], memoryFile.gymLibrary ?? [])),
+      drills: mergeById(stored.drills ?? [], memoryFile.drills ?? []),
+      stars: [...stored.stars, ...memoryFile.stars].filter(
+        (s, i, all) =>
+          s.athleteId &&
+          s.warmupId &&
+          all.findIndex((x) => x.athleteId === s.athleteId && x.warmupId === s.warmupId) === i,
+      ),
+      removedWarmupIds: [
+        ...new Set([...(stored.removedWarmupIds ?? []), ...(memoryFile.removedWarmupIds ?? [])]),
+      ],
+    })
+    syncGymCache(parsed)
+    return parsed
+  }
+  syncGymCache(stored)
+  return stored
 }
 
 function emptyFile(): CoachContentFile {
@@ -78,6 +142,7 @@ function emptyFile(): CoachContentFile {
     stars: [],
     gymLibrary: [],
     drills: [],
+    removedWarmupIds: [],
   }
 }
 
@@ -110,9 +175,11 @@ function syncGymCache(file: CoachContentFile) {
   setGymShapeCache((file.gymLibrary ?? []).map(gymRowToDef))
 }
 
-function persist(next: CoachContentFile) {
-  const file: CoachContentFile = {
+function persist(next: CoachContentFile, sync = true) {
+  const file = applyRemovedWarmups({
     ...next,
+    kind: 'shape-lab-coach-content',
+    version: 1,
     exportedAt: new Date().toISOString(),
     shapes: next.shapes.slice(0, 200),
     references: (next.references ?? []).slice(0, 240),
@@ -120,27 +187,40 @@ function persist(next: CoachContentFile) {
     stars: next.stars.slice(0, 400),
     gymLibrary: cleanGymLibrary(next.gymLibrary ?? []).slice(0, 200),
     drills: (next.drills ?? []).slice(0, 200),
-  }
+    removedWarmupIds: asIdList(next.removedWarmupIds),
+  })
+  memoryFile = file
   try {
     localStorage.setItem(KEY, JSON.stringify(file))
   } catch {
-    /* quota */
+    /* quota — keep the in-memory copy so this device still has the edit */
   }
   syncGymCache(file)
   emit()
-  void pushContent(file)
+  if (sync) void pushContent()
 }
 
-async function pushContent(file: CoachContentFile) {
-  try {
-    await fetch('/api/coach-content', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
-    })
-  } catch {
-    /* offline */
+/** PUT the current stretch / coach-content file to the gym link. */
+export async function publishCoachContent(): Promise<boolean> {
+  const file = readFile()
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch('/api/coach-content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(file),
+      })
+      if (res.ok) return true
+    } catch {
+      /* retry */
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 400 * (attempt + 1)))
   }
+  return false
+}
+
+async function pushContent() {
+  await publishCoachContent()
 }
 
 function mergeById<T extends { id: string; updatedAt?: string; createdAt?: string }>(
@@ -158,30 +238,66 @@ function mergeById<T extends { id: string; updatedAt?: string; createdAt?: strin
 }
 
 export async function hydrateCoachContent(): Promise<void> {
+  const local = readFile()
   try {
-    const res = await fetch('/api/coach-content')
-    if (!res.ok) return
+    const res = await fetch('/api/coach-content', { cache: 'no-store' })
+    if (!res.ok) {
+      if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+        await pushContent()
+      }
+      return
+    }
     const data = (await res.json()) as CoachContentFile
-    if (data?.kind !== 'shape-lab-coach-content') return
-    const local = readFile()
-    persist({
-      kind: 'shape-lab-coach-content',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      shapes: mergeById(local.shapes, data.shapes ?? []),
-      references: mergeById(local.references ?? [], data.references ?? []),
-      warmups: mergeById(local.warmups, data.warmups ?? []),
-      gymLibrary: cleanGymLibrary(mergeById(local.gymLibrary ?? [], data.gymLibrary ?? [])),
-      drills: mergeById(local.drills ?? [], data.drills ?? []),
-      stars: [...local.stars, ...(data.stars ?? [])].filter(
-        (s, i, all) =>
-          s.athleteId &&
-          s.warmupId &&
-          all.findIndex((x) => x.athleteId === s.athleteId && x.warmupId === s.warmupId) === i,
-      ),
-    })
+    if (data?.kind !== 'shape-lab-coach-content') {
+      if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+        await pushContent()
+      }
+      return
+    }
+    const removedWarmupIds = [
+      ...new Set([...asIdList(local.removedWarmupIds), ...asIdList(data.removedWarmupIds)]),
+    ]
+    persist(
+      {
+        kind: 'shape-lab-coach-content',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        shapes: mergeById(local.shapes, data.shapes ?? []),
+        references: mergeById(local.references ?? [], data.references ?? []),
+        warmups: mergeById(local.warmups, data.warmups ?? []),
+        gymLibrary: cleanGymLibrary(mergeById(local.gymLibrary ?? [], data.gymLibrary ?? [])),
+        drills: mergeById(local.drills ?? [], data.drills ?? []),
+        stars: [...local.stars, ...(data.stars ?? [])].filter(
+          (s, i, all) =>
+            s.athleteId &&
+            s.warmupId &&
+            all.findIndex((x) => x.athleteId === s.athleteId && x.warmupId === s.warmupId) === i,
+        ),
+        removedWarmupIds,
+      },
+      false,
+    )
+    const next = readFile()
+    const remoteWarmups = Array.isArray(data.warmups) ? data.warmups : []
+    const remoteRemoved = asIdList(data.removedWarmupIds)
+    const remoteById = new Map(
+      remoteWarmups
+        .filter((w): w is WarmupGuide => Boolean(w && typeof w === 'object' && w.id))
+        .map((w) => [w.id, w]),
+    )
+    const needPush =
+      next.warmups.some((w) => {
+        const remote = remoteById.get(w.id)
+        if (!remote) return true
+        return (w.updatedAt || '') > (remote.updatedAt || '')
+      }) ||
+      next.warmups.length !== remoteWarmups.filter((w) => w?.id && !removedWarmupIds.includes(w.id)).length ||
+      (next.removedWarmupIds ?? []).some((id) => !remoteRemoved.includes(id))
+    if (needPush) await pushContent()
   } catch {
-    /* first load */
+    if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+      await pushContent()
+    }
   }
 }
 
@@ -381,8 +497,17 @@ export function saveWarmup(guide: WarmupGuide): WarmupGuide {
   persist({
     ...file,
     warmups: [next, ...file.warmups.filter((w) => w.id !== next.id)],
+    removedWarmupIds: (file.removedWarmupIds ?? []).filter((id) => id !== next.id),
   })
   return next
+}
+
+export async function saveWarmupToGym(guide: WarmupGuide): Promise<{
+  guide: WarmupGuide
+  savedToGym: boolean
+}> {
+  const saved = saveWarmup(guide)
+  return { guide: saved, savedToGym: await publishCoachContent() }
 }
 
 export function deleteWarmup(id: string) {
@@ -391,7 +516,13 @@ export function deleteWarmup(id: string) {
     ...file,
     warmups: file.warmups.filter((w) => w.id !== id),
     stars: file.stars.filter((s) => s.warmupId !== id),
+    removedWarmupIds: [...new Set([...(file.removedWarmupIds ?? []), id])],
   })
+}
+
+export async function deleteWarmupFromGym(id: string): Promise<boolean> {
+  deleteWarmup(id)
+  return publishCoachContent()
 }
 
 export function emptyWarmup(coachId: string, coachName: string): WarmupGuide {

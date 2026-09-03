@@ -390,6 +390,7 @@ export default function App() {
       })
       void hydrateCoachClasses()
       void hydrateChalkboards()
+      void hydrateCoachContent()
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') pull()

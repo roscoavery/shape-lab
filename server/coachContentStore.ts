@@ -1,4 +1,4 @@
-import { readJson, writeJson } from './persist.ts'
+import { readDiskJson, readJson, writeJson } from './persist.ts'
 
 const FILE = 'data/coach-content.json'
 
@@ -12,6 +12,7 @@ export type DiskCoachContent = {
   stars: unknown[]
   gymLibrary?: unknown[]
   drills?: unknown[]
+  removedWarmupIds?: string[]
 }
 
 const EMPTY: DiskCoachContent = {
@@ -24,12 +25,17 @@ const EMPTY: DiskCoachContent = {
   stars: [],
   gymLibrary: [],
   drills: [],
+  removedWarmupIds: [],
 }
 
-export async function readCoachContentFile(): Promise<DiskCoachContent> {
-  const data = await readJson<DiskCoachContent>(FILE, { ...EMPTY })
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function normalize(data: DiskCoachContent | null | undefined): DiskCoachContent {
   if (!data || data.kind !== 'shape-lab-coach-content') return { ...EMPTY }
-  return {
+  return applyRemoved({
     kind: 'shape-lab-coach-content',
     version: 1,
     exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
@@ -39,7 +45,48 @@ export async function readCoachContentFile(): Promise<DiskCoachContent> {
     stars: Array.isArray(data.stars) ? data.stars : [],
     gymLibrary: Array.isArray(data.gymLibrary) ? data.gymLibrary : [],
     drills: Array.isArray(data.drills) ? data.drills : [],
+    removedWarmupIds: asIdList(data.removedWarmupIds),
+  })
+}
+
+function applyRemoved(file: DiskCoachContent): DiskCoachContent {
+  const removedWarmupIds = asIdList(file.removedWarmupIds)
+  const removed = new Set(removedWarmupIds)
+  return {
+    ...file,
+    warmups: file.warmups.filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const id = (raw as { id?: unknown }).id
+      return typeof id === 'string' && id && !removed.has(id)
+    }),
+    stars: file.stars.filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const id = (raw as { warmupId?: unknown }).warmupId
+      return typeof id === 'string' && id && !removed.has(id)
+    }),
+    removedWarmupIds,
   }
+}
+
+function unionFiles(a: DiskCoachContent, b: DiskCoachContent): DiskCoachContent {
+  return applyRemoved({
+    kind: 'shape-lab-coach-content',
+    version: 1,
+    exportedAt: a.exportedAt || b.exportedAt || '',
+    shapes: union(a.shapes, b.shapes),
+    references: union(a.references, b.references),
+    warmups: union(a.warmups, b.warmups),
+    stars: unionStars(a.stars, b.stars),
+    gymLibrary: union(a.gymLibrary ?? [], b.gymLibrary ?? []),
+    drills: union(a.drills ?? [], b.drills ?? []),
+    removedWarmupIds: [...new Set([...asIdList(a.removedWarmupIds), ...asIdList(b.removedWarmupIds)])],
+  })
+}
+
+export async function readCoachContentFile(): Promise<DiskCoachContent> {
+  const stored = normalize(await readJson<DiskCoachContent>(FILE, { ...EMPTY }))
+  const bundled = normalize(readDiskJson<DiskCoachContent>(FILE, { ...EMPTY }))
+  return unionFiles(bundled, stored)
 }
 
 function byId(list: unknown[]): Map<string, Record<string, unknown>> {
@@ -93,21 +140,11 @@ function unionStars(existing: unknown[], incoming: unknown[]): unknown[] {
 }
 
 export async function writeCoachContentFile(raw: unknown): Promise<DiskCoachContent> {
-  const body = raw && typeof raw === 'object' ? (raw as DiskCoachContent) : EMPTY
+  const body = raw && typeof raw === 'object' ? normalize(raw as DiskCoachContent) : { ...EMPTY }
   const current = await readCoachContentFile()
   const next: DiskCoachContent = {
-    kind: 'shape-lab-coach-content',
-    version: 1,
+    ...unionFiles(current, body),
     exportedAt: new Date().toISOString(),
-    shapes: union(current.shapes, Array.isArray(body.shapes) ? body.shapes : []),
-    references: union(current.references, Array.isArray(body.references) ? body.references : []),
-    warmups: union(current.warmups, Array.isArray(body.warmups) ? body.warmups : []),
-    stars: unionStars(current.stars, Array.isArray(body.stars) ? body.stars : []),
-    gymLibrary: union(
-      current.gymLibrary ?? [],
-      Array.isArray(body.gymLibrary) ? body.gymLibrary : [],
-    ),
-    drills: union(current.drills ?? [], Array.isArray(body.drills) ? body.drills : []),
   }
   await writeJson(FILE, next)
   return next

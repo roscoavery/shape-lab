@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 import {
-  deleteWarmup,
+  deleteWarmupFromGym,
   emptyWarmup,
+  hydrateCoachContent,
   isWarmupStarred,
   listWarmups,
-  saveWarmup,
+  saveWarmupToGym,
   subscribeCoachContent,
   toggleWarmupStar,
   uploadCoachMedia,
 } from '../../lib/coachContentStore'
 import { compressImageFile } from '../../lib/mediaCompress'
 import { createId } from '../../lib/storage'
-import { isCoachProfile } from '../../lib/profileRole'
+import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import type { Athlete, WarmupGuide, WarmupStep } from '../../types'
 import { FramedPhoto } from '../coach/FramedPhoto'
 
@@ -25,9 +26,15 @@ export function WarmupPanel({ signedIn }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [editing, setEditing] = useState<WarmupGuide | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [askDelete, setAskDelete] = useState<WarmupGuide | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
 
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
+  useEffect(() => {
+    void hydrateCoachContent()
+  }, [])
   void tick
 
   const all = listWarmups()
@@ -84,12 +91,43 @@ export function WarmupPanel({ signedIn }: Props) {
         <WarmupEditor
           guide={editing}
           coachId={signedIn.id}
+          existing={all.some((w) => w.id === editing.id)}
           onCancel={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
+          onSaved={(savedToGym) => {
+            setEditing(null)
+            setNotice(
+              savedToGym
+                ? 'Saved to this gym link. Every phone and iPad will see it.'
+                : 'Saved on this device. The gym link did not take it — stay on this URL and save again.',
+            )
+          }}
           onError={setErr}
         />
       )}
       {err && <p className="text-sm text-[var(--bad)]">{err}</p>}
+      {notice && <p className="text-sm text-[var(--accent)]">{notice}</p>}
+      {askDelete && (
+        <WarmupAsk
+          title={`Are you sure you want to delete ${askDelete.title || 'this stretch'}?`}
+          body="It comes off every phone and iPad on this gym link. This does not undo."
+          keepLabel="Keep stretch"
+          confirmLabel={deleting ? 'Deleting…' : 'Yes, delete'}
+          busy={deleting}
+          onKeep={() => setAskDelete(null)}
+          onConfirm={() => {
+            setDeleting(true)
+            void deleteWarmupFromGym(askDelete.id).then((ok) => {
+              setDeleting(false)
+              setAskDelete(null)
+              setNotice(
+                ok
+                  ? 'Deleted from this gym link.'
+                  : 'Removed on this device. The gym link did not take it — stay on this URL and delete again.',
+              )
+            })
+          }}
+        />
+      )}
 
       {ordered.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
@@ -100,6 +138,7 @@ export function WarmupPanel({ signedIn }: Props) {
           {ordered.map((w) => {
             const star = isWarmupStarred(signedIn.id, w.id)
             const mine = w.coachId === signedIn.id
+            const canDelete = mine || isGymAdmin(signedIn)
             return (
               <li
                 key={w.id}
@@ -129,20 +168,18 @@ export function WarmupPanel({ signedIn }: Props) {
                     Start
                   </button>
                   {mine && (
-                    <>
-                      <button type="button" className="text-xs underline" onClick={() => setEditing(w)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="text-xs text-[var(--bad)] underline"
-                        onClick={() => {
-                          if (window.confirm(`Delete ${w.title || 'this warm-up'}?`)) deleteWarmup(w.id)
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </>
+                    <button type="button" className="text-xs underline" onClick={() => setEditing(w)}>
+                      Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--bad)] underline"
+                      onClick={() => setAskDelete(w)}
+                    >
+                      Delete
+                    </button>
                   )}
                 </div>
               </li>
@@ -300,21 +337,73 @@ function WarmupPlayer({
   )
 }
 
+function WarmupAsk({
+  title,
+  body,
+  keepLabel,
+  confirmLabel,
+  busy,
+  onKeep,
+  onConfirm,
+}: {
+  title: string
+  body: string
+  keepLabel: string
+  confirmLabel: string
+  busy?: boolean
+  onKeep: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 shadow-2xl">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--bad)]">
+          Stretch / warm-up
+        </p>
+        <h3 className="mt-1 text-lg font-semibold">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{body}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onKeep}
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+          >
+            {keepLabel}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onConfirm}
+            className="rounded-lg border border-[var(--bad)] px-4 py-2 text-sm font-semibold text-[var(--bad)] disabled:opacity-40"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function WarmupEditor({
   guide,
   coachId,
+  existing,
   onCancel,
   onSaved,
   onError,
 }: {
   guide: WarmupGuide
   coachId: string
+  existing: boolean
   onCancel: () => void
-  onSaved: () => void
+  onSaved: (savedToGym: boolean) => void
   onError: (msg: string | null) => void
 }) {
   const [draft, setDraft] = useState(guide)
   const [busy, setBusy] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [askSave, setAskSave] = useState(false)
 
   const setStep = (id: string, patch: Partial<WarmupStep>) => {
     setDraft({
@@ -441,12 +530,9 @@ function WarmupEditor({
         <div className="flex gap-2">
           <button
             type="button"
-            disabled={!draft.title.trim() || draft.steps.length === 0 || busy}
+            disabled={!draft.title.trim() || draft.steps.length === 0 || busy || saving}
             className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
-            onClick={() => {
-              saveWarmup({ ...draft, title: draft.title.trim() })
-              onSaved()
-            }}
+            onClick={() => setAskSave(true)}
           >
             Save warm-up
           </button>
@@ -455,6 +541,33 @@ function WarmupEditor({
           </button>
         </div>
       </div>
+      {askSave && (
+        <WarmupAsk
+          title={
+            existing
+              ? `Are you sure you want to save these changes to ${draft.title.trim() || 'this stretch'}?`
+              : `Are you sure you want to save ${draft.title.trim() || 'this stretch'} to the gym link?`
+          }
+          body={
+            existing
+              ? 'Every phone and iPad on this gym link gets the update. This does not undo.'
+              : 'Every phone and iPad on this gym link will see it.'
+          }
+          keepLabel={existing ? 'Keep editing' : 'Keep writing'}
+          confirmLabel={saving ? 'Saving…' : 'Yes, save'}
+          busy={saving}
+          onKeep={() => setAskSave(false)}
+          onConfirm={() => {
+            setSaving(true)
+            onError(null)
+            void saveWarmupToGym({ ...draft, title: draft.title.trim() }).then(({ savedToGym }) => {
+              setSaving(false)
+              setAskSave(false)
+              onSaved(savedToGym)
+            })
+          }}
+        />
+      )}
     </section>
   )
 }
