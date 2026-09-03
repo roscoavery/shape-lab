@@ -27,10 +27,25 @@ export function AssignClassHomework({
   onAthletesChange,
 }: Props) {
   const present = resolveAttendeeAthletes(meeting, athletes)
+  const roster = (offering?.rosterIds ?? [])
+    .map((id) => athletes.find((a) => a.id === id))
+    .filter((a): a is Athlete => Boolean(a))
+  const homeworkPool = useMemo(() => {
+    const seen = new Set<string>()
+    const out: Athlete[] = []
+    for (const a of [...roster, ...present]) {
+      if (seen.has(a.id)) continue
+      seen.add(a.id)
+      out.push(a)
+    }
+    return out
+  }, [roster, present])
   const guests = meeting.attendees.filter(
     (row) => !row.athleteId && !present.some((a) => a.name.toLowerCase() === `${row.firstName} ${row.lastName}`.toLowerCase()),
   )
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(present.map((a) => a.id)))
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set((offering?.rosterIds?.length ? offering.rosterIds : present.map((a) => a.id)).filter((id) => athletes.some((a) => a.id === id))),
+  )
   const [notes, setNotes] = useState('')
   const [mode, setMode] = useState<HomeworkTrackMode | ''>('')
   const [target, setTarget] = useState('20')
@@ -85,9 +100,12 @@ export function AssignClassHomework({
           Homework{offering ? ` · ${classLabel(offering)}` : ''}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          Assign one exercise to everyone who has a profile, or uncheck names
-          for individual homework. Notes and wins still land on the athlete
-          after class is over.
+          The class roster starts checked for homework — not roll. Core
+          drills become coach-assigned on the card they already have. Do
+          not assign back extensions or glute bridges here; those stay on
+          the coach back-pain path. Candlestick, core, and study shapes
+          are the stock picks. Athletes study the library and take the
+          shape test at home.
         </p>
       </div>
 
@@ -112,21 +130,23 @@ export function AssignClassHomework({
             className="text-xs text-[var(--accent)] underline"
             onClick={() =>
               setSelected(
-                selected.size === present.length ? new Set() : new Set(present.map((a) => a.id)),
+                selected.size === homeworkPool.length
+                  ? new Set()
+                  : new Set(homeworkPool.map((a) => a.id)),
               )
             }
           >
-            {selected.size === present.length ? 'Select none' : 'Select whole class'}
+            {selected.size === homeworkPool.length ? 'Select none' : 'Select whole roster'}
           </button>
         </div>
-        {present.length === 0 ? (
+        {homeworkPool.length === 0 ? (
           <p className="text-sm text-white/55">
-            Nobody with a profile was marked here. Use Class station next time
-            so homework has somewhere to land.
+            Nobody on the roster or roll has a profile yet. Add them under
+            Edit classes, or they check in at the roll station.
           </p>
         ) : (
           <ul className="space-y-2">
-            {present.map((a) => (
+            {homeworkPool.map((a) => (
               <li key={a.id}>
                 <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <input
@@ -153,6 +173,7 @@ export function AssignClassHomework({
           libraryShapes={libraryShapes}
           coachExercises={exercises}
           isCoach
+          stockAudience="class"
           source="coach"
           onSource={() => {}}
           notes={notes}

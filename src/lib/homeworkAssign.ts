@@ -11,7 +11,14 @@ import {
   drillHomeworkShapeId,
   sequenceHomeworkShapeId,
 } from './homeworkLabel'
-import { addHomeworkItem, createId, homeworkDedupeKey, loadAllHomework } from './storage'
+import {
+  addHomeworkItem,
+  createId,
+  ensureAutoHomework,
+  homeworkDedupeKey,
+  loadAllHomework,
+  updateHomeworkItem,
+} from './storage'
 import type { CoachExercise, HomeworkItem, HomeworkSource, HomeworkTrackMode } from '../types'
 import type { HomeworkPick } from '../components/homework/AddHomeworkForm'
 
@@ -50,6 +57,7 @@ export function buildHomeworkItem(
   draft: HomeworkAssignDraft,
 ): HomeworkItem | null {
   const pick = draft.pick
+  if (pick.kind === 'core') return null
   const coachEx =
     pick.kind === 'coach'
       ? draft.coachExercises?.find((e) => e.id === pick.id)
@@ -140,6 +148,24 @@ export function assignHomeworkToAthletes(
   let skipped = 0
   const existing = loadAllHomework()
   for (const athleteId of athleteIds) {
+    if (draft.pick.kind === 'core') {
+      const coreId = draft.pick.id
+      ensureAutoHomework(athleteId)
+      const auto = loadAllHomework().find(
+        (h) => h.athleteId === athleteId && (h.autoKey === coreId || h.shapeId === coreId),
+      )
+      if (!auto) {
+        skipped += 1
+        continue
+      }
+      if (auto.coachAssigned) {
+        skipped += 1
+        continue
+      }
+      updateHomeworkItem(auto.id, { coachAssigned: true })
+      added += 1
+      continue
+    }
     const item = buildHomeworkItem(athleteId, draft)
     if (!item) {
       skipped += 1

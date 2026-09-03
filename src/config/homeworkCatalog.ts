@@ -14,6 +14,8 @@ export const PULLUP_GRIPS = [
   { id: 'mixed', label: 'Mixed' },
 ] as const
 
+export type HomeworkCatalogAudience = 'class' | 'care' | 'all'
+
 export type HomeworkCatalogItem = {
   id: string
   name: string
@@ -23,11 +25,41 @@ export type HomeworkCatalogItem = {
   allowWeight?: boolean
   grips?: boolean
   wristPrep?: boolean
+  /** care = coach back-pain path; class = end-of-class stock; all = both. */
+  audience?: HomeworkCatalogAudience
   notes: string
   cues: string[]
 }
 
 export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
+  {
+    id: 'candlestick',
+    name: 'Candlestick drills',
+    trackMode: 'hold_or_reps',
+    targetSeconds: 20,
+    targetReps: 8,
+    audience: 'class',
+    notes:
+      'Shoulder-stand candle and the handstand-roll candle. Open hips, ribs in, climb down with control.',
+    cues: [
+      'Ribs in. Hips open toward the ceiling.',
+      'Hands stay on the floor unless this is a shoulder-stand finish.',
+      'A quality rep is a still candle you can hold for a beat.',
+    ],
+  },
+  {
+    id: 'study_shapes',
+    name: 'Study shapes + take the shape test',
+    trackMode: 'journal',
+    audience: 'class',
+    notes:
+      'At home: go through the shape library, then take the shape test. Log when you finish so the coach can see it.',
+    cues: [
+      'Open Learn → Shape library. Read the still and the written standard.',
+      'Then take the shape test — pictures or descriptions.',
+      'Write which shapes you studied if you want the coach to see it.',
+    ],
+  },
   {
     id: 'bridge_pushup',
     name: 'Bridge push-ups',
@@ -83,6 +115,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     id: 'back_extension',
     name: 'Back extensions',
     trackMode: 'hold_or_reps',
+    audience: 'care',
     targetSeconds: 120,
     targetReps: 8,
     allowWeight: true,
@@ -99,6 +132,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     id: 'glute_bridge',
     name: 'Glute bridges',
     trackMode: 'hold_or_reps',
+    audience: 'care',
     targetSeconds: 30,
     targetReps: 10,
     allowWeight: true,
@@ -120,6 +154,27 @@ export function catalogIdFromShape(shapeId: string): string | null {
   if (!shapeId.startsWith(CATALOG_PREFIX)) return null
   return shapeId.slice(CATALOG_PREFIX.length)
 }
+
+export function catalogAudience(item: HomeworkCatalogItem): HomeworkCatalogAudience {
+  return item.audience ?? 'all'
+}
+
+export function stockCatalogFor(audience: HomeworkCatalogAudience | 'class'): HomeworkCatalogItem[] {
+  if (audience === 'class') {
+    return HOMEWORK_CATALOG.filter((item) => {
+      const who = catalogAudience(item)
+      return who === 'class'
+    })
+  }
+  return HOMEWORK_CATALOG.filter((item) => catalogAudience(item) !== 'care')
+}
+
+export const CORE_HOMEWORK_PICKS: { autoKey: string; name: string; hint: string }[] = [
+  { autoKey: 'hollow', name: 'Hollow', hint: 'Core drill already on every athlete — coach assigned, no second card' },
+  { autoKey: 'superman', name: 'Superman', hint: 'Core drill already on every athlete — coach assigned, no second card' },
+  { autoKey: 'side_plank', name: 'Side plank', hint: 'Core drill already on every athlete — coach assigned, no second card' },
+  { autoKey: 'wall_handstand', name: 'Wall handstand', hint: 'Core drill already on every athlete — coach assigned, no second card' },
+]
 
 export function getCatalogItem(id: string | undefined | null): HomeworkCatalogItem | undefined {
   if (!id) return undefined

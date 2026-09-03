@@ -31,6 +31,7 @@ type Props = {
   pool?: QuizPool
   athletes?: Athlete[]
   presetTaker?: QuizTaker | null
+  preferredAthleteIds?: string[]
   onTakerReady?: (taker: QuizTaker) => void
   onGrade?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
@@ -43,6 +44,7 @@ export function ShapeQuiz({
   pool = 'pathway',
   athletes = [],
   presetTaker = null,
+  preferredAthleteIds = [],
   onTakerReady,
   onGrade,
   onAthleteChange,
@@ -179,6 +181,7 @@ export function ShapeQuiz({
       <QuizWho
         athletes={athletes}
         preset={presetTaker}
+        preferredIds={preferredAthleteIds}
         onReady={(next) => {
           setTaker(next)
           onTakerReady?.(next)

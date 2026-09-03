@@ -437,9 +437,15 @@ export function filterDismissedHomework(items: HomeworkItem[]): HomeworkItem[] {
 }
 
 function preferHomeworkItem(a: HomeworkItem, b: HomeworkItem): HomeworkItem {
-  if (a.source === 'auto' && b.source !== 'auto') return a
-  if (b.source === 'auto' && a.source !== 'auto') return b
-  return a.createdAt <= b.createdAt ? a : b
+  const keep = (() => {
+    if (a.source === 'auto' && b.source !== 'auto') return a
+    if (b.source === 'auto' && a.source !== 'auto') return b
+    return a.createdAt <= b.createdAt ? a : b
+  })()
+  return {
+    ...keep,
+    coachAssigned: Boolean(a.coachAssigned || b.coachAssigned),
+  }
 }
 
 export function dedupeHomeworkItems(items: HomeworkItem[]): HomeworkItem[] {
@@ -599,6 +605,7 @@ export function updateHomeworkItem(
       | 'targetReps'
       | 'grip'
       | 'allowWeight'
+      | 'coachAssigned'
     >
   >,
 ): HomeworkItem | null {

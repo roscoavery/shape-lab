@@ -21,8 +21,7 @@ export const SUGGESTED_CLASS_EXTRAS: Omit<ClassExtraExercise, 'id'>[] = [
   { kind: 'catalog', refId: 'pullup', label: 'Pull-ups', trackMode: 'reps' },
   { kind: 'catalog', refId: 'bridge_pushup', label: 'Bridge push-ups', trackMode: 'reps' },
   { kind: 'catalog', refId: 'v_up', label: 'V-ups', trackMode: 'reps' },
-  { kind: 'catalog', refId: 'glute_bridge', label: 'Glute bridges', trackMode: 'hold' },
-  { kind: 'catalog', refId: 'back_extension', label: 'Back extensions', trackMode: 'hold' },
+  { kind: 'catalog', refId: 'candlestick', label: 'Candlestick drills', trackMode: 'hold' },
 ]
 
 export function normalizeClassExtra(raw: Partial<ClassExtraExercise> | null | undefined): ClassExtraExercise | null {

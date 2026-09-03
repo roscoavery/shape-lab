@@ -116,6 +116,7 @@ import {
   getOffering,
   hydrateCoachClasses,
   markClassAttendance,
+  priorOfferingAthleteIds,
   subscribeCoachClasses,
 } from './lib/coachClasses'
 import {
@@ -1063,6 +1064,16 @@ export default function App() {
           intent={learnIntent}
           onIntentConsumed={() => setLearnIntent(null)}
           presetQuizTaker={quizPreset}
+          preferredQuizIds={[
+            ...new Set([
+              ...(getActiveMeeting()
+                ? [
+                    ...(getOffering(getActiveMeeting()!.offeringId)?.rosterIds ?? []),
+                    ...priorOfferingAthleteIds(getActiveMeeting()!.offeringId),
+                  ]
+                : []),
+            ]),
+          ]}
           onQuizTaker={(taker) => {
             markClassAttendance({
               athleteId: taker.athleteId,

@@ -20,11 +20,13 @@ export type QuizTaker = {
 type Props = {
   athletes: Athlete[]
   preset?: QuizTaker | null
+  /** People from the open class — show them first so roll is easy. */
+  preferredIds?: string[]
   onReady: (taker: QuizTaker) => void
   onExit: () => void
 }
 
-export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
+export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }: Props) {
   const [mode, setMode] = useState<'pick' | 'type'>(preset ? 'type' : 'pick')
   const [first, setFirst] = useState(preset?.firstName ?? '')
   const [last, setLast] = useState(preset?.lastName ?? '')
@@ -36,7 +38,16 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
     [athletes],
   )
   const q = filter.trim().toLowerCase()
-  const visible = roster.filter((a) => !q || a.name.toLowerCase().includes(q))
+  const preferred = new Set(preferredIds)
+  const visible = roster
+    .filter((a) => !q || a.name.toLowerCase().includes(q))
+    .slice()
+    .sort((a, b) => {
+      const ap = preferred.has(a.id) ? 0 : 1
+      const bp = preferred.has(b.id) ? 0 : 1
+      if (ap !== bp) return ap - bp
+      return a.name.localeCompare(b.name)
+    })
   const visibleGuests = guests.filter((g) => {
     const already = roster.some((a) => namesMatch(a, g.firstName, g.lastName))
     const name = displayPersonName(g.firstName, g.lastName).toLowerCase()
@@ -57,8 +68,8 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
       </p>
       <h3 className="mt-1 text-2xl font-semibold text-[var(--text)]">Who is taking this?</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-        First and last name, or pick a profile. If they already typed a name on
-        a test, it is here so you do not make a second one.
+        First and last name, or pick a profile. If a class is open, names from
+        that class sit at the top — tapping one also marks roll.
       </p>
 
       <div className="mt-4 flex gap-2">
@@ -129,7 +140,14 @@ export function QuizWho({ athletes, preset, onReady, onExit }: Props) {
                   }
                   className="flex w-full items-center justify-between rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3 text-left"
                 >
-                  <AthleteName athlete={a} size="md" nameClassName="text-base font-semibold" />
+                  <span>
+                    {preferred.has(a.id) ? (
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                        This class
+                      </span>
+                    ) : null}
+                    <AthleteName athlete={a} size="md" nameClassName="text-base font-semibold" />
+                  </span>
                   {last ? (
                     <span className="text-xs font-medium text-[var(--accent)]">
                       Last: {formatQuizScore(last)}

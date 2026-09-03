@@ -71,6 +71,7 @@ type Props = {
   intent?: LearnIntent | null
   onIntentConsumed?: () => void
   presetQuizTaker?: { firstName: string; lastName: string; athleteId?: string } | null
+  preferredQuizIds?: string[]
   onQuizTaker?: (taker: { firstName: string; lastName: string; athleteId?: string }) => void
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
@@ -90,6 +91,7 @@ export function EducationPanel({
   intent = null,
   onIntentConsumed,
   presetQuizTaker = null,
+  preferredQuizIds = [],
   onQuizTaker,
   onRecordQuiz,
   onAthleteChange,
@@ -321,6 +323,7 @@ export function EducationPanel({
           onExit={goHome}
           athletes={athletes}
           presetTaker={presetQuizTaker}
+          preferredAthleteIds={preferredQuizIds}
           onTakerReady={onQuizTaker}
           onGrade={onRecordQuiz}
           onAthleteChange={onAthleteChange}

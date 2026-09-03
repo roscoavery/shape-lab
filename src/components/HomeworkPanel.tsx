@@ -43,6 +43,7 @@ import { WristPrepNotice } from './homework/WristPrepNotice'
 import { RepSession } from './homework/RepSession'
 import { CarePanel } from './homework/CarePanel'
 import { AddHomeworkForm, type HomeworkPick } from './homework/AddHomeworkForm'
+import { PastHoldLogForm } from './homework/PastHoldLogForm'
 import { alreadyHasCatalog, catalogIdsForBackPain, shouldEncourageSlowReps } from '../lib/backCare'
 import { buildHomeworkItem, ensureHomeworkForPick } from '../lib/homeworkAssign'
 import { ExerciseSetLog, OTHER_EXERCISE } from './homework/ExerciseSetLog'
@@ -618,6 +619,7 @@ export function HomeworkPanel({
   const [manualItemId, setManualItemId] = useState<string | null>(null)
   const [manualSeconds, setManualSeconds] = useState('')
   const [manualDate, setManualDate] = useState(todayInputValue())
+  const [manualInLesson, setManualInLesson] = useState(false)
   const [manualSide, setManualSide] = useState<PlankSide>('left')
   // Live breakdown count for the session box
   const [breakdownCount, setBreakdownCount] = useState(0)
@@ -1006,6 +1008,9 @@ export function HomeworkPanel({
       totalHoldSeconds: Number(secs.toFixed(2)),
       score: 0,
       ...(isPlank && manualSide !== 'both' ? { side: manualSide } : {}),
+      ...(manualInLesson
+        ? { loggedFrom: 'lesson' as const, sourceLabel: 'In a lesson' }
+        : {}),
     }
     logLockRef.current = true
     addHomeworkLog(log)
@@ -1363,6 +1368,18 @@ export function HomeworkPanel({
             Log pain, remember what the doctor said, and train what you can handle today.
           </span>
         </button>
+        {athlete && (
+          <PastHoldLogForm
+            athlete={athlete}
+            items={visibleItems}
+            coach={
+              signedIn && isCoachProfile(signedIn) && signedIn.id !== athlete.id
+                ? signedIn
+                : null
+            }
+            onLogged={(log) => setLogs((prev) => [log, ...prev])}
+          />
+        )}
       </div>
 
       <HomeworkProgressStrip items={visibleItems} logsByItem={logsByItem} />
@@ -1870,6 +1887,11 @@ export function HomeworkPanel({
                   >
                     {badge.label}
                   </span>
+                  {item.coachAssigned && (
+                    <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text)]">
+                      Coach assigned
+                    </span>
+                  )}
                   <span className="truncate font-medium text-[var(--text)]">
                     {homeworkTitle(item)}
                   </span>
@@ -2001,6 +2023,14 @@ export function HomeworkPanel({
                         max={todayInputValue()}
                         onChange={(e) => setManualDate(e.target.value)}
                       />
+                    </label>
+                    <label className="flex items-center gap-1 text-[var(--muted)]">
+                      <input
+                        type="checkbox"
+                        checked={manualInLesson}
+                        onChange={(e) => setManualInLesson(e.target.checked)}
+                      />
+                      in a lesson
                     </label>
                     {isPlank && (
                       <select

@@ -741,6 +741,22 @@ export function resolveAttendeeAthletes(meeting: ClassMeeting, athletes: Athlete
   return out
 }
 
+/** People who have already been marked in this class type — newest meetings first. */
+export function priorOfferingAthleteIds(offeringId: string | null | undefined): string[] {
+  if (!offeringId) return []
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  for (const meeting of loadMeetings()) {
+    if (meeting.offeringId !== offeringId) continue
+    for (const row of meeting.attendees) {
+      if (!row.athleteId || seen.has(row.athleteId)) continue
+      seen.add(row.athleteId)
+      ordered.push(row.athleteId)
+    }
+  }
+  return ordered
+}
+
 export function rosterAthletes(offering: CoachClassOffering | null | undefined, athletes: Athlete[]): Athlete[] {
   if (!offering) return []
   return offering.rosterIds

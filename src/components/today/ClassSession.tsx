@@ -14,6 +14,7 @@ import {
   markClassAttendance,
   offeringHelperCoachIds,
   offeringLeadCoachId,
+  priorOfferingAthleteIds,
   publishClassList,
   removeClassAttendance,
   removeOffering,
@@ -51,7 +52,7 @@ type Props = {
   onViewProfile?: (id: string) => void
 }
 
-type Screen = 'pick' | 'live' | 'assign' | 'schedule'
+type Screen = 'pick' | 'roll' | 'live' | 'assign' | 'schedule'
 
 export function ClassSession({
   coach,
@@ -83,8 +84,8 @@ export function ClassSession({
   void tick
 
   useEffect(() => {
-    if (live) setScreen('live')
-  }, [live?.id])
+    if (live && screen === 'pick') setScreen('roll')
+  }, [live?.id, screen])
 
   const offeringFor = (id: string) => offerings.find((o) => o.id === id)
 
@@ -96,7 +97,9 @@ export function ClassSession({
             {live ? 'Class is running' : screen === 'assign' ? 'Class ended' : 'Today · Class'}
           </p>
           <p className="text-sm text-white/60">
-            {live
+            {live && screen === 'roll'
+              ? 'Tap your name if you are here'
+              : live
               ? classLabel(offeringFor(live.offeringId) ?? { name: 'Class', weekday: 'Monday', time: '' })
               : screen === 'assign'
                 ? 'Homework for who was here'
@@ -154,7 +157,7 @@ export function ClassSession({
                     type="button"
                     onClick={() => {
                       startClassMeeting(o)
-                      setScreen('live')
+                      setScreen('roll')
                     }}
                     className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f]"
                   >
@@ -202,6 +205,18 @@ export function ClassSession({
           </div>
         )}
 
+        {screen === 'roll' && live && (
+          <ClassRollCall
+            meeting={getMeeting(live.id) ?? live}
+            offering={offeringFor(live.offeringId)}
+            athletes={athletes}
+            onChanged={refresh}
+            onCoachDesk={() => setScreen('live')}
+            onStation={onOpenStation}
+            onShapeTest={onOpenShapeTest}
+          />
+        )}
+
         {screen === 'live' && live && (
           <LiveClass
             meeting={getMeeting(live.id) ?? live}
@@ -210,6 +225,7 @@ export function ClassSession({
             coach={coach}
             onStation={onOpenStation}
             onShapeTest={onOpenShapeTest}
+            onOpenRoll={() => setScreen('roll')}
             onChanged={refresh}
             onAthletesChange={onAthletesChange}
             onViewProfile={onViewProfile}
@@ -251,6 +267,154 @@ export function ClassSession({
   )
 }
 
+function ClassRollCall({
+  meeting,
+  offering,
+  athletes,
+  onChanged,
+  onCoachDesk,
+  onStation,
+  onShapeTest,
+}: {
+  meeting: ClassMeeting
+  offering?: CoachClassOffering
+  athletes: Athlete[]
+  onChanged: () => void
+  onCoachDesk: () => void
+  onStation: () => void
+  onShapeTest: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const present = resolveAttendeeAthletes(meeting, athletes)
+  const presentIds = new Set(present.map((a) => a.id))
+  const priorIds = priorOfferingAthleteIds(offering?.id)
+  const rosterIds = new Set(offering?.rosterIds ?? [])
+  const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const q = query.trim().toLowerCase()
+  const matches = kids.filter((a) => !q || a.name.toLowerCase().includes(q))
+
+  const checkIn = (a: Athlete) => {
+    if (presentIds.has(a.id)) return
+    const parts = splitPersonName(a.name)
+    markClassAttendance({
+      meetingId: meeting.id,
+      athleteId: a.id,
+      firstName: a.firstName || parts.firstName,
+      lastName: a.lastName || parts.lastName,
+      source: rosterIds.has(a.id) ? 'roster' : 'manual',
+      logged: false,
+    })
+    onChanged()
+  }
+
+  const section = (title: string, rows: Athlete[]) => {
+    if (rows.length === 0) return null
+    return (
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{title}</p>
+        <ul className="mt-2 grid gap-2">
+          {rows.map((a) => {
+            const here = presentIds.has(a.id)
+            return (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  disabled={here}
+                  onClick={() => checkIn(a)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-left ${
+                    here
+                      ? 'border border-[var(--accent)]/40 bg-[#102820] text-[var(--accent)]'
+                      : 'bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] text-[#06281f]'
+                  }`}
+                >
+                  <AthleteAvatar athlete={a} size="md" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xl font-bold">{a.name}</span>
+                    <span className="text-sm font-medium opacity-80">
+                      {here ? 'Here tonight' : "That's me"}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    )
+  }
+
+  const familiar = matches.filter((a) => priorIds.includes(a.id) && !presentIds.has(a.id))
+  const rosterOnly = matches.filter(
+    (a) => rosterIds.has(a.id) && !priorIds.includes(a.id) && !presentIds.has(a.id),
+  )
+  const rest = matches.filter(
+    (a) => !priorIds.includes(a.id) && !rosterIds.has(a.id) && !presentIds.has(a.id),
+  )
+  const here = matches.filter((a) => presentIds.has(a.id))
+
+  return (
+    <div className="flex flex-col gap-5 pt-2">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+          Roll call
+        </p>
+        <h2 className="text-3xl font-bold tracking-tight">
+          {offering ? offering.name : 'Class'}
+        </h2>
+        <p className="mt-2 text-sm text-white/65">
+          Tap your name. The coach does not have to pick who is here.
+          Names you have used in this class sit at the top.
+        </p>
+      </div>
+      <input
+        className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+        placeholder="Find your name…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {section('Here tonight', here)}
+      {section('Been in this class', familiar)}
+      {section('On the roster', rosterOnly)}
+      {q && section('Other names', rest)}
+      {!q && rest.length > 0 && (
+        <p className="text-xs text-white/45">
+          Type a few letters if you do not see your name. New tonight? Use New
+          athlete · shape test.
+        </p>
+      )}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onStation}
+          className="rounded-2xl bg-[var(--accent)] px-4 py-4 text-left font-bold text-[#06281f]"
+        >
+          New athlete · shape test
+          <span className="mt-1 block text-sm font-medium opacity-80">
+            Also marks you here while class is open
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onShapeTest}
+          className="rounded-2xl bg-white/10 px-4 py-4 text-left font-bold"
+        >
+          Shape test
+          <span className="mt-1 block text-sm font-medium text-white/65">
+            Pick your name — that is roll too
+          </span>
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onCoachDesk}
+        className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold"
+      >
+        Coach desk · {present.length} checked in
+      </button>
+    </div>
+  )
+}
+
 function LiveClass({
   meeting,
   offering,
@@ -258,6 +422,7 @@ function LiveClass({
   coach,
   onStation,
   onShapeTest,
+  onOpenRoll,
   onChanged,
   onAthletesChange,
   onViewProfile,
@@ -269,6 +434,7 @@ function LiveClass({
   coach: Athlete
   onStation: () => void
   onShapeTest: () => void
+  onOpenRoll: () => void
   onChanged: () => void
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
@@ -298,9 +464,17 @@ function LiveClass({
           {offering ? classLabel(offering) : 'Class'}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          {meeting.attendees.length} marked here tonight. This list is for the
-          hour and homework — Class nights only write when you log at End class.
+          {meeting.attendees.length} checked in. Leave the iPad on roll call
+          so they tap their name. Shape test and New athlete · shape test
+          also mark roll while this class is open. Roster is not auto-checked.
         </p>
+        <button
+          type="button"
+          onClick={onOpenRoll}
+          className="mt-3 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[#06281f]"
+        >
+          Leave iPad for roll call
+        </button>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -321,7 +495,7 @@ function LiveClass({
         >
           Shape test
           <span className="mt-1 block text-sm font-medium text-white/65">
-            Ask who is taking it
+            Who takes it is marked here
           </span>
         </button>
       </div>
@@ -367,33 +541,6 @@ function LiveClass({
           Add
         </button>
       </div>
-      {offering &&
-        offering.rosterIds.some((id) => !present.some((p) => p.id === id)) && (
-          <button
-            type="button"
-            onClick={() => {
-              for (const id of offering.rosterIds) {
-                if (present.some((p) => p.id === id)) continue
-                const a = athletes.find((row) => row.id === id)
-                if (!a) continue
-                const parts = splitPersonName(a.name)
-                markClassAttendance({
-                  meetingId: meeting.id,
-                  athleteId: a.id,
-                  firstName: a.firstName || parts.firstName,
-                  lastName: a.lastName || parts.lastName,
-                  source: 'roster',
-                  logged: false,
-                })
-              }
-              onChanged()
-            }}
-            className="self-start text-xs font-semibold text-[var(--accent)] underline"
-          >
-            Add everyone on the roster
-          </button>
-        )}
-
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
           Here tonight

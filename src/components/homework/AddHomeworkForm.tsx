@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { FLOW_SEQUENCES } from '../../config/tasks2'
-import { HOMEWORK_CATALOG, getCatalogItem } from '../../config/homeworkCatalog'
+import { CORE_HOMEWORK_PICKS, getCatalogItem, stockCatalogFor } from '../../config/homeworkCatalog'
 import { listPublicDrills } from '../../lib/coachContentStore'
 import type { CoachExercise, HomeworkTrackMode, ShapeDef } from '../../types'
 
 export type HomeworkPick =
   | { kind: 'catalog'; id: string; name: string }
+  | { kind: 'core'; id: string; name: string }
   | { kind: 'coach'; id: string; name: string }
   | { kind: 'shape'; id: string; name: string }
   | { kind: 'flow'; id: string; name: string }
@@ -36,12 +37,16 @@ type Props = {
   onSaveExercise: () => void
   onRemoveExercise: (id: string) => void
   onAdd: (pick: HomeworkPick) => void
+  /** Class assign hides back-care stock and leads with core + study shapes. */
+  stockAudience?: 'class' | 'all'
 }
 
 function kindLabel(kind: HomeworkPick['kind']): string {
   switch (kind) {
     case 'catalog':
       return 'Exercise'
+    case 'core':
+      return 'Core drill'
     case 'coach':
       return 'Yours'
     case 'shape':
@@ -77,15 +82,24 @@ export function AddHomeworkForm({
   onSaveExercise,
   onRemoveExercise,
   onAdd,
+  stockAudience = 'all',
 }: Props) {
   const [query, setQuery] = useState('')
 
-  const catalog = HOMEWORK_CATALOG
+  const catalog = stockCatalogFor(stockAudience)
   const flows = FLOW_SEQUENCES
   const drills = listPublicDrills()
 
   const all: Suggestion[] = useMemo(() => {
     const rows: Suggestion[] = [
+      ...(stockAudience === 'class'
+        ? CORE_HOMEWORK_PICKS.map((c) => ({
+            kind: 'core' as const,
+            id: c.autoKey,
+            name: c.name,
+            hint: c.hint,
+          }))
+        : []),
       ...catalog.map((c) => ({
         kind: 'catalog' as const,
         id: c.id,
@@ -118,7 +132,7 @@ export function AddHomeworkForm({
       })),
     ]
     return rows
-  }, [catalog, coachExercises, libraryShapes, flows, drills])
+  }, [catalog, coachExercises, libraryShapes, flows, drills, stockAudience])
 
   const q = query.trim().toLowerCase()
   const matches = useMemo(() => {
@@ -166,7 +180,7 @@ export function AddHomeworkForm({
         <input
           autoFocus
           className="mt-2 h-14 w-full rounded-2xl border border-[var(--panel-border)] bg-[#0d1218] px-4 text-lg text-[var(--text)] outline-none ring-[var(--accent)] focus:ring-2"
-          placeholder="Glute bridges, hollow, pull-ups…"
+          placeholder="Candlestick, hollow, study shapes…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -227,9 +241,26 @@ export function AddHomeworkForm({
       {!q && (
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Start with a stock exercise
+            {stockAudience === 'class'
+              ? 'Candlestick, core drills, study shapes'
+              : 'Start with a stock exercise'}
           </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {stockAudience === 'class' && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {CORE_HOMEWORK_PICKS.map((c) => (
+                <button
+                  key={c.autoKey}
+                  type="button"
+                  onClick={() => onAdd({ kind: 'core', id: c.autoKey, name: c.name })}
+                  className="rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3 text-left hover:border-[var(--accent)]/50"
+                >
+                  <span className="block font-semibold text-[var(--text)]">{c.name}</span>
+                  <span className="mt-1 block text-xs text-[var(--muted)]">{c.hint}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className={`${stockAudience === 'class' ? 'mt-2' : 'mt-2'} grid gap-2 sm:grid-cols-2`}>
             {catalog.map((c) => (
               <button
                 key={c.id}

@@ -501,6 +501,8 @@ export type HomeworkItem = {
   /** Coach-typed drill name when this is not a scored gym shape. */
   customLabel?: string
   source: HomeworkSource
+  /** Coach put this core drill on tonight’s homework without making a second card. */
+  coachAssigned?: boolean
   /**
    * Stable key for auto items ('hollow' | 'superman' | 'side_plank' |
    * 'wall_handstand') so the hollow item can switch shape (arms down →
