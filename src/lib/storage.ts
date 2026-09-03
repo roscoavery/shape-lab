@@ -361,7 +361,7 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'hollow_arms_down',
     targetSeconds: HOLLOW_PROGRESS_TARGET_SECONDS,
     notes:
-      'Start in a zombie-arm pike and inch back until the lowest part of the lower back touches the ground. Flatten the low back, then let the feet inch off. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears. Work toward a minute.',
+      'Start in a seated pike with zombie arms. Inch back until the lowest part of the lower back touches the ground and stop. Try to get the low back flat to the ground and hold it as long as you can. Then let the feet inch off. Arms by the sides. If the low back will not go down, bend the knees. At 60s quality hold, level up to arms by the ears.',
   },
   {
     autoKey: 'superman',
@@ -552,13 +552,13 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
     next = [...mine, ...seeded]
     changed = true
   }
-  const supermanDef = AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === 'superman')
-  if (supermanDef) {
-    for (const item of next) {
-      if (item.source === 'auto' && item.autoKey === 'superman' && item.notes !== supermanDef.notes) {
-        item.notes = supermanDef.notes
-        changed = true
-      }
+  for (const item of next) {
+    if (item.source !== 'auto') continue
+    if (item.autoKey !== 'hollow' && item.autoKey !== 'superman') continue
+    const def = AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === item.autoKey)
+    if (def && item.notes !== def.notes) {
+      item.notes = def.notes
+      changed = true
     }
   }
   const cleaned = dedupeHomeworkItems(all)

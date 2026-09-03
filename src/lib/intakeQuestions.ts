@@ -39,6 +39,15 @@ export const WALL_OPTS: IntakeChoice[] = [
   { value: 'over_min', label: 'Over a minute' },
 ]
 
+/** Hollow / Superman used to be 10s buckets. Fold those into the minute answers. */
+export function asMinuteHold(value: string | undefined | null): WallHoldGuess | undefined {
+  if (!value) return undefined
+  if (value === 'under_min' || value === 'over_min') return value
+  if (value === 'contest') return 'over_min'
+  if (value === 'under_10' || value === 'over_10' || value === 'over_20') return 'under_min'
+  return undefined
+}
+
 export const VUP_OPTS: IntakeChoice[] = [
   { value: 'under_10', label: 'Under 10' },
   { value: 'over_10', label: 'Over 10' },
@@ -96,7 +105,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     kind: 'choice',
     once: true,
     stillShapeId: 'hollow_arms_down',
-    options: HOLD_SIMPLE,
+    options: WALL_OPTS,
   },
   {
     id: 'supermanHold',
@@ -104,7 +113,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     kind: 'choice',
     once: true,
     stillShapeId: 'superman',
-    options: HOLD_SIMPLE,
+    options: WALL_OPTS,
   },
   {
     id: 'vUps',
@@ -193,8 +202,12 @@ export function applyIntakeField(athlete: Athlete, id: string, value: string): A
   if (id === 'favoriteColor') return { ...athlete, favoriteColor: value as Athlete['favoriteColor'] }
   if (id === 'handstandFloor') return { ...athlete, handstandFloor: value as HoldGuess }
   if (id === 'handstandWall') return { ...athlete, handstandWall: value as WallHoldGuess }
-  if (id === 'hollowHold') return { ...athlete, hollowHold: value as HoldGuess }
-  if (id === 'supermanHold') return { ...athlete, supermanHold: value as HoldGuess }
+  if (id === 'hollowHold') {
+    return { ...athlete, hollowHold: asMinuteHold(value) ?? (value as Athlete['hollowHold']) }
+  }
+  if (id === 'supermanHold') {
+    return { ...athlete, supermanHold: asMinuteHold(value) ?? (value as Athlete['supermanHold']) }
+  }
   if (id === 'vUps') return { ...athlete, vUps: value as VUpGuess }
   return athlete
 }

@@ -5,6 +5,7 @@
 
 import { studyById } from '../config/researchStudies'
 import type { Athlete } from '../types'
+import { asMinuteHold } from './intakeQuestions'
 import { isAthleteProfile } from './profileRole'
 import {
   loadResearch,
@@ -100,8 +101,10 @@ export function mergeAthleteIntoResearch(
   if (athlete.favoriteColor) pretest.favoriteColor = athlete.favoriteColor
   if (athlete.handstandFloor) pretest.handstandFloor = athlete.handstandFloor
   if (athlete.handstandWall) pretest.handstandWall = athlete.handstandWall
-  if (athlete.hollowHold) pretest.hollowHold = athlete.hollowHold
-  if (athlete.supermanHold) pretest.supermanHold = athlete.supermanHold
+  if (athlete.hollowHold) pretest.hollowHold = asMinuteHold(athlete.hollowHold) ?? athlete.hollowHold
+  if (athlete.supermanHold) {
+    pretest.supermanHold = asMinuteHold(athlete.supermanHold) ?? athlete.supermanHold
+  }
   if (athlete.vUps) pretest.vUps = athlete.vUps
   const energy = latestWeekEnergy(athlete)
   if (energy) pretest.weekEnergy = energy

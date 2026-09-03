@@ -18,11 +18,15 @@ function stepsFor(item: HomeworkItem): Step[] {
   if (hollow) {
     const holdId = item.shapeId === 'hollow_arms_up' ? 'hollow_arms_up' : 'hollow_arms_down'
     return [
-      { shapeId: 'seated_pike', title: 'Pike', cue: 'Zombie arms. Start sitting.' },
+      {
+        shapeId: 'seated_pike',
+        title: 'Pike',
+        cue: 'Start in a seated pike with zombie arms.',
+      },
       {
         shapeId: holdId,
         title: holdId === 'hollow_arms_up' ? 'Hollow · arms up' : 'Hollow',
-        cue: 'Inch back. Low back down. Then feet off.',
+        cue: 'Inch back until the lowest part of the lower back touches the ground and stop. Get the low back flat and hold as long as you can.',
       },
     ]
   }
@@ -59,12 +63,24 @@ type Props = {
   photos: ReferencePhoto[]
 }
 
+function isHollowItem(item: HomeworkItem): boolean {
+  return (
+    item.autoKey === 'hollow' ||
+    item.shapeId === 'hollow_arms_down' ||
+    item.shapeId === 'hollow_arms_up' ||
+    item.shapeId === 'hollow'
+  )
+}
+
 export function CoreDrillGuide({ item, photos }: Props) {
   const [open, setOpen] = useState(false)
   const shape = getShape(item.shapeId)
   const steps = stepsFor(item)
   const more = fullCopy(item, shape)
   const multi = steps.length > 1
+  const hollowHow = isHollowItem(item)
+    ? 'Start in a seated pike with zombie arms. Inch back until the lowest part of the lower back touches the ground and stop. Try to get the low back flat to the ground and hold it as long as you can.'
+    : null
 
   return (
     <div className="mb-2">
@@ -94,6 +110,9 @@ export function CoreDrillGuide({ item, photos }: Props) {
           </figure>
         ))}
       </div>
+      {hollowHow ? (
+        <p className="mt-2 text-sm leading-relaxed text-white/85">{hollowHow}</p>
+      ) : null}
       {more.length > 0 ? (
         <div className="mt-2">
           <button

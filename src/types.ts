@@ -244,8 +244,9 @@ export type Athlete = {
   favoriteColor?: FavoriteColor
   handstandFloor?: HoldGuess
   handstandWall?: WallHoldGuess
-  hollowHold?: HoldGuess
-  supermanHold?: HoldGuess
+  /** Minute buckets now; older 10s answers still read. */
+  hollowHold?: HoldGuess | WallHoldGuess
+  supermanHold?: HoldGuess | WallHoldGuess
   vUps?: VUpGuess
   /** Weekly / intake answers kept for research and profile building. */
   intakeAnswers?: IntakeAnswer[]

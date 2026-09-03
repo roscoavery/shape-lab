@@ -7,7 +7,6 @@
 import { FAVORITE_COLORS } from '../lib/profileTheme'
 import {
   HOLD_OPTS,
-  HOLD_SIMPLE,
   VUP_OPTS,
   WALL_OPTS,
   WEEK_ENERGY_OPTS,
@@ -357,13 +356,13 @@ export const RESEARCH_STUDIES: StudyDef[] = [
         id: 'hollowHold',
         label: 'Hollow hold guess',
         kind: 'choice',
-        options: HOLD_SIMPLE,
+        options: WALL_OPTS,
       },
       {
         id: 'supermanHold',
         label: 'Superman hold guess',
         kind: 'choice',
-        options: HOLD_SIMPLE,
+        options: WALL_OPTS,
       },
       {
         id: 'vUps',

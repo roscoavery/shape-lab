@@ -92,6 +92,13 @@ function DrillCard({
             {action}
           </p>
           <p className="mt-0.5 text-base font-semibold leading-snug text-white">{title}</p>
+          {item.autoKey === 'hollow' || item.shapeId.includes('hollow') ? (
+            <p className="mt-1.5 text-sm leading-snug text-white/80">
+              Start in a seated pike with zombie arms. Inch back until the lowest
+              part of the lower back touches the ground and stop. Get the low
+              back flat and hold as long as you can.
+            </p>
+          ) : null}
           <p className="mt-1 text-xs tabular-nums text-white/55">
             {last != null ? `Last ${formatSeconds(last)}` : 'No logs yet'}
             {best > 0 ? ` · Best ${formatSeconds(best)}` : ''}

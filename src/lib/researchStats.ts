@@ -1,5 +1,13 @@
 import { type StudyDef, type StudyField } from '../config/researchStudies'
+import { asMinuteHold } from './intakeQuestions'
 import type { Observation } from './research'
+
+function choiceRaw(field: StudyField, raw: string): string {
+  if (field.id === 'hollowHold' || field.id === 'supermanHold') {
+    return asMinuteHold(raw) ?? raw
+  }
+  return raw
+}
 
 export type CountRow = {
   value: string
@@ -39,8 +47,10 @@ export function countChoice(
   let n = 0
   for (const obs of observations) {
     const raw = obs.answers[field.id]
-    if (typeof raw !== 'string' || !tallies.has(raw)) continue
-    tallies.set(raw, (tallies.get(raw) ?? 0) + 1)
+    if (typeof raw !== 'string') continue
+    const value = choiceRaw(field, raw)
+    if (!tallies.has(value)) continue
+    tallies.set(value, (tallies.get(value) ?? 0) + 1)
     n += 1
   }
   return options.map((opt) => {
@@ -222,9 +232,11 @@ export function crosstab(
   const cells = rows.map(() => cols.map(() => 0))
   let n = 0
   for (const obs of observations) {
-    const r = answerString(obs, rowField.id)
-    const c = answerString(obs, colField.id)
-    if (!r || !c) continue
+    const rRaw = answerString(obs, rowField.id)
+    const cRaw = answerString(obs, colField.id)
+    if (!rRaw || !cRaw) continue
+    const r = choiceRaw(rowField, rRaw)
+    const c = choiceRaw(colField, cRaw)
     const ri = rowIndex.get(r)
     const ci = colIndex.get(c)
     if (ri === undefined || ci === undefined) continue
