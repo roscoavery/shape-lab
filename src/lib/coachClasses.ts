@@ -370,8 +370,12 @@ export function offeringHelperCoachIds(
   offering: Pick<CoachClassOffering, 'coachId' | 'coachIds' | 'leadCoachId' | 'helperCoachIds'>,
 ): string[] {
   const lead = offeringLeadCoachId(offering)
-  if (offering.helperCoachIds?.length) return offering.helperCoachIds.filter((id) => id && id !== lead)
-  return offeringCoachIds(offering).filter((id) => id !== lead)
+  if (offering.helperCoachIds?.length) {
+    return offering.helperCoachIds.filter((id) => id && id !== lead)
+  }
+  return [...new Set([...(offering.coachIds ?? []), offering.coachId].filter(Boolean))].filter(
+    (id) => id !== lead,
+  )
 }
 
 export function offeringCoachIds(
@@ -379,7 +383,7 @@ export function offeringCoachIds(
 ): string[] {
   const lead = offeringLeadCoachId(offering)
   const helpers = offeringHelperCoachIds(offering)
-  return [...new Set([lead, ...helpers, ...(offering.coachIds ?? [])].filter(Boolean))]
+  return [...new Set([lead, ...helpers].filter(Boolean))]
 }
 
 export function classCoachesLabel(
