@@ -6,17 +6,19 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
  * this spin. Only wrap the delay buffer.
  *
  * The inner box is the pane's swapped size, then rotated, so the picture
- * fills this pane at 1× — no extra scale() and no zoom on live / Replay last.
- * object-cover keeps the same crop as those views (contain letterboxed it).
+ * is not scaled up. iPad covers the pane; phone contains the native frame.
  * Mirror / zoom belong on this outer box.
  */
 export function IosDelayUnwind({
   active,
+  fillFrame = false,
   className,
   style,
   children,
 }: {
   active: boolean
+  /** iPad: cover the pane. Phone: contain so the frame is not digitally zoomed. */
+  fillFrame?: boolean
   className?: string
   style?: CSSProperties
   children: ReactNode
@@ -65,7 +67,11 @@ export function IosDelayUnwind({
         }
 
   return (
-    <div ref={boxRef} className={`ios-delay-stage ${className ?? ''}`} style={style}>
+    <div
+      ref={boxRef}
+      className={`ios-delay-stage ${fillFrame ? 'fill-frame' : ''} ${className ?? ''}`}
+      style={style}
+    >
       <div className="ios-delay-spin" style={spin}>
         {children}
       </div>

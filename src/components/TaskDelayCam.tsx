@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { DELAY_MAX, DELAY_MIN, useDelayCam } from '../hooks/useDelayCam'
-import { isIosDevice } from '../lib/delayCameraPipeline'
+import { isIosDevice, isIpadDevice } from '../lib/delayCameraPipeline'
 import { IosDelayUnwind } from './IosDelayUnwind'
 
 type Mode = 'live' | 'delay' | 'replay'
@@ -86,6 +86,7 @@ export function TaskDelayCam({
   }
 
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
+  const fit = isIpadDevice() ? 'object-cover' : 'object-contain'
   const videoBox = pip
     ? 'aspect-[9/16] h-36 sm:h-44'
     : compact
@@ -98,7 +99,7 @@ export function TaskDelayCam({
         <video
           ref={replayVideoRef}
           src={replaySrc}
-          className={`block h-full w-full bg-black object-cover ${videoBox} ${mirrorCls}`}
+          className={`block h-full w-full bg-black ${fit} ${videoBox} ${mirrorCls}`}
           controls={!pip}
           playsInline
           onLoadedMetadata={(e) => {
@@ -112,11 +113,12 @@ export function TaskDelayCam({
       ) : (
         <IosDelayUnwind
           active={isIosDevice()}
+          fillFrame={isIpadDevice()}
           className={`relative w-full ${videoBox} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
         >
           <video
             ref={delay.delayVideoRef}
-            className="block h-full w-full bg-black object-cover"
+            className={`block h-full w-full bg-black ${fit}`}
             playsInline
             muted
             disableRemotePlayback

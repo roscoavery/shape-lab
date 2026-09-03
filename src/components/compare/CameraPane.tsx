@@ -42,6 +42,7 @@ import {
   pickRecorderMime,
   prepareDelayVideo,
   isIosDevice,
+  isIpadDevice,
   requestUserCamera,
   cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
@@ -81,6 +82,7 @@ export function CameraPane({
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
   const iosDelay = isIosDevice()
+  const cameraFit = isIpadDevice() ? 'cover' : 'contain'
   const streamRef = useRef<MediaStream | null>(null)
 
   // Delay engine refs
@@ -983,13 +985,14 @@ export function CameraPane({
           className={
             livePip
               ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-cover shadow-lg`
-              : `absolute inset-0 h-full w-full object-cover ${
-                  livePeek ? '' : mode === 'delay' ? 'hidden' : ''
-                }`
+              : `absolute inset-0 h-full w-full ${
+                  cameraFit === 'cover' ? 'object-cover' : 'object-contain'
+                } ${livePeek ? '' : mode === 'delay' ? 'hidden' : ''}`
           }
         />
         <IosDelayUnwind
           active={iosDelay}
+          fillFrame={cameraFit === 'cover'}
           style={videoXform}
           className={
             mode === 'delay' && !livePeek ? 'absolute inset-0 h-full w-full' : 'hidden'
@@ -1001,7 +1004,7 @@ export function CameraPane({
             playsInline
             disableRemotePlayback
             webkit-playsinline="true"
-            className="h-full w-full object-cover"
+            className={`h-full w-full ${cameraFit === 'cover' ? 'object-cover' : 'object-contain'}`}
           />
         </IosDelayUnwind>
         {livePip && (
@@ -1134,6 +1137,7 @@ export function CameraPane({
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
               fill
+              objectFit={cameraFit}
               overlayChrome
               replayChrome={!camPip}
               pinchZoom={!camPip}

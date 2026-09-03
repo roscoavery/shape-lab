@@ -42,6 +42,14 @@ export function isIosDevice() {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
+/** iPad (including iPadOS desktop UA). Phone and laptop stay on the native camera frame. */
+export function isIpadDevice() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/iPad/.test(ua)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+}
+
 /** iPhone / iPad / Android — speechSynthesis is flaky on all of these. */
 export function isPhoneBrowser() {
   if (isIosDevice()) return true
@@ -101,34 +109,13 @@ export function cameraPermissionMessage(err: unknown): string {
 }
 
 /**
- * Ask an already-open track for a tall 9:16 frame. Desktop webcams often
- * ignore this — CSS object-cover then crops to portrait.
- */
-export async function preferPortraitTrack(stream: MediaStream): Promise<void> {
-  const track = stream.getVideoTracks()[0]
-  if (!track) return
-  const settings = track.getSettings()
-  const width = settings.width ?? 0
-  const height = settings.height ?? 0
-  if (height >= width && height > 0) return
-  try {
-    await track.applyConstraints({
-      width: { ideal: 720 },
-      height: { ideal: 1280 },
-      aspectRatio: { ideal: 9 / 16 },
-    })
-  } catch {
-    /* crop in the view instead */
-  }
-}
-
-/**
- * Open the user-facing camera. Prefer a portrait / 9:16 frame so delay cam
- * fills a phone-shaped view. Fall back to any camera so Chrome still prompts.
+ * Open the user-facing camera at the device's native frame — same idea as
+ * opening Camera / Photo Booth. Do not ask for 9:16 first: browsers treat
+ * that as a digital crop, so delay and Replay last look zoomed-in.
  *
  * getUserMedia is the first await so a tap still counts as a user gesture.
  */
-export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<MediaStream> {
+export async function requestUserCamera(_opts?: { portrait?: boolean }): Promise<MediaStream> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     throw new Error(
       typeof window !== 'undefined' && window.isSecureContext === false
@@ -136,21 +123,15 @@ export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<
         : 'This browser cannot open the camera. Allow camera access, then try again.',
     )
   }
-  const portrait = opts?.portrait !== false
   const attempts: MediaStreamConstraints[] = [
-    ...(portrait
-      ? [
-          {
-            audio: false,
-            video: {
-              facingMode: { ideal: 'user' },
-              width: { ideal: 720 },
-              height: { ideal: 1280 },
-              aspectRatio: { ideal: 9 / 16 },
-            },
-          } satisfies MediaStreamConstraints,
-        ]
-      : []),
+    {
+      audio: false,
+      video: {
+        facingMode: { ideal: 'user' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    },
     { audio: false, video: { facingMode: { ideal: 'user' } } },
     { audio: false, video: true },
   ]
@@ -167,10 +148,6 @@ export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<
   if (!stream) {
     throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
   }
-  // iPad / iPhone MediaRecorder + MSE stay landscape; IosDelayUnwind
-  // stands the delay <video> up. applyConstraints to 9:16 here made the
-  // buffer portrait and the unwind spun the athlete 90° again.
-  if (portrait && !isIosDevice()) await preferPortraitTrack(stream)
   return stream
 }
 

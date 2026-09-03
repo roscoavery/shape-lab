@@ -25,6 +25,8 @@ type Props = {
   /** Loop/scrub only the last N seconds of the file (delay-cam buffer). */
   tailSeconds?: number
   fill?: boolean
+  /** Fill players default to cover. Delay / Replay last on phone and laptop use contain. */
+  objectFit?: 'cover' | 'contain'
   /** Ghost still on this video (delay cam / replay). Off for the reference clip. */
   showStillOverlay?: boolean
   /** Gym URL used to persist A/B points for every section. */
@@ -82,6 +84,7 @@ function VideoWorkbenchInner({
   autoPlay = false,
   tailSeconds,
   fill = false,
+  objectFit = 'cover',
   showStillOverlay = false,
   persistUrl,
   loopA,
@@ -671,9 +674,9 @@ function VideoWorkbenchInner({
           }
           className={`${
             fill
-              ? 'absolute inset-0 block h-full w-full object-cover'
+              ? `absolute inset-0 block h-full w-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`
               : overlay
-                ? 'block min-h-[16rem] max-h-[min(70vh,36rem)] w-full object-cover'
+                ? `block min-h-[16rem] max-h-[min(70vh,36rem)] w-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`
                 : 'max-h-[420px] w-full object-contain'
           } ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
         />

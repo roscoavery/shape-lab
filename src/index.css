@@ -108,8 +108,8 @@ button {
 
 /*
  * iPhone / iPad delay cam: CSS-rotate the MSE <video> to match LIVE.
- * Only the delay layer uses this. Live and Replay last stay unrotated.
- * object-cover matches their crop; contain letterboxed a landscape frame.
+ * iPad (.fill-frame) covers the pane like the Camera app. Phone and laptop
+ * contain the native frame so delay / Replay last are not digitally zoomed.
  */
 .ios-delay-stage {
   position: relative;
@@ -122,6 +122,10 @@ button {
   height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
+}
+.ios-delay-stage.fill-frame .ios-delay-spin > canvas,
+.ios-delay-stage.fill-frame .ios-delay-spin > video {
+  object-fit: cover;
 }
