@@ -30,6 +30,7 @@ export function CollageStage({
   viewerId = null,
   onSaveBoard,
   savingBoard = false,
+  boardDirty = false,
   onEditVideos,
   onDuplicate,
   editor,
@@ -48,6 +49,8 @@ export function CollageStage({
   /** Persist the board so Classes / Collages opens it the way you left it. */
   onSaveBoard?: () => void
   savingBoard?: boolean
+  /** Highlight Save after tile / loop edits that are not on disk yet. */
+  boardDirty?: boolean
   onEditVideos?: () => void
   onDuplicate?: () => void
   editor?: OrganizeEditor
@@ -215,9 +218,13 @@ export function CollageStage({
                 type="button"
                 disabled={savingBoard}
                 onClick={onSaveBoard}
-                className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-black disabled:opacity-50"
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
+                  boardDirty
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'bg-white text-black'
+                }`}
               >
-                {savingBoard ? 'Saving…' : 'Save collage'}
+                {savingBoard ? 'Saving…' : boardDirty ? 'Save changes' : 'Save collage'}
               </button>
             )}
             <button

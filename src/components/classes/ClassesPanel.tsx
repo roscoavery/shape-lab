@@ -71,6 +71,8 @@ export function ClassesPanel({ athlete }: Props) {
   const [previewReel, setPreviewReel] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [playingDirty, setPlayingDirty] = useState(false)
+  const [savingBoard, setSavingBoard] = useState(false)
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [shareCaption, setShareCaption] = useState('')
   const [sharing, setSharing] = useState(false)
@@ -124,8 +126,12 @@ export function ClassesPanel({ athlete }: Props) {
   }, [collections, filter, onlyFavorites, favorites])
 
   const closePlay = () => {
+    if (playingDirty && !confirm('You have unsaved collage edits. Close without saving?')) {
+      return
+    }
     setPlaying(null)
     setFullscreen(false)
+    setPlayingDirty(false)
   }
 
   const startNew = () => {
@@ -155,8 +161,10 @@ export function ClassesPanel({ athlete }: Props) {
       copiedFromId: c.copiedFromId,
       slots: c.slots.map((s) => ({ ...s })),
     })
-    closePlay()
-    setNotice(`Editing “${c.name}”. Each tile has its own video — the same clip can be on more than one.`)
+    setPlaying(null)
+    setFullscreen(false)
+    setPlayingDirty(false)
+    setNotice(`Editing “${c.name}”. Save changes when the panels look right.`)
   }
 
   const duplicateExisting = (c: Collage) => {
@@ -266,7 +274,8 @@ export function ClassesPanel({ athlete }: Props) {
     setCollages((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)])
     setDraft(null)
     setPlaying(saved)
-    setNotice(`Saved “${saved.name}”. In the board, each panel can pick its own video.`)
+    setPlayingDirty(false)
+    setNotice(`Saved “${saved.name}”. Change a panel, then Save changes to keep it.`)
   }
 
   const drop = async (c: Collage) => {
@@ -313,11 +322,23 @@ export function ClassesPanel({ athlete }: Props) {
 
   const persistPlayingSlots = (slots: CollageSlot[]) => {
     if (!playing) return
-    const next = { ...playing, slots, updatedAt: new Date().toISOString() }
-    setPlaying(next)
-    void saveCollage(next).then((saved) => {
-      if (saved) setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
-    })
+    setPlaying({ ...playing, slots, updatedAt: new Date().toISOString() })
+    setPlayingDirty(true)
+  }
+
+  const savePlaying = async () => {
+    if (!playing || !canEdit) return
+    setSavingBoard(true)
+    const saved = await saveCollage({ ...playing, updatedAt: new Date().toISOString() })
+    setSavingBoard(false)
+    if (!saved) {
+      setNotice('Could not save that collage.')
+      return
+    }
+    setPlaying(saved)
+    setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
+    setPlayingDirty(false)
+    setNotice(`Saved “${saved.name}”.`)
   }
 
   const listProps = {
@@ -329,6 +350,10 @@ export function ClassesPanel({ athlete }: Props) {
     canShare,
     canManage,
     onPlay: (c: Collage) => {
+      if (playingDirty && !confirm('You have unsaved collage edits. Switch boards without saving?')) {
+        return
+      }
+      setPlayingDirty(false)
       setPlaying(c)
       setDraft(null)
       setFullscreen(false)
@@ -620,6 +645,30 @@ export function ClassesPanel({ athlete }: Props) {
             )}
           </div>
           </div>
+          <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void persist()}
+                disabled={saving}
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+              >
+                {saving
+                  ? 'Saving…'
+                  : collages.some((c) => c.id === draft.id)
+                    ? 'Save changes'
+                    : 'Save collage'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm"
+              >
+                Cancel
+              </button>
+              <p className="text-xs text-[var(--muted)]">Edits stay on this screen until you save.</p>
+            </div>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -692,6 +741,9 @@ export function ClassesPanel({ athlete }: Props) {
           onClose={closePlay}
           onSlots={canEdit ? persistPlayingSlots : undefined}
           canEdit={canEdit}
+          onSaveBoard={canEdit ? () => void savePlaying() : undefined}
+          savingBoard={savingBoard}
+          boardDirty={playingDirty}
           onEditVideos={canEdit ? () => editExisting(playing) : undefined}
           onDuplicate={canEdit ? () => duplicateExisting(playing) : undefined}
           editor={{

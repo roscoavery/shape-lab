@@ -20,6 +20,7 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedNote, setSavedNote] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
     void listCollages(viewer?.id).then(setCollages)
@@ -29,31 +30,29 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
     Boolean(viewer) &&
     (isCoachProfile(viewer) || board.ownerId === viewer?.id || !board.ownerId)
 
-  const persistBoard = (board: Collage, announce = false) => {
+  const persistBoard = (board: Collage) => {
     if (!canPersist(board)) return
-    if (announce) setSaving(true)
+    setSaving(true)
     void saveCollage({ ...board, updatedAt: new Date().toISOString() })
       .then((saved) => {
         if (!saved) {
-          if (announce) setSavedNote('Could not save that collage.')
+          setSavedNote('Could not save that collage.')
           return
         }
         setPlaying(saved)
+        setDirty(false)
         setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
-        if (announce) {
-          setSavedNote('Saved. Open Collages to keep editing it just like this.')
-        }
+        setSavedNote('Saved. Open Collages to keep editing it just like this.')
       })
       .finally(() => {
-        if (announce) setSaving(false)
+        setSaving(false)
       })
   }
 
   const applySlots = (slots: CollageSlot[]) => {
     if (!playing) return
-    const next = { ...playing, slots, updatedAt: new Date().toISOString() }
-    setPlaying(next)
-    persistBoard(next)
+    setPlaying({ ...playing, slots, updatedAt: new Date().toISOString() })
+    setDirty(true)
   }
 
   const body = (
@@ -100,8 +99,12 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
                 collage={c}
                 nameForUrl={nameForUrl}
                 onPlay={() => {
+                  if (dirty && !confirm('You have unsaved collage edits. Switch boards without saving?')) {
+                    return
+                  }
                   setPlaying(c)
                   setFullscreen(true)
+                  setDirty(false)
                   setSavedNote(null)
                 }}
               >
@@ -129,15 +132,20 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
             fullscreen={fullscreen}
             onFullscreen={setFullscreen}
             onClose={() => {
+              if (dirty && !confirm('You have unsaved collage edits. Close without saving?')) {
+                return
+              }
               setPlaying(null)
               setFullscreen(false)
+              setDirty(false)
             }}
             canEdit={false}
             canAssign
             viewerId={viewer?.id ?? null}
             onSlots={applySlots}
-            onSaveBoard={canPersist(playing) ? () => persistBoard(playing, true) : undefined}
+            onSaveBoard={canPersist(playing) ? () => persistBoard(playing) : undefined}
             savingBoard={saving}
+            boardDirty={dirty}
           />
         </div>
       )}
