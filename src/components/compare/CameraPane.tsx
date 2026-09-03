@@ -41,7 +41,7 @@ import {
   getDelayCameraPipeline,
   pickRecorderMime,
   prepareDelayVideo,
-  isIosDevice,
+  isIphone,
   requestUserCamera,
   cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
@@ -80,7 +80,7 @@ export function CameraPane({
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
-  const iosDelay = isIosDevice()
+  const iosDelay = isIphone()
   const streamRef = useRef<MediaStream | null>(null)
 
   // Delay engine refs

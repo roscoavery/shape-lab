@@ -107,9 +107,10 @@ button {
 }
 
 /*
- * iPhone delay cam: CSS-rotate the MSE <video> to match the upright LIVE
- * pip. The inner box is sized in JS (pane height × width) then rotated,
- * so layout stays non-zero and the picture is not scaled up.
+ * iPhone delay cam only: CSS-rotate the MSE <video> to match LIVE.
+ * iPad stays object-cover in the same pane as live / Replay last.
+ * The inner box is pane height × width, then rotated, so the picture
+ * is not scaled up past those views.
  */
 .ios-delay-stage {
   position: relative;

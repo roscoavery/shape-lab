@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
- * Spin a delay-cam <video> 90° clockwise so iPhone sensor pixels match LIVE.
- * MediaRecorder + MSE on iPad write landscape frames even when the live
- * preview is upright — always unwind on iOS. Do not key this off 9:16 CSS
- * or videoWidth; those made the buffer look sideways again.
+ * iPhone only: MediaRecorder + MSE write landscape sensor pixels, so the
+ * delay <video> is on its side. Spin 90° clockwise to match LIVE.
+ *
+ * Do not use this on iPad. iPad buffers are already upright; rotating them
+ * letterboxes a landscape view, and sizing the spin to fill the pane zooms
+ * live / Replay last past the other replay cams.
  *
  * The inner box is the pane's swapped size, then rotated, so the picture
- * fills the available view at 1×. Mirror / zoom belong on this outer box.
+ * fills at 1× — no extra scale() zoom. Mirror / zoom belong on this outer box.
  */
 export function IosDelayUnwind({
   active,
