@@ -969,45 +969,41 @@ export function CameraPane({
             : `relative overflow-hidden bg-black ${
                 fullscreen
                   ? 'min-h-0 flex-1'
-                  : 'aspect-[9/16] w-full max-h-[min(72vh,38rem)] rounded-lg border border-[var(--panel-border)]'
+                  : 'min-h-[16rem] h-[min(60vh,32rem)] rounded-lg border border-[var(--panel-border)]'
               }`
         }
       >
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative h-full max-w-full aspect-[9/16]">
-            <video
-              ref={liveVideoRef}
-              muted
-              playsInline
-              disableRemotePlayback
-              webkit-playsinline="true"
-              style={videoXform}
-              className={
-                livePip
-                  ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-cover shadow-lg`
-                  : `absolute inset-0 h-full w-full object-cover ${
-                      livePeek ? '' : mode === 'delay' ? 'hidden' : ''
-                    }`
-              }
-            />
-            <IosDelayUnwind
-              active={iosDelay}
-              style={videoXform}
-              className={
-                mode === 'delay' && !livePeek ? 'absolute inset-0 h-full w-full' : 'hidden'
-              }
-            >
-              <video
-                ref={delayVideoRef}
-                muted
-                playsInline
-                disableRemotePlayback
-                webkit-playsinline="true"
-                className="h-full w-full object-cover"
-              />
-            </IosDelayUnwind>
-          </div>
-        </div>
+        <video
+          ref={liveVideoRef}
+          muted
+          playsInline
+          disableRemotePlayback
+          webkit-playsinline="true"
+          style={videoXform}
+          className={
+            livePip
+              ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-cover shadow-lg`
+              : `absolute inset-0 h-full w-full object-cover ${
+                  livePeek ? '' : mode === 'delay' ? 'hidden' : ''
+                }`
+          }
+        />
+        <IosDelayUnwind
+          active={iosDelay}
+          style={videoXform}
+          className={
+            mode === 'delay' && !livePeek ? 'absolute inset-0 h-full w-full' : 'hidden'
+          }
+        >
+          <video
+            ref={delayVideoRef}
+            muted
+            playsInline
+            disableRemotePlayback
+            webkit-playsinline="true"
+            className="h-full w-full object-cover"
+          />
+        </IosDelayUnwind>
         {livePip && (
           <>
             <button
@@ -1129,9 +1125,7 @@ export function CameraPane({
         (clipSrc ? (
           <div
             className={`relative flex min-h-0 flex-col overflow-hidden ${
-              fullscreen
-                ? 'h-full flex-1'
-                : 'aspect-[9/16] w-full max-h-[min(72vh,38rem)] rounded-lg'
+              fullscreen ? 'h-full flex-1' : 'min-h-[16rem] h-[min(60vh,32rem)] rounded-lg'
             }`}
           >
             <VideoWorkbench

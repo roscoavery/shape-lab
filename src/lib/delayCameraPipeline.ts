@@ -167,7 +167,10 @@ export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<
   if (!stream) {
     throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
   }
-  if (portrait) await preferPortraitTrack(stream)
+  // iPad MediaRecorder + MSE stay landscape; IosDelayUnwind stands that up.
+  // applyConstraints to 9:16 here made the buffer portrait and the unwind
+  // spun the athlete 90° again.
+  if (portrait && !isIosDevice()) await preferPortraitTrack(stream)
   return stream
 }
 
