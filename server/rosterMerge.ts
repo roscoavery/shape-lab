@@ -15,6 +15,7 @@ export type Athlete = {
   instagramHandle?: string
   shapeLabHandle?: string
   createdAt: string
+  updatedAt?: string
   passcodeHash?: string
   role?: ProfileKind
   gymName?: string
@@ -268,11 +269,20 @@ function mergeCompareLibs(
   return out
 }
 
+function profileStamp(athlete: Pick<Athlete, 'updatedAt' | 'createdAt'>): string {
+  return athlete.updatedAt || athlete.createdAt || ''
+}
+
+function pickPhoto(newer?: string, older?: string): string | undefined {
+  if (newer && older) return newer.length >= older.length ? newer : older
+  return newer || older
+}
+
 /** Combine two profile rows. Keep passcodes, roles, and gym fields if either side has them. */
 export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
-  const newerWins = (incoming.createdAt || '') >= (keep.createdAt || '')
-  const newer = newerWins ? incoming : keep
-  const older = newerWins ? keep : incoming
+  const incomingNewer = profileStamp(incoming) >= profileStamp(keep)
+  const newer = incomingNewer ? incoming : keep
+  const older = incomingNewer ? keep : incoming
   const role: Athlete['role'] = newer.role || older.role
   return {
     ...older,
@@ -300,7 +310,9 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     cartwheelLeg: newer.cartwheelLeg || older.cartwheelLeg,
     harderShape: newer.harderShape || older.harderShape,
     openShoulderHardness: newer.openShoulderHardness ?? older.openShoulderHardness,
-    photoDataUrl: newer.photoDataUrl || older.photoDataUrl,
+    photoDataUrl: pickPhoto(newer.photoDataUrl, older.photoDataUrl),
+    updatedAt:
+      profileStamp(incoming) >= profileStamp(keep) ? incoming.updatedAt || keep.updatedAt : keep.updatedAt || incoming.updatedAt,
     twistDirection: newer.twistDirection || older.twistDirection,
     twistBetterSide: newer.twistBetterSide || older.twistBetterSide,
     dominantHand: newer.dominantHand || older.dominantHand,
@@ -550,14 +562,24 @@ export function mergeRosterLists(
   hints: Record<string, ProfileHint> = {},
 ): RosterLists {
   const incomingLiving = new Set(remote.athletes.map((a) => a.id))
+  const localLiving = new Set(local.athletes.map((a) => a.id))
   const serverCount = local.athletes.length
   const incomingCount = remote.athletes.length
-  // A phone that only has Ryan + a couple names cannot delete the rest of the gym.
+  const proposedDrops = remote.removedAthleteIds.filter(
+    (id) => localLiving.has(id) && !incomingLiving.has(id),
+  )
+  // A phone that is missing people cannot tombstone the rest of the gym.
+  // A real delete must account for every living id (kept or explicitly dropped).
+  const clientAccountsForGym = [...localLiving].every(
+    (id) => incomingLiving.has(id) || proposedDrops.includes(id),
+  )
   const acceptClientRemovals =
-    incomingCount === 0 || incomingCount >= Math.max(1, Math.ceil(serverCount * 0.8))
+    incomingCount === 0
+      ? false
+      : clientAccountsForGym && incomingCount + proposedDrops.length >= serverCount
   const clientRemovals = acceptClientRemovals ? remote.removedAthleteIds : []
   const removed = normalizeRemovedIds([
-    ...local.removedAthleteIds,
+    ...local.removedAthleteIds.filter((id) => !incomingLiving.has(id)),
     ...clientRemovals,
   ]).filter((id) => !incomingLiving.has(id))
   const dismissedHomeworkKeys = [

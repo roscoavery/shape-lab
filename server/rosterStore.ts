@@ -11,6 +11,13 @@ import {
   type RosterLists,
 } from './rosterMerge.ts'
 import { readDiskJson, readJson, writeJson } from './persist.ts'
+import {
+  attachRosterPhotos,
+  photosFromAthletes,
+  readRosterPhotosFile,
+  stripRosterPhotos,
+  writeRosterPhotosFile,
+} from './rosterPhotoStore.ts'
 
 const FILE = 'data/roster.json'
 
@@ -146,6 +153,19 @@ async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
   return next
 }
 
+async function withPhotos(disk: DiskRoster): Promise<DiskRoster> {
+  const inline = photosFromAthletes(disk.athletes)
+  if (Object.keys(inline).length > 0) {
+    await writeRosterPhotosFile({ kind: 'shape-lab-roster-photos', version: 1, exportedAt: '', photos: inline })
+  }
+  const stored = await readRosterPhotosFile()
+  const photos = { ...stored.photos, ...inline }
+  return {
+    ...disk,
+    athletes: attachRosterPhotos(disk.athletes as { id: string; photoDataUrl?: string }[], photos),
+  }
+}
+
 export async function readRosterFile(): Promise<DiskRoster> {
   const onDisk = await readRawRoster()
   const merged = mergeRosterLists(
@@ -156,10 +176,8 @@ export async function readRosterFile(): Promise<DiskRoster> {
   const sameAthletes = JSON.stringify(onDisk.athletes) === JSON.stringify(merged.athletes)
   const sameRemoved =
     JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
-  if (!sameAthletes || !sameRemoved) {
-    return persistMerged(merged)
-  }
-  return listsToDisk(merged, onDisk.exportedAt)
+  const disk = !sameAthletes || !sameRemoved ? await persistMerged(merged) : listsToDisk(merged, onDisk.exportedAt)
+  return withPhotos(disk)
 }
 
 export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
@@ -167,10 +185,27 @@ export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
   if (!parsed || parsed.kind !== 'shape-lab-roster' || !Array.isArray(parsed.athletes)) {
     throw new Error('Invalid roster payload')
   }
+  const incomingPhotos = photosFromAthletes(parsed.athletes)
+  if (Object.keys(incomingPhotos).length > 0) {
+    await writeRosterPhotosFile({
+      kind: 'shape-lab-roster-photos',
+      version: 1,
+      exportedAt: '',
+      photos: incomingPhotos,
+    })
+  }
+  const slim: DiskRoster = {
+    ...parsed,
+    athletes: stripRosterPhotos(parsed.athletes as { photoDataUrl?: string }[]),
+  }
   const merged = mergeRosterLists(
     rosterListsFromUnknown(await readRawRoster()),
-    rosterListsFromUnknown(parsed),
+    rosterListsFromUnknown(slim),
     await profileHints(),
   )
-  return persistMerged(merged)
+  const saved = await persistMerged({
+    ...merged,
+    athletes: stripRosterPhotos(merged.athletes),
+  })
+  return withPhotos(saved)
 }

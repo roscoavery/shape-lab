@@ -186,6 +186,8 @@ export type Athlete = {
    */
   shapeLabHandle?: string
   createdAt: string
+  /** Last time this profile was edited. Newer stamps win when phones merge. */
+  updatedAt?: string
   /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
   passcodeHash?: string
   /**

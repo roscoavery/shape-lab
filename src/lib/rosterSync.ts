@@ -244,15 +244,63 @@ export async function pullServerRoster(): Promise<RosterBackup | null> {
   return null
 }
 
+function photosFromSnapshot(athletes: Athlete[]): Record<string, string> {
+  const photos: Record<string, string> = {}
+  for (const a of athletes) {
+    if (a.photoDataUrl && a.photoDataUrl.startsWith('data:')) photos[a.id] = a.photoDataUrl
+  }
+  return photos
+}
+
+function attachPhotos(athletes: Athlete[], photos: Record<string, string>): Athlete[] {
+  if (Object.keys(photos).length === 0) return athletes
+  return athletes.map((a) => {
+    const incoming = photos[a.id]
+    if (!incoming) return a
+    if (!a.photoDataUrl || incoming.length > a.photoDataUrl.length) return { ...a, photoDataUrl: incoming }
+    return a
+  })
+}
+
+export async function pullServerRosterPhotos(): Promise<Record<string, string>> {
+  try {
+    const res = await fetch('/api/roster-photos', { cache: 'no-store' })
+    if (!res.ok) return {}
+    const data = (await res.json()) as { kind?: string; photos?: Record<string, string> }
+    if (data?.kind !== 'shape-lab-roster-photos' || !data.photos) return {}
+    return data.photos
+  } catch {
+    return {}
+  }
+}
+
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
   const body = snapshot ?? localRosterSnapshot()
   if (!shouldPushRoster(body.athletes.length)) return
+  const photos = photosFromSnapshot(body.athletes)
+  const slim: RosterBackup = {
+    ...body,
+    athletes: body.athletes.map(({ photoDataUrl: _photo, ...rest }) => rest),
+  }
   try {
-    await fetch('/api/roster', {
+    const res = await fetch('/api/roster', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(slim),
     })
+    if (!res.ok) return
+    if (Object.keys(photos).length > 0) {
+      await fetch('/api/roster-photos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'shape-lab-roster-photos',
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          photos,
+        }),
+      })
+    }
   } catch {
     /* server down — localStorage still holds a copy on this origin */
   }
@@ -276,7 +324,12 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
       error: 'Could not load the gym file from this URL.',
     }
   }
-  const applied = applyRosterSnapshot(server)
+  const photos = await pullServerRosterPhotos()
+  const withPics = {
+    ...server,
+    athletes: attachPhotos(server.athletes, photos),
+  }
+  const applied = applyRosterSnapshot(withPics)
   enableServerRosterPush()
   lastServerAthleteCount = Math.max(
     lastServerAthleteCount,

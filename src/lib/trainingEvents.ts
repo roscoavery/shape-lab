@@ -90,13 +90,14 @@ export function createTrainingEvent(opts: {
   name: string
   coachId: string
   hostGym?: string
+  athleteIds?: string[]
 }): TrainingEvent {
   const now = new Date().toISOString()
   return saveTrainingEvent({
     id: createId('evt'),
     name: opts.name.trim(),
     hostGym: opts.hostGym?.trim() || TUMBLE_SMART,
-    athleteIds: [],
+    athleteIds: [...new Set(opts.athleteIds ?? [])],
     coachIds: [opts.coachId],
     createdAt: now,
     updatedAt: now,

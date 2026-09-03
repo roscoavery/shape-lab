@@ -65,11 +65,15 @@ function pushRosterSoon() {
 
 export function loadAthletes(): Athlete[] {
   const stored = readJson<Athlete[]>(ATHLETES_KEY, [])
-  if (memoryAthletes && memoryAthletes.length > stored.length) {
-    return memoryAthletes.map(withDefaultGym)
+  // This tab’s in-memory roster is the source of truth — localStorage may
+  // have dropped photos or a smaller snapshot when the phone hit quota.
+  if (memoryAthletes && memoryAthletes.length > 0) {
+    if (memoryAthletes.length >= stored.length) return memoryAthletes.map(withDefaultGym)
+    const byId = new Map(stored.map((a) => [a.id, a]))
+    for (const a of memoryAthletes) byId.set(a.id, a)
+    return [...byId.values()].map(withDefaultGym)
   }
-  if (stored.length > 0) return stored.map(withDefaultGym)
-  return (memoryAthletes ?? []).map(withDefaultGym)
+  return stored.map(withDefaultGym)
 }
 
 export function saveAthletes(athletes: Athlete[]) {

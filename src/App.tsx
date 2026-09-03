@@ -244,7 +244,19 @@ export default function App() {
   )
 
   const setAthleteRoster = useCallback((next: Athlete[]) => {
-    setAthletes(ensureRyanInAthletes(next))
+    const now = new Date().toISOString()
+    setAthletes((prev) =>
+      ensureRyanInAthletes(next).map((a) => {
+        const old = prev.find((x) => x.id === a.id)
+        if (!old) return { ...a, updatedAt: a.updatedAt || now }
+        const { updatedAt: _prevAt, ...prevFields } = old
+        const { updatedAt: _nextAt, ...nextFields } = a
+        if (JSON.stringify(prevFields) === JSON.stringify(nextFields)) {
+          return { ...a, updatedAt: a.updatedAt || old.updatedAt }
+        }
+        return { ...a, updatedAt: now }
+      }),
+    )
   }, [])
 
   const requestSelectAthlete = useCallback(

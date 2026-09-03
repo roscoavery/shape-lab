@@ -38,11 +38,14 @@ import {
   scopeAthletes,
   trainsAtGym,
   viewerHomeGym,
+  withClassGym,
   withEventMembership,
   type GymScope,
 } from '../../lib/gymScope'
 import {
+  getTrainingEvent,
   listTrainingEvents,
+  setEventAthletes,
   subscribeTrainingEvents,
   toggleEventAthlete,
 } from '../../lib/trainingEvents'
@@ -95,6 +98,7 @@ export function HomeDashboard({
   const [unlockGym, setUnlockGym] = useState<string | 'all'>('all')
   const [lessonQuery, setLessonQuery] = useState('')
   const [gymScope, setGymScope] = useState<GymScope>({ kind: 'desk' })
+  const [campPickId, setCampPickId] = useState<string | null>(null)
   const [pickHint, setPickHint] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -130,17 +134,20 @@ export function HomeDashboard({
   )
 
   const eventAddMatches = useMemo(() => {
-    if (gymScope.kind !== 'event') return []
-    const q = lessonQuery.trim()
-    if (!q) return []
+    if (gymScope.kind !== 'event' || !signedIn) return []
     const onEvent = new Set(roster.map((a) => a.id))
+    const q = lessonQuery.trim()
+    const fromDesk = scopeAthletes(athletes, signedIn, { kind: 'desk' }, events).filter(
+      (a) => !onEvent.has(a.id),
+    )
+    if (!q) return fromDesk
     return scopeAthletes(athletes, signedIn, { kind: 'all' }, events)
       .filter((a) => !onEvent.has(a.id) && athleteMatchesQuery(a, q))
-      .slice(0, 12)
+      .slice(0, 16)
   }, [athletes, signedIn, events, gymScope, lessonQuery, roster])
 
   const withAthletes = withIds
-    .map((id) => roster.find((a) => a.id === id) ?? null)
+    .map((id) => athletes.find((a) => a.id === id) ?? null)
     .filter((a): a is Athlete => Boolean(a))
   const withAthlete = withAthletes[0] ?? null
   const plans = withAthlete ? plansForAthlete(withAthlete.id) : []
@@ -149,17 +156,31 @@ export function HomeDashboard({
     setEditing(null)
     setPickHint(false)
   }
-  const toggleCampAthlete = (athleteId: string) => {
-    if (gymScope.kind !== 'event') return
-    const next = toggleEventAthlete(gymScope.eventId, athleteId)
+  const toggleCampAthlete = (athleteId: string, eventId = gymScope.kind === 'event' ? gymScope.eventId : '') => {
+    if (!eventId) return
+    const next = toggleEventAthlete(eventId, athleteId)
     if (next && onAthletesChange) {
       const on = next.athleteIds.includes(athleteId)
       onAthletesChange(
-        athletes.map((a) =>
-          a.id === athleteId ? withEventMembership(a, gymScope.eventId, on) : a,
-        ),
+        athletes.map((a) => (a.id === athleteId ? withEventMembership(a, eventId, on) : a)),
       )
     }
+    setRefresh((n) => n + 1)
+  }
+  const addToThisGym = (athlete: Athlete) => {
+    if (!onAthletesChange) return
+    onAthletesChange(athletes.map((a) => (a.id === athlete.id ? withClassGym(a, viewerGym) : a)))
+  }
+  const addToCamp = (athleteId: string, eventId: string) => {
+    const event = getTrainingEvent(eventId)
+    if (!event) return
+    if (!event.athleteIds.includes(athleteId)) {
+      setEventAthletes(eventId, [...event.athleteIds, athleteId])
+      onAthletesChange?.(
+        athletes.map((a) => (a.id === athleteId ? withEventMembership(a, eventId, true) : a)),
+      )
+    }
+    setCampPickId(null)
     setRefresh((n) => n + 1)
   }
   const lessonFirstNames = withAthletes.map((a) => a.name.split(' ')[0] || a.name)
@@ -531,7 +552,16 @@ export function HomeDashboard({
             events={events}
             viewerGym={viewerGym}
             coachId={signedIn.id}
+            seedAthleteIds={withIds}
             onEventsChange={() => setRefresh((n) => n + 1)}
+            onCreated={(event) => {
+              if (!onAthletesChange || event.athleteIds.length === 0) return
+              onAthletesChange(
+                athletes.map((a) =>
+                  event.athleteIds.includes(a.id) ? withEventMembership(a, event.id, true) : a,
+                ),
+              )
+            }}
           />
         {roster.length === 0 && gymScope.kind !== 'event' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
@@ -557,7 +587,7 @@ export function HomeDashboard({
               {filteredLesson.map((a) => (
                 <div
                   key={a.id}
-                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                  className={`flex w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
                     withIds.includes(a.id)
                       ? 'border-[var(--accent)] bg-[#102820]'
                       : 'border-[var(--panel-border)] bg-[#121820]'
@@ -572,23 +602,59 @@ export function HomeDashboard({
                     <span className="block text-xs text-[var(--muted)]">{roleLabel(a)}</span>
                     <GymBadge athlete={a} viewerGym={viewerGym} className="mt-1" />
                   </button>
-                  {gymScope.kind === 'event' && (
-                    <button
-                      type="button"
-                      className="shrink-0 text-[11px] font-semibold text-[var(--muted)]"
-                      onClick={() => toggleCampAthlete(a.id)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                  {onViewProfile && (
-                    <button
-                      type="button"
-                      className="shrink-0 text-xs font-semibold text-[var(--accent)]"
-                      onClick={() => onViewProfile(a.id)}
-                    >
-                      View
-                    </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {gymScope.kind === 'event' && (
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-[var(--muted)]"
+                        onClick={() => toggleCampAthlete(a.id)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                    {!trainsAtGym(a, viewerGym) && onAthletesChange && (
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-[var(--accent)]"
+                        onClick={() => addToThisGym(a)}
+                      >
+                        Add to this gym
+                      </button>
+                    )}
+                    {events.length > 0 && gymScope.kind !== 'event' && (
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-[var(--accent)]"
+                        onClick={() =>
+                          events.length === 1 ? addToCamp(a.id, events[0]!.id) : setCampPickId(a.id)
+                        }
+                      >
+                        Add to camp
+                      </button>
+                    )}
+                    {onViewProfile && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[var(--accent)]"
+                        onClick={() => onViewProfile(a.id)}
+                      >
+                        View
+                      </button>
+                    )}
+                  </div>
+                  {campPickId === a.id && events.length > 1 && (
+                    <div className="flex w-full flex-wrap gap-1 pt-1">
+                      {events.map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          className="rounded-full bg-[var(--accent-dim)] px-2 py-1 text-[11px] font-semibold text-white"
+                          onClick={() => addToCamp(a.id, event.id)}
+                        >
+                          {event.name}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
@@ -596,7 +662,7 @@ export function HomeDashboard({
             {gymScope.kind === 'event' && eventAddMatches.length > 0 && (
               <div className="mt-3 space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Add from the network
+                  {lessonQuery.trim() ? 'Add from the network' : 'Add from this gym'}
                 </p>
                 {eventAddMatches.map((a) => (
                   <div
@@ -623,7 +689,7 @@ export function HomeDashboard({
                 {gymScope.kind === 'event'
                   ? lessonQuery.trim()
                     ? 'No network names match that search. Create their profile under More → Profiles or New athlete / shape test, then add them here.'
-                    : 'No one on this camp yet. Search any name to add an existing profile.'
+                    : 'No one on this camp yet. Names from this gym are listed below so you can add them. Search any gym to add a visiting profile.'
                   : 'No names match that search. Try Search all if they train at another gym.'}
               </p>
             )}

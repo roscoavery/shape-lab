@@ -13,6 +13,7 @@ import { postedByFromUrl } from '../src/lib/socialUrls.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
+import { readRosterPhotosFile, writeRosterPhotosFile } from './rosterPhotoStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
 import {
@@ -75,6 +76,7 @@ const API_PATHS = new Set([
   '/api/ig-media',
   '/api/library',
   '/api/roster',
+  '/api/roster-photos',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/persist',
@@ -188,6 +190,19 @@ export async function handleShapeLabApi(
       return true
     }
     await sendContactsPage(req, res, path.endsWith('.csv') ? 'csv' : 'html')
+    return true
+  }
+  if (path === '/api/roster-photos') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readRosterPhotosFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeRosterPhotosFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
     return true
   }
   if (path === '/api/roster') {

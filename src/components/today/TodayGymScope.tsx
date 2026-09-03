@@ -14,7 +14,9 @@ type Props = {
   events: TrainingEvent[]
   viewerGym: string
   coachId: string
+  seedAthleteIds?: string[]
   onEventsChange: () => void
+  onCreated?: (event: TrainingEvent) => void
 }
 
 function chipClass(on: boolean) {
@@ -30,7 +32,9 @@ export function TodayGymScope({
   events,
   viewerGym,
   coachId,
+  seedAthleteIds = [],
   onEventsChange,
+  onCreated,
 }: Props) {
   const [making, setMaking] = useState(false)
   const [name, setName] = useState('')
@@ -45,10 +49,12 @@ export function TodayGymScope({
       name: trimmed,
       coachId,
       hostGym: hostGym.trim() || viewerGym,
+      athleteIds: seedAthleteIds,
     })
     setName('')
     setMaking(false)
     onEventsChange()
+    onCreated?.(event)
     onScope({ kind: 'event', eventId: event.id })
   }
 
@@ -102,8 +108,9 @@ export function TodayGymScope({
       </div>
       {scope.kind === 'desk' && (
         <p className="text-[11px] text-[var(--muted)]">
-          {viewerGym} athletes, plus anyone who takes class here or who you do
-          privates with. Camp-only names stay off this list.
+          {viewerGym} athletes, plus class and private-lesson names. Add a camp
+          athlete here if they should show on this gym. Add someone from this
+          list onto a camp without taking them off.
         </p>
       )}
       {scope.kind === 'all' && (
@@ -123,8 +130,8 @@ export function TodayGymScope({
           <p className="text-[11px] text-[var(--muted)]">
             {activeEvent.hostGym ? `${activeEvent.hostGym} · ` : ''}
             {activeEvent.athleteIds.length}{' '}
-            {activeEvent.athleteIds.length === 1 ? 'athlete' : 'athletes'}. Their
-            home gym stays put — they do not land on {viewerGym}’s main list.
+            {activeEvent.athleteIds.length === 1 ? 'athlete' : 'athletes'}. Home
+            gym stays put. Add them to this gym if they take class here.
           </p>
           <button
             type="button"
@@ -143,8 +150,8 @@ export function TodayGymScope({
         <div className="grid gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
           <p className="text-sm font-semibold">New camp or travel group</p>
           <p className="text-[11px] text-[var(--muted)]">
-            Use this when you host a clinic or coach at another gym. Search all
-            to add existing profiles. New names still set their own home gym.
+            Anyone already tapped for a lesson is added. Tumble Smart athletes
+            can sit on this camp and still stay on this gym.
           </p>
           <input
             className="h-10 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
