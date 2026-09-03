@@ -9,6 +9,7 @@ import {
   getActiveMeeting,
   getMeeting,
   loadMeetings,
+  hydrateCoachClasses,
   loadOfferings,
   markClassAttendance,
   removeClassAttendance,
@@ -71,6 +72,9 @@ export function ClassSession({
   }
 
   useEffect(() => subscribeCoachClasses(refresh), [])
+  useEffect(() => {
+    void hydrateCoachClasses().then(refresh)
+  }, [])
 
   const live = getActiveMeeting()
   const recent = loadMeetings().filter((m) => m.endedAt).slice(0, 4)
@@ -132,9 +136,10 @@ export function ClassSession({
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Start a class</h2>
               <p className="mt-2 text-sm text-white/65">
-                Pick the class you are on the floor for. Add who is here
-                tonight. Ending class asks whether to write Class nights —
-                opening Start and End alone does not log anyone.
+                Pick the class you are on the floor for. This list is the
+                gym’s saved classes — the same on phone, iPad, and laptop.
+                Ending class asks whether to write Class nights — opening
+                Start and End alone does not log anyone.
               </p>
             </div>
             {offerings.length === 0 ? (
@@ -623,9 +628,11 @@ function ScheduleEditor({
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Classes I teach</h2>
         <p className="mt-2 text-sm text-white/65">
-          These save to the gym link. Name the class type — Connections,
-          Elevate, Reps w/ Logan, or your own — and the time you teach it.
-          Add a roster so Start class only shows who is in that hour.
+          Every add or edit saves to the gym link and shows on every
+          device after that — phone, iPad, and laptop. Name the class
+          type — Connections, Elevate, Reps w/ Logan, or your own — and
+          the time you teach it. Add a roster so Start class only shows
+          who is usually in that hour.
         </p>
       </div>
       <input

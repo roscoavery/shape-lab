@@ -387,6 +387,7 @@ export default function App() {
         if (!synced.fromServer || synced.athletes.length === 0) return
         setAthletes(ensureRyanInAthletes(synced.athletes))
       })
+      void hydrateCoachClasses()
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') pull()

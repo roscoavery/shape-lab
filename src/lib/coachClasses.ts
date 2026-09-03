@@ -88,6 +88,8 @@ export type CoachClassFile = {
 
 const KEY = 'shape-lab.coachClasses.v1'
 const listeners = new Set<() => void>()
+/** Live tab copy — localStorage can miss a write when the phone is full. */
+let memoryFile: CoachClassFile | null = null
 
 function emptyFile(): CoachClassFile {
   return {
@@ -165,10 +167,9 @@ export function attendeeCountsOnProfile(
   return Boolean(meeting.endedAt)
 }
 
-function read(): CoachClassFile {
+function parseFile(raw: string | null): CoachClassFile {
+  if (!raw) return emptyFile()
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return emptyFile()
     const data = JSON.parse(raw) as CoachClassFile
     if (data?.kind !== 'shape-lab-coach-classes') return emptyFile()
     return {
@@ -184,17 +185,86 @@ function read(): CoachClassFile {
   }
 }
 
+function offeringStamp(row: Pick<CoachClassOffering, 'updatedAt' | 'createdAt'>): string {
+  return row.updatedAt || row.createdAt || ''
+}
+
+function combineOfferings(keep: CoachClassOffering, incoming: CoachClassOffering): CoachClassOffering {
+  const incomingNewer = offeringStamp(incoming) >= offeringStamp(keep)
+  const newer = incomingNewer ? incoming : keep
+  const older = incomingNewer ? keep : incoming
+  const extras = new Map<string, NonNullable<CoachClassOffering['extraExercises']>[number]>()
+  for (const row of [...(older.extraExercises ?? []), ...(newer.extraExercises ?? [])]) {
+    if (row?.id) extras.set(row.id, row)
+  }
+  return {
+    ...older,
+    ...newer,
+    id: keep.id,
+    coachId: newer.coachId || older.coachId,
+    coachIds: [...new Set([...(older.coachIds ?? []), ...(newer.coachIds ?? [])].filter(Boolean))],
+    rosterIds: [...new Set([...(older.rosterIds ?? []), ...(newer.rosterIds ?? [])])],
+    extraExercises: extras.size ? [...extras.values()] : newer.extraExercises ?? older.extraExercises,
+    createdAt: older.createdAt || newer.createdAt,
+    updatedAt: offeringStamp(incoming) >= offeringStamp(keep) ? incoming.updatedAt || keep.updatedAt : keep.updatedAt || incoming.updatedAt,
+  }
+}
+
+function mergeOfferings(a: CoachClassOffering[], b: CoachClassOffering[]): CoachClassOffering[] {
+  const byId = new Map<string, CoachClassOffering>()
+  const put = (row: CoachClassOffering) => {
+    const have = byId.get(row.id)
+    byId.set(row.id, have ? combineOfferings(have, row) : row)
+  }
+  for (const row of a) put(row)
+  for (const row of b) put(row)
+  return [...byId.values()]
+}
+
+function readStored(): CoachClassFile {
+  try {
+    return parseFile(localStorage.getItem(KEY))
+  } catch {
+    return emptyFile()
+  }
+}
+
+function read(): CoachClassFile {
+  const stored = readStored()
+  if (memoryFile && memoryFile.offerings.length >= stored.offerings.length) {
+    return {
+      ...memoryFile,
+      offerings: memoryFile.offerings.map((o) => ({ ...o })),
+      meetings: memoryFile.meetings.map((m) => ({ ...m })),
+    }
+  }
+  if (memoryFile && memoryFile.offerings.length > 0) {
+    return {
+      kind: 'shape-lab-coach-classes',
+      version: 1,
+      exportedAt: memoryFile.exportedAt || stored.exportedAt,
+      offerings: mergeOfferings(stored.offerings, memoryFile.offerings),
+      meetings: mergeById(stored.meetings, memoryFile.meetings, (m) => m.endedAt || m.startedAt),
+      activeMeetingId: memoryFile.activeMeetingId ?? stored.activeMeetingId,
+    }
+  }
+  return stored
+}
+
 function write(file: CoachClassFile, sync = true) {
   const next: CoachClassFile = {
     ...file,
     kind: 'shape-lab-coach-classes',
     version: 1,
     exportedAt: new Date().toISOString(),
+    offerings: file.offerings.map(normalizeOffering).filter((o): o is CoachClassOffering => !!o),
+    meetings: file.meetings.map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
   }
+  memoryFile = next
   try {
     localStorage.setItem(KEY, JSON.stringify(next))
   } catch {
-    /* quota */
+    /* quota — memory still has every class in this tab */
   }
   for (const cb of listeners) cb()
   if (sync) void pushCoachClasses()
@@ -563,35 +633,40 @@ function mergeById<T extends { id: string }>(a: T[], b: T[], stamp: (row: T) => 
 
 async function pushCoachClasses() {
   const file = read()
-  try {
-    await fetch('/api/coach-classes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
-    })
-  } catch {
-    /* offline */
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch('/api/coach-classes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(file),
+      })
+      if (res.ok) return
+    } catch {
+      /* retry */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
   }
 }
 
 export async function hydrateCoachClasses(): Promise<void> {
+  const local = read()
   try {
-    const res = await fetch('/api/coach-classes')
+    const res = await fetch('/api/coach-classes', { cache: 'no-store' })
     if (!res.ok) {
       ensureDefaultClassTypes(RYAN_PROFILE_ID)
+      if (read().offerings.length > 0) await pushCoachClasses()
       return
     }
     const data = (await res.json()) as CoachClassFile
     if (data?.kind !== 'shape-lab-coach-classes') {
       ensureDefaultClassTypes(RYAN_PROFILE_ID)
+      if (read().offerings.length > 0) await pushCoachClasses()
       return
     }
-    const local = read()
-    const offerings = mergeById(
-      local.offerings,
-      (data.offerings ?? []).map(normalizeOffering).filter((o): o is CoachClassOffering => !!o),
-      (o) => o.updatedAt || o.createdAt,
-    )
+    const remoteOfferings = (data.offerings ?? [])
+      .map(normalizeOffering)
+      .filter((o): o is CoachClassOffering => !!o)
+    const offerings = mergeOfferings(local.offerings, remoteOfferings)
     const meetings = mergeById(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
@@ -604,7 +679,24 @@ export async function hydrateCoachClasses(): Promise<void> {
         : local.activeMeetingId
     write({ ...local, offerings, meetings, activeMeetingId: live ?? null }, false)
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
+    const next = read()
+    const remoteById = new Map(remoteOfferings.map((o) => [o.id, o]))
+    const needPush = next.offerings.some((o) => {
+      const remote = remoteById.get(o.id)
+      if (!remote) return true
+      return (
+        o.name !== remote.name ||
+        o.weekday !== remote.weekday ||
+        o.time !== remote.time ||
+        o.rosterIds.length !== remote.rosterIds.length ||
+        o.rosterIds.some((id) => !remote.rosterIds.includes(id)) ||
+        (o.coachIds?.length ?? 0) !== (remote.coachIds?.length ?? 0) ||
+        (o.extraExercises?.length ?? 0) !== (remote.extraExercises?.length ?? 0)
+      )
+    })
+    if (needPush || next.offerings.length !== remoteOfferings.length) await pushCoachClasses()
   } catch {
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
+    if (read().offerings.length > 0) await pushCoachClasses()
   }
 }
