@@ -9,7 +9,7 @@
  */
 
 import { getBlob, hasBlob, putBlob } from './clipStore'
-import { socialPlatform } from './socialUrls'
+import { socialPlatform, socialVideoKey } from './socialUrls'
 
 export type IgSlide = {
   url: string
@@ -30,6 +30,18 @@ export function isQuotaError(err: unknown): boolean {
 
 export function slideCacheId(itemId: string, index: number): string {
   return index <= 0 ? itemId : `${itemId}::s${index}`
+}
+
+/** Cache key scoped to this library item AND the social clip, so a race cannot store the wrong reel under this id. */
+export function mediaCacheId(itemId: string, pageUrl: string, index = 0): string {
+  const key = socialVideoKey(pageUrl) || pageUrl
+  const base = `${itemId}::${key}`
+  return index <= 0 ? base : `${base}::s${index}`
+}
+
+export function forgetInstagramManifest(pageUrl: string) {
+  manifestMem.delete(pageUrl)
+  inflightManifest.delete(pageUrl)
 }
 
 export function peekCachedInstagramBlob(itemId: string): Blob | null {
@@ -96,9 +108,13 @@ export async function fetchIgMediaBlob(proxyUrl: string): Promise<Blob> {
   const work = (async () => {
     const videoRes = await fetch(proxyUrl)
     if (!videoRes.ok) {
+      blobMem.delete(`url:${proxyUrl}`)
       throw new Error('Could not download that video.')
     }
     const blob = await videoRes.blob()
+    if (blob.size < 800) {
+      throw new Error('Could not download that video.')
+    }
     blobMem.set(`url:${proxyUrl}`, blob)
     return blob
   })()
@@ -128,9 +144,13 @@ export async function saveInstagramInApp(
   itemId: string,
   pageUrl: string,
 ): Promise<'cached' | 'saved'> {
+  const scoped = mediaCacheId(itemId, pageUrl)
+  if (blobMem.has(scoped) || (await hasBlob(scoped))) return 'cached'
   if (blobMem.has(itemId) || (await hasBlob(itemId))) return 'cached'
   const blob = await fetchInstagramVideoBlob(pageUrl)
+  rememberInstagramBlob(scoped, blob)
   rememberInstagramBlob(itemId, blob)
+  await putBlob(scoped, blob)
   await putBlob(itemId, blob)
   return 'saved'
 }
@@ -161,16 +181,22 @@ export function prefetchIgSlide(itemId: string, index: number, url?: string) {
 /** Resolve + download the first playable slide so a swipe feels instant. */
 export async function prefetchInstagram(pageUrl: string, itemId: string): Promise<void> {
   if (!socialPlatform(pageUrl)) return
-  if (blobMem.has(itemId) || blobMem.has(slideCacheId(itemId, 0))) return
+  const scoped = mediaCacheId(itemId, pageUrl)
+  if (blobMem.has(scoped) || blobMem.has(itemId)) return
   try {
-    const cached = await loadCachedInstagramBlob(itemId)
-    if (cached) return
+    const cached = (await loadCachedInstagramBlob(scoped)) ?? (await loadCachedInstagramBlob(itemId))
+    if (cached) {
+      rememberInstagramBlob(scoped, cached)
+      return
+    }
     const manifest = await fetchInstagramManifest(pageUrl)
     const first = manifest.slides.find((s) => s.kind === 'video') ?? manifest.slides[0]
     if (!first?.url) return
     const blob = await fetchIgMediaBlob(first.url)
+    rememberInstagramBlob(scoped, blob)
     rememberInstagramBlob(itemId, blob)
     rememberInstagramBlob(slideCacheId(itemId, 0), blob)
+    await putBlob(scoped, blob).catch(() => {})
     await putBlob(itemId, blob).catch(() => {})
     manifest.slides.forEach((slide, i) => {
       if (i === 0) return

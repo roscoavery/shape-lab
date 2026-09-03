@@ -18,12 +18,12 @@ import { canWriteCollection } from './organizeLibrary'
 export async function saveClipMeta(
   url: string,
   patch: { name?: string; keywords?: string[] | string },
-  opts: OrganizeEditor,
+  opts: OrganizeEditor & { itemId?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; reason: string }> {
   const name = (patch.name ?? '').trim()
   const keywords =
     typeof patch.keywords === 'string' ? parseKeywords(patch.keywords) : patch.keywords ?? []
-  if (!url) return { ok: false, reason: 'No clip selected.' }
+  if (!url && !opts.itemId) return { ok: false, reason: 'No clip selected.' }
   const all = await getCollections()
   const writable = all.filter((c) => canWriteCollection(c, opts))
   let touched = 0
@@ -32,7 +32,9 @@ export async function saveClipMeta(
   for (const col of writable) {
     let changed = false
     const items = col.items.map((item) => {
-      if (!item.url || !isSameReferenceUrl(item.url, url)) return item
+      const byId = Boolean(opts.itemId && item.id === opts.itemId)
+      const byUrl = Boolean(url && item.url && isSameReferenceUrl(item.url, url))
+      if (!byId && !byUrl) return item
       changed = true
       touched += 1
       const nextName = name || item.name

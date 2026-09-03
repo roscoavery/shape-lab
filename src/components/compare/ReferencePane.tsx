@@ -293,8 +293,11 @@ export function ReferencePane({
         .filter((item) => item.url)
         .map((item) => ({ id: item.id, url: item.url! })),
     )
-    if (clips.length) prefetchNeighborClips(clips, 0, Math.min(4, clips.length))
-  }, [collections])
+    if (clips.length) {
+      const idx = Math.max(0, clips.findIndex((c) => c.id === activeItemId))
+      prefetchNeighborClips(clips, idx >= 0 ? idx : 0, 2)
+    }
+  }, [collections, activeItemId])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -333,6 +336,14 @@ export function ReferencePane({
       setItemSrc(item.url ?? null)
     } else {
       setItemSrc(null) // instagram renders as embed
+    }
+    const scope = collection ?? collections.find((c) => c.id === activeCollectionId)
+    const list = (scope?.items ?? [])
+      .filter((row): row is RefItem & { url: string } => Boolean(row.url))
+      .map((row) => ({ id: row.id, url: row.url }))
+    if (list.length > 0) {
+      const idx = list.findIndex((row) => row.id === item.id)
+      prefetchNeighborClips(list, Math.max(0, idx), 2)
     }
   }
 
@@ -993,7 +1004,7 @@ export function ReferencePane({
                 </span>
               )}
             </button>
-            {!opts.quiet && canEditCollection(opts.collection) && (
+            {canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startRename(item)}
@@ -1003,7 +1014,7 @@ export function ReferencePane({
               Rename
             </button>
             )}
-            {!opts.quiet && canEditCollection(opts.collection) && (
+            {canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startTags(item)}
@@ -1254,18 +1265,84 @@ export function ReferencePane({
                   <ul className="flex flex-col gap-1">
                     {items.map((item) => {
                       const on = item.id === activeItemId
+                      const editing = canEditCollection(col)
+                      const renaming = renamingId === item.id
+                      const tagging = taggingId === item.id
                       return (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            onClick={() => void selectItem(item, col)}
-                            className={`w-full rounded-xl px-3 py-2 text-left text-sm ${
-                              on ? 'bg-white font-semibold text-black' : 'bg-white/10 text-white'
-                            }`}
-                          >
-                            {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
-                            {item.name}
-                          </button>
+                        <li key={item.id} className="rounded-xl bg-white/10">
+                          {renaming ? (
+                            <form
+                              className="px-3 py-2"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                void commitRename(item, col)
+                              }}
+                            >
+                              <input
+                                autoFocus
+                                value={renameDraft}
+                                onChange={(e) => setRenameDraft(e.target.value)}
+                                onBlur={() => void commitRename(item, col)}
+                                className="h-9 w-full rounded-lg bg-black/40 px-2 text-sm text-white"
+                                aria-label="Rename clip"
+                              />
+                            </form>
+                          ) : tagging ? (
+                            <form
+                              className="px-3 py-2"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                void commitTags(item, col)
+                              }}
+                            >
+                              <input
+                                autoFocus
+                                value={tagDraft}
+                                onChange={(e) => setTagDraft(e.target.value)}
+                                onBlur={() => void commitTags(item, col)}
+                                list="shape-keyword-suggestions"
+                                placeholder="handstand, roundoff"
+                                className="h-9 w-full rounded-lg bg-black/40 px-2 text-sm text-white"
+                                aria-label="Clip tags"
+                              />
+                            </form>
+                          ) : (
+                            <div className="flex items-start gap-1">
+                              <button
+                                type="button"
+                                onClick={() => void selectItem(item, col)}
+                                className={`min-w-0 flex-1 rounded-xl px-3 py-2 text-left text-sm ${
+                                  on ? 'bg-white font-semibold text-black' : 'text-white'
+                                }`}
+                              >
+                                {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
+                                {item.name}
+                                {item.keywords && item.keywords.length > 0 ? (
+                                  <span className={`mt-0.5 block truncate text-[10px] ${on ? 'text-black/55' : 'text-white/45'}`}>
+                                    {item.keywords.join(', ')}
+                                  </span>
+                                ) : null}
+                              </button>
+                              {editing ? (
+                                <div className="flex shrink-0 flex-col py-1 pr-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => startRename(item)}
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white/70 hover:text-white"
+                                  >
+                                    Rename
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => startTags(item)}
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white/70 hover:text-white"
+                                  >
+                                    Tags
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
                         </li>
                       )
                     })}
@@ -1598,11 +1675,6 @@ export function ReferencePane({
               className={`${inputCls} min-w-0 flex-1`}
               aria-label="Shape keywords for this URL"
             />
-            <datalist id="shape-keyword-suggestions">
-              {SHAPE_TAG_SUGGESTIONS.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
             <button type="button" onClick={() => void addUrl()} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]">
               Add URL
             </button>
@@ -1758,6 +1830,11 @@ export function ReferencePane({
           onCopied={setNotice}
         />
       ) : null}
+      <datalist id="shape-keyword-suggestions">
+        {SHAPE_TAG_SUGGESTIONS.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
     </section>
   )
 }
