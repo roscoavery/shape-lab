@@ -38,6 +38,7 @@ import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
+import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
 import { publishTextPostResult } from './lib/feedPosts'
@@ -85,6 +86,7 @@ import {
   saveAthletes,
   saveSettings,
   saveTab,
+  noteRemovedAthlete,
   type AppTab,
 } from './lib/storage'
 import { hydrateGymAtBoot, localHasGymRoster, type PersistInfo } from './lib/gymHydrate'
@@ -258,6 +260,18 @@ export default function App() {
       }),
     )
   }, [])
+
+  const removeProfile = useCallback((id: string) => {
+    const target = athletes.find((a) => a.id === id)
+    if (!target || isRyanAthlete(target)) return
+    noteRemovedAthlete(id)
+    setAthleteRoster(athletes.filter((a) => a.id !== id))
+    if (viewingAthleteId === id) setViewingAthleteId(null)
+    if (activeAthleteId === id) {
+      lockAllProfiles()
+      setActiveAthleteId(null)
+    }
+  }, [athletes, viewingAthleteId, activeAthleteId, setAthleteRoster])
 
   const requestSelectAthlete = useCallback(
     (id: string | null) => {
@@ -645,6 +659,7 @@ export default function App() {
     <ClipLoopsProvider>
     <FavoritesProvider>
     <ProfilePeekProvider onView={setViewingAthleteId}>
+    <GestureBurstHost />
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -1234,7 +1249,7 @@ export default function App() {
             activeId={activeAthleteId}
             onChangeAthletes={setAthleteRoster}
             onSelect={requestSelectAthlete}
-            allowDelete
+            allowDelete={ryanEdit}
             canSeeAllProfiles={ryanEdit}
             onViewProfile={setViewingAthleteId}
             viewer={activeProfile}
@@ -1470,6 +1485,7 @@ export default function App() {
         athletes={athletes}
         variant="overlay"
         onClose={() => setProfileOpen(false)}
+        onDeleteProfile={ryanEdit ? removeProfile : undefined}
         onAthleteChange={(next) => {
           setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
           void syncAthleteProfileToResearch(next, next.id)
@@ -1492,6 +1508,7 @@ export default function App() {
         athletes={athletes}
         variant="overlay"
         onClose={() => setViewingAthleteId(null)}
+        onDeleteProfile={ryanEdit ? removeProfile : undefined}
         onAddNote={
           activeProfile && isCoachProfile(activeProfile)
             ? (text) =>

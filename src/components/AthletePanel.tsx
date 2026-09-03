@@ -33,6 +33,7 @@ import { AthleteProfileCard } from './AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../lib/athleteNotes'
 import { withLinkedAthletes } from '../lib/parentLink'
 import { CoachPicker } from './CoachPicker'
+import { DeleteProfileAsk } from './DeleteProfileAsk'
 import { TUMBLE_SMART, normalizeGymName } from '../config/gyms'
 
 type Props = {
@@ -100,6 +101,7 @@ export function AthletePanel({
   const [legacyPin, setLegacyPin] = useState('')
   const [legacyPinAgain, setLegacyPinAgain] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Athlete | null>(null)
 
   const active = athletes.find((a) => a.id === activeId) ?? null
 
@@ -307,7 +309,7 @@ export function AthletePanel({
           <AthleteName athlete={active} size="md" nameClassName="font-semibold" />
         </div>
       )}
-      {canSeeAllProfiles && onViewProfile && (
+      {canSeeAllProfiles && onViewProfile && !allowDelete && (
         <div className="mb-3 flex flex-wrap gap-2">
           {athletes.map((a) => (
             <button
@@ -320,6 +322,47 @@ export function AthletePanel({
             </button>
           ))}
         </div>
+      )}
+      {allowDelete && (
+        <ul className="mb-3 max-h-[min(50vh,22rem)] space-y-1 overflow-y-auto">
+          {athletes.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
+            >
+              <button
+                type="button"
+                onClick={() => (onViewProfile ? onViewProfile(a.id) : onSelect(a.id))}
+                className="min-w-0 flex-1 text-left text-sm"
+              >
+                <AthleteName athlete={a} />
+                <span className="ml-1 text-[11px] text-[var(--muted)]">{roleLabel(a)}</span>
+              </button>
+              {isRyanAthlete(a) ? (
+                <span className="text-[11px] text-[var(--muted)]">Stays on roster</span>
+              ) : (
+                <button
+                  type="button"
+                  className="shrink-0 text-xs font-semibold text-[var(--bad)]"
+                  onClick={() => setPendingDelete(a)}
+                >
+                  Delete
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {pendingDelete && (
+        <DeleteProfileAsk
+          athlete={pendingDelete}
+          onKeep={() => setPendingDelete(null)}
+          onDelete={() => {
+            remove(pendingDelete.id)
+            setPendingDelete(null)
+            flash(`${pendingDelete.name} was deleted.`)
+          }}
+        />
       )}
       <select
         className="mb-3 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
@@ -349,6 +392,7 @@ export function AthletePanel({
             viewer={viewer ?? active}
             athletes={athletes}
             variant="embed"
+            onDeleteProfile={allowDelete ? remove : undefined}
             onAthleteChange={(next) =>
               onChangeAthletes(athletes.map((a) => (a.id === next.id ? next : a)))
             }
@@ -759,21 +803,6 @@ export function AthletePanel({
               >
                 @{active.instagramHandle}
               </a>
-            )}
-            {allowDelete && (
-            <button
-              type="button"
-              className="text-xs text-[var(--bad)] underline"
-              onClick={() => remove(active.id)}
-              disabled={isRyanAthlete(active)}
-              title={
-                isRyanAthlete(active)
-                  ? 'Ryan stays on the roster so IG shapes can save into the app'
-                  : 'Delete this profile'
-              }
-            >
-              {isRyanAthlete(active) ? 'Ryan stays on the roster' : 'Delete profile'}
-            </button>
             )}
             <button
               type="button"

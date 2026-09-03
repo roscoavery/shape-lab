@@ -20,6 +20,7 @@ import {
 } from '../../lib/feedPosts'
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
 import { pushNotice } from '../../lib/notify'
+import { playGestureBurst } from '../../lib/gestureBurst'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import {
   collageFromShare,
@@ -533,6 +534,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                             )
                             const on = (next.hi5s ?? []).includes(athlete.id)
                             if (!on || targets.length === 0) return
+                            playGestureBurst('hi5')
                             const names = targets.map((t) => givenName(t)).join(', ')
                             const youDid =
                               targets.length === 1

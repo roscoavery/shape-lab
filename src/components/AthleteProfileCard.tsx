@@ -7,6 +7,7 @@ import {
   canGiveHi5,
   isAthleteProfile,
   isCoachProfile,
+  isGymAdmin,
   profileRole,
   roleLabel,
 } from '../lib/profileRole'
@@ -50,6 +51,9 @@ import {
 } from '../lib/stories'
 import { fileToClipBlob, recordQuickClip } from '../lib/quickClip'
 import { FollowButton } from './network/FollowButton'
+import { DeleteProfileAsk } from './DeleteProfileAsk'
+import { playGestureBurst } from '../lib/gestureBurst'
+import { isRyanAthlete } from '../lib/ryanProfile'
 
 type Tab = 'posts' | 'passes' | 'stories'
 type Compose = 'story' | 'post' | 'pass' | null
@@ -63,6 +67,8 @@ type Props = {
   onAddNote?: (text: string) => void
   onAddWin?: (text: string, big: boolean) => void
   onAthleteChange?: (next: Athlete) => void
+  /** Gym admin only — delete this profile after an are-you-sure. */
+  onDeleteProfile?: (id: string) => void
 }
 
 export function AthleteProfileCard({
@@ -74,6 +80,7 @@ export function AthleteProfileCard({
   onAddNote,
   onAddWin,
   onAthleteChange,
+  onDeleteProfile,
 }: Props) {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [storiesFile, setStoriesFile] = useState<StoriesFile>({ stories: [], highlights: [] })
@@ -89,6 +96,9 @@ export function AthleteProfileCard({
   const [big, setBig] = useState(false)
   const [winError, setWinError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<string | null>(null)
+  const [askDelete, setAskDelete] = useState(false)
+  const adminDelete =
+    Boolean(onDeleteProfile) && isGymAdmin(viewer) && !isRyanAthlete(athlete)
   const facts = profileFactLines(athlete)
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
@@ -137,6 +147,7 @@ export function AthleteProfileCard({
       createdAt: new Date().toISOString(),
     }
     onAthleteChange?.({ ...athlete, gestures: [row, ...(athlete.gestures ?? [])].slice(0, 80) })
+    playGestureBurst(kind)
     const who = givenName(athlete)
     const youDid = kind === 'hi5' ? `You high-fived ${who}` : `You fist bumped ${who}`
     const theyGot =
@@ -357,7 +368,7 @@ export function AthleteProfileCard({
         <p className="text-xs text-[var(--muted)]">
           {(athlete.gestures ?? []).slice(0, 4).map((g) => (
             <span key={g.id} className="mr-2">
-              {g.kind === 'hi5' ? '🙏' : '👊'} {g.fromName}
+              {g.kind === 'hi5' ? 'High five' : 'Fist bump'} · {g.fromName}
             </span>
           ))}
         </p>
@@ -568,6 +579,31 @@ export function AthleteProfileCard({
       )}
       {watchPass && (
         <PassViewer post={watchPass} onClose={() => setWatchPass(null)} />
+      )}
+
+      {adminDelete && (
+        <div className="mt-8 border-t border-white/10 pt-5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Admin
+          </p>
+          <button
+            type="button"
+            className="mt-2 text-xs font-semibold text-[var(--bad)] underline"
+            onClick={() => setAskDelete(true)}
+          >
+            Delete this profile
+          </button>
+        </div>
+      )}
+      {askDelete && (
+        <DeleteProfileAsk
+          athlete={athlete}
+          onKeep={() => setAskDelete(false)}
+          onDelete={() => {
+            setAskDelete(false)
+            onDeleteProfile?.(athlete.id)
+          }}
+        />
       )}
     </div>
   )

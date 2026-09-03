@@ -6,6 +6,7 @@ import {
   reactionMeta,
   reactionOnLog,
 } from '../../lib/homeworkReactions'
+import { playGestureBurst } from '../../lib/gestureBurst'
 
 type Props = {
   log: HomeworkLog
@@ -29,6 +30,7 @@ export function HomeworkLogReactions({
   const pick = (kind: HomeworkReactionKind) => {
     if (!viewer) return
     reactToHomeworkLog(log.id, viewer, kind)
+    if (kind === 'hi5' || kind === 'fist') playGestureBurst(kind)
     onChanged?.()
   }
 
@@ -50,9 +52,15 @@ export function HomeworkLogReactions({
                 athlete={who ?? { name: row.fromName }}
                 size="xs"
               />
-              <span className="absolute -bottom-1 -right-1 text-[11px] leading-none">
-                {meta.emoji}
-              </span>
+              {meta.emoji ? (
+                <span className="absolute -bottom-1 -right-1 text-[11px] leading-none">
+                  {meta.emoji}
+                </span>
+              ) : (
+                <span className="absolute -bottom-1 -right-1 rounded bg-black/70 px-0.5 text-[8px] font-bold leading-none text-[var(--accent)]">
+                  {row.kind === 'hi5' ? '5' : '•'}
+                </span>
+              )}
             </span>
           </span>
         )
@@ -71,7 +79,7 @@ export function HomeworkLogReactions({
                   : 'hover:bg-white/10'
               }`}
             >
-              {r.emoji}
+              {r.emoji || (r.kind === 'hi5' ? 'Hi-5' : r.kind === 'fist' ? 'Bump' : r.label)}
             </button>
           ))}
         </span>

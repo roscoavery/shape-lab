@@ -11,6 +11,7 @@ import {
 } from '../lib/notify'
 import { daysSinceHomework, homeworkNudgeCopy } from '../lib/homeworkRecs'
 import { HOMEWORK_REACTIONS, reactToHomeworkLog, reactionOnLog } from '../lib/homeworkReactions'
+import { playGestureBurst } from '../lib/gestureBurst'
 import { loadHomeworkLogs } from '../lib/storage'
 import { isCoachProfile } from '../lib/profileRole'
 
@@ -140,6 +141,7 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
                             onClick={() => {
                               if (!n.homeworkLogId) return
                               reactToHomeworkLog(n.homeworkLogId, athlete, r.kind)
+                              if (r.kind === 'hi5' || r.kind === 'fist') playGestureBurst(r.kind)
                               markRead(n.id)
                               setLogTick((n) => n + 1)
                             }}
@@ -149,7 +151,7 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
                                 : 'hover:bg-white/10'
                             }`}
                           >
-                            {r.emoji}
+                            {r.emoji || (r.kind === 'hi5' ? 'Hi-5' : r.kind === 'fist' ? 'Bump' : r.label)}
                           </button>
                         ))}
                       </div>
