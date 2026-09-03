@@ -42,12 +42,6 @@ export function isIosDevice() {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
-/** iPhone / iPod only — iPad is landscape-upright and must not get the 90° unwind. */
-export function isIphone() {
-  if (typeof navigator === 'undefined') return false
-  return /iP(hone|od)/.test(navigator.userAgent || '')
-}
-
 /** iPhone / iPad / Android — speechSynthesis is flaky on all of these. */
 export function isPhoneBrowser() {
   if (isIosDevice()) return true
@@ -173,9 +167,9 @@ export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<
   if (!stream) {
     throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
   }
-  // iPhone MediaRecorder + MSE write sideways landscape; IosDelayUnwind
-  // stands that up. iPad frames are already upright — do not unwind or
-  // force 9:16 here (that zoomed live / Replay last past the other cams).
+  // iPad / iPhone MediaRecorder + MSE stay landscape; IosDelayUnwind
+  // stands the delay <video> up. applyConstraints to 9:16 here made the
+  // buffer portrait and the unwind spun the athlete 90° again.
   if (portrait && !isIosDevice()) await preferPortraitTrack(stream)
   return stream
 }

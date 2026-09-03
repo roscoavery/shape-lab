@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { DELAY_MAX, DELAY_MIN, useDelayCam } from '../hooks/useDelayCam'
-import { isIphone } from '../lib/delayCameraPipeline'
+import { isIosDevice } from '../lib/delayCameraPipeline'
 import { IosDelayUnwind } from './IosDelayUnwind'
 
 type Mode = 'live' | 'delay' | 'replay'
@@ -111,7 +111,7 @@ export function TaskDelayCam({
         />
       ) : (
         <IosDelayUnwind
-          active={isIphone()}
+          active={isIosDevice()}
           className={`relative w-full ${videoBox} ${mode === 'delay' ? mirrorCls : 'hidden'}`}
         >
           <video
