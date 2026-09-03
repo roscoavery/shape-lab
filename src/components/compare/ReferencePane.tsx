@@ -311,7 +311,7 @@ export function ReferencePane({
     )
     if (clips.length) {
       const idx = Math.max(0, clips.findIndex((c) => c.id === activeItemId))
-      prefetchNeighborClips(clips, idx >= 0 ? idx : 0, 2)
+      prefetchNeighborClips(clips, idx >= 0 ? idx : 0, 4)
     }
   }, [collections, activeItemId])
 

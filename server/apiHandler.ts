@@ -9,6 +9,7 @@ import {
   resolveSocialSlides,
   sendJson,
 } from './instagramResolve.ts'
+import { postedByFromUrl } from '../src/lib/socialUrls.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
@@ -785,7 +786,7 @@ export async function handleShapeLabApi(
       })
       return true
     }
-    const postedBy = resolved.postedBy ?? (await lookupPostedBy(page))
+    const postedBy = resolved.postedBy ?? postedByFromUrl(page)
     sendJson(res, 200, {
       videoUrl: `/api/ig-media?src=${encodeURIComponent(resolved.url)}`,
       slides: resolved.slides.map((slide) => ({

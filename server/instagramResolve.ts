@@ -62,14 +62,14 @@ function handleFromField(raw: string | null | undefined): string | null {
 
 type YtHit = { url: string | null; postedBy: string | null }
 
-function spawnYtdlp(cmd: string, args: string[]): Promise<YtHit> {
+function spawnYtdlp(cmd: string, args: string[], ms = 12_000): Promise<YtHit> {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
     let out = ''
     const kill = setTimeout(() => {
       child.kill('SIGKILL')
       resolve({ url: null, postedBy: null })
-    }, 25_000)
+    }, ms)
     child.stdout.on('data', (d: Buffer) => {
       out += d.toString('utf8')
     })
@@ -99,56 +99,6 @@ async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
   const first = await spawnYtdlp('yt-dlp', args)
   if (first.url || first.postedBy) return first
   return spawnYtdlp('python3', ['-m', 'yt_dlp', ...args])
-}
-
-function slidesFromUrlLines(out: string): ResolvedSlide[] {
-  const slides: ResolvedSlide[] = []
-  const seen = new Set<string>()
-  for (const line of out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)) {
-    if (!/^https?:\/\//.test(line) || seen.has(line)) continue
-    seen.add(line)
-    slides.push({ url: line, kind: 'video' })
-    if (slides.length >= CAROUSEL_CAP) break
-  }
-  return slides
-}
-
-function spawnYtdlpLines(cmd: string, args: string[]): Promise<ResolvedSlide[]> {
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
-    let out = ''
-    const kill = setTimeout(() => {
-      child.kill('SIGKILL')
-      resolve(slidesFromUrlLines(out))
-    }, 28_000)
-    child.stdout.on('data', (d: Buffer) => {
-      out += d.toString('utf8')
-    })
-    child.on('error', () => {
-      clearTimeout(kill)
-      resolve([])
-    })
-    child.on('close', () => {
-      clearTimeout(kill)
-      resolve(slidesFromUrlLines(out))
-    })
-  })
-}
-
-async function ytdlpResolveAll(pageUrl: string): Promise<ResolvedSlide[]> {
-  const args = [
-    '-f',
-    'b',
-    '-g',
-    '--yes-playlist',
-    '--playlist-end',
-    String(CAROUSEL_CAP),
-    '--no-warnings',
-    pageUrl,
-  ]
-  const first = await spawnYtdlpLines('yt-dlp', args)
-  if (first.length > 0) return first
-  return spawnYtdlpLines('python3', ['-m', 'yt_dlp', ...args])
 }
 
 async function ytdlpPostedBy(pageUrl: string): Promise<string | null> {
@@ -184,35 +134,34 @@ function cobaltSlides(data: {
   return []
 }
 
-async function cobaltResolveAll(pageUrl: string): Promise<ResolvedSlide[]> {
-  for (const origin of COBALT_APIS) {
-    try {
-      const res = await fetch(origin, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': UA,
-        },
-        body: JSON.stringify({
-          url: pageUrl,
-          videoQuality: '720',
-          disableMetadata: true,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      })
-      const data = (await res.json()) as {
-        status?: string
-        url?: string
-        picker?: Array<{ type?: string; url?: string }>
-      }
-      const slides = cobaltSlides(data)
-      if (slides.length > 0) return slides
-    } catch {
-      // try next instance
-    }
+async function cobaltOne(origin: string, pageUrl: string): Promise<ResolvedSlide[]> {
+  const res = await fetch(origin, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': UA,
+    },
+    body: JSON.stringify({
+      url: pageUrl,
+      videoQuality: '720',
+      disableMetadata: true,
+    }),
+    signal: AbortSignal.timeout(8_000),
+  })
+  const data = (await res.json()) as {
+    status?: string
+    url?: string
+    picker?: Array<{ type?: string; url?: string }>
   }
-  return []
+  return cobaltSlides(data)
+}
+
+async function cobaltResolveAll(pageUrl: string): Promise<ResolvedSlide[]> {
+  const hits = await Promise.all(
+    COBALT_APIS.map((origin) => cobaltOne(origin, pageUrl).catch(() => [] as ResolvedSlide[])),
+  )
+  return hits.find((slides) => slides.length > 0) ?? []
 }
 
 function unescapeIgUrl(raw: string): string {
@@ -268,10 +217,39 @@ function slidesFromInstagramHtml(html: string): ResolvedSlide[] {
   return slides
 }
 
+function slidesFromPageHtml(html: string): ResolvedSlide[] {
+  const carousel = slidesFromInstagramHtml(html)
+  if (carousel.length > 0) return carousel
+  const slides: ResolvedSlide[] = []
+  const seen = new Set<string>()
+  const push = (raw: string | undefined, kind: ResolvedSlide['kind'] = 'video') => {
+    if (!raw) return
+    const clean = unescapeIgUrl(raw)
+    if (!clean.startsWith('http') || seen.has(clean)) return
+    seen.add(clean)
+    slides.push({ url: clean, kind })
+  }
+  push(html.match(/"video_url"\s*:\s*"(https?:[^"]+)"/)?.[1])
+  push(
+    html.match(/property="og:video(?::secure_url)?"\s+content="(https?:[^"]+)"/i)?.[1]
+      ?? html.match(/content="(https?:[^"]+)"\s+property="og:video(?::secure_url)?"/i)?.[1],
+  )
+  push(html.match(/"playAddr"\s*:\s*"(https?:[^"]+)"/)?.[1])
+  push(html.match(/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i)?.[1])
+  return slides
+}
+
 async function htmlCarouselSlides(pageUrl: string): Promise<ResolvedSlide[]> {
-  const html = await fetchText(pageUrl, 7000)
+  const html = await fetchText(pageUrl, 4500)
   if (!html) return []
-  return slidesFromInstagramHtml(html)
+  return slidesFromPageHtml(html)
+}
+
+function firstVideoSlides(lists: ResolvedSlide[][]): ResolvedSlide[] | null {
+  for (const list of lists) {
+    if (list.some((s) => s.kind === 'video') || list.length > 0) return list
+  }
+  return null
 }
 
 function looksLikeCarousel(slides: ResolvedSlide[], pageUrl: string): boolean {
@@ -368,27 +346,42 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
   if (hit && Date.now() - hit.at < CACHE_MS && hit.slides.length > 0) {
     return { url: hit.url, slides: hit.slides, postedBy: hit.postedBy }
   }
-  const yt = await ytdlpResolve(pageUrl)
   const ig = parseInstagramUrl(pageUrl)
-  const [ytAll, cobalt, html] = await Promise.all([
-    ig?.type === 'p' ? ytdlpResolveAll(pageUrl) : Promise.resolve([]),
-    cobaltResolveAll(pageUrl),
-    ig ? htmlCarouselSlides(pageUrl) : Promise.resolve([]),
-  ])
-  const single: ResolvedSlide[] = yt.url
-    ? [{ url: yt.url, kind: 'video' }]
-    : cobalt.slice(0, 1)
-  const carousel = pickCarouselSlides(pageUrl, html, cobalt, ytAll)
-  const chosen = carousel.length > 0 ? carousel : single
-  const direct = chosen.find((s) => s.kind === 'video')?.url ?? chosen[0]?.url ?? yt.url ?? null
-  if (!direct || chosen.length === 0) return null
-  cache.set(pageUrl, {
-    url: direct,
-    slides: chosen,
-    at: Date.now(),
-    postedBy: yt.postedBy,
-  })
-  return { url: direct, slides: chosen, postedBy: yt.postedBy }
+  const fromUrl = postedByFromUrl(rawUrl)
+
+  const finish = (slides: ResolvedSlide[], postedBy?: string | null) => {
+    const direct = slides.find((s) => s.kind === 'video')?.url ?? slides[0]?.url ?? null
+    if (!direct || slides.length === 0) return null
+    const posted = postedBy ?? fromUrl
+    cache.set(pageUrl, { url: direct, slides, at: Date.now(), postedBy: posted })
+    return { url: direct, slides, postedBy: posted }
+  }
+
+  const htmlP = htmlCarouselSlides(pageUrl)
+  const cobaltP = cobaltResolveAll(pageUrl)
+  const ytP = ytdlpResolve(pageUrl)
+
+  const html = await htmlP
+  if (html.some((s) => s.kind === 'video') || (ig?.type === 'p' && html.length > 1)) {
+    const ready = finish(html)
+    if (ready) return ready
+  }
+
+  const cobalt = await cobaltP
+  const htmlOrCobalt = pickCarouselSlides(pageUrl, html, cobalt)
+  if (htmlOrCobalt.length > 0) {
+    const ready = finish(htmlOrCobalt)
+    if (ready) return ready
+  }
+  if (cobalt.length > 0) {
+    const ready = finish(cobalt)
+    if (ready) return ready
+  }
+
+  const yt = await ytP
+  const ytSlides: ResolvedSlide[] = yt.url ? [{ url: yt.url, kind: 'video' }] : []
+  const chosen = firstVideoSlides([html, cobalt, ytSlides]) ?? []
+  return finish(chosen, yt.postedBy)
 }
 
 export async function resolveSocialVideo(rawUrl: string): Promise<string | null> {

@@ -52,6 +52,15 @@ export function rememberInstagramBlob(itemId: string, blob: Blob) {
   blobMem.set(itemId, blob)
 }
 
+export function asPlayableBlob(blob: Blob, kind: IgSlide['kind'] = 'video'): Blob {
+  if (kind === 'image') {
+    if (blob.type.startsWith('image/')) return blob
+    return blob.slice(0, blob.size, 'image/jpeg')
+  }
+  if (blob.type.startsWith('video/')) return blob
+  return blob.slice(0, blob.size, 'video/mp4')
+}
+
 export async function fetchInstagramManifest(
   pageUrl: string,
 ): Promise<{ slides: IgSlide[]; postedBy?: string }> {
@@ -111,10 +120,17 @@ export async function fetchIgMediaBlob(proxyUrl: string): Promise<Blob> {
       blobMem.delete(`url:${proxyUrl}`)
       throw new Error('Could not download that video.')
     }
-    const blob = await videoRes.blob()
-    if (blob.size < 800) {
+    const raw = await videoRes.blob()
+    if (raw.size < 800) {
       throw new Error('Could not download that video.')
     }
+    const mime = videoRes.headers.get('content-type') || raw.type || 'video/mp4'
+    const blob =
+      mime.startsWith('video/') || mime.startsWith('image/')
+        ? raw.type === mime
+          ? raw
+          : raw.slice(0, raw.size, mime)
+        : raw.slice(0, raw.size, 'video/mp4')
     blobMem.set(`url:${proxyUrl}`, blob)
     return blob
   })()
@@ -215,18 +231,29 @@ export function prefetchIgSlide(itemId: string, index: number, url?: string) {
   })
 }
 
-/** Resolve + download the first playable slide so a swipe feels instant. */
-export async function prefetchInstagram(pageUrl: string, itemId: string): Promise<void> {
+/** Resolve the playable URL now. Optionally download bytes for the next swipe. */
+export async function prefetchInstagram(
+  pageUrl: string,
+  itemId: string,
+  opts: { download?: boolean } = {},
+): Promise<void> {
   if (!socialPlatform(pageUrl)) return
   const scoped = mediaCacheId(itemId, pageUrl)
-  if (blobMem.has(scoped) || blobMem.has(itemId)) return
+  if (blobMem.has(scoped) || blobMem.has(itemId)) {
+    if (!opts.download) return
+  }
   try {
-    const cached = (await loadCachedInstagramBlob(scoped)) ?? (await loadCachedInstagramBlob(itemId))
+    const cached =
+      (await loadAnyCachedInstagramBlob(itemId, pageUrl)) ??
+      (await loadCachedInstagramBlob(scoped)) ??
+      (await loadCachedInstagramBlob(itemId))
     if (cached) {
       rememberInstagramBlob(scoped, cached)
+      rememberInstagramBlob(itemId, cached)
       return
     }
     const manifest = await fetchInstagramManifest(pageUrl)
+    if (!opts.download) return
     const first = manifest.slides.find((s) => s.kind === 'video') ?? manifest.slides[0]
     if (!first?.url) return
     const blob = await fetchIgMediaBlob(first.url)
@@ -247,13 +274,13 @@ export async function prefetchInstagram(pageUrl: string, itemId: string): Promis
 export function prefetchNeighborClips(
   clips: { id: string; url: string }[],
   active: number,
-  radius = 2,
+  radius = 3,
 ) {
-  const start = Math.max(0, active)
+  const start = Math.max(0, active - 1)
   const end = Math.min(clips.length - 1, active + radius)
   for (let i = start; i <= end; i++) {
     const clip = clips[i]
     if (!clip) continue
-    void prefetchInstagram(clip.url, clip.id)
+    void prefetchInstagram(clip.url, clip.id, { download: i === active || i === active + 1 })
   }
 }

@@ -15,6 +15,7 @@ import {
   urlWithIgSlide,
 } from '../../lib/socialUrls'
 import {
+  asPlayableBlob,
   fetchIgMediaBlob,
   fetchInstagramManifest,
   forgetInstagramManifest,
@@ -256,11 +257,20 @@ export function InstagramEmbed({
     const showBlob = (blob: Blob, slideKind: IgSlide['kind'], cached: boolean) => {
       if (loadGen.current !== gen) return
       revoke()
-      const objectUrl = URL.createObjectURL(blob)
+      const objectUrl = URL.createObjectURL(asPlayableBlob(blob, slideKind))
       objectUrlRef.current = objectUrl
       setSrc(objectUrl)
       setKind(slideKind)
       setFromCache(cached)
+      setLoading(false)
+    }
+
+    const showStream = (streamUrl: string, slideKind: IgSlide['kind']) => {
+      if (loadGen.current !== gen) return
+      revoke()
+      setSrc(streamUrl)
+      setKind(slideKind)
+      setFromCache(false)
       setLoading(false)
     }
 
@@ -293,6 +303,11 @@ export function InstagramEmbed({
         if (manifest.postedBy) {
           setResolvedBy(manifest.postedBy)
           onPostedByRef.current?.(manifest.postedBy)
+        }
+        if (!playedFromCache) {
+          const index = Math.min(instagramSlideIndex(url), Math.max(0, manifest.slides.length - 1))
+          const current = manifest.slides[index] ?? manifest.slides[0]
+          if (current?.url) showStream(current.url, current.kind)
         }
       } catch (err) {
         if (cancelled || loadGen.current !== gen) return
@@ -341,77 +356,68 @@ export function InstagramEmbed({
         if (mem) {
           if (loadGen.current !== gen) return
           revoke()
-          const objectUrl = URL.createObjectURL(mem)
+          const objectUrl = URL.createObjectURL(asPlayableBlob(mem, current.kind))
           objectUrlRef.current = objectUrl
           setSrc(objectUrl)
           setKind(current.kind)
           setFromCache(true)
           setLoading(false)
-        } else {
-          const cached = await loadAnyCachedInstagramBlob(itemId, url, index)
-          if (cancelled || loadGen.current !== gen) return
-          if (cached) {
-            revoke()
-            const objectUrl = URL.createObjectURL(cached)
-            objectUrlRef.current = objectUrl
-            setSrc(objectUrl)
-            setKind(current.kind)
-            setFromCache(true)
-            setLoading(false)
-            if (scoped) rememberInstagramBlob(scoped, cached)
-            return
-          }
-          if (!src) setLoading(true)
-        }
-        if (mem) {
-          /* already showing */
-        } else if (!current.url) {
-          setLoading(false)
           return
-        } else {
-          let blob: Blob
-          try {
-            blob = await fetchIgMediaBlob(current.url)
-          } catch (first) {
-            forgetInstagramManifest(url)
-            const manifest = await fetchInstagramManifest(url)
-            if (cancelled || loadGen.current !== gen) return
-            setSlides(manifest.slides)
-            setSlidesFor(url)
-            const again = manifest.slides[index] ?? manifest.slides[0]
-            if (!again?.url) throw first
-            blob = await fetchIgMediaBlob(again.url)
-          }
-          if (cancelled || loadGen.current !== gen) return
-          if (scoped) rememberInstagramBlob(scoped, blob)
-          if (legacy) rememberInstagramBlob(legacy, blob)
-          if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
-          try {
-            if (scoped) await putBlob(scoped, blob)
-            if (legacy && legacy !== scoped) await putBlob(legacy, blob)
-            if (itemId && index === 0) await putBlob(itemId, blob)
-            if (!cancelled && itemId) onCachedRef.current?.(itemId)
-          } catch (err) {
-            if (isQuotaError(err)) setQuotaWarn(true)
-          }
+        }
+        const cached = await loadAnyCachedInstagramBlob(itemId, url, index)
+        if (cancelled || loadGen.current !== gen) return
+        if (cached) {
           revoke()
-          const objectUrl = URL.createObjectURL(blob)
+          const objectUrl = URL.createObjectURL(asPlayableBlob(cached, current.kind))
           objectUrlRef.current = objectUrl
           setSrc(objectUrl)
           setKind(current.kind)
+          setFromCache(true)
+          setLoading(false)
+          if (scoped) rememberInstagramBlob(scoped, cached)
+          return
+        }
+        if (current.url) {
+          revoke()
+          setSrc(current.url)
+          setKind(current.kind)
           setFromCache(false)
           setLoading(false)
+          void fetchIgMediaBlob(current.url)
+            .then(async (blob) => {
+              if (cancelled || loadGen.current !== gen) return
+              if (scoped) rememberInstagramBlob(scoped, blob)
+              if (legacy) rememberInstagramBlob(legacy, blob)
+              if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
+              try {
+                if (scoped) await putBlob(scoped, blob)
+                if (legacy && legacy !== scoped) await putBlob(legacy, blob)
+                if (itemId && index === 0) await putBlob(itemId, blob)
+                if (!cancelled && itemId) onCachedRef.current?.(itemId)
+              } catch (err) {
+                if (isQuotaError(err)) setQuotaWarn(true)
+              }
+            })
+            .catch(() => {})
+          return
         }
+        setLoading(false)
       } catch (err) {
         if (cancelled || loadGen.current !== gen) return
         const cached = await loadAnyCachedInstagramBlob(itemId, url, index)
         if (cached && loadGen.current === gen) {
           revoke()
-          const objectUrl = URL.createObjectURL(cached)
+          const objectUrl = URL.createObjectURL(asPlayableBlob(cached, current.kind))
           objectUrlRef.current = objectUrl
           setSrc(objectUrl)
           setKind(current.kind)
           setFromCache(true)
+          setLoading(false)
+          return
+        }
+        if (current.url) {
+          setSrc(current.url)
+          setKind(current.kind)
           setLoading(false)
           return
         }
