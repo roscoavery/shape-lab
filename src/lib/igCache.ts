@@ -163,6 +163,43 @@ export async function loadCachedInstagramBlob(itemId: string): Promise<Blob | nu
   return blob
 }
 
+/** Every key this clip may have been stored under, newest and oldest. */
+export function instagramCacheKeys(itemId: string | undefined, pageUrl: string, index = 0): string[] {
+  const keys: string[] = []
+  if (itemId) {
+    keys.push(mediaCacheId(itemId, pageUrl, index))
+    if (index <= 0) keys.push(itemId)
+    keys.push(slideCacheId(itemId, index))
+  }
+  return [...new Set(keys.filter(Boolean))]
+}
+
+export function peekAnyCachedInstagramBlob(
+  itemId: string | undefined,
+  pageUrl: string,
+  index = 0,
+): Blob | null {
+  for (const key of instagramCacheKeys(itemId, pageUrl, index)) {
+    const hit = blobMem.get(key)
+    if (hit) return hit
+  }
+  return null
+}
+
+export async function loadAnyCachedInstagramBlob(
+  itemId: string | undefined,
+  pageUrl: string,
+  index = 0,
+): Promise<Blob | null> {
+  const peek = peekAnyCachedInstagramBlob(itemId, pageUrl, index)
+  if (peek) return peek
+  for (const key of instagramCacheKeys(itemId, pageUrl, index)) {
+    const blob = await loadCachedInstagramBlob(key)
+    if (blob) return blob
+  }
+  return null
+}
+
 /** Warm the next slide so a swipe does not wait on the network. */
 export function prefetchIgSlide(itemId: string, index: number, url?: string) {
   const key = slideCacheId(itemId, index)

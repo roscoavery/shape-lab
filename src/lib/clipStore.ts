@@ -277,10 +277,9 @@ export function kindFromUrl(url: string): RefItemKind {
 }
 
 export function isSocialVideoItem(item: RefItem): item is RefItem & { url: string } {
-  return (
-    Boolean(item.url) &&
-    (item.kind === 'instagram' || item.kind === 'tiktok' || item.kind === 'facebook')
-  )
+  if (!item.url) return false
+  if (item.kind === 'instagram' || item.kind === 'tiktok' || item.kind === 'facebook') return true
+  return socialPlatform(item.url) !== null
 }
 
 export function reorderItems(items: RefItem[], fromId: string, toId: string): RefItem[] {

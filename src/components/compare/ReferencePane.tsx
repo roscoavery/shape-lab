@@ -28,7 +28,7 @@ import {
   type RefCollection,
   type RefItem,
 } from '../../lib/clipStore'
-import { saveInstagramInApp } from '../../lib/igCache'
+import { mediaCacheId, saveInstagramInApp } from '../../lib/igCache'
 import {
   allUrlsText,
   backupUrlCount,
@@ -95,6 +95,7 @@ type Props = {
   viewer?: boolean
   handoffSrc?: string | null
   handoffName?: string | null
+  handoffItemId?: string | null
 }
 
 export function ReferencePane({
@@ -104,6 +105,7 @@ export function ReferencePane({
   viewer = false,
   handoffSrc = null,
   handoffName = null,
+  handoffItemId = null,
 }: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
@@ -152,8 +154,21 @@ export function ReferencePane({
   const pip = fullscreen && focus === 'cam'
 
   const refreshCachedIds = useCallback(async (cols: RefCollection[]) => {
-    const ids = cols.flatMap((c) => c.items.map((i) => i.id))
-    setCachedIds(await listCachedIds(ids))
+    const keys = cols.flatMap((c) =>
+      c.items.flatMap((item) =>
+        item.url ? [item.id, mediaCacheId(item.id, item.url)] : [item.id],
+      ),
+    )
+    const found = await listCachedIds(keys)
+    const ids = new Set<string>()
+    for (const col of cols) {
+      for (const item of col.items) {
+        if (found.has(item.id) || (item.url && found.has(mediaCacheId(item.id, item.url)))) {
+          ids.add(item.id)
+        }
+      }
+    }
+    setCachedIds(ids)
   }, [])
 
   const canEditLibrary = gymEditor || personalEditor
@@ -307,12 +322,31 @@ export function ReferencePane({
   }
 
   useEffect(() => {
-    if (!handoffSrc) return
+    if (!handoffItemId && !handoffSrc) return
+    let cancelled = false
     revokeSrc()
-    setItemSrc(handoffSrc)
-    setActiveItemId(null)
     setNotice(handoffName ? `Reference: ${handoffName}` : 'Playing the replay as the reference.')
-  }, [handoffSrc, handoffName])
+    setError(null)
+    if (handoffItemId) {
+      setActiveItemId(handoffItemId)
+      void getBlob(handoffItemId).then((blob) => {
+        if (cancelled) return
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          objectUrlRef.current = url
+          setItemSrc(url)
+          return
+        }
+        if (handoffSrc) setItemSrc(handoffSrc)
+      })
+    } else if (handoffSrc) {
+      setActiveItemId(null)
+      setItemSrc(handoffSrc)
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [handoffItemId, handoffSrc, handoffName])
 
   const selectItem = async (item: RefItem, collection?: RefCollection) => {
     setError(null)
@@ -322,7 +356,9 @@ export function ReferencePane({
     }
     setActiveItemId(item.id)
     if (!fullscreen && desk !== 'watch' && desk !== 'browse') setDesk('watch')
-    if (item.kind === 'file') {
+    if (isSocialVideoItem(item)) {
+      setItemSrc(null)
+    } else if (item.kind === 'file' || !item.url) {
       const blob = await getBlob(item.id)
       if (!blob) {
         setError('Stored video not found — it may have been cleared by the browser.')
@@ -332,10 +368,15 @@ export function ReferencePane({
       const url = URL.createObjectURL(blob)
       objectUrlRef.current = url
       setItemSrc(url)
-    } else if (item.kind === 'url') {
-      setItemSrc(item.url ?? null)
     } else {
-      setItemSrc(null) // instagram renders as embed
+      const blob = await getBlob(item.id)
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        objectUrlRef.current = url
+        setItemSrc(url)
+      } else {
+        setItemSrc(item.url ?? null)
+      }
     }
     const scope = collection ?? collections.find((c) => c.id === activeCollectionId)
     const list = (scope?.items ?? [])
@@ -537,9 +578,19 @@ export function ReferencePane({
     await selectItem(item)
   }
 
+  const canDeleteItem = (item: RefItem, collection: RefCollection | null) => {
+    void item
+    return canEditCollection(collection)
+  }
+
   const removeItem = async (item: RefItem, collection = activeCollection) => {
-    if (!collection || !canEditCollection(collection)) return
+    if (!collection || !canDeleteItem(item, collection)) return
+    const who = gymEditor
+      ? 'This removes it from the gym library after you save into the app.'
+      : 'This only removes it from your collection — Ryan’s gym clips stay.'
+    if (!confirm(`Remove “${item.name}” from ${collection.name}?\n\n${who}`)) return
     await deleteBlob(item.id)
+    if (item.url) await deleteBlob(mediaCacheId(item.id, item.url)).catch(() => {})
     await updateCollection({
       ...collection,
       items: collection.items.filter((i) => i.id !== item.id),
@@ -1047,14 +1098,14 @@ export function ReferencePane({
             )}
           </>
         )}
-        {!opts.quiet && canEditCollection(opts.collection) && (
+        {canDeleteItem(item, opts.collection) && (
         <button
           type="button"
           onClick={() => void removeItem(item, opts.collection)}
-          className="rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--bad)]"
-          title="Remove from collection"
+          className="rounded px-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--bad)]"
+          title={gymEditor ? 'Remove from the gym library' : 'Remove a clip you added'}
         >
-          ✕
+          Delete
         </button>
         )}
       </li>
@@ -1453,6 +1504,15 @@ export function ReferencePane({
             </optgroup>
           )}
         </select>
+        {activeItem && canDeleteItem(activeItem, activeCollection) && (
+          <button
+            type="button"
+            onClick={() => void removeItem(activeItem, activeCollection)}
+            className="rounded-lg border border-[var(--bad)]/50 px-3 py-1.5 text-sm font-semibold text-[var(--bad)] hover:bg-[#2a1518]"
+          >
+            Delete clip
+          </button>
+        )}
       </div>
       )}
 

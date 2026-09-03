@@ -65,6 +65,12 @@ type Props = {
   savingPhotos?: boolean
   /** Shrink replay to the corner and show the reference full screen. */
   onMinimize?: () => void
+  libraryBusy?: boolean
+  libraryNotice?: string | null
+  libraryError?: string | null
+  onUseAsReference?: () => void
+  onSaveToDrill?: () => void
+  onSaveToCollection?: () => void
 }
 
 function fmt(t: number): string {
@@ -109,6 +115,12 @@ function VideoWorkbenchInner({
   onSaveInApp,
   savingPhotos = false,
   onMinimize,
+  libraryBusy = false,
+  libraryNotice = null,
+  libraryError = null,
+  onUseAsReference,
+  onSaveToDrill,
+  onSaveToCollection,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -136,7 +148,7 @@ function VideoWorkbenchInner({
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
   const overlay = overlayChrome ?? (fill || replayChrome)
-  const [chromeOpen, setChromeOpen] = useState(() => Boolean(compact && fill))
+  const [chromeOpen, setChromeOpen] = useState(() => Boolean(compact && fill) || Boolean(replayChrome))
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
     dist: number
@@ -733,6 +745,12 @@ function VideoWorkbenchInner({
             onSaveInApp={onSaveInApp}
             onToggleChrome={() => setChromeOpen((open) => !open)}
             onMinimize={onMinimize}
+            libraryBusy={libraryBusy}
+            libraryNotice={libraryNotice}
+            libraryError={libraryError}
+            onUseAsReference={onUseAsReference}
+            onSaveToDrill={onSaveToDrill}
+            onSaveToCollection={onSaveToCollection}
           />
         ) : (
           <>

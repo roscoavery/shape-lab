@@ -19,15 +19,15 @@ import {
   fetchInstagramManifest,
   forgetInstagramManifest,
   isQuotaError,
-  loadCachedInstagramBlob,
+  loadAnyCachedInstagramBlob,
   mediaCacheId,
-  peekCachedInstagramBlob,
+  peekAnyCachedInstagramBlob,
   prefetchIgSlide,
   rememberInstagramBlob,
   slideCacheId,
   type IgSlide,
 } from '../../lib/igCache'
-import { deleteBlob, putBlob } from '../../lib/clipStore'
+import { putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
 /** Keep carousel chevrons out of the left markup stack / right Show HUD. */
@@ -264,10 +264,7 @@ export function InstagramEmbed({
       setLoading(false)
     }
 
-    const scoped = itemId ? mediaCacheId(itemId, url) : null
-    const warm =
-      (scoped ? peekCachedInstagramBlob(scoped) : null) ??
-      (itemId ? peekCachedInstagramBlob(itemId) : null)
+    const warm = peekAnyCachedInstagramBlob(itemId, url)
     if (warm) {
       setFromCache(true)
       setLoading(false)
@@ -279,10 +276,8 @@ export function InstagramEmbed({
 
     void (async () => {
       let playedFromCache = Boolean(warm)
-      if (itemId && !warm) {
-        const cached =
-          (scoped ? await loadCachedInstagramBlob(scoped) : null) ??
-          (await loadCachedInstagramBlob(itemId))
+      if (!warm) {
+        const cached = await loadAnyCachedInstagramBlob(itemId, url)
         if (cancelled || loadGen.current !== gen) return
         if (cached) {
           playedFromCache = true
@@ -302,14 +297,10 @@ export function InstagramEmbed({
       } catch (err) {
         if (cancelled || loadGen.current !== gen) return
         if (playedFromCache) return
-        if (itemId && retry === 0) {
-          const cached =
-            (scoped ? await loadCachedInstagramBlob(scoped) : null) ??
-            (await loadCachedInstagramBlob(itemId))
-          if (cached && loadGen.current === gen) {
-            showBlob(cached, 'video', true)
-            return
-          }
+        const cached = await loadAnyCachedInstagramBlob(itemId, url)
+        if (cached && loadGen.current === gen) {
+          showBlob(cached, 'video', true)
+          return
         }
         setError(
           err instanceof Error
@@ -346,10 +337,7 @@ export function InstagramEmbed({
       try {
         const scoped = itemId ? mediaCacheId(itemId, url, index) : null
         const legacy = itemId ? slideCacheId(itemId, index) : null
-        const cacheKey = scoped ?? legacy
-        const mem =
-          (scoped ? peekCachedInstagramBlob(scoped) : null) ??
-          (legacy ? peekCachedInstagramBlob(legacy) : null)
+        const mem = peekAnyCachedInstagramBlob(itemId, url, index)
         if (mem) {
           if (loadGen.current !== gen) return
           revoke()
@@ -359,10 +347,8 @@ export function InstagramEmbed({
           setKind(current.kind)
           setFromCache(true)
           setLoading(false)
-        } else if (cacheKey) {
-          const cached =
-            (scoped ? await loadCachedInstagramBlob(scoped) : null) ??
-            (legacy ? await loadCachedInstagramBlob(legacy) : null)
+        } else {
+          const cached = await loadAnyCachedInstagramBlob(itemId, url, index)
           if (cancelled || loadGen.current !== gen) return
           if (cached) {
             revoke()
@@ -376,8 +362,6 @@ export function InstagramEmbed({
             return
           }
           if (!src) setLoading(true)
-        } else if (!src) {
-          setLoading(true)
         }
         if (mem) {
           /* already showing */
@@ -420,6 +404,17 @@ export function InstagramEmbed({
         }
       } catch (err) {
         if (cancelled || loadGen.current !== gen) return
+        const cached = await loadAnyCachedInstagramBlob(itemId, url, index)
+        if (cached && loadGen.current === gen) {
+          revoke()
+          const objectUrl = URL.createObjectURL(cached)
+          objectUrlRef.current = objectUrl
+          setSrc(objectUrl)
+          setKind(current.kind)
+          setFromCache(true)
+          setLoading(false)
+          return
+        }
         setError(err instanceof Error ? err.message : 'Could not open that slide.')
         setLoading(false)
       }
@@ -492,10 +487,6 @@ export function InstagramEmbed({
             type="button"
             onClick={() => {
               forgetInstagramManifest(url)
-              if (itemId) {
-                void deleteBlob(itemId)
-                void deleteBlob(mediaCacheId(itemId, url))
-              }
               setRetry((n) => n + 1)
             }}
             className="text-xs font-semibold text-[var(--accent)] hover:underline"

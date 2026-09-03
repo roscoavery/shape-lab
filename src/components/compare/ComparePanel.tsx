@@ -78,6 +78,7 @@ export function ComparePanel({
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [handoffSrc, setHandoffSrc] = useState<string | null>(null)
   const [handoffName, setHandoffName] = useState<string | null>(null)
+  const [handoffItemId, setHandoffItemId] = useState<string | null>(null)
 
   const enterReplay = (next: CompareSplit, afterGo: CompareFocus = 'split') => {
     setLibraryOpen(false)
@@ -286,6 +287,7 @@ export function ComparePanel({
                   profileId={athleteId}
                   handoffSrc={handoffSrc}
                   handoffName={handoffName}
+                  handoffItemId={handoffItemId}
                 />
               </ComparePipSlot>
               {splitScreen ? (
@@ -293,7 +295,6 @@ export function ComparePanel({
                   axis={split === 'tb' ? 'y' : 'x'}
                   value={split === 'tb' ? tbRatio : lrRatio}
                   onChange={split === 'tb' ? setTbRatio : setLrRatio}
-                  flush={athleteReplay}
                   onClose={exitReplay}
                 />
               ) : null}
@@ -326,10 +327,11 @@ export function ComparePanel({
                   skillLabel={skillLabel}
                   classId={classId}
                   className={className}
-                  onPlayAsReference={(src, name) => {
-                    setHandoffSrc(src)
+                  onPlayAsReference={(_src, name, itemId) => {
+                    setHandoffSrc(null)
                     setHandoffName(name)
-                    setFocus('ref')
+                    setHandoffItemId(itemId ?? null)
+                    setFocus('split')
                   }}
                 />
               </ComparePipSlot>
@@ -434,6 +436,7 @@ export function ComparePanel({
               viewer
               handoffSrc={handoffSrc}
               handoffName={handoffName}
+              handoffItemId={handoffItemId}
             />
           </div>
         </div>

@@ -29,8 +29,8 @@ import {
 } from '../../lib/clipStore'
 import { emptyDrill, saveDrill, uploadCoachMedia } from '../../lib/coachContentStore'
 import { createId } from '../../lib/storage'
+import { dispatchLibraryChanged } from '../../lib/libraryEvents'
 import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
-import { extractVideoRange } from '../../lib/trimVideo'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
@@ -64,7 +64,7 @@ type CameraPaneProps = {
   skillLabel?: string | null
   classId?: string | null
   className?: string | null
-  onPlayAsReference?: (src: string, name: string) => void
+  onPlayAsReference?: (src: string | null, name: string, itemId?: string) => void
 }
 
 export function CameraPane({
@@ -132,6 +132,7 @@ export function CameraPane({
   const [librarySaving, setLibrarySaving] = useState(false)
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
   const [savingPhotos, setSavingPhotos] = useState(false)
+  const [replayBusy, setReplayBusy] = useState(false)
   const replayWindowRef = useRef<{ start: number; end: number } | null>(null)
   const [delayTime, setDelayTime] = useState(0)
   const [delayDuration, setDelayDuration] = useState(0)
@@ -622,21 +623,15 @@ export function CameraPane({
     }
   }
 
-  const blobForScrubWindow = async (): Promise<Blob | null> => {
+  const cloneReplayBlob = (): Blob | null => {
     const blob = replayBlobRef.current
-    if (!blob) return null
-    const win = replayWindowRef.current
-    if (!win || !(win.end > win.start + 0.15)) return blob
-    try {
-      return await extractVideoRange(blob, win.start, win.end)
-    } catch {
-      return blob
-    }
+    if (!blob || blob.size < 800) return null
+    return blob.slice(0, blob.size, blob.type || 'video/mp4')
   }
 
   const saveReplayToApp = () => {
     void (async () => {
-      const blob = await blobForScrubWindow()
+      const blob = cloneReplayBlob()
       if (!blob) {
         setError('Nothing to save — open a replay first.')
         return
@@ -683,17 +678,24 @@ export function CameraPane({
   const sendReplay = async (
     dest: 'reference' | 'drill' | 'collection',
   ) => {
-    const blob = await blobForScrubWindow()
+    const blob = cloneReplayBlob()
     if (!blob) {
       setError('Nothing to save — open a replay first.')
       return
     }
     const name = `Replay ${new Date().toLocaleTimeString()}`
     const ownerId = athleteId || 'ath_ryan'
+    setReplayBusy(true)
+    setError(null)
     try {
       if (dest === 'reference') {
         const id = createId('ref')
-        await putBlob(id, blob)
+        try {
+          await putBlob(id, blob)
+        } catch {
+          setError('Could not keep that replay on this device — storage may be full.')
+          return
+        }
         const cols = await getCollections()
         const existing = cols.find((c) => c.name === 'Replay references')
         const item: RefItem = {
@@ -712,16 +714,36 @@ export function CameraPane({
               athleteId: athleteId ?? undefined,
             }
         await putCollection(col)
-        const url = URL.createObjectURL(blob)
-        onPlayAsReference?.(url, name)
+        dispatchLibraryChanged()
+        onPlayAsReference?.(null, name, id)
         setFlash('That replay is now the reference clip.')
       } else if (dest === 'drill') {
-        const src = await uploadCoachMedia({ ownerId, file: blob, name })
+        let src: string | null = null
+        try {
+          src = await uploadCoachMedia({ ownerId, file: blob, name })
+        } catch {
+          src = null
+        }
+        if (!src) {
+          const id = createId('ref')
+          try {
+            await putBlob(id, blob)
+            src = URL.createObjectURL(blob)
+          } catch {
+            setError('Could not save to the drill library — the upload failed and this device is out of room.')
+            return
+          }
+        }
         saveDrill({ ...emptyDrill(), title: name, src, notes: 'Saved from replay last view' })
         setFlash('Saved to the drill library.')
       } else {
         const id = createId('ref')
-        await putBlob(id, blob)
+        try {
+          await putBlob(id, blob)
+        } catch {
+          setError('Could not keep that replay on this device — storage may be full.')
+          return
+        }
         const cols = await getCollections()
         const folder = className?.trim() || 'Class clips'
         const existing = cols.find((c) => c.name === folder)
@@ -741,31 +763,39 @@ export function CameraPane({
               athleteId: athleteId ?? undefined,
             }
         await putCollection(col)
+        dispatchLibraryChanged()
         if (athleteId) {
-          await uploadAthleteVideo({
-            athleteId,
-            blob,
-            name,
-            source: saveSource,
-            lessonId,
-            skillId,
-            skillLabel,
-            classId,
-            className,
-          })
-          onLibrarySaved?.()
+          try {
+            await uploadAthleteVideo({
+              athleteId,
+              blob,
+              name,
+              source: saveSource,
+              lessonId,
+              skillId,
+              skillLabel,
+              classId,
+              className,
+            })
+            onLibrarySaved?.()
+          } catch {
+            /* local collection still saved */
+          }
         }
         setFlash(`Saved to the ${folder} collection.`)
       }
       window.setTimeout(() => setFlash(null), 3200)
-    } catch {
-      setError('Could not save that replay.')
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Could not save that replay.'
+      setError(msg)
+    } finally {
+      setReplayBusy(false)
     }
   }
 
   const downloadReplay = () => {
     void (async () => {
-      const blob = await blobForScrubWindow()
+      const blob = cloneReplayBlob()
       if (!blob) {
         setError('Nothing to download — open a replay first.')
         return
@@ -1152,30 +1182,13 @@ export function CameraPane({
               onSavePhotos={downloadReplay}
               onSaveInApp={saveReplayToApp}
               onMinimize={() => setFocus('ref')}
+              libraryBusy={replayBusy}
+              libraryNotice={flash}
+              libraryError={error}
+              onUseAsReference={() => void sendReplay('reference')}
+              onSaveToDrill={() => void sendReplay('drill')}
+              onSaveToCollection={() => void sendReplay('collection')}
             />
-            <div className="flex flex-wrap gap-2 px-2 pb-2">
-              <button
-                type="button"
-                onClick={() => void sendReplay('reference')}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
-              >
-                Use as reference
-              </button>
-              <button
-                type="button"
-                onClick={() => void sendReplay('drill')}
-                className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
-              >
-                Save to drill library
-              </button>
-              <button
-                type="button"
-                onClick={() => void sendReplay('collection')}
-                className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
-              >
-                Save to collection
-              </button>
-            </div>
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">

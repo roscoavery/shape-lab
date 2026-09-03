@@ -12,8 +12,6 @@ type Props = {
   onChange: (n: number) => void
   min?: number
   max?: number
-  /** Replay Last: panes sit flush; the drag hit area still overlaps both videos. */
-  flush?: boolean
   /** Leave fullscreen without sitting on the Clip HUD. */
   onClose?: () => void
 }
@@ -24,7 +22,6 @@ export function CompareSplitDivider({
   onChange,
   min = 0.22,
   max = 0.78,
-  flush = false,
   onClose,
 }: Props) {
   const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
@@ -73,34 +70,17 @@ export function CompareSplitDivider({
       onPointerCancel={end}
       className={
         vertical
-          ? flush
-            ? 'relative z-[16] h-0 shrink-0 cursor-ns-resize touch-none'
-            : 'relative z-[16] flex h-3 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-black'
-          : flush
-            ? 'relative z-[16] w-0 shrink-0 cursor-ew-resize touch-none'
-            : 'relative z-[16] flex w-3 shrink-0 cursor-ew-resize touch-none items-center justify-center bg-black'
+          ? 'relative z-[30] flex h-11 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-[#0b0f14]'
+          : 'relative z-[30] flex w-11 shrink-0 cursor-ew-resize touch-none items-center justify-center bg-[#0b0f14]'
       }
     >
       <span
         className={
           vertical
-            ? flush
-              ? 'absolute left-1/2 top-1/2 z-[17] h-5 w-full -translate-x-1/2 -translate-y-1/2'
-              : 'h-1 w-12 rounded-full bg-white/55'
-            : flush
-              ? 'absolute left-1/2 top-1/2 z-[17] h-full w-5 -translate-x-1/2 -translate-y-1/2'
-              : 'h-12 w-1 rounded-full bg-white/55'
+            ? 'pointer-events-none h-1.5 w-16 rounded-full bg-white/75 shadow-[0_0_0_6px_rgba(255,255,255,0.08)]'
+            : 'pointer-events-none h-16 w-1.5 rounded-full bg-white/75 shadow-[0_0_0_6px_rgba(255,255,255,0.08)]'
         }
       />
-      {flush ? (
-        <span
-          className={
-            vertical
-              ? 'pointer-events-none absolute left-1/2 top-1/2 h-px w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40'
-              : 'pointer-events-none absolute left-1/2 top-1/2 h-10 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40'
-          }
-        />
-      ) : null}
       {onClose ? (
         <button
           type="button"
@@ -109,8 +89,8 @@ export function CompareSplitDivider({
           onClick={onClose}
           className={
             vertical
-              ? 'absolute right-2 top-1/2 z-[22] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
-              : 'absolute bottom-2 left-1/2 z-[22] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+              ? 'absolute right-2 top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+              : 'absolute bottom-2 left-1/2 z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full bg-[#e03131] text-[1.35rem] font-bold leading-none text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
           }
         >
           ×

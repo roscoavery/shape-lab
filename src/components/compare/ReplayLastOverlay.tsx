@@ -246,6 +246,12 @@ type Props = {
   onSaveInApp?: () => void
   onToggleChrome: () => void
   onMinimize?: () => void
+  libraryBusy?: boolean
+  libraryNotice?: string | null
+  libraryError?: string | null
+  onUseAsReference?: () => void
+  onSaveToDrill?: () => void
+  onSaveToCollection?: () => void
 }
 
 export function ReplayLastOverlay({
@@ -268,6 +274,12 @@ export function ReplayLastOverlay({
   onSaveInApp,
   onToggleChrome,
   onMinimize,
+  libraryBusy = false,
+  libraryNotice = null,
+  libraryError = null,
+  onUseAsReference,
+  onSaveToDrill,
+  onSaveToCollection,
 }: Props) {
   const { focus, fullscreen, pipCorner } = useCompareLayout()
   const chipRight = hudAvoidPipRightClass(fullscreen, focus, pipCorner, 'cam')
@@ -284,7 +296,7 @@ export function ReplayLastOverlay({
         <IconBack />
       </button>
 
-      <div className={`absolute z-[40] flex flex-col items-center gap-4 text-white ${chromeOpen ? 'bottom-[8.75rem]' : 'bottom-4'} ${chipRight}`}>
+      <div className={`absolute z-[40] flex flex-col items-center gap-4 text-white ${chromeOpen ? 'bottom-[12.5rem]' : 'bottom-4'} ${chipRight}`}>
         {onMinimize && (
           <button type="button" onClick={onMinimize} aria-label="Show reference, keep replay in the corner">
             <IconPip />
@@ -325,6 +337,45 @@ export function ReplayLastOverlay({
               {time.toFixed(3)}s
             </span>
           </div>
+          {(onUseAsReference || onSaveToDrill || onSaveToCollection) && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {onUseAsReference ? (
+                <button
+                  type="button"
+                  disabled={libraryBusy}
+                  onClick={onUseAsReference}
+                  className="rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[#06281f] disabled:opacity-40"
+                >
+                  Use as reference
+                </button>
+              ) : null}
+              {onSaveToDrill ? (
+                <button
+                  type="button"
+                  disabled={libraryBusy}
+                  onClick={onSaveToDrill}
+                  className="rounded-md bg-white/12 px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40"
+                >
+                  Save to drill library
+                </button>
+              ) : null}
+              {onSaveToCollection ? (
+                <button
+                  type="button"
+                  disabled={libraryBusy}
+                  onClick={onSaveToCollection}
+                  className="rounded-md bg-white/12 px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40"
+                >
+                  Save to collection
+                </button>
+              ) : null}
+            </div>
+          )}
+          {libraryError ? (
+            <p className="mb-1 rounded-md bg-[#2a1518] px-2 py-1 text-[11px] text-[#ff8a8a]">{libraryError}</p>
+          ) : libraryNotice ? (
+            <p className="mb-1 rounded-md bg-[#102820] px-2 py-1 text-[11px] text-[var(--accent)]">{libraryNotice}</p>
+          ) : null}
           <ReplayFilmstrip src={src} duration={duration} time={time} onSeek={onSeek} />
           <div className="mt-2 flex items-center justify-evenly">
             <button type="button" onClick={() => step(-1)} aria-label="Previous frame" className="text-white">
