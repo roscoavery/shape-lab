@@ -86,7 +86,11 @@ export function TaskDelayCam({
   }
 
   const mirrorCls = mirror ? 'scale-x-[-1]' : ''
-  const videoBox = pip ? 'h-36 sm:h-44' : compact ? 'h-36' : 'h-48'
+  const videoBox = pip
+    ? 'aspect-[9/16] h-36 sm:h-44'
+    : compact
+      ? 'aspect-[9/16] h-40'
+      : 'aspect-[9/16] max-h-[min(56vh,28rem)]'
 
   const videoBlock = (
     <div className="relative overflow-hidden rounded-lg bg-black">
@@ -94,7 +98,7 @@ export function TaskDelayCam({
         <video
           ref={replayVideoRef}
           src={replaySrc}
-          className={`block w-full bg-black ${videoBox} ${mirrorCls}`}
+          className={`block h-full w-full bg-black object-cover ${videoBox} ${mirrorCls}`}
           controls={!pip}
           playsInline
           onLoadedMetadata={(e) => {
@@ -112,7 +116,7 @@ export function TaskDelayCam({
         >
           <video
             ref={delay.delayVideoRef}
-            className="block h-full w-full bg-black"
+            className="block h-full w-full bg-black object-cover"
             playsInline
             muted
             disableRemotePlayback

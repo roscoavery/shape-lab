@@ -101,9 +101,30 @@ export function cameraPermissionMessage(err: unknown): string {
 }
 
 /**
- * Open the user-facing camera. Desktop Chrome often rejects `facingMode: user`
- * without ever showing a permission prompt — try a bare `video: true` first
- * there. iPad keeps the front-camera portrait constraints.
+ * Ask an already-open track for a tall 9:16 frame. Desktop webcams often
+ * ignore this — CSS object-cover then crops to portrait.
+ */
+export async function preferPortraitTrack(stream: MediaStream): Promise<void> {
+  const track = stream.getVideoTracks()[0]
+  if (!track) return
+  const settings = track.getSettings()
+  const width = settings.width ?? 0
+  const height = settings.height ?? 0
+  if (height >= width && height > 0) return
+  try {
+    await track.applyConstraints({
+      width: { ideal: 720 },
+      height: { ideal: 1280 },
+      aspectRatio: { ideal: 9 / 16 },
+    })
+  } catch {
+    /* crop in the view instead */
+  }
+}
+
+/**
+ * Open the user-facing camera. Prefer a portrait / 9:16 frame so delay cam
+ * fills a phone-shaped view. Fall back to any camera so Chrome still prompts.
  *
  * getUserMedia is the first await so a tap still counts as a user gesture.
  */
@@ -115,42 +136,39 @@ export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<
         : 'This browser cannot open the camera. Allow camera access, then try again.',
     )
   }
-  const portrait = opts?.portrait ?? isIosDevice()
-  const attempts: MediaStreamConstraints[] = portrait
-    ? [
-        {
-          audio: false,
-          video: {
-            facingMode: { ideal: 'user' },
-            width: { ideal: 720 },
-            height: { ideal: 1280 },
-            aspectRatio: { ideal: 9 / 16 },
-          },
-        },
-        { audio: false, video: { facingMode: { ideal: 'user' } } },
-        { audio: false, video: true },
-      ]
-    : [
-        { audio: false, video: true },
-        {
-          audio: false,
-          video: {
-            facingMode: { ideal: 'user' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        },
-        { audio: false, video: { facingMode: { ideal: 'user' } } },
-      ]
+  const portrait = opts?.portrait !== false
+  const attempts: MediaStreamConstraints[] = [
+    ...(portrait
+      ? [
+          {
+            audio: false,
+            video: {
+              facingMode: { ideal: 'user' },
+              width: { ideal: 720 },
+              height: { ideal: 1280 },
+              aspectRatio: { ideal: 9 / 16 },
+            },
+          } satisfies MediaStreamConstraints,
+        ]
+      : []),
+    { audio: false, video: { facingMode: { ideal: 'user' } } },
+    { audio: false, video: true },
+  ]
   let lastErr: unknown = null
+  let stream: MediaStream | null = null
   for (const constraints of attempts) {
     try {
-      return await navigator.mediaDevices.getUserMedia(constraints)
+      stream = await navigator.mediaDevices.getUserMedia(constraints)
+      break
     } catch (err) {
       lastErr = err
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
+  if (!stream) {
+    throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
+  }
+  if (portrait) await preferPortraitTrack(stream)
+  return stream
 }
 
 /** iPhone / Android: inline playback, no AirPlay hijack of ManagedMediaSource. */

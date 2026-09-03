@@ -30,7 +30,7 @@ import {
 import { emptyDrill, saveDrill, uploadCoachMedia } from '../../lib/coachContentStore'
 import { createId } from '../../lib/storage'
 import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
-import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
+import { extractVideoRange } from '../../lib/trimVideo'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
@@ -407,7 +407,7 @@ export function CameraPane({
   const startCamera = async (): Promise<boolean> => {
     setError(null)
     try {
-      const stream = await requestUserCamera({ portrait: iosDelay })
+      const stream = await requestUserCamera({ portrait: true })
       streamRef.current = stream
       let video = liveVideoRef.current
       for (let i = 0; i < 40 && !video; i++) {
@@ -560,15 +560,11 @@ export function CameraPane({
         return
       }
       const tail = Math.min(delaySec, capturedFor)
-      let playable = blob
-      try {
-        playable = await extractVideoTail(blob, tail)
-      } catch {
-        playable = blob
-      }
-      replayBlobRef.current = playable
+      // Play the recorder file as-is. Re-encoding the tail used to make a
+      // glitchy sped-up clip; VideoWorkbench jumps to the last N seconds.
+      replayBlobRef.current = blob
       if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
-      const url = URL.createObjectURL(playable)
+      const url = URL.createObjectURL(blob)
       clipUrlRef.current = url
       setClipSrc(url)
       setActiveClipId(null)
@@ -970,24 +966,48 @@ export function CameraPane({
         className={
           mode === 'replay' && clipSrc
             ? 'pointer-events-none absolute h-px w-px overflow-hidden opacity-0'
-            : `relative overflow-hidden bg-black ${fullscreen ? 'min-h-0 flex-1' : 'rounded-lg border border-[var(--panel-border)]'}`
+            : `relative overflow-hidden bg-black ${
+                fullscreen
+                  ? 'min-h-0 flex-1'
+                  : 'aspect-[9/16] w-full max-h-[min(72vh,38rem)] rounded-lg border border-[var(--panel-border)]'
+              }`
         }
       >
-        <video
-          ref={liveVideoRef}
-          muted
-          playsInline
-          disableRemotePlayback
-          webkit-playsinline="true"
-          style={videoXform}
-          className={
-            livePip
-              ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-contain shadow-lg`
-              : `${fullscreen ? 'h-full max-h-none' : 'max-h-[420px]'} w-full object-contain ${
-                  livePeek ? '' : mode === 'delay' ? 'hidden' : ''
-                }`
-          }
-        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative h-full max-w-full aspect-[9/16]">
+            <video
+              ref={liveVideoRef}
+              muted
+              playsInline
+              disableRemotePlayback
+              webkit-playsinline="true"
+              style={videoXform}
+              className={
+                livePip
+                  ? `absolute bottom-3 ${livePipCorner} z-[24] h-[7.75rem] w-[5.5rem] rounded-lg border-2 border-white bg-black object-cover shadow-lg`
+                  : `absolute inset-0 h-full w-full object-cover ${
+                      livePeek ? '' : mode === 'delay' ? 'hidden' : ''
+                    }`
+              }
+            />
+            <IosDelayUnwind
+              active={iosDelay}
+              style={videoXform}
+              className={
+                mode === 'delay' && !livePeek ? 'absolute inset-0 h-full w-full' : 'hidden'
+              }
+            >
+              <video
+                ref={delayVideoRef}
+                muted
+                playsInline
+                disableRemotePlayback
+                webkit-playsinline="true"
+                className="h-full w-full object-cover"
+              />
+            </IosDelayUnwind>
+          </div>
+        </div>
         {livePip && (
           <>
             <button
@@ -1003,26 +1023,6 @@ export function CameraPane({
             </span>
           </>
         )}
-        <IosDelayUnwind
-          active={iosDelay}
-          style={videoXform}
-          className={
-            mode === 'delay' && !livePeek
-              ? fullscreen
-                ? 'h-full min-h-0 w-full'
-                : 'h-[min(420px,70vw)] max-h-[420px] w-full'
-              : 'hidden'
-          }
-        >
-          <video
-            ref={delayVideoRef}
-            muted
-            playsInline
-            disableRemotePlayback
-            webkit-playsinline="true"
-            className="h-full w-full object-contain"
-          />
-        </IosDelayUnwind>
         {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
             Camera off — press Start camera
@@ -1127,13 +1127,19 @@ export function CameraPane({
       {/* Replay of the last N seconds (or a saved attempt) */}
       {mode === 'replay' &&
         (clipSrc ? (
-          <div className={`relative flex min-h-0 flex-col ${fullscreen ? 'h-full flex-1' : ''}`}>
+          <div
+            className={`relative flex min-h-0 flex-col overflow-hidden ${
+              fullscreen
+                ? 'h-full flex-1'
+                : 'aspect-[9/16] w-full max-h-[min(72vh,38rem)] rounded-lg'
+            }`}
+          >
             <VideoWorkbench
               src={clipSrc}
               mirror={mirror}
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
-              fill={fullscreen}
+              fill
               overlayChrome
               replayChrome={!camPip}
               pinchZoom={!camPip}

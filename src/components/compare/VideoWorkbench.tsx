@@ -671,11 +671,11 @@ function VideoWorkbenchInner({
           }
           className={`${
             fill
-              ? 'block h-full max-h-none'
+              ? 'absolute inset-0 block h-full w-full object-cover'
               : overlay
-                ? 'block min-h-[16rem] max-h-[min(70vh,36rem)]'
-                : 'max-h-[420px]'
-          } w-full object-contain ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
+                ? 'block min-h-[16rem] max-h-[min(70vh,36rem)] w-full object-cover'
+                : 'max-h-[420px] w-full object-contain'
+          } ${pinchZoom ? '' : mirror ? 'scale-x-[-1]' : ''}`}
         />
         {showStillOverlay && !fill && <DraggableStillOverlay />}
         {markup && !bare && !zoomed && (
