@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
 import {
+  boardsForClassType,
   boardsForOffering,
+  ensureBoardForClassType,
   ensureBoardForOffering,
   postToChalkboard,
   subscribeChalkboards,
   type ChalkboardDraft,
+  type ChalkboardScope,
+  typeOfferingId,
 } from '../../lib/chalkboard'
 import {
   classLabel,
+  classTypeKey,
   getActiveMeeting,
   loadOfferings,
   subscribeCoachClasses,
@@ -28,7 +33,9 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [open, setOpen] = useState(false)
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
+  const [typeKey, setTypeKey] = useState('')
   const [offeringId, setOfferingId] = useState('')
+  const [scope, setScope] = useState<ChalkboardScope>('type')
   const [boardId, setBoardId] = useState('')
   const [pin, setPin] = useState(true)
   const [note, setNote] = useState<string | null>(null)
@@ -36,43 +43,74 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
   useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
   useEffect(() => subscribeChalkboards(() => setOfferings(loadOfferings())), [])
 
+  const types = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const o of offerings) {
+      const key = classTypeKey(o.name)
+      if (!seen.has(key)) seen.set(key, o.name)
+    }
+    return [...seen.entries()].map(([key, name]) => ({ key, name }))
+  }, [offerings])
+
+  const times = useMemo(
+    () => offerings.filter((o) => classTypeKey(o.name) === typeKey),
+    [offerings, typeKey],
+  )
+
   useEffect(() => {
     const live = getActiveMeeting()
-    const first = live?.offeringId || offerings[0]?.id || ''
-    setOfferingId((id) => id || first)
+    const liveOffering = live ? offerings.find((o) => o.id === live.offeringId) : null
+    const first = liveOffering ?? offerings[0]
+    if (!first) return
+    setTypeKey((key) => key || classTypeKey(first.name))
+    setOfferingId((id) => id || first.id)
+    if (liveOffering) setScope('time')
   }, [offerings])
 
   if (!coach || !viewer) return null
 
-  const boards = boardsForOffering(offeringId)
+  const selectedType = types.find((t) => t.key === typeKey)
+  const boards =
+    scope === 'type'
+      ? boardsForClassType(selectedType?.name)
+      : boardsForOffering(offeringId)
   const live = getActiveMeeting()
 
   const post = () => {
-    if (!offeringId) {
+    if (!selectedType) {
       setNote('Add a class type first — Start class → Edit classes.')
       return
     }
+    if (scope === 'time' && !offeringId) {
+      setNote('Pick which class time this belongs on.')
+      return
+    }
+    const targetId = scope === 'type' ? typeOfferingId(selectedType.name) : offeringId
     const board = boardId
       ? boards.find((b) => b.id === boardId)
-      : ensureBoardForOffering(offeringId, viewer.id)
+      : scope === 'type'
+        ? ensureBoardForClassType(selectedType.name, viewer.id)
+        : ensureBoardForOffering(offeringId, viewer.id)
     const item = postToChalkboard({
-      offeringId,
+      offeringId: targetId,
       boardId: board?.id,
       createdById: viewer.id,
       createdByName: viewer.name,
       pinned: pin,
-      meetingId: live?.offeringId === offeringId ? live.id : undefined,
+      meetingId: live && scope === 'time' && live.offeringId === offeringId ? live.id : undefined,
       draft,
     })
     if (!item) {
       setNote('Could not post that to the chalkboard.')
       return
     }
-    const offering = offerings.find((o) => o.id === offeringId)
+    const hour = offerings.find((o) => o.id === offeringId)
     setNote(
-      pin
-        ? `Pinned on ${offering?.name ?? 'that class'} — it is ready before class starts.`
-        : `Posted to ${offering?.name ?? 'that class'}. It shows while that class is running.`,
+      scope === 'type'
+        ? `On every ${selectedType.name} chalkboard${pin ? ' — ready before class' : ''}.`
+        : pin
+          ? `Pinned on ${hour ? classLabel(hour) : selectedType.name} only.`
+          : `Posted to ${hour ? classLabel(hour) : selectedType.name} only.`,
     )
     setOpen(false)
   }
@@ -100,7 +138,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
       {formOpen && (
         <div className="mt-2 space-y-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <p className="text-[11px] text-[var(--muted)]">
-            {draft.title} · pick the class type this belongs on.
+            {draft.title} · every {selectedType?.name || 'class'} time, or one hour only.
           </p>
           {offerings.length === 0 ? (
             <p className="text-xs text-[var(--bad)]">
@@ -109,20 +147,68 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
           ) : (
             <>
               <select
-                value={offeringId}
+                value={typeKey}
                 onChange={(e) => {
-                  setOfferingId(e.target.value)
+                  setTypeKey(e.target.value)
+                  const nextTimes = offerings.filter((o) => classTypeKey(o.name) === e.target.value)
+                  setOfferingId(nextTimes[0]?.id ?? '')
                   setBoardId('')
                 }}
                 className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
               >
-                {offerings.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {classLabel(o)}
-                    {live?.offeringId === o.id ? ' · live now' : ''}
+                {types.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.name}
                   </option>
                 ))}
               </select>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScope('type')
+                    setBoardId('')
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    scope === 'type'
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                  }`}
+                >
+                  All {selectedType?.name ?? 'class'} times
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScope('time')
+                    setBoardId('')
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    scope === 'time'
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                  }`}
+                >
+                  One class time
+                </button>
+              </div>
+              {scope === 'time' && (
+                <select
+                  value={offeringId}
+                  onChange={(e) => {
+                    setOfferingId(e.target.value)
+                    setBoardId('')
+                  }}
+                  className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+                >
+                  {times.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.weekday} {o.time}
+                      {live?.offeringId === o.id ? ' · live now' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
               {boards.length > 1 && (
                 <select
                   value={boardId}
@@ -144,7 +230,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
                   checked={pin}
                   onChange={(e) => setPin(e.target.checked)}
                 />
-                Pin ahead of time — stays on this class even before it starts
+                Pin ahead of time — stays on the board even before class starts
               </label>
               <button
                 type="button"

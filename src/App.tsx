@@ -388,6 +388,7 @@ export default function App() {
         setAthletes(ensureRyanInAthletes(synced.athletes))
       })
       void hydrateCoachClasses()
+      void hydrateChalkboards()
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') pull()

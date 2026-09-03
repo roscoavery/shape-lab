@@ -9,6 +9,7 @@ export type DiskCoachClasses = {
   offerings: unknown[]
   meetings: unknown[]
   activeMeetingId?: string | null
+  removedOfferingIds?: string[]
 }
 
 const EMPTY: DiskCoachClasses = {
@@ -18,6 +19,7 @@ const EMPTY: DiskCoachClasses = {
   offerings: [],
   meetings: [],
   activeMeetingId: null,
+  removedOfferingIds: [],
 }
 
 function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses {
@@ -29,6 +31,9 @@ function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses 
     offerings: Array.isArray(data.offerings) ? data.offerings : [],
     meetings: Array.isArray(data.meetings) ? data.meetings : [],
     activeMeetingId: typeof data.activeMeetingId === 'string' ? data.activeMeetingId : null,
+    removedOfferingIds: Array.isArray(data.removedOfferingIds)
+      ? data.removedOfferingIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
+      : [],
   }
 }
 
@@ -78,12 +83,30 @@ function combineOffering(
   const older = incomingNewer ? keep : incoming
   const extras = extrasById(older.extraExercises)
   for (const [id, row] of extrasById(newer.extraExercises)) extras.set(id, row)
-  const coachIds = [...new Set([...asIds(keep.coachIds), ...asIds(incoming.coachIds), ...asIds([keep.coachId, incoming.coachId])])]
+  const allCoachIds = [
+    ...new Set([
+      ...asIds(keep.coachIds),
+      ...asIds(incoming.coachIds),
+      ...asIds(keep.helperCoachIds),
+      ...asIds(incoming.helperCoachIds),
+      ...asIds([keep.coachId, incoming.coachId, keep.leadCoachId, incoming.leadCoachId]),
+    ]),
+  ]
+  const lead =
+    (typeof newer.leadCoachId === 'string' && newer.leadCoachId) ||
+    (typeof older.leadCoachId === 'string' && older.leadCoachId) ||
+    (typeof newer.coachId === 'string' && newer.coachId) ||
+    allCoachIds[0] ||
+    ''
+  const helperCoachIds = allCoachIds.filter((id) => id !== lead)
+  const coachIds = [lead, ...helperCoachIds].filter(Boolean)
   return {
     ...older,
     ...newer,
     id: keep.id,
-    coachId: (typeof newer.coachId === 'string' && newer.coachId) || keep.coachId || coachIds[0] || '',
+    coachId: lead || keep.coachId || '',
+    leadCoachId: lead || undefined,
+    helperCoachIds,
     coachIds,
     rosterIds: [...new Set([...asIds(keep.rosterIds), ...asIds(incoming.rosterIds)])],
     extraExercises: extras.size ? [...extras.values()] : newer.extraExercises ?? older.extraExercises,
@@ -117,13 +140,22 @@ function unionMeetings(existing: unknown[], incoming: unknown[]): unknown[] {
 }
 
 function unionFiles(a: DiskCoachClasses, b: DiskCoachClasses): DiskCoachClasses {
+  const removedOfferingIds = [
+    ...new Set([...(a.removedOfferingIds ?? []), ...(b.removedOfferingIds ?? [])]),
+  ]
+  const removed = new Set(removedOfferingIds)
   return {
     kind: 'shape-lab-coach-classes',
     version: 1,
     exportedAt: a.exportedAt || b.exportedAt,
-    offerings: unionOfferings(a.offerings, b.offerings),
+    offerings: unionOfferings(a.offerings, b.offerings).filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const id = (raw as { id?: unknown }).id
+      return typeof id === 'string' && !removed.has(id)
+    }),
     meetings: unionMeetings(a.meetings, b.meetings),
     activeMeetingId: a.activeMeetingId ?? b.activeMeetingId ?? null,
+    removedOfferingIds,
   }
 }
 

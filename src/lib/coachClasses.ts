@@ -37,6 +37,10 @@ export type CoachClassOffering = {
   coachId: string
   /** Coaches listed on this class. coachId stays the creator. */
   coachIds?: string[]
+  /** Coach running the hour — shown first. */
+  leadCoachId?: string
+  /** Coaches helping this hour. */
+  helperCoachIds?: string[]
   name: string
   weekday: Weekday
   time: string
@@ -84,6 +88,7 @@ export type CoachClassFile = {
   offerings: CoachClassOffering[]
   meetings: ClassMeeting[]
   activeMeetingId: string | null
+  removedOfferingIds?: string[]
 }
 
 const KEY = 'shape-lab.coachClasses.v1'
@@ -99,19 +104,73 @@ function emptyFile(): CoachClassFile {
     offerings: [],
     meetings: [],
     activeMeetingId: null,
+    removedOfferingIds: [],
+  }
+}
+
+/** Connections Monday 5pm and Connections Wednesday 4pm share this key. */
+export function classTypeKey(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function parseClassTimeMinutes(raw: string): number {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, '')
+  const m = s.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)?$/)
+  if (!m) return 24 * 60 + 1
+  let hour = Number(m[1])
+  const minute = m[2] ? Number(m[2]) : 0
+  const ap = m[3]
+  if (ap === 'pm' && hour < 12) hour += 12
+  if (ap === 'am' && hour === 12) hour = 0
+  if (!ap && hour > 0 && hour <= 7) hour += 12
+  return hour * 60 + minute
+}
+
+export function compareOfferingsByWhen(a: CoachClassOffering, b: CoachClassOffering): number {
+  const day = WEEKDAYS.indexOf(a.weekday) - WEEKDAYS.indexOf(b.weekday)
+  if (day !== 0) return day
+  const time = parseClassTimeMinutes(a.time) - parseClassTimeMinutes(b.time)
+  if (time !== 0) return time
+  return a.name.localeCompare(b.name)
+}
+
+function asIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function withCoachRoles(raw: Partial<CoachClassOffering>, coachIds: string[]): Pick<
+  CoachClassOffering,
+  'coachId' | 'coachIds' | 'leadCoachId' | 'helperCoachIds'
+> {
+  const lead =
+    (raw.leadCoachId && coachIds.includes(raw.leadCoachId) && raw.leadCoachId) ||
+    (raw.coachId && coachIds.includes(raw.coachId) && raw.coachId) ||
+    coachIds[0] ||
+    ''
+  const helpers = asIdList(raw.helperCoachIds).filter((id) => id !== lead)
+  const rest = coachIds.filter((id) => id !== lead && !helpers.includes(id))
+  const helperCoachIds = [...helpers, ...rest]
+  const ordered = [lead, ...helperCoachIds].filter(Boolean)
+  return {
+    coachId: lead || ordered[0] || '',
+    coachIds: ordered,
+    leadCoachId: lead || undefined,
+    helperCoachIds,
   }
 }
 
 function normalizeOffering(raw: Partial<CoachClassOffering>): CoachClassOffering | null {
   if (!raw?.id || !raw.name) return null
+  const coachIds = asIdList(raw.coachIds).length
+    ? asIdList(raw.coachIds)
+    : raw.coachId
+      ? [raw.coachId]
+      : []
+  const roles = withCoachRoles(raw, coachIds)
   return {
     id: raw.id,
-    coachId: raw.coachId || '',
-    coachIds: Array.isArray(raw.coachIds)
-      ? raw.coachIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
-      : raw.coachId
-        ? [raw.coachId]
-        : [],
+    ...roles,
     name: raw.name,
     weekday: (raw.weekday as Weekday) || 'Monday',
     time: raw.time || '',
@@ -179,6 +238,7 @@ function parseFile(raw: string | null): CoachClassFile {
       offerings: (data.offerings ?? []).map(normalizeOffering).filter((o): o is CoachClassOffering => !!o),
       meetings: (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
       activeMeetingId: data.activeMeetingId ?? null,
+      removedOfferingIds: asIdList(data.removedOfferingIds),
     }
   } catch {
     return emptyFile()
@@ -201,8 +261,20 @@ function combineOfferings(keep: CoachClassOffering, incoming: CoachClassOffering
     ...older,
     ...newer,
     id: keep.id,
-    coachId: newer.coachId || older.coachId,
-    coachIds: [...new Set([...(older.coachIds ?? []), ...(newer.coachIds ?? [])].filter(Boolean))],
+    ...withCoachRoles(newer, [
+      ...new Set(
+        [
+          newer.leadCoachId,
+          older.leadCoachId,
+          newer.coachId,
+          older.coachId,
+          ...(newer.coachIds ?? []),
+          ...(older.coachIds ?? []),
+          ...(newer.helperCoachIds ?? []),
+          ...(older.helperCoachIds ?? []),
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ]),
     rosterIds: [...new Set([...(older.rosterIds ?? []), ...(newer.rosterIds ?? [])])],
     extraExercises: extras.size ? [...extras.values()] : newer.extraExercises ?? older.extraExercises,
     createdAt: older.createdAt || newer.createdAt,
@@ -246,19 +318,27 @@ function read(): CoachClassFile {
       offerings: mergeOfferings(stored.offerings, memoryFile.offerings),
       meetings: mergeById(stored.meetings, memoryFile.meetings, (m) => m.endedAt || m.startedAt),
       activeMeetingId: memoryFile.activeMeetingId ?? stored.activeMeetingId,
+      removedOfferingIds: [
+        ...new Set([...(stored.removedOfferingIds ?? []), ...(memoryFile.removedOfferingIds ?? [])]),
+      ],
     }
   }
   return stored
 }
 
 function write(file: CoachClassFile, sync = true) {
+  const removedOfferingIds = asIdList(file.removedOfferingIds)
+  const removed = new Set(removedOfferingIds)
   const next: CoachClassFile = {
     ...file,
     kind: 'shape-lab-coach-classes',
     version: 1,
     exportedAt: new Date().toISOString(),
-    offerings: file.offerings.map(normalizeOffering).filter((o): o is CoachClassOffering => !!o),
+    offerings: file.offerings
+      .map(normalizeOffering)
+      .filter((o): o is CoachClassOffering => !!o && !removed.has(o.id)),
     meetings: file.meetings.map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
+    removedOfferingIds,
   }
   memoryFile = next
   try {
@@ -280,21 +360,40 @@ export function classLabel(offering: Pick<CoachClassOffering, 'name' | 'weekday'
   return time ? `${offering.name} (${offering.weekday} ${time})` : `${offering.name} (${offering.weekday})`
 }
 
-export function offeringCoachIds(offering: Pick<CoachClassOffering, 'coachId' | 'coachIds'>): string[] {
-  return [...new Set([offering.coachId, ...(offering.coachIds ?? [])].filter(Boolean))]
+export function offeringLeadCoachId(
+  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds' | 'leadCoachId'>,
+): string {
+  return offering.leadCoachId || offering.coachId || offering.coachIds?.[0] || ''
+}
+
+export function offeringHelperCoachIds(
+  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds' | 'leadCoachId' | 'helperCoachIds'>,
+): string[] {
+  const lead = offeringLeadCoachId(offering)
+  if (offering.helperCoachIds?.length) return offering.helperCoachIds.filter((id) => id && id !== lead)
+  return offeringCoachIds(offering).filter((id) => id !== lead)
+}
+
+export function offeringCoachIds(
+  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds' | 'leadCoachId' | 'helperCoachIds'>,
+): string[] {
+  const lead = offeringLeadCoachId(offering)
+  const helpers = offeringHelperCoachIds(offering)
+  return [...new Set([lead, ...helpers, ...(offering.coachIds ?? [])].filter(Boolean))]
 }
 
 export function classCoachesLabel(
-  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds'>,
+  offering: Pick<CoachClassOffering, 'coachId' | 'coachIds' | 'leadCoachId' | 'helperCoachIds'>,
   athletes: Athlete[],
 ): string {
-  const names = offeringCoachIds(offering)
-    .map((id) => athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? '')
-    .filter(Boolean)
-  if (names.length === 0) return ''
-  if (names.length === 1) return names[0]
-  if (names.length === 2) return `${names[0]} and ${names[1]}`
-  return `${names[0]} + ${names.length - 1}`
+  const first = (id: string) => athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? ''
+  const lead = first(offeringLeadCoachId(offering))
+  const helpers = offeringHelperCoachIds(offering).map(first).filter(Boolean)
+  if (!lead && helpers.length === 0) return ''
+  if (!helpers.length) return lead ? `${lead} running` : ''
+  if (!lead) return helpers.length === 1 ? `${helpers[0]} helping` : `${helpers[0]} + ${helpers.length - 1}`
+  if (helpers.length === 1) return `${lead} running · ${helpers[0]} helping`
+  return `${lead} running · ${helpers[0]} + ${helpers.length - 1} helping`
 }
 
 export function loadCoachClassFile(): CoachClassFile {
@@ -303,7 +402,11 @@ export function loadCoachClassFile(): CoachClassFile {
 
 /** Gym-wide class list. Every coach on this link sees the same offerings. */
 export function loadOfferings(_coachId?: string | null): CoachClassOffering[] {
-  return read().offerings.slice().sort((a, b) => a.name.localeCompare(b.name))
+  const removed = new Set(read().removedOfferingIds ?? [])
+  return read()
+    .offerings.filter((o) => !removed.has(o.id))
+    .slice()
+    .sort(compareOfferingsByWhen)
 }
 
 export function getOffering(id: string | null | undefined): CoachClassOffering | null {
@@ -317,9 +420,10 @@ export function ensureDefaultClassTypes(coachId?: string | null): CoachClassOffe
   const byName = new Set(file.offerings.map((o) => o.name.trim().toLowerCase()))
   const byId = new Set(file.offerings.map((o) => o.id))
   const owner = coachId?.trim() || RYAN_PROFILE_ID
+  const removed = new Set(file.removedOfferingIds ?? [])
   let added = false
   for (const seed of DEFAULT_CLASS_TYPES) {
-    if (byId.has(seed.id) || byName.has(seed.name.toLowerCase())) continue
+    if (removed.has(seed.id) || byId.has(seed.id) || byName.has(seed.name.toLowerCase())) continue
     file.offerings.push({
       id: seed.id,
       coachId: owner,
@@ -341,6 +445,8 @@ export function saveOffering(input: {
   id?: string
   coachId: string
   coachIds?: string[]
+  leadCoachId?: string
+  helperCoachIds?: string[]
   name: string
   weekday: Weekday
   time: string
@@ -351,13 +457,25 @@ export function saveOffering(input: {
   const existing = input.id ? file.offerings.find((o) => o.id === input.id) : undefined
   const coachIds = [
     ...new Set(
-      (input.coachIds ?? existing?.coachIds ?? [input.coachId || existing?.coachId || '']).filter(Boolean),
+      (
+        input.coachIds ??
+        existing?.coachIds ??
+        [input.leadCoachId || input.coachId || existing?.coachId || '']
+      ).filter(Boolean),
     ),
   ]
+  const roles = withCoachRoles(
+    {
+      leadCoachId: input.leadCoachId ?? existing?.leadCoachId,
+      helperCoachIds: input.helperCoachIds ?? existing?.helperCoachIds,
+      coachId: input.coachId || existing?.coachId,
+      coachIds,
+    },
+    coachIds,
+  )
   const row: CoachClassOffering = {
     id: existing?.id ?? createId('cls'),
-    coachId: input.coachId || existing?.coachId || coachIds[0] || '',
-    coachIds,
+    ...roles,
     name: input.name.trim(),
     weekday: input.weekday,
     time: input.time.trim(),
@@ -369,24 +487,42 @@ export function saveOffering(input: {
     ),
   }
   file.offerings = [row, ...file.offerings.filter((o) => o.id !== row.id)]
+  file.removedOfferingIds = (file.removedOfferingIds ?? []).filter((id) => id !== row.id)
   write(file)
   return row
 }
 
-export function setOfferingCoaches(id: string, coachIds: string[]): CoachClassOffering | null {
+export function setOfferingCoachRoles(
+  id: string,
+  input: { leadCoachId: string; helperCoachIds: string[] },
+): CoachClassOffering | null {
   const file = read()
   const existing = file.offerings.find((o) => o.id === id)
   if (!existing) return null
-  const ids = [...new Set(coachIds.filter(Boolean))]
+  const roles = withCoachRoles(
+    {
+      leadCoachId: input.leadCoachId,
+      helperCoachIds: input.helperCoachIds,
+      coachId: input.leadCoachId,
+    },
+    [input.leadCoachId, ...input.helperCoachIds],
+  )
   const row: CoachClassOffering = {
     ...existing,
-    coachIds: ids,
-    coachId: ids.includes(existing.coachId) ? existing.coachId : ids[0] || existing.coachId,
+    ...roles,
     updatedAt: new Date().toISOString(),
   }
   file.offerings = file.offerings.map((o) => (o.id === id ? row : o))
   write(file)
   return row
+}
+
+export function setOfferingCoaches(id: string, coachIds: string[]): CoachClassOffering | null {
+  const lead = coachIds[0] || ''
+  return setOfferingCoachRoles(id, {
+    leadCoachId: lead,
+    helperCoachIds: coachIds.filter((x) => x && x !== lead),
+  })
 }
 
 export function setOfferingExtras(
@@ -431,6 +567,7 @@ export function toggleOfferingRoster(id: string, athleteId: string): CoachClassO
 export function removeOffering(id: string) {
   const file = read()
   file.offerings = file.offerings.filter((o) => o.id !== id)
+  file.removedOfferingIds = [...new Set([...(file.removedOfferingIds ?? []), id])]
   write(file)
 }
 
@@ -631,7 +768,7 @@ function mergeById<T extends { id: string }>(a: T[], b: T[], stamp: (row: T) => 
   return [...map.values()]
 }
 
-async function pushCoachClasses() {
+export async function publishClassList(): Promise<boolean> {
   const file = read()
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
@@ -640,12 +777,17 @@ async function pushCoachClasses() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file),
       })
-      if (res.ok) return
+      if (res.ok) return true
     } catch {
       /* retry */
     }
     await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
   }
+  return false
+}
+
+async function pushCoachClasses() {
+  await publishClassList()
 }
 
 export async function hydrateCoachClasses(): Promise<void> {
@@ -666,7 +808,11 @@ export async function hydrateCoachClasses(): Promise<void> {
     const remoteOfferings = (data.offerings ?? [])
       .map(normalizeOffering)
       .filter((o): o is CoachClassOffering => !!o)
-    const offerings = mergeOfferings(local.offerings, remoteOfferings)
+    const removedOfferingIds = [
+      ...new Set([...(local.removedOfferingIds ?? []), ...asIdList(data.removedOfferingIds)]),
+    ]
+    const removed = new Set(removedOfferingIds)
+    const offerings = mergeOfferings(local.offerings, remoteOfferings).filter((o) => !removed.has(o.id))
     const meetings = mergeById(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
@@ -677,7 +823,7 @@ export async function hydrateCoachClasses(): Promise<void> {
       : data.activeMeetingId && meetings.some((m) => m.id === data.activeMeetingId && !m.endedAt)
         ? data.activeMeetingId
         : local.activeMeetingId
-    write({ ...local, offerings, meetings, activeMeetingId: live ?? null }, false)
+    write({ ...local, offerings, meetings, activeMeetingId: live ?? null, removedOfferingIds }, false)
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
     const next = read()
     const remoteById = new Map(remoteOfferings.map((o) => [o.id, o]))
@@ -690,11 +836,19 @@ export async function hydrateCoachClasses(): Promise<void> {
         o.time !== remote.time ||
         o.rosterIds.length !== remote.rosterIds.length ||
         o.rosterIds.some((id) => !remote.rosterIds.includes(id)) ||
+        offeringLeadCoachId(o) !== offeringLeadCoachId(remote) ||
         (o.coachIds?.length ?? 0) !== (remote.coachIds?.length ?? 0) ||
         (o.extraExercises?.length ?? 0) !== (remote.extraExercises?.length ?? 0)
       )
     })
-    if (needPush || next.offerings.length !== remoteOfferings.length) await pushCoachClasses()
+    const remoteRemoved = asIdList(data.removedOfferingIds)
+    if (
+      needPush ||
+      next.offerings.length !== remoteOfferings.filter((o) => !removed.has(o.id)).length ||
+      (next.removedOfferingIds ?? []).some((id) => !remoteRemoved.includes(id))
+    ) {
+      await pushCoachClasses()
+    }
   } catch {
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
     if (read().offerings.length > 0) await pushCoachClasses()

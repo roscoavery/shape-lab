@@ -5,7 +5,18 @@
  */
 
 import { createId } from './storage'
-import { getActiveMeeting, loadOfferings } from './coachClasses'
+import { classTypeKey, getActiveMeeting, loadOfferings, type CoachClassOffering } from './coachClasses'
+
+export type ChalkboardScope = 'type' | 'time'
+
+export function typeOfferingId(nameOrKey: string): string {
+  const key = nameOrKey.startsWith('type:') ? nameOrKey.slice(5) : classTypeKey(nameOrKey)
+  return `type:${key}`
+}
+
+export function isTypeOfferingId(id: string | null | undefined): boolean {
+  return Boolean(id?.startsWith('type:'))
+}
 
 export type ChalkboardItemKind =
   | 'clip'
@@ -44,6 +55,9 @@ export type ChalkboardBoard = {
   offeringId: string
   name: string
   lessonId?: string
+  /** Shared across every time of this class name, or only this hour. */
+  scope?: ChalkboardScope
+  classTypeKey?: string
   /** The board that shows while this class type is in session. */
   active: boolean
   createdById: string
@@ -113,11 +127,21 @@ function normalizeItem(raw: Partial<ChalkboardItem>): ChalkboardItem | null {
 
 function normalizeBoard(raw: Partial<ChalkboardBoard>): ChalkboardBoard | null {
   if (!raw?.id || !raw.offeringId) return null
+  const scope: ChalkboardScope =
+    raw.scope === 'type' || raw.offeringId.startsWith('type:') ? 'type' : 'time'
+  const key =
+    typeof raw.classTypeKey === 'string' && raw.classTypeKey
+      ? classTypeKey(raw.classTypeKey)
+      : scope === 'type'
+        ? classTypeKey(raw.offeringId.replace(/^type:/, ''))
+        : undefined
   return {
     id: raw.id,
     offeringId: raw.offeringId,
     name: (raw.name || 'Chalkboard').trim() || 'Chalkboard',
     lessonId: raw.lessonId,
+    scope,
+    classTypeKey: key,
     active: Boolean(raw.active),
     createdById: raw.createdById || '',
     createdAt: raw.createdAt || new Date().toISOString(),
@@ -169,10 +193,26 @@ export function loadChalkboardFile(): ChalkboardFile {
 }
 
 export function boardsForOffering(offeringId: string | null | undefined): ChalkboardBoard[] {
-  if (!offeringId) return []
+  if (!offeringId || isTypeOfferingId(offeringId)) return []
   return read()
-    .boards.filter((b) => b.offeringId === offeringId)
+    .boards.filter((b) => b.offeringId === offeringId && b.scope !== 'type')
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function boardsForClassType(name: string | null | undefined): ChalkboardBoard[] {
+  if (!name?.trim()) return []
+  const key = classTypeKey(name)
+  const typeId = typeOfferingId(name)
+  return read()
+    .boards.filter(
+      (b) => b.scope === 'type' && (b.classTypeKey === key || b.offeringId === typeId),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function activeBoardForClassType(name: string | null | undefined): ChalkboardBoard | null {
+  const list = boardsForClassType(name)
+  return list.find((b) => b.active) ?? list[0] ?? null
 }
 
 export function getBoard(id: string | null | undefined): ChalkboardBoard | null {
@@ -197,14 +237,22 @@ export function createBoard(input: {
   createdById: string
   lessonId?: string
   makeActive?: boolean
+  scope?: ChalkboardScope
+  classTypeKey?: string
 }): ChalkboardBoard {
   const file = read()
-  const existing = boardsForOffering(input.offeringId)
+  const scope: ChalkboardScope =
+    input.scope ?? (isTypeOfferingId(input.offeringId) ? 'type' : 'time')
+  const typeKey = input.classTypeKey || (scope === 'type' ? classTypeKey(input.offeringId.replace(/^type:/, '')) : undefined)
+  const offeringId = scope === 'type' ? typeOfferingId(typeKey || input.offeringId) : input.offeringId
+  const existing = scope === 'type' ? boardsForClassType(typeKey || offeringId) : boardsForOffering(offeringId)
   const board: ChalkboardBoard = {
     id: createId('chb'),
-    offeringId: input.offeringId,
+    offeringId,
     name: input.name.trim() || 'Chalkboard',
     lessonId: input.lessonId,
+    scope,
+    classTypeKey: typeKey,
     active: input.makeActive || existing.length === 0,
     createdById: input.createdById,
     createdAt: new Date().toISOString(),
@@ -213,9 +261,13 @@ export function createBoard(input: {
   }
   let boards = file.boards
   if (board.active) {
-    boards = boards.map((b) =>
-      b.offeringId === input.offeringId ? { ...b, active: false, updatedAt: new Date().toISOString() } : b,
-    )
+    boards = boards.map((b) => {
+      const same =
+        scope === 'type'
+          ? b.scope === 'type' && (b.classTypeKey === typeKey || b.offeringId === offeringId)
+          : b.offeringId === offeringId && b.scope !== 'type'
+      return same ? { ...b, active: false, updatedAt: new Date().toISOString() } : b
+    })
   }
   write({ ...file, boards: [board, ...boards] })
   return board
@@ -238,7 +290,12 @@ export function setActiveBoard(id: string): ChalkboardBoard | null {
   write({
     ...file,
     boards: file.boards.map((b) => {
-      if (b.offeringId !== board.offeringId) return b
+      const same =
+        board.scope === 'type'
+          ? b.scope === 'type' &&
+            (b.classTypeKey === board.classTypeKey || b.offeringId === board.offeringId)
+          : b.offeringId === board.offeringId && b.scope !== 'type'
+      if (!same) return b
       return { ...b, active: b.id === id, updatedAt: now }
     }),
   })
@@ -250,7 +307,11 @@ export function removeBoard(id: string) {
   const gone = file.boards.find((b) => b.id === id)
   let boards = file.boards.filter((b) => b.id !== id)
   if (gone?.active) {
-    const sibling = boards.find((b) => b.offeringId === gone.offeringId)
+    const sibling = boards.find((b) =>
+      gone.scope === 'type'
+        ? b.scope === 'type' && (b.classTypeKey === gone.classTypeKey || b.offeringId === gone.offeringId)
+        : b.offeringId === gone.offeringId && b.scope !== 'type',
+    )
     if (sibling) {
       boards = boards.map((b) => (b.id === sibling.id ? { ...b, active: true } : b))
     }
@@ -259,15 +320,49 @@ export function removeBoard(id: string) {
 }
 
 export function ensureBoardForOffering(offeringId: string, createdById: string): ChalkboardBoard {
+  if (isTypeOfferingId(offeringId)) {
+    return ensureBoardForClassType(offeringId.replace(/^type:/, ''), createdById)
+  }
   const existing = activeBoardForOffering(offeringId)
   if (existing) return existing
   const offering = loadOfferings().find((o) => o.id === offeringId)
   return createBoard({
     offeringId,
-    name: offering ? `${offering.name} chalkboard` : 'Chalkboard',
+    name: offering ? `${offering.name} · ${offering.weekday} ${offering.time}` : 'This hour',
     createdById,
+    scope: 'time',
     makeActive: true,
   })
+}
+
+export function ensureBoardForClassType(name: string, createdById: string): ChalkboardBoard {
+  const existing = activeBoardForClassType(name)
+  if (existing) return existing
+  const label = name.replace(/^type:/, '').trim() || 'Class'
+  return createBoard({
+    offeringId: typeOfferingId(label),
+    name: `All ${label} classes`,
+    createdById,
+    scope: 'type',
+    classTypeKey: classTypeKey(label),
+    makeActive: true,
+  })
+}
+
+export function itemsForOfferingHour(
+  offering: CoachClassOffering | null | undefined,
+  live: boolean,
+): { item: ChalkboardItem; source: ChalkboardScope }[] {
+  if (!offering) return []
+  const typeItems = itemsForDisplay(activeBoardForClassType(offering.name), live).map((item) => ({
+    item,
+    source: 'type' as const,
+  }))
+  const timeItems = itemsForDisplay(activeBoardForOffering(offering.id), live).map((item) => ({
+    item,
+    source: 'time' as const,
+  }))
+  return [...typeItems, ...timeItems]
 }
 
 export function postToChalkboard(input: {
@@ -281,11 +376,13 @@ export function postToChalkboard(input: {
 }): ChalkboardItem | null {
   const board = input.boardId
     ? getBoard(input.boardId)
-    : ensureBoardForOffering(input.offeringId, input.createdById)
-  if (!board || board.offeringId !== input.offeringId) return null
+    : isTypeOfferingId(input.offeringId)
+      ? ensureBoardForClassType(input.offeringId.replace(/^type:/, ''), input.createdById)
+      : ensureBoardForOffering(input.offeringId, input.createdById)
+  if (!board) return null
   const item: ChalkboardItem = {
     id: createId('chk'),
-    offeringId: input.offeringId,
+    offeringId: board.offeringId,
     boardId: board.id,
     meetingId: input.meetingId,
     kind: input.draft.kind,
@@ -346,6 +443,24 @@ export function eraseChalkboardItem(itemId: string) {
   })
 }
 
+export function postToClassType(input: {
+  className: string
+  createdById: string
+  createdByName: string
+  pinned?: boolean
+  draft: ChalkboardDraft
+}): ChalkboardItem | null {
+  const board = ensureBoardForClassType(input.className, input.createdById)
+  return postToChalkboard({
+    offeringId: board.offeringId,
+    boardId: board.id,
+    createdById: input.createdById,
+    createdByName: input.createdByName,
+    pinned: input.pinned,
+    draft: input.draft,
+  })
+}
+
 export function itemsForDisplay(board: ChalkboardBoard | null, live: boolean): ChalkboardItem[] {
   if (!board) return []
   return board.items.filter((i) => live || i.pinned)
@@ -380,33 +495,52 @@ function mergeById<T extends { id: string }>(a: T[], b: T[], stamp: (row: T) => 
   return [...map.values()]
 }
 
-async function pushChalkboards() {
+export async function publishChalkboards(): Promise<boolean> {
   const file = read()
-  try {
-    await fetch('/api/chalkboards', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
-    })
-  } catch {
-    /* offline */
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch('/api/chalkboards', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(file),
+      })
+      if (res.ok) return true
+    } catch {
+      /* retry */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
   }
+  return false
+}
+
+async function pushChalkboards() {
+  await publishChalkboards()
 }
 
 export async function hydrateChalkboards(): Promise<void> {
   try {
-    const res = await fetch('/api/chalkboards')
-    if (!res.ok) return
+    const res = await fetch('/api/chalkboards', { cache: 'no-store' })
+    if (!res.ok) {
+      if (read().boards.length > 0) await publishChalkboards()
+      return
+    }
     const data = (await res.json()) as ChalkboardFile
     if (data?.kind !== 'shape-lab-chalkboards') return
     const local = read()
-    const boards = mergeById(
-      local.boards,
-      (data.boards ?? []).map(normalizeBoard).filter((b): b is ChalkboardBoard => !!b),
-      (b) => b.updatedAt || b.createdAt,
-    )
+    const remote = (data.boards ?? []).map(normalizeBoard).filter((b): b is ChalkboardBoard => !!b)
+    const boards = mergeById(local.boards, remote, (b) => b.updatedAt || b.createdAt)
     write({ ...local, boards }, false)
+    const next = read()
+    if (
+      next.boards.length !== remote.length ||
+      next.boards.some((b) => {
+        const other = remote.find((r) => r.id === b.id)
+        return !other || b.items.length > other.items.length
+      })
+    ) {
+      await publishChalkboards()
+    }
   } catch {
-    /* first load */
+    if (read().boards.length > 0) await publishChalkboards()
   }
 }

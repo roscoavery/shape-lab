@@ -12,14 +12,16 @@ import {
   hydrateCoachClasses,
   loadOfferings,
   markClassAttendance,
+  offeringHelperCoachIds,
+  offeringLeadCoachId,
+  publishClassList,
   removeClassAttendance,
   removeOffering,
   resolveAttendeeAthletes,
   rosterAthletes,
   classCoachesLabel,
-  offeringCoachIds,
   saveOffering,
-  setOfferingCoaches,
+  setOfferingCoachRoles,
   setOfferingExtras,
   setOfferingRoster,
   startClassMeeting,
@@ -32,7 +34,7 @@ import {
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
 import { EndClassPrompt } from './EndClassPrompt'
-import { AthleteName } from '../AthleteAvatar'
+import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
@@ -154,17 +156,20 @@ export function ClassSession({
                       startClassMeeting(o)
                       setScreen('live')
                     }}
-                    className="rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f]"
+                    className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f]"
                   >
-                    <span className="block text-xl font-bold">{o.name}</span>
-                    <span className="text-sm font-medium opacity-80">
-                      {o.weekday} {o.time}
-                      {classCoachesLabel(o, athletes)
-                        ? ` · ${classCoachesLabel(o, athletes)}`
-                        : ''}
-                      {o.rosterIds.length
-                        ? ` · ${o.rosterIds.length} on roster`
-                        : ' · add a roster'}
+                    <CoachPhotoStack offering={o} athletes={athletes} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xl font-bold">{o.name}</span>
+                      <span className="text-sm font-medium opacity-80">
+                        {o.weekday} {o.time}
+                        {classCoachesLabel(o, athletes)
+                          ? ` · ${classCoachesLabel(o, athletes)}`
+                          : ''}
+                        {o.rosterIds.length
+                          ? ` · ${o.rosterIds.length} on roster`
+                          : ' · add a roster'}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -488,7 +493,8 @@ function QuickAddClass({
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
   const coaches = athletes.filter((a) => isCoachProfile(a))
   const [roster, setRoster] = useState<string[]>([])
-  const [coachIds, setCoachIds] = useState<string[]>([coachId])
+  const [leadCoachId, setLeadCoachId] = useState(coachId)
+  const [helperCoachIds, setHelperCoachIds] = useState<string[]>([])
   const [extras, setExtras] = useState<ClassExtraExercise[]>([])
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -520,13 +526,14 @@ function QuickAddClass({
           onChange={(e) => setTime(e.target.value)}
         />
       </div>
-      <RosterPicker
-        label="Coaches on this class"
-        athletes={coaches}
-        selected={coachIds}
-        onChange={setCoachIds}
-        onText="Coaching"
-        offText="Add"
+      <CoachRolePicker
+        coaches={coaches}
+        leadId={leadCoachId}
+        helperIds={helperCoachIds}
+        onChange={(lead, helpers) => {
+          setLeadCoachId(lead)
+          setHelperCoachIds(helpers)
+        }}
       />
       <RosterPicker athletes={kids} selected={roster} onChange={setRoster} />
       <ClassExtraPicker extras={extras} onChange={setExtras} />
@@ -535,8 +542,10 @@ function QuickAddClass({
         disabled={!name.trim()}
         onClick={() => {
           saveOffering({
-            coachId,
-            coachIds: coachIds.length ? coachIds : [coachId],
+            coachId: leadCoachId || coachId,
+            leadCoachId: leadCoachId || coachId,
+            helperCoachIds,
+            coachIds: [leadCoachId || coachId, ...helperCoachIds],
             name: name.trim(),
             weekday,
             time: time.trim() || '5pm',
@@ -549,6 +558,162 @@ function QuickAddClass({
       >
         Save this class
       </button>
+    </div>
+  )
+}
+
+function CoachPhotoStack({
+  offering,
+  athletes,
+}: {
+  offering: CoachClassOffering
+  athletes: Athlete[]
+}) {
+  const lead = athletes.find((a) => a.id === offeringLeadCoachId(offering))
+  const helpers = offeringHelperCoachIds(offering)
+    .map((id) => athletes.find((a) => a.id === id))
+    .filter((a): a is Athlete => Boolean(a))
+  if (!lead && helpers.length === 0) return null
+  return (
+    <span className="flex shrink-0 items-end">
+      {lead && (
+        <AthleteAvatar athlete={lead} size="md" className="ring-2 ring-[#06281f]" />
+      )}
+      {helpers.map((helper) => (
+        <AthleteAvatar
+          key={helper.id}
+          athlete={helper}
+          size="sm"
+          className="-ml-2 ring-2 ring-[#06281f]"
+        />
+      ))}
+    </span>
+  )
+}
+
+function CoachRolePicker({
+  coaches,
+  leadId,
+  helperIds,
+  onChange,
+}: {
+  coaches: Athlete[]
+  leadId: string
+  helperIds: string[]
+  onChange: (leadId: string, helperIds: string[]) => void
+}) {
+  const setRole = (id: string, role: 'off' | 'lead' | 'help') => {
+    if (role === 'lead') {
+      const helpers = [leadId, ...helperIds].filter((x) => x && x !== id)
+      onChange(id, helpers)
+      return
+    }
+    if (role === 'help') {
+      const nextLead = leadId === id ? helperIds[0] || '' : leadId
+      const helpers = [...new Set([...(leadId === id ? [] : helperIds), id])].filter(
+        (x) => x && x !== nextLead,
+      )
+      onChange(nextLead || id, nextLead ? helpers : helpers.filter((x) => x !== id))
+      return
+    }
+    const helpers = helperIds.filter((x) => x !== id)
+    if (leadId === id) {
+      onChange(helpers[0] || '', helpers.slice(1))
+      return
+    }
+    onChange(leadId, helpers)
+  }
+
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+        Who is running · who is helping
+      </p>
+      <p className="mt-1 text-xs text-white/50">
+        The coach running the hour shows first. Helpers stay on the class with them.
+      </p>
+      {coaches.length === 0 ? (
+        <p className="mt-1 text-sm text-white/55">No coach profiles yet.</p>
+      ) : (
+        <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+          {coaches.map((a) => {
+            const role = leadId === a.id ? 'lead' : helperIds.includes(a.id) ? 'help' : 'off'
+            return (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-3 py-2"
+              >
+                <AthleteName athlete={a} />
+                <span className="flex shrink-0 gap-1">
+                  {(
+                    [
+                      ['off', 'Off'],
+                      ['lead', 'Running'],
+                      ['help', 'Helping'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRole(a.id, value)}
+                      className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
+                        role === value
+                          ? 'bg-[var(--accent)] text-[#06281f]'
+                          : 'bg-white/10 text-white/70'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function RemoveClassAsk({
+  offering,
+  onKeep,
+  onRemove,
+}: {
+  offering: CoachClassOffering
+  onKeep: () => void
+  onRemove: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#102018] p-5 shadow-2xl">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--bad)]">
+          Remove class
+        </p>
+        <h3 className="mt-1 text-lg font-semibold">
+          Are you sure you want to remove {classLabel(offering)}?
+        </h3>
+        <p className="mt-2 text-sm text-white/65">
+          It comes off every phone and iPad on this gym link. The roster for
+          this hour is removed with it.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onKeep}
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+          >
+            Keep class
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg border border-[var(--bad)] px-4 py-2 text-sm font-semibold text-[var(--bad)]"
+          >
+            Yes, remove
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -619,6 +784,9 @@ function ScheduleEditor({
   const [weekday, setWeekday] = useState<Weekday>('Monday')
   const [time, setTime] = useState('5pm')
   const [editId, setEditId] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<CoachClassOffering | null>(null)
+  const [saveNote, setSaveNote] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
   const coaches = athletes.filter((a) => isCoachProfile(a))
   const editing = offerings.find((o) => o.id === editId) ?? null
@@ -628,11 +796,10 @@ function ScheduleEditor({
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Classes I teach</h2>
         <p className="mt-2 text-sm text-white/65">
-          Every add or edit saves to the gym link and shows on every
-          device after that — phone, iPad, and laptop. Name the class
-          type — Connections, Elevate, Reps w/ Logan, or your own — and
-          the time you teach it. Add a roster so Start class only shows
-          who is usually in that hour.
+          Listed Sunday through Saturday, morning to night. Every add or
+          edit saves to the gym link. Use Save this list to every device
+          after you change it on a phone or iPad so the other screens
+          match. Same class name (Connections) can have more than one time.
         </p>
       </div>
       <input
@@ -672,11 +839,34 @@ function ScheduleEditor({
       >
         Save class
       </button>
+      <button
+        type="button"
+        disabled={saving || offerings.length === 0}
+        onClick={() => {
+          setSaving(true)
+          setSaveNote(null)
+          void publishClassList().then((ok) => {
+            setSaving(false)
+            setSaveNote(
+              ok
+                ? 'Saved to the gym. Phone, iPad, and laptop will show this list.'
+                : 'Could not reach the gym file. Try again on this same link.',
+            )
+          })
+        }}
+        className="h-12 rounded-2xl border border-[var(--accent)]/50 bg-[#102820] text-sm font-semibold text-[var(--accent)] disabled:opacity-40"
+      >
+        {saving ? 'Saving to every device…' : 'Save this list to every device'}
+      </button>
+      {saveNote && <p className="text-sm text-[var(--accent)]">{saveNote}</p>}
       <ul className="space-y-3">
         {offerings.map((o) => (
           <li key={o.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold">{classLabel(o)}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <CoachPhotoStack offering={o} athletes={athletes} />
+                <span className="font-semibold">{classLabel(o)}</span>
+              </span>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -688,10 +878,7 @@ function ScheduleEditor({
                 <button
                   type="button"
                   className="text-xs text-[var(--bad)] underline"
-                  onClick={() => {
-                    removeOffering(o.id)
-                    onChanged()
-                  }}
+                  onClick={() => setPendingRemove(o)}
                 >
                   Remove
                 </button>
@@ -699,7 +886,7 @@ function ScheduleEditor({
             </div>
             <p className="mt-1 text-xs text-white/50">
               {classCoachesLabel(o, athletes)
-                ? `Coaches: ${classCoachesLabel(o, athletes)} · `
+                ? `${classCoachesLabel(o, athletes)} · `
                 : ''}
               {o.rosterIds.length} athlete{o.rosterIds.length === 1 ? '' : 's'} on this class
               {o.extraExercises?.length
@@ -708,16 +895,17 @@ function ScheduleEditor({
             </p>
             {editing?.id === o.id && (
               <div className="mt-2 flex flex-col gap-3">
-                <RosterPicker
-                  label="Coaches on this class"
-                  athletes={coaches}
-                  selected={offeringCoachIds(o)}
-                  onChange={(next) => {
-                    setOfferingCoaches(o.id, next.length ? next : [coachId])
+                <CoachRolePicker
+                  coaches={coaches}
+                  leadId={offeringLeadCoachId(o) || coachId}
+                  helperIds={offeringHelperCoachIds(o)}
+                  onChange={(lead, helpers) => {
+                    setOfferingCoachRoles(o.id, {
+                      leadCoachId: lead || coachId,
+                      helperCoachIds: helpers,
+                    })
                     onChanged()
                   }}
-                  onText="Coaching"
-                  offText="Add"
                 />
                 <RosterPicker
                   athletes={kids}
@@ -734,6 +922,11 @@ function ScheduleEditor({
                     onChanged()
                   }}
                 />
+                <ChalkboardPanel
+                  viewer={athletes.find((a) => a.id === coachId) ?? null}
+                  offeringId={o.id}
+                  embed
+                />
               </div>
             )}
           </li>
@@ -742,6 +935,18 @@ function ScheduleEditor({
       <button type="button" onClick={onBack} className="self-start text-sm text-white/50 underline">
         Back to start class
       </button>
+      {pendingRemove && (
+        <RemoveClassAsk
+          offering={pendingRemove}
+          onKeep={() => setPendingRemove(null)}
+          onRemove={() => {
+            removeOffering(pendingRemove.id)
+            setPendingRemove(null)
+            if (editId === pendingRemove.id) setEditId(null)
+            onChanged()
+          }}
+        />
+      )}
     </div>
   )
 }

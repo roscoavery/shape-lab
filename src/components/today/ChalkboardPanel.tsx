@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
 import {
+  activeBoardForClassType,
   activeBoardForOffering,
+  boardsForClassType,
   boardsForOffering,
   createBoard,
   eraseChalkboardItem,
-  itemsForDisplay,
+  itemsForOfferingHour,
   kindLabel,
   pinChalkboardItem,
   postToChalkboard,
@@ -17,9 +19,12 @@ import {
   subscribeChalkboards,
   type ChalkboardBoard,
   type ChalkboardItem,
+  type ChalkboardScope,
+  typeOfferingId,
 } from '../../lib/chalkboard'
 import {
   classLabel,
+  classTypeKey,
   getActiveMeeting,
   getOffering,
   loadOfferings,
@@ -49,13 +54,14 @@ type Props = {
 export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, embed = false }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
-  const [size, setSize] = useState<Size>('compact')
+  const [size, setSize] = useState<Size>(embed ? 'more' : 'compact')
   const [offerings, setOfferings] = useState(() => loadOfferings())
   const [pickOffering, setPickOffering] = useState(offeringId ?? '')
   const [newName, setNewName] = useState('')
   const [rename, setRename] = useState('')
   const [drillPick, setDrillPick] = useState<string[]>([])
   const [notice, setNotice] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<ChalkboardScope>('time')
 
   useEffect(() => subscribeChalkboards(() => setTick((n) => n + 1)), [])
   useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
@@ -64,12 +70,18 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
   const live = getActiveMeeting()
   const liveOffering = live ? getOffering(live.offeringId) : null
   const targetId = offeringId || pickOffering || live?.offeringId || offerings[0]?.id || ''
-  const board = activeBoardForOffering(targetId)
-  const boards = boardsForOffering(targetId)
-  const inSession = Boolean(live && live.offeringId === targetId)
-  const items = itemsForDisplay(board, inSession || !onToday)
-  const visible = size === 'compact' ? items.slice(0, 2) : items
   const offering = offerings.find((o) => o.id === targetId) ?? liveOffering
+  const board =
+    editTarget === 'type'
+      ? activeBoardForClassType(offering?.name)
+      : activeBoardForOffering(targetId)
+  const boards =
+    editTarget === 'type'
+      ? boardsForClassType(offering?.name)
+      : boardsForOffering(targetId)
+  const inSession = Boolean(live && live.offeringId === targetId)
+  const tagged = itemsForOfferingHour(offering, inSession || !onToday)
+  const visible = size === 'compact' ? tagged.slice(0, 2) : tagged
 
   if (!coach && !inSession) return null
   if (!offering && offerings.length === 0) {
@@ -90,7 +102,9 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
       board={board}
       boards={boards}
       items={visible}
-      allCount={items.length}
+      allCount={tagged.length}
+      editTarget={editTarget}
+      onEditTarget={setEditTarget}
       inSession={inSession}
       size={size}
       pickOffering={targetId}
@@ -178,8 +192,8 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
           </h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {inSession
-              ? 'What is on the board for this hour. Full screen for the floor.'
-              : 'Pin clips, stills, drills, or a drill list before class. It opens here when that class is running — it does not take over Today.'}
+              ? 'Shared pins for every class with this name, plus pins for this hour only.'
+              : 'Pin work for every Connections time, or only this class time. It opens here when that class is running.'}
           </p>
         </div>
         {sizeButtons}
@@ -211,6 +225,8 @@ function ChalkboardBody({
   notice,
   onNotice,
   hideOfferingSelect,
+  editTarget,
+  onEditTarget,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -218,7 +234,7 @@ function ChalkboardBody({
   offerings: CoachClassOffering[]
   board: ChalkboardBoard | null
   boards: ChalkboardBoard[]
-  items: ChalkboardItem[]
+  items: { item: ChalkboardItem; source: ChalkboardScope }[]
   allCount: number
   inSession: boolean
   size: Size
@@ -233,6 +249,8 @@ function ChalkboardBody({
   notice: string | null
   onNotice: (v: string | null) => void
   hideOfferingSelect: boolean
+  editTarget: ChalkboardScope
+  onEditTarget: (scope: ChalkboardScope) => void
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -253,10 +271,39 @@ function ChalkboardBody({
         </select>
       )}
 
+      {coach && offering && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onEditTarget('type')}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              editTarget === 'type'
+                ? 'bg-[var(--accent)] text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            All {offering.name} times
+          </button>
+          <button
+            type="button"
+            onClick={() => onEditTarget('time')}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              editTarget === 'time'
+                ? 'bg-[var(--accent)] text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            This hour only · {offering.weekday} {offering.time}
+          </button>
+        </div>
+      )}
+
       {coach && offering && viewer && size !== 'compact' && (
         <div className="space-y-2 rounded-xl bg-[#0d1218] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Chalkboards for this class
+            {editTarget === 'type'
+              ? `Chalkboard on every ${offering.name} class`
+              : `Chalkboard for ${offering.weekday} ${offering.time} only`}
           </p>
           <div className="flex flex-wrap gap-2">
             {boards.map((b) => (
@@ -308,7 +355,11 @@ function ChalkboardBody({
             <input
               value={newName}
               onChange={(e) => onNewName(e.target.value)}
-              placeholder="New chalkboard — e.g. Week 3 connections"
+              placeholder={
+                editTarget === 'type'
+                  ? `New board for every ${offering.name} time`
+                  : 'New board for this hour only'
+              }
               className="h-10 min-w-[12rem] flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
             />
             <button
@@ -317,10 +368,13 @@ function ChalkboardBody({
                 const name = newName.trim()
                 if (!name) return
                 createBoard({
-                  offeringId: offering.id,
+                  offeringId:
+                    editTarget === 'type' ? typeOfferingId(offering.name) : offering.id,
                   name,
                   createdById: viewer.id,
                   makeActive: true,
+                  scope: editTarget,
+                  classTypeKey: classTypeKey(offering.name),
                 })
                 onNewName('')
               }}
@@ -359,7 +413,8 @@ function ChalkboardBody({
                 disabled={drillPick.length === 0}
                 onClick={() => {
                   postToChalkboard({
-                    offeringId: offering.id,
+                    offeringId:
+                      editTarget === 'type' ? typeOfferingId(offering.name) : offering.id,
                     boardId: board?.id,
                     createdById: viewer.id,
                     createdByName: viewer.name,
@@ -367,12 +422,19 @@ function ChalkboardBody({
                     meetingId: inSession ? getActiveMeeting()?.id : undefined,
                     draft: {
                       kind: 'drill-list',
-                      title: `Drills · ${offering.name}`,
+                      title:
+                        editTarget === 'type'
+                          ? `Drills · every ${offering.name}`
+                          : `Drills · ${offering.name} ${offering.weekday}`,
                       drillIds: drillPick,
                     },
                   })
                   onDrillPick([])
-                  onNotice('Pinned that drill list on this chalkboard.')
+                  onNotice(
+                    editTarget === 'type'
+                      ? `Pinned on every ${offering.name} chalkboard.`
+                      : 'Pinned on this hour only.',
+                  )
                 }}
                 className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-40"
               >
@@ -389,13 +451,22 @@ function ChalkboardBody({
         <p className="text-sm text-[var(--muted)]">
           {inSession
             ? 'Nothing on the board yet. Post a clip, still, drill, or collage from anywhere in the app.'
-            : 'Pin a reference from Compare, Learn, drills, or collages — or create a chalkboard for this class.'}
+            : 'Pin a reference from Compare, Learn, drills, or collages — for every class with this name, or only this hour.'}
         </p>
       ) : (
         <ul className="grid gap-3">
-          {items.map((item) => (
+          {items.map(({ item, source }) => (
             <li key={item.id}>
-              <ChalkboardCard item={item} coach={coach} compact={compact} />
+              <ChalkboardCard
+                item={item}
+                coach={coach}
+                compact={compact}
+                sourceLabel={
+                  source === 'type'
+                    ? `Every ${offering?.name ?? 'class'} time`
+                    : 'This hour only'
+                }
+              />
             </li>
           ))}
         </ul>
@@ -412,10 +483,12 @@ function ChalkboardCard({
   item,
   coach,
   compact,
+  sourceLabel,
 }: {
   item: ChalkboardItem
   coach: boolean
   compact: boolean
+  sourceLabel?: string
 }) {
   const { nameForUrl } = useGymLibrary()
   const [collage, setCollage] = useState<Awaited<ReturnType<typeof listCollages>>[number] | null>(null)
@@ -433,6 +506,7 @@ function ChalkboardCard({
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{item.title}</p>
           <p className="text-[11px] text-[var(--muted)]">
+            {sourceLabel ? `${sourceLabel} · ` : ''}
             {kindLabel(item.kind)}
             {item.pinned ? ' · pinned' : ''}
             {item.createdByName ? ` · ${item.createdByName}` : ''}
