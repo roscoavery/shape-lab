@@ -182,10 +182,29 @@ export async function writeSocialFile(data: unknown): Promise<DiskSocial> {
   const next = {
     ...incoming,
     follows: dedupeFollows([...current.follows, ...incoming.follows]),
+    threads: mergeThreads(current.threads, incoming.threads),
     exportedAt: new Date().toISOString(),
   }
   await writeJson(FILE, next)
   return next
+}
+
+function mergeThreads(current: DiskThread[], incoming: DiskThread[]): DiskThread[] {
+  const map = new Map<string, DiskThread>()
+  for (const t of current) map.set(t.id, t)
+  for (const t of incoming) {
+    const prev = map.get(t.id)
+    if (!prev) {
+      map.set(t.id, t)
+      continue
+    }
+    const newer = t.updatedAt.localeCompare(prev.updatedAt) >= 0
+    const more = t.messages.length >= prev.messages.length
+    if (newer || more) map.set(t.id, t)
+  }
+  return [...map.values()]
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 120)
 }
 
 export async function toggleFollowOnDisk(
