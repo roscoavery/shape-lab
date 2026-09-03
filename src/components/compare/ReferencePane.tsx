@@ -61,7 +61,7 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
 import { LIBRARY_CHANGED_EVENT } from '../../lib/libraryEvents'
-import { HudCircle, IconClips, IconPip, IconSwap, IconX, CompareControlsButton } from './CompareHud'
+import { HudCircle, IconClips, IconPip, IconSwap, CompareControlsButton } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -130,6 +130,7 @@ export function ReferencePane({
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const [clipHudOpen, setClipHudOpen] = useState(false)
+  const [clipHudAll, setClipHudAll] = useState(false)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
   const [reelOpen, setReelOpen] = useState(false)
@@ -760,6 +761,19 @@ export function ReferencePane({
       : []
   const matchCount = currentHits.length + otherHits.length
   const q = searchQuery.trim()
+  const hudGroups = useMemo(() => {
+    const scope = clipHudAll || q
+      ? allCollections
+      : activeCollection
+        ? [activeCollection]
+        : allCollections
+    return scope
+      .map((col) => ({
+        col,
+        items: col.items.filter((item) => !q || itemMatchesQuery(item, q)),
+      }))
+      .filter((row) => row.items.length > 0)
+  }, [allCollections, activeCollection, clipHudAll, q])
   const watchList = desk === 'browse' ? currentHits : (activeCollection?.items ?? [])
   const reelItems = watchList.flatMap((item) =>
     item.url
@@ -1049,7 +1063,17 @@ export function ReferencePane({
   const hudCorner =
     fullscreen && !pip ? (
       <>
-        <HudCircle label="Clip" onClick={() => setClipHudOpen((open) => !open)}>
+        <HudCircle
+          label="Clip"
+          active={clipHudOpen}
+          onClick={() =>
+            setClipHudOpen((open) => {
+              if (open) return false
+              setClipHudAll(false)
+              return true
+            })
+          }
+        >
           <IconClips />
         </HudCircle>
         <HudCircle label={focus === 'split' ? 'Min' : 'Swap'} onClick={() => setFocus(focus === 'cam' ? 'ref' : 'cam')}>
@@ -1155,48 +1179,99 @@ export function ReferencePane({
         </div>
       ) : null}
       {clipHudOpen && fill && !pip && (
-        <div className="absolute inset-y-0 right-0 z-[50] flex w-[min(17.5rem,58%)] flex-col bg-black/92 text-white shadow-[-16px_0_40px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center justify-between px-3 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Clips</p>
-            <HudCircle label="Close" onClick={() => setClipHudOpen(false)}>
-              <IconX />
-            </HudCircle>
+        <div className="pointer-events-auto absolute left-2 top-14 bottom-[5.75rem] z-[42] flex w-[min(16.75rem,46vw)] flex-col overflow-hidden rounded-2xl bg-[#0b0f14]/92 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/12 backdrop-blur-xl sm:bottom-24">
+          <div className="flex items-center gap-2 px-3 pt-3">
+            <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
+              Clips
+            </p>
+            <button
+              type="button"
+              onClick={() => setClipHudOpen(false)}
+              className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white/16"
+            >
+              Close
+            </button>
           </div>
-          <p className="px-3 pb-1 text-[11px] text-white/50">
-            The video keeps playing. Tap a name to switch.
-          </p>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1">
-            {allCollections.every((c) => c.items.length === 0) ? (
-              <p className="py-6 text-center text-sm text-white/60">No clips in the library yet.</p>
+          <div className="px-3 pt-2">
+            <input
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                if (e.target.value.trim()) setClipHudAll(true)
+              }}
+              placeholder="Search a shape or name"
+              className="h-9 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-sm text-white placeholder:text-white/40"
+              aria-label="Search reference clips"
+            />
+          </div>
+          <div className="mt-2 flex gap-1.5 overflow-x-auto px-3 pb-2">
+            <button
+              type="button"
+              onClick={() => setClipHudAll(true)}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                clipHudAll || q
+                  ? 'bg-white text-black'
+                  : 'bg-white/10 text-white/80'
+              }`}
+            >
+              All
+            </button>
+            {allCollections
+              .filter((c) => c.items.length > 0)
+              .map((c) => {
+                const on = !clipHudAll && !q && c.id === activeCollectionId
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setClipHudAll(false)
+                      setSearchQuery('')
+                      setActiveCollectionId(c.id)
+                    }}
+                    className={`max-w-[9rem] shrink-0 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      on ? 'bg-white text-black' : 'bg-white/10 text-white/80'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                )
+              })}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            {hudGroups.length === 0 ? (
+              <p className="py-6 text-center text-sm text-white/55">
+                {q ? 'No clips match that search.' : 'No clips in this collection yet.'}
+              </p>
             ) : (
-              allCollections.map((col) =>
-                col.items.length === 0 ? null : (
-                  <div key={col.id} className="mb-4">
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+              hudGroups.map(({ col, items }) => (
+                <div key={col.id} className="mb-3">
+                  {(clipHudAll || q || hudGroups.length > 1) && (
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/40">
                       {col.name}
                     </p>
-                    <ul className="flex flex-col gap-1">
-                      {col.items.map((item) => {
-                        const on = item.id === activeItemId
-                        return (
-                          <li key={item.id}>
-                            <button
-                              type="button"
-                              onClick={() => void selectItem(item, col)}
-                              className={`w-full rounded-xl px-3 py-2.5 text-left text-sm ${
-                                on ? 'bg-white font-semibold text-black' : 'bg-white/10 text-white'
-                              }`}
-                            >
-                              {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
-                              {item.name}
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                ),
-              )
+                  )}
+                  <ul className="flex flex-col gap-1">
+                    {items.map((item) => {
+                      const on = item.id === activeItemId
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onClick={() => void selectItem(item, col)}
+                            className={`w-full rounded-xl px-3 py-2 text-left text-sm ${
+                              on ? 'bg-white font-semibold text-black' : 'bg-white/10 text-white'
+                            }`}
+                          >
+                            {favorites.isUrlFavorite(itemFavoriteKey(item)) ? '★ ' : ''}
+                            {item.name}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ))
             )}
           </div>
         </div>
