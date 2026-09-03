@@ -49,6 +49,7 @@ import type { LearnIntent } from './components/EducationPanel'
 import { LessonNoteBar } from './components/lesson/LessonNoteBar'
 import { LessonWorkspace } from './components/lesson/LessonWorkspace'
 import { TodayFloorCamera } from './components/today/TodayFloorCamera'
+import { TodayDock } from './components/today/TodayDock'
 import { WarmupPanel } from './components/warmup/WarmupPanel'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
@@ -686,15 +687,24 @@ export default function App() {
               />
             )}
           </div>
-          <TodayFloorCamera
-            mirror={settings.mirrorVideo}
-            showJointAngles={settings.showAngles}
-            referencePhotos={referencePhotos}
-            onOpenCompareWithReference={openCompareWithReference}
-            onShowJointAnglesChange={(showAngles) =>
-              setSettings((current) => ({ ...current, showAngles }))
-            }
-          />
+          <TodayDock
+            id="floor"
+            icon="📷"
+            eyebrow="Floor"
+            title="Floor camera"
+            hint="See the mat. No score or grade."
+          >
+            <TodayFloorCamera
+              embed
+              mirror={settings.mirrorVideo}
+              showJointAngles={settings.showAngles}
+              referencePhotos={referencePhotos}
+              onOpenCompareWithReference={openCompareWithReference}
+              onShowJointAnglesChange={(showAngles) =>
+                setSettings((current) => ({ ...current, showAngles }))
+              }
+            />
+          </TodayDock>
         </div>
       )}
 

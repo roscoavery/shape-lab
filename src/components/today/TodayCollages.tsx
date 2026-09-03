@@ -9,31 +9,71 @@ import { isCoachProfile } from '../../lib/profileRole'
 type Props = {
   viewer: Athlete | null
   onOpenLibrary: () => void
+  embed?: boolean
 }
 
-export function TodayCollages({ viewer, onOpenLibrary }: Props) {
+export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
   const { nameForUrl } = useGymLibrary()
   const [collages, setCollages] = useState<Collage[]>([])
   const [playing, setPlaying] = useState<Collage | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedNote, setSavedNote] = useState<string | null>(null)
 
   useEffect(() => {
     void listCollages(viewer?.id).then(setCollages)
   }, [viewer?.id])
 
-  return (
-    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+  const canPersist = (board: Collage) =>
+    Boolean(viewer) &&
+    (isCoachProfile(viewer) || board.ownerId === viewer?.id || !board.ownerId)
+
+  const persistBoard = (board: Collage, announce = false) => {
+    if (!canPersist(board)) return
+    if (announce) setSaving(true)
+    void saveCollage({ ...board, updatedAt: new Date().toISOString() })
+      .then((saved) => {
+        if (!saved) {
+          if (announce) setSavedNote('Could not save that collage.')
+          return
+        }
+        setPlaying(saved)
+        setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
+        if (announce) {
+          setSavedNote('Saved. Open Collages to keep editing it just like this.')
+        }
+      })
+      .finally(() => {
+        if (announce) setSaving(false)
+      })
+  }
+
+  const applySlots = (slots: CollageSlot[]) => {
+    if (!playing) return
+    const next = { ...playing, slots, updatedAt: new Date().toISOString() }
+    setPlaying(next)
+    persistBoard(next)
+  }
+
+  const body = (
+    <>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-            Class drills
+        {!embed ? (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+              Class drills
+            </p>
+            <h3 className="text-lg font-semibold">Collages</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              All panels play at once. Change the gym clip on any tile, or drop in
+              a quick record / Photos upload. Save collage keeps it editable.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-white/55">
+            Play a board, hide the loops, then Save collage so Classes opens it the same way.
           </p>
-          <h3 className="text-lg font-semibold">Collages</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            All panels play at once. Change the gym clip on any tile, or drop in
-            a quick record / Photos upload. Save to Photos exports the board.
-          </p>
-        </div>
+        )}
         <button
           type="button"
           onClick={onOpenLibrary}
@@ -42,6 +82,11 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
           Open collages
         </button>
       </div>
+      {savedNote ? (
+        <p className="mt-2 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
+          {savedNote}
+        </p>
+      ) : null}
       {collages.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--muted)]">
           No collages yet. Build one on Classes — up to six gym clips on one board.
@@ -63,6 +108,7 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
                   onClick={() => {
                     setPlaying(c)
                     setFullscreen(true)
+                    setSavedNote(null)
                   }}
                   className="text-xs font-semibold text-[var(--accent)]"
                 >
@@ -98,22 +144,19 @@ export function TodayCollages({ viewer, onOpenLibrary }: Props) {
             canEdit={false}
             canAssign
             viewerId={viewer?.id ?? null}
-            onSlots={(slots: CollageSlot[]) => {
-              const next = { ...playing, slots, updatedAt: new Date().toISOString() }
-              setPlaying(next)
-              const persist =
-                Boolean(viewer) &&
-                (isCoachProfile(viewer) || playing.ownerId === viewer?.id || !playing.ownerId)
-              if (!persist) return
-              void saveCollage(next).then((saved) => {
-                if (!saved) return
-                setPlaying(saved)
-                setCollages((prev) => prev.map((c) => (c.id === saved.id ? saved : c)))
-              })
-            }}
+            onSlots={applySlots}
+            onSaveBoard={canPersist(playing) ? () => persistBoard(playing, true) : undefined}
+            savingBoard={saving}
           />
         </div>
       )}
+    </>
+  )
+
+  if (embed) return <div>{body}</div>
+  return (
+    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+      {body}
     </section>
   )
 }

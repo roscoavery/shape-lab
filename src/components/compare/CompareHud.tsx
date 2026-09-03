@@ -36,7 +36,19 @@ export function HudCircle({
   )
 }
 
-export function HudRecord({ onClick, busy = false, disabled = false }: { onClick: () => void; busy?: boolean; disabled?: boolean }) {
+export function HudRecord({
+  onClick,
+  busy = false,
+  disabled = false,
+  size = 'md',
+}: {
+  onClick: () => void
+  busy?: boolean
+  disabled?: boolean
+  size?: 'sm' | 'md'
+}) {
+  const ring = size === 'sm' ? 'h-12 w-12 border-[2.5px]' : 'h-[4.25rem] w-[4.25rem] border-[3px]'
+  const dot = size === 'sm' ? 'h-8 w-8' : 'h-12 w-12'
   return (
     <button
       type="button"
@@ -44,11 +56,21 @@ export function HudRecord({ onClick, busy = false, disabled = false }: { onClick
       onClick={onClick}
       className="flex flex-col items-center gap-0.5 disabled:opacity-40"
     >
-      <span className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-full border-[3px] border-white">
-        <span className="h-12 w-12 rounded-full bg-[#e03131]" />
+      <span className={`flex ${ring} items-center justify-center rounded-full border-white`}>
+        <span className={`${dot} rounded-full bg-[#e03131]`} />
       </span>
       <span className="text-[10px] font-medium tracking-wide text-white">{busy ? 'Saving…' : 'Record'}</span>
     </button>
+  )
+}
+
+export function IconPhotos() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="6" width="16" height="12" rx="2" />
+      <circle cx="10" cy="12" r="2.1" />
+      <path d="m14 16 2.2-2.4a1 1 0 0 1 1.5 0L20 16" />
+    </svg>
   )
 }
 

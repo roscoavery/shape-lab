@@ -42,9 +42,11 @@ type Props = {
   offeringId?: string | null
   /** Compact strip on Today; coaches can still prepare boards when class is not live. */
   onToday?: boolean
+  /** Body only — Today dock supplies the title. */
+  embed?: boolean
 }
 
-export function ChalkboardPanel({ viewer, offeringId = null, onToday = false }: Props) {
+export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, embed = false }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
   const [size, setSize] = useState<Size>('compact')
@@ -129,6 +131,40 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false }: 
     )
   }
 
+  const sizeButtons = (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => setSize(size === 'compact' ? 'more' : 'compact')}
+        className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
+      >
+        {size === 'compact' ? 'Show more' : 'Show less'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setSize('full')}
+        className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+      >
+        Full screen
+      </button>
+    </div>
+  )
+
+  if (embed) {
+    return (
+      <div>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <p className="text-sm text-white/55">
+            {offering ? offering.name : 'Chalkboard'}
+            {inSession ? ' · live' : ''}
+          </p>
+          {sizeButtons}
+        </div>
+        {body}
+      </div>
+    )
+  }
+
   return (
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -146,22 +182,7 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false }: 
               : 'Pin clips, stills, drills, or a drill list before class. It opens here when that class is running — it does not take over Today.'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSize(size === 'compact' ? 'more' : 'compact')}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
-          >
-            {size === 'compact' ? 'Show more' : 'Show less'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSize('full')}
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
-          >
-            Full screen
-          </button>
-        </div>
+        {sizeButtons}
       </div>
       {body}
     </section>

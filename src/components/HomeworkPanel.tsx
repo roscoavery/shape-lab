@@ -1340,14 +1340,11 @@ export function HomeworkPanel({
           onClick={() => setHwPage('train')}
           className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
-            Homework · Choose
+          <span className="text-5xl" aria-hidden>
+            🐵
           </span>
-          <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+          <span className="mt-2 text-3xl font-black tracking-tight text-[#06281f] sm:text-4xl">
             Train now
-          </span>
-          <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
-            What do you want to train? Core drills, assigned work, or a rep set.
           </span>
         </button>
         <button
@@ -1416,8 +1413,8 @@ export function HomeworkPanel({
 
       {hwPage === 'train' && (
         <HwOverlay
-          eyebrow="Homework · Train"
-          title="What do you want to train?"
+          eyebrow="Train"
+          title="Tap one"
           onDone={() => setHwPage('home')}
         >
           <TrainPicker

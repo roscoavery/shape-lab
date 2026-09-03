@@ -1,12 +1,6 @@
+import { useState } from 'react'
 import type { HomeworkItem } from '../../types'
-import { homeworkTitle, homeworkTrackMode, isSequenceHomework } from '../../lib/homeworkLabel'
-import { getCatalogItem } from '../../config/homeworkCatalog'
-
-type Group = {
-  title: string
-  hint: string
-  items: HomeworkItem[]
-}
+import { homeworkTitle } from '../../lib/homeworkLabel'
 
 type Props = {
   assigned: HomeworkItem[]
@@ -18,43 +12,73 @@ type Props = {
   onOther?: () => void
 }
 
-function Card({
-  item,
-  onPick,
+type Folder = 'home' | 'assigned' | 'reps' | 'more'
+
+function emojiFor(item: HomeworkItem): string {
+  const id = `${item.shapeId} ${item.catalogId ?? ''}`.toLowerCase()
+  if (id.includes('hollow')) return '🥣'
+  if (id.includes('superman') || id.includes('arch')) return '🦸'
+  if (id.includes('side_plank') || id.includes('plank')) return '🪵'
+  if (id.includes('handstand') || id.includes('wall')) return '🤸'
+  if (id.includes('v_up') || id.includes('v-up')) return '🔺'
+  if (id.includes('pushup') || id.includes('push')) return '💪'
+  if (id.includes('pullup') || id.includes('pull')) return '🏋️'
+  if (id.includes('bridge')) return '🌉'
+  if (id.includes('back_extension')) return '⬆️'
+  return '⭐'
+}
+
+function shortName(item: HomeworkItem): string {
+  const title = homeworkTitle(item)
+  if (/side plank/i.test(title)) return title.includes('Right') ? 'Right plank' : title.includes('Left') ? 'Left plank' : 'Plank'
+  if (/wall handstand/i.test(title)) return 'Wall'
+  if (/hollow/i.test(title)) return 'Hollow'
+  if (/superman/i.test(title)) return 'Superman'
+  const first = title.split(/[·•(]/)[0]?.trim() ?? title
+  return first.length > 16 ? `${first.slice(0, 14)}…` : first
+}
+
+function Tile({
+  emoji,
+  label,
+  onClick,
+  accent = false,
 }: {
-  item: HomeworkItem
-  onPick: (item: HomeworkItem) => void
+  emoji: string
+  label: string
+  onClick: () => void
+  accent?: boolean
 }) {
-  const mode = homeworkTrackMode(item)
-  const cat = getCatalogItem(item.catalogId ?? item.shapeId)
-  const kind = isSequenceHomework(item)
-    ? 'Class flow'
-    : mode === 'reps'
-      ? 'Reps'
-      : mode === 'hold_or_reps'
-        ? 'Hold or reps'
-        : 'Hold'
   return (
     <button
       type="button"
-      onClick={() => onPick(item)}
-      className="flex w-full flex-col items-start rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-3 text-left hover:border-[var(--accent)]/50"
+      onClick={onClick}
+      className={`flex min-h-[7.5rem] flex-col items-center justify-center gap-2 rounded-3xl px-3 py-4 text-center shadow-[0_12px_28px_rgba(0,0,0,0.28)] ${
+        accent
+          ? 'bg-gradient-to-br from-[#5cf0c8] to-[#147a62] text-[#06281f]'
+          : 'bg-[#151d26] text-white hover:bg-[#1c2733]'
+      }`}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-        {kind}
+      <span className="text-5xl leading-none" aria-hidden>
+        {emoji}
       </span>
-      <span className="mt-0.5 text-base font-semibold text-[var(--text)]">
-        {homeworkTitle(item)}
-      </span>
-      {item.grip ? (
-        <span className="mt-0.5 text-xs text-[var(--muted)]">Grip: {item.grip}</span>
-      ) : null}
-      {cat ? (
-        <span className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{cat.notes}</span>
-      ) : item.notes ? (
-        <span className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{item.notes}</span>
-      ) : null}
+      <span className="text-xl font-black tracking-tight">{label}</span>
     </button>
+  )
+}
+
+function Grid({ items, onPick }: { items: HomeworkItem[]; onPick: (item: HomeworkItem) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {items.map((item) => (
+        <Tile
+          key={item.id}
+          emoji={emojiFor(item)}
+          label={shortName(item)}
+          onClick={() => onPick(item)}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -67,86 +91,90 @@ export function TrainPicker({
   onAddHomework,
   onOther,
 }: Props) {
-  const groups: Group[] = [
-    {
-      title: 'Coach assigned',
-      hint: 'Your coach put these on the list. You can still pick something else.',
-      items: assigned,
-    },
-    {
-      title: 'Core drills',
-      hint: 'The four holds that stay on every profile.',
-      items: core,
-    },
-    {
-      title: 'Rep work',
-      hint: 'Push-ups, pull-ups, v-ups, bridges, back extensions — log reps and quality reps.',
-      items: strength,
-    },
-    {
-      title: 'Also on your list',
-      hint: 'Shapes and skills you added.',
-      items: other,
-    },
-  ].filter((g) => g.items.length > 0)
+  const [folder, setFolder] = useState<Folder>('home')
+
+  if (folder === 'assigned') {
+    return (
+      <div className="flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={() => setFolder('home')}
+          className="self-start rounded-full bg-white/12 px-3 py-1.5 text-sm font-semibold text-white"
+        >
+          Back
+        </button>
+        <Grid items={assigned} onPick={onPick} />
+      </div>
+    )
+  }
+
+  if (folder === 'reps') {
+    return (
+      <div className="flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={() => setFolder('home')}
+          className="self-start rounded-full bg-white/12 px-3 py-1.5 text-sm font-semibold text-white"
+        >
+          Back
+        </button>
+        <Grid items={strength} onPick={onPick} />
+      </div>
+    )
+  }
+
+  if (folder === 'more') {
+    return (
+      <div className="flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={() => setFolder('home')}
+          className="self-start rounded-full bg-white/12 px-3 py-1.5 text-sm font-semibold text-white"
+        >
+          Back
+        </button>
+        <Grid items={other} onPick={onPick} />
+        {onAddHomework ? (
+          <button
+            type="button"
+            onClick={onAddHomework}
+            className="rounded-2xl bg-white/8 py-4 text-lg font-bold text-white"
+          >
+            + Add
+          </button>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          Homework
-        </p>
-        <h3 className="text-xl font-semibold text-[var(--text)]">What do you want to train?</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Assigned work is here if you have it. Core drills are always an option.
-          Nothing auto-starts a class flow.
-        </p>
-      </div>
-      {groups.map((group) => (
-        <section key={group.title} className="flex flex-col gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              {group.title}
-            </p>
-            <p className="text-xs text-[var(--muted)]">{group.hint}</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {group.items.map((item) => (
-              <Card key={item.id} item={item} onPick={onPick} />
-            ))}
-          </div>
-          {group.title === 'Core drills' && (onOther || onAddHomework) ? (
-            <div className="mt-1 flex flex-col gap-1">
-              {onOther && (
-                <button
-                  type="button"
-                  onClick={onOther}
-                  className="rounded-xl border border-dashed border-[var(--accent)]/40 bg-[#102820] px-3 py-3 text-left"
-                >
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                    Other
-                  </span>
-                  <span className="mt-0.5 block text-base font-semibold text-[var(--text)]">
-                    Type or pick another exercise
-                  </span>
-                  <span className="mt-0.5 block text-xs text-[var(--muted)]">
-                    Log a hold or a set for something that is not on this list.
-                  </span>
-                </button>
-              )}
-              {onAddHomework && (
-                <button
-                  type="button"
-                  onClick={onAddHomework}
-                  className="text-left text-sm font-semibold text-[var(--accent)] underline"
-                >
-                  Want it on your list? Add homework
-                </button>
-              )}
-            </div>
-          ) : null}
-        </section>
+    <div className="grid grid-cols-2 gap-3">
+      {core.map((item) => (
+        <Tile
+          key={item.id}
+          emoji={emojiFor(item)}
+          label={shortName(item)}
+          onClick={() => onPick(item)}
+        />
       ))}
+      {assigned.length > 0 ? (
+        <Tile
+          emoji="⭐"
+          label={assigned.length === 1 ? shortName(assigned[0]!) : 'Assigned'}
+          accent
+          onClick={() => {
+            if (assigned.length === 1) onPick(assigned[0]!)
+            else setFolder('assigned')
+          }}
+        />
+      ) : null}
+      {strength.length > 0 ? (
+        <Tile emoji="💪" label="Reps" onClick={() => setFolder('reps')} />
+      ) : null}
+      {other.length > 0 ? (
+        <Tile emoji="📦" label="More" onClick={() => setFolder('more')} />
+      ) : null}
+      {onOther ? <Tile emoji="✏️" label="Other" onClick={onOther} /> : null}
     </div>
   )
 }

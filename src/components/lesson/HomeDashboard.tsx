@@ -18,6 +18,7 @@ import { ClassStopwatch } from '../today/ClassStopwatch'
 import { EndClassPrompt } from '../today/EndClassPrompt'
 import { ChalkboardPanel } from '../today/ChalkboardPanel'
 import { TodayCollages } from '../today/TodayCollages'
+import { TodayDock } from '../today/TodayDock'
 import {
   childAthletes,
   childNamesLabel,
@@ -267,9 +268,27 @@ export function HomeDashboard({
             </ul>
           </section>
         )}
-        <ChalkboardPanel viewer={signedIn} onToday />
+        {(isCoachProfile(signedIn) || getActiveMeeting()) && (
+          <TodayDock
+            id="chalk"
+            icon="📋"
+            eyebrow="Today"
+            title="Prepare chalkboard"
+            hint="Pin clips and drills. Tap to open."
+          >
+            <ChalkboardPanel viewer={signedIn} onToday embed />
+          </TodayDock>
+        )}
         {onShortcut && (
-          <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
+          <TodayDock
+            id="collage"
+            icon="🎬"
+            eyebrow="Class drills"
+            title="Collages"
+            hint="Play the board. Save it. Keep editing later."
+          >
+            <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} embed />
+          </TodayDock>
         )}
         {onShortcut && profileRole(signedIn) !== 'parent' && (
           <PracticeNudge
@@ -582,12 +601,36 @@ export function HomeDashboard({
       )}
 
       {coach && (
-        <ClassStopwatch athletes={athletes} signedIn={signedIn} coach />
+        <TodayDock
+          id="clock"
+          icon="⏱️"
+          eyebrow="Class clock"
+          title="Holds & stopwatch"
+          hint="Time it. Log it. No camera grade."
+        >
+          <ClassStopwatch athletes={athletes} signedIn={signedIn} coach embed />
+        </TodayDock>
       )}
 
-      <ChalkboardPanel viewer={signedIn} onToday />
+      <TodayDock
+        id="chalk"
+        icon="📋"
+        eyebrow="Today"
+        title="Prepare chalkboard"
+        hint="Pin clips and drills. Tap to open."
+      >
+        <ChalkboardPanel viewer={signedIn} onToday embed />
+      </TodayDock>
       {onShortcut && (
-        <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} />
+        <TodayDock
+          id="collage"
+          icon="🎬"
+          eyebrow="Class drills"
+          title="Collages"
+          hint="Play the board. Save it. Keep editing later."
+        >
+          <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} embed />
+        </TodayDock>
       )}
 
       {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}

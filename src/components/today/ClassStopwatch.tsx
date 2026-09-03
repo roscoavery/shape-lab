@@ -31,6 +31,8 @@ type Props = {
   coach?: boolean
   variant?: 'card' | 'overlay'
   onClose?: () => void
+  /** Body only — Today dock supplies the title. */
+  embed?: boolean
 }
 
 function formatWatch(ms: number): string {
@@ -46,6 +48,7 @@ export function ClassStopwatch({
   coach,
   variant = 'card',
   onClose,
+  embed = false,
 }: Props) {
   const [, setClassTick] = useState(0)
   useEffect(() => subscribeCoachClasses(() => setClassTick((n) => n + 1)), [])
@@ -713,6 +716,17 @@ export function ClassStopwatch({
           )}
         </header>
         <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto px-4 pb-8">{body}</div>
+      </div>
+    )
+  }
+
+  if (embed) {
+    return (
+      <div>
+        <p className="mb-3 text-sm text-white/55">
+          {className ? `Holds for ${className}` : 'Time it. Log it. Done.'}
+        </p>
+        {body}
       </div>
     )
   }

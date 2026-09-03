@@ -28,6 +28,8 @@ export function CollageStage({
   canEdit,
   canAssign = false,
   viewerId = null,
+  onSaveBoard,
+  savingBoard = false,
   onEditVideos,
   onDuplicate,
   editor,
@@ -43,6 +45,9 @@ export function CollageStage({
   /** Pick, record, or upload a clip into a tile — Today uses this without full edit. */
   canAssign?: boolean
   viewerId?: string | null
+  /** Persist the board so Classes / Collages opens it the way you left it. */
+  onSaveBoard?: () => void
+  savingBoard?: boolean
   onEditVideos?: () => void
   onDuplicate?: () => void
   editor?: OrganizeEditor
@@ -52,6 +57,7 @@ export function CollageStage({
   const gridRef = useRef<HTMLDivElement | null>(null)
   const cancelRef = useRef(false)
   const [chrome, setChrome] = useState(!fullscreen)
+  const [hideTransport, setHideTransport] = useState(false)
   const [exportSec, setExportSec] = useState(10)
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -237,6 +243,27 @@ export function CollageStage({
           >
             Save to Photos
           </button>
+          {onSaveBoard && (
+            <button
+              type="button"
+              disabled={savingBoard}
+              onClick={onSaveBoard}
+              className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-black disabled:opacity-50"
+            >
+              {savingBoard ? 'Saving…' : 'Save collage'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setHideTransport((v) => !v)}
+            className={`rounded-md px-2 py-1 text-xs font-semibold ${
+              hideTransport
+                ? 'bg-white text-black'
+                : 'border border-white/30 text-white'
+            }`}
+          >
+            {hideTransport ? 'Show loops' : 'Hide controls'}
+          </button>
           {onEditVideos && (
             <button
               type="button"
@@ -346,11 +373,11 @@ export function CollageStage({
                 compact
                 quiet
                 shareChrome={false}
-                bare={cinema && !allowAssign}
+                bare={hideTransport || (cinema && !allowAssign)}
                 active
                 markup={false}
                 onAbChange={
-                  canEdit && onSlots
+                  (canEdit || canAssign) && onSlots
                     ? (a, b) => {
                         const slots = collage.slots.map((s, idx) =>
                           idx === i ? { ...s, loopA: a, loopB: b } : s,
@@ -373,7 +400,8 @@ export function CollageStage({
                 Full screen
               </button>
             ) : null}
-            <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
+            {!hideTransport ? (
+              <div className="absolute inset-x-0 top-0 z-20 space-y-1 bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
                 {allowAssign ? (
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
@@ -394,6 +422,7 @@ export function CollageStage({
                   <p className="text-[12px] text-[var(--accent)]">{slot.caption}</p>
                 ) : null}
               </div>
+            ) : null}
           </div>
         )
       })}
