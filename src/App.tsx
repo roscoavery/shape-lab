@@ -1422,6 +1422,7 @@ export default function App() {
     {stationOpen && (
       <ClassStation
         athletes={athletes}
+        viewer={activeProfile}
         onClose={() => setStationOpen(false)}
         onSaveAthlete={(athlete, mode) => {
           if (mode === 'create') {

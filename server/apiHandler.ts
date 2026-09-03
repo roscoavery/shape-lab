@@ -59,6 +59,7 @@ import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coach
 import { persistMode } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
+import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
@@ -95,6 +96,7 @@ const API_PATHS = new Set([
   '/api/coach-library',
   '/api/lessons',
   '/api/coach-classes',
+  '/api/training-events',
   '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-media',
@@ -627,6 +629,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeCoachClassesFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/training-events') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readTrainingEventsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeTrainingEventsFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

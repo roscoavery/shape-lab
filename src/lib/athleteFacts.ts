@@ -9,8 +9,12 @@ export function shoulderFirstPost(n?: Athlete['openShoulderHardness']): string |
 }
 
 export function gymsLine(athlete: Athlete): string | null {
-  const raw = athlete.gymName?.trim()
-  return raw || null
+  const home = athlete.gymName?.trim()
+  const extras = (athlete.classGyms ?? []).map((g) => g.trim()).filter(Boolean)
+  if (!home && extras.length === 0) return null
+  if (extras.length === 0) return home || null
+  if (!home) return `Classes at ${extras.join(', ')}`
+  return `${home} · class at ${extras.join(', ')}`
 }
 
 export function cartwheelLine(athlete: Athlete): string | null {

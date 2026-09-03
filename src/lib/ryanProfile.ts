@@ -5,6 +5,7 @@
  */
 
 import type { Athlete } from '../types'
+import { TUMBLE_SMART } from '../config/gyms'
 
 export const RYAN_PROFILE_ID = 'ath_ryan'
 export const RYAN_PROFILE_NAME = 'Ryan'
@@ -28,6 +29,7 @@ export function makeRyanProfile(): Athlete {
     name: RYAN_PROFILE_NAME,
     createdAt: '2024-01-01T00:00:00.000Z',
     role: 'coach',
+    gymName: TUMBLE_SMART,
   }
 }
 
@@ -35,7 +37,7 @@ export function makeRyanProfile(): Athlete {
 export function ensureRyanInAthletes(list: Athlete[]): Athlete[] {
   const found = findRyan(list)
   const ryan: Athlete = found
-    ? { ...found, role: 'coach' }
+    ? { ...found, role: 'coach', gymName: found.gymName || TUMBLE_SMART }
     : makeRyanProfile()
   const rest = list.filter((a) => !isRyanAthlete(a))
   rest.sort((a, b) => a.name.localeCompare(b.name))

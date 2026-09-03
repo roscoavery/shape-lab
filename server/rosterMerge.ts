@@ -18,6 +18,8 @@ export type Athlete = {
   passcodeHash?: string
   role?: ProfileKind
   gymName?: string
+  classGyms?: string[]
+  eventIds?: string[]
   childName?: string
   linkedAthleteIds?: string[]
   worksWithCoachIds?: string[]
@@ -277,7 +279,9 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     ...newer,
     id: keep.id,
     passcodeHash: newer.passcodeHash || older.passcodeHash,
-    gymName: newer.gymName || older.gymName,
+    gymName: newer.gymName || older.gymName || 'Tumble Smart Athletics',
+    classGyms: mergeIdList(newer.classGyms, older.classGyms),
+    eventIds: mergeIdList(newer.eventIds, older.eventIds),
     childName: newer.childName || older.childName,
     linkedAthleteIds: mergeIdList(newer.linkedAthleteIds, older.linkedAthleteIds),
     worksWithCoachIds: mergeIdList(newer.worksWithCoachIds, older.worksWithCoachIds),

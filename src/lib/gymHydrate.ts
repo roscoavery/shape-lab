@@ -21,6 +21,7 @@ import {
 } from './rosterSync'
 import { loadSocial } from './social'
 import { loadStories } from './stories'
+import { hydrateTrainingEvents } from './trainingEvents'
 
 export type PersistInfo = {
   mode: 'blob' | 'disk' | 'tmp'
@@ -61,6 +62,7 @@ function prefetchGymPanels(): void {
     listCollages(),
     loadNotices(),
     pullServerLibrary(),
+    hydrateTrainingEvents(),
   ])
 }
 

@@ -32,6 +32,8 @@ export type StationDraft = {
   parentPhone?: string
   email?: string
   phone?: string
+  gymName?: string
+  takesClassHere?: boolean
   cartwheelLeg?: CartwheelLeg
   harderShape?: HarderShape
   openShoulderHardness?: OpenShoulderHardness

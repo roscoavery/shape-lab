@@ -193,8 +193,12 @@ export type Athlete = {
    * Gym owners and coaches can keep their own Compare collections.
    */
   role?: 'gym_owner' | 'coach' | 'athlete' | 'parent'
-  /** Gym they own, coach at, or train at. */
+  /** Home gym they own, coach at, or train at. Defaults to Tumble Smart Athletics. */
   gymName?: string
+  /** Other gyms they take classes at (besides home). */
+  classGyms?: string[]
+  /** Camp / clinic / travel event ids. Does not put them on a gym’s main Today list. */
+  eventIds?: string[]
   /** Parent profiles: the athlete they came for (display name). */
   childName?: string
   /** Parent profiles: roster ids of the kids they came with. */

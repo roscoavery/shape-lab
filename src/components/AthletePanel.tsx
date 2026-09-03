@@ -33,6 +33,7 @@ import { AthleteProfileCard } from './AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../lib/athleteNotes'
 import { withLinkedAthletes } from '../lib/parentLink'
 import { CoachPicker } from './CoachPicker'
+import { TUMBLE_SMART, normalizeGymName } from '../config/gyms'
 
 type Props = {
   athletes: Athlete[]
@@ -45,6 +46,18 @@ type Props = {
   canSeeAllProfiles?: boolean
   onViewProfile?: (id: string) => void
   viewer?: Athlete | null
+}
+
+function parseGymList(raw: string, homeGym: string): string[] {
+  const home = normalizeGymName(homeGym)
+  return [
+    ...new Set(
+      raw
+        .split(',')
+        .map((g) => normalizeGymName(g))
+        .filter((g) => g && g.toLowerCase() !== home.toLowerCase()),
+    ),
+  ]
 }
 
 export function AthletePanel({
@@ -66,7 +79,8 @@ export function AthletePanel({
   const [newHandle, setNewHandle] = useState('')
   const [newShapeHandle, setNewShapeHandle] = useState('')
   const [newRole, setNewRole] = useState<ProfileKind>('athlete')
-  const [newGym, setNewGym] = useState('')
+  const [newGym, setNewGym] = useState(TUMBLE_SMART)
+  const [newClassGyms, setNewClassGyms] = useState('')
   const [newLinkedIds, setNewLinkedIds] = useState<string[]>([])
   const [newCoachIds, setNewCoachIds] = useState<string[]>([])
   const [newShowCoaches, setNewShowCoaches] = useState(true)
@@ -79,6 +93,7 @@ export function AthletePanel({
   const [phone, setPhone] = useState('')
   const [parentPhone, setParentPhone] = useState('')
   const [gymName, setGymName] = useState('')
+  const [classGymsText, setClassGymsText] = useState('')
   const [linkedIds, setLinkedIds] = useState<string[]>([])
   const guests = loadQuizGuests()
   void canSeeAllProfiles
@@ -91,14 +106,15 @@ export function AthletePanel({
   useEffect(() => {
     setHandle(active?.instagramHandle ?? '')
     setShapeHandle(active?.shapeLabHandle ?? '')
-    setGymName(active?.gymName ?? '')
+    setGymName(active?.gymName ?? TUMBLE_SMART)
+    setClassGymsText((active?.classGyms ?? []).join(', '))
     setLinkedIds(active?.linkedAthleteIds ?? [])
     setEmail(active?.email ?? '')
     setPhone(active?.phone ?? '')
     setParentPhone(active?.parentPhone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
-  }, [active?.id, active?.instagramHandle, active?.shapeLabHandle, active?.gymName, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
+  }, [active?.id, active?.instagramHandle, active?.shapeLabHandle, active?.gymName, active?.classGyms, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
 
   const flash = (msg: string, ms = 2800) => {
     setSaved(msg)
@@ -148,7 +164,8 @@ export function AthletePanel({
       phone: newPhone.trim(),
       instagramHandle: normalizeInstagramHandle(newHandle) || undefined,
       shapeLabHandle: normalizeInstagramHandle(newShapeHandle) || undefined,
-      gymName: newGym.trim() || undefined,
+      gymName: normalizeGymName(newGym),
+      classGyms: parseGymList(newClassGyms, normalizeGymName(newGym)),
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
@@ -173,7 +190,8 @@ export function AthletePanel({
     setNewPhone('')
     setNewHandle('')
     setNewShapeHandle('')
-    setNewGym('')
+    setNewGym(TUMBLE_SMART)
+    setNewClassGyms('')
     setNewLinkedIds([])
     setNewCoachIds([])
     setNewShowCoaches(true)
@@ -193,7 +211,8 @@ export function AthletePanel({
     if (!active) return
     const instagramHandle = normalizeInstagramHandle(handle) || undefined
     const shapeLabHandle = normalizeInstagramHandle(shapeHandle) || undefined
-    const nextGym = gymName.trim() || undefined
+    const nextGym = normalizeGymName(gymName)
+    const nextClassGyms = parseGymList(classGymsText, nextGym)
     const next =
       profileRole(active) === 'parent'
         ? withLinkedAthletes(active, linkedIds, athletes)
@@ -206,6 +225,7 @@ export function AthletePanel({
               instagramHandle,
               shapeLabHandle,
               gymName: nextGym,
+              classGyms: nextClassGyms,
               email: email.trim() || undefined,
               phone: phone.trim() || undefined,
               parentPhone: parentPhone.trim() || undefined,
@@ -216,6 +236,7 @@ export function AthletePanel({
     const bits = [
       shapeLabHandle ? `@${shapeLabHandle}` : instagramHandle ? `@${instagramHandle}` : null,
       nextGym,
+      nextClassGyms.length ? `class at ${nextClassGyms.join(', ')}` : null,
       next.childName ? `athlete ${next.childName}` : null,
       email.trim() || null,
       phone.trim() || null,
@@ -455,9 +476,20 @@ export function AthletePanel({
         {(newRole === 'gym_owner' || newRole === 'coach' || newRole === 'athlete') && (
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            placeholder={newRole === 'athlete' ? 'Gym you train at (optional)' : 'Gym name (optional)'}
+            placeholder={newRole === 'athlete' ? 'Home gym' : 'Gym you coach at'}
             value={newGym}
             onChange={(e) => setNewGym(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void add()
+            }}
+          />
+        )}
+        {newRole === 'athlete' && (
+          <input
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            placeholder="Also takes class at (other gyms, comma-separated)"
+            value={newClassGyms}
+            onChange={(e) => setNewClassGyms(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void add()
             }}
@@ -596,10 +628,21 @@ export function AthletePanel({
             <input
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
               placeholder={
-                profileRole(active) === 'athlete' ? 'Gym you train at (optional)' : 'Gym name (optional)'
+                profileRole(active) === 'athlete' ? 'Home gym' : 'Gym you coach at'
               }
               value={gymName}
               onChange={(e) => setGymName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveDetails()
+              }}
+            />
+          )}
+          {profileRole(active) === 'athlete' && (
+            <input
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+              placeholder="Also takes class at (other gyms, comma-separated)"
+              value={classGymsText}
+              onChange={(e) => setClassGymsText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveDetails()
               }}

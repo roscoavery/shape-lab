@@ -21,6 +21,9 @@ import {
   type TwistDirection,
 } from '../../lib/classStation'
 import { AthleteName } from '../AthleteAvatar'
+import { TUMBLE_SMART, normalizeGymName, sameGym } from '../../config/gyms'
+import { trainsAtGym, viewerHomeGym, withClassGym } from '../../lib/gymScope'
+import { GymBadge } from './GymBadge'
 import { StationSnapshot } from './StationSnapshot'
 import {
   loadGuestParks,
@@ -30,6 +33,7 @@ import {
 
 type Props = {
   athletes: Athlete[]
+  viewer?: Athlete | null
   onClose: () => void
   onSaveAthlete: (athlete: Athlete, mode: 'create' | 'update') => void
   onStartShapeTest: (athlete: Athlete) => void
@@ -63,7 +67,13 @@ function stepIndex(step: StationStep): number {
   return Math.max(0, STEPS.indexOf(step))
 }
 
-export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTest }: Props) {
+export function ClassStation({
+  athletes,
+  viewer = null,
+  onClose,
+  onSaveAthlete,
+  onStartShapeTest,
+}: Props) {
   const [draft, setDraft] = useState<StationDraft>(emptyDraft)
   const [drafts, setDrafts] = useState(loadStationDrafts)
   const [guests, setGuests] = useState(loadQuizGuests)
@@ -71,6 +81,9 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
   const [filter, setFilter] = useState('')
+  const [newGym, setNewGym] = useState(TUMBLE_SMART)
+  const [takesClassHere, setTakesClassHere] = useState(true)
+  const viewerGym = viewerHomeGym(viewer)
 
   const roster = useMemo(
     () => athletes.filter((a) => profileRole(a) === 'athlete' || !a.role),
@@ -101,7 +114,12 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
     persist({ ...draft, ...patch, step })
   }
 
-  const pickName = (firstName: string, lastName: string, athleteId?: string) => {
+  const pickName = (
+    firstName: string,
+    lastName: string,
+    athleteId?: string,
+    extra: Partial<StationDraft> = {},
+  ) => {
     const existing = athleteId
       ? athletes.find((a) => a.id === athleteId)
       : roster.find((a) => namesMatch(a, firstName, lastName))
@@ -113,6 +131,9 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       parentPhone: draft.parentPhone || existing?.parentPhone,
       email: draft.email || existing?.email,
       phone: draft.phone || existing?.phone,
+      gymName: extra.gymName || existing?.gymName || TUMBLE_SMART,
+      takesClassHere:
+        extra.takesClassHere ?? (existing ? trainsAtGym(existing, viewerGym) : true),
       cartwheelLeg: draft.cartwheelLeg || existing?.cartwheelLeg,
       harderShape: draft.harderShape || existing?.harderShape,
       openShoulderHardness: draft.openShoulderHardness ?? existing?.openShoulderHardness,
@@ -130,7 +151,8 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
     const existing =
       (from.athleteId ? athletes.find((a) => a.id === from.athleteId) : undefined) ??
       roster.find((a) => namesMatch(a, from.firstName, from.lastName))
-    const athlete: Athlete = {
+    const home = normalizeGymName(from.gymName || existing?.gymName)
+    let athlete: Athlete = {
       ...(existing ?? {
         id: createId('ath'),
         name,
@@ -139,6 +161,8 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
       name,
       firstName: from.firstName.trim(),
       lastName: from.lastName.trim(),
+      gymName: home,
+      classGyms: existing?.classGyms,
       parentPhone: from.parentPhone || existing?.parentPhone,
       email: from.email || existing?.email,
       phone: from.phone || existing?.phone,
@@ -155,6 +179,9 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
         existing?.shapeTests,
         takeGuestGrades(from.firstName, from.lastName),
       ),
+    }
+    if (from.takesClassHere !== false) {
+      athlete = withClassGym(athlete, viewerGym)
     }
     onSaveAthlete(athlete, existing ? 'update' : 'create')
     setGuests(forgetQuizGuest(from.firstName, from.lastName))
@@ -370,9 +397,10 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
                         const parts = splitPersonName(a.name)
                         pickName(a.firstName || parts.firstName, a.lastName || parts.lastName, a.id)
                       }}
-                      className="flex w-full items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-lg font-semibold"
+                      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-lg font-semibold"
                     >
                       <AthleteName athlete={a} size="md" />
+                      <GymBadge athlete={a} viewerGym={viewerGym} />
                     </button>
                   ))}
                   {visibleDrafts.length + visibleGuests.length + visibleRoster.length === 0 && (
@@ -395,10 +423,39 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
                   value={last}
                   onChange={(e) => setLast(e.target.value)}
                 />
+                <input
+                  className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+                  placeholder="Home gym"
+                  value={newGym}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setNewGym(next)
+                    setTakesClassHere(sameGym(next, viewerGym))
+                  }}
+                />
+                {!sameGym(newGym, viewerGym) && (
+                  <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={takesClassHere}
+                      onChange={(e) => setTakesClassHere(e.target.checked)}
+                    />
+                    <span>
+                      Also takes class at {viewerGym}. Leave off if they are
+                      here for a camp or a one-time visit.
+                    </span>
+                  </label>
+                )}
                 <button
                   type="button"
                   disabled={!first.trim() || !last.trim()}
-                  onClick={() => pickName(first.trim(), last.trim())}
+                  onClick={() =>
+                    pickName(first.trim(), last.trim(), undefined, {
+                      gymName: newGym,
+                      takesClassHere,
+                    })
+                  }
                   className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
                 >
                   Next
@@ -422,6 +479,26 @@ export function ClassStation({ athletes, onClose, onSaveAthlete, onStartShapeTes
               value={draft.parentPhone ?? ''}
               onChange={(e) => persist({ ...draft, parentPhone: e.target.value })}
             />
+            <input
+              className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+              placeholder="Home gym"
+              value={draft.gymName ?? TUMBLE_SMART}
+              onChange={(e) => persist({ ...draft, gymName: e.target.value })}
+            />
+            {!sameGym(draft.gymName, viewerGym) && (
+              <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={draft.takesClassHere !== false}
+                  onChange={(e) => persist({ ...draft, takesClassHere: e.target.checked })}
+                />
+                <span>
+                  Also takes class at {viewerGym}. Leave off for a camp or travel
+                  visit so they stay off this gym’s Today list.
+                </span>
+              </label>
+            )}
             <button
               type="button"
               disabled={!draft.parentPhone?.trim()}

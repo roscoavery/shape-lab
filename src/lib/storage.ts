@@ -21,6 +21,7 @@ import type {
 } from '../types'
 import { dismissHomeworkKey, loadDismissedHomeworkKeys, undismissHomeworkKey } from './careStore'
 import { catalogIdFromShape } from '../config/homeworkCatalog'
+import { withDefaultGym } from '../config/gyms'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
 const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
@@ -64,18 +65,20 @@ function pushRosterSoon() {
 
 export function loadAthletes(): Athlete[] {
   const stored = readJson<Athlete[]>(ATHLETES_KEY, [])
-  if (memoryAthletes && memoryAthletes.length > stored.length) return memoryAthletes
-  if (stored.length > 0) return stored
-  return memoryAthletes ?? []
+  if (memoryAthletes && memoryAthletes.length > stored.length) {
+    return memoryAthletes.map(withDefaultGym)
+  }
+  if (stored.length > 0) return stored.map(withDefaultGym)
+  return (memoryAthletes ?? []).map(withDefaultGym)
 }
 
 export function saveAthletes(athletes: Athlete[]) {
-  memoryAthletes = athletes
+  memoryAthletes = athletes.map(withDefaultGym)
   try {
-    writeJson(ATHLETES_KEY, athletes)
+    writeJson(ATHLETES_KEY, memoryAthletes)
   } catch {
     try {
-      writeJson(ATHLETES_KEY, athletesWithoutPhotos(athletes))
+      writeJson(ATHLETES_KEY, athletesWithoutPhotos(memoryAthletes))
     } catch {
       /* keep the in-memory roster so this tab still shows every profile */
     }
