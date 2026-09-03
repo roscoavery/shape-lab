@@ -1340,10 +1340,7 @@ export function HomeworkPanel({
           onClick={() => setHwPage('train')}
           className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
         >
-          <span className="text-5xl" aria-hidden>
-            🐵
-          </span>
-          <span className="mt-2 text-3xl font-black tracking-tight text-[#06281f] sm:text-4xl">
+          <span className="text-3xl font-black tracking-tight text-[#06281f] sm:text-4xl">
             Train now
           </span>
         </button>
@@ -1414,7 +1411,7 @@ export function HomeworkPanel({
       {hwPage === 'train' && (
         <HwOverlay
           eyebrow="Train"
-          title="Tap one"
+          title="Pick a shape"
           onDone={() => setHwPage('home')}
         >
           <TrainPicker
@@ -1425,6 +1422,8 @@ export function HomeworkPanel({
               ...(!showAssignedBanner ? fromCoach : []),
               ...otherTrainItems.filter((item) => !strengthItems.some((s) => s.id === item.id)),
             ]}
+            photos={referencePhotos}
+            logsByItem={logsByItem}
             onPick={(item) => startItem(item)}
             onAddHomework={() => setHwPage('add')}
             onOther={() => {
