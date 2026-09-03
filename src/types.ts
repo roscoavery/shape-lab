@@ -664,6 +664,7 @@ export type LessonHold = {
   score: number
   method: 'camera' | 'manual'
   topicKind?: LessonNoteTopicKind
+  side?: 'left' | 'right'
 }
 
 export type LessonSession = {

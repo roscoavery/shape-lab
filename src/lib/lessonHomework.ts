@@ -22,6 +22,7 @@ export function logLessonHoldOnAthleteHomework(args: {
   properHoldSeconds: number
   score: number
   method: 'camera' | 'manual'
+  side?: 'left' | 'right'
 }): HomeworkLog | null {
   if (!args.athleteId || args.totalHoldSeconds < 0.2) return null
 
@@ -66,6 +67,8 @@ export function logLessonHoldOnAthleteHomework(args: {
     lessonId: args.lessonId,
     coachId: args.coachId,
     coachName: args.coachName,
+    ...(args.side ? { side: args.side } : {}),
+    ...(args.side ? { sourceLabel: `Lesson · ${args.shapeName}` } : {}),
   }
   addHomeworkLog(log)
   return log

@@ -110,7 +110,11 @@ export function formatHomeworkLogLine(log: HomeworkLog, item?: HomeworkItem | nu
   if (log.kind === 'sequence') {
     return `${title} · sequence${log.reps ? ` ×${log.reps}` : ''}`
   }
-  if (log.totalHoldSeconds > 0) return `${title} · ${formatHoldSeconds(log.totalHoldSeconds)}`
+  if (log.totalHoldSeconds > 0) {
+    const side =
+      log.side && !/left|right/i.test(title) ? ` · ${log.side}` : ''
+    return `${title}${side} · ${formatHoldSeconds(log.totalHoldSeconds)}`
+  }
   return title
 }
 

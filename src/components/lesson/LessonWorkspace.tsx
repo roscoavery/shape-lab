@@ -147,6 +147,7 @@ export function LessonWorkspace({
       score: scoreValue,
       method,
       topicKind: holdTopic.kind,
+      ...(holdTopic.side ? { side: holdTopic.side } : {}),
     })
     if (next) {
       if (holdTopic.kind === 'custom') rememberTypedHold(session.coachId, label)
@@ -162,6 +163,7 @@ export function LessonWorkspace({
           properHoldSeconds: Number(proper.toFixed(1)),
           score: scoreValue,
           method,
+          ...(holdTopic.side ? { side: holdTopic.side } : {}),
         })
       }
       onSessionChange(next)

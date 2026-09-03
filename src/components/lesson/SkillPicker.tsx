@@ -11,6 +11,8 @@ export type SkillTopic = {
   id?: string
   label: string
   scoreShapeId?: string
+  /** Side plank — same left / right split as class clock. */
+  side?: 'left' | 'right'
 }
 
 type Props = {
@@ -93,6 +95,45 @@ export function SkillPicker({
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">{label}</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {QUICK_HOLDS.map((q) => {
+            if (q.id === 'side_plank') {
+              return (
+                <div
+                  key={q.id}
+                  className="grid grid-cols-2 overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#121820]"
+                >
+                  {(['left', 'right'] as const).map((s) => {
+                    const on =
+                      value.kind === 'shape' && value.id === 'side_plank' && value.side === s
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        aria-pressed={on}
+                        aria-label={s === 'left' ? 'Left side plank' : 'Right side plank'}
+                        onClick={() =>
+                          onChange({
+                            kind: 'shape',
+                            id: q.id,
+                            label: `Side plank · ${s}`,
+                            scoreShapeId: q.id,
+                            side: s,
+                          })
+                        }
+                        className={`whitespace-nowrap px-1.5 py-2.5 text-xs font-semibold sm:px-3 sm:text-sm ${
+                          s === 'right' ? 'border-l border-[var(--panel-border)]' : ''
+                        } ${
+                          on
+                            ? 'bg-[var(--accent)] text-[#06281f]'
+                            : 'text-[var(--text)]'
+                        }`}
+                      >
+                        {s === 'left' ? 'Left plank' : 'Right plank'}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
             const on = value.kind === 'shape' && value.id === q.id
             return (
               <button
