@@ -29,8 +29,10 @@ import {
   endClassMeeting,
   getActiveMeeting,
   getOffering,
+  hydrateCoachClasses,
   subscribeCoachClasses,
 } from '../../lib/coachClasses'
+import { ClassRecapList } from '../today/ClassRecapList'
 import {
   athleteMatchesQuery,
   listKnownGyms,
@@ -105,8 +107,11 @@ export function HomeDashboard({
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
+  useEffect(() => {
+    void hydrateCoachClasses().then(() => setRefresh((n) => n + 1))
+  }, [])
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
-  const liveClass = coach ? getActiveMeeting() : null
+  const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
   const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const events = useMemo(() => {
     void refresh
@@ -820,6 +825,13 @@ export function HomeDashboard({
       )}
 
       {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
+
+      <ClassRecapList
+        athletes={athletes}
+        viewer={signedIn}
+        classInSession={Boolean(liveClass)}
+        onAthletesChange={onAthletesChange}
+      />
 
       <LessonReviewList
         sessions={coachRecapSessions(signedIn.id, athletes)}

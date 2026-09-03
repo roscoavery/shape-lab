@@ -67,7 +67,7 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
   useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
   void tick
 
-  const live = getActiveMeeting()
+  const live = getActiveMeeting(viewer?.id)
   const liveOffering = live ? getOffering(live.offeringId) : null
   const targetId = offeringId || pickOffering || live?.offeringId || offerings[0]?.id || ''
   const offering = offerings.find((o) => o.id === targetId) ?? liveOffering

@@ -305,6 +305,7 @@ export type AthleteCoachNote = {
   authorName: string
   text: string
   createdAt: string
+  updatedAt?: string
   meetingId?: string
   lessonId?: string
   className?: string

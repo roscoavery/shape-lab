@@ -8,7 +8,6 @@ import {
   endClassMeeting,
   getActiveMeeting,
   getMeeting,
-  loadMeetings,
   hydrateCoachClasses,
   loadOfferings,
   markClassAttendance,
@@ -34,6 +33,7 @@ import {
 } from '../../lib/coachClasses'
 import { splitPersonName } from '../../lib/classStation'
 import { AssignClassHomework } from './AssignClassHomework'
+import { ClassRecapList } from './ClassRecapList'
 import { EndClassPrompt } from './EndClassPrompt'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
@@ -79,8 +79,7 @@ export function ClassSession({
     void hydrateCoachClasses().then(refresh)
   }, [])
 
-  const live = getActiveMeeting()
-  const recent = loadMeetings().filter((m) => m.endedAt).slice(0, 4)
+  const live = getActiveMeeting(coach.id)
   void tick
 
   useEffect(() => {
@@ -185,23 +184,13 @@ export function ClassSession({
             >
               {offerings.length ? 'Edit classes and rosters' : 'Add a class I teach'}
             </button>
-            {recent.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-                  Ended recently
-                </p>
-                <ul className="mt-2 space-y-1 text-sm text-white/65">
-                  {recent.map((m) => (
-                    <li key={m.id}>
-                      {classLabel(
-                        offeringFor(m.offeringId) ?? { name: 'Class', weekday: 'Monday', time: '' },
-                      )}{' '}
-                      · {m.attendees.length} athlete{m.attendees.length === 1 ? '' : 's'}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <ClassRecapList
+              athletes={athletes}
+              viewer={coach}
+              classInSession={Boolean(live)}
+              onAthletesChange={onAthletesChange}
+              title="Ended recently"
+            />
           </div>
         )}
 

@@ -58,7 +58,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
   )
 
   useEffect(() => {
-    const live = getActiveMeeting()
+    const live = getActiveMeeting(viewer?.id)
     const liveOffering = live ? offerings.find((o) => o.id === live.offeringId) : null
     const first = liveOffering ?? offerings[0]
     if (!first) return
@@ -74,7 +74,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
     scope === 'type'
       ? boardsForClassType(selectedType?.name)
       : boardsForOffering(offeringId)
-  const live = getActiveMeeting()
+  const live = getActiveMeeting(viewer.id)
 
   const post = () => {
     if (!selectedType) {

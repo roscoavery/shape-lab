@@ -83,6 +83,7 @@ type AthleteCoachNote = {
   authorName: string
   text: string
   createdAt: string
+  updatedAt?: string
   meetingId?: string
   lessonId?: string
   className?: string
@@ -336,9 +337,11 @@ function mergeCoachNotes(
   b: AthleteCoachNote[] | undefined,
 ): AthleteCoachNote[] | undefined {
   const byId = new Map<string, AthleteCoachNote>()
+  const stamp = (n: AthleteCoachNote) => n.updatedAt || n.createdAt || ''
   for (const row of [...(a ?? []), ...(b ?? [])]) {
     if (!row || typeof row.id !== 'string' || !row.id) continue
-    byId.set(row.id, row)
+    const keep = byId.get(row.id)
+    if (!keep || stamp(row) >= stamp(keep)) byId.set(row.id, { ...keep, ...row })
   }
   if (byId.size === 0) return a ?? b
   return [...byId.values()]

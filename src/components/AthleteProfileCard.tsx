@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Athlete, ProfileGesture } from '../types'
+import type { Athlete, AthleteCoachNote, ProfileGesture } from '../types'
 import { AthleteAvatar } from './AthleteAvatar'
 import { profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
-import { canWriteCoachNotes, visibleCoachNotes } from '../lib/athleteNotes'
+import {
+  canEditCoachNote,
+  canWriteCoachNotes,
+  groupNotesByAuthor,
+  updateCoachNote,
+  visibleCoachNotes,
+} from '../lib/athleteNotes'
+import { getActiveMeeting } from '../lib/coachClasses'
 import {
   canGiveHi5,
   isAthleteProfile,
@@ -102,6 +109,11 @@ export function AthleteProfileCard({
   const facts = profileFactLines(athlete)
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
+  const notesByCoach = groupNotesByAuthor(notes)
+  const classLive = Boolean(getActiveMeeting(viewer?.id))
+  const canEditNotes = Boolean(
+    viewer && onAthleteChange && canWriteCoachNotes(viewer) && !classLive,
+  )
   const privateOk = canSeePrivateCoaching(viewer, athlete)
   const writeNotes = privateOk && canWriteCoachNotes(viewer) && Boolean(onAddNote)
   const writeWin = canWriteCoachNotes(viewer) && Boolean(onAddWin)
@@ -488,27 +500,35 @@ export function AthleteProfileCard({
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Notes
           </p>
+          {classLive && coach && (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Class is running — add a note now. Edit after the hour ends.
+            </p>
+          )}
           {notes.length === 0 ? (
             <p className="mt-1 text-sm text-[var(--muted)]">No notes filed yet.</p>
           ) : (
-            <ul className="mt-2 space-y-2">
-              {notes.slice(0, 16).map((n) => (
-                <li key={n.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
-                  {n.topicLabel && (
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                      {n.topicLabel}
-                    </p>
-                  )}
-                  <p>{n.text}</p>
-                  <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                    {n.authorName}
-                    {n.className ? ` · ${n.className}` : ''}
-                    {' · '}
-                    {new Date(n.createdAt).toLocaleString()}
+            <div className="mt-2 flex flex-col gap-3">
+              {notesByCoach.map((group) => (
+                <div key={group.authorId}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    {group.authorName}
                   </p>
-                </li>
+                  <ul className="mt-1 space-y-2">
+                    {group.notes.slice(0, 16).map((n) => (
+                      <ProfileNoteRow
+                        key={n.id}
+                        note={n}
+                        athlete={athlete}
+                        viewer={viewer}
+                        canEdit={canEditNotes && Boolean(viewer && canEditCoachNote(viewer, n))}
+                        onAthleteChange={onAthleteChange}
+                      />
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       )}
@@ -652,6 +672,84 @@ function Stat({ n, label, onClick }: { n: number; label: string; onClick: () => 
       <span className="block text-lg font-bold leading-none">{n}</span>
       <span className="mt-1 block text-[10px] uppercase tracking-wider text-[var(--muted)]">{label}</span>
     </button>
+  )
+}
+
+function ProfileNoteRow({
+  note,
+  athlete,
+  viewer,
+  canEdit,
+  onAthleteChange,
+}: {
+  note: AthleteCoachNote
+  athlete: Athlete
+  viewer: Athlete | null
+  canEdit: boolean
+  onAthleteChange?: (next: Athlete) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(note.text)
+  return (
+    <li className="rounded-lg bg-black/25 px-3 py-2 text-sm">
+      {note.topicLabel && (
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+          {note.topicLabel}
+        </p>
+      )}
+      {editing ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={2}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-2 py-1.5 text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!text.trim() || !viewer || !onAthleteChange}
+              onClick={() => {
+                if (!viewer || !onAthleteChange) return
+                onAthleteChange(updateCoachNote(athlete, note.id, text, viewer))
+                setEditing(false)
+              }}
+              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-40"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setText(note.text)
+                setEditing(false)
+              }}
+              className="text-xs text-[var(--muted)] underline"
+            >
+              Keep
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p>{note.text}</p>
+      )}
+      <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+        {note.authorName}
+        {note.className ? ` · ${note.className}` : ''}
+        {' · '}
+        {new Date(note.updatedAt ?? note.createdAt).toLocaleString()}
+        {note.updatedAt ? ' · edited' : ''}
+      </p>
+      {canEdit && !editing && (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-1 text-[11px] font-semibold text-[var(--accent)] underline"
+        >
+          Edit
+        </button>
+      )}
+    </li>
   )
 }
 

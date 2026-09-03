@@ -622,7 +622,7 @@ export default function App() {
     </div>
   )
 
-  const liveClass = getActiveMeeting()
+  const liveClass = getActiveMeeting(activeAthleteId)
   const liveClassOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const ryanEdit = isRyanAthlete(
     athletes.find((a) => a.id === activeAthleteId) ?? null,
@@ -1067,10 +1067,10 @@ export default function App() {
           presetQuizTaker={quizPreset}
           preferredQuizIds={[
             ...new Set([
-              ...(getActiveMeeting()
+              ...(liveClass
                 ? [
-                    ...(getOffering(getActiveMeeting()!.offeringId)?.rosterIds ?? []),
-                    ...priorOfferingAthleteIds(getActiveMeeting()!.offeringId),
+                    ...(getOffering(liveClass.offeringId)?.rosterIds ?? []),
+                    ...priorOfferingAthleteIds(liveClass.offeringId),
                   ]
                 : []),
             ]),

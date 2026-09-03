@@ -52,7 +52,7 @@ export function ClassStopwatch({
 }: Props) {
   const [, setClassTick] = useState(0)
   useEffect(() => subscribeCoachClasses(() => setClassTick((n) => n + 1)), [])
-  const meeting = getActiveMeeting()
+  const meeting = getActiveMeeting(signedIn?.id)
   const offering = meeting ? getOffering(meeting.offeringId) : null
   const className = offering ? classLabel(offering) : undefined
   const present = useMemo(

@@ -215,6 +215,64 @@ function normalizeMeeting(raw: Partial<ClassMeeting>): ClassMeeting | null {
   }
 }
 
+function attendeeKey(row: ClassAttendee): string {
+  if (row.athleteId) return `id:${row.athleteId}`
+  return `name:${row.firstName.trim().toLowerCase()}|${row.lastName.trim().toLowerCase()}`
+}
+
+function combineMeetings(keep: ClassMeeting, incoming: ClassMeeting): ClassMeeting {
+  const incomingEnded = Boolean(incoming.endedAt)
+  const keepEnded = Boolean(keep.endedAt)
+  const newerEnded = incomingEnded && (!keepEnded || (incoming.endedAt || '') >= (keep.endedAt || ''))
+  const attendees = new Map<string, ClassAttendee>()
+  for (const row of [...keep.attendees, ...incoming.attendees]) {
+    const key = attendeeKey(row)
+    const have = attendees.get(key)
+    attendees.set(key, have ? { ...have, ...row, logged: Boolean(have.logged || row.logged) } : row)
+  }
+  const notes = new Map<string, (typeof keep.notes)[number]>()
+  for (const row of [...keep.notes, ...incoming.notes]) {
+    if (row?.id) notes.set(row.id, row)
+  }
+  return {
+    ...keep,
+    ...incoming,
+    id: keep.id,
+    offeringId: keep.offeringId || incoming.offeringId,
+    coachId: keep.coachId || incoming.coachId,
+    startedAt: keep.startedAt <= incoming.startedAt ? keep.startedAt : incoming.startedAt,
+    endedAt: newerEnded ? incoming.endedAt : keep.endedAt || incoming.endedAt,
+    attendees: [...attendees.values()],
+    notes: [...notes.values()],
+    attendanceLogged: incoming.attendanceLogged ?? keep.attendanceLogged,
+  }
+}
+
+function mergeMeetings(a: ClassMeeting[], b: ClassMeeting[]): ClassMeeting[] {
+  const byId = new Map<string, ClassMeeting>()
+  const put = (row: ClassMeeting) => {
+    const have = byId.get(row.id)
+    byId.set(row.id, have ? combineMeetings(have, row) : row)
+  }
+  for (const row of a) put(row)
+  for (const row of b) put(row)
+  return [...byId.values()]
+}
+
+export function listLiveMeetings(): ClassMeeting[] {
+  return read()
+    .meetings.filter((m) => !m.endedAt)
+    .slice()
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+}
+
+export function pickLiveMeetingId(meetings: ClassMeeting[], preferred?: string | null): string | null {
+  const live = meetings.filter((m) => !m.endedAt).sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  if (live.length === 0) return null
+  if (preferred && live.some((m) => m.id === preferred)) return preferred
+  return live[0]!.id
+}
+
 /** Profile Class nights — live “here tonight” and unlogged ends stay off. */
 export function attendeeCountsOnProfile(
   meeting: Pick<ClassMeeting, 'endedAt' | 'attendanceLogged'>,
@@ -584,18 +642,26 @@ export function getMeeting(id: string | null | undefined): ClassMeeting | null {
   return read().meetings.find((m) => m.id === id) ?? null
 }
 
-export function getActiveMeeting(_coachId?: string | null): ClassMeeting | null {
-  const file = read()
-  if (!file.activeMeetingId) return null
-  return file.meetings.find((m) => m.id === file.activeMeetingId && !m.endedAt) ?? null
+export function getActiveMeeting(coachId?: string | null): ClassMeeting | null {
+  const live = listLiveMeetings()
+  if (live.length === 0) return null
+  if (!coachId) return live[0] ?? null
+  const offerings = read().offerings
+  const mine = live.find((m) => {
+    const offering = offerings.find((o) => o.id === m.offeringId)
+    return offering ? offeringCoachIds(offering).includes(coachId) : false
+  })
+  return mine ?? live[0] ?? null
 }
 
 export function startClassMeeting(offering: CoachClassOffering): ClassMeeting {
   const file = read()
-  const open = file.activeMeetingId
-    ? file.meetings.find((m) => m.id === file.activeMeetingId && !m.endedAt)
-    : null
-  if (open) return open
+  const existing = file.meetings.find((m) => m.offeringId === offering.id && !m.endedAt)
+  if (existing) {
+    file.activeMeetingId = existing.id
+    write(file)
+    return existing
+  }
   const now = new Date().toISOString()
   const meeting: ClassMeeting = {
     id: createId('mtg'),
@@ -626,7 +692,7 @@ export function endClassMeeting(
     ...a,
     logged: log ? true : a.logged === true,
   }))
-  if (file.activeMeetingId === id) file.activeMeetingId = null
+  if (file.activeMeetingId === id) file.activeMeetingId = pickLiveMeetingId(file.meetings)
   write(file)
   return meeting
 }
@@ -833,17 +899,12 @@ export async function hydrateCoachClasses(): Promise<void> {
     ]
     const removed = new Set(removedOfferingIds)
     const offerings = mergeOfferings(local.offerings, remoteOfferings).filter((o) => !removed.has(o.id))
-    const meetings = mergeById(
+    const meetings = mergeMeetings(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
-      (m) => m.endedAt || m.startedAt,
     )
-    const live = local.activeMeetingId && meetings.some((m) => m.id === local.activeMeetingId && !m.endedAt)
-      ? local.activeMeetingId
-      : data.activeMeetingId && meetings.some((m) => m.id === data.activeMeetingId && !m.endedAt)
-        ? data.activeMeetingId
-        : local.activeMeetingId
-    write({ ...local, offerings, meetings, activeMeetingId: live ?? null, removedOfferingIds }, false)
+    const live = pickLiveMeetingId(meetings, data.activeMeetingId ?? local.activeMeetingId)
+    write({ ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds }, false)
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
     const next = read()
     const remoteById = new Map(remoteOfferings.map((o) => [o.id, o]))
@@ -862,10 +923,13 @@ export async function hydrateCoachClasses(): Promise<void> {
       )
     })
     const remoteRemoved = asIdList(data.removedOfferingIds)
+    const remoteLive = (data.meetings ?? []).filter((m) => m && !m.endedAt)
     if (
       needPush ||
       next.offerings.length !== remoteOfferings.filter((o) => !removed.has(o.id)).length ||
-      (next.removedOfferingIds ?? []).some((id) => !remoteRemoved.includes(id))
+      (next.removedOfferingIds ?? []).some((id) => !remoteRemoved.includes(id)) ||
+      (next.activeMeetingId && next.activeMeetingId !== data.activeMeetingId) ||
+      listLiveMeetings().length !== remoteLive.length
     ) {
       await pushCoachClasses()
     }
