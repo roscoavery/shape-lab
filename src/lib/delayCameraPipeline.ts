@@ -81,6 +81,78 @@ export function pickRecorderMime(): string | null {
   return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null
 }
 
+/** Human message when getUserMedia never opens a prompt or the stream fails. */
+export function cameraPermissionMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : ''
+  if (typeof window !== 'undefined' && window.isSecureContext === false) {
+    return 'This page is not HTTPS, so the browser will not start the camera. Open the gym link, then tap GO.'
+  }
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Camera permission is blocked. Click the camera icon in the address bar, allow it, then tap GO again.'
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No camera was found on this computer. Plug one in, then tap GO again.'
+  }
+  if (name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError') {
+    return 'Another app is using the camera. Close Zoom, Meet, or Photo Booth, then tap GO again.'
+  }
+  if (err instanceof Error && err.message) return err.message
+  return 'Could not access the camera. Allow camera, then tap GO again.'
+}
+
+/**
+ * Open the user-facing camera. Desktop Chrome often rejects `facingMode: user`
+ * without ever showing a permission prompt — try a bare `video: true` first
+ * there. iPad keeps the front-camera portrait constraints.
+ *
+ * getUserMedia is the first await so a tap still counts as a user gesture.
+ */
+export async function requestUserCamera(opts?: { portrait?: boolean }): Promise<MediaStream> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    throw new Error(
+      typeof window !== 'undefined' && window.isSecureContext === false
+        ? 'This page is not HTTPS, so the browser will not start the camera. Open the gym link.'
+        : 'This browser cannot open the camera. Allow camera access, then try again.',
+    )
+  }
+  const portrait = opts?.portrait ?? isIosDevice()
+  const attempts: MediaStreamConstraints[] = portrait
+    ? [
+        {
+          audio: false,
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
+            aspectRatio: { ideal: 9 / 16 },
+          },
+        },
+        { audio: false, video: { facingMode: { ideal: 'user' } } },
+        { audio: false, video: true },
+      ]
+    : [
+        { audio: false, video: true },
+        {
+          audio: false,
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        },
+        { audio: false, video: { facingMode: { ideal: 'user' } } },
+      ]
+  let lastErr: unknown = null
+  for (const constraints of attempts) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints)
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(cameraPermissionMessage(lastErr))
+}
+
 /** iPhone / Android: inline playback, no AirPlay hijack of ManagedMediaSource. */
 export function prepareDelayVideo(video: HTMLVideoElement | null) {
   if (!video) return

@@ -161,13 +161,18 @@ export function TasksWorkspace({
       : null
 
   useEffect(() => {
+    wasReady.current = false
+  }, [shape.id])
+
+  useEffect(() => {
     if (score.holdReady && !wasReady.current) {
       wasReady.current = true
       setHitKind('hit')
       setHitBurst((n) => n + 1)
     }
-    if (!score.holdReady) wasReady.current = false
-  }, [score.holdReady])
+    // Class flows: keep the one check. Tasks still re-fires when they leave and hit again.
+    if (!flowMode && !score.holdReady) wasReady.current = false
+  }, [score.holdReady, flowMode])
 
   useEffect(() => {
     if (liveUi?.liveKind === 'gotit' && !wasGotit.current) {
@@ -241,7 +246,7 @@ export function TasksWorkspace({
           {pipShapeName}
         </span>
       </div>
-      {!fullscreen && (
+      {!fullscreen && !flowMode && (
         <p className="px-3 py-1 text-[10px] leading-snug text-[var(--muted)]">
           Picture of this shape, not a photo match. Pick any still from the shape library or IG
           shapes below to overlay it on the camera.
@@ -273,7 +278,7 @@ export function TasksWorkspace({
     <div className="flex flex-col gap-3">
       <section className={`rounded-xl border border-[var(--accent)]/35 bg-[#121f1a] p-3 ${fullscreen ? 'hidden' : ''}`}>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          {flowMode ? 'Asked shape — still matches this name' : 'Hit this body position'}
+          {flowMode ? 'This shape' : 'Hit this body position'}
         </p>
         <h2 className="text-xl font-semibold text-[var(--text)]">{shape.name}</h2>
         {previewItems && previewItems.length > 0 && (
@@ -286,17 +291,16 @@ export function TasksWorkspace({
             {cueLine}
           </p>
         )}
+        {!flowMode && (
         <p className="mt-1 text-sm leading-snug text-[var(--text)] sm:text-base">
           {shape.bodyPosition ?? shape.description}
         </p>
+        )}
+        {!flowMode && (
         <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
-          {flowMode
-            ? 'The still is the shape we are naming right now. Live scores are notes — they do not stop the sequence. After you finish we write the grades.'
-            : 'Pass when this body position is true. The still is a picture of the idea — you do not have to match the photo.'}
+          {'Pass when this body position is true. The still is a picture of the idea — you do not have to match the photo.'}
           {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
-            ? flowMode
-              ? ' Starting and landing lunges and lever: this still is that shape.'
-              : ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open — open shoulders do not block the pass. Legs need 85%.'
+            ? ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open — open shoulders do not block the pass. Legs need 85%.'
             : ''}
           {shape.id === 'mountain_climber'
             ? ' Mountain climber: both knees bent, C upper body, reach forward and out — not a lunge.'
@@ -308,6 +312,7 @@ export function TasksWorkspace({
             ? ' Low V lunge: we look for the long line from the back foot to the shoulders, plus arms in a low V slightly back. A fake bent back knee from shorts does not block the pass.'
             : ''}
         </p>
+        )}
         {holding && !flowMode && (
           <p className="mt-2 text-base font-semibold text-[var(--good)]">Hold it.</p>
         )}
@@ -349,7 +354,7 @@ export function TasksWorkspace({
               className={fullscreen ? 'h-full min-h-0 flex-1' : ''}
               overlay={
                 <div className="pointer-events-none absolute inset-0 z-20">
-                  <HitCheckOverlay burst={hitBurst} kind={hitKind} holding={holding} />
+                  <HitCheckOverlay burst={hitBurst} kind={hitKind} holding={flowMode ? false : holding} />
 
                   {cueLine && (
                     <div className={`absolute inset-x-3 rounded-xl bg-black/65 px-3 py-2 text-center shadow-lg ${
@@ -416,7 +421,7 @@ export function TasksWorkspace({
                 </div>
               }
             />
-            {!fullscreen && (
+            {!fullscreen && !flowMode && (
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 Skeleton: green = that line is in, yellow = close, red = the correction.
                 Full screen puts delay cam bottom right and the reference bottom left.
@@ -438,7 +443,7 @@ export function TasksWorkspace({
             </div>
           )}
 
-          {!fullscreen && (
+          {!fullscreen && !flowMode && (
             <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
               <div className="flex items-end justify-between gap-2">
                 <div>

@@ -57,9 +57,9 @@ export function GymClipPlayer({
   const { nameForUrl } = useGymLibrary()
   const showShare = shareChrome ?? (fill && !bare)
   const share = showShare ? (
-    <div className="pointer-events-auto absolute left-2 top-2 z-30">
+    <div className="pointer-events-auto absolute right-2 bottom-[5.75rem] z-30 sm:bottom-24">
       <ShareReference
-        variant="reel"
+        variant="story"
         draft={clipShareDraft(nameForUrl(persist) || 'Reference clip', persist, loopA, loopB)}
       />
     </div>

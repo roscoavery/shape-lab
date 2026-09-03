@@ -190,7 +190,7 @@ export function PhoneReelViewer({
                       </div>
                       <div className="flex shrink-0 flex-col items-center gap-2">
                         <ShareReference
-                          variant="reel"
+                          variant="story"
                           draft={clipShareDraft(
                             clip.name,
                             clip.url,

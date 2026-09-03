@@ -42,6 +42,8 @@ import {
   pickRecorderMime,
   prepareDelayVideo,
   isIosDevice,
+  requestUserCamera,
+  cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
 import { IosDelayUnwind } from '../IosDelayUnwind'
 
@@ -405,37 +407,28 @@ export function CameraPane({
   const startCamera = async (): Promise<boolean> => {
     setError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: iosDelay
-          ? {
-              facingMode: 'user',
-              width: { ideal: 720 },
-              height: { ideal: 1280 },
-              aspectRatio: { ideal: 9 / 16 },
-            }
-          : {
-              facingMode: 'user',
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-      })
+      const stream = await requestUserCamera({ portrait: iosDelay })
       streamRef.current = stream
-      const video = liveVideoRef.current
-      if (!video) throw new Error('Video element missing')
+      let video = liveVideoRef.current
+      for (let i = 0; i < 40 && !video; i++) {
+        await new Promise((r) => window.setTimeout(r, 50))
+        video = liveVideoRef.current
+      }
+      if (!video) throw new Error('Camera view is not on screen. Stay on Replay cam and tap GO again.')
       prepareDelayVideo(video)
       prepareDelayVideo(delayVideoRef.current)
       video.srcObject = stream
-      await video.play()
+      try {
+        await video.play()
+      } catch {
+        await new Promise((r) => window.setTimeout(r, 120))
+        await video.play()
+      }
       setRunning(true)
       startRolling()
       return true
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Could not access camera. Allow camera permission and use HTTPS or localhost.',
-      )
+      setError(cameraPermissionMessage(err))
       setRunning(false)
       return false
     }

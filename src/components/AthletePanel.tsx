@@ -288,7 +288,7 @@ export function AthletePanel({
       )}
       {canSeeAllProfiles && onViewProfile && (
         <div className="mb-3 flex flex-wrap gap-2">
-          {athletes.slice(0, 24).map((a) => (
+          {athletes.map((a) => (
             <button
               key={a.id}
               type="button"

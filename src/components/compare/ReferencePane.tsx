@@ -1036,6 +1036,16 @@ export function ReferencePane({
     )
   }
 
+  const shareDraft =
+    activeItem?.url
+      ? clipShareDraft(
+          activeItem.name,
+          activeItem.url,
+          activeItem.trimStart,
+          activeItem.trimEnd,
+        )
+      : null
+
   const hudCorner =
     fullscreen && !pip ? (
       <>
@@ -1045,6 +1055,9 @@ export function ReferencePane({
         <HudCircle label={focus === 'split' ? 'Min' : 'Swap'} onClick={() => setFocus(focus === 'cam' ? 'ref' : 'cam')}>
           {focus === 'split' ? <IconPip /> : <IconSwap />}
         </HudCircle>
+        {shareDraft ? (
+          <ShareReference variant="story" draft={shareDraft} className="pointer-events-auto" />
+        ) : null}
       </>
     ) : null
 
@@ -1136,19 +1149,11 @@ export function ReferencePane({
           Full screen
         </button>
       )}
-      {!pip && activeItem?.url && (
-        <div className="absolute bottom-2 left-2 z-[40]">
-          <ShareReference
-            variant="reel"
-            draft={clipShareDraft(
-              activeItem.name,
-              activeItem.url,
-              activeItem.trimStart,
-              activeItem.trimEnd,
-            )}
-          />
+      {!pip && !fullscreen && activeItem?.url && shareDraft ? (
+        <div className="pointer-events-auto absolute right-2 top-2 z-[40]">
+          <ShareReference variant="story" draft={shareDraft} />
         </div>
-      )}
+      ) : null}
       {clipHudOpen && fill && !pip && (
         <div className="absolute inset-y-0 right-0 z-[50] flex w-[min(17.5rem,58%)] flex-col bg-black/92 text-white shadow-[-16px_0_40px_rgba(0,0,0,0.55)]">
           <div className="flex items-center justify-between px-3 pt-3">

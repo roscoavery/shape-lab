@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getPoseLandmarker, resultToLandmarks } from '../lib/pose'
 import { hintMotion } from '../lib/saveMedia'
+import { cameraPermissionMessage, requestUserCamera } from '../lib/delayCameraPipeline'
 import type { Landmark } from '../types'
 
 export type PoseCameraState = {
@@ -97,29 +98,7 @@ export function usePoseCamera(): PoseCameraState {
       setError(null)
       try {
         // getUserMedia must be the first await after the tap on iPad Safari.
-        const attempts: MediaStreamConstraints[] = [
-          {
-            audio: false,
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-          },
-          { audio: false, video: { facingMode: 'user' } },
-          { audio: false, video: true },
-        ]
-        let media: MediaStream | null = null
-        let lastErr: unknown = null
-        for (const constraints of attempts) {
-          try {
-            media = await navigator.mediaDevices.getUserMedia(constraints)
-            break
-          } catch (err) {
-            lastErr = err
-          }
-        }
-        if (!media) {
-          throw lastErr instanceof Error
-            ? lastErr
-            : new Error('Could not access camera. Allow camera, then tap Start again.')
-        }
+        const media = await requestUserCamera()
         streamRef.current = media
         setStream(media)
         hintMotion(media)
@@ -159,13 +138,9 @@ export function usePoseCamera(): PoseCameraState {
           )
         }
       } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : 'Could not access camera. Allow camera permission and use HTTPS.'
-        setError(msg)
+        setError(cameraPermissionMessage(err))
         setRunning(false)
-        throw err instanceof Error ? err : new Error(msg)
+        throw err instanceof Error ? err : new Error(cameraPermissionMessage(err))
       } finally {
         startLockRef.current = null
       }

@@ -18,7 +18,7 @@ import { publishStoryFromUrl } from '../../lib/stories'
 import { useClipEditor } from '../ClipWatchMeta'
 import { givenName } from '../../lib/classStation'
 
-type Variant = 'button' | 'compact' | 'reel' | 'row'
+type Variant = 'button' | 'compact' | 'reel' | 'row' | 'story'
 
 type Props = {
   draft: ChalkboardDraft
@@ -55,8 +55,10 @@ export function ShareReference({
   const athletesOnly = people.filter((a) => profileRole(a) === 'athlete')
   const coachesOnly = people.filter((a) => isCoachProfile(a))
 
-  const btnClass =
-    variant === 'reel'
+  const story = variant === 'story'
+  const btnClass = story
+    ? 'flex flex-col items-center gap-0.5 text-white'
+    : variant === 'reel'
       ? 'rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-black shadow-lg'
       : variant === 'compact' || variant === 'row'
         ? 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px] font-semibold text-[var(--accent)]'
@@ -328,11 +330,30 @@ export function ShareReference({
           else setTab('people')
         }}
         className={btnClass}
+        aria-label="Share"
       >
-        Share
+        {story ? (
+          <>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+              <SharePlaneIcon />
+            </span>
+            <span className="text-[10px] font-medium tracking-wide">Share</span>
+          </>
+        ) : (
+          'Share'
+        )}
       </button>
       {sheet}
     </div>
+  )
+}
+
+function SharePlaneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 2 11.4 12.6" />
+      <path d="M22 2 15 22l-3.6-8.4L3 10.2 22 2z" />
+    </svg>
   )
 }
 

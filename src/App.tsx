@@ -800,7 +800,8 @@ export default function App() {
       )}
 
       {tab === 'tasks2' && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
+          <div className="order-2 min-w-0 xl:order-1">
           <TasksWorkspace
             shape={shape}
             score={score}
@@ -825,14 +826,9 @@ export default function App() {
             holdSeconds={holdClock}
             holdSecondsRef={holdSecondsRef}
           />
+          </div>
 
-          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
-            <AthletePanel
-              athletes={athletes}
-              activeId={activeAthleteId}
-              onChangeAthletes={setAthleteRoster}
-              onSelect={requestSelectAthlete}
-            />
+          <div className="order-1 panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto xl:order-2">
             <Tasks2Panel
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}

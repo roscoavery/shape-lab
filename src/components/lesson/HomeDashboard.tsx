@@ -75,9 +75,7 @@ export function HomeDashboard({
   const [editing, setEditing] = useState<LessonPlan | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [unlockQuery, setUnlockQuery] = useState('')
-  const [unlockMore, setUnlockMore] = useState(false)
   const [lessonQuery, setLessonQuery] = useState('')
-  const [lessonMore, setLessonMore] = useState(false)
   const [pickHint, setPickHint] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -99,10 +97,16 @@ export function HomeDashboard({
 
   const filteredUnlock = useMemo(() => {
     const q = unlockQuery.trim().toLowerCase()
-    if (!q) return athletes
-    return athletes.filter((a) => a.name.toLowerCase().includes(q))
+    const list = [...athletes].sort((a, b) => a.name.localeCompare(b.name))
+    if (!q) return list
+    return list.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        (a.firstName ?? '').toLowerCase().includes(q) ||
+        (a.lastName ?? '').toLowerCase().includes(q) ||
+        roleLabel(a).toLowerCase().includes(q),
+    )
   }, [athletes, unlockQuery])
-  const visibleUnlock = unlockMore ? filteredUnlock : filteredUnlock.slice(0, 6)
 
   const filteredLesson = useMemo(() => {
     const q = lessonQuery.trim().toLowerCase()
@@ -113,7 +117,6 @@ export function HomeDashboard({
         roleLabel(a).toLowerCase().includes(q),
     )
   }, [roster, lessonQuery])
-  const visibleLesson = lessonMore ? filteredLesson : filteredLesson.slice(0, 6)
 
   const withAthletes = withIds
     .map((id) => roster.find((a) => a.id === id) ?? null)
@@ -145,11 +148,10 @@ export function HomeDashboard({
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           <h2 className="text-xl font-semibold">Unlock a profile</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Coaches start a lesson from here. Athletes see their notes, hold times,
-            and lesson videos. Open <strong className="text-[var(--text)]">More → Profiles</strong>{' '}
-            if you still need to create one.
+            Tap your name. {athletes.length > 0 ? `${athletes.length} on this gym.` : ''} Open{' '}
+            <strong className="text-[var(--text)]">More → Profiles</strong> to create one.
           </p>
-          {athletes.length > 6 && (
+          {athletes.length > 4 && (
             <input
               className="mt-4 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 text-sm"
               placeholder="Search a name"
@@ -157,8 +159,8 @@ export function HomeDashboard({
               onChange={(e) => setUnlockQuery(e.target.value)}
             />
           )}
-          <div className="mt-4 flex flex-col gap-2">
-            {visibleUnlock.map((a) => (
+          <div className="mt-4 flex max-h-[min(70vh,36rem)] flex-col gap-2 overflow-y-auto pr-0.5">
+            {filteredUnlock.map((a) => (
               <div
                 key={a.id}
                 className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
@@ -183,14 +185,8 @@ export function HomeDashboard({
               </div>
             ))}
           </div>
-          {filteredUnlock.length > 6 && (
-            <button
-              type="button"
-              onClick={() => setUnlockMore((v) => !v)}
-              className="mt-2 text-sm font-semibold text-[var(--accent)]"
-            >
-              {unlockMore ? 'Show less' : `Show ${filteredUnlock.length - 6} more`}
-            </button>
+          {filteredUnlock.length === 0 && athletes.length > 0 && (
+            <p className="mt-3 text-sm text-[var(--muted)]">No names match that search.</p>
           )}
           {athletes.length === 0 && (
             <p className="mt-3 text-sm text-[var(--muted)]">No profiles on this gym yet.</p>
@@ -426,7 +422,6 @@ export function HomeDashboard({
             onClick={() => {
               if (withAthletes.length === 0) {
                 setPickHint(true)
-                setLessonMore(true)
                 pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                 return
               }
@@ -471,8 +466,8 @@ export function HomeDashboard({
               value={lessonQuery}
               onChange={(e) => setLessonQuery(e.target.value)}
             />
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {visibleLesson.map((a) => (
+            <div className="mt-3 grid max-h-[min(50vh,24rem)] gap-2 overflow-y-auto sm:grid-cols-2">
+              {filteredLesson.map((a) => (
                 <div
                   key={a.id}
                   className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
@@ -504,14 +499,10 @@ export function HomeDashboard({
             {filteredLesson.length === 0 && (
               <p className="mt-2 text-sm text-[var(--muted)]">No names match that search.</p>
             )}
-            {filteredLesson.length > 6 && (
-              <button
-                type="button"
-                onClick={() => setLessonMore((v) => !v)}
-                className="mt-2 text-sm font-semibold text-[var(--accent)]"
-              >
-                {lessonMore ? 'Show less' : `Show ${filteredLesson.length - 6} more`}
-              </button>
+            {filteredLesson.length > 0 && (
+              <p className="mt-2 text-[11px] text-[var(--muted)]">
+                {filteredLesson.length} {filteredLesson.length === 1 ? 'person' : 'people'}
+              </p>
             )}
           </>
         )}

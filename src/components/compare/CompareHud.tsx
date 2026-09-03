@@ -64,6 +64,15 @@ export function HudRecord({
   )
 }
 
+export function IconShare() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 2 11.4 12.6" />
+      <path d="M22 2 15 22l-3.6-8.4L3 10.2 22 2z" />
+    </svg>
+  )
+}
+
 export function IconPhotos() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

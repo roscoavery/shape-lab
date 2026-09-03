@@ -23,6 +23,7 @@ import { loadCompareLibraries, saveCompareLibraries, type CompareLibraries } fro
 import {
   isAthleteRecord,
   mergeRosterLists,
+  restoreMissingAthletes,
   rosterListsFromUnknown,
   type RosterLists,
 } from '../../server/rosterMerge.ts'
@@ -193,11 +194,11 @@ export function applyRosterSnapshot(data: RosterBackup): {
   activeAthleteId: string | null
 } {
   const remote = rosterListsFromUnknown(data)
-  // A new phone is Ryan-only. Take the gym file as-is so empty localStorage
-  // cannot dilute profiles, notes, or homework that already live on the link.
+  // A new phone is Ryan-only. Take the gym file, then restore anyone who
+  // still has homework / libraries so a stale removed-id list cannot hide them.
   const merged = localHasGymRoster()
     ? mergeRosterLists(listsFromLocal(), remote)
-    : remote
+    : { ...remote, athletes: restoreMissingAthletes(remote) }
   const athletes = persistLists(merged)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('shape-lab-roster-applied'))
@@ -211,15 +212,25 @@ export function applyRosterSnapshot(data: RosterBackup): {
 }
 
 export async function pullServerRoster(): Promise<RosterBackup | null> {
-  try {
-    const res = await fetch('/api/roster')
-    if (!res.ok) return null
-    const data = (await res.json()) as RosterBackup
-    if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) return null
-    return data
-  } catch {
-    return null
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch('/api/roster', { cache: 'no-store' })
+      if (!res.ok) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+        continue
+      }
+      const data = (await res.json()) as RosterBackup
+      if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) return null
+      if (data.athletes.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+        continue
+      }
+      return data
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+    }
   }
+  return null
 }
 
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
