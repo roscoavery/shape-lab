@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import { listCollages, saveCollage, type Collage, type CollageSlot } from '../../lib/collages'
 import { ShareReference } from '../share/ShareReference'
 import { CollageStage } from '../classes/CollageStage'
+import { CollageBoardCard } from '../classes/CollageBoardCard'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { isCoachProfile } from '../../lib/profileRole'
 
@@ -92,29 +93,19 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
           No collages yet. Build one on Classes — up to six gym clips on one board.
         </p>
       ) : (
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
           {collages.slice(0, 6).map((c) => (
-            <li
-              key={c.id}
-              className="rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3"
-            >
-              <p className="truncate text-sm font-semibold">{c.name}</p>
-              <p className="text-[11px] text-[var(--muted)]">
-                {c.slots.length} panel{c.slots.length === 1 ? '' : 's'}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlaying(c)
-                    setFullscreen(true)
-                    setSavedNote(null)
-                  }}
-                  className="text-xs font-semibold text-[var(--accent)]"
-                >
-                  Play
-                </button>
-                {viewer && (
+            <li key={c.id}>
+              <CollageBoardCard
+                collage={c}
+                nameForUrl={nameForUrl}
+                onPlay={() => {
+                  setPlaying(c)
+                  setFullscreen(true)
+                  setSavedNote(null)
+                }}
+              >
+                {viewer ? (
                   <ShareReference
                     viewer={viewer}
                     variant="compact"
@@ -124,8 +115,8 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
                       collageId: c.id,
                     }}
                   />
-                )}
-              </div>
+                ) : null}
+              </CollageBoardCard>
             </li>
           ))}
         </ul>

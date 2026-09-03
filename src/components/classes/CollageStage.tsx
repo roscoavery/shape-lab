@@ -208,118 +208,122 @@ export function CollageStage({
           </button>
         </>
       ) : (
-        <>
-          <label className="flex items-center gap-1 text-[11px] text-white/70">
-            Seconds
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={exportSec}
-              onChange={(e) => setExportSec(clampExportSeconds(Number(e.target.value)))}
-              className="w-14 rounded-md border border-white/30 bg-black/40 px-1.5 py-1 text-xs text-white"
-            />
-          </label>
-          <div className="hidden flex-wrap gap-1 sm:flex">
-            {COLLAGE_EXPORT_PRESETS.map((s) => (
+        <div className="flex w-full flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onSaveBoard && (
               <button
-                key={s}
                 type="button"
-                onClick={() => setExportSec(s)}
-                className={`rounded-md px-1.5 py-1 text-[11px] ${
-                  exportSec === s
-                    ? 'bg-white text-black'
-                    : 'border border-white/30 text-white/80'
-                }`}
+                disabled={savingBoard}
+                onClick={onSaveBoard}
+                className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-black disabled:opacity-50"
               >
-                {s}s
+                {savingBoard ? 'Saving…' : 'Save collage'}
               </button>
-            ))}
+            )}
+            <button
+              type="button"
+              onClick={() => setHideTransport((v) => !v)}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                hideTransport
+                  ? 'bg-white text-black'
+                  : 'border border-white/30 text-white'
+              }`}
+            >
+              {hideTransport ? 'Show loops' : 'Hide controls'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onFullscreen(!fullscreen)}
+              className="rounded-md border border-white/30 px-2.5 py-1 text-xs"
+            >
+              {fullscreen ? 'Exit grid' : 'Full grid'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-white/30 px-2.5 py-1 text-xs"
+            >
+              Close
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void runExport()}
-            className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[#06281f]"
-          >
-            Save to Photos
-          </button>
-          {onSaveBoard && (
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1 text-[11px] text-white/70">
+              Seconds
+              <input
+                type="number"
+                min={1}
+                max={120}
+                value={exportSec}
+                onChange={(e) => setExportSec(clampExportSeconds(Number(e.target.value)))}
+                className="w-14 rounded-md border border-white/30 bg-black/40 px-1.5 py-1 text-xs text-white"
+              />
+            </label>
+            <div className="hidden flex-wrap gap-1 sm:flex">
+              {COLLAGE_EXPORT_PRESETS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setExportSec(s)}
+                  className={`rounded-md px-1.5 py-1 text-[11px] ${
+                    exportSec === s
+                      ? 'bg-white text-black'
+                      : 'border border-white/30 text-white/80'
+                  }`}
+                >
+                  {s}s
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              disabled={savingBoard}
-              onClick={onSaveBoard}
-              className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-black disabled:opacity-50"
+              onClick={() => void runExport()}
+              className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[#06281f]"
             >
-              {savingBoard ? 'Saving…' : 'Save collage'}
+              Save to Photos
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setHideTransport((v) => !v)}
-            className={`rounded-md px-2 py-1 text-xs font-semibold ${
-              hideTransport
-                ? 'bg-white text-black'
-                : 'border border-white/30 text-white'
-            }`}
-          >
-            {hideTransport ? 'Show loops' : 'Hide controls'}
-          </button>
-          {onEditVideos && (
+            {onEditVideos && (
+              <button
+                type="button"
+                onClick={onEditVideos}
+                className="rounded-md border border-white/30 px-2 py-1 text-xs"
+              >
+                Edit videos
+              </button>
+            )}
+            {onDuplicate && (
+              <button
+                type="button"
+                onClick={onDuplicate}
+                className="rounded-md border border-white/30 px-2 py-1 text-xs"
+              >
+                Duplicate
+              </button>
+            )}
+            <ShareReference
+              variant="reel"
+              draft={{ kind: 'collage', title: collage.name, collageId: collage.id }}
+            />
+            {fullscreen && (
+              <button
+                type="button"
+                onClick={() => setChrome(false)}
+                className="rounded-md border border-white/30 px-2 py-1 text-xs"
+              >
+                Hide
+              </button>
+            )}
             <button
               type="button"
-              onClick={onEditVideos}
-              className="rounded-md border border-white/30 px-2 py-1 text-xs"
+              onClick={() => {
+                setReelIndex(playingSlot ?? 0)
+                setReelOpen(true)
+              }}
+              className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-black"
             >
-              Edit videos
+              Watch reels
             </button>
-          )}
-          {onDuplicate && (
-            <button
-              type="button"
-              onClick={onDuplicate}
-              className="rounded-md border border-white/30 px-2 py-1 text-xs"
-            >
-              Duplicate
-            </button>
-          )}
-          <ShareReference
-            variant="reel"
-            draft={{ kind: 'collage', title: collage.name, collageId: collage.id }}
-          />
-          {fullscreen && (
-            <button
-              type="button"
-              onClick={() => setChrome(false)}
-              className="rounded-md border border-white/30 px-2 py-1 text-xs"
-            >
-              Hide
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setReelIndex(playingSlot ?? 0)
-              setReelOpen(true)
-            }}
-            className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-black"
-          >
-            Watch reels
-          </button>
-          <button
-            type="button"
-            onClick={() => onFullscreen(!fullscreen)}
-            className="rounded-md border border-white/30 px-2 py-1 text-xs"
-          >
-            {fullscreen ? 'Exit grid' : 'Full grid'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-white/30 px-2 py-1 text-xs"
-          >
-            Close
-          </button>
-        </>
+          </div>
+        </div>
       )}
     </div>
   )

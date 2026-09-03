@@ -3,6 +3,7 @@ import type { HomeworkItem, HomeworkLog, ReferencePhoto } from '../../types'
 import { homeworkTitle, homeworkTrackMode, isSequenceHomework } from '../../lib/homeworkLabel'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 import { ReferenceStill } from '../ReferenceStill'
+import { CoreDrillGuide } from './CoreDrillGuide'
 
 type Props = {
   assigned: HomeworkItem[]
@@ -53,18 +54,38 @@ function DrillCard({
   const best = bestHold(logs)
   const mode = homeworkTrackMode(item)
   const action = isSequenceHomework(item) ? 'Flow' : mode === 'hold' ? 'Train' : 'Log'
+  const [howOpen, setHowOpen] = useState(false)
 
   return (
     <article className="overflow-hidden rounded-2xl border border-white/10 bg-[#121820]">
       <button type="button" onClick={onPick} className="block w-full text-left">
         <div className="relative aspect-[4/3] bg-black">
-          <ReferenceStill
-            shapeId={item.shapeId}
-            photos={photos}
-            alt={title}
-            className="h-full w-full object-contain"
-            emptyLabel={title}
-          />
+          {item.autoKey === 'hollow' || item.shapeId.includes('hollow') ? (
+            <div className="grid h-full grid-cols-2">
+              <ReferenceStill
+                shapeId="seated_pike"
+                photos={photos}
+                alt="Pike (zombie arms)"
+                className="h-full w-full object-contain"
+                emptyLabel="Pike"
+              />
+              <ReferenceStill
+                shapeId={item.shapeId === 'hollow_arms_up' ? 'hollow_arms_up' : 'hollow_arms_down'}
+                photos={photos}
+                alt={title}
+                className="h-full w-full object-contain"
+                emptyLabel={title}
+              />
+            </div>
+          ) : (
+            <ReferenceStill
+              shapeId={item.shapeId}
+              photos={photos}
+              alt={title}
+              className="h-full w-full object-contain"
+              emptyLabel={title}
+            />
+          )}
         </div>
         <div className="px-3 pt-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
@@ -85,14 +106,34 @@ function DrillCard({
         >
           {action}
         </button>
-        <button
-          type="button"
-          onClick={onToggleLogs}
-          className="text-xs font-semibold text-white/60"
-        >
-          {logsOpen ? 'Hide times' : logs.length ? `${logs.length} log${logs.length === 1 ? '' : 's'}` : 'Times'}
-        </button>
+        <div className="flex items-center gap-3">
+          {item.source === 'auto' || item.notes ? (
+            <button
+              type="button"
+              onClick={() => setHowOpen((v) => !v)}
+              className="text-xs font-semibold text-white/60"
+            >
+              {howOpen ? 'Hide how' : 'How'}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onToggleLogs}
+            className="text-xs font-semibold text-white/60"
+          >
+            {logsOpen ? 'Hide times' : logs.length ? `${logs.length} log${logs.length === 1 ? '' : 's'}` : 'Times'}
+          </button>
+        </div>
       </div>
+      {howOpen ? (
+        <div className="border-t border-white/8 px-3 py-2">
+          {item.source === 'auto' ? (
+            <CoreDrillGuide item={item} photos={photos} />
+          ) : item.notes ? (
+            <p className="text-sm leading-relaxed text-white/70">{item.notes}</p>
+          ) : null}
+        </div>
+      ) : null}
       {logsOpen ? (
         <ul className="border-t border-white/8 px-3 py-2">
           {logs.length === 0 ? (

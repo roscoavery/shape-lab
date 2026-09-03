@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CollageStage } from './CollageStage'
+import { CollageBoardCard } from './CollageBoardCard'
 import { CollageClipPicker } from './CollageClipPicker'
 import {
   collageToShare,
@@ -744,79 +745,75 @@ function CollageList({
   onShare: (c: Collage) => void
   athlete: Athlete | null
 }) {
+  const [openMore, setOpenMore] = useState<string | null>(null)
+
   return (
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">{title}</h3>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-3 grid gap-3 sm:grid-cols-2">
         {collages.map((c) => (
-          <li
-            key={c.id}
-            className="flex flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3"
-          >
-            <div>
-              <p className="font-semibold text-[var(--text)]">{c.name}</p>
-              <p className="text-xs text-[var(--muted)]">
-                {c.slots.length} video{c.slots.length === 1 ? '' : 's'} ·{' '}
-                {c.slots.map((s) => nameForUrl(s.url)).join(', ')}
-              </p>
+          <li key={c.id}>
+            <CollageBoardCard collage={c} nameForUrl={nameForUrl} onPlay={() => onPlay(c)}>
               {c.copiedFromId ? (
-                <p className="mt-1 text-[11px] text-[var(--accent)]">
+                <p className="w-full text-[11px] text-[var(--accent)]">
                   {c.ownerId ? 'Copy in your class library' : 'Saved from the gym feed'}
                 </p>
               ) : null}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => onPlay(c)}
-                className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
-              >
-                Play
-              </button>
               {canEdit && (
                 <button
                   type="button"
                   onClick={() => onEdit(c)}
-                  className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+                  className="rounded-md border border-white/15 px-2.5 py-1 text-xs"
                 >
                   Edit
                 </button>
               )}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => onDuplicate(c)}
-                  className="rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs"
-                >
-                  Duplicate
-                </button>
-              )}
-              {canShare(c) && sharingId !== c.id && (
-                <button
-                  type="button"
-                  onClick={() => onShareStart(c)}
-                  className="rounded-md border border-[var(--accent-dim)] px-2.5 py-1 text-xs text-[var(--accent)]"
-                >
-                  Share to feed
-                </button>
-              )}
-              {athlete && (
-                <ShareReference
-                  viewer={athlete}
-                  variant="compact"
-                  draft={{ kind: 'collage', title: c.name, collageId: c.id }}
-                />
-              )}
-              {canManage(c) && (
-                <button
-                  type="button"
-                  onClick={() => onDelete(c)}
-                  className="rounded-md px-2.5 py-1 text-xs text-[var(--bad)]"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
+              <button
+                type="button"
+                onClick={() => setOpenMore((id) => (id === c.id ? null : c.id))}
+                className="rounded-md border border-white/15 px-2.5 py-1 text-xs"
+              >
+                {openMore === c.id ? 'Less' : 'More'}
+              </button>
+              {openMore === c.id ? (
+                <>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onDuplicate(c)}
+                      className="rounded-md border border-white/15 px-2.5 py-1 text-xs"
+                    >
+                      Duplicate
+                    </button>
+                  )}
+                  {canShare(c) && sharingId !== c.id && (
+                    <button
+                      type="button"
+                      onClick={() => onShareStart(c)}
+                      className="rounded-md border border-[var(--accent)]/40 px-2.5 py-1 text-xs text-[var(--accent)]"
+                    >
+                      Share to feed
+                    </button>
+                  )}
+                  {athlete && (
+                    <ShareReference
+                      viewer={athlete}
+                      variant="compact"
+                      draft={{ kind: 'collage', title: c.name, collageId: c.id }}
+                    />
+                  )}
+                  {canManage(c) && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(c)}
+                      className="rounded-md px-2.5 py-1 text-xs text-[var(--bad)]"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </>
+              ) : null}
+            </CollageBoardCard>
             {sharingId === c.id && (
               <div className="space-y-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-2">
                 <textarea

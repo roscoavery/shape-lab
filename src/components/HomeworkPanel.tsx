@@ -38,6 +38,7 @@ import {
 } from '../lib/careStore'
 import { FormStandardField } from './homework/FormStandardField'
 import { TrainPicker } from './homework/TrainPicker'
+import { CoreDrillGuide } from './homework/CoreDrillGuide'
 import { WristPrepNotice } from './homework/WristPrepNotice'
 import { RepSession } from './homework/RepSession'
 import { CarePanel } from './homework/CarePanel'
@@ -47,7 +48,7 @@ import { buildHomeworkItem, ensureHomeworkForPick } from '../lib/homeworkAssign'
 import { ExerciseSetLog, OTHER_EXERCISE } from './homework/ExerciseSetLog'
 import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
-import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
+import { CoachStillGallery } from './ReferenceStill'
 import {
   DEFAULT_FORM_STANDARD,
   HOLLOW_PROGRESS_TARGET_SECONDS,
@@ -470,48 +471,6 @@ function Sparkline({ values, target }: { values: number[]; target?: number }) {
         strokeWidth="1.5"
       />
     </svg>
-  )
-}
-
-/** Both hollow stills on the homework card — arms-up is labeled as gated. */
-function HollowPairRefs({
-  photos,
-  unlockedUp,
-}: {
-  photos: ReferencePhoto[]
-  unlockedUp: boolean
-}) {
-  return (
-    <div className="mt-2 grid grid-cols-2 gap-2">
-      <figure>
-        <div className="max-h-36 overflow-hidden rounded-md bg-[#0d1218]">
-          <ReferenceStill
-            shapeId="hollow_arms_down"
-            photos={photos}
-            alt="Hollow arms down"
-            className="max-h-36 w-full object-contain"
-          />
-        </div>
-        <figcaption className="mt-1 text-[11px] leading-snug text-[var(--text)]">
-          Arms down — do this first. Lower back flat, then feet lift.
-        </figcaption>
-      </figure>
-      <figure className={unlockedUp ? '' : 'opacity-75'}>
-        <div className="max-h-36 overflow-hidden rounded-md bg-[#0d1218]">
-          <ReferenceStill
-            shapeId="hollow_arms_up"
-            photos={photos}
-            alt="Hollow arms up"
-            className="max-h-36 w-full object-contain"
-          />
-        </div>
-        <figcaption className="mt-1 text-[11px] leading-snug text-[var(--warn)]">
-          {unlockedUp
-            ? 'Arms up — unlocked after a proper 1-minute arms-down hold.'
-            : 'Arms up — do not use until you can hold arms-down properly for 1 minute.'}
-        </figcaption>
-      </figure>
-    </div>
   )
 }
 
@@ -1713,11 +1672,8 @@ export function HomeworkPanel({
               </span>
             </p>
           )}
-          {activeItem.source === 'auto' && activeItem.autoKey === 'hollow' ? (
-            <HollowPairRefs
-              photos={referencePhotos}
-              unlockedUp={activeItem.shapeId === 'hollow_arms_up'}
-            />
+          {activeItem.source === 'auto' ? (
+            <CoreDrillGuide item={activeItem} photos={referencePhotos} />
           ) : (
             <div className="mb-2 overflow-hidden rounded-md border border-[var(--panel-border)] bg-[#0d1218]">
               <CoachStillGallery
@@ -2077,10 +2033,15 @@ export function HomeworkPanel({
                 </div>
               )}
 
+              {item.source === 'auto' && (
+                <div className="mt-2">
+                  <CoreDrillGuide item={item} photos={referencePhotos} />
+                </div>
+              )}
+
               {/* Hollow progression state */}
               {isHollowAuto && (
                 <div className="mt-2">
-                  <HollowPairRefs photos={referencePhotos} unlockedUp={!hollowStage1} />
                   {hollowStage1 ? (
                     <>
                       <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
@@ -2161,7 +2122,7 @@ export function HomeworkPanel({
                 />
               )}
               {isDrillHomework(item) && <DrillHomeworkCard item={item} />}
-              {item.notes && (
+              {item.notes && item.source !== 'auto' && (
                 <div className="mt-1">
                   <ExpandableNotes text={item.notes} previewLines={1} />
                 </div>
