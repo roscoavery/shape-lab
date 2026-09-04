@@ -1,5 +1,6 @@
 import { createId } from './storage'
 import type { CollageShare } from './collages'
+import { feedBlobPath, uploadGymMedia } from './mediaUpload'
 
 export const FEED_CAPTION_MAX = 800
 
@@ -144,26 +145,63 @@ export async function publishFeedPostResult(params: {
   const id = createId('post')
   const raw = params.blob.type || ''
   const mime = raw.includes('mp4') || raw.includes('quicktime') ? 'video/mp4' : 'video/webm'
-  const qs = new URLSearchParams({
-    id,
-    authorId: params.authorId,
-    caption: params.caption.slice(0, FEED_CAPTION_MAX),
-    taggedIds: params.taggedIds.join(','),
-    mime,
-    createdAt: new Date().toISOString(),
-    channels: (params.channels ?? ['gym']).join(','),
-    ...(params.sharedById ? { sharedById: params.sharedById } : {}),
-    ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
-  })
-  try {
-    const res = await fetch(`/api/feed?${qs.toString()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': mime },
-      body: params.blob,
+  const uploaded = await uploadGymMedia(feedBlobPath(id, mime), params.blob, mime)
+  if ('url' in uploaded) {
+    try {
+      const res = await fetch('/api/feed?kind=video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          kind: 'video',
+          id,
+          authorId: params.authorId,
+          caption: params.caption.slice(0, FEED_CAPTION_MAX),
+          taggedIds: params.taggedIds,
+          createdAt: new Date().toISOString(),
+          channels: params.channels ?? ['gym'],
+          mime,
+          url: uploaded.url,
+          sizeBytes: params.blob.size,
+          ...(params.sharedById ? { sharedById: params.sharedById } : {}),
+          ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
+        }),
+      })
+      return readFeedResponse(res)
+    } catch {
+      return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+    }
+  }
+  if (uploaded.direct) {
+    const qs = new URLSearchParams({
+      id,
+      authorId: params.authorId,
+      caption: params.caption.slice(0, FEED_CAPTION_MAX),
+      taggedIds: params.taggedIds.join(','),
+      mime,
+      createdAt: new Date().toISOString(),
+      channels: (params.channels ?? ['gym']).join(','),
+      ...(params.sharedById ? { sharedById: params.sharedById } : {}),
+      ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
     })
-    return readFeedResponse(res)
-  } catch {
-    return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+    try {
+      const res = await fetch(`/api/feed?${qs.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': mime },
+        body: params.blob,
+      })
+      return readFeedResponse(res)
+    } catch {
+      return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+    }
+  }
+  return {
+    post: null,
+    error:
+      uploaded.error && uploaded.error !== 'direct'
+        ? uploaded.error
+        : 'That clip is too big to post through this link. Try a shorter video from Photos.',
   }
 }
 

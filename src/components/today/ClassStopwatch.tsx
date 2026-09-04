@@ -17,7 +17,7 @@ import {
 } from '../../lib/classSessionLog'
 import type { ClassExtraExercise } from '../../types'
 import { makeClassExtra } from '../../lib/classExercises'
-import { publishTextPostResult } from '../../lib/feedPosts'
+import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
@@ -87,6 +87,7 @@ export function ClassStopwatch({
   const [skillText, setSkillText] = useState('')
   const [postWins, setPostWins] = useState(true)
   const [bigWin, setBigWin] = useState(false)
+  const [skillFile, setSkillFile] = useState<File | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const startRef = useRef<number | null>(null)
   const accRef = useRef(0)
@@ -281,13 +282,13 @@ export function ClassStopwatch({
 
   const logSkill = async () => {
     const text = skillText.trim()
-    if (!skillAthleteId || !text) {
-      setFlash('Pick the athlete and type what they did.')
+    if (!skillAthleteId || (!text && !skillFile)) {
+      setFlash('Pick the athlete and type what they did, or attach a clip.')
       return
     }
     const log = logClassSkillForAthlete({
       athleteId: skillAthleteId,
-      text,
+      text: text || 'Video win',
       className,
       meetingId: meeting?.id,
     })
@@ -295,19 +296,35 @@ export function ClassStopwatch({
     const who = athletes.find((a) => a.id === skillAthleteId)
     if (postWins && signedIn) {
       const channels: ('gym' | 'wins')[] = bigWin ? ['wins', 'gym'] : ['wins']
-      await publishTextPostResult({
-        authorId: skillAthleteId,
-        caption: text,
-        taggedIds: [skillAthleteId],
-        channels,
-        sharedById: signedIn.id,
-        sharedByName: coachShareLabel(signedIn),
-      })
+      const posted = skillFile
+        ? await publishFeedPostResult({
+            authorId: skillAthleteId,
+            caption: text,
+            taggedIds: [skillAthleteId],
+            blob: skillFile,
+            channels,
+            sharedById: signedIn.id,
+            sharedByName: coachShareLabel(signedIn),
+          })
+        : await publishTextPostResult({
+            authorId: skillAthleteId,
+            caption: text,
+            taggedIds: [skillAthleteId],
+            channels,
+            sharedById: signedIn.id,
+            sharedByName: coachShareLabel(signedIn),
+          })
+      if (!posted.post) {
+        setFlash(posted.error || 'Logged the skill, but the win post did not go through.')
+        setSkillText('')
+        return
+      }
     }
     setSkillText('')
+    setSkillFile(null)
     setFlash(
       postWins
-        ? `Logged for ${who?.name ?? 'them'} and posted to Wins${bigWin ? ' and the gym feed' : ''}.`
+        ? `Logged for ${who?.name ?? 'them'} and posted to Wins${bigWin ? ' and the gym feed' : ''}${skillFile ? ' with the clip' : ''}.`
         : `Logged for ${who?.name ?? 'them'} on homework as a class skill.`,
     )
   }
@@ -664,6 +681,18 @@ export function ClassStopwatch({
             placeholder="First standing back tuck · stuck the layout · cartwheel on a beam…"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
           />
+          <label className="cursor-pointer self-start rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">
+            Attach clip from Photos
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/*"
+              className="sr-only"
+              onChange={(e) => setSkillFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          {skillFile && (
+            <p className="text-xs text-[var(--muted)]">Clip: {skillFile.name}</p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

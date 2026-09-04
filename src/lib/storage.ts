@@ -647,6 +647,12 @@ export function loadHomeworkLogs(athleteId?: string): HomeworkLog[] {
   return athleteId ? all.filter((l) => l.athleteId === athleteId) : all
 }
 
+export function saveHomeworkLogs(logs: HomeworkLog[]) {
+  writeJson(HOMEWORK_LOGS_KEY, logs.slice(0, 1000))
+  emitHomework()
+  pushRosterSoon()
+}
+
 /** Newest first; capped at 1000 entries across all athletes. */
 export function addHomeworkLog(log: HomeworkLog): void {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])

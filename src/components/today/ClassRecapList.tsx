@@ -7,6 +7,7 @@ import {
   canWriteCoachNotes,
   groupNotesByAuthor,
   notesForMeeting,
+  relabelMeetingNotes,
 } from '../../lib/athleteNotes'
 import {
   attendeeLabel,
@@ -14,10 +15,16 @@ import {
   deleteClassMeeting,
   getOffering,
   loadMeetings,
+  loadOfferings,
+  markClassAttendance,
+  removeClassAttendance,
   resolveAttendeeAthletes,
+  setMeetingOffering,
   subscribeCoachClasses,
   type ClassMeeting,
 } from '../../lib/coachClasses'
+import { copyClassWorkToAthlete, relabelClassMeetingLogs } from '../../lib/classSessionLog'
+import { splitPersonName } from '../../lib/classStation'
 import { formatQuizScore, quizKindLabel } from '../../lib/quizGrades'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { AthleteName } from '../AthleteAvatar'
@@ -94,10 +101,45 @@ function ClassRecapCard({
 }) {
   const [open, setOpen] = useState(false)
   const [askDelete, setAskDelete] = useState(false)
+  const [addId, setAddId] = useState('')
+  const [flash, setFlash] = useState<string | null>(null)
   const offering = getOffering(meeting.offeringId)
+  const offerings = loadOfferings()
   const people = resolveAttendeeAthletes(meeting, athletes)
+  const presentIds = new Set(people.map((p) => p.id))
+  const addable = athletes
+    .filter((a) => a.role !== 'parent' && !presentIds.has(a.id))
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
   const guests = meeting.attendees.filter((row) => !row.athleteId)
   const when = new Date(meeting.endedAt ?? meeting.startedAt).toLocaleString()
+  const className = offering ? classLabel(offering) : undefined
+
+  const addAthleteToRecap = (athleteId: string) => {
+    const athlete = athletes.find((a) => a.id === athleteId)
+    if (!athlete) return
+    const parts = splitPersonName(athlete.name)
+    markClassAttendance({
+      athleteId: athlete.id,
+      firstName: athlete.firstName || parts.firstName,
+      lastName: athlete.lastName || parts.lastName,
+      source: 'manual',
+      meetingId: meeting.id,
+      logged: true,
+    })
+    const copied = copyClassWorkToAthlete({
+      meetingId: meeting.id,
+      athleteId: athlete.id,
+      className,
+      at: meeting.endedAt ?? meeting.startedAt,
+    })
+    setAddId('')
+    setFlash(
+      copied
+        ? `Logged ${athlete.name.split(' ')[0]} for this class and copied ${copied} hold${copied === 1 ? '' : 's'} / skill${copied === 1 ? '' : 's'}.`
+        : `Logged ${athlete.name.split(' ')[0]} for this class night.`,
+    )
+  }
 
   return (
     <li className="rounded-xl border border-[var(--panel-border)] bg-[#121820]">
@@ -121,6 +163,42 @@ function ClassRecapCard({
       </button>
       {open && (
         <div className="flex flex-col gap-2 border-t border-[var(--panel-border)] px-3 py-3">
+          {canEdit && (
+            <label className="text-xs text-[var(--muted)]">
+              Which class
+              <select
+                value={meeting.offeringId}
+                onChange={(e) => {
+                  const next = setMeetingOffering(meeting.id, e.target.value)
+                  if (!next) return
+                  const label = getOffering(next.offeringId)
+                    ? classLabel(getOffering(next.offeringId)!)
+                    : ''
+                  if (label) {
+                    relabelClassMeetingLogs(meeting.id, label)
+                    if (onAthletesChange) {
+                      onAthletesChange(relabelMeetingNotes(athletes, meeting.id, label))
+                    }
+                  }
+                }}
+                className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-black/30 px-2 text-sm text-[var(--text)]"
+              >
+                {offerings.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {classLabel(o)}
+                  </option>
+                ))}
+                {!offerings.some((o) => o.id === meeting.offeringId) && (
+                  <option value={meeting.offeringId}>{meeting.offeringId}</option>
+                )}
+              </select>
+            </label>
+          )}
+          {flash && (
+            <p className="rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2 text-xs font-semibold text-[var(--accent)]">
+              {flash}
+            </p>
+          )}
           {people.length === 0 && guests.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Nobody was marked here.</p>
           ) : null}
@@ -133,6 +211,14 @@ function ClassRecapCard({
               viewer={viewer}
               canEdit={canEdit}
               onAthletesChange={onAthletesChange}
+              onRemove={
+                canEdit
+                  ? () => {
+                      removeClassAttendance(meeting.id, person.id)
+                      setFlash(`${person.name.split(' ')[0]} is off this recap. Class holds already logged stay on their homework.`)
+                    }
+                  : undefined
+              }
             />
           ))}
           {guests.map((row) => (
@@ -140,6 +226,35 @@ function ClassRecapCard({
               {attendeeLabel(row, athletes)} — no profile, so no saved grades or notes.
             </p>
           ))}
+          {canEdit && addable.length > 0 && (
+            <div className="mt-1 flex flex-col gap-2 rounded-lg border border-white/10 bg-black/20 p-2">
+              <p className="text-xs text-[var(--muted)]">
+                Add someone who was here. That writes Class nights and copies holds already logged in this class.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={addId}
+                  onChange={(e) => setAddId(e.target.value)}
+                  className="h-10 min-w-[10rem] flex-1 rounded-lg border border-white/10 bg-black/30 px-2 text-sm"
+                >
+                  <option value="">Pick an athlete…</option>
+                  {addable.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!addId}
+                  onClick={() => addAthleteToRecap(addId)}
+                  className="h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+                >
+                  Add + log class
+                </button>
+              </div>
+            </div>
+          )}
           {askDelete ? (
             <div className="mt-2 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] p-3">
               <p className="text-sm font-semibold text-[var(--text)]">Delete this class recap?</p>
@@ -188,6 +303,7 @@ function AthleteRecap({
   viewer,
   canEdit,
   onAthletesChange,
+  onRemove,
 }: {
   athlete: Athlete
   meeting: ClassMeeting
@@ -195,6 +311,7 @@ function AthleteRecap({
   viewer: Athlete | null
   canEdit: boolean
   onAthletesChange?: (next: Athlete[]) => void
+  onRemove?: () => void
 }) {
   const tests = athlete.shapeTests ?? []
   const latest = tests[tests.length - 1]
@@ -204,9 +321,20 @@ function AthleteRecap({
 
   return (
     <article className="rounded-xl bg-black/25 p-3">
-      <p className="text-sm font-semibold">
-        <AthleteName athlete={athlete} size="sm" />
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold">
+          <AthleteName athlete={athlete} size="sm" />
+        </p>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-[11px] font-semibold text-[var(--muted)] underline"
+          >
+            Not here
+          </button>
+        )}
+      </div>
       <div className="mt-2 flex flex-col gap-2">
         <CollapsibleSection
           inset

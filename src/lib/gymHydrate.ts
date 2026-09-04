@@ -9,6 +9,7 @@ import { hydrateCoachContent } from './coachContentStore'
 import { listCollages } from './collages'
 import { listFeedPosts } from './feedPosts'
 import { LASTING_GYM_URL, isLastingGymOrigin } from './gymLink'
+import { rememberGymRevision, type GymRevisionStores } from './gymLive'
 import { hydrateIgStills } from './igStillStore'
 import { hydrateLessons } from './lessonStore'
 import { pullServerLibrary } from './libraryBackup'
@@ -26,6 +27,7 @@ import { hydrateTrainingEvents } from './trainingEvents'
 export type PersistInfo = {
   mode: 'blob' | 'disk' | 'tmp'
   lasting: boolean
+  revision?: { stores?: GymRevisionStores }
 }
 
 export type GymHydrateResult = RosterSyncResult & {
@@ -41,6 +43,7 @@ async function pullPersist(): Promise<PersistInfo | null> {
     if (!res.ok) return null
     const data = (await res.json()) as PersistInfo
     if (data?.mode !== 'blob' && data?.mode !== 'disk' && data?.mode !== 'tmp') return null
+    if (data.revision?.stores) rememberGymRevision(data.revision.stores)
     return data
   } catch {
     return null

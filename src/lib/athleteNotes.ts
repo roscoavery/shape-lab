@@ -70,6 +70,19 @@ export function updateCoachNote(
   }
 }
 
+export function relabelMeetingNotes(
+  athletes: Athlete[],
+  meetingId: string,
+  className: string,
+): Athlete[] {
+  return athletes.map((a) => ({
+    ...a,
+    coachNotes: (a.coachNotes ?? []).map((n) =>
+      n.meetingId === meetingId ? { ...n, className } : n,
+    ),
+  }))
+}
+
 export function applyCoachNoteUpdate(
   athletes: Athlete[],
   athleteId: string,

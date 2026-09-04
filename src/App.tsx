@@ -41,7 +41,7 @@ import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
-import { listFeedPosts, publishTextPostResult } from './lib/feedPosts'
+import { publishTextPostResult } from './lib/feedPosts'
 import { ClipEditProvider } from './components/ClipWatchMeta'
 import { NotifyBell } from './components/NotifyBell'
 import { splitPersonName } from './lib/classStation'
@@ -91,12 +91,12 @@ import {
   type AppTab,
 } from './lib/storage'
 import { hydrateGymAtBoot, localHasGymRoster, type PersistInfo } from './lib/gymHydrate'
+import { syncGymIfChanged } from './lib/gymLive'
 import {
   localRosterSnapshot,
   pushServerRoster,
   isServerRosterPushEnabled,
   shouldPushRoster,
-  syncRosterWithServer,
 } from './lib/rosterSync'
 import {
   getLessonPlan,
@@ -391,24 +391,17 @@ export default function App() {
   useEffect(() => {
     if (gymBoot !== 'ready') return
     const pull = () => {
-      void syncRosterWithServer().then((synced) => {
-        if (!synced.fromServer || synced.athletes.length === 0) return
-        setAthletes(ensureRyanInAthletes(synced.athletes))
+      void syncGymIfChanged((next) => {
+        if (next.length === 0) return
+        setAthletes(ensureRyanInAthletes(next))
       })
-      void hydrateCoachClasses()
-      void hydrateChalkboards()
-      void hydrateCoachContent()
-      void listFeedPosts()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('shape-lab-gym-pulled'))
-      }
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') pull()
     }
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('focus', pull)
-    const tick = window.setInterval(pull, 6_000)
+    const tick = window.setInterval(pull, 2_500)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('focus', pull)

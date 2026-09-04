@@ -16,6 +16,8 @@ import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 import {
   readRosterPhoto,
   readRosterPhotosFile,
+  sendRosterPhotoFile,
+  writeRosterPhotoBytes,
   writeRosterPhotosFile,
 } from './rosterPhotoStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
@@ -30,6 +32,7 @@ import {
 import {
   addCollageFeedPost,
   addFeedPostFromBody,
+  addFeedPostFromUrl,
   addTextFeedPost,
   deleteFeedPost,
   postsForClient,
@@ -61,7 +64,7 @@ import {
 import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
-import { persistMode } from './persist.ts'
+import { persistMode, readRevision } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
@@ -81,6 +84,9 @@ const API_PATHS = new Set([
   '/api/library',
   '/api/roster',
   '/api/roster-photos',
+  '/api/roster-photo-file',
+  '/api/revision',
+  '/api/media-token',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/persist',
@@ -185,7 +191,65 @@ export async function handleShapeLabApi(
     sendJson(res, 200, {
       mode,
       lasting: mode === 'blob' || mode === 'disk',
+      revision: await readRevision(),
     })
+    return true
+  }
+  if (path === '/api/revision') {
+    sendJson(res, 200, await readRevision())
+    return true
+  }
+  if (path === '/api/media-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+      sendJson(res, 501, { error: 'direct' })
+      return true
+    }
+    let body: { pathname?: string; contentType?: string } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not start that upload.' })
+      return true
+    }
+    const pathname = (body.pathname || '').trim()
+    if (
+      !pathname ||
+      pathname.includes('..') ||
+      !(pathname.startsWith('data/feed-blobs/') || pathname.startsWith('data/roster-photos/'))
+    ) {
+      sendJson(res, 400, { error: 'That upload path is not allowed.' })
+      return true
+    }
+    try {
+      const { generateClientTokenFromReadWriteToken } = await import('@vercel/blob/client')
+      const token = await generateClientTokenFromReadWriteToken({
+        pathname,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        allowedContentTypes: [
+          'video/mp4',
+          'video/webm',
+          'video/quicktime',
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/heic',
+        ],
+        maximumSizeInBytes: 80 * 1024 * 1024,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 31536000,
+      })
+      sendJson(res, 200, { token, pathname })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not start that upload.',
+      })
+    }
     return true
   }
   if (path === '/api/contacts' || path === '/api/contacts.csv') {
@@ -194,6 +258,13 @@ export async function handleShapeLabApi(
       return true
     }
     await sendContactsPage(req, res, path.endsWith('.csv') ? 'csv' : 'html')
+    return true
+  }
+  if (path === '/api/roster-photo-file') {
+    const photoId = url.searchParams.get('id') ?? ''
+    if (!(await sendRosterPhotoFile(photoId, res))) {
+      sendJson(res, 404, { error: 'Photo not found' })
+    }
     return true
   }
   if (path === '/api/roster-photos') {
@@ -211,6 +282,17 @@ export async function handleShapeLabApi(
       return true
     }
     if (req.method === 'PUT') {
+      const ct = String(req.headers['content-type'] || '').toLowerCase()
+      if (photoId && (ct.startsWith('image/') || ct === 'application/octet-stream')) {
+        const buf = await readRequestBuffer(req, 8 * 1024 * 1024)
+        const saved = await writeRosterPhotoBytes(photoId, buf, ct.startsWith('image/') ? ct : 'image/jpeg')
+        if (!saved) {
+          sendJson(res, 400, { error: 'Could not save that photo.' })
+          return true
+        }
+        sendJson(res, 200, { kind: 'shape-lab-roster-photo', id: photoId, ...saved })
+        return true
+      }
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeRosterPhotosFile(JSON.parse(body)))
       return true
@@ -402,6 +484,7 @@ export async function handleShapeLabApi(
         ct.includes('json') ||
         url.searchParams.get('kind') === 'collage' ||
         url.searchParams.get('kind') === 'text' ||
+        url.searchParams.get('kind') === 'video' ||
         url.searchParams.get('kind') === 'like' ||
         url.searchParams.get('kind') === 'hi5' ||
         url.searchParams.get('kind') === 'repost'
@@ -417,6 +500,9 @@ export async function handleShapeLabApi(
           channels?: unknown
           sharedById?: string
           sharedByName?: string
+          url?: string
+          mime?: string
+          sizeBytes?: number
         } = {}
         try {
           const raw = await readRequestBody(req)
@@ -463,6 +549,27 @@ export async function handleShapeLabApi(
             ...saved,
             url: saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : '',
           })
+          return true
+        }
+        if (kind === 'video') {
+          const saved = await addFeedPostFromUrl({
+            id: body.id ?? url.searchParams.get('id') ?? '',
+            authorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
+            caption: body.caption ?? url.searchParams.get('caption') ?? '',
+            taggedIds,
+            createdAt: body.createdAt,
+            mime: body.mime ?? url.searchParams.get('mime') ?? 'video/mp4',
+            url: body.url ?? url.searchParams.get('url') ?? '',
+            sizeBytes: body.sizeBytes,
+            channels: body.channels ?? url.searchParams.get('channels'),
+            sharedById: body.sharedById ?? url.searchParams.get('sharedById') ?? undefined,
+            sharedByName: body.sharedByName ?? url.searchParams.get('sharedByName') ?? undefined,
+          })
+          if (!saved) {
+            sendJson(res, 400, { error: 'Could not save that video win.' })
+            return true
+          }
+          sendJson(res, 200, { ...saved, url: saved.publicUrl || '' })
           return true
         }
         if (kind === 'text') {

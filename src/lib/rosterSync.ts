@@ -55,6 +55,8 @@ import {
   saveInjuryLogs,
   savePainJournal,
 } from './careStore'
+import { photoBlobPath, uploadGymMedia } from './mediaUpload'
+import { compressProfilePhoto, isPhotoUrl } from './profilePhoto'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -263,7 +265,9 @@ export async function pullServerRoster(): Promise<RosterBackup | null> {
 function photosFromSnapshot(athletes: Athlete[]): Record<string, string> {
   const photos: Record<string, string> = {}
   for (const a of athletes) {
-    if (a.photoDataUrl && a.photoDataUrl.startsWith('data:')) photos[a.id] = a.photoDataUrl
+    if (a.photoDataUrl && (a.photoDataUrl.startsWith('data:') || isPhotoUrl(a.photoDataUrl))) {
+      photos[a.id] = a.photoDataUrl
+    }
   }
   return photos
 }
@@ -273,56 +277,114 @@ function attachPhotos(athletes: Athlete[], photos: Record<string, string>): Athl
   return athletes.map((a) => {
     const incoming = photos[a.id]
     if (!incoming) return a
-    if (!a.photoDataUrl || incoming.length > a.photoDataUrl.length) return { ...a, photoDataUrl: incoming }
+    if (!a.photoDataUrl) return { ...a, photoDataUrl: incoming }
+    if (isPhotoUrl(incoming) && a.photoDataUrl.startsWith('data:')) {
+      return { ...a, photoDataUrl: incoming }
+    }
+    if (incoming.length > a.photoDataUrl.length) return { ...a, photoDataUrl: incoming }
     return a
   })
 }
 
+function photoUrlFromRow(id: string, raw: unknown, fallbackAt = ''): string | null {
+  if (typeof raw === 'string') {
+    if (isPhotoUrl(raw)) return raw
+    return null
+  }
+  if (raw && typeof raw === 'object' && 'url' in raw) {
+    const url = (raw as { url?: unknown }).url
+    if (typeof url === 'string' && isPhotoUrl(url)) return url
+  }
+  if (id) return `/api/roster-photo-file?id=${encodeURIComponent(id)}${fallbackAt ? `&v=${encodeURIComponent(fallbackAt)}` : ''}`
+  return null
+}
+
+/** Index of picture URLs — never downloads the image bytes into JavaScript. */
 export async function pullServerRosterPhotos(): Promise<Record<string, string>> {
   const photos: Record<string, string> = {}
   try {
-    const res = await fetch('/api/roster-photos', gymGetInit(20_000))
+    const res = await fetch('/api/roster-photos', gymGetInit(12_000))
     if (!res.ok) return {}
     const data = (await res.json()) as {
       kind?: string
-      photos?: Record<string, string>
+      exportedAt?: string
+      photos?: Record<string, unknown>
       ids?: string[]
     }
+    const at = typeof data.exportedAt === 'string' ? data.exportedAt : ''
     if (data?.photos) {
-      for (const [id, url] of Object.entries(data.photos)) {
-        if (id && typeof url === 'string' && url.startsWith('data:')) photos[id] = url
+      for (const [id, raw] of Object.entries(data.photos)) {
+        const url = photoUrlFromRow(id, raw, at)
+        if (id && url) photos[id] = url
       }
     }
-    const ids = [
-      ...new Set([
-        ...(Array.isArray(data.ids) ? data.ids : []),
-        ...Object.keys(photos),
-      ]),
-    ].filter((id) => typeof id === 'string' && id)
-    const missing = ids.filter((id) => !photos[id])
-    for (let i = 0; i < missing.length; i += 4) {
-      const batch = missing.slice(i, i + 4)
-      await Promise.all(
-        batch.map(async (id) => {
-          try {
-            const one = await fetch(
-              `/api/roster-photos?id=${encodeURIComponent(id)}`,
-              gymGetInit(25_000),
-            )
-            if (!one.ok) return
-            const row = (await one.json()) as { photo?: string }
-            if (typeof row.photo === 'string' && row.photo.startsWith('data:')) {
-              photos[id] = row.photo
-            }
-          } catch {
-            /* one missing picture must not block the rest */
-          }
-        }),
-      )
+    for (const id of Array.isArray(data.ids) ? data.ids : []) {
+      if (typeof id === 'string' && id && !photos[id]) {
+        photos[id] = `/api/roster-photo-file?id=${encodeURIComponent(id)}${at ? `&v=${encodeURIComponent(at)}` : ''}`
+      }
     }
     return photos
   } catch {
     return photos
+  }
+}
+
+async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
+  if (isPhotoUrl(photo)) {
+    try {
+      await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          kind: 'shape-lab-roster-photos',
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          photos: { [id]: photo },
+        }),
+      })
+    } catch {
+      /* index already has this URL on another device */
+    }
+    return photo
+  }
+  if (!photo.startsWith('data:')) return null
+  const blob = await compressProfilePhoto(photo)
+  if (!blob) return null
+  const uploaded = await uploadGymMedia(photoBlobPath(id), blob, 'image/jpeg')
+  if ('url' in uploaded) {
+    try {
+      await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          kind: 'shape-lab-roster-photos',
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          photos: { [id]: uploaded.url },
+        }),
+      })
+    } catch {
+      /* URL is already on Blob; index write can retry next push */
+    }
+    return uploaded.url
+  }
+  try {
+    const res = await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg' },
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: blob,
+    })
+    if (!res.ok) return null
+    const row = (await res.json()) as { url?: string }
+    return typeof row.url === 'string' ? row.url : `/api/roster-photo-file?id=${encodeURIComponent(id)}`
+  } catch {
+    return null
   }
 }
 
@@ -349,22 +411,19 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
       }
       lastServerAthleteCount = Math.max(lastServerAthleteCount, slim.athletes.length)
       if (Object.keys(photos).length > 0) {
-        await Promise.all(
-          Object.entries(photos).map(([id, photo]) =>
-            fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              cache: 'no-store',
-              credentials: 'same-origin',
-              body: JSON.stringify({
-                kind: 'shape-lab-roster-photos',
-                version: 1,
-                exportedAt: new Date().toISOString(),
-                photos: { [id]: photo },
-              }),
-            }).catch(() => null),
-          ),
+        const uploaded = await Promise.all(
+          Object.entries(photos).map(async ([id, photo]) => {
+            const url = await pushOnePhoto(id, photo)
+            return [id, url] as const
+          }),
         )
+        const nextUrls: Record<string, string> = {}
+        for (const [id, url] of uploaded) {
+          if (url) nextUrls[id] = url
+        }
+        if (Object.keys(nextUrls).length > 0) {
+          saveAthletes(attachPhotos(loadAthletes(), nextUrls))
+        }
       }
       return true
     } catch {
@@ -379,6 +438,15 @@ export type RosterSyncResult = {
   activeAthleteId: string | null
   fromServer: boolean
   error: string | null
+}
+
+export function attachPhotosToLocal(photos: Record<string, string>): Athlete[] {
+  const athletes = attachPhotos(ensureRyanInAthletes(loadAthletes()), photos)
+  saveAthletes(athletes)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('shape-lab-roster-applied'))
+  }
+  return athletes
 }
 
 export async function syncRosterWithServer(): Promise<RosterSyncResult> {

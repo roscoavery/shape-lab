@@ -1,25 +1,36 @@
-import { readJson, readText, removeFile, writeJson, writeText } from './persist.ts'
+import type { ServerResponse } from 'node:http'
+import { readBin, readJson, readText, removeFile, writeJson, writePublicBin } from './persist.ts'
 
 const FILE = 'data/roster-photos.json'
 
+export type PhotoRef = {
+  url: string
+  mime: string
+  updatedAt: string
+}
+
 export type DiskRosterPhotos = {
   kind: 'shape-lab-roster-photos'
-  version: 1
+  version: 1 | 2
   exportedAt: string
-  photos: Record<string, string>
+  photos: Record<string, string | PhotoRef>
   ids?: string[]
 }
 
 const EMPTY: DiskRosterPhotos = {
   kind: 'shape-lab-roster-photos',
-  version: 1,
+  version: 2,
   exportedAt: '',
   photos: {},
   ids: [],
 }
 
-function photoRel(id: string): string {
+function photoTextRel(id: string): string {
   return `data/roster-photos/${id}.txt`
+}
+
+function photoBinRel(id: string): string {
+  return `data/roster-photos/${id}.bin`
 }
 
 function safePhotoId(id: string): string | null {
@@ -29,98 +40,237 @@ function safePhotoId(id: string): string | null {
   return s
 }
 
-async function writeOne(id: string, url: string): Promise<void> {
-  await writeText(photoRel(id), url)
+function decodeDataUrl(url: string): { buf: Buffer; mime: string } | null {
+  const m = url.match(/^data:([^;]+);base64,(.+)$/s)
+  if (!m) return null
+  try {
+    return { mime: m[1] || 'image/jpeg', buf: Buffer.from(m[2], 'base64') }
+  } catch {
+    return null
+  }
 }
 
-async function readOne(id: string): Promise<string | null> {
-  const text = await readText(photoRel(id))
-  if (text && text.startsWith('data:')) return text
+function isHttpUrl(url: string): boolean {
+  return url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/api/')
+}
+
+function photoFileUrl(id: string, updatedAt: string): string {
+  return `/api/roster-photo-file?id=${encodeURIComponent(id)}&v=${encodeURIComponent(updatedAt)}`
+}
+
+function asRef(raw: string | PhotoRef | undefined, fallbackAt: string): PhotoRef | null {
+  if (!raw) return null
+  if (typeof raw === 'string') {
+    if (isHttpUrl(raw)) {
+      return { url: raw, mime: 'image/jpeg', updatedAt: fallbackAt }
+    }
+    return null
+  }
+  if (typeof raw.url === 'string' && raw.url && !raw.url.startsWith('data:')) {
+    return {
+      url: raw.url,
+      mime: raw.mime || 'image/jpeg',
+      updatedAt: raw.updatedAt || fallbackAt,
+    }
+  }
   return null
 }
 
-async function migrateCombined(data: DiskRosterPhotos): Promise<string[]> {
-  const ids = new Set<string>()
-  for (const id of Array.isArray(data.ids) ? data.ids : []) {
-    if (typeof id === 'string' && safePhotoId(id)) ids.add(id)
+async function writePhotoBytes(
+  id: string,
+  buf: Buffer,
+  mime: string,
+): Promise<PhotoRef> {
+  const updatedAt = new Date().toISOString()
+  const publicUrl = await writePublicBin(photoBinRel(id), buf, mime || 'image/jpeg')
+  return {
+    url: publicUrl || photoFileUrl(id, updatedAt),
+    mime: mime || 'image/jpeg',
+    updatedAt,
   }
-  let moved = false
-  if (data.photos && typeof data.photos === 'object') {
-    for (const [id, url] of Object.entries(data.photos)) {
-      const sid = safePhotoId(id)
-      if (!sid) continue
-      ids.add(sid)
-      if (typeof url === 'string' && url.startsWith('data:')) {
-        await writeOne(sid, url)
-        moved = true
-      }
-    }
+}
+
+async function migrateDataUrl(id: string, dataUrl: string): Promise<PhotoRef | null> {
+  const decoded = decodeDataUrl(dataUrl)
+  if (!decoded || decoded.buf.length < 32) return null
+  const ref = await writePhotoBytes(id, decoded.buf, decoded.mime)
+  try {
+    await removeFile(photoTextRel(id))
+  } catch {
+    /* leftover text is unused once the binary exists */
   }
-  if (moved) {
-    await writeJson(FILE, {
-      kind: 'shape-lab-roster-photos',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      photos: {},
-      ids: [...ids],
-    })
+  return ref
+}
+
+async function loadIndex(): Promise<DiskRosterPhotos> {
+  const data = await readJson<DiskRosterPhotos>(FILE, { ...EMPTY })
+  if (!data || data.kind !== 'shape-lab-roster-photos') return { ...EMPTY }
+  return {
+    ...EMPTY,
+    ...data,
+    photos: data.photos && typeof data.photos === 'object' ? data.photos : {},
+    ids: Array.isArray(data.ids) ? data.ids.filter((id): id is string => typeof id === 'string') : [],
   }
-  return [...ids]
+}
+
+async function persistIndex(photos: Record<string, PhotoRef>): Promise<DiskRosterPhotos> {
+  const next: DiskRosterPhotos = {
+    kind: 'shape-lab-roster-photos',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    photos,
+    ids: Object.keys(photos),
+  }
+  await writeJson(FILE, next)
+  return next
 }
 
 export async function listRosterPhotoIds(): Promise<string[]> {
-  const data = await readJson<DiskRosterPhotos>(FILE, { ...EMPTY })
-  return migrateCombined(data)
+  const data = await loadIndex()
+  const ids = new Set<string>()
+  for (const id of data.ids ?? []) {
+    if (safePhotoId(id)) ids.add(id)
+  }
+  for (const id of Object.keys(data.photos)) {
+    if (safePhotoId(id)) ids.add(id)
+  }
+  return [...ids]
 }
 
 export async function readRosterPhoto(id: string): Promise<string | null> {
   const sid = safePhotoId(id)
   if (!sid) return null
-  const one = await readOne(sid)
-  if (one) return one
-  const data = await readJson<DiskRosterPhotos>(FILE, { ...EMPTY })
-  const url = data.photos?.[sid]
-  return typeof url === 'string' && url.startsWith('data:') ? url : null
+  const data = await loadIndex()
+  const ref = asRef(data.photos[sid], data.exportedAt)
+  if (ref) return ref.url
+  const text = await readText(photoTextRel(sid))
+  if (text?.startsWith('data:')) {
+    const migrated = await migrateDataUrl(sid, text)
+    if (migrated) {
+      const photos = clientPhotoMap(data)
+      photos[sid] = migrated
+      await persistIndex(photos)
+      return migrated.url
+    }
+  }
+  return null
 }
 
-/** Index only — do not inline data URLs. iPhone Safari dies on the combined file. */
+function clientPhotoMap(data: DiskRosterPhotos): Record<string, PhotoRef> {
+  const photos: Record<string, PhotoRef> = {}
+  const at = data.exportedAt || new Date().toISOString()
+  const ids = new Set([...(data.ids ?? []), ...Object.keys(data.photos)])
+  for (const id of ids) {
+    const sid = safePhotoId(id)
+    if (!sid) continue
+    const ref = asRef(data.photos[sid], at)
+    if (ref) {
+      photos[sid] = ref
+      continue
+    }
+    photos[sid] = {
+      url: photoFileUrl(sid, at),
+      mime: 'image/jpeg',
+      updatedAt: at,
+    }
+  }
+  return photos
+}
+
+/** Index only — phones get URLs, never megabyte data URLs. */
 export async function readRosterPhotosFile(): Promise<DiskRosterPhotos> {
-  const ids = await listRosterPhotoIds()
+  const data = await loadIndex()
+  const photos = clientPhotoMap(data)
   return {
     kind: 'shape-lab-roster-photos',
-    version: 1,
-    exportedAt: '',
-    photos: {},
-    ids,
+    version: 2,
+    exportedAt: data.exportedAt,
+    photos,
+    ids: Object.keys(photos),
   }
 }
 
 export async function writeRosterPhotosFile(raw: unknown): Promise<DiskRosterPhotos> {
   const body = raw && typeof raw === 'object' ? (raw as DiskRosterPhotos) : EMPTY
   const incoming = body.photos && typeof body.photos === 'object' ? body.photos : {}
-  const ids = new Set(await listRosterPhotoIds())
-  for (const [id, url] of Object.entries(incoming)) {
+  const current = clientPhotoMap(await loadIndex())
+  for (const [id, value] of Object.entries(incoming)) {
     const sid = safePhotoId(id)
     if (!sid) continue
-    if (!url) {
-      ids.delete(sid)
-      await removeFile(photoRel(sid))
+    if (!value) {
+      delete current[sid]
+      await removeFile(photoBinRel(sid))
+      await removeFile(photoTextRel(sid))
       continue
     }
-    if (typeof url === 'string' && url.startsWith('data:')) {
-      await writeOne(sid, url)
-      ids.add(sid)
+    if (typeof value === 'string' && value.startsWith('data:')) {
+      const migrated = await migrateDataUrl(sid, value)
+      if (migrated) current[sid] = migrated
+      continue
+    }
+    if (typeof value === 'string' && isHttpUrl(value)) {
+      current[sid] = { url: value, mime: 'image/jpeg', updatedAt: new Date().toISOString() }
+      continue
+    }
+    if (typeof value === 'object' && value && typeof value.url === 'string') {
+      if (value.url.startsWith('data:')) {
+        const migrated = await migrateDataUrl(sid, value.url)
+        if (migrated) current[sid] = migrated
+      } else if (isHttpUrl(value.url)) {
+        current[sid] = {
+          url: value.url,
+          mime: value.mime || 'image/jpeg',
+          updatedAt: value.updatedAt || new Date().toISOString(),
+        }
+      }
     }
   }
-  const next: DiskRosterPhotos = {
-    kind: 'shape-lab-roster-photos',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    photos: {},
-    ids: [...ids],
+  return persistIndex(current)
+}
+
+export async function writeRosterPhotoBytes(
+  id: string,
+  buf: Buffer,
+  mime: string,
+): Promise<PhotoRef | null> {
+  const sid = safePhotoId(id)
+  if (!sid || !buf.length) return null
+  const ref = await writePhotoBytes(sid, buf, mime)
+  const current = clientPhotoMap(await loadIndex())
+  current[sid] = ref
+  await persistIndex(current)
+  return ref
+}
+
+export async function sendRosterPhotoFile(id: string, res: ServerResponse): Promise<boolean> {
+  const sid = safePhotoId(id)
+  if (!sid) return false
+  let buf = await readBin(photoBinRel(sid))
+  let mime = 'image/jpeg'
+  if (!buf) {
+    const text = await readText(photoTextRel(sid))
+    if (text?.startsWith('data:')) {
+      const migrated = await migrateDataUrl(sid, text)
+      if (migrated) {
+        const current = clientPhotoMap(await loadIndex())
+        current[sid] = migrated
+        await persistIndex(current)
+        buf = await readBin(photoBinRel(sid))
+        mime = migrated.mime
+      }
+    }
+  } else {
+    const data = await loadIndex()
+    const ref = asRef(data.photos[sid], data.exportedAt)
+    if (ref?.mime) mime = ref.mime
   }
-  await writeJson(FILE, next)
-  return next
+  if (!buf) return false
+  res.statusCode = 200
+  res.setHeader('Content-Type', mime)
+  res.setHeader('Content-Length', String(buf.length))
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+  res.end(buf)
+  return true
 }
 
 export function photosFromAthletes(athletes: unknown[]): Record<string, string> {
@@ -129,7 +279,9 @@ export function photosFromAthletes(athletes: unknown[]): Record<string, string> 
     if (!raw || typeof raw !== 'object') continue
     const row = raw as { id?: unknown; photoDataUrl?: unknown }
     if (typeof row.id !== 'string' || typeof row.photoDataUrl !== 'string') continue
-    if (row.photoDataUrl.startsWith('data:')) photos[row.id] = row.photoDataUrl
+    if (row.photoDataUrl.startsWith('data:') || isHttpUrl(row.photoDataUrl)) {
+      photos[row.id] = row.photoDataUrl
+    }
   }
   return photos
 }
@@ -141,7 +293,7 @@ export function attachRosterPhotos<T extends { id: string; photoDataUrl?: string
   return athletes.map((a) => {
     const incoming = photos[a.id]
     if (!incoming) return a
-    if (!a.photoDataUrl || incoming.length > a.photoDataUrl.length) {
+    if (!a.photoDataUrl || incoming.length > a.photoDataUrl.length || incoming.startsWith('http') || incoming.startsWith('/api/')) {
       return { ...a, photoDataUrl: incoming }
     }
     return a

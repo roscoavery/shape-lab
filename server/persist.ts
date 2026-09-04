@@ -128,11 +128,12 @@ export async function writeText(rel: string, text: string): Promise<void> {
   mem.set(rel, buf)
   if (useBlob()) {
     await writeBlob(rel, text, 'application/json')
-    return
+  } else {
+    const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(dest, text)
   }
-  const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
-  fs.mkdirSync(path.dirname(dest), { recursive: true })
-  fs.writeFileSync(dest, text)
+  await touchRevision(rel)
 }
 
 export async function readJson<T>(rel: string, fallback: T): Promise<T> {
@@ -200,6 +201,34 @@ export async function writeBin(rel: string, buf: Buffer, contentType: string): P
   fs.writeFileSync(dest, buf)
 }
 
+/**
+ * Profile pics and win clips need a URL the phone can load like any
+ * social app — not a multi-megabyte data URL stuffed through JSON.
+ */
+export async function writePublicBin(
+  rel: string,
+  buf: Buffer,
+  contentType: string,
+): Promise<string | null> {
+  assertDurableWrite()
+  mem.set(rel, buf)
+  if (useBlob()) {
+    const { put } = await import('@vercel/blob')
+    const result = await put(rel, buf, {
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType,
+      access: 'public',
+      cacheControlMaxAge: 31536000,
+    })
+    return typeof result.url === 'string' ? result.url : null
+  }
+  const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.writeFileSync(dest, buf)
+  return null
+}
+
 export async function removeFile(rel: string): Promise<void> {
   mem.delete(rel)
   if (useBlob()) {
@@ -217,4 +246,108 @@ export async function removeFile(rel: string): Promise<void> {
       /* ignore */
     }
   }
+}
+
+export type GymRevisionStores = {
+  roster: string
+  photos: string
+  feed: string
+  classes: string
+  content: string
+  chalkboards: string
+}
+
+export type GymRevision = {
+  kind: 'shape-lab-revision'
+  version: 1
+  stores: GymRevisionStores
+}
+
+const REV_FILE = 'data/revision.json'
+
+const FILE_TO_STORE: Record<string, keyof GymRevisionStores> = {
+  'data/roster.json': 'roster',
+  'data/roster-photos.json': 'photos',
+  'data/feed-posts.json': 'feed',
+  'data/coach-classes.json': 'classes',
+  'data/coach-content.json': 'content',
+  'data/chalkboards.json': 'chalkboards',
+}
+
+function emptyRevision(): GymRevision {
+  return {
+    kind: 'shape-lab-revision',
+    version: 1,
+    stores: {
+      roster: '',
+      photos: '',
+      feed: '',
+      classes: '',
+      content: '',
+      chalkboards: '',
+    },
+  }
+}
+
+let revMem: GymRevision | null = null
+
+function stampFromJson(text: string | null): string {
+  if (!text) return ''
+  try {
+    const row = JSON.parse(text) as { exportedAt?: unknown }
+    return typeof row.exportedAt === 'string' ? row.exportedAt : ''
+  } catch {
+    return ''
+  }
+}
+
+async function touchRevision(rel: string): Promise<void> {
+  const store = FILE_TO_STORE[rel]
+  if (!store) return
+  const now = new Date().toISOString()
+  const prev = revMem ?? emptyRevision()
+  const next: GymRevision = {
+    kind: 'shape-lab-revision',
+    version: 1,
+    stores: { ...emptyRevision().stores, ...prev.stores, [store]: now },
+  }
+  revMem = next
+  const buf = Buffer.from(JSON.stringify(next) + '\n', 'utf8')
+  mem.set(REV_FILE, buf)
+  if (useBlob()) {
+    try {
+      await writeBlob(REV_FILE, buf.toString('utf8'), 'application/json')
+    } catch {
+      /* next poll still has this instance's stamp */
+    }
+    return
+  }
+  const dest = canWrite(path.dirname(diskPath(REV_FILE))) ? diskPath(REV_FILE) : tmpPath(REV_FILE)
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.writeFileSync(dest, buf)
+}
+
+export async function readRevision(): Promise<GymRevision> {
+  const stored = await readJson<GymRevision>(REV_FILE, emptyRevision())
+  const stores: GymRevisionStores = { ...emptyRevision().stores, ...(stored.stores ?? {}) }
+  const hasAny = Object.values(stores).some(Boolean)
+  if (!hasAny) {
+    const [roster, photos, feed, classes, content, chalkboards] = await Promise.all([
+      readText('data/roster.json'),
+      readText('data/roster-photos.json'),
+      readText('data/feed-posts.json'),
+      readText('data/coach-classes.json'),
+      readText('data/coach-content.json'),
+      readText('data/chalkboards.json'),
+    ])
+    stores.roster = stampFromJson(roster)
+    stores.photos = stampFromJson(photos)
+    stores.feed = stampFromJson(feed)
+    stores.classes = stampFromJson(classes)
+    stores.content = stampFromJson(content)
+    stores.chalkboards = stampFromJson(chalkboards)
+  }
+  const next: GymRevision = { kind: 'shape-lab-revision', version: 1, stores }
+  revMem = next
+  return next
 }

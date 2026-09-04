@@ -12,6 +12,8 @@ import {
   ensureAutoHomework,
   homeworkDedupeKey,
   loadAllHomework,
+  loadHomeworkLogs,
+  saveHomeworkLogs,
 } from './storage'
 import type { ClassExtraExercise, HomeworkItem, HomeworkLog } from '../types'
 
@@ -278,4 +280,94 @@ export function logClassSkillForAthlete(opts: {
   }
   addHomeworkLog(log)
   return log
+}
+
+function classWorkKey(log: HomeworkLog): string {
+  return [
+    log.kind ?? '',
+    log.shapeId,
+    String(log.totalHoldSeconds ?? 0),
+    String(log.reps ?? ''),
+    String(log.sets ?? ''),
+    log.side ?? '',
+    (log.journal ?? '').trim(),
+    log.sourceLabel ?? '',
+  ].join('|')
+}
+
+function homeworkForCopiedLog(athleteId: string, src: HomeworkLog): HomeworkItem | null {
+  const all = loadAllHomework()
+  const srcHw = all.find((h) => h.id === src.homeworkId)
+  if (srcHw?.autoKey) {
+    return ensureAutoHomework(athleteId).find((h) => h.autoKey === srcHw.autoKey) ?? null
+  }
+  if (srcHw?.catalogId) return ensureCatalogHomework(athleteId, srcHw.catalogId)
+  if (src.kind === 'journal' || srcHw?.customLabel === CLASS_SKILLS_TITLE) {
+    return ensureClassSkillsHomework(athleteId)
+  }
+  if (srcHw) {
+    return ensureExtraHomework(athleteId, {
+      id: srcHw.id,
+      kind: srcHw.catalogId ? 'catalog' : srcHw.shapeId.startsWith('custom:') ? 'custom' : 'shape',
+      refId: srcHw.catalogId || srcHw.shapeId,
+      label: srcHw.customLabel || src.sourceLabel || srcHw.shapeId,
+      trackMode: srcHw.trackMode === 'hold' || src.kind === 'hold' ? 'hold' : 'reps',
+    })
+  }
+  return ensureClassSkillsHomework(athleteId)
+}
+
+/** Give a late add the holds / reps / skills already logged on this class. */
+export function copyClassWorkToAthlete(opts: {
+  meetingId: string
+  athleteId: string
+  className?: string
+  at?: string
+}): number {
+  const logs = loadHomeworkLogs().filter((l) => l.classMeetingId === opts.meetingId)
+  const mine = new Set(logs.filter((l) => l.athleteId === opts.athleteId).map(classWorkKey))
+  const templates = new Map<string, HomeworkLog>()
+  for (const log of logs) {
+    if (log.athleteId === opts.athleteId) continue
+    const key = classWorkKey(log)
+    if (!templates.has(key)) templates.set(key, log)
+  }
+  let n = 0
+  const at = opts.at || new Date().toISOString()
+  for (const src of templates.values()) {
+    const key = classWorkKey(src)
+    if (mine.has(key)) continue
+    const hw = homeworkForCopiedLog(opts.athleteId, src)
+    if (!hw) continue
+    addHomeworkLog({
+      ...src,
+      id: createId('hwlog'),
+      athleteId: opts.athleteId,
+      homeworkId: hw.id,
+      shapeId: hw.shapeId,
+      date: at,
+      loggedFrom: 'class',
+      classMeetingId: opts.meetingId,
+      ...(opts.className ? { className: opts.className } : {}),
+    })
+    n += 1
+  }
+  return n
+}
+
+export function relabelClassMeetingLogs(meetingId: string, className: string): number {
+  const all = loadHomeworkLogs()
+  let n = 0
+  const next = all.map((log) => {
+    if (log.classMeetingId !== meetingId) return log
+    n += 1
+    const base = (log.sourceLabel || '').replace(/\s*\([^)]*\)\s*$/, '')
+    return {
+      ...log,
+      className,
+      sourceLabel: base ? `${base} (${className})` : classLabel(log.kind || 'class', className),
+    }
+  })
+  if (n > 0) saveHomeworkLogs(next)
+  return n
 }

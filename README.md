@@ -13,7 +13,7 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 - **Chalkboard** opens on Today while a class is running (show more / show less / full screen — it does not take over the page). Coaches pin a looped clip, shape still, IG still, drill, drill list, or collage onto a class type (Connections, Elevate, Reps w/ Logan, or a class they create with a name and time). Erase takes it off. Pin ahead of time so the board is ready before class starts.
 - **Share** on every reel and shape view — Compare, Learn scroll, full-screen reels, the shape library, IG stills, drills, and collages. The same sheet posts to a class chalkboard, sends the reference to an athlete or a coach, or posts it on the gym feed.
 - **Feed** thoughts, accomplishment clips, and shared class collages — video is optional; coaches tag athletes, athletes tag their coach. Type `@handle` or `@"Full Name"` in a story, feed post, or win to tag a profile. Instagram @ on a profile is also the Shape Lab handle unless they set a different one. Instagram-style **stories** sit at the top for 24 hours (same rings as Learn → Reference scroll). **Highlights** — stories you save so they stay — only show on a profile. Anyone signed in as an athlete or coach can **high-five** the athlete on a post (not themselves). They see “You high-fived Ellie”; the athlete gets an alert.
-- **Wins** a separate spam-friendly feed for firsts and small hits, with a **big win** checkbox to also post on the gym feed. When a coach logs a win it still belongs to the athlete, with **shared by Coach Ryan** (or whichever coach posted it). High-five works the same as on the gym feed.
+- **Wins** a separate spam-friendly feed for firsts and small hits, with a **big win** checkbox to also post on the gym feed. Attach a clip from Photos on the class clock or the Wins composer. When a coach logs a win it still belongs to the athlete, with **shared by Coach Ryan** (or whichever coach posted it). High-five works the same as on the gym feed.
 - **My profile** (Today) — add or take a photo, answer the class-station questions, plus twist direction, dominant hand, and skate stance. Answers sync into Research.
 - **Public profiles** — Instagram-style layout unique to Shape Lab: photo with a story ring, handle, and tabs for **Posts**, **Passes**, and **Stories**. A pass is a short vertical clip (our word for a reel / Short). Only what that person posted or reposted shows. They can share a story, a feed post, or a pass from their own page. Highlights stay under the header. Athletes and coaches can high-five that athlete. Coaches can also fist bump. Coaches see notes they wrote; gym admin sees every note. Class and lesson desks keep those notes on the athlete after class ends. Parent profiles show who their athlete is.
 - **Parents** select their athlete on Profiles. Coaches see that link. Parents can open that kid’s wins, homework, and lessons without unlocking the child’s passcode, and they can **add and log homework** on that athlete.
@@ -112,9 +112,14 @@ On the **same Production URL**, with Blob connected, every device shares:
 
 - New athlete profiles and later edits (name, gyms, laterality, photos, coach notes)
 - Homework items and every logged activity (including class-clock holds)
-- Feed and Wins posts
+- Feed and Wins posts — **video wins upload straight to Blob**, then the post is just a URL. Phone clips used to die on Vercel’s ~4.5MB request limit.
+- Profile pictures as real image URLs (phones load them like any social app; they are not stuffed through JSON)
 - Videos the app records or uploads (delay cam, compare, lesson, feed)
 - Lessons, class meetings, research, Compare library, and shape-library crops
+
+Edits land through a cheap `/api/revision` check every few seconds. Only the store that changed is pulled — add, edit, or delete on the iPad and the phone should show it without a full reload.
+
+After a class ends, **Class recaps** can change which class it was and who was there. Adding someone who was not marked present still writes Class nights and copies holds / skills already logged in that class.
 
 Unlock/passcode stays on that phone. The records themselves are gym-wide. Preview or tunnel links are different origins and do not share that store.
 

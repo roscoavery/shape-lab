@@ -22,6 +22,8 @@ export type DiskFeedPost = {
   mime: string
   sizeBytes: number
   file?: string
+  /** Public Blob URL when the phone uploaded the clip itself. */
+  publicUrl?: string
   kind?: 'video' | 'collage' | 'text'
   collage?: DiskCollageShare
   channels?: ('gym' | 'wins' | 'passes')[]
@@ -82,7 +84,7 @@ function isFeedPost(p: unknown): p is DiskFeedPost {
   if (typeof row.id !== 'string') return false
   if (row.kind === 'collage' || row.collage) return Boolean(row.collage)
   if (row.kind === 'text') return Boolean((row.caption || '').trim())
-  return typeof row.file === 'string'
+  return typeof row.file === 'string' || typeof row.publicUrl === 'string'
 }
 
 function mergePosts(existing: DiskFeedPost[], incoming: DiskFeedPost[]): DiskFeedPost[] {
@@ -149,7 +151,7 @@ export async function postsForClient(): Promise<Array<DiskFeedPost & { url: stri
           : p.kind === 'text' || (!p.file && (p.caption || '').trim())
             ? 'text'
             : 'video',
-      url: p.file ? `/api/feed-file?id=${encodeURIComponent(p.id)}` : '',
+      url: p.publicUrl || (p.file ? `/api/feed-file?id=${encodeURIComponent(p.id)}` : ''),
     }))
 }
 
@@ -189,7 +191,10 @@ export async function addFeedPostFromBody(params: {
   const id = safeId(params.id)
   const authorId = safeId(params.authorId)
   if (!id || !authorId || !params.buf.length || params.buf.length > MAX_BYTES) return null
-  const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
+  const mime =
+    params.mime.includes('mp4') || params.mime.includes('quicktime')
+      ? 'video/mp4'
+      : 'video/webm'
   const file = `${id}${extForMime(mime)}`
   await writeBin(blobRel(file), params.buf, mime)
   const taggedIds = params.taggedIds
@@ -220,6 +225,56 @@ export async function addFeedPostFromBody(params: {
     if (!drop.file) continue
     await removeFile(blobRel(drop.file))
   }
+  await writeMeta(kept.slice(0, MAX_POSTS), meta.removedIds)
+  return post
+}
+
+export async function addFeedPostFromUrl(params: {
+  id: string
+  authorId: string
+  caption: string
+  taggedIds: string[]
+  createdAt?: string
+  mime: string
+  url: string
+  sizeBytes?: number
+  channels?: unknown
+  sharedById?: string
+  sharedByName?: string
+}): Promise<DiskFeedPost | null> {
+  const id = safeId(params.id)
+  const authorId = safeId(params.authorId)
+  const url = params.url.trim()
+  if (!id || !authorId || !url) return null
+  if (!/^https:\/\//i.test(url) && !url.startsWith('/api/')) return null
+  const mime = params.mime.includes('mp4') || params.mime.includes('quicktime')
+    ? 'video/mp4'
+    : params.mime.includes('webm')
+      ? 'video/webm'
+      : 'video/mp4'
+  const taggedIds = params.taggedIds
+    .map((x) => safeId(x))
+    .filter((x): x is string => Boolean(x))
+    .slice(0, 24)
+  const post: DiskFeedPost = {
+    id,
+    authorId,
+    caption: (params.caption || '').trim().slice(0, CAPTION_MAX),
+    createdAt: params.createdAt || new Date().toISOString(),
+    taggedIds,
+    mime,
+    sizeBytes: params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : 0,
+    publicUrl: url,
+    kind: 'video',
+    channels: cleanChannels(params.channels),
+    ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
+    ...(typeof params.sharedByName === 'string' && params.sharedByName.trim()
+      ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
+      : {}),
+  }
+  const meta = await readFeedFile()
+  if ((meta.removedIds ?? []).includes(id)) return post
+  const kept = mergePosts(meta.posts, [post])
   await writeMeta(kept.slice(0, MAX_POSTS), meta.removedIds)
   return post
 }

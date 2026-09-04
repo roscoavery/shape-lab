@@ -782,6 +782,17 @@ export function markClassAttendance(input: {
   return meeting
 }
 
+export function setMeetingOffering(meetingId: string, offeringId: string): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === meetingId)
+  const offering = file.offerings.find((o) => o.id === offeringId)
+  if (!meeting || !offering) return null
+  if (meeting.offeringId === offeringId) return meeting
+  meeting.offeringId = offeringId
+  write(file)
+  return meeting
+}
+
 export function removeClassAttendance(meetingId: string, athleteId: string): ClassMeeting | null {
   const file = read()
   const meeting = file.meetings.find((m) => m.id === meetingId)
