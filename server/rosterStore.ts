@@ -152,30 +152,29 @@ async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
 }
 
 export async function readRosterFile(): Promise<DiskRoster> {
-  const onDisk = await readRawRoster()
-  const merged = mergeRosterLists(
-    rosterListsFromUnknown(EMPTY),
-    rosterListsFromUnknown(onDisk),
-    await profileHints(),
-  )
-  const sameAthletes = JSON.stringify(onDisk.athletes) === JSON.stringify(merged.athletes)
-  const sameRemoved =
-    JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
-  const disk = !sameAthletes || !sameRemoved ? await persistMerged(merged) : listsToDisk(merged, onDisk.exportedAt)
-  const inline = photosFromAthletes(disk.athletes)
-  if (Object.keys(inline).length > 0) {
-    await writeRosterPhotosFile({
-      kind: 'shape-lab-roster-photos',
-      version: 1,
-      exportedAt: '',
-      photos: inline,
-    })
-  }
-  // Photos live on /api/roster-photos?id=. Inlining them here made the gym
-  // file too large for iPhone Safari and the phone never got past boot.
-  return {
-    ...disk,
-    athletes: stripRosterPhotos(disk.athletes as { photoDataUrl?: string }[]),
+  // GET must stay read-only. Migrating pictures here crashed Production
+  // with “Dynamic require of node:buffer” and the phone never got a roster.
+  try {
+    const onDisk = await readRawRoster()
+    const slimDisk: DiskRoster = {
+      ...onDisk,
+      athletes: stripRosterPhotos(onDisk.athletes as { photoDataUrl?: string }[]),
+    }
+    const merged = mergeRosterLists(
+      rosterListsFromUnknown(EMPTY),
+      rosterListsFromUnknown(slimDisk),
+      await profileHints(),
+    )
+    return {
+      ...listsToDisk(merged, slimDisk.exportedAt),
+      athletes: stripRosterPhotos(merged.athletes),
+    }
+  } catch {
+    const bundled = normalizeRoster(readDiskJson<DiskRoster>(FILE, { ...EMPTY }))
+    return {
+      ...bundled,
+      athletes: stripRosterPhotos(bundled.athletes as { photoDataUrl?: string }[]),
+    }
   }
 }
 
@@ -186,12 +185,16 @@ export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
   }
   const incomingPhotos = photosFromAthletes(parsed.athletes)
   if (Object.keys(incomingPhotos).length > 0) {
-    await writeRosterPhotosFile({
-      kind: 'shape-lab-roster-photos',
-      version: 1,
-      exportedAt: '',
-      photos: incomingPhotos,
-    })
+    try {
+      await writeRosterPhotosFile({
+        kind: 'shape-lab-roster-photos',
+        version: 2,
+        exportedAt: '',
+        photos: incomingPhotos,
+      })
+    } catch {
+      /* names still save if one picture write fails */
+    }
   }
   const slim: DiskRoster = {
     ...parsed,

@@ -460,25 +460,55 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
       error: 'Could not load the gym file from this URL.',
     }
   }
-  const photos = await pullServerRosterPhotos()
-  const withPics = {
-    ...server,
-    athletes: attachPhotos(server.athletes, photos),
-  }
-  const applied = applyRosterSnapshot(withPics)
+  const applied = applyRosterSnapshot(server)
   enableServerRosterPush()
   lastServerAthleteCount = Math.max(
     lastServerAthleteCount,
     applied.athletes.length,
     server.athletes.length,
   )
+  void pullServerRosterPhotos().then((photos) => {
+    if (Object.keys(photos).length === 0) return
+    attachPhotosToLocal(photos)
+  })
   const local = localRosterSnapshot()
   const serverIds = new Set((server.athletes ?? []).map((a) => a.id))
   const hasUnsaved =
     local.athletes.length > (server.athletes?.length ?? 0) ||
-    local.athletes.some((a) => !serverIds.has(a.id))
+    local.athletes.some((a) => !serverIds.has(a.id)) ||
+    local.athletes.some((a) => a.photoDataUrl?.startsWith('data:'))
   if (hasUnsaved) {
-    await pushServerRoster(local)
+    void pushServerRoster(local)
   }
   return { ...applied, fromServer: true, error: null }
+}
+
+/** iPad is the full gym — send names + every local picture to this URL. */
+export async function pushThisDeviceToGym(): Promise<{
+  ok: boolean
+  profiles: number
+  photos: number
+  error: string | null
+}> {
+  enableServerRosterPush()
+  const local = localRosterSnapshot()
+  const ok = await pushServerRoster(local)
+  const remaining = loadAthletes().filter((a) => a.photoDataUrl?.startsWith('data:'))
+  let photos = local.athletes.filter((a) => a.photoDataUrl).length - remaining.length
+  if (remaining.length > 0) {
+    for (const row of remaining) {
+      if (!row.photoDataUrl) continue
+      const url = await pushOnePhoto(row.id, row.photoDataUrl)
+      if (url) {
+        photos += 1
+        saveAthletes(attachPhotos(loadAthletes(), { [row.id]: url }))
+      }
+    }
+  }
+  return {
+    ok,
+    profiles: local.athletes.length,
+    photos,
+    error: ok ? null : 'Could not reach the gym file from this device.',
+  }
 }

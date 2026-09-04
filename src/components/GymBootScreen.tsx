@@ -18,8 +18,8 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
       </h1>
       {phase === 'loading' ? (
         <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-          Pulling profiles, homework, notes, lessons, classes, feed, and wins from
-          this gym link — not from whatever was last on this phone.
+          Pulling the name list first. Pictures load after, so this phone
+          does not sit on a blank screen.
         </p>
       ) : (
         <>

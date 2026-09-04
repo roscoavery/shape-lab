@@ -119,6 +119,8 @@ On the **same Production URL**, with Blob connected, every device shares:
 
 Edits land through a cheap `/api/revision` check every few seconds. Only the store that changed is pulled — add, edit, or delete on the iPad and the phone should show it without a full reload.
 
+**Do not create a second Blob store.** The gym already has one. Missing pictures (Addy, Tina, anyone else) are still sitting in the iPad browser. After a Production redeploy, unlock Ryan on the iPad → **More → Profiles** → **Send everything on this device**. Then hard-refresh the phone and laptop on the same Production URL.
+
 After a class ends, **Class recaps** can change which class it was and who was there. Adding someone who was not marked present still writes Class nights and copies holds / skills already logged in that class.
 
 Unlock/passcode stays on that phone. The records themselves are gym-wide. Preview or tunnel links are different origins and do not share that store.

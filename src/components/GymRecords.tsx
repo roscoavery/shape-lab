@@ -4,8 +4,7 @@ import { athleteContact } from '../lib/gymBackup'
 import {
   enableServerRosterPush,
   isServerRosterPushEnabled,
-  localRosterSnapshot,
-  pushServerRoster,
+  pushThisDeviceToGym,
 } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import { roleLabel } from '../lib/profileRole'
@@ -40,7 +39,7 @@ export function GymRecords({ athletes }: Props) {
     // Only push after a successful GET. Enabling push from a Ryan-only phone
     // used to look like “saved” while the gym file never loaded.
     if (!isServerRosterPushEnabled()) return
-    void pushServerRoster(localRosterSnapshot()).catch(() => {})
+    void pushThisDeviceToGym().catch(() => {})
   }, [athletes.length])
 
   const contacts = athletes.map((a) => ({
@@ -59,11 +58,15 @@ export function GymRecords({ athletes }: Props) {
     setBusy(true)
     try {
       enableServerRosterPush()
-      await pushServerRoster(localRosterSnapshot())
+      const result = await pushThisDeviceToGym()
+      if (!result.ok) {
+        flash(result.error || 'Could not send this device’s gym file.')
+        return
+      }
       flash(
         persist?.lasting
-          ? `Saved ${athletes.length} profiles on this gym link. They stay here for the next class.`
-          : `Saved ${athletes.length} profiles on this gym link. Add a Blob store on this Vercel project so they still show up tomorrow.`,
+          ? `Sent ${result.profiles} profiles and ${result.photos} picture${result.photos === 1 ? '' : 's'} from this device. Open the same URL on the phone and laptop — no new Blob store.`
+          : `Saved ${result.profiles} profiles on this link. This project still needs its existing Blob connected — do not create a second one.`,
       )
     } catch {
       flash('Could not reach the gym link from this phone. Stay on the same URL and try again.')
@@ -94,8 +97,9 @@ export function GymRecords({ athletes }: Props) {
       )}
       {persist?.lasting && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
-          This gym link is keeping profiles, notes, homework logs, feed/Wins, and
-          videos. Use this same URL on every device.
+          Blob is already on. Do not make another store. The iPad still has
+          pictures the gym file is missing — send them from this page, then
+          hard-refresh the phone and laptop on this same URL.
         </p>
       )}
 
@@ -144,7 +148,7 @@ export function GymRecords({ athletes }: Props) {
           onClick={() => void saveToLink()}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
         >
-          Save profiles to this gym
+          Send everything on this device
         </button>
       </div>
       {status && <p className="mt-2 text-sm text-[var(--accent)]">{status}</p>}

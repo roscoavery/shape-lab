@@ -1,5 +1,5 @@
 import type { ServerResponse } from 'node:http'
-import { readBin, readJson, readText, removeFile, writeJson, writePublicBin } from './persist.ts'
+import { readBin, readJson, readText, removeFile, writeBin, writeJson } from './persist.ts'
 
 const FILE = 'data/roster-photos.json'
 
@@ -82,9 +82,9 @@ async function writePhotoBytes(
   mime: string,
 ): Promise<PhotoRef> {
   const updatedAt = new Date().toISOString()
-  const publicUrl = await writePublicBin(photoBinRel(id), buf, mime || 'image/jpeg')
+  await writeBin(photoBinRel(id), buf, mime || 'image/jpeg')
   return {
-    url: publicUrl || photoFileUrl(id, updatedAt),
+    url: photoFileUrl(id, updatedAt),
     mime: mime || 'image/jpeg',
     updatedAt,
   }

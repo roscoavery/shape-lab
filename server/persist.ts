@@ -201,34 +201,6 @@ export async function writeBin(rel: string, buf: Buffer, contentType: string): P
   fs.writeFileSync(dest, buf)
 }
 
-/**
- * Profile pics and win clips need a URL the phone can load like any
- * social app — not a multi-megabyte data URL stuffed through JSON.
- */
-export async function writePublicBin(
-  rel: string,
-  buf: Buffer,
-  contentType: string,
-): Promise<string | null> {
-  assertDurableWrite()
-  mem.set(rel, buf)
-  if (useBlob()) {
-    const { put } = await import('@vercel/blob')
-    const result = await put(rel, buf, {
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType,
-      access: 'public',
-      cacheControlMaxAge: 31536000,
-    })
-    return typeof result.url === 'string' ? result.url : null
-  }
-  const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
-  fs.mkdirSync(path.dirname(dest), { recursive: true })
-  fs.writeFileSync(dest, buf)
-  return null
-}
-
 export async function removeFile(rel: string): Promise<void> {
   mem.delete(rel)
   if (useBlob()) {
