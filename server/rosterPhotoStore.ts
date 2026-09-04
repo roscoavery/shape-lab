@@ -242,17 +242,28 @@ export async function writeRosterPhotoBytes(
   return ref
 }
 
+async function dataUrlForId(id: string, data: DiskRosterPhotos): Promise<string | null> {
+  const raw = data.photos[id]
+  if (typeof raw === 'string' && raw.startsWith('data:')) return raw
+  if (raw && typeof raw === 'object' && typeof raw.url === 'string' && raw.url.startsWith('data:')) {
+    return raw.url
+  }
+  const text = await readText(photoTextRel(id))
+  return text?.startsWith('data:') ? text : null
+}
+
 export async function sendRosterPhotoFile(id: string, res: ServerResponse): Promise<boolean> {
   const sid = safePhotoId(id)
   if (!sid) return false
   let buf = await readBin(photoBinRel(sid))
   let mime = 'image/jpeg'
   if (!buf) {
-    const text = await readText(photoTextRel(sid))
-    if (text?.startsWith('data:')) {
-      const migrated = await migrateDataUrl(sid, text)
+    const data = await loadIndex()
+    const dataUrl = await dataUrlForId(sid, data)
+    if (dataUrl) {
+      const migrated = await migrateDataUrl(sid, dataUrl)
       if (migrated) {
-        const current = clientPhotoMap(await loadIndex())
+        const current = clientPhotoMap(data)
         current[sid] = migrated
         await persistIndex(current)
         buf = await readBin(photoBinRel(sid))
