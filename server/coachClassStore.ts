@@ -10,6 +10,7 @@ export type DiskCoachClasses = {
   meetings: unknown[]
   activeMeetingId?: string | null
   removedOfferingIds?: string[]
+  removedMeetingIds?: string[]
 }
 
 const EMPTY: DiskCoachClasses = {
@@ -20,6 +21,7 @@ const EMPTY: DiskCoachClasses = {
   meetings: [],
   activeMeetingId: null,
   removedOfferingIds: [],
+  removedMeetingIds: [],
 }
 
 function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses {
@@ -33,6 +35,9 @@ function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses 
     activeMeetingId: typeof data.activeMeetingId === 'string' ? data.activeMeetingId : null,
     removedOfferingIds: Array.isArray(data.removedOfferingIds)
       ? data.removedOfferingIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
+      : [],
+    removedMeetingIds: Array.isArray(data.removedMeetingIds)
+      ? data.removedMeetingIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
       : [],
   }
 }
@@ -143,7 +148,11 @@ function unionFiles(a: DiskCoachClasses, b: DiskCoachClasses): DiskCoachClasses 
   const removedOfferingIds = [
     ...new Set([...(a.removedOfferingIds ?? []), ...(b.removedOfferingIds ?? [])]),
   ]
+  const removedMeetingIds = [
+    ...new Set([...(a.removedMeetingIds ?? []), ...(b.removedMeetingIds ?? [])]),
+  ]
   const removed = new Set(removedOfferingIds)
+  const droppedMeetings = new Set(removedMeetingIds)
   return {
     kind: 'shape-lab-coach-classes',
     version: 1,
@@ -153,9 +162,14 @@ function unionFiles(a: DiskCoachClasses, b: DiskCoachClasses): DiskCoachClasses 
       const id = (raw as { id?: unknown }).id
       return typeof id === 'string' && !removed.has(id)
     }),
-    meetings: unionMeetings(a.meetings, b.meetings),
+    meetings: unionMeetings(a.meetings, b.meetings).filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const id = (raw as { id?: unknown }).id
+      return typeof id === 'string' && !droppedMeetings.has(id)
+    }),
     activeMeetingId: a.activeMeetingId ?? b.activeMeetingId ?? null,
     removedOfferingIds,
+    removedMeetingIds,
   }
 }
 

@@ -352,7 +352,13 @@ export function EducationPanel({
               Unlock a profile first — their hit photos show up here, grouped by shape.
             </p>
           ) : (
-            <HitFolder captures={hits} athleteName={athleteName} />
+            <HitFolder
+              captures={hits}
+              athleteName={athleteName}
+              onChange={() => {
+                void listCaptures(athleteId).then(setHits).catch(() => setHits([]))
+              }}
+            />
           )}
         </section>
       )}

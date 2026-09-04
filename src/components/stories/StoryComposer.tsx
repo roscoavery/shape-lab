@@ -54,9 +54,10 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
         </p>
         <h3 className="mt-1 text-lg font-semibold">Add to your story</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Lives on Feed and Reference scroll for 24 hours. Tag someone with
-          @handle or @"Full Name". Name a highlight below if you want this clip
-          to stay on your profile.
+          Lives on Feed and Reference scroll for 24 hours. Record up to 30
+          seconds, or pick a clip from Photos. Tag someone with @handle or
+          @"Full Name". Name a highlight below if you want this clip to stay
+          on your profile.
         </p>
         <input
           value={caption}
@@ -79,7 +80,7 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
             onClick={() => {
               setError(null)
               setBusy('Recording…')
-              void recordQuickClip(8)
+              void recordQuickClip(30)
                 .then((blob) => post(blob))
                 .catch((err) => {
                   setBusy(null)
@@ -88,7 +89,7 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
             }}
             className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f] disabled:opacity-40"
           >
-            {busy === 'Recording…' ? 'Recording 8s…' : 'Record 8s'}
+            {busy === 'Recording…' ? 'Recording 30s…' : 'Record 30s'}
           </button>
           <button
             type="button"

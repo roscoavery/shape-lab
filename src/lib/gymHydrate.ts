@@ -37,7 +37,7 @@ export type GymHydrateResult = RosterSyncResult & {
 
 async function pullPersist(): Promise<PersistInfo | null> {
   try {
-    const res = await fetch('/api/persist')
+    const res = await fetch('/api/persist', { cache: 'no-store', credentials: 'same-origin' })
     if (!res.ok) return null
     const data = (await res.json()) as PersistInfo
     if (data?.mode !== 'blob' && data?.mode !== 'disk' && data?.mode !== 'tmp') return null

@@ -828,6 +828,46 @@ export function Tasks2Panel({
           if (first) onRequestShape(first.shapeId)
         }
 
+        if (seqRun.mode === 'hs-hold') {
+          setPhase('holding')
+          onRequestShape('handstand', 'auto', { profileOk: true })
+          setCue(
+            'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
+          )
+          const holdP = runHandstandHoldSession({
+            cancelled: () => !alive(),
+            doneRequested: () => holdDoneRef.current || !alive(),
+            landmarks: () => landmarksRef.current,
+            score: () => scoreRef.current,
+            stream: () => streamRef.current ?? overlayStreamRef.current,
+            canvas: () => canvasRef.current,
+            onTick: (tick) => {
+              setHoldTick(tick)
+              onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
+            },
+            onCue: (line) => {
+              if (alive()) setCue(line)
+            },
+          })
+          void (async () => {
+            await speakLine(seqRun.previewSpeak)
+            if (!alive()) return
+            if (seqRun.setupSpeak) {
+              setCue(seqRun.setupSpeak)
+              await speakLine(seqRun.setupSpeak)
+            }
+            if (!alive()) return
+            if (seqRun.setupExtraSpeak) {
+              setCue(seqRun.setupExtraSpeak)
+              await speakLine(seqRun.setupExtraSpeak)
+            }
+          })()
+          const raw = await holdP
+          if (!alive()) return
+          await finishHoldRun(seqRun, raw)
+          return
+        }
+
         await speakLine(seqRun.previewSpeak)
         if (!alive()) return
         if (seqRun.setupSpeak) {
@@ -853,32 +893,6 @@ export function Tasks2Panel({
         if (!seqRun.setupSpeak && !seqRun.setupExtraSpeak) {
           await wait(700)
           if (!alive()) return
-        }
-
-        if (seqRun.mode === 'hs-hold') {
-          setPhase('holding')
-          onRequestShape('handstand', 'auto', { profileOk: true })
-          setCue(
-            'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
-          )
-          const raw = await runHandstandHoldSession({
-            cancelled: () => !alive(),
-            doneRequested: () => holdDoneRef.current || !alive(),
-            landmarks: () => landmarksRef.current,
-            score: () => scoreRef.current,
-            stream: () => streamRef.current ?? overlayStreamRef.current,
-            canvas: () => canvasRef.current,
-            onTick: (tick) => {
-              setHoldTick(tick)
-              onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
-            },
-            onCue: (line) => {
-              if (alive()) setCue(line)
-            },
-          })
-          if (!alive()) return
-          await finishHoldRun(seqRun, raw)
-          return
         }
 
         setPhase('running')

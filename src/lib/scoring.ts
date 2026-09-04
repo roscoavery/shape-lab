@@ -40,6 +40,12 @@ import {
   viewMatches,
   type DetectedView,
 } from './view'
+import {
+  poseLooksLongBridge,
+  poseLooksRainbowBridge,
+  poseLooksSidePlank,
+} from './homeworkPose'
+import { mergePair } from './skeleton'
 import type {
   CriterionDef,
   CriterionScore,
@@ -112,6 +118,73 @@ const LEVER_BODY_IDS = new Set([
  * lifted, chest toward parallel. A lunge (both feet down) or a handstand
  * (both feet up) is not a lever even if other angles look tidy.
  */
+function visPoint(p: Landmark | undefined, min = 0.1): p is Landmark {
+  return Boolean(p) && (p!.visibility ?? 1) >= min
+}
+
+function midY(a?: Landmark, b?: Landmark): number | null {
+  const pts = [a, b].filter((p): p is Landmark => visPoint(p, 0.08))
+  if (pts.length === 0) return null
+  return pts.reduce((s, p) => s + p.y, 0) / pts.length
+}
+
+/** Hands and feet must leave the mat — lying flat cannot score a Superman. */
+function supermanLifted(landmarks: Landmark[]): { handsOff: boolean; feetOff: boolean } {
+  const hip = mergePair(landmarks[LM.LEFT_HIP], landmarks[LM.RIGHT_HIP], 0.08)
+  const wrY = midY(landmarks[LM.LEFT_WRIST], landmarks[LM.RIGHT_WRIST])
+  const anY = midY(landmarks[LM.LEFT_ANKLE], landmarks[LM.RIGHT_ANKLE])
+  if (!hip || wrY == null || anY == null) return { handsOff: false, feetOff: false }
+  return {
+    handsOff: wrY < hip.y - 0.04,
+    feetOff: anY < hip.y - 0.04,
+  }
+}
+
+/** Hollow: low back near flat and feet (and usually hands) off the floor. */
+function hollowPicture(landmarks: Landmark[]): { backFlat: boolean; feetOff: boolean; handsOff: boolean } {
+  const hip = mergePair(landmarks[LM.LEFT_HIP], landmarks[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(landmarks[LM.LEFT_SHOULDER], landmarks[LM.RIGHT_SHOULDER], 0.08)
+  const wrY = midY(landmarks[LM.LEFT_WRIST], landmarks[LM.RIGHT_WRIST])
+  const anY = midY(landmarks[LM.LEFT_ANKLE], landmarks[LM.RIGHT_ANKLE])
+  if (!hip || !sh) return { backFlat: false, feetOff: false, handsOff: false }
+  return {
+    backFlat: Math.abs(sh.y - hip.y) < 0.2,
+    feetOff: anY != null && anY < hip.y - 0.03,
+    handsOff: wrY != null && wrY < hip.y - 0.02,
+  }
+}
+
+/** Passé needs one foot clearly off the floor — both feet together is not a passé. */
+function passeLegLifted(landmarks: Landmark[]): boolean {
+  const la = landmarks[LM.LEFT_ANKLE]
+  const ra = landmarks[LM.RIGHT_ANKLE]
+  if (!visPoint(la, 0.08) || !visPoint(ra, 0.08)) return false
+  return Math.abs(la.y - ra.y) >= 0.09
+}
+
+/** Stand clean: wrists stay down by the thighs, not out in a T. */
+function standCleanArmsDown(landmarks: Landmark[]): boolean {
+  const sh = mergePair(landmarks[LM.LEFT_SHOULDER], landmarks[LM.RIGHT_SHOULDER], 0.08)
+  const wrY = midY(landmarks[LM.LEFT_WRIST], landmarks[LM.RIGHT_WRIST])
+  if (!sh || wrY == null) return false
+  return wrY > sh.y + 0.14
+}
+
+/** Ribs in / hollow chest — used by mountain climber, C, and hollow. */
+function ribsIn(landmarks: Landmark[]): boolean {
+  const hip = mergePair(landmarks[LM.LEFT_HIP], landmarks[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(landmarks[LM.LEFT_SHOULDER], landmarks[LM.RIGHT_SHOULDER], 0.08)
+  const knee = mergePair(landmarks[LM.LEFT_KNEE], landmarks[LM.RIGHT_KNEE], 0.06)
+  if (!hip || !sh || !knee) return false
+  const a = Math.hypot(sh.x - hip.x, sh.y - hip.y)
+  const b = Math.hypot(knee.x - hip.x, knee.y - hip.y)
+  if (a < 1e-4 || b < 1e-4) return false
+  const c = Math.hypot(sh.x - knee.x, sh.y - knee.y)
+  const cos = Math.max(-1, Math.min(1, (a * a + b * b - c * c) / (2 * a * b)))
+  const deg = (Math.acos(cos) * 180) / Math.PI
+  return deg < 168
+}
+
 function leverPicture(landmarks: Landmark[]): {
   supportOnFloor: boolean
   backLegLifted: boolean
@@ -511,6 +584,81 @@ function scoreOnce(
     }
   }
 
+  if (shape.id === 'superman') {
+    const lift = supermanLifted(landmarks)
+    if (!lift.handsOff || !lift.feetOff) {
+      overall = Math.min(overall, 28)
+      pictureMiss = !lift.handsOff && !lift.feetOff
+        ? 'Lift the hands and the feet off the ground. Arms behind the ears, knees straight.'
+        : !lift.handsOff
+          ? 'Lift both hands off the ground — arms behind the ears, not resting on the mat.'
+          : 'Lift both feet off the ground — straight knees, toes pointed.'
+    }
+  }
+
+  if (shape.id.startsWith('hollow')) {
+    const pic = hollowPicture(landmarks)
+    if (!pic.backFlat || !pic.feetOff) {
+      overall = Math.min(overall, 30)
+      pictureMiss = !pic.backFlat
+        ? 'Flatten the low back to the floor, then lift the hands and feet.'
+        : 'Lift the feet off the ground — low back stays flat.'
+    } else if (!pic.handsOff && shape.id === 'hollow_arms_up') {
+      overall = Math.min(overall, 42)
+      pictureMiss = 'Hands off the ground — arms by the ears, low back flat.'
+    }
+  }
+
+  if (shape.id === 'passe' && !passeLegLifted(landmarks)) {
+    overall = Math.min(overall, 32)
+    pictureMiss = 'Lift one knee into passé — both feet on the floor is not a passé.'
+    const height = results.find((c) => c.id === 'passe_height')
+    if (height) {
+      height.score = Math.min(height.score, 20)
+      height.feedback = pictureMiss
+    }
+  }
+
+  if (shape.id === 'stand_clean' && !standCleanArmsDown(landmarks)) {
+    overall = Math.min(overall, 34)
+    pictureMiss = 'Arms pinned to your sides — that is still a T.'
+    const arms = results.find((c) => c.id === 'arms_down')
+    if (arms) {
+      arms.score = Math.min(arms.score, 18)
+      arms.feedback = pictureMiss
+    }
+  }
+
+  if (shape.id === 'rainbow_bridge' && !poseLooksRainbowBridge(landmarks)) {
+    overall = Math.min(overall, 36)
+    pictureMiss =
+      'Rainbow is hands and feet on the floor, knees bent, hips the peak. Push the hips up and spread the arch.'
+  }
+
+  if (shape.id === 'long_bridge' && !poseLooksLongBridge(landmarks)) {
+    overall = Math.min(overall, 36)
+    pictureMiss =
+      'Long bridge is hands and feet down, hips up, knees straight. Push through the toes with arms by the ears.'
+  }
+
+  if (shape.id === 'side_plank' && !poseLooksSidePlank(landmarks)) {
+    overall = Math.min(overall, 38)
+    pictureMiss = 'Forearm down, hips lifted, body in a pencil. That is not a side plank yet.'
+  }
+
+  if (
+    (shape.id === 'mountain_climber' || shape.id === 'c_shape' || shape.id.startsWith('hollow')) &&
+    !ribsIn(landmarks)
+  ) {
+    overall = Math.min(overall, Math.max(overall - 28, 40))
+    if (!pictureMiss) {
+      pictureMiss =
+        shape.id === 'mountain_climber' || shape.id === 'c_shape'
+          ? 'Ribs in — hollow the chest into a C. Do not keep a straight-back open-shoulder line.'
+          : 'Ribs in — press the low back down. Do not flare the ribs.'
+    }
+  }
+
   const sorted = [...results].sort((a, b) => a.score - b.score)
 
   const threshold = qualityThresholdOverride ?? shape.qualityThreshold
@@ -610,6 +758,9 @@ export function scoreShape(
     Boolean(options?.profileOk) ||
     shape.cameraView === 'side' ||
     shape.id === 'stand_clean' ||
+    shape.id === 'seated_pike' ||
+    shape.id === 'pike_open_shoulders' ||
+    shape.id === 'tuck_open_shoulders' ||
     detected === 'side'
 
   if (want === 'right') {

@@ -221,24 +221,36 @@ export function applyRosterSnapshot(data: RosterBackup): {
   return { athletes, activeAthleteId: active }
 }
 
+function gymGetInit(timeoutMs = 18_000): RequestInit {
+  const init: RequestInit = {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  }
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    init.signal = AbortSignal.timeout(timeoutMs)
+  }
+  return init
+}
+
 export async function pullServerRoster(): Promise<RosterBackup | null> {
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     try {
-      const res = await fetch('/api/roster', { cache: 'no-store' })
+      const res = await fetch('/api/roster', gymGetInit())
       if (!res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
         continue
       }
       const data = (await res.json()) as RosterBackup
       if (!data || data.kind !== 'shape-lab-roster' || !Array.isArray(data.athletes)) return null
       if (data.athletes.length === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
         continue
       }
       lastServerAthleteCount = Math.max(lastServerAthleteCount, data.athletes.length)
       return data
     } catch {
-      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+      await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
     }
   }
   return null
@@ -264,7 +276,7 @@ function attachPhotos(athletes: Athlete[], photos: Record<string, string>): Athl
 
 export async function pullServerRosterPhotos(): Promise<Record<string, string>> {
   try {
-    const res = await fetch('/api/roster-photos', { cache: 'no-store' })
+      const res = await fetch('/api/roster-photos', gymGetInit(20_000))
     if (!res.ok) return {}
     const data = (await res.json()) as { kind?: string; photos?: Record<string, string> }
     if (data?.kind !== 'shape-lab-roster-photos' || !data.photos) return {}
@@ -337,10 +349,11 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
     server.athletes.length,
   )
   const local = localRosterSnapshot()
-  // Only write back when this device has more living profiles than the gym
-  // file — that heals a Blob that never received the full roster. A smaller
-  // phone snapshot used to PUT stale removed IDs and hide everyone else.
-  if (local.athletes.length > (server.athletes?.length ?? 0)) {
+  const serverIds = new Set((server.athletes ?? []).map((a) => a.id))
+  const hasUnsaved =
+    local.athletes.length > (server.athletes?.length ?? 0) ||
+    local.athletes.some((a) => !serverIds.has(a.id))
+  if (hasUnsaved) {
     await pushServerRoster(local)
   }
   return { ...applied, fromServer: true, error: null }

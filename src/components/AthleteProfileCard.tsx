@@ -147,6 +147,9 @@ export function AthleteProfileCard({
   useEffect(() => {
     reloadFeed()
     reloadStories()
+    const onPull = () => reloadFeed()
+    window.addEventListener('shape-lab-gym-pulled', onPull)
+    return () => window.removeEventListener('shape-lab-gym-pulled', onPull)
   }, [athlete.id])
 
   const gesture = async (kind: ProfileGesture['kind']) => {

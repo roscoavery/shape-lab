@@ -89,6 +89,7 @@ export type CoachClassFile = {
   meetings: ClassMeeting[]
   activeMeetingId: string | null
   removedOfferingIds?: string[]
+  removedMeetingIds?: string[]
 }
 
 const KEY = 'shape-lab.coachClasses.v1'
@@ -105,6 +106,7 @@ function emptyFile(): CoachClassFile {
     meetings: [],
     activeMeetingId: null,
     removedOfferingIds: [],
+    removedMeetingIds: [],
   }
 }
 
@@ -297,6 +299,7 @@ function parseFile(raw: string | null): CoachClassFile {
       meetings: (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
       activeMeetingId: data.activeMeetingId ?? null,
       removedOfferingIds: asIdList(data.removedOfferingIds),
+      removedMeetingIds: asIdList(data.removedMeetingIds),
     }
   } catch {
     return emptyFile()
@@ -379,6 +382,9 @@ function read(): CoachClassFile {
       removedOfferingIds: [
         ...new Set([...(stored.removedOfferingIds ?? []), ...(memoryFile.removedOfferingIds ?? [])]),
       ],
+      removedMeetingIds: [
+        ...new Set([...(stored.removedMeetingIds ?? []), ...(memoryFile.removedMeetingIds ?? [])]),
+      ],
     }
   }
   return stored
@@ -386,7 +392,9 @@ function read(): CoachClassFile {
 
 function write(file: CoachClassFile, sync = true) {
   const removedOfferingIds = asIdList(file.removedOfferingIds)
+  const removedMeetingIds = asIdList(file.removedMeetingIds)
   const removed = new Set(removedOfferingIds)
+  const droppedMeetings = new Set(removedMeetingIds)
   const next: CoachClassFile = {
     ...file,
     kind: 'shape-lab-coach-classes',
@@ -395,8 +403,11 @@ function write(file: CoachClassFile, sync = true) {
     offerings: file.offerings
       .map(normalizeOffering)
       .filter((o): o is CoachClassOffering => !!o && !removed.has(o.id)),
-    meetings: file.meetings.map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
+    meetings: file.meetings
+      .map(normalizeMeeting)
+      .filter((m): m is ClassMeeting => !!m && !droppedMeetings.has(m.id)),
     removedOfferingIds,
+    removedMeetingIds,
   }
   memoryFile = next
   try {
@@ -678,6 +689,19 @@ export function startClassMeeting(offering: CoachClassOffering): ClassMeeting {
   return meeting
 }
 
+export function deleteClassMeeting(id: string): boolean {
+  const file = read()
+  const sid = id.trim()
+  if (!sid) return false
+  const found = file.meetings.some((m) => m.id === sid)
+  if (!found && !(file.removedMeetingIds ?? []).includes(sid)) return false
+  file.meetings = file.meetings.filter((m) => m.id !== sid)
+  file.removedMeetingIds = [...new Set([...(file.removedMeetingIds ?? []), sid])]
+  if (file.activeMeetingId === sid) file.activeMeetingId = pickLiveMeetingId(file.meetings)
+  write(file)
+  return true
+}
+
 export function endClassMeeting(
   id: string,
   opts?: { logAttendance?: boolean },
@@ -897,14 +921,21 @@ export async function hydrateCoachClasses(): Promise<void> {
     const removedOfferingIds = [
       ...new Set([...(local.removedOfferingIds ?? []), ...asIdList(data.removedOfferingIds)]),
     ]
+    const removedMeetingIds = [
+      ...new Set([...(local.removedMeetingIds ?? []), ...asIdList(data.removedMeetingIds)]),
+    ]
     const removed = new Set(removedOfferingIds)
+    const droppedMeetings = new Set(removedMeetingIds)
     const offerings = mergeOfferings(local.offerings, remoteOfferings).filter((o) => !removed.has(o.id))
     const meetings = mergeMeetings(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
-    )
+    ).filter((m) => !droppedMeetings.has(m.id))
     const live = pickLiveMeetingId(meetings, data.activeMeetingId ?? local.activeMeetingId)
-    write({ ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds }, false)
+    write(
+      { ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds, removedMeetingIds },
+      false,
+    )
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
     const next = read()
     const remoteById = new Map(remoteOfferings.map((o) => [o.id, o]))
@@ -923,11 +954,13 @@ export async function hydrateCoachClasses(): Promise<void> {
       )
     })
     const remoteRemoved = asIdList(data.removedOfferingIds)
+    const remoteRemovedMeetings = asIdList(data.removedMeetingIds)
     const remoteLive = (data.meetings ?? []).filter((m) => m && !m.endedAt)
     if (
       needPush ||
       next.offerings.length !== remoteOfferings.filter((o) => !removed.has(o.id)).length ||
       (next.removedOfferingIds ?? []).some((id) => !remoteRemoved.includes(id)) ||
+      (next.removedMeetingIds ?? []).some((id) => !remoteRemovedMeetings.includes(id)) ||
       (next.activeMeetingId && next.activeMeetingId !== data.activeMeetingId) ||
       listLiveMeetings().length !== remoteLive.length
     ) {

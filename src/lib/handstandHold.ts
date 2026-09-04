@@ -18,7 +18,7 @@ export function formatSeconds(s: number): string {
   return `${sec.toFixed(1)}s`
 }
 
-export const HOLD_ENTER_FRAMES = 8
+export const HOLD_ENTER_FRAMES = 3
 export const HOLD_EXIT_FRAMES = 5
 export const MIN_HOLD_SEC = 0.45
 export const POST_FOOT_MS = 650
@@ -186,17 +186,34 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
 
   while (!opts.cancelled() && !opts.doneRequested()) {
     let enterFrames = 0
-    let recorder: ReturnType<typeof startClipRecorder> | null = null
+    const rec = {
+      session: null as ReturnType<typeof startClipRecorder> | null,
+    }
     let recStart = 0
     const poseTrack: PoseTrack = []
 
+    const startRec = () => {
+      if (rec.session) return
+      const stream = opts.stream()
+      if (!stream || typeof MediaRecorder === 'undefined') return
+      try {
+        rec.session = startClipRecorder(stream)
+        recStart = rec.session.startedAt
+      } catch {
+        rec.session = null
+      }
+    }
+
     const samplePose = (lm: Landmark[] | null) => {
-      if (!recorder || !lm || lm.length < 33) return
+      if (!rec.session || !lm || lm.length < 33) return
       const t = (performance.now() - recStart) / 1000
       const last = poseTrack[poseTrack.length - 1]
       if (last && t - last.t < 0.05) return
       poseTrack.push({ t, lm: cloneLandmarks(lm) })
     }
+
+    // Record as soon as we wait for a kick-up so talking does not eat the video.
+    startRec()
 
     while (!opts.cancelled() && !opts.doneRequested()) {
       const lm = opts.landmarks()
@@ -204,32 +221,17 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       samplePose(lm)
       if (inverted) {
         enterFrames += 1
-        if (!recorder) {
-          const stream = opts.stream()
-          if (stream && typeof MediaRecorder !== 'undefined') {
-            try {
-              recorder = startClipRecorder(stream)
-              recStart = recorder.startedAt
-            } catch {
-              recorder = null
-            }
-          }
-        }
+        startRec()
         if (enterFrames >= HOLD_ENTER_FRAMES) break
       } else {
         enterFrames = 0
-        if (recorder) {
-          const rec = recorder
-          recorder = null
-          void rec.stop()
-        }
       }
       tick({ seconds: null, running: false, inverted })
       await wait(33)
     }
 
     if (opts.cancelled() || opts.doneRequested()) {
-      if (recorder) void recorder.stop()
+      if (rec.session) void rec.session.stop()
       break
     }
 
@@ -273,7 +275,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     if (opts.cancelled()) {
-      if (recorder) void recorder.stop()
+      if (rec.session) void rec.session.stop()
       break
     }
 
@@ -286,9 +288,9 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
 
     await wait(POST_FOOT_MS)
     let clipBlob: Blob | null = null
-    if (recorder) {
+    if (rec.session) {
       try {
-        const blob = await recorder.stop()
+        const blob = await rec.session.stop()
         if (blob.size > 800) clipBlob = await durableBlob(blob)
       } catch {
         clipBlob = null

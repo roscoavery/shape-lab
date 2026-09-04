@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Athlete, AthleteCoachNote } from '../../types'
 import {
   addCoachNotesToAthletes,
@@ -11,9 +11,11 @@ import {
 import {
   attendeeLabel,
   classLabel,
+  deleteClassMeeting,
   getOffering,
   loadMeetings,
   resolveAttendeeAthletes,
+  subscribeCoachClasses,
   type ClassMeeting,
 } from '../../lib/coachClasses'
 import { formatQuizScore, quizKindLabel } from '../../lib/quizGrades'
@@ -35,6 +37,8 @@ export function ClassRecapList({
   onAthletesChange,
   title = 'Class recaps',
 }: Props) {
+  const [, setTick] = useState(0)
+  useEffect(() => subscribeCoachClasses(() => setTick((n) => n + 1)), [])
   const meetings = loadMeetings()
     .filter((m) => m.endedAt)
     .slice(0, 16)
@@ -89,6 +93,7 @@ function ClassRecapCard({
   onAthletesChange?: (next: Athlete[]) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [askDelete, setAskDelete] = useState(false)
   const offering = getOffering(meeting.offeringId)
   const people = resolveAttendeeAthletes(meeting, athletes)
   const guests = meeting.attendees.filter((row) => !row.athleteId)
@@ -135,6 +140,41 @@ function ClassRecapCard({
               {attendeeLabel(row, athletes)} — no profile, so no saved grades or notes.
             </p>
           ))}
+          {askDelete ? (
+            <div className="mt-2 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] p-3">
+              <p className="text-sm font-semibold text-[var(--text)]">Delete this class recap?</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Are you sure? This recap leaves every device. Grades and notes on profiles stay.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteClassMeeting(meeting.id)
+                    setAskDelete(false)
+                  }}
+                  className="rounded-lg bg-[var(--bad)] px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                  Yes, delete it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAskDelete(false)}
+                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold"
+                >
+                  Keep it
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAskDelete(true)}
+              className="mt-1 self-start text-xs font-semibold text-[var(--bad)] underline"
+            >
+              Delete this recap
+            </button>
+          )}
         </div>
       )}
     </li>

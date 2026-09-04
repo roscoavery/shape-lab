@@ -52,6 +52,7 @@ export type DiskFeed = {
   version: 1
   exportedAt: string
   posts: DiskFeedPost[]
+  removedIds?: string[]
 }
 
 const EMPTY: DiskFeed = {
@@ -59,6 +60,7 @@ const EMPTY: DiskFeed = {
   version: 1,
   exportedAt: '',
   posts: [],
+  removedIds: [],
 }
 
 function safeId(id: string): string | null {
@@ -74,29 +76,62 @@ function extForMime(mime: string): string {
   return '.webm'
 }
 
+function isFeedPost(p: unknown): p is DiskFeedPost {
+  if (!p || typeof p !== 'object') return false
+  const row = p as DiskFeedPost
+  if (typeof row.id !== 'string') return false
+  if (row.kind === 'collage' || row.collage) return Boolean(row.collage)
+  if (row.kind === 'text') return Boolean((row.caption || '').trim())
+  return typeof row.file === 'string'
+}
+
+function mergePosts(existing: DiskFeedPost[], incoming: DiskFeedPost[]): DiskFeedPost[] {
+  const byId = new Map<string, DiskFeedPost>()
+  for (const row of [...existing, ...incoming]) {
+    if (!isFeedPost(row)) continue
+    const keep = byId.get(row.id)
+    if (!keep) {
+      byId.set(row.id, row)
+      continue
+    }
+    const newer = (row.createdAt || '') >= (keep.createdAt || '') ? row : keep
+    const older = newer === row ? keep : row
+    byId.set(row.id, {
+      ...older,
+      ...newer,
+      channels: cleanChannels([...(older.channels ?? []), ...(newer.channels ?? [])]),
+      likes: [...new Set([...(older.likes ?? []), ...(newer.likes ?? [])])],
+      hi5s: [...new Set([...(older.hi5s ?? []), ...(newer.hi5s ?? [])])],
+      reposts: [...new Set([...(older.reposts ?? []), ...(newer.reposts ?? [])])],
+      taggedIds: [...new Set([...(older.taggedIds ?? []), ...(newer.taggedIds ?? [])])],
+    })
+  }
+  return [...byId.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 export async function readFeedFile(): Promise<DiskFeed> {
   const data = await readJson<DiskFeed>(META, { ...EMPTY })
   if (!data || data.kind !== 'shape-lab-feed' || !Array.isArray(data.posts)) {
     return { ...EMPTY }
   }
+  const removed = new Set(
+    Array.isArray(data.removedIds) ? data.removedIds.filter((id) => typeof id === 'string') : [],
+  )
   return {
     ...EMPTY,
     ...data,
-    posts: data.posts.filter((p) => {
-      if (!p || typeof p.id !== 'string') return false
-      if (p.kind === 'collage' || p.collage) return Boolean(p.collage)
-      if (p.kind === 'text') return Boolean((p.caption || '').trim())
-      return typeof p.file === 'string'
-    }),
+    removedIds: [...removed],
+    posts: data.posts.filter((p) => isFeedPost(p) && !removed.has(p.id)),
   }
 }
 
-async function writeMeta(posts: DiskFeedPost[]): Promise<DiskFeed> {
+async function writeMeta(posts: DiskFeedPost[], removedIds: string[] = []): Promise<DiskFeed> {
   const next: DiskFeed = {
     kind: 'shape-lab-feed',
     version: 1,
     exportedAt: new Date().toISOString(),
-    posts,
+    posts: posts.slice(0, MAX_POSTS),
+    removedIds: [...new Set(removedIds)].slice(-400),
   }
   await writeJson(META, next)
   return next
@@ -177,14 +212,15 @@ export async function addFeedPostFromBody(params: {
       ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
       : {}),
   }
-  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
-  const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const meta = await readFeedFile()
+  if ((meta.removedIds ?? []).includes(id)) return post
+  const kept = mergePosts(meta.posts, [post])
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
     if (!drop.file) continue
     await removeFile(blobRel(drop.file))
   }
-  await writeMeta(kept.slice(0, MAX_POSTS))
+  await writeMeta(kept.slice(0, MAX_POSTS), meta.removedIds)
   return post
 }
 
@@ -200,7 +236,10 @@ export async function deleteFeedPost(
   if (!found) return false
   if (!actorIsAdmin && actorId && found.authorId !== actorId) return false
   if (found.file) await removeFile(blobRel(found.file))
-  await writeMeta(meta.posts.filter((p) => p.id !== sid))
+  await writeMeta(
+    meta.posts.filter((p) => p.id !== sid),
+    [...(meta.removedIds ?? []), sid],
+  )
   return true
 }
 
@@ -233,14 +272,15 @@ export async function addCollageFeedPost(params: {
     collage,
     channels: cleanChannels(params.channels),
   }
-  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
-  const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const meta = await readFeedFile()
+  if ((meta.removedIds ?? []).includes(id)) return post
+  const kept = mergePosts(meta.posts, [post])
   const pruned = kept.slice(MAX_POSTS)
   for (const drop of pruned) {
     if (!drop.file) continue
     await removeFile(blobRel(drop.file))
   }
-  await writeMeta(kept.slice(0, MAX_POSTS))
+  await writeMeta(kept.slice(0, MAX_POSTS), meta.removedIds)
   return post
 }
 
@@ -278,9 +318,10 @@ export async function addTextFeedPost(params: {
       ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
       : {}),
   }
-  const others = (await readFeedFile()).posts.filter((p) => p.id !== id)
-  const kept = [post, ...others].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  await writeMeta(kept.slice(0, MAX_POSTS))
+  const meta = await readFeedFile()
+  if ((meta.removedIds ?? []).includes(id)) return post
+  const kept = mergePosts(meta.posts, [post])
+  await writeMeta(kept.slice(0, MAX_POSTS), meta.removedIds)
   return post
 }
 
@@ -320,7 +361,7 @@ async function toggleFeedMark(
   if (set.has(who)) set.delete(who)
   else set.add(who)
   found[field] = [...set]
-  await writeMeta(meta.posts)
+  await writeMeta(meta.posts, meta.removedIds)
   return found
 }
 

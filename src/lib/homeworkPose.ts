@@ -220,7 +220,12 @@ export function homeworkLooksReady(
     return poseLooksHollow(lm) || overall >= 32
   }
   if (shapeId === 'superman') {
-    return poseLooksLongBody(lm) || overall >= 32
+    if (!lm || lm.length < 33) return overall >= 55
+    const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+    const wr = mergePair(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.08)
+    const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.08)
+    const lifted = Boolean(hip && wr && ank && wr.y < hip.y - 0.04 && ank.y < hip.y - 0.04)
+    return (poseLooksLongBody(lm) && lifted) || overall >= 55
   }
   if (shapeId === 'side_plank') {
     return poseLooksSidePlank(lm) || overall >= 32

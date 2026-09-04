@@ -4,21 +4,25 @@
 
 import { useEffect, useState } from 'react'
 import {
+  deleteCapture,
   getCaptureBlob,
   groupCapturesByShape,
   type TaskCapture,
 } from '../lib/captureStore'
+import { saveResultMessage, saveVideoToDevice } from '../lib/saveMedia'
 
-type Preview = { url: string; kind: 'snapshot' | 'clip'; label: string }
+type Preview = { url: string; kind: 'snapshot' | 'clip'; label: string; id: string }
 
 type Props = {
   captures: TaskCapture[]
   athleteName?: string | null
-  onDelete?: (id: string) => void
+  onChange?: () => void
 }
 
-export function HitFolder({ captures, athleteName, onDelete }: Props) {
+export function HitFolder({ captures, athleteName, onChange }: Props) {
   const [preview, setPreview] = useState<Preview | null>(null)
+  const [askId, setAskId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const groups = groupCapturesByShape(captures)
 
   useEffect(() => {
@@ -35,7 +39,29 @@ export function HitFolder({ captures, athleteName, onDelete }: Props) {
       url: URL.createObjectURL(blob),
       kind: c.kind,
       label: c.shapeName,
+      id: c.id,
     })
+  }
+
+  const saveToPhotos = async (id: string, kind: 'snapshot' | 'clip', name: string) => {
+    const blob = await getCaptureBlob(id)
+    if (!blob) {
+      setNotice('Could not load that picture.')
+      return
+    }
+    const ext = kind === 'clip' ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'
+    const result = await saveVideoToDevice(blob, `${name.replace(/\s+/g, '-')}.${ext}`)
+    setNotice(saveResultMessage(result, kind === 'clip' ? 'video' : 'video'))
+  }
+
+  const remove = async (id: string) => {
+    await deleteCapture(id)
+    if (preview?.id === id) {
+      URL.revokeObjectURL(preview.url)
+      setPreview(null)
+    }
+    setAskId(null)
+    onChange?.()
   }
 
   return (
@@ -62,20 +88,16 @@ export function HitFolder({ captures, athleteName, onDelete }: Props) {
                 </span>
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {g.snapshots.map((c) => (
+                {[...g.snapshots, ...g.clips].map((c) => (
                   <Thumb
                     key={c.id}
                     capture={c}
+                    asking={askId === c.id}
                     onOpen={() => void open(c)}
-                    onDelete={onDelete}
-                  />
-                ))}
-                {g.clips.map((c) => (
-                  <Thumb
-                    key={c.id}
-                    capture={c}
-                    onOpen={() => void open(c)}
-                    onDelete={onDelete}
+                    onSave={() => void saveToPhotos(c.id, c.kind, c.shapeName)}
+                    onAskDelete={() => setAskId(c.id)}
+                    onCancelDelete={() => setAskId(null)}
+                    onConfirmDelete={() => void remove(c.id)}
                   />
                 ))}
               </div>
@@ -83,6 +105,7 @@ export function HitFolder({ captures, athleteName, onDelete }: Props) {
           ))}
         </div>
       )}
+      {notice && <p className="mt-2 text-xs text-[var(--accent)]">{notice}</p>}
       {preview && (
         <div className="mt-3">
           {preview.kind === 'clip' ? (
@@ -94,16 +117,25 @@ export function HitFolder({ captures, athleteName, onDelete }: Props) {
               className="max-h-52 w-full rounded object-contain"
             />
           )}
-          <button
-            type="button"
-            className="mt-1 text-xs text-[var(--muted)] underline"
-            onClick={() => {
-              URL.revokeObjectURL(preview.url)
-              setPreview(null)
-            }}
-          >
-            Close preview
-          </button>
+          <div className="mt-1 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--accent)] underline"
+              onClick={() => void saveToPhotos(preview.id, preview.kind, preview.label)}
+            >
+              Save to Photos
+            </button>
+            <button
+              type="button"
+              className="text-xs text-[var(--muted)] underline"
+              onClick={() => {
+                URL.revokeObjectURL(preview.url)
+                setPreview(null)
+              }}
+            >
+              Close preview
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -112,12 +144,20 @@ export function HitFolder({ captures, athleteName, onDelete }: Props) {
 
 function Thumb({
   capture,
+  asking,
   onOpen,
-  onDelete,
+  onSave,
+  onAskDelete,
+  onCancelDelete,
+  onConfirmDelete,
 }: {
   capture: TaskCapture
+  asking: boolean
   onOpen: () => void
-  onDelete?: (id: string) => void
+  onSave: () => void
+  onAskDelete: () => void
+  onCancelDelete: () => void
+  onConfirmDelete: () => void
 }) {
   const [url, setUrl] = useState<string | null>(null)
 
@@ -160,14 +200,41 @@ function Thumb({
           )}
         </div>
       </button>
-      {onDelete && (
-        <button
-          type="button"
-          className="mt-0.5 text-[10px] text-[var(--bad)]"
-          onClick={() => onDelete(capture.id)}
-        >
-          remove
-        </button>
+      {asking ? (
+        <div className="mt-1 space-y-1">
+          <p className="text-[10px] text-[var(--text)]">Are you sure?</p>
+          <button
+            type="button"
+            className="text-[10px] font-semibold text-[var(--bad)] underline"
+            onClick={onConfirmDelete}
+          >
+            Yes, delete
+          </button>
+          <button
+            type="button"
+            className="ml-2 text-[10px] text-[var(--muted)] underline"
+            onClick={onCancelDelete}
+          >
+            Keep
+          </button>
+        </div>
+      ) : (
+        <div className="mt-0.5 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            className="text-[10px] font-semibold text-[var(--accent)]"
+            onClick={onSave}
+          >
+            Photos
+          </button>
+          <button
+            type="button"
+            className="text-[10px] text-[var(--bad)]"
+            onClick={onAskDelete}
+          >
+            Delete
+          </button>
+        </div>
       )}
     </div>
   )

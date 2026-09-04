@@ -356,10 +356,18 @@ function VideoWorkbenchInner({
     }
   }, [pinchZoom])
 
+  const windowStart =
+    tailSeconds && Number.isFinite(duration) && duration > tailSeconds + 0.05
+      ? duration - tailSeconds
+      : 0
+  const windowLen = Math.max(0.01, (Number.isFinite(duration) ? duration : 0) - windowStart)
+
   const seek = (t: number) => {
     const v = videoRef.current
     if (!v) return
-    v.currentTime = Math.min(Math.max(t, 0), duration || 0)
+    const lo = windowStart
+    const hi = duration || 0
+    v.currentTime = Math.min(Math.max(t, lo), hi)
     setTime(v.currentTime)
   }
 
@@ -460,10 +468,10 @@ function VideoWorkbenchInner({
       <input
         type="range"
         min={0}
-        max={duration || 0.01}
+        max={windowLen}
         step={0.01}
-        value={Math.min(time, duration || 0)}
-        onChange={(e) => seek(Number(e.target.value))}
+        value={Math.min(Math.max(0, time - windowStart), windowLen)}
+        onChange={(e) => seek(windowStart + Number(e.target.value))}
         onPointerDown={(e) => e.stopPropagation()}
         className="w-full accent-[var(--accent)]"
         aria-label="Scrub video"
@@ -523,8 +531,8 @@ function VideoWorkbenchInner({
           </>
         )}
         <span className={`tabular-nums text-xs ${fill || overlay ? 'text-white/70' : 'text-[var(--muted)]'}`}>
-          {fmt(time)}s / {fmt(duration)}s
-          {loopingAb ? ` · loop ${fmt(pointA!)}–${fmt(pointB!)}` : ''}
+          {fmt(Math.max(0, time - windowStart))}s / {fmt(windowLen)}s
+          {loopingAb && !tailSeconds ? ` · loop ${fmt(pointA!)}–${fmt(pointB!)}` : ''}
         </span>
         <span className="ml-auto flex items-center gap-1">
           {SPEEDS.map((s) => (

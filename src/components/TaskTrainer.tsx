@@ -22,7 +22,6 @@ import type { TaskLiveUi } from './TasksWorkspace'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { playHitTick, playSuccessChime } from '../lib/sounds'
 import {
-  deleteCapture,
   listCaptures,
   saveCapture,
   snapshotCanvas,
@@ -1210,13 +1209,7 @@ export function TaskTrainer({
         </p>
       )}
 
-      <HitFolder
-        captures={captures}
-        onDelete={async (id) => {
-          await deleteCapture(id)
-          await refreshCaptures()
-        }}
-      />
+      <HitFolder captures={captures} onChange={() => void refreshCaptures()} />
     </div>
   )
 }

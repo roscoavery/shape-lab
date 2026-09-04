@@ -82,7 +82,17 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   })
 
   useEffect(() => {
-    void listFeedPosts().then(setPosts)
+    const load = () => {
+      void listFeedPosts().then(setPosts)
+    }
+    load()
+    const onPull = () => load()
+    window.addEventListener('shape-lab-gym-pulled', onPull)
+    const tick = window.setInterval(load, 6_000)
+    return () => {
+      window.removeEventListener('shape-lab-gym-pulled', onPull)
+      window.clearInterval(tick)
+    }
   }, [])
 
   useEffect(() => {

@@ -572,7 +572,7 @@ export function CameraPane({
       setClipSrc(url)
       setActiveClipId(null)
       setReplayTailSec(tail)
-      replayWindowRef.current = { start: 0, end: tail }
+      replayWindowRef.current = { start: Math.max(0, capturedFor - tail), end: capturedFor }
       setMode('replay')
       const shown = Math.max(1, Math.round(tail))
       setFlash(`Last ${shown}s of buffer — pinch to zoom, hide the bar, or save`)

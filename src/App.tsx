@@ -41,7 +41,7 @@ import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
-import { publishTextPostResult } from './lib/feedPosts'
+import { listFeedPosts, publishTextPostResult } from './lib/feedPosts'
 import { ClipEditProvider } from './components/ClipWatchMeta'
 import { NotifyBell } from './components/NotifyBell'
 import { splitPersonName } from './lib/classStation'
@@ -391,13 +391,17 @@ export default function App() {
       void hydrateCoachClasses()
       void hydrateChalkboards()
       void hydrateCoachContent()
+      void listFeedPosts()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('shape-lab-gym-pulled'))
+      }
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') pull()
     }
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('focus', pull)
-    const tick = window.setInterval(pull, 45_000)
+    const tick = window.setInterval(pull, 6_000)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('focus', pull)

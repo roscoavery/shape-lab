@@ -177,7 +177,12 @@ export async function readRosterFile(): Promise<DiskRoster> {
   const sameRemoved =
     JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
   const disk = !sameAthletes || !sameRemoved ? await persistMerged(merged) : listsToDisk(merged, onDisk.exportedAt)
-  return withPhotos(disk)
+  // Photos live on /api/roster-photos. Inlining them here made the gym file
+  // too large for iPhone Safari and the phone never got past boot.
+  return {
+    ...disk,
+    athletes: stripRosterPhotos(disk.athletes as { photoDataUrl?: string }[]),
+  }
 }
 
 export async function writeRosterFile(data: unknown): Promise<DiskRoster> {

@@ -63,14 +63,38 @@ function rememberFeedPost(post: FeedPost | null) {
   feedCache = [post, ...prev.filter((row) => row.id !== post.id)]
 }
 
+function unionFeedPosts(local: FeedPost[], remote: FeedPost[]): FeedPost[] {
+  const byId = new Map<string, FeedPost>()
+  for (const row of [...local, ...remote]) {
+    if (!row?.id) continue
+    const keep = byId.get(row.id)
+    if (!keep) {
+      byId.set(row.id, row)
+      continue
+    }
+    const newer = (row.createdAt || '') >= (keep.createdAt || '') ? row : keep
+    const older = newer === row ? keep : row
+    byId.set(row.id, {
+      ...older,
+      ...newer,
+      channels: [...new Set([...postChannels(older), ...postChannels(newer)])],
+      likes: [...new Set([...(older.likes ?? []), ...(newer.likes ?? [])])],
+      hi5s: [...new Set([...(older.hi5s ?? []), ...(newer.hi5s ?? [])])],
+      reposts: [...new Set([...(older.reposts ?? []), ...(newer.reposts ?? [])])],
+      taggedIds: [...new Set([...(older.taggedIds ?? []), ...(newer.taggedIds ?? [])])],
+    })
+  }
+  return [...byId.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 export async function listFeedPosts(): Promise<FeedPost[]> {
   try {
-    const res = await fetch('/api/feed')
+    const res = await fetch('/api/feed', { cache: 'no-store', credentials: 'same-origin' })
     if (!res.ok) return feedCache ?? []
     const data = (await res.json()) as { posts?: FeedPost[] }
     const posts = Array.isArray(data.posts) ? data.posts : []
-    feedCache = posts
-    return posts
+    feedCache = unionFeedPosts(feedCache ?? [], posts)
+    return feedCache
   } catch {
     return feedCache ?? []
   }

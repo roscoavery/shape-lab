@@ -40,7 +40,7 @@ export function StoryViewer({
   }, [items, startIndex])
 
   useEffect(() => {
-    if (!story || story.mime.startsWith('image/')) return
+    if (!story || !story.mime.startsWith('image/')) return
     if (busy || name.trim()) return
     const id = window.setTimeout(() => {
       if (index < items.length - 1) setIndex(index + 1)
@@ -48,6 +48,11 @@ export function StoryViewer({
     }, 8000)
     return () => window.clearTimeout(id)
   }, [story, index, items.length, onClose, busy, name])
+
+  const advanceStory = () => {
+    if (index < items.length - 1) setIndex(index + 1)
+    else onClose()
+  }
 
   if (!story) return null
 
@@ -101,7 +106,13 @@ export function StoryViewer({
         {story.mime.startsWith('image/') ? (
           <img src={story.url} alt="" className="h-full w-full object-contain" />
         ) : (
-          <video src={story.url} autoPlay playsInline className="h-full w-full object-contain" />
+          <video
+            src={story.url}
+            autoPlay
+            playsInline
+            onEnded={advanceStory}
+            className="h-full w-full object-contain"
+          />
         )}
         <button
           type="button"

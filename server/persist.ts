@@ -74,7 +74,7 @@ async function writeBlob(rel: string, body: string | Buffer, contentType: string
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType,
-    cacheControlMaxAge: 60,
+    cacheControlMaxAge: 0,
   } as const
   try {
     await put(rel, body, { ...options, access: 'private' })
@@ -84,8 +84,8 @@ async function writeBlob(rel: string, body: string | Buffer, contentType: string
 }
 
 export async function readText(rel: string): Promise<string | null> {
-  const cached = mem.get(rel)
-  if (cached) return cached.toString('utf8')
+  // Always hit Blob first. A warm function used to return its in-memory
+  // copy and hide profiles / wins another device had just saved.
   if (useBlob()) {
     try {
       const buf = await readBlob(rel)
@@ -94,8 +94,13 @@ export async function readText(rel: string): Promise<string | null> {
         return buf.toString('utf8')
       }
     } catch {
-      /* fall through */
+      /* fall through to this instance's last write */
     }
+    const cached = mem.get(rel)
+    if (cached) return cached.toString('utf8')
+  } else {
+    const cached = mem.get(rel)
+    if (cached) return cached.toString('utf8')
   }
   for (const p of [diskPath(rel), tmpPath(rel)]) {
     try {
@@ -155,8 +160,6 @@ export async function writeJson(rel: string, data: unknown): Promise<void> {
 }
 
 export async function readBin(rel: string): Promise<Buffer | null> {
-  const cached = mem.get(rel)
-  if (cached) return cached
   if (useBlob()) {
     try {
       const buf = await readBlob(rel)
@@ -167,6 +170,11 @@ export async function readBin(rel: string): Promise<Buffer | null> {
     } catch {
       /* fall through */
     }
+    const cached = mem.get(rel)
+    if (cached) return cached
+  } else {
+    const cached = mem.get(rel)
+    if (cached) return cached
   }
   for (const p of [diskPath(rel), tmpPath(rel)]) {
     try {
