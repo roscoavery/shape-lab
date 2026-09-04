@@ -7,6 +7,7 @@ import {
   pushThisDeviceToGym,
 } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
+import { buildGymBackup, downloadGymBackup } from '../lib/gymBackup'
 import { roleLabel } from '../lib/profileRole'
 import { AthleteAvatar } from './AthleteAvatar'
 
@@ -141,7 +142,7 @@ export function GymRecords({ athletes }: Props) {
         </table>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy}
@@ -149,6 +150,21 @@ export function GymRecords({ athletes }: Props) {
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
         >
           Send everything on this device
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            void buildGymBackup().then((backup) => {
+              downloadGymBackup(backup)
+              flash(
+                `Saved a gym file with ${backup.roster.athletes.length} profiles onto this iPad. Keep that file in Files / iCloud.`,
+              )
+            })
+          }}
+          className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold"
+        >
+          Download gym file
         </button>
       </div>
       {status && <p className="mt-2 text-sm text-[var(--accent)]">{status}</p>}
