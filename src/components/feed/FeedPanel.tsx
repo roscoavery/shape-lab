@@ -19,6 +19,7 @@ import {
   removeFeedPost,
 } from '../../lib/feedPosts'
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { pushNotice } from '../../lib/notify'
 import { playGestureBurst } from '../../lib/gestureBurst'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
@@ -308,7 +309,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   From Photos
                   <input
                     type="file"
-                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
                     onChange={(e) => {
                       setFile(e.target.files?.[0] ?? null)
                       setLibId(null)

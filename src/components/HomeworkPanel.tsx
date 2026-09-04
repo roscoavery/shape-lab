@@ -22,7 +22,7 @@ import {
   getCatalogItem,
   needsWristPrep,
 } from '../config/homeworkCatalog'
-import { isPhoneBrowser } from '../lib/delayCameraPipeline'
+import { cameraPromptCue, isPhoneBrowser } from '../lib/delayCameraPipeline'
 import { isCoachProfile, profileRole } from '../lib/profileRole'
 import { worksWithCoachIds } from '../lib/coachLink'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
@@ -1635,7 +1635,7 @@ export function HomeworkPanel({
                   ? inShape
                     ? 'In the shape — clock is running'
                     : 'Camera on — clock starts when you hit the shape'
-                  : 'Allow the camera if Safari asks'
+                  : cameraPromptCue('homework')
                 : 'Switching camera to this shape…'}
             </p>
           </div>

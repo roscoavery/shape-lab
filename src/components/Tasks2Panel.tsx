@@ -9,7 +9,7 @@ import { FLOW_SEQUENCES, getFlowSequence, type FlowSequence } from '../config/ta
 import { getShape } from '../config/shapes'
 import { DELAY_MAX, useDelayCam } from '../hooks/useDelayCam'
 import { expandLeadCount, useSpeechCoach } from '../hooks/useSpeechCoach'
-import { isPhoneBrowser } from '../lib/delayCameraPipeline'
+import { cameraPromptCue, isPhoneBrowser } from '../lib/delayCameraPipeline'
 import {
   getCaptureBlob,
   getPoseTrackJson,
@@ -758,7 +758,7 @@ export function Tasks2Panel({
       revokeClipUrls()
       setPhase('preview')
       setBeatIndex(-1)
-      setCue('Starting camera… Allow it if Safari asks.')
+      setCue(cameraPromptCue('starting'))
       setFlash(null)
       onRequestFullscreen?.()
       const camP = Promise.resolve(onEnsureCamera?.())
@@ -789,11 +789,11 @@ export function Tasks2Panel({
         while (!streamRef.current && Date.now() < deadline) {
           await wait(200)
           if (!alive()) return
-          setCue('Allow the camera if Safari asks — waiting…')
+          setCue(cameraPromptCue('waiting'))
         }
         if (!streamRef.current) {
           setCue('Camera did not start.')
-          setFlash('Allow the camera in Safari, then tap Start again. Stay on this page.')
+          setFlash(cameraPromptCue('blocked'))
           window.setTimeout(() => setFlash(null), 8000)
           setPhase('idle')
           return

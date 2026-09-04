@@ -15,6 +15,7 @@ import {
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
 import { pushNotice } from '../../lib/notify'
 import { taggedIdsFromText } from '../../lib/profileHandle'
+import { videoFileAccept } from '../../lib/saveMedia'
 
 type Props = {
   athlete: Athlete
@@ -125,7 +126,7 @@ export function WinComposer({
           From Photos
           <input
             type="file"
-            accept="video/mp4,video/webm,video/quicktime,video/*"
+            accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
             className="sr-only"
             onChange={(e) => {
               setFile(e.target.files?.[0] ?? null)

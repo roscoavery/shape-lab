@@ -21,11 +21,32 @@
   box-sizing: border-box;
 }
 
+html {
+  --sl-vh: 100vh;
+}
+
 html,
 body,
 #root {
   margin: 0;
   min-height: 100%;
+}
+
+/*
+ * Android Chrome only. iPhone / iPad / laptop keep 100vh and default
+ * input sizes so delay cam, Compare, and desktop layout stay the same.
+ */
+html.android {
+  --sl-vh: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html.android input,
+html.android textarea,
+html.android select {
+  font-size: max(16px, 1em);
 }
 
 body {

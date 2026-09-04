@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { isAndroid } from '../../lib/delayCameraPipeline'
 
 function cameraErrorMessage(err: unknown): string {
   const name = err instanceof DOMException ? err.name : ''
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-    return 'Camera permission was blocked. Allow the camera, then try again.'
+    return isAndroid()
+      ? 'Camera permission is blocked. Tap the lock in Chrome, allow Camera, then try again.'
+      : 'Camera permission was blocked. Allow the camera, then try again.'
   }
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
     return 'No camera found on this device.'
@@ -96,11 +99,13 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
       streamRef.current = null
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: {
-          facingMode: { ideal: 'user' },
-          width: { ideal: 1280 },
-          height: { ideal: 1280 },
-        },
+        video: isAndroid()
+          ? { facingMode: { ideal: 'user' } }
+          : {
+              facingMode: { ideal: 'user' },
+              width: { ideal: 1280 },
+              height: { ideal: 1280 },
+            },
       })
       streamRef.current = stream
       setLive(true)

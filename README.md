@@ -49,6 +49,10 @@ Allow camera permission when the browser asks. Click **Start camera**.
 
 **Camera note:** Browsers require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) for `getUserMedia`. `localhost` works on the computer. Over a LAN IP, many phones block the camera on plain `http`. Use the **Vercel production URL** (HTTPS) on phones.
 
+### Android (Chrome)
+
+Open the Production gym URL in **Chrome**. Camera, delay cam, recordings, and file pickers use Android-safe settings (WebM first, lower bitrate, no 1080p-first camera ask, Chrome permission copy). **iPhone, iPad, and laptop are unchanged** — iPad delay still fills like the Camera app; iPhone / laptop still contain the native frame; iOS still uses the 90° unwind. Samsung Internet can lie about MP4 support; Chrome is the path that matches these gates.
+
 ## Permanent gym link (Vercel)
 
 This is the link that **stays the same** after updates. Do not text Cursor Preview or `*.trycloudflare.com` to the gym — those die.

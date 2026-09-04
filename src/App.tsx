@@ -819,7 +819,7 @@ export default function App() {
             onFullscreenChange={setCamFullscreen}
           />
 
-          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+          <div className="panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto">
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
@@ -890,7 +890,7 @@ export default function App() {
           />
           </div>
 
-          <div className="order-1 panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto xl:order-2">
+          <div className="order-1 panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto xl:order-2">
             <Tasks2Panel
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
@@ -1232,7 +1232,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="panel-scroll flex max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto">
+          <div className="panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto">
             <ShapeSelector selectedId={shape.id} onSelect={onSelectShape} />
             <ScorePanel
               shape={shape}

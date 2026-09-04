@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { fileToClipBlob, recordQuickClip } from '../../lib/quickClip'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { publishStory, saveHighlight } from '../../lib/stories'
 import { taggedIdsFromText } from '../../lib/profileHandle'
 import { pushNotice } from '../../lib/notify'
@@ -106,7 +107,7 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
         <input
           ref={fileRef}
           type="file"
-          accept="video/*,image/*"
+          accept={videoFileAccept('video/*,image/*')}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]

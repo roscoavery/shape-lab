@@ -46,6 +46,7 @@ import {
   pushCoachLibrary,
 } from '../../lib/coachLibrary'
 import { createId } from '../../lib/storage'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { defaultSocialName, clipLoopKey, postedByFromUrl } from '../../lib/socialUrls'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
@@ -1816,7 +1817,7 @@ export function ReferencePane({
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/*"
+              accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0]

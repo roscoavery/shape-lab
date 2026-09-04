@@ -2,6 +2,7 @@
  * Record or pick a short clip and save it into the gym video library.
  */
 
+import { isAndroid } from './delayCameraPipeline'
 import { createRecorder, pickRecorderMime, startRecorder } from './saveMedia'
 import { uploadAthleteVideo, type AthleteVideoSource } from './athleteVideoStore'
 
@@ -9,10 +10,35 @@ export async function recordQuickClip(seconds = 8): Promise<Blob> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('This browser cannot open the camera.')
   }
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 1280 } },
-    audio: true,
-  })
+  const attempts: MediaStreamConstraints[] = isAndroid()
+    ? [
+        { video: { facingMode: { ideal: 'environment' } }, audio: true },
+        { video: { facingMode: { ideal: 'environment' } }, audio: false },
+        { video: true, audio: true },
+      ]
+    : [
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
+          },
+          audio: true,
+        },
+      ]
+  let stream: MediaStream | null = null
+  let lastErr: unknown = null
+  for (const constraints of attempts) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints)
+      break
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  if (!stream) {
+    throw lastErr instanceof Error ? lastErr : new Error('This browser cannot open the camera.')
+  }
   try {
     if (!pickRecorderMime() && typeof MediaRecorder === 'undefined') {
       throw new Error('This browser cannot record a clip.')

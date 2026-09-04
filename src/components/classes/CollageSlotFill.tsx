@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { GymClip } from '../../lib/gymLibrary'
 import { fileToClipBlob, recordQuickClip, saveQuickClip } from '../../lib/quickClip'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { HudCircle, HudRecord, IconPhotos } from '../compare/CompareHud'
 import { CollageClipPicker } from './CollageClipPicker'
 
@@ -59,7 +60,7 @@ export function CollageSlotFill({ url, clipId, clips, viewerId, onPick }: Props)
         <input
           ref={fileRef}
           type="file"
-          accept="video/*,image/*"
+          accept={videoFileAccept('video/*,image/*')}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]

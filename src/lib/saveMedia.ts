@@ -6,6 +6,10 @@
  * "Save Video" and "Save to Files".
  */
 
+import { isAndroid } from './delayCameraPipeline'
+
+export { isAndroid }
+
 const remembered = new Map<string, Blob>()
 
 export function rememberCaptureBlob(id: string, blob: Blob): void {
@@ -28,10 +32,6 @@ export function isAppleMobile(): boolean {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
-export function isAndroid(): boolean {
-  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
-}
-
 /** True when the native share sheet is the reliable way onto Photos / Files. */
 export function prefersShareSave(): boolean {
   return (
@@ -50,9 +50,30 @@ const MIME_CANDIDATES = [
   'video/webm',
 ]
 
+const ANDROID_MIME_CANDIDATES = [
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm;codecs=vp9',
+  'video/webm;codecs=vp8',
+  'video/webm',
+  'video/mp4',
+]
+
 export function pickRecorderMime(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined
-  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t))
+  const list = isAndroid() ? ANDROID_MIME_CANDIDATES : MIME_CANDIDATES
+  return list.find((t) => MediaRecorder.isTypeSupported(t))
+}
+
+/** Extra Android types only. Other devices keep the exact accept string. */
+export function videoFileAccept(base = 'video/*,.mp4,.mov'): string {
+  if (!isAndroid()) return base
+  const extra = ['video/webm', 'video/3gpp', '.webm', '.3gp']
+  const parts = base.split(',').map((part) => part.trim()).filter(Boolean)
+  for (const item of extra) {
+    if (!parts.includes(item)) parts.push(item)
+  }
+  return parts.join(',')
 }
 
 export function extForVideoType(type: string): 'mp4' | 'webm' {
@@ -61,7 +82,9 @@ export function extForVideoType(type: string): 'mp4' | 'webm' {
 
 export function createRecorder(stream: MediaStream): MediaRecorder {
   const mime = pickRecorderMime()
-  const bitrates = [6_000_000, 3_500_000, 2_000_000]
+  const bitrates = isAndroid()
+    ? [2_500_000, 1_500_000, 800_000]
+    : [6_000_000, 3_500_000, 2_000_000]
   for (const bps of bitrates) {
     try {
       const opts: MediaRecorderOptions = { videoBitsPerSecond: bps }
@@ -169,7 +192,9 @@ export function saveResultMessage(result: SaveVideoResult, kind: 'video' | 'pack
   if (result === 'shared') {
     return isAppleMobile()
       ? 'Share sheet opened — tap Save Video (Photos) or Save to Files.'
-      : 'Share sheet opened — save the video to Photos or Files.'
+      : isAndroid()
+        ? 'Share sheet opened — save the video to Gallery or Files.'
+        : 'Share sheet opened — save the video to Photos or Files.'
   }
   if (result === 'downloaded') {
     return kind === 'pack'

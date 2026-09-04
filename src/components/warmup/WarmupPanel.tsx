@@ -12,6 +12,7 @@ import {
   uploadCoachMedia,
 } from '../../lib/coachContentStore'
 import { compressImageFile } from '../../lib/mediaCompress'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { createId } from '../../lib/storage'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import type { Athlete, WarmupGuide, WarmupStep } from '../../types'
@@ -479,7 +480,7 @@ function WarmupEditor({
                 Picture or video
                 <input
                   type="file"
-                  accept="image/*,video/*"
+                  accept={videoFileAccept('image/*,video/*')}
                   className="hidden"
                   disabled={busy}
                   onChange={(e) => {

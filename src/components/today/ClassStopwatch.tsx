@@ -20,6 +20,7 @@ import { makeClassExtra } from '../../lib/classExercises'
 import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
+import { videoFileAccept } from '../../lib/saveMedia'
 
 type Mode = 'hold' | 'vups' | 'skill' | 'other' | `extra:${string}`
 
@@ -685,7 +686,7 @@ export function ClassStopwatch({
             Attach clip from Photos
             <input
               type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/*"
+              accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
               className="sr-only"
               onChange={(e) => setSkillFile(e.target.files?.[0] ?? null)}
             />

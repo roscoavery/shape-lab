@@ -16,6 +16,7 @@ import {
 } from '../../lib/coachContentStore'
 import { AddGymShapeForm } from '../AddGymShapeForm'
 import { compressImageFile } from '../../lib/mediaCompress'
+import { videoFileAccept } from '../../lib/saveMedia'
 import { createId } from '../../lib/storage'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import type { Athlete, CoachShape, CoachShapeMedia, CoachSkillRef } from '../../types'
@@ -418,7 +419,7 @@ function SkillRefEditor({
             Upload video
             <input
               type="file"
-              accept="video/*"
+              accept={videoFileAccept('video/*')}
               className="hidden"
               disabled={busy}
               onChange={(e) => {
@@ -649,7 +650,7 @@ function ShapeEditor({
               Upload video
               <input
                 type="file"
-                accept="video/*"
+                accept={videoFileAccept('video/*')}
                 className="hidden"
                 disabled={busy}
                 onChange={(e) => {

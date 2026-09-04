@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isAndroid } from '../../lib/delayCameraPipeline'
 
 type Props = {
   onCapture: (file: File) => void
@@ -12,7 +13,9 @@ function stopStream(stream: MediaStream | null) {
 function cameraErrorMessage(err: unknown): string {
   const name = err instanceof DOMException ? err.name : ''
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-    return 'Camera permission was blocked. Allow the camera, then try again.'
+    return isAndroid()
+      ? 'Camera permission is blocked. Tap the lock in Chrome, allow Camera, then try again.'
+      : 'Camera permission was blocked. Allow the camera, then try again.'
   }
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
     return 'No camera found on this device.'
@@ -45,14 +48,40 @@ export function ShapeSnapCamera({ onCapture, onClose }: Props) {
       try {
         stopStream(streamRef.current)
         streamRef.current = null
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: facing },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        })
+        const attempts: MediaStreamConstraints[] = isAndroid()
+          ? [
+              {
+                audio: false,
+                video: {
+                  facingMode: { ideal: facing },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              },
+              { audio: false, video: { facingMode: { ideal: facing } } },
+              { audio: false, video: true },
+            ]
+          : [
+              {
+                audio: false,
+                video: {
+                  facingMode: { ideal: facing },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              },
+            ]
+        let stream: MediaStream | null = null
+        let lastErr: unknown = null
+        for (const constraints of attempts) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints)
+            break
+          } catch (err) {
+            lastErr = err
+          }
+        }
+        if (!stream) throw lastErr instanceof Error ? lastErr : new Error('Could not open the camera.')
         if (cancelled) {
           stopStream(stream)
           return

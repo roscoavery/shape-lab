@@ -13,6 +13,14 @@ const MIME_CANDIDATES = [
   'video/webm',
 ]
 
+/** Chrome Android often reports mp4 as supported, then writes a broken clip. */
+const ANDROID_MIME_CANDIDATES = [
+  'video/webm;codecs=vp9',
+  'video/webm;codecs=vp8',
+  'video/webm',
+  'video/mp4',
+]
+
 type MediaSourceCtor = {
   new (): MediaSource
   isTypeSupported?: (type: string) => boolean
@@ -42,6 +50,15 @@ export function isIosDevice() {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
+/** Chrome / WebView on Android. Never true on iPhone, iPad, or desktop Safari. */
+export function isAndroid() {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+}
+
+function recorderMimeCandidates(): readonly string[] {
+  return isAndroid() ? ANDROID_MIME_CANDIDATES : MIME_CANDIDATES
+}
+
 /** iPad (including iPadOS desktop UA). Phone and laptop stay on the native camera frame. */
 export function isIpadDevice() {
   if (typeof navigator === 'undefined') return false
@@ -53,8 +70,7 @@ export function isIpadDevice() {
 /** iPhone / iPad / Android — speechSynthesis is flaky on all of these. */
 export function isPhoneBrowser() {
   if (isIosDevice()) return true
-  if (typeof navigator === 'undefined') return false
-  return /Android/i.test(navigator.userAgent)
+  return isAndroid()
 }
 
 /**
@@ -77,7 +93,7 @@ export function getDelayCameraPipeline(preferredMime?: string | null): DelayCame
   }
   const mime =
     (preferredMime && supported(preferredMime) ? preferredMime : null) ??
-    MIME_CANDIDATES.find(supported) ??
+    recorderMimeCandidates().find(supported) ??
     null
   if (!mime) return null
   const classic = typeof (window as Window & { MediaSource?: unknown }).MediaSource === 'function'
@@ -86,7 +102,7 @@ export function getDelayCameraPipeline(preferredMime?: string | null): DelayCame
 
 export function pickRecorderMime(): string | null {
   if (typeof MediaRecorder === 'undefined') return null
-  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null
+  return recorderMimeCandidates().find((t) => MediaRecorder.isTypeSupported(t)) ?? null
 }
 
 /** Human message when getUserMedia never opens a prompt or the stream fails. */
@@ -96,16 +112,36 @@ export function cameraPermissionMessage(err: unknown): string {
     return 'This page is not HTTPS, so the browser will not start the camera. Open the gym link, then tap GO.'
   }
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-    return 'Camera permission is blocked. Click the camera icon in the address bar, allow it, then tap GO again.'
+    return isAndroid()
+      ? 'Camera permission is blocked. Tap the lock in Chrome, allow Camera, then tap GO again.'
+      : 'Camera permission is blocked. Click the camera icon in the address bar, allow it, then tap GO again.'
   }
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-    return 'No camera was found on this computer. Plug one in, then tap GO again.'
+    return isAndroid()
+      ? 'No camera was found on this phone. Check that Chrome can use the camera, then tap GO again.'
+      : 'No camera was found on this computer. Plug one in, then tap GO again.'
   }
   if (name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError') {
-    return 'Another app is using the camera. Close Zoom, Meet, or Photo Booth, then tap GO again.'
+    return isAndroid()
+      ? 'Another app is using the camera. Close Meet, Instagram, or the Camera app, then tap GO again.'
+      : 'Another app is using the camera. Close Zoom, Meet, or Photo Booth, then tap GO again.'
   }
   if (err instanceof Error && err.message) return err.message
   return 'Could not access the camera. Allow camera, then tap GO again.'
+}
+
+/** Tasks / homework wait copy. Safari wording stays on iPhone and iPad. */
+export function cameraPromptCue(kind: 'starting' | 'waiting' | 'blocked' | 'homework'): string {
+  if (isAndroid()) {
+    if (kind === 'starting') return 'Starting camera… Allow it if Chrome asks.'
+    if (kind === 'waiting') return 'Allow the camera if Chrome asks — waiting…'
+    if (kind === 'homework') return 'Allow the camera if Chrome asks'
+    return 'Allow the camera in Chrome, then tap Start again. Stay on this page.'
+  }
+  if (kind === 'starting') return 'Starting camera… Allow it if Safari asks.'
+  if (kind === 'waiting') return 'Allow the camera if Safari asks — waiting…'
+  if (kind === 'homework') return 'Allow the camera if Safari asks'
+  return 'Allow the camera in Safari, then tap Start again. Stay on this page.'
 }
 
 /**
@@ -123,18 +159,31 @@ export async function requestUserCamera(_opts?: { portrait?: boolean }): Promise
         : 'This browser cannot open the camera. Allow camera access, then try again.',
     )
   }
-  const attempts: MediaStreamConstraints[] = [
-    {
-      audio: false,
-      video: {
-        facingMode: { ideal: 'user' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
-    },
-    { audio: false, video: { facingMode: { ideal: 'user' } } },
-    { audio: false, video: true },
-  ]
+  const attempts: MediaStreamConstraints[] = isAndroid()
+    ? [
+        {
+          audio: false,
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        },
+        { audio: false, video: { facingMode: { ideal: 'user' } } },
+        { audio: false, video: true },
+      ]
+    : [
+        {
+          audio: false,
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        },
+        { audio: false, video: { facingMode: { ideal: 'user' } } },
+        { audio: false, video: true },
+      ]
   let lastErr: unknown = null
   let stream: MediaStream | null = null
   for (const constraints of attempts) {

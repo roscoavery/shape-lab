@@ -15,6 +15,7 @@ import {
   uploadCoachMedia,
 } from '../lib/coachContentStore'
 import type { Athlete, DrillClip } from '../types'
+import { videoFileAccept } from '../lib/saveMedia'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShareReference } from './share/ShareReference'
@@ -305,7 +306,7 @@ function DrillEditor({
           {busy ? 'Uploading…' : draft.src ? 'Replace video' : 'Upload 9:16 video'}
           <input
             type="file"
-            accept="video/*"
+            accept={videoFileAccept('video/*')}
             className="hidden"
             disabled={busy}
             onChange={(e) => {

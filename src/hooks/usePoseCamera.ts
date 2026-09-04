@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getPoseLandmarker, resultToLandmarks } from '../lib/pose'
 import { hintMotion } from '../lib/saveMedia'
-import { cameraPermissionMessage, requestUserCamera } from '../lib/delayCameraPipeline'
+import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../lib/delayCameraPipeline'
 import type { Landmark } from '../types'
 
 export type PoseCameraState = {
@@ -63,7 +63,8 @@ export function usePoseCamera(): PoseCameraState {
     try {
       const landmarker = await getPoseLandmarker()
       const now = performance.now()
-      if (now > lastTsRef.current) {
+      const minGap = isAndroid() ? 50 : 0
+      if (now - lastTsRef.current >= minGap) {
         const result = landmarker.detectForVideo(video, now)
         lastTsRef.current = now
         setLandmarks(resultToLandmarks(result))

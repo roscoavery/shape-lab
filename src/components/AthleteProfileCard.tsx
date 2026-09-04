@@ -30,6 +30,7 @@ import {
   type FeedPost,
 } from '../lib/feedPosts'
 import { WinComposer } from './feed/WinComposer'
+import { videoFileAccept } from '../lib/saveMedia'
 import { profileThemeStyle } from '../lib/profileTheme'
 import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
@@ -1083,7 +1084,7 @@ function PassComposer({
       <input
         ref={fileRef}
         type="file"
-        accept="video/*"
+        accept={videoFileAccept('video/*')}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]

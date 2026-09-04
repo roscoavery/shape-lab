@@ -6,6 +6,7 @@ import { LM, POSE_EDGES } from '../../lib/landmarks'
 import { getFloorPoseLandmarker, resultToMultipleLandmarks } from '../../lib/pose'
 import type { Landmark, ReferencePhoto } from '../../types'
 import { useOverlayStill } from '../OverlayStillContext'
+import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../../lib/delayCameraPipeline'
 
 type Props = {
   mirror: boolean
@@ -162,14 +163,16 @@ export function TodayFloorCamera({
     setError(null)
     try {
       // Keep this request local to Today. Compare never receives this stream.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      })
+      const stream = isAndroid()
+        ? await requestUserCamera()
+        : await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: 'user',
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          })
       streamRef.current = stream
       const video = videoRef.current
       if (!video) throw new Error('Today floor-camera preview is unavailable.')
@@ -207,9 +210,11 @@ export function TodayFloorCamera({
     } catch (err) {
       stop()
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Could not open the Today camera. Allow permission and try again.',
+        isAndroid()
+          ? cameraPermissionMessage(err)
+          : err instanceof Error
+            ? err.message
+            : 'Could not open the Today camera. Allow permission and try again.',
       )
     } finally {
       startingRef.current = false
