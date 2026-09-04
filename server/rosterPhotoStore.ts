@@ -1,4 +1,4 @@
-import { readJson, writeJson } from './persist.ts'
+import { readJson, readText, removeFile, writeJson, writeText } from './persist.ts'
 
 const FILE = 'data/roster-photos.json'
 
@@ -7,6 +7,7 @@ export type DiskRosterPhotos = {
   version: 1
   exportedAt: string
   photos: Record<string, string>
+  ids?: string[]
 }
 
 const EMPTY: DiskRosterPhotos = {
@@ -14,43 +15,109 @@ const EMPTY: DiskRosterPhotos = {
   version: 1,
   exportedAt: '',
   photos: {},
+  ids: [],
 }
 
-export async function readRosterPhotosFile(): Promise<DiskRosterPhotos> {
+function photoRel(id: string): string {
+  return `data/roster-photos/${id}.txt`
+}
+
+function safePhotoId(id: string): string | null {
+  const s = id.trim()
+  if (!s || s.length > 80) return null
+  if (!/^[a-zA-Z0-9_-]+$/.test(s)) return null
+  return s
+}
+
+async function writeOne(id: string, url: string): Promise<void> {
+  await writeText(photoRel(id), url)
+}
+
+async function readOne(id: string): Promise<string | null> {
+  const text = await readText(photoRel(id))
+  if (text && text.startsWith('data:')) return text
+  return null
+}
+
+async function migrateCombined(data: DiskRosterPhotos): Promise<string[]> {
+  const ids = new Set<string>()
+  for (const id of Array.isArray(data.ids) ? data.ids : []) {
+    if (typeof id === 'string' && safePhotoId(id)) ids.add(id)
+  }
+  let moved = false
+  if (data.photos && typeof data.photos === 'object') {
+    for (const [id, url] of Object.entries(data.photos)) {
+      const sid = safePhotoId(id)
+      if (!sid) continue
+      ids.add(sid)
+      if (typeof url === 'string' && url.startsWith('data:')) {
+        await writeOne(sid, url)
+        moved = true
+      }
+    }
+  }
+  if (moved) {
+    await writeJson(FILE, {
+      kind: 'shape-lab-roster-photos',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      photos: {},
+      ids: [...ids],
+    })
+  }
+  return [...ids]
+}
+
+export async function listRosterPhotoIds(): Promise<string[]> {
   const data = await readJson<DiskRosterPhotos>(FILE, { ...EMPTY })
-  if (!data || data.kind !== 'shape-lab-roster-photos' || !data.photos || typeof data.photos !== 'object') {
-    return { ...EMPTY, photos: {} }
-  }
-  const photos: Record<string, string> = {}
-  for (const [id, url] of Object.entries(data.photos)) {
-    if (id && typeof url === 'string' && url.startsWith('data:')) photos[id] = url
-  }
+  return migrateCombined(data)
+}
+
+export async function readRosterPhoto(id: string): Promise<string | null> {
+  const sid = safePhotoId(id)
+  if (!sid) return null
+  const one = await readOne(sid)
+  if (one) return one
+  const data = await readJson<DiskRosterPhotos>(FILE, { ...EMPTY })
+  const url = data.photos?.[sid]
+  return typeof url === 'string' && url.startsWith('data:') ? url : null
+}
+
+/** Index only — do not inline data URLs. iPhone Safari dies on the combined file. */
+export async function readRosterPhotosFile(): Promise<DiskRosterPhotos> {
+  const ids = await listRosterPhotoIds()
   return {
     kind: 'shape-lab-roster-photos',
     version: 1,
-    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
-    photos,
+    exportedAt: '',
+    photos: {},
+    ids,
   }
 }
 
 export async function writeRosterPhotosFile(raw: unknown): Promise<DiskRosterPhotos> {
   const body = raw && typeof raw === 'object' ? (raw as DiskRosterPhotos) : EMPTY
-  const current = await readRosterPhotosFile()
   const incoming = body.photos && typeof body.photos === 'object' ? body.photos : {}
-  const photos = { ...current.photos }
+  const ids = new Set(await listRosterPhotoIds())
   for (const [id, url] of Object.entries(incoming)) {
-    if (!id || typeof url !== 'string') continue
+    const sid = safePhotoId(id)
+    if (!sid) continue
     if (!url) {
-      delete photos[id]
+      ids.delete(sid)
+      await removeFile(photoRel(sid))
       continue
     }
-    if (url.startsWith('data:')) photos[id] = url
+    if (typeof url === 'string' && url.startsWith('data:')) {
+      await writeOne(sid, url)
+      ids.add(sid)
+    }
   }
   const next: DiskRosterPhotos = {
     kind: 'shape-lab-roster-photos',
     version: 1,
     exportedAt: new Date().toISOString(),
-    photos,
+    photos: {},
+    ids: [...ids],
   }
   await writeJson(FILE, next)
   return next

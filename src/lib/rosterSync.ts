@@ -92,9 +92,13 @@ export function lastPulledAthleteCount() {
   return lastServerAthleteCount
 }
 
-/** Skip PUTs that would shrink the gym file back to a 3-profile phone cache. */
-export function shouldPushRoster(athleteCount = loadAthletes().length) {
-  return serverPushEnabled && athleteCount >= Math.max(1, lastServerAthleteCount)
+/**
+ * After the first successful GET, every change must PUT — including deletes.
+ * Removals are explicit tombstones, so a smaller living list cannot wipe
+ * people the client never listed as removed.
+ */
+export function shouldPushRoster(_athleteCount = loadAthletes().length) {
+  return serverPushEnabled
 }
 
 function localFlowMap(): Record<string, FlowProgress> {
@@ -275,47 +279,99 @@ function attachPhotos(athletes: Athlete[], photos: Record<string, string>): Athl
 }
 
 export async function pullServerRosterPhotos(): Promise<Record<string, string>> {
+  const photos: Record<string, string> = {}
   try {
-      const res = await fetch('/api/roster-photos', gymGetInit(20_000))
+    const res = await fetch('/api/roster-photos', gymGetInit(20_000))
     if (!res.ok) return {}
-    const data = (await res.json()) as { kind?: string; photos?: Record<string, string> }
-    if (data?.kind !== 'shape-lab-roster-photos' || !data.photos) return {}
-    return data.photos
+    const data = (await res.json()) as {
+      kind?: string
+      photos?: Record<string, string>
+      ids?: string[]
+    }
+    if (data?.photos) {
+      for (const [id, url] of Object.entries(data.photos)) {
+        if (id && typeof url === 'string' && url.startsWith('data:')) photos[id] = url
+      }
+    }
+    const ids = [
+      ...new Set([
+        ...(Array.isArray(data.ids) ? data.ids : []),
+        ...Object.keys(photos),
+      ]),
+    ].filter((id) => typeof id === 'string' && id)
+    const missing = ids.filter((id) => !photos[id])
+    for (let i = 0; i < missing.length; i += 4) {
+      const batch = missing.slice(i, i + 4)
+      await Promise.all(
+        batch.map(async (id) => {
+          try {
+            const one = await fetch(
+              `/api/roster-photos?id=${encodeURIComponent(id)}`,
+              gymGetInit(25_000),
+            )
+            if (!one.ok) return
+            const row = (await one.json()) as { photo?: string }
+            if (typeof row.photo === 'string' && row.photo.startsWith('data:')) {
+              photos[id] = row.photo
+            }
+          } catch {
+            /* one missing picture must not block the rest */
+          }
+        }),
+      )
+    }
+    return photos
   } catch {
-    return {}
+    return photos
   }
 }
 
-export async function pushServerRoster(snapshot?: RosterBackup): Promise<void> {
+export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean> {
   const body = snapshot ?? localRosterSnapshot()
-  if (!shouldPushRoster(body.athletes.length)) return
+  if (!shouldPushRoster(body.athletes.length)) return false
   const photos = photosFromSnapshot(body.athletes)
   const slim: RosterBackup = {
     ...body,
     athletes: body.athletes.map(({ photoDataUrl: _photo, ...rest }) => rest),
   }
-  try {
-    const res = await fetch('/api/roster', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slim),
-    })
-    if (!res.ok) return
-    if (Object.keys(photos).length > 0) {
-      await fetch('/api/roster-photos', {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const res = await fetch('/api/roster', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'shape-lab-roster-photos',
-          version: 1,
-          exportedAt: new Date().toISOString(),
-          photos,
-        }),
+        cache: 'no-store',
+        credentials: 'same-origin',
+        body: JSON.stringify(slim),
       })
+      if (!res.ok) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
+        continue
+      }
+      lastServerAthleteCount = Math.max(lastServerAthleteCount, slim.athletes.length)
+      if (Object.keys(photos).length > 0) {
+        await Promise.all(
+          Object.entries(photos).map(([id, photo]) =>
+            fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              cache: 'no-store',
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                kind: 'shape-lab-roster-photos',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                photos: { [id]: photo },
+              }),
+            }).catch(() => null),
+          ),
+        )
+      }
+      return true
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
     }
-  } catch {
-    /* server down — localStorage still holds a copy on this origin */
   }
+  return false
 }
 
 export type RosterSyncResult = {

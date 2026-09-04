@@ -86,6 +86,7 @@ import {
   saveAthletes,
   saveSettings,
   saveTab,
+  loadRemovedAthleteIds,
   noteRemovedAthlete,
   type AppTab,
 } from './lib/storage'
@@ -266,12 +267,18 @@ export default function App() {
     const target = athletes.find((a) => a.id === id)
     if (!target || isRyanAthlete(target)) return
     noteRemovedAthlete(id)
-    setAthleteRoster(athletes.filter((a) => a.id !== id))
+    const next = athletes.filter((a) => a.id !== id)
+    setAthleteRoster(next)
     if (viewingAthleteId === id) setViewingAthleteId(null)
     if (activeAthleteId === id) {
       lockAllProfiles()
       setActiveAthleteId(null)
     }
+    void pushServerRoster({
+      ...localRosterSnapshot(),
+      athletes: ensureRyanInAthletes(next),
+      removedAthleteIds: [...new Set([...loadRemovedAthleteIds(), id])],
+    })
   }, [athletes, viewingAthleteId, activeAthleteId, setAthleteRoster])
 
   const requestSelectAthlete = useCallback(

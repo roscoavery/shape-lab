@@ -12,9 +12,7 @@ import {
 } from './rosterMerge.ts'
 import { readDiskJson, readJson, writeJson } from './persist.ts'
 import {
-  attachRosterPhotos,
   photosFromAthletes,
-  readRosterPhotosFile,
   stripRosterPhotos,
   writeRosterPhotosFile,
 } from './rosterPhotoStore.ts'
@@ -153,19 +151,6 @@ async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
   return next
 }
 
-async function withPhotos(disk: DiskRoster): Promise<DiskRoster> {
-  const inline = photosFromAthletes(disk.athletes)
-  if (Object.keys(inline).length > 0) {
-    await writeRosterPhotosFile({ kind: 'shape-lab-roster-photos', version: 1, exportedAt: '', photos: inline })
-  }
-  const stored = await readRosterPhotosFile()
-  const photos = { ...stored.photos, ...inline }
-  return {
-    ...disk,
-    athletes: attachRosterPhotos(disk.athletes as { id: string; photoDataUrl?: string }[], photos),
-  }
-}
-
 export async function readRosterFile(): Promise<DiskRoster> {
   const onDisk = await readRawRoster()
   const merged = mergeRosterLists(
@@ -177,8 +162,17 @@ export async function readRosterFile(): Promise<DiskRoster> {
   const sameRemoved =
     JSON.stringify(onDisk.removedAthleteIds ?? []) === JSON.stringify(merged.removedAthleteIds)
   const disk = !sameAthletes || !sameRemoved ? await persistMerged(merged) : listsToDisk(merged, onDisk.exportedAt)
-  // Photos live on /api/roster-photos. Inlining them here made the gym file
-  // too large for iPhone Safari and the phone never got past boot.
+  const inline = photosFromAthletes(disk.athletes)
+  if (Object.keys(inline).length > 0) {
+    await writeRosterPhotosFile({
+      kind: 'shape-lab-roster-photos',
+      version: 1,
+      exportedAt: '',
+      photos: inline,
+    })
+  }
+  // Photos live on /api/roster-photos?id=. Inlining them here made the gym
+  // file too large for iPhone Safari and the phone never got past boot.
   return {
     ...disk,
     athletes: stripRosterPhotos(disk.athletes as { photoDataUrl?: string }[]),
@@ -212,5 +206,5 @@ export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
     ...merged,
     athletes: stripRosterPhotos(merged.athletes),
   })
-  return withPhotos(saved)
+  return saved
 }

@@ -564,27 +564,12 @@ export function mergeRosterLists(
   remote: RosterLists,
   hints: Record<string, ProfileHint> = {},
 ): RosterLists {
-  const incomingLiving = new Set(remote.athletes.map((a) => a.id))
-  const localLiving = new Set(local.athletes.map((a) => a.id))
-  const serverCount = local.athletes.length
-  const incomingCount = remote.athletes.length
-  const proposedDrops = remote.removedAthleteIds.filter(
-    (id) => localLiving.has(id) && !incomingLiving.has(id),
-  )
-  // A phone that is missing people cannot tombstone the rest of the gym.
-  // A real delete must account for every living id (kept or explicitly dropped).
-  const clientAccountsForGym = [...localLiving].every(
-    (id) => incomingLiving.has(id) || proposedDrops.includes(id),
-  )
-  const acceptClientRemovals =
-    incomingCount === 0
-      ? false
-      : clientAccountsForGym && incomingCount + proposedDrops.length >= serverCount
-  const clientRemovals = acceptClientRemovals ? remote.removedAthleteIds : []
+  // Absence never deletes. Only an explicit removed id does — and once it is
+  // listed, living copies on another device cannot bring that person back.
   const removed = normalizeRemovedIds([
-    ...local.removedAthleteIds.filter((id) => !incomingLiving.has(id)),
-    ...clientRemovals,
-  ]).filter((id) => !incomingLiving.has(id))
+    ...local.removedAthleteIds,
+    ...remote.removedAthleteIds,
+  ])
   const dismissedHomeworkKeys = [
     ...new Set([...local.dismissedHomeworkKeys, ...remote.dismissedHomeworkKeys]),
   ]

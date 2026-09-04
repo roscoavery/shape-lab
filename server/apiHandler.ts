@@ -13,7 +13,11 @@ import { postedByFromUrl } from '../src/lib/socialUrls.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
-import { readRosterPhotosFile, writeRosterPhotosFile } from './rosterPhotoStore.ts'
+import {
+  readRosterPhoto,
+  readRosterPhotosFile,
+  writeRosterPhotosFile,
+} from './rosterPhotoStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
 import {
@@ -193,7 +197,16 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/roster-photos') {
+    const photoId = url.searchParams.get('id') ?? ''
     if (req.method === 'GET') {
+      if (photoId) {
+        sendJson(res, 200, {
+          kind: 'shape-lab-roster-photo',
+          id: photoId,
+          photo: (await readRosterPhoto(photoId)) ?? '',
+        })
+        return true
+      }
       sendJson(res, 200, await readRosterPhotosFile())
       return true
     }
