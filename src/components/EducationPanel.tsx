@@ -30,6 +30,7 @@ import { useShapeCopy } from './ShapeCopyContext'
 import { ShapeCopyEditor } from './ShapeCopyEditor'
 import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
+import { MediaLightbox } from './MediaLightbox'
 import { PhysicsLessons } from './learn/PhysicsLessons'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
 import { ANATOMY_LESSONS } from '../config/coachAnatomy'
@@ -1448,6 +1449,7 @@ function IgShapesLibrary({
   const [draftNotes, setDraftNotes] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [viewStill, setViewStill] = useState<ReferencePhoto | null>(null)
 
   const remove = async (still: ReferencePhoto) => {
     if (still.persistedToApp && !persistIgToApp) return
@@ -1524,14 +1526,19 @@ function IgShapesLibrary({
                 key={still.id}
                 className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0d1218]"
               >
-                <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#0d1218]">
+                <button
+                  type="button"
+                  onClick={() => setViewStill(still)}
+                  className="flex aspect-[4/3] w-full items-center justify-center bg-[#0d1218]"
+                  aria-label={`Open ${still.label || group.name} full screen`}
+                >
                   <CroppedStill
                     src={still.dataUrl}
                     stillId={still.id}
                     alt={still.label ?? group.name}
                     className="h-full w-full object-contain"
                   />
-                </div>
+                </button>
                 <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                   <p className="min-w-0 truncate text-[11px] text-[var(--muted)]">
                     {still.label || group.name}
@@ -1621,6 +1628,14 @@ function IgShapesLibrary({
           </ul>
         </div>
       ))}
+      {viewStill && (
+        <MediaLightbox
+          src={viewStill.dataUrl}
+          kind="image"
+          alt={viewStill.label || viewStill.customName || 'IG shape'}
+          onClose={() => setViewStill(null)}
+        />
+      )}
     </section>
   )
 }

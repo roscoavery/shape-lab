@@ -11,6 +11,7 @@ export type PhysicsLesson = {
   gym: string
   /** Optional nav grouping in Learn. */
   section?: string
+  image?: { src: string; alt: string }
 }
 
 export const PHYSICS_LESSONS: PhysicsLesson[] = [

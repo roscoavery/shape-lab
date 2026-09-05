@@ -44,6 +44,7 @@ import {
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, toggleFollowOnDisk, writeSocialFile } from './socialStore.ts'
 import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
+import { readLearnNotesFile, writeLearnNotesFile } from './learnNotesStore.ts'
 import {
   addIgStillFromBody,
   deleteIgStill,
@@ -93,6 +94,7 @@ const API_PATHS = new Set([
   '/api/ig-stills',
   '/api/ig-still-file',
   '/api/shape-copy',
+  '/api/learn-notes',
   '/api/still-crops',
   '/api/athlete-videos',
   '/api/athlete-video-file',
@@ -323,6 +325,20 @@ export async function handleShapeLabApi(
               : 'Could not save the gym file on this link.',
         })
       }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/learn-notes') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readLearnNotesFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      const saved = await writeLearnNotesFile(JSON.parse(body))
+      sendJson(res, 200, saved)
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

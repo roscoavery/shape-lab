@@ -10,6 +10,10 @@ export const PROGRESSION_LESSONS: CoachLesson[] = [
     id: 'four-levels',
     section: 'The 4 levels',
     title: 'The 4 levels of progression',
+    image: {
+      src: '/learn/progression-levels.png',
+      alt: 'The 4 levels of progression for any tumbling skill, and how fear and blocks sit on that path',
+    },
     kicker: 'Introduction → approximation → acquisition → mastery. Athletes move forward, stay, or step back.',
     body: [
       'Level 1 — Skill introduction. They are first learning the skill exists. They see it, hear the shapes, do drills on the ground. They may be curious, excited, or nervous. Your job is teach, build a foundation, make the first impression safe, and earn trust. Do not test courage here.',
@@ -71,6 +75,10 @@ export const PROGRESSION_LESSONS: CoachLesson[] = [
     id: 'levels-and-blocks',
     section: 'Fear and blocks',
     title: 'How blocks sit on the 4 levels',
+    image: {
+      src: '/learn/progression-levels.png',
+      alt: 'The 4 levels of progression and how normal fear, mental, physical, and emotional blocks connect',
+    },
     kicker: 'Normal fear can live anywhere. A mental block is a step back from a level they already earned.',
     body: [
       'Introduction and approximation should have normal fear. If you see refusal there, it is usually too big a jump or a physical gap, not a mental block. Call it what it is. Shrink the drill or build the body.',

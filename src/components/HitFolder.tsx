@@ -10,6 +10,7 @@ import {
   type TaskCapture,
 } from '../lib/captureStore'
 import { saveResultMessage, saveVideoToDevice } from '../lib/saveMedia'
+import { MediaLightbox } from './MediaLightbox'
 
 type Preview = { url: string; kind: 'snapshot' | 'clip'; label: string; id: string }
 
@@ -33,7 +34,10 @@ export function HitFolder({ captures, athleteName, onChange }: Props) {
 
   const open = async (c: TaskCapture) => {
     const blob = await getCaptureBlob(c.id)
-    if (!blob) return
+    if (!blob) {
+      setNotice('Could not open that still or clip. The file is not on this device.')
+      return
+    }
     if (preview) URL.revokeObjectURL(preview.url)
     setPreview({
       url: URL.createObjectURL(blob),
@@ -107,36 +111,15 @@ export function HitFolder({ captures, athleteName, onChange }: Props) {
       )}
       {notice && <p className="mt-2 text-xs text-[var(--accent)]">{notice}</p>}
       {preview && (
-        <div className="mt-3">
-          {preview.kind === 'clip' ? (
-            <video src={preview.url} controls className="max-h-52 w-full rounded bg-black" />
-          ) : (
-            <img
-              src={preview.url}
-              alt={preview.label}
-              className="max-h-52 w-full rounded object-contain"
-            />
-          )}
-          <div className="mt-1 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="text-xs font-semibold text-[var(--accent)] underline"
-              onClick={() => void saveToPhotos(preview.id, preview.kind, preview.label)}
-            >
-              Save to Photos
-            </button>
-            <button
-              type="button"
-              className="text-xs text-[var(--muted)] underline"
-              onClick={() => {
-                URL.revokeObjectURL(preview.url)
-                setPreview(null)
-              }}
-            >
-              Close preview
-            </button>
-          </div>
-        </div>
+        <MediaLightbox
+          src={preview.url}
+          kind={preview.kind === 'clip' ? 'video' : 'image'}
+          alt={preview.label}
+          onClose={() => {
+            URL.revokeObjectURL(preview.url)
+            setPreview(null)
+          }}
+        />
       )}
     </div>
   )

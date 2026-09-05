@@ -3,6 +3,8 @@
  * Blobs are too large for localStorage — this stays on-device only.
  */
 
+import { getRememberedBlob } from './saveMedia'
+
 const DB_NAME = 'shape-lab-captures'
 const DB_VERSION = 2
 const META = 'meta'
@@ -114,10 +116,15 @@ export async function listCaptures(athleteId: string): Promise<TaskCapture[]> {
 }
 
 export async function getCaptureBlob(id: string): Promise<Blob | null> {
-  const db = await openDb()
-  const tx = db.transaction(BLOBS, 'readonly')
-  const blob = await reqToPromise(tx.objectStore(BLOBS).get(id) as IDBRequest<Blob | undefined>)
-  return blob ?? null
+  try {
+    const db = await openDb()
+    const tx = db.transaction(BLOBS, 'readonly')
+    const blob = await reqToPromise(tx.objectStore(BLOBS).get(id) as IDBRequest<Blob | undefined>)
+    if (blob) return blob
+  } catch {
+    /* IndexedDB down — try the in-memory run clip */
+  }
+  return getRememberedBlob(id)
 }
 
 export async function deleteCapture(id: string): Promise<void> {

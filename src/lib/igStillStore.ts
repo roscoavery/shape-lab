@@ -3,12 +3,13 @@
  * (POST /api/ig-stills) so every gym link has the same library.
  */
 
+import { SHIPPED_IG_STILLS } from '../config/shippedIgStills'
 import type { ReferencePhoto } from '../types'
 
 const DB_NAME = 'shape-lab-ig-stills'
 const DB_VERSION = 1
 const STORE = 'stills'
-const MAX_IG = 80
+const MAX_IG = 400
 
 let dbPromise: Promise<IDBDatabase> | null = null
 let memory: ReferencePhoto[] = []
@@ -119,10 +120,16 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
     local = memory.filter((p) => p.library === 'ig')
   }
   const remote = await pullServerIgStills()
-  memory = unionIgLists(local, remote)
+  const remoteIds = new Set(remote.map((p) => p.id))
+  memory = unionIgLists([...SHIPPED_IG_STILLS, ...local], remote)
   emit()
+  // Re-upload any still this device still has as pixels if the gym file is
+  // missing that id — recovers crops after an empty Blob overwrite.
   const unsaved = memory.filter(
-    (p) => !p.persistedToApp && typeof p.dataUrl === 'string' && p.dataUrl.startsWith('data:image'),
+    (p) =>
+      typeof p.dataUrl === 'string' &&
+      p.dataUrl.startsWith('data:image') &&
+      (!p.persistedToApp || !remoteIds.has(p.id)),
   )
   for (const photo of unsaved) {
     const saved = await postServerStill(photo)
@@ -165,21 +172,18 @@ async function postServerStill(photo: ReferencePhoto): Promise<ReferencePhoto | 
 
 export async function addIgStill(
   photo: ReferencePhoto,
-  opts?: { persistToApp?: boolean },
+  _opts?: { persistToApp?: boolean },
 ): Promise<ReferencePhoto> {
   let next: ReferencePhoto = { ...photo, library: 'ig' }
   memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
   emit()
   await writeLocal(next)
-  const persist = opts?.persistToApp !== false
-  if (persist) {
-    const saved = await postServerStill(next)
-    if (saved) {
-      next = saved
-      memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
-      emit()
-      await writeLocal(next)
-    }
+  const saved = await postServerStill(next)
+  if (saved) {
+    next = saved
+    memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
+    emit()
+    await writeLocal(next)
   }
   return next
 }

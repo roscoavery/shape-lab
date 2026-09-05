@@ -732,7 +732,7 @@ export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
   }
   const ig = next.filter((p) => p.library === 'ig')
   const other = next.filter((p) => p.library !== 'ig')
-  saveReferencePhotos([...ig.slice(0, 80), ...other.slice(0, 80)])
+  saveReferencePhotos([...ig.slice(0, 400), ...other.slice(0, 80)])
 }
 
 export async function deleteReferencePhoto(id: string): Promise<void> {

@@ -26,6 +26,7 @@ dist-ssr
 data/ig-blobs/
 data/ig-stills.json
 data/shape-copy.json
+data/learn-notes.json
 data/athlete-videos.json
 data/athlete-video-blobs/
 data/feed-posts.json

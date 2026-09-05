@@ -4,11 +4,13 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
+import path from 'node:path'
+import { readBin, readDiskJson, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
 const META = 'data/ig-stills.json'
 const blobRel = (file: string) => `data/ig-blobs/${file}`
-const MAX_STILLS = 80
+const MAX_STILLS = 400
+const SHIPPED_DIR = 'public/learn/ig-stills'
 const MAX_BYTES = 6 * 1024 * 1024
 
 export type DiskIgStill = {
@@ -65,15 +67,76 @@ function parseDataUrl(dataUrl: string): { type: string; buf: Buffer } | null {
   return { type, buf }
 }
 
+function asDiskStill(s: unknown): DiskIgStill | null {
+  if (!s || typeof s !== 'object') return null
+  const row = s as DiskIgStill
+  if (typeof row.id !== 'string' || !row.id) return null
+  const file = typeof row.file === 'string' && row.file ? row.file : `${row.id}.jpg`
+  return { ...row, library: 'ig', file }
+}
+
+const SHIPPED_FALLBACK: DiskIgStill[] = [
+  {
+    id: 'ig_mtcn5232_az6p66',
+    shapeId: 'handstand',
+    athleteId: null,
+    createdAt: '2026-08-28T07:39:19.118Z',
+    library: 'ig',
+    file: 'ig_mtcn5232_az6p66.jpg',
+  },
+  {
+    id: 'ig_mtdy2mah_ey7owy',
+    shapeId: 'custom_eduardo_athlete_lever',
+    athleteId: 'ath_mt946zgf_p3ml85',
+    label: 'eduardo athlete lever',
+    customName: 'eduardo athlete lever',
+    createdAt: '2026-08-29T05:33:07.289Z',
+    library: 'ig',
+    file: 'ig_mtdy2mah_ey7owy.jpg',
+  },
+  {
+    id: 'ig_mtdy0ax0_wz77sx',
+    shapeId: 'custom_eduardo_athlete_starting_lunge',
+    athleteId: 'ath_mt946zgf_p3ml85',
+    label: 'eduardo athlete starting lunge',
+    customName: 'eduardo athlete starting lunge',
+    createdAt: '2026-08-29T05:31:19.236Z',
+    library: 'ig',
+    file: 'ig_mtdy0ax0_wz77sx.jpg',
+  },
+  {
+    id: 'ig_mtdcrfqt_j9l8df',
+    shapeId: 'custom_zombie_into_whip',
+    athleteId: 'ath_ryan',
+    label: 'Dead mat whip shapes',
+    customName: 'Zombie into whip',
+    createdAt: '2026-08-28T19:36:33.653Z',
+    library: 'ig',
+    file: 'ig_mtdcrfqt_j9l8df.jpg',
+  },
+]
+
+/** Blob can be an empty file that hid the disk / shipped library. Union, do not replace. */
 export async function readIgStillMeta(): Promise<DiskIgLibrary> {
-  const data = await readJson<DiskIgLibrary>(META, { ...EMPTY })
-  if (!data || data.kind !== 'shape-lab-ig-stills' || !Array.isArray(data.stills)) {
-    return { ...EMPTY }
+  const remote = await readJson<DiskIgLibrary>(META, { ...EMPTY })
+  const disk = readDiskJson<DiskIgLibrary>(META, { ...EMPTY })
+  const map = new Map<string, DiskIgStill>()
+  const addAll = (lib: DiskIgLibrary | null) => {
+    if (!lib || lib.kind !== 'shape-lab-ig-stills' || !Array.isArray(lib.stills)) return
+    for (const raw of lib.stills) {
+      const row = asDiskStill(raw)
+      if (row) map.set(row.id, row)
+    }
+  }
+  addAll(disk)
+  addAll(remote)
+  for (const shipped of SHIPPED_FALLBACK) {
+    if (!map.has(shipped.id)) map.set(shipped.id, shipped)
   }
   return {
     ...EMPTY,
-    ...data,
-    stills: data.stills.filter((s) => s && typeof s.id === 'string' && typeof s.file === 'string'),
+    exportedAt: remote.exportedAt || disk.exportedAt || '',
+    stills: [...map.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
   }
 }
 
@@ -89,6 +152,7 @@ async function writeMeta(stills: DiskIgStill[]): Promise<DiskIgLibrary> {
 }
 
 export async function stillsForClient(): Promise<Array<Record<string, unknown>>> {
+  const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
   return (await readIgStillMeta()).stills.map((s) => ({
     id: s.id,
     shapeId: s.shapeId,
@@ -99,7 +163,9 @@ export async function stillsForClient(): Promise<Array<Record<string, unknown>>>
     createdAt: s.createdAt,
     library: 'ig',
     persistedToApp: true,
-    dataUrl: `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
+    dataUrl: shippedIds.has(s.id)
+      ? `/learn/ig-stills/${s.file}`
+      : `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
   }))
 }
 
@@ -185,7 +251,10 @@ export async function sendIgStillFile(idRaw: string, res: ServerResponse): Promi
   if (!id) return false
   const row = (await readIgStillMeta()).stills.find((s) => s.id === id)
   if (!row) return false
-  const buf = await readBin(blobRel(row.file))
+  const buf =
+    (await readBin(blobRel(row.file))) ??
+    (await readBin(path.posix.join(SHIPPED_DIR, row.file))) ??
+    (await readBin(path.posix.join(SHIPPED_DIR, `${id}.jpg`)))
   if (!buf) return false
   const { type } = mimeToExt(row.file)
   res.statusCode = 200
