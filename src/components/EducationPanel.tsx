@@ -695,8 +695,9 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">My shapes</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          The athlete&apos;s own hit photos, filed by shape — a personal reference folder
-          built automatically in Tasks.
+          The athlete&apos;s own hit photos and clips, filed by shape. Most Tasks
+          hits land here automatically. A long Home core video asks first —
+          Save to My shapes, or I don&apos;t want the video.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Open folder →
