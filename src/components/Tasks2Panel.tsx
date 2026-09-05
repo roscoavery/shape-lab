@@ -5,7 +5,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FLOW_SEQUENCES, getFlowSequence, type FlowSequence } from '../config/tasks2'
+import {
+  FLOW_SEQUENCES,
+  getFlowSequence,
+  resolveFlowRun,
+  type FlowSequence,
+} from '../config/tasks2'
 import { getShape } from '../config/shapes'
 import { DELAY_MAX, useDelayCam } from '../hooks/useDelayCam'
 import { expandLeadCount, useSpeechCoach } from '../hooks/useSpeechCoach'
@@ -161,6 +166,25 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   return `${seq.name}. Average ${avg}/100. ${bits.join(', ')}. These grades do not block you — read the cues and go again.`
 }
 
+const LAST_FLOW_KEY = 'shape-lab.tasks2.lastSeq'
+
+function readLastFlowId(): string | null {
+  try {
+    const id = sessionStorage.getItem(LAST_FLOW_KEY)
+    return id && getFlowSequence(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+function writeLastFlowId(id: string) {
+  try {
+    sessionStorage.setItem(LAST_FLOW_KEY, id)
+  } catch {
+    /* private mode */
+  }
+}
+
 export function Tasks2Panel({
   athleteId,
   athlete = null,
@@ -188,7 +212,13 @@ export function Tasks2Panel({
   onAssignedSequenceConsumed,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
-  const [seqId, setSeqId] = useState(FLOW_SEQUENCES[0]!.id)
+  const [seqId, setSeqId] = useState(() => readLastFlowId() ?? FLOW_SEQUENCES[0]!.id)
+  const [runSeq, setRunSeq] = useState<FlowSequence | null>(null)
+  const [phaMode, setPhaMode] = useState<'learn' | 'reps'>('reps')
+  const [phaReps, setPhaReps] = useState(5)
+  const [lemonPlan, setLemonPlan] = useState<'default' | 'custom'>('default')
+  const [lemonSets, setLemonSets] = useState(3)
+  const [lemonReps, setLemonReps] = useState(10)
   const [phase, setPhase] = useState<Phase>('idle')
   const [beatIndex, setBeatIndex] = useState(-1)
   const [cue, setCue] = useState('')
@@ -200,6 +230,9 @@ export function Tasks2Panel({
   const [seekTo, setSeekTo] = useState<number | null>(null)
 
   const seq = getFlowSequence(seqId) ?? FLOW_SEQUENCES[0]!
+  const liveSeq = runSeq ?? seq
+  const assignedConsumedRef = useRef(onAssignedSequenceConsumed)
+  assignedConsumedRef.current = onAssignedSequenceConsumed
   const runGen = useRef(0)
   const scoreRef = useRef(score)
   const shapeIdRef = useRef(scoredShapeId)
@@ -314,18 +347,35 @@ export function Tasks2Panel({
       assignedSequenceId && getFlowSequence(assignedSequenceId)
         ? assignedSequenceId
         : null
-    const nextId =
-      assigned ??
-      (p.currentId && getFlowSequence(p.currentId) ? p.currentId : FLOW_SEQUENCES[0]!.id)
-    setSeqId(nextId)
-    if (p.currentId !== nextId) {
-      const saved = { ...p, currentId: nextId }
-      saveFlowProgress(saved)
-      setProgress(saved)
+    if (assigned) {
+      setSeqId(assigned)
+      writeLastFlowId(assigned)
+      if (p.currentId !== assigned) {
+        const saved = { ...p, currentId: assigned }
+        saveFlowProgress(saved)
+        setProgress(saved)
+      }
+      setHistory(flowHistoryForSequence(athleteId, assigned))
+      assignedConsumedRef.current?.()
+      return
     }
+    const last = readLastFlowId()
+    if (last) {
+      setSeqId(last)
+      if (p.currentId !== last) {
+        const saved = { ...p, currentId: last }
+        saveFlowProgress(saved)
+        setProgress(saved)
+      }
+      setHistory(flowHistoryForSequence(athleteId, last))
+      return
+    }
+    const nextId =
+      p.currentId && getFlowSequence(p.currentId) ? p.currentId : FLOW_SEQUENCES[0]!.id
+    setSeqId(nextId)
+    writeLastFlowId(nextId)
     setHistory(flowHistoryForSequence(athleteId, nextId))
-    if (assigned) onAssignedSequenceConsumed?.()
-  }, [athleteId, assignedSequenceId, onAssignedSequenceConsumed])
+  }, [athleteId, assignedSequenceId])
 
   useEffect(() => {
     if (!athleteId) return
@@ -441,6 +491,7 @@ export function Tasks2Panel({
     runGen.current += 1
     holdDoneRef.current = true
     resetSpeech()
+    setRunSeq(null)
     setPhase('idle')
     setBeatIndex(-1)
     setCue('')
@@ -743,8 +794,10 @@ export function Tasks2Panel({
       if (!athleteId) {
         setFlash('Select or create an athlete first — then tap Start.')
         window.setTimeout(() => setFlash(null), 5000)
+        setRunSeq(null)
         return
       }
+      setRunSeq(seqRun)
       onVoiceEnabledChange?.(true)
       resetSpeech()
       unlockSpeech()
@@ -783,6 +836,7 @@ export function Tasks2Panel({
           )
           window.setTimeout(() => setFlash(null), 8000)
           setPhase('idle')
+          setRunSeq(null)
           return
         }
         const deadline = Date.now() + 45_000
@@ -796,6 +850,7 @@ export function Tasks2Panel({
           setFlash(cameraPromptCue('blocked'))
           window.setTimeout(() => setFlash(null), 8000)
           setPhase('idle')
+          setRunSeq(null)
           return
         }
         if (seqRun.mode !== 'hs-hold' && !seqRun.beats.some((b) => b.replayStart)) {
@@ -1118,6 +1173,8 @@ export function Tasks2Panel({
   const selectSeq = (id: string) => {
     if (phase === 'preview' || phase === 'running' || phase === 'holding') return
     setSeqId(id)
+    writeLastFlowId(id)
+    setRunSeq(null)
     setPhase('idle')
     setReport(null)
     if (athleteId) {
@@ -1127,6 +1184,14 @@ export function Tasks2Panel({
       setProgress(next)
     }
   }
+
+  const flowConfig = () => ({
+    pikeHollowArchMode: phaMode,
+    pikeHollowArchReps: phaReps,
+    lemonPlan,
+    lemonSets,
+    lemonReps,
+  })
 
   const nextSequence = () => {
     const idx = FLOW_SEQUENCES.findIndex((s) => s.id === seq.id)
@@ -1295,12 +1360,12 @@ export function Tasks2Panel({
     else v.addEventListener('loadedmetadata', apply, { once: true })
   }, [seekTo, replayUrl])
 
-  const askedBeat = phase === 'running' ? seq.beats[beatIndex] : null
+  const askedBeat = phase === 'running' ? liveSeq.beats[beatIndex] : null
   const askedShapeId =
     phase === 'holding'
       ? 'handstand'
       : askedBeat?.shapeId ??
-    [...seq.beats.slice(0, Math.max(0, beatIndex + 1))].reverse().find((b) => b.shapeId)?.shapeId ??
+    [...liveSeq.beats.slice(0, Math.max(0, beatIndex + 1))].reverse().find((b) => b.shapeId)?.shapeId ??
     ((phase === 'idle' || phase === 'preview') && seq.setupShapeId
       ? seq.setupShapeId
       : undefined) ??
@@ -1323,7 +1388,7 @@ export function Tasks2Panel({
             unlockSpeech()
             void onEnsureCamera?.()
           }}
-          onClick={() => void startSequence(seq)}
+          onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
         >
           {completions > 0 ? 'Go again' : seq.mode === 'hs-hold' ? 'Start hold' : 'Start'}
@@ -1463,6 +1528,104 @@ export function Tasks2Panel({
           />
         </div>
         <div className="mt-3">{startBar}</div>
+        {!busy && phase !== 'replay' && seq.id === 'flow_pike_hollow_arch' && (
+          <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              How this run talks
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPhaMode('learn')}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  phaMode === 'learn'
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-white/15 text-[var(--muted)]'
+                }`}
+              >
+                Learn
+              </button>
+              {([3, 4, 5, 6, 7, 8, 9, 10] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    setPhaMode('reps')
+                    setPhaReps(n)
+                  }}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    phaMode === 'reps' && phaReps === n
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-white/15 text-[var(--muted)]'
+                  }`}
+                >
+                  {n} reps
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
+              {phaMode === 'learn'
+                ? 'Full talk-through on the first pike, hollow, and arch, then 4 timed reps (pike 2s, hollow and arch 1.2s).'
+                : `First rep names each shape. Then ${phaReps - 1} more at pike 2s, hollow 1.2s, arch 1.2s.`}
+            </p>
+          </div>
+        )}
+        {!busy && phase !== 'replay' && seq.id === 'flow_lemon_squeezes' && (
+          <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Sets and reps
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setLemonPlan('default')}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  lemonPlan === 'default'
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-white/15 text-[var(--muted)]'
+                }`}
+              >
+                Default · 10, 8, 6
+              </button>
+              {([1, 2, 3] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    setLemonPlan('custom')
+                    setLemonSets(n)
+                  }}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    lemonPlan === 'custom' && lemonSets === n
+                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      : 'border border-white/15 text-[var(--muted)]'
+                  }`}
+                >
+                  {n} set{n === 1 ? '' : 's'}
+                </button>
+              ))}
+            </div>
+            {lemonPlan === 'custom' && (
+              <label className="mt-2 block text-[11px] text-[var(--muted)]">
+                Reps each set · {lemonReps}
+                <input
+                  type="range"
+                  min={5}
+                  max={30}
+                  step={1}
+                  value={lemonReps}
+                  onChange={(e) => setLemonReps(Number(e.target.value))}
+                  className="mt-1 w-full"
+                />
+              </label>
+            )}
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
+              {lemonPlan === 'default'
+                ? '3 sets. Pike with open shoulders, pull a tuck, then hollow–tuck 10, 8, and 6. Reset to pike each set.'
+                : `${lemonSets} set${lemonSets === 1 ? '' : 's'} of ${lemonReps}. Pike with open shoulders, pull a tuck, then hollow–tuck. Reset to pike each set.`}
+            </p>
+          </div>
+        )}
         <p className="mt-2 text-[11px] text-[var(--muted)]">
           Volume up. Start goes full screen.
           {completions > 0 ? ` ${completions}× this one.` : ''}
@@ -1589,7 +1752,7 @@ export function Tasks2Panel({
               </button>
               <button
                 type="button"
-                onClick={() => void startSequence(seq)}
+                onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
                 className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
               >
                 Go again
@@ -1908,7 +2071,7 @@ export function Tasks2Panel({
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => void startSequence(seq)}
+              onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
               className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
             >
               Go again

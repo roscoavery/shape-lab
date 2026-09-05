@@ -246,6 +246,14 @@ export function addLessonNote(
   return saveLessonSession({ ...found, notes: [note, ...found.notes].slice(0, 200) })
 }
 
+export function removeLessonNote(sessionId: string, noteId: string): LessonSession | null {
+  const found = getLessonSession(sessionId)
+  if (!found) return null
+  const notes = found.notes.filter((n) => n.id !== noteId)
+  if (notes.length === found.notes.length) return found
+  return saveLessonSession({ ...found, notes })
+}
+
 export function hideLessonRecap(id: string): LessonSession | null {
   const found = getLessonSession(id)
   if (!found) return null

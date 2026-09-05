@@ -19,6 +19,8 @@ export function LessonNoteBar({
   const [text, setText] = useState('')
   const [topic, setTopic] = useState<SkillTopic>(preset ?? emptySkillTopic())
   const [cueTick, setCueTick] = useState(0)
+  const [filed, setFiled] = useState<string | null>(null)
+  const [filedKey, setFiledKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (!preset?.label.trim()) return
@@ -37,10 +39,16 @@ export function LessonNoteBar({
     : [...yours, ...shapeCues.slice(0, showAllCues ? shapeCues.length : 3)]
   void cueTick
 
-  const file = (line: string) => {
+  const file = (line: string, key?: string) => {
     const next = line.trim()
     if (!next || !label) return
     onAdd(next, { ...topic, label })
+    setFiled(next)
+    setFiledKey(key ?? next)
+    window.setTimeout(() => {
+      setFiled((cur) => (cur === next ? null : cur))
+      setFiledKey((cur) => (cur === (key ?? next) ? null : cur))
+    }, 2800)
   }
 
   const submit = () => {
@@ -99,6 +107,11 @@ export function LessonNoteBar({
           <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
             Tap a correction to file it
           </p>
+          {filed && (
+            <p className="mt-2 rounded-lg border border-[var(--accent)]/50 bg-[#102820] px-3 py-2 text-sm font-semibold text-[var(--accent)]">
+              Filed — {filed}
+            </p>
+          )}
           <input
             className="mt-2 h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
             placeholder="Search a correction…"
@@ -106,19 +119,27 @@ export function LessonNoteBar({
             onChange={(e) => setCueQuery(e.target.value)}
           />
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {filtered.map((c) => (
+            {filtered.map((c) => {
+              const key = `${c.source}:${c.text}`
+              const justFiled = filedKey === key
+              return (
               <button
-                key={`${c.source}:${c.text}`}
+                key={key}
                 type="button"
-                onClick={() => file(c.text)}
-                className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left text-sm leading-snug hover:border-[var(--accent-dim)]"
+                onClick={() => file(c.text, key)}
+                className={`rounded-lg border px-3 py-2.5 text-left text-sm leading-snug ${
+                  justFiled
+                    ? 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
+                    : 'border-[var(--panel-border)] bg-[#121820] hover:border-[var(--accent-dim)]'
+                }`}
               >
                 <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {c.source === 'yours' ? 'Your cue' : 'Shape cue'}
+                  {justFiled ? 'Filed' : c.source === 'yours' ? 'Your cue' : 'Shape cue'}
                 </span>
                 {c.text}
               </button>
-            ))}
+              )
+            })}
           </div>
           {!q && !showAllCues && shapeCues.length > 3 && (
             <button

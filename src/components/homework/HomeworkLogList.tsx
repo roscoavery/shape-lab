@@ -24,13 +24,24 @@ type Props = {
   onLogsChange?: () => void
 }
 
+function speedWord(speed?: number): string {
+  if (speed == null) return ''
+  if (speed <= 33) return 'fast'
+  if (speed >= 67) return 'slow'
+  return 'steady'
+}
+
 function logLine(log: HomeworkLog): string {
+  const hold = log.totalHoldSeconds ? `${log.totalHoldSeconds}s hold` : ''
   if (log.reps) {
     const sets = log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} rep${log.reps === 1 ? '' : 's'}`
-    return log.qualityReps != null ? `${sets} (${log.qualityReps} quality)` : sets
+    const quality = log.qualityReps != null && log.repSpeed == null ? ` (${log.qualityReps} quality)` : ''
+    const speed = speedWord(log.repSpeed)
+    const reps = `${sets}${quality}${speed ? ` ${speed}` : ''}`
+    return hold ? `${hold} + ${reps}` : reps
   }
   if (log.journal) return log.journal
-  return ''
+  return hold
 }
 
 export function HomeworkLogList({

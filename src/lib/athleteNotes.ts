@@ -93,6 +93,25 @@ export function applyCoachNoteUpdate(
   return athletes.map((a) => (a.id === athleteId ? updateCoachNote(a, noteId, text, editor) : a))
 }
 
+export function removeCoachNote(athlete: Athlete, noteId: string, editor: Athlete): Athlete {
+  return {
+    ...athlete,
+    coachNotes: (athlete.coachNotes ?? []).filter((n) => {
+      if (n.id !== noteId) return true
+      return !canEditCoachNote(editor, n)
+    }),
+  }
+}
+
+export function applyCoachNoteRemove(
+  athletes: Athlete[],
+  athleteId: string,
+  noteId: string,
+  editor: Athlete,
+): Athlete[] {
+  return athletes.map((a) => (a.id === athleteId ? removeCoachNote(a, noteId, editor) : a))
+}
+
 export function canWriteCoachNotes(viewer: Athlete | null): boolean {
   return Boolean(viewer && (isCoachProfile(viewer) || isGymAdmin(viewer)))
 }

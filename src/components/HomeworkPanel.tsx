@@ -349,12 +349,21 @@ function HoldTimesBoard({
                   >
                     {new Date(log.date).toLocaleString()}
                     {log.side ? ` · ${log.side === 'left' ? 'L' : 'R'}` : ''}
-                    {log.reps
+                    {log.totalHoldSeconds && log.reps
+                      ? ` · ${log.totalHoldSeconds}s hold + ${
+                          log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} reps`
+                        }`
+                      : log.reps
                       ? ` · ${
                           log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} rep${log.reps === 1 ? '' : 's'}`
                         }${
-                          log.qualityReps != null ? ` (${log.qualityReps} quality)` : ''
+                          log.qualityReps != null && log.repSpeed == null
+                            ? ` (${log.qualityReps} quality)`
+                            : ''
                         }`
+                      : ''}
+                    {log.repSpeed != null
+                      ? ` · ${log.repSpeed <= 33 ? 'fast' : log.repSpeed >= 67 ? 'slow' : 'steady'}`
                       : ''}
                     {log.loggedFrom === 'lesson' && (
                       <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
@@ -1124,6 +1133,7 @@ export function HomeworkPanel({
       painLevel?: number
       journal?: string
       trackMode: HomeworkTrackMode
+      repSpeed?: number
     },
   ) => {
     if (!athleteId) return
@@ -1150,6 +1160,7 @@ export function HomeworkPanel({
       painLevel: input.painLevel,
       journal: input.journal,
       trackMode: input.trackMode,
+      repSpeed: input.repSpeed,
       score: 0,
     }
     logLockRef.current = true
@@ -1173,6 +1184,14 @@ export function HomeworkPanel({
       })
       setPainJournal(loadPainJournal(athleteId))
     }
+    const speed =
+      input.repSpeed != null
+        ? input.repSpeed <= 33
+          ? 'fast'
+          : input.repSpeed >= 67
+            ? 'slow'
+            : 'steady'
+        : null
     const bits = [
       input.holdSeconds ? `${input.holdSeconds}s hold` : null,
       input.reps
@@ -1180,8 +1199,10 @@ export function HomeworkPanel({
           ? `${input.sets}×${input.reps}`
           : `${input.reps} reps`
         : null,
+      speed,
     ].filter(Boolean)
-    showFlash(`Logged ${homeworkTitle(item)} — ${bits.join(' + ')}`)
+    const together = input.holdSeconds && input.reps ? ' in one log' : ''
+    showFlash(`Logged ${homeworkTitle(item)} — ${bits.join(' + ')}${together}`)
   }
 
   const logPickedSet = (

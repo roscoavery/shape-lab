@@ -161,6 +161,7 @@ export default function App() {
   const [compareFullTick, setCompareFullTick] = useState(0)
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
+  const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
   const [learnIntent, setLearnIntent] = useState<LearnIntent | null>(null)
   const [quizPreset, setQuizPreset] = useState<{
     firstName: string
@@ -895,7 +896,7 @@ export default function App() {
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
               assignedSequenceId={assignedFlowId}
-              onAssignedSequenceConsumed={() => setAssignedFlowId(null)}
+              onAssignedSequenceConsumed={consumeAssignedFlow}
               score={score}
               scoredShapeId={shape.id}
               onRequestShape={onJumpToShape}

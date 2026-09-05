@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   addLessonNote,
   hideLessonRecap,
+  removeLessonNote,
   unhideLessonRecap,
   lessonAthleteIds,
   lessonNameList,
@@ -50,6 +51,9 @@ export function LessonReviewList({
 }: Props) {
   const ended = sessions.filter((s) => s.endedAt)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [askHideId, setAskHideId] = useState<string | null>(null)
+  const [undoId, setUndoId] = useState<string | null>(null)
+  const [askNoteId, setAskNoteId] = useState<string | null>(null)
   const now = Date.now()
   const hidden = ended.filter((s) => s.hiddenAt)
   const showing = ended.filter((s) => !s.hiddenAt)
@@ -116,18 +120,50 @@ export function LessonReviewList({
                 <span className="text-xs text-[var(--muted)]">{open ? 'Close' : 'Review'}</span>
               </button>
               {hideable && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (s.hiddenAt) unhideLessonRecap(s.id)
-                    else hideLessonRecap(s.id)
-                    if (openId === s.id) setOpenId(null)
-                    onChanged?.()
-                  }}
-                  className="shrink-0 px-3 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
-                >
-                  {s.hiddenAt ? 'Show again' : 'Remove'}
-                </button>
+                s.hiddenAt ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      unhideLessonRecap(s.id)
+                      setUndoId(null)
+                      onChanged?.()
+                    }}
+                    className="shrink-0 px-3 text-[11px] font-semibold text-[var(--accent)]"
+                  >
+                    Show again
+                  </button>
+                ) : askHideId === s.id ? (
+                  <span className="flex shrink-0 flex-col items-end justify-center gap-1 px-2 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        hideLessonRecap(s.id)
+                        if (openId === s.id) setOpenId(null)
+                        setAskHideId(null)
+                        setUndoId(s.id)
+                        onChanged?.()
+                      }}
+                      className="rounded bg-[var(--bad)] px-2 py-0.5 text-[10px] font-semibold text-white"
+                    >
+                      Are you sure?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAskHideId(null)}
+                      className="text-[10px] text-[var(--muted)] underline"
+                    >
+                      Keep
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAskHideId(s.id)}
+                    className="shrink-0 px-3 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+                  >
+                    Remove
+                  </button>
+                )
               )}
             </div>
             {open && (
@@ -221,9 +257,40 @@ export function LessonReviewList({
                           </p>
                         ))}
                         {g.notes.map((n) => (
-                          <p key={n.id} className="mt-0.5 text-sm">
-                            {n.text}
-                          </p>
+                          <div key={n.id} className="mt-0.5 flex items-start justify-between gap-2">
+                            <p className="text-sm">{n.text}</p>
+                            {canEdit &&
+                              (askNoteId === n.id ? (
+                                <span className="flex shrink-0 gap-1">
+                                  <button
+                                    type="button"
+                                    className="rounded bg-[var(--bad)] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                                    onClick={() => {
+                                      removeLessonNote(s.id, n.id)
+                                      setAskNoteId(null)
+                                      onChanged?.()
+                                    }}
+                                  >
+                                    Are you sure?
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-[10px] text-[var(--muted)] underline"
+                                    onClick={() => setAskNoteId(null)}
+                                  >
+                                    Keep
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="shrink-0 text-[10px] text-[var(--muted)] underline"
+                                  onClick={() => setAskNoteId(n.id)}
+                                >
+                                  Delete
+                                </button>
+                              ))}
+                          </div>
                         ))}
                       </div>
                     ))
@@ -306,9 +373,26 @@ export function LessonReviewList({
     >
       <p className="text-sm text-[var(--muted)]">
         Recaps from the last day stay here. Older lessons stay in Older recaps — go back as far as
-        you want. Remove hides a recap without deleting the notes.
+        you want. Remove hides a recap without deleting the notes — it asks first, and you can
+        undo.
         {canEdit ? ' Open one to add more notes or assign homework.' : ''}
       </p>
+      {undoId && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">
+          <p className="text-sm font-semibold text-[var(--accent)]">Recap hidden.</p>
+          <button
+            type="button"
+            onClick={() => {
+              unhideLessonRecap(undoId)
+              setUndoId(null)
+              onChanged?.()
+            }}
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
+          >
+            Undo
+          </button>
+        </div>
+      )}
       {recent.length > 0 ? (
         renderList(recent)
       ) : (

@@ -6,6 +6,7 @@ import {
   canEditCoachNote,
   canWriteCoachNotes,
   groupNotesByAuthor,
+  removeCoachNote,
   updateCoachNote,
   visibleCoachNotes,
 } from '../lib/athleteNotes'
@@ -693,6 +694,7 @@ function ProfileNoteRow({
   onAthleteChange?: (next: Athlete) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [askDelete, setAskDelete] = useState(false)
   const [text, setText] = useState(note.text)
   return (
     <li className="rounded-lg bg-black/25 px-3 py-2 text-sm">
@@ -745,13 +747,46 @@ function ProfileNoteRow({
         {note.updatedAt ? ' · edited' : ''}
       </p>
       {canEdit && !editing && (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="mt-1 text-[11px] font-semibold text-[var(--accent)] underline"
-        >
-          Edit
-        </button>
+        <div className="mt-1 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[11px] font-semibold text-[var(--accent)] underline"
+          >
+            Edit
+          </button>
+          {askDelete ? (
+            <span className="flex gap-2">
+              <button
+                type="button"
+                disabled={!viewer || !onAthleteChange}
+                onClick={() => {
+                  if (!viewer || !onAthleteChange) return
+                  onAthleteChange(removeCoachNote(athlete, note.id, viewer))
+                  setAskDelete(false)
+                }}
+                className="rounded bg-[var(--bad)] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+              >
+                Are you sure?
+              </button>
+              <button
+                type="button"
+                onClick={() => setAskDelete(false)}
+                className="text-[10px] text-[var(--muted)] underline"
+              >
+                Keep
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAskDelete(true)}
+              className="text-[11px] font-semibold text-[var(--muted)] underline"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       )}
     </li>
   )

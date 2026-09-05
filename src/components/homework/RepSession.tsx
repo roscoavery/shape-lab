@@ -16,6 +16,7 @@ type Props = {
     painLevel?: number
     journal?: string
     trackMode: HomeworkTrackMode
+    repSpeed?: number
   }) => void
   onDone: () => void
 }
@@ -27,6 +28,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
   const allowReps = mode === 'reps' || mode === 'hold_or_reps'
   const [reps, setReps] = useState(String(item.targetReps ?? cat?.targetReps ?? ''))
   const [quality, setQuality] = useState('')
+  const [repSpeed, setRepSpeed] = useState(50)
   const [holdSec, setHoldSec] = useState('')
   const [grip, setGrip] = useState(item.grip ?? '')
   const [weight, setWeight] = useState('')
@@ -67,21 +69,28 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
       setError('Enter how many reps you did.')
       return
     }
-    if (hasReps && quality !== '' && (!Number.isFinite(q) || q < 0)) {
+    if (!isBackExt && hasReps && quality !== '' && (!Number.isFinite(q) || q < 0)) {
       setError('Quality reps has to be a number.')
       return
     }
     setError(null)
     setSaving(true)
-    onLog({
+            onLog({
       reps: hasReps ? r : 0,
-      qualityReps: hasReps && Number.isFinite(q) ? Math.min(q, r || q) : 0,
+      qualityReps: isBackExt
+        ? hasReps
+          ? r
+          : 0
+        : hasReps && Number.isFinite(q)
+          ? Math.min(q, r || q)
+          : 0,
       holdSeconds: hasHold ? hold : undefined,
       grip: grip || undefined,
       weightLb: w != null && Number.isFinite(w) ? w : undefined,
       painLevel: p != null && Number.isFinite(p) ? Math.min(10, Math.max(0, p)) : undefined,
       journal: journal.trim() || undefined,
       trackMode: hasHold && hasReps ? 'hold_or_reps' : hasHold ? 'hold' : 'reps',
+      ...(isBackExt && hasReps ? { repSpeed } : {}),
     })
     setHoldSec('')
     window.setTimeout(() => setSaving(false), 1200)
@@ -96,7 +105,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
         <h3 className="text-lg font-semibold text-[var(--text)]">{homeworkTitle(item)}</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {allowHold && allowReps
-            ? 'One set can be a hold, reps, or both — for example 2 minutes then 5 reps.'
+            ? 'One Save set writes hold time and reps together. You do not need to log twice. Leave a box blank if you only did that part.'
             : (cat?.notes ??
               item.notes ??
               'Count the reps you would show a coach, then the ones that were quality.')}
@@ -132,6 +141,21 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
         </ul>
       )}
 
+      {allowHold && allowReps && (holdSec.trim() || Number(reps) > 0) && (
+        <p className="rounded-lg border border-[var(--accent)]/35 bg-[#102820] px-3 py-2 text-sm text-[var(--text)]">
+          This one log will be{' '}
+          <span className="font-semibold">
+            {[
+              holdSec.trim() && Number(holdSec) > 0 ? `${holdSec.trim()}s hold` : null,
+              Number(reps) > 0 ? `${reps} reps` : null,
+            ]
+              .filter(Boolean)
+              .join(' + ')}
+          </span>
+          {holdSec.trim() && Number(reps) > 0 ? ' together. Tap Save set once.' : '.'}
+        </p>
+      )}
+
       {allowHold && (
         <label className="text-xs text-[var(--muted)]">
           Hold seconds {allowReps ? '(optional if you only did reps)' : ''}
@@ -146,7 +170,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
       )}
 
       {allowReps && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className={isBackExt ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2'}>
           <label className="text-xs text-[var(--muted)]">
             Reps {allowHold ? '(optional if you only held)' : ''}
             <input
@@ -156,16 +180,35 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
               onChange={(e) => setReps(e.target.value)}
             />
           </label>
-          <label className="text-xs text-[var(--muted)]">
-            Quality reps
-            <input
-              inputMode="numeric"
-              className="mt-1 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-base text-[var(--text)]"
-              value={quality}
-              onChange={(e) => setQuality(e.target.value)}
-              placeholder="same as reps"
-            />
-          </label>
+          {isBackExt ? (
+            <label className="text-xs text-[var(--muted)]">
+              Rep speed · {repSpeed <= 33 ? 'fast' : repSpeed >= 67 ? 'slow' : 'steady'}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={repSpeed}
+                onChange={(e) => setRepSpeed(Number(e.target.value))}
+                className="mt-2 w-full"
+              />
+              <span className="mt-1 flex justify-between text-[10px] uppercase tracking-wider">
+                <span>Fast</span>
+                <span>Slow</span>
+              </span>
+            </label>
+          ) : (
+            <label className="text-xs text-[var(--muted)]">
+              Quality reps
+              <input
+                inputMode="numeric"
+                className="mt-1 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-base text-[var(--text)]"
+                value={quality}
+                onChange={(e) => setQuality(e.target.value)}
+                placeholder="same as reps"
+              />
+            </label>
+          )}
         </div>
       )}
 
@@ -227,9 +270,12 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
       {last && (
         <p className="text-xs text-[var(--muted)]">
           Last set:{' '}
-          {last.totalHoldSeconds ? `${last.totalHoldSeconds}s` : ''}
+          {last.totalHoldSeconds ? `${last.totalHoldSeconds}s hold` : ''}
           {last.totalHoldSeconds && last.reps ? ' + ' : ''}
           {last.reps ? `${last.reps} reps` : ''}
+          {last.repSpeed != null
+            ? ` · ${last.repSpeed <= 33 ? 'fast' : last.repSpeed >= 67 ? 'slow' : 'steady'}`
+            : ''}
           {last.grip ? ` · ${last.grip}` : ''}
         </p>
       )}

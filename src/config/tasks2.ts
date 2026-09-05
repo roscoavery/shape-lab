@@ -422,53 +422,123 @@ function longBridgeClass(): FlowBeat[] {
   ]
 }
 
+const PIKE_MS = 2000
+const HOLLOW_MS = 1200
+const ARCH_MS = 1200
+
+const COUNT_WORDS = [
+  '',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Eleven',
+  'Twelve',
+  'Thirteen',
+  'Fourteen',
+  'Fifteen',
+  'Sixteen',
+  'Seventeen',
+  'Eighteen',
+  'Nineteen',
+  'Twenty',
+  'Twenty one',
+  'Twenty two',
+  'Twenty three',
+  'Twenty four',
+  'Twenty five',
+  'Twenty six',
+  'Twenty seven',
+  'Twenty eight',
+  'Twenty nine',
+  'Thirty',
+]
+
+function countWord(n: number): string {
+  return COUNT_WORDS[n] ?? String(n)
+}
+
 /** Snap-open drill: pike (zombie arms) → hollow arms down → arch (supine). */
-function pikeHollowArchClass(): FlowBeat[] {
-  return [
-    {
-      speak: 'Sit in a pike. Zombie arms.',
+function pikeHollowArchClass(opts?: { mode?: 'learn' | 'reps'; reps?: number }): FlowBeat[] {
+  const mode = opts?.mode ?? 'reps'
+  const reps = mode === 'learn' ? 5 : Math.min(10, Math.max(3, opts?.reps ?? 5))
+  const beats: FlowBeat[] = []
+
+  for (let r = 1; r <= reps; r++) {
+    const first = r === 1
+    const learn = mode === 'learn' && first
+    if (learn) {
+      beats.push({
+        speak: 'Sit in a pike. Zombie arms.',
+        shapeId: 'seated_pike',
+        pauseMs: 400,
+        replayStart: true,
+        rep: r,
+      })
+      beats.push({ speak: 'Toes pointed. Straight knees.', pauseMs: 450 })
+      beats.push({
+        speak:
+          'Torso upright and rounded hollow. Shoulders shrug. Arms covering the ears. Eyes looking through the hands.',
+        pauseMs: 500,
+        snapshotAtMs: 400,
+        snapLabel: 'Pike (zombie arms)',
+      })
+      beats.push({
+        speak:
+          'Inch back to hollow until lower back is flat, bringing arms in close to the body.',
+        shapeId: 'hollow_arms_down',
+        pauseMs: 800,
+        snapshotAtMs: 350,
+        snapLabel: 'Hollow (arms down)',
+      })
+      beats.push({
+        speak:
+          'Then snap open to the arch. Arms all the way back. Hips up. Straight knees. Ankles together with pointed toes.',
+        shapeId: 'arch',
+        pauseMs: 900,
+        snapshotAtMs: 400,
+        snapLabel: 'Arch (supine)',
+      })
+      continue
+    }
+    beats.push({
+      speak: first
+        ? 'Pike. Zombie arms. Toes pointed. Straight knees.'
+        : 'Pike.',
       shapeId: 'seated_pike',
-      pauseMs: 400,
-      replayStart: true,
-    },
-    {
-      speak: 'Toes pointed. Straight knees.',
-      pauseMs: 450,
-    },
-    {
-      speak: 'Torso upright and rounded hollow. Shoulders shrug. Arms covering the ears. Eyes looking through the hands.',
-      pauseMs: 500,
-      snapshotAtMs: 400,
-      snapLabel: 'Pike (zombie arms)',
-    },
-    {
-      speak: 'Snap to hollow. Arms down.',
+      pauseMs: PIKE_MS,
+      ...(first ? { replayStart: true, snapshotAtMs: 400, snapLabel: 'Pike (zombie arms)' } : {}),
+      rep: r,
+    })
+    beats.push({
+      speak: first
+        ? 'Inch back to hollow until lower back is flat, bringing arms in close to the body.'
+        : 'Hollow.',
       shapeId: 'hollow_arms_down',
-      pauseMs: 550,
-    },
-    {
-      speak: 'Hold.',
-      pauseMs: 400,
-      snapshotAtMs: 180,
-      snapLabel: 'Hollow (arms down)',
-    },
-    {
-      speak: 'Arch. On your back.',
+      pauseMs: first ? 1600 : HOLLOW_MS,
+      ...(first ? { snapshotAtMs: 350, snapLabel: 'Hollow (arms down)' } : {}),
+    })
+    beats.push({
+      speak: first
+        ? 'Then snap open to the arch. Arms all the way back. Hips up. Straight knees. Ankles together with pointed toes.'
+        : 'Arch.',
       shapeId: 'arch',
-      pauseMs: 550,
-    },
-    {
-      speak: 'Hold.',
-      pauseMs: 400,
-      snapshotAtMs: 180,
-      snapLabel: 'Arch (supine)',
-    },
-    {
-      speak: 'That is the snap open. Go again when you are ready.',
-      pauseMs: 700,
-      replayEnd: true,
-    },
-  ]
+      pauseMs: first ? 1800 : ARCH_MS,
+      ...(first ? { snapshotAtMs: 400, snapLabel: 'Arch (supine)' } : {}),
+    })
+  }
+  beats.push({
+    speak: 'That is pike, hollow, arch.',
+    pauseMs: 500,
+    replayEnd: true,
+  })
+  return beats
 }
 
 /** Pike (open shoulders) → seated tuck → hollow → arch. */
@@ -528,62 +598,55 @@ function pikeTuckHollowArchClass(): FlowBeat[] {
   ]
 }
 
-/** Lemon squeezes: hollow → seated tuck, repeatedly. */
-function lemonSqueezesClass(): FlowBeat[] {
-  return [
-    {
-      speak: 'Lie in a hollow. Arms down.',
-      shapeId: 'hollow_arms_down',
-      pauseMs: 450,
-      replayStart: true,
-    },
-    {
-      speak: 'Lower back flat. That is hollow.',
-      pauseMs: 450,
-      snapshotAtMs: 280,
-      snapLabel: 'Hollow',
-    },
-    {
-      speak: 'Squeeze to a tuck. Pull the feet in.',
-      shapeId: 'tuck_open_shoulders',
-      pauseMs: 500,
-    },
-    {
+/** Lemon squeezes: pike (open shoulders) → tuck, then hollow / tuck reps. */
+function lemonSqueezesClass(opts?: { sets?: number; repsPerSet?: number[] }): FlowBeat[] {
+  const sets = Math.min(3, Math.max(1, opts?.sets ?? 3))
+  const repsPerSet = opts?.repsPerSet ?? [10, 8, 6]
+  const beats: FlowBeat[] = []
+  const hollowMs = 550
+  const tuckMs = 550
+
+  for (let set = 1; set <= sets; set++) {
+    const reps = Math.min(30, Math.max(5, repsPerSet[set - 1] ?? repsPerSet.at(-1) ?? 10))
+    beats.push({
       speak:
-        'Flex the feet. Keep reaching arms behind the ears. Slightly rounded hollow back.',
-      pauseMs: 500,
-      snapshotAtMs: 350,
-      snapLabel: 'Tuck',
-    },
-    {
-      speak: 'Back to hollow.',
-      shapeId: 'hollow_arms_down',
-      pauseMs: 500,
-    },
-    {
-      speak: 'Squeeze to a tuck.',
-      shapeId: 'tuck_open_shoulders',
-      pauseMs: 500,
-    },
-    {
-      speak: 'Back to hollow.',
-      shapeId: 'hollow_arms_down',
-      pauseMs: 500,
-    },
-    {
-      speak: 'Squeeze to a tuck. Flex the feet. Keep reaching.',
-      shapeId: 'tuck_open_shoulders',
-      pauseMs: 550,
-      snapshotAtMs: 320,
-      snapLabel: 'Tuck (squeeze)',
-    },
-    {
-      speak:
-        'That is lemon squeezes. Hollow to tuck, over and over. Go again when you are ready.',
+        set === 1
+          ? `Set 1. Start in a pike with open shoulders.`
+          : `Set ${set}. Back to a pike with open shoulders.`,
+      shapeId: 'pike_open_shoulders',
       pauseMs: 700,
-      replayEnd: true,
-    },
-  ]
+      ...(set === 1
+        ? { replayStart: true, snapshotAtMs: 280, snapLabel: 'Pike (open shoulders)' }
+        : {}),
+    })
+    beats.push({
+      speak: 'Pull a tuck.',
+      shapeId: 'tuck_open_shoulders',
+      pauseMs: 600,
+      ...(set === 1 ? { snapshotAtMs: 250, snapLabel: 'Tuck' } : {}),
+    })
+    for (let r = 1; r <= reps; r++) {
+      const count = r % 5 === 0 ? ` ${countWord(r)}.` : ''
+      beats.push({
+        speak: 'Hollow.',
+        shapeId: 'hollow_arms_down',
+        pauseMs: hollowMs,
+        ...(set === 1 && r === 1 ? { snapshotAtMs: 180, snapLabel: 'Hollow' } : {}),
+        rep: r,
+      })
+      beats.push({
+        speak: `Tuck.${count}`,
+        shapeId: 'tuck_open_shoulders',
+        pauseMs: tuckMs,
+      })
+    }
+  }
+  beats.push({
+    speak: 'That is lemon squeezes.',
+    pauseMs: 500,
+    replayEnd: true,
+  })
+  return beats
 }
 
 /** Spoken ~30s hold after the athlete is already in the shape. */
@@ -848,18 +911,18 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: 'Pike → Hollow → Arch',
     nickname: 'Snap open',
     description:
-      'Class snap-open drill for handsprings and whips. Pike with zombie arms, snap to hollow arms down, then arch on the back. Repeat with Go again. Falling from a standing zombie into this pike is a beginner shaping drill. Not a gate.',
+      'Class snap-open drill for handsprings and whips. Sit in a pike with zombie arms, inch back to hollow until the lower back is flat with arms in close, then snap open to the arch. Pick Learn for the full talk-through plus 5 reps, or pick 3–10 reps. Not a gate.',
     previewSpeak:
-      'Pike, hollow, arch. Snap open for handsprings and whips. Go again as many times as you want.',
+      'Pike, hollow, arch. Inch back to hollow, then snap open to the arch.',
     setupSpeak: 'Side view. Sit in a pike with zombie arms.',
     setupExtraSpeak:
-      'Falling from a standing zombie into this pike is a good beginner shaping drill. Round-off or handspring to this shape helps handspring connections.',
+      'Inch back to hollow until the lower back is flat, bringing arms in close to the body. Then snap open to the arch — arms all the way back, hips up, straight knees, ankles together with pointed toes.',
     setupShapeId: 'seated_pike',
     previewShapes: [
       { shapeId: 'seated_pike', label: 'Pike' },
       { shapeId: 'hollow_arms_down', label: 'Hollow' },
     ],
-    beats: pikeHollowArchClass(),
+    beats: pikeHollowArchClass({ mode: 'reps', reps: 5 }),
   },
   {
     id: 'flow_pike_tuck_hollow_arch',
@@ -885,18 +948,19 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: 'Lemon squeezes',
     nickname: 'Lemon squeezes',
     description:
-      'Class talk-through. From a hollow, squeeze into the seated open-shoulder tuck — feet in, feet flexed, arms still reaching behind the ears — then back to hollow. Repeat. Not a gate.',
+      'Start in a pike with open shoulders, pull a tuck, then hollow–tuck for the reps you pick. Default is 3 sets of 10, 8, and 6. Reset to pike with open shoulders each set. Not a gate.',
     previewSpeak:
-      'Lemon squeezes. Hollow to tuck, hollow to tuck. Keep reaching when you squeeze.',
-    setupSpeak: 'Side view. Start in a hollow, arms down.',
+      'Lemon squeezes. Pike with open shoulders, pull a tuck, then hollow, tuck.',
+    setupSpeak: 'Side view. Start in a pike with open shoulders.',
     setupExtraSpeak:
-      'When you squeeze, pull the feet in, flex them, and keep the arms behind the ears. Slightly rounded hollow back.',
-    setupShapeId: 'hollow_arms_down',
+      'Pull a tuck. Then the count is hollow, tuck. We reset to pike with open shoulders at the start of each set.',
+    setupShapeId: 'pike_open_shoulders',
     previewShapes: [
-      { shapeId: 'hollow_arms_down', label: 'Hollow' },
+      { shapeId: 'pike_open_shoulders', label: 'Pike' },
       { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
+      { shapeId: 'hollow_arms_down', label: 'Hollow' },
     ],
-    beats: lemonSqueezesClass(),
+    beats: lemonSqueezesClass({ sets: 3, repsPerSet: [10, 8, 6] }),
   },
   {
     id: 'flow_core_home',
@@ -927,4 +991,31 @@ export const FLOW_BY_ID: Record<string, FlowSequence> = Object.fromEntries(
 
 export function getFlowSequence(id: string): FlowSequence | undefined {
   return FLOW_BY_ID[id]
+}
+
+export type FlowRunConfig = {
+  pikeHollowArchMode?: 'learn' | 'reps'
+  pikeHollowArchReps?: number
+  lemonPlan?: 'default' | 'custom'
+  lemonSets?: number
+  lemonReps?: number
+}
+
+/** Build the spoken run for Start / Go again, including pike–hollow–arch reps and lemon sets. */
+export function resolveFlowRun(id: string, config?: FlowRunConfig): FlowSequence | undefined {
+  const base = getFlowSequence(id)
+  if (!base) return undefined
+  if (id === 'flow_pike_hollow_arch') {
+    const mode = config?.pikeHollowArchMode ?? 'reps'
+    const reps = mode === 'learn' ? 5 : Math.min(10, Math.max(3, config?.pikeHollowArchReps ?? 5))
+    return { ...base, beats: pikeHollowArchClass({ mode, reps }) }
+  }
+  if (id === 'flow_lemon_squeezes') {
+    const plan = config?.lemonPlan ?? 'default'
+    const sets = plan === 'default' ? 3 : Math.min(3, Math.max(1, config?.lemonSets ?? 3))
+    const reps = Math.min(30, Math.max(5, config?.lemonReps ?? 10))
+    const repsPerSet = plan === 'default' ? [10, 8, 6] : Array.from({ length: sets }, () => reps)
+    return { ...base, beats: lemonSqueezesClass({ sets, repsPerSet }) }
+  }
+  return base
 }

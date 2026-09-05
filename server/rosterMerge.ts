@@ -256,6 +256,33 @@ function mergeMaps(
   return { ...local, ...remote }
 }
 
+/** Prefer the newer `updatedAt` so a class-flow pick is not overwritten by a stale gym file. */
+function mergeStampMaps(
+  local: Record<string, unknown>,
+  remote: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  const ids = new Set([...Object.keys(local), ...Object.keys(remote)])
+  for (const id of ids) {
+    const a = local[id]
+    const b = remote[id]
+    if (a == null) {
+      out[id] = b
+      continue
+    }
+    if (b == null) {
+      out[id] = a
+      continue
+    }
+    const at =
+      typeof a === 'object' && a && 'updatedAt' in a ? String((a as { updatedAt?: unknown }).updatedAt ?? '') : ''
+    const bt =
+      typeof b === 'object' && b && 'updatedAt' in b ? String((b as { updatedAt?: unknown }).updatedAt ?? '') : ''
+    out[id] = at >= bt ? a : b
+  }
+  return out
+}
+
 function mergeCompareLibs(
   local: Record<string, unknown>,
   remote: Record<string, unknown>,
@@ -583,7 +610,7 @@ export function mergeRosterLists(
       homework,
       homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
       taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
-      flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
+      flowProgress: mergeStampMaps(local.flowProgress, remote.flowProgress),
       attempts: mergeByRowId(local.attempts, remote.attempts, 2000),
       compareLibraries: mergeCompareLibs(local.compareLibraries, remote.compareLibraries),
       removedAthleteIds: removed,
@@ -600,7 +627,7 @@ export function mergeRosterLists(
     homework,
     homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
     taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
-    flowProgress: mergeMaps(local.flowProgress, remote.flowProgress),
+    flowProgress: mergeStampMaps(local.flowProgress, remote.flowProgress),
     attempts: mergeByRowId(local.attempts, remote.attempts, 2000),
     compareLibraries: mergeCompareLibs(local.compareLibraries, remote.compareLibraries),
     removedAthleteIds: removed,

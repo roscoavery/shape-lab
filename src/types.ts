@@ -591,6 +591,8 @@ export type HomeworkLog = {
   sets?: number
   /** Reps the athlete counted as quality (form they would show a coach). */
   qualityReps?: number
+  /** Back-extension rep speed: 0 = fast, 100 = slow. */
+  repSpeed?: number
   grip?: string
   weightLb?: number
   /** 0–10 pain after this session (care / back-extension logs). */
