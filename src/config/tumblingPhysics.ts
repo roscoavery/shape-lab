@@ -9,11 +9,14 @@ export type PhysicsLesson = {
   kicker: string
   body: string[]
   gym: string
+  /** Optional nav grouping in Learn. */
+  section?: string
 }
 
 export const PHYSICS_LESSONS: PhysicsLesson[] = [
   {
     id: 'inertia',
+    section: 'How motion works',
     title: 'Law of inertia',
     kicker: 'A body keeps doing what it is doing until something changes it.',
     body: [
@@ -25,6 +28,7 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
   },
   {
     id: 'angular-momentum',
+    section: 'How motion works',
     title: 'Angular momentum',
     kicker: 'How much spin you have in the air is mostly set on takeoff.',
     body: [
@@ -36,6 +40,7 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
   },
   {
     id: 'moment-of-inertia',
+    section: 'How motion works',
     title: 'Moment of inertia',
     kicker: 'How spread out the body is around the flip axis.',
     body: [
@@ -47,6 +52,7 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
   },
   {
     id: 'speed-rotation',
+    section: 'How motion works',
     title: 'Speeding and slowing rotation',
     kicker: 'Change shape to change spin rate, not to invent flip.',
     body: [
@@ -58,6 +64,7 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
   },
   {
     id: 'roundoff-handspring',
+    section: 'Tumbling skills',
     title: 'Round-off into back handspring',
     kicker: 'A small arm drop can shrink I so the feet can get in front.',
     body: [
@@ -69,6 +76,7 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
   },
   {
     id: 'tuck-vs-layout',
+    section: 'Tumbling skills',
     title: 'Back tucks and layouts',
     kicker: 'Same idea of flip, very different I — and that is why layouts expose the set.',
     body: [
@@ -77,6 +85,32 @@ export const PHYSICS_LESSONS: PhysicsLesson[] = [
       'Teaching progression that matches the physics: get a set that already has extra flip in a tuck (they make it easily, even a little over). Then lengthen. Do not lengthen first and hope the layout invents angular momentum. Challenges on layout are often set problems wearing a shape costume.',
     ],
     gym: 'If layouts pike or pull a late tuck, film the set, not only the air shape. Ask whether a punch tuck from that same set would be easy. If the tuck is a fight, the layout is asking for money they do not have.',
+  },
+  {
+    id: 'block-surfaces',
+    section: 'Block, surfaces, and twist',
+    title: 'Newton’s 3rd law, the block, and surfaces',
+    kicker: 'The floor pushes back as hard as you push it — and a deeper surface spends that push as give.',
+    body: [
+      'Newton’s third law: if the athlete pushes the floor, the floor pushes the athlete with an equal force the other way. The block is that conversation. Hands or feet do not “hit and hope.” They apply force at an angle. The surface answers with a force that can send the body up, down the floor, or into more rotation — depending on the shape and the angle of that push.',
+      'Inertia still wants the body to keep doing what it was doing. The block is the force that redirects that leftover travel. A late, soft, or collapsed block lets inertia keep going the old way (down the floor, chest dropping, feet behind). A firm block with the right body line turns leftover run into height and turnover.',
+      'The desired block angle is not one magic number. It depends on (1) how fast they are traveling, (2) how much flip they already have and still need, and (3) how deep and how quickly the surface gives. Dead floor gives almost nothing — the redirect is sharp and short. A spring floor stores and returns more. A rod floor is springy but different under the feet. Tumble Trak and trampoline give deeper and longer. The deeper the surface gives, the longer the athlete has to stay in a pushing shape, and the more the angle has to account for sinking before the rebound.',
+      'If they treat tramp like dead floor, they punch and leave before the bed has answered — the third-law push never fully arrives. If they sit in a spring floor like a tramp, they wait too long and the return dumps them. Same physics, different timing. Shape at contact (open shoulders, tight hollow or the sit you actually want) decides whether the return goes into the skill or into a pike and a stall.',
+    ],
+    gym: 'Name the surface before you cue the block. “Same arms as on floor” on a tramp is often the wrong timing. Watch whether they stay in the push until the surface has given and come back.',
+  },
+  {
+    id: 'twisting',
+    section: 'Block, surfaces, and twist',
+    title: 'How twisting works',
+    kicker: 'Twist is not a mystery. It is contact, late aerial work, tilt, or a cat twist — all spending the same L.',
+    body: [
+      'Angular momentum is still the budget. Moment of inertia is still the dial. A twist is rotation around the long axis of the body. You can start that twist while you are still on the floor (contact twist), or you can create or finish it after you leave (aerial / late twist). You can also tilt the flip axis so some of the flip “looks like” twist, and you can use a cat-twist: one half of the body turns, then the other, with almost no extra L needed from the floor.',
+      'Contact twisting: the feet or hands are still on the surface when the shoulders and hips start to turn. The surface can add a little twist L because there is still an external torque. This is the “I already started the twist on the set” look. Useful when the set is strong. Dangerous as a habit if they throw the twist so early that the flip axis dies.',
+      'Aerial (late) twisting: they leave the floor mostly on the flip, then create twist in the air. They do that with arm and shoulder work and with small asymmetries — one arm in, a slight hip offset, a look. That is the tilt method: if the body is a little off the true flip axis, some of the existing flip L shows up as twist. They did not invent a new law. They spent the same L on a slightly tilted axis. Late twist needs enough leftover flip. If the tuck is already a fight, a late full will look like a spinny undercut.',
+      'Cat twist: think of a cat righting in the air. The upper body turns against the lower body, then the hips follow. Coaches see this as a “wrap” that starts in the chest and finishes in the legs. It is useful for teaching that twist can be built without slamming the floor into a corkscrew set. Circle back to I: arms in drops the long-axis I so the same twist L turns faster. Arms out brakes the twist. Same story as tuck versus layout, just on a different axis.',
+    ],
+    gym: 'Ask where the twist started: on the floor, late in the air, from a tilt, or from a cat wrap. If they have no flip, do not add twist. If they have flip and no twist, check arms and whether they are actually off-axis or just hoping.',
   },
 ]
 

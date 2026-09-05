@@ -40,15 +40,21 @@ export function HudRecord({
   onClick,
   busy = false,
   disabled = false,
+  recording = false,
+  seconds = 0,
   size = 'md',
 }: {
   onClick: () => void
   busy?: boolean
   disabled?: boolean
+  recording?: boolean
+  seconds?: number
   size?: 'sm' | 'md'
 }) {
   const ring = size === 'sm' ? 'h-12 w-12 border-[2.5px]' : 'h-[4.25rem] w-[4.25rem] border-[3px]'
   const dot = size === 'sm' ? 'h-8 w-8' : 'h-12 w-12'
+  const stop = size === 'sm' ? 'h-5 w-5' : 'h-7 w-7'
+  const label = busy ? 'Saving…' : recording ? `Stop ${seconds}s` : 'Record'
   return (
     <button
       type="button"
@@ -57,9 +63,13 @@ export function HudRecord({
       className="flex flex-col items-center gap-0.5 disabled:opacity-40"
     >
       <span className={`flex ${ring} items-center justify-center rounded-full border-white`}>
-        <span className={`${dot} rounded-full bg-[#e03131]`} />
+        {recording ? (
+          <span className={`${stop} rounded-sm bg-[#e03131]`} />
+        ) : (
+          <span className={`${dot} rounded-full bg-[#e03131]`} />
+        )}
       </span>
-      <span className="text-[10px] font-medium tracking-wide text-white">{busy ? 'Saving…' : 'Record'}</span>
+      <span className="text-[10px] font-medium tracking-wide text-white">{label}</span>
     </button>
   )
 }

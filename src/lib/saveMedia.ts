@@ -20,6 +20,10 @@ export function getRememberedBlob(id: string): Blob | null {
   return remembered.get(id) ?? null
 }
 
+export function forgetCaptureBlob(id: string): void {
+  remembered.delete(id)
+}
+
 export async function durableBlob(blob: Blob): Promise<Blob> {
   const buf = await blob.arrayBuffer()
   return new Blob([buf], { type: blob.type || 'video/mp4' })

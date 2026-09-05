@@ -32,6 +32,8 @@ import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
 import { PhysicsLessons } from './learn/PhysicsLessons'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
+import { ANATOMY_LESSONS } from '../config/coachAnatomy'
+import { PROGRESSION_LESSONS } from '../config/tumblingProgression'
 import { drillsForShape, subscribeCoachContent } from '../lib/coachContentStore'
 import { isCoachProfile } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
@@ -57,6 +59,8 @@ type EduView =
   | { kind: 'ig' }
   | { kind: 'scroll' }
   | { kind: 'physics' }
+  | { kind: 'anatomy' }
+  | { kind: 'progression' }
 
 export type LearnIntent = 'shapes' | 'quiz' | 'scroll'
 
@@ -189,6 +193,16 @@ export function EducationPanel({
             label="Tumbling physics"
           />
           <NavChip
+            active={view.kind === 'anatomy'}
+            onClick={() => setView({ kind: 'anatomy' })}
+            label="Anatomy"
+          />
+          <NavChip
+            active={view.kind === 'progression'}
+            onClick={() => setView({ kind: 'progression' })}
+            label="Progression"
+          />
+          <NavChip
             active={view.kind === 'glossary'}
             onClick={() => setView({ kind: 'glossary' })}
             label="Glossary"
@@ -241,6 +255,8 @@ export function EducationPanel({
           onScroll={() => setView({ kind: 'scroll' })}
           onPhysics={() => setView({ kind: 'physics' })}
           onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
+          onAnatomy={() => setView({ kind: 'anatomy' })}
+          onProgression={() => setView({ kind: 'progression' })}
           igCount={listIgStills(referencePhotos).length}
           referencePhotos={referencePhotos}
           shapes={catalog}
@@ -287,6 +303,14 @@ export function EducationPanel({
 
       {view.kind === 'physics' && (
         <PhysicsLessons onTakeTest={() => setView({ kind: 'physicsQuiz' })} />
+      )}
+
+      {view.kind === 'anatomy' && (
+        <PhysicsLessons lessons={ANATOMY_LESSONS} heading="Anatomy for coaches" />
+      )}
+
+      {view.kind === 'progression' && (
+        <PhysicsLessons lessons={PROGRESSION_LESSONS} heading="Progression and blocks" />
       )}
 
       {view.kind === 'task' && (
@@ -436,6 +460,8 @@ function HomeView({
   onScroll,
   onPhysics,
   onPhysicsQuiz,
+  onAnatomy,
+  onProgression,
   igCount,
   referencePhotos,
   shapes,
@@ -453,6 +479,8 @@ function HomeView({
   onScroll: () => void
   onPhysics: () => void
   onPhysicsQuiz: () => void
+  onAnatomy: () => void
+  onProgression: () => void
   igCount: number
   referencePhotos: ReferencePhoto[]
   shapes: ShapeDef[]
@@ -510,9 +538,9 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Tumbling physics</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Inertia, angular momentum, moment of inertia — and why arms come in
-          after a round-off so the feet can get in front for the handspring.
-          Layouts expose a weak set because a long body has more I to turn.
+          Inertia, angular momentum, moment of inertia, the block and Newton’s
+          third law on dead / spring / rod / Tumble Trak / tramp, and how
+          twisting actually works — contact, late, tilt, and cat twist.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Open physics →
@@ -525,13 +553,44 @@ function HomeView({
       >
         <h3 className="text-lg font-semibold text-[var(--text)]">Physics in tumbling test</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Twelve questions from the physics notes: inertia, angular momentum,
-          moment of inertia, speeding and slowing rotation, the round-off arm
-          drop, and why layouts expose a weak set. When you finish, you see the
-          score and every miss with the right answer and why.
+          Sixteen questions from the physics notes: inertia, angular momentum,
+          moment of inertia, the block and surfaces, twisting, the round-off
+          arm drop, and why layouts expose a weak set. When you finish, you see
+          the score and every miss with the right answer and why.
         </p>
         <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
           Take the physics test →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onAnatomy}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Anatomy for coaches</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Joint actions and the cues that match them, hypermobility you can
+          see, strain vs sprain vs tendon, grades, and gym prevention — wrists,
+          ankles, backs, short landings, and why we stopped treating ice as the
+          whole plan.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open anatomy →
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onProgression}
+        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+      >
+        <h3 className="text-lg font-semibold text-[var(--text)]">Progression and blocks</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Introduction, approximation, acquisition, mastery — and how normal
+          fear, mental blocks, physical blocks, and emotional blocks sit on
+          those levels. Progress is not linear.
+        </p>
+        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
+          Open progression →
         </span>
       </button>
       <button

@@ -8,8 +8,9 @@
  *    save to this device and/or keep it in the app.
  *  - Replay: pick a recorded attempt, scrub frame-by-frame with speed control.
  *
- * Recording uses a second MediaRecorder on the same stream; clips are saved
- * to IndexedDB with a storage cap (oldest pruned).
+ * Record is start/stop of the delay-cam (or live) picture — captureStream
+ * of that <video>, never a second MediaRecorder on the live camera track
+ * and never getDisplayMedia. Clips are saved to IndexedDB (oldest pruned).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -30,7 +31,13 @@ import {
 import { emptyDrill, saveDrill, uploadCoachMedia } from '../../lib/coachContentStore'
 import { createId } from '../../lib/storage'
 import { dispatchLibraryChanged } from '../../lib/libraryEvents'
-import { extForVideoType, saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
+import {
+  createRecorder,
+  extForVideoType,
+  saveResultMessage,
+  saveVideoToDevice,
+  startRecorder,
+} from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
 import { hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
@@ -113,6 +120,7 @@ export function CameraPane({
   const attemptChunksRef = useRef<Blob[]>([])
   const attemptStartRef = useRef(0)
   const recTimerRef = useRef<number>(0)
+  const viewCaptureStopRef = useRef<(() => void) | null>(null)
 
   const clipUrlRef = useRef<string | null>(null)
 
@@ -129,7 +137,7 @@ export function CameraPane({
   const [clipSrc, setClipSrc] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const [replayBuilding, setReplayBuilding] = useState(false)
-  const [librarySaving, setLibrarySaving] = useState(false)
+  const librarySaving = false
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
   const [savingPhotos, setSavingPhotos] = useState(false)
   const [replayBusy, setReplayBusy] = useState(false)
@@ -440,6 +448,8 @@ export function CameraPane({
   const stopRecording = useCallback(() => {
     const rec = attemptRecorderRef.current
     if (rec && rec.state !== 'inactive') rec.stop()
+    viewCaptureStopRef.current?.()
+    viewCaptureStopRef.current = null
     window.clearInterval(recTimerRef.current)
     setRecording(false)
   }, [])
@@ -468,28 +478,103 @@ export function CameraPane({
   // Attempt recording + replay
   // -------------------------------------------------------------------------
 
+  const grabViewStream = (): MediaStream | null => {
+    viewCaptureStopRef.current?.()
+    viewCaptureStopRef.current = null
+    // Record the picture on screen (delay-cam when that mode is up). Never
+    // attach a second MediaRecorder to the live camera — the rolling buffer
+    // already owns that track.
+    const delayEl = delayVideoRef.current
+    const liveEl = liveVideoRef.current
+    const video = mode === 'delay' && delayEl ? delayEl : liveEl
+    if (!video) return null
+    const cap = video as HTMLVideoElement & {
+      captureStream?: (fps?: number) => MediaStream
+      mozCaptureStream?: (fps?: number) => MediaStream
+    }
+    const grab = cap.captureStream ?? cap.mozCaptureStream
+    if (typeof grab === 'function') {
+      try {
+        const grabbed = grab.call(video, 30)
+        if (grabbed.getVideoTracks().length > 0) return grabbed
+      } catch {
+        /* canvas fallback */
+      }
+    }
+    const w = video.videoWidth || liveEl?.videoWidth || 0
+    const h = video.videoHeight || liveEl?.videoHeight || 0
+    if (w > 2 && h > 2) {
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        let live = true
+        const draw = () => {
+          if (!live) return
+          try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          } catch {
+            /* video not paintable this frame */
+          }
+          raf = requestAnimationFrame(draw)
+        }
+        let raf = requestAnimationFrame(draw)
+        viewCaptureStopRef.current = () => {
+          live = false
+          cancelAnimationFrame(raf)
+        }
+        return canvas.captureStream(30)
+      }
+    }
+    return null
+  }
+
   const startRecording = () => {
-    const stream = streamRef.current
-    if (!stream) return
-    const mime = pickRecorderMime()
-    if (!mime) {
+    if (recording) {
+      stopRecording()
+      return
+    }
+    if (typeof MediaRecorder === 'undefined') {
       setError('Recording is not supported in this browser (MediaRecorder missing).')
       return
     }
+    const stream = grabViewStream()
+    if (!stream) {
+      setError(
+        mode === 'delay'
+          ? 'Wait until the delay-cam picture is up, then tap Record. That records the buffered view — not the whole screen.'
+          : 'Start the camera first, then tap Record.',
+      )
+      return
+    }
     attemptChunksRef.current = []
-    const rec = new MediaRecorder(stream, { mimeType: mime })
+    let rec: MediaRecorder
+    try {
+      rec = createRecorder(stream)
+    } catch {
+      viewCaptureStopRef.current?.()
+      viewCaptureStopRef.current = null
+      setError('Could not start a recording of the camera picture.')
+      return
+    }
     attemptRecorderRef.current = rec
     rec.ondataavailable = (e) => {
       if (e.data.size > 0) attemptChunksRef.current.push(e.data)
     }
     rec.onstop = () => {
+      viewCaptureStopRef.current?.()
+      viewCaptureStopRef.current = null
       const blob = new Blob(attemptChunksRef.current, { type: rec.mimeType })
       attemptChunksRef.current = []
-      if (blob.size === 0) return
+      if (blob.size === 0) {
+        setError('That recording came out empty. Keep the delay-cam picture on, then try Record again.')
+        return
+      }
       const durationSec = (performance.now() - attemptStartRef.current) / 1000
       const meta: RecordedClip = {
         id: createId('clip'),
-        name: `Attempt ${new Date().toLocaleTimeString()}`,
+        name: `Delay cam ${Math.max(1, Math.round(durationSec))}s · ${new Date().toLocaleTimeString()}`,
         createdAt: new Date().toISOString(),
         durationSec: Number(durationSec.toFixed(1)),
         sizeBytes: blob.size,
@@ -498,7 +583,7 @@ export function CameraPane({
         .then(getClips)
         .then((list) => {
           setClips(list)
-          setFlash(`Saved ${meta.name} (${meta.durationSec}s)`)
+          setFlash(`Saved ${meta.name}`)
           setTimeout(() => setFlash(null), 2500)
         })
         .catch(() => setError('Could not save the clip — device storage may be full.'))
@@ -520,7 +605,15 @@ export function CameraPane({
       }
     }
     attemptStartRef.current = performance.now()
-    rec.start()
+    try {
+      startRecorder(rec, 200)
+    } catch {
+      viewCaptureStopRef.current?.()
+      viewCaptureStopRef.current = null
+      setError('Could not start a recording of the camera picture.')
+      return
+    }
+    setError(null)
     setRecSeconds(0)
     setRecording(true)
     recTimerRef.current = window.setInterval(() => {
@@ -579,47 +672,6 @@ export function CameraPane({
       window.setTimeout(() => setFlash(null), 2500)
     } finally {
       setReplayBuilding(false)
-    }
-  }
-
-  const recordAfterSkill = async () => {
-    if (!running || librarySaving) return
-    if (!athleteId) {
-      setError('Unlock an athlete profile first — Record saves into that video library.')
-      return
-    }
-    setLibrarySaving(true)
-    setError(null)
-    try {
-      const capturedFor = (performance.now() - rollingStartRef.current) / 1000
-      const blob = await flushRollingBlob()
-      if (streamRef.current) startRolling()
-      if (!blob || blob.size < 1500 || capturedFor < 1.2) {
-        setError(
-          `Keep the camera on for a couple of seconds, then tap Record. That saves what just happened.`,
-        )
-        return
-      }
-      const shown = Math.max(1, Math.round(Math.min(delaySec, capturedFor)))
-      const saved = await uploadAthleteVideo({
-        athleteId,
-        blob,
-        name: `Delay cam ${shown}s · ${new Date().toLocaleTimeString()}`,
-        source: saveSource === 'lesson' ? 'lesson' : 'delay-record',
-        durationSec: shown,
-        lessonId,
-        skillId,
-        skillLabel,
-        classId,
-        className,
-      })
-      onLibrarySaved?.()
-      setFlash(`Saved to video library: ${saved.name}`)
-      window.setTimeout(() => setFlash(null), 2800)
-    } catch {
-      setError('Could not save that recording into the video library.')
-    } finally {
-      setLibrarySaving(false)
     }
   }
 
@@ -903,16 +955,16 @@ export function CameraPane({
       </button>
       <button
         type="button"
-        disabled={!running || librarySaving}
-        title="Save the delay-cam buffer that just happened into this athlete’s video library"
-        onClick={() => void recordAfterSkill()}
+        disabled={!running || (librarySaving && !recording)}
+        title="Start or stop a recording of the delay-cam picture — not a screen recording"
+        onClick={() => (recording ? stopRecording() : startRecording())}
         className={
           rail
             ? 'rounded-lg bg-[var(--bad)] px-2 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40'
             : 'rounded-lg border border-[var(--bad)]/60 px-3 py-1.5 text-sm font-semibold text-[var(--bad)] disabled:opacity-40'
         }
       >
-        {librarySaving ? 'Saving…' : 'Record'}
+        {librarySaving ? 'Saving…' : recording ? `Stop ${recSeconds}s` : 'Record'}
       </button>
       <label className={`flex items-center gap-1.5 ${rail ? 'text-[11px] text-white/75' : 'text-sm text-[var(--muted)]'}`}>
         <input
@@ -1073,6 +1125,7 @@ export function CameraPane({
             zoom={camZoom}
             buffering={delayBuffering}
             recording={recording}
+            recSeconds={recSeconds}
             saving={librarySaving}
             hudOpen={delayHudOpen}
             onZoom={setCamZoom}
@@ -1080,7 +1133,7 @@ export function CameraPane({
             onShow={() => setDelayHudOpen(true)}
             onReplay={() => void openBufferReplay()}
             onFlip={() => setMirror((on) => !on)}
-            onRecord={() => void recordAfterSkill()}
+            onRecord={() => (recording ? stopRecording() : startRecording())}
             onBuffer={() => {
               setMode('live')
               setReplayStart(true)
@@ -1136,12 +1189,12 @@ export function CameraPane({
         {mode === 'delay' && running && !fullscreen && (
           <button
             type="button"
-            disabled={librarySaving}
-            title="Save the delay-cam buffer that just happened into this athlete’s video library"
-            onClick={() => void recordAfterSkill()}
+            disabled={librarySaving && !recording}
+            title="Start or stop a recording of the delay-cam picture"
+            onClick={() => (recording ? stopRecording() : startRecording())}
             className="absolute bottom-3 right-3 z-[15] rounded-full bg-[var(--bad)] px-4 py-2 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
           >
-            {librarySaving ? 'Saving…' : 'Record'}
+            {librarySaving ? 'Saving…' : recording ? `Stop ${recSeconds}s` : 'Record'}
           </button>
         )}
         {recording && (

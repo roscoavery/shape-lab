@@ -12,6 +12,7 @@ type DelayProps = {
   zoom: number
   buffering: boolean
   recording: boolean
+  recSeconds?: number
   saving: boolean
   hudOpen: boolean
   onZoom: (n: number) => void
@@ -31,6 +32,7 @@ export function DelayCamHud({
   zoom,
   buffering,
   recording,
+  recSeconds = 0,
   saving,
   hudOpen,
   onZoom,
@@ -110,7 +112,12 @@ export function DelayCamHud({
           <IconFlip />
         </HudCircle>
         <div className="mt-2">
-          <HudRecord onClick={onRecord} busy={saving} />
+          <HudRecord
+            onClick={onRecord}
+            busy={saving && !recording}
+            recording={recording}
+            seconds={recSeconds}
+          />
         </div>
         <CompareControlsButton />
       </div>

@@ -191,4 +191,60 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     explain:
       'If a punch tuck from that set is already a fight, the layout is asking for money they do not have. Get a set with extra flip in a tuck, then stay long. Do not lengthen first and hope L appears.',
   },
+  {
+    id: 'n3-equal-opposite',
+    lessonId: 'block-surfaces',
+    prompt: 'In a block, Newton’s third law means:',
+    choices: [
+      { id: 'a', label: 'The floor pushes the athlete back with an equal force the other way' },
+      { id: 'b', label: 'The athlete can invent extra flip after they leave the floor' },
+      { id: 'c', label: 'A deeper surface always gives a sharper, shorter redirect' },
+      { id: 'd', label: 'Inertia resets to zero when the hands touch' },
+    ],
+    answerId: 'a',
+    explain:
+      'If they push the floor, the floor pushes them. That return is the block. Inertia still wants the old direction; the block is the force that redirects it. A deeper surface spends more of that conversation as give, so timing has to stay in the push longer.',
+  },
+  {
+    id: 'n3-surface-depth',
+    lessonId: 'block-surfaces',
+    prompt: 'Compared with dead floor, a trampoline or a deep Tumble Trak:',
+    choices: [
+      { id: 'a', label: 'Gives less, so they should punch and leave even sooner' },
+      { id: 'b', label: 'Gives deeper and longer, so they must stay in the pushing shape until the bed answers' },
+      { id: 'c', label: 'Removes Newton’s third law' },
+      { id: 'd', label: 'Adds angular momentum from nothing' },
+    ],
+    answerId: 'b',
+    explain:
+      'Deeper give means a longer third-law conversation. Punch-and-leave like dead floor and the return never fully arrives. Sit too long on a spring floor and the return dumps them. Same law, different timing.',
+  },
+  {
+    id: 'twist-contact-vs-late',
+    lessonId: 'twisting',
+    prompt: 'A contact twist is different from a late (aerial) twist because:',
+    choices: [
+      { id: 'a', label: 'Contact twist starts while they are still on the floor; late twist is built after they leave' },
+      { id: 'b', label: 'Late twist invents new angular momentum; contact twist does not' },
+      { id: 'c', label: 'Contact twist only works on trampoline' },
+      { id: 'd', label: 'Late twist means they have no flip' },
+    ],
+    answerId: 'a',
+    explain:
+      'Contact: feet or hands still on the surface when the shoulders start to turn. Aerial/late: they leave mostly on the flip, then create twist with arms, look, and small asymmetries. Both spend the same L. A weak flip cannot fund a late full.',
+  },
+  {
+    id: 'twist-tilt-i',
+    lessonId: 'twisting',
+    prompt: 'The tilt method and “arms in to twist faster” are really:',
+    choices: [
+      { id: 'a', label: 'A new kind of force that only exists in twisting' },
+      { id: 'b', label: 'Spending the same angular momentum on a tilted axis, and dropping long-axis I so ω rises' },
+      { id: 'c', label: 'Proof that moment of inertia does not apply to twist' },
+      { id: 'd', label: 'A reason to throw the twist so early the flip dies' },
+    ],
+    answerId: 'b',
+    explain:
+      'Tilt: if the body is a little off the true flip axis, some flip L shows up as twist. Arms in: smaller I around the long axis, faster twist rate — same Iω story as a tuck. Cat twist is a wrap (upper, then lower) without needing a corkscrew set.',
+  },
 ]

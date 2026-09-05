@@ -83,7 +83,9 @@ export function CarePanel({
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Pain is information, not a life sentence. Write what you feel, do the
           work you can handle today, and keep the notes your doctor gave you
-          where you can find them. Healing is a trail, not a switch.
+          where you can find them. Healing is a trail, not a switch. Coach notes
+          on joints, tissues, and prevention live in Learn → Anatomy. The four
+          levels of a skill and how blocks sit on them live in Learn → Progression.
         </p>
         <button
           type="button"
