@@ -33,8 +33,8 @@ import {
 import {
   forgetCaptureBlob,
   getRememberedBlob,
-  prefersShareSave,
   rememberCaptureBlob,
+  saveImageToDevice,
   saveResultMessage,
   saveVideoToDevice,
 } from '../lib/saveMedia'
@@ -105,6 +105,8 @@ type Props = {
   /** Homework / coach assign — select this Class Flow when the page opens. */
   assignedSequenceId?: string | null
   onAssignedSequenceConsumed?: () => void
+  onFlowPhase?: (phase: Phase) => void
+  onRegisterStart?: (fn: () => void) => void
 }
 
 function scoreColor(n: number): string {
@@ -212,6 +214,8 @@ export function Tasks2Panel({
   cameraError = null,
   assignedSequenceId = null,
   onAssignedSequenceConsumed,
+  onFlowPhase,
+  onRegisterStart,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(() => readLastFlowId() ?? FLOW_SEQUENCES[0]!.id)
@@ -263,6 +267,9 @@ export function Tasks2Panel({
   } | null>(null)
   const clipUrlsRef = useRef<Map<string, string>>(new Map())
   const holdDoneRef = useRef(false)
+  const pendingStillsRef = useRef<
+    { id: string; blob: Blob; shapeId: string; shapeName: string; seqId: string }[]
+  >([])
   const landmarksRef = useRef(landmarks)
   const onHoldClockRef = useRef(onHoldClock)
   const onCueRef = useRef(onCue)
@@ -464,23 +471,14 @@ export function Tasks2Panel({
       const captureId = createId('snap')
       if (blob) {
         onHitPreview?.(blob)
-        try {
-          await saveCapture(
-            {
-              id: captureId,
-              athleteId,
-              taskId: seq.id,
-              shapeId,
-              shapeName: snapLabel ?? shape?.name ?? shapeId,
-              kind: 'snapshot',
-              createdAt: new Date().toISOString(),
-              holdSeconds: 0,
-            },
-            blob,
-          )
-        } catch {
-          /* optional */
-        }
+        rememberCaptureBlob(captureId, blob)
+        pendingStillsRef.current.push({
+          id: captureId,
+          blob,
+          shapeId,
+          shapeName: snapLabel ?? shape?.name ?? shapeId,
+          seqId: seq.id,
+        })
       }
       const view: SnapView = {
         shapeId,
@@ -527,30 +525,10 @@ export function Tasks2Panel({
       replayUrlRef.current = url
       setReplayUrl(url)
 
-      const askHits = seqRun.id === 'flow_core_home'
       let replayCaptureId: string | null = null
       if (blob && blob.size > 800) {
         replayCaptureId = createId('clip')
         rememberCaptureBlob(replayCaptureId, blob)
-        if (athleteId && !askHits) {
-          try {
-            await saveCapture(
-              {
-                id: replayCaptureId,
-                athleteId,
-                taskId: seqRun.id,
-                shapeId: seqRun.previewShapes[0]?.shapeId ?? 'handstand',
-                shapeName: seqRun.nickname,
-                kind: 'clip',
-                createdAt: new Date().toISOString(),
-                holdSeconds: delay.capturedSec(),
-              },
-              blob,
-            )
-          } catch {
-            /* still keep the in-memory clip for Photos / Files */
-          }
-        }
       }
 
       const steps: FlowStepSnap[] = collected.map((s) => ({
@@ -582,29 +560,27 @@ export function Tasks2Panel({
         setProgress(next)
         logHomeworkSequenceRun(built)
       }
-      if (blob && blob.size > 800) {
+      if (blob && blob.size > 800 && replayCaptureId) {
         const filename = videoFileName(built, blob.type)
         setDeviceSave({ blob, filename, label: 'this run' })
-        if (askHits && replayCaptureId) {
-          setHitsAsk({
-            id: replayCaptureId,
-            blob,
-            filename,
-            seconds: delay.capturedSec(),
-            seqId: seqRun.id,
-            nickname: seqRun.nickname,
-          })
-        } else {
-          setHitsAsk(null)
-          if (!prefersShareSave()) {
-            void saveVideoToDevice(blob, filename).then((result) => {
-              if (result !== 'failed') {
-                setFlash(saveResultMessage(result))
-                window.setTimeout(() => setFlash(null), 4000)
-              }
-            })
-          }
-        }
+        setHitsAsk({
+          id: replayCaptureId,
+          blob,
+          filename,
+          seconds: delay.capturedSec(),
+          seqId: seqRun.id,
+          nickname: seqRun.nickname,
+        })
+      } else if (pendingStillsRef.current.length > 0) {
+        setDeviceSave(null)
+        setHitsAsk({
+          id: pendingStillsRef.current[0]!.id,
+          blob: pendingStillsRef.current[0]!.blob,
+          filename: `${seqRun.nickname}-still.jpg`,
+          seconds: 0,
+          seqId: seqRun.id,
+          nickname: seqRun.nickname,
+        })
       } else {
         setDeviceSave(null)
         setHitsAsk(null)
@@ -615,13 +591,11 @@ export function Tasks2Panel({
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        seqRun.id === 'flow_core_home'
-          ? 'This Home core video is long. Choose Save to My shapes (Learn → My shapes) or I don’t want the video.'
-          : seqRun.id === 'flow_mc_hs_5reps'
-            ? 'Watch your 5 reps. Each handstand is numbered in the grades.'
-            : seqRun.id === 'flow_mc_hs_lg_assist'
-              ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
-              : 'Watch your run. Scrub, then continue to the grades.',
+        seqRun.id === 'flow_mc_hs_5reps'
+          ? 'Watch your 5 reps. Each handstand is numbered in the grades. After that, choose whether to keep the clip.'
+          : seqRun.id === 'flow_mc_hs_lg_assist'
+            ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade and choose whether to keep the video.'
+            : 'Watch your run. Then read the grades and choose whether to keep the clip.',
       )
     },
     [athlete?.instagramHandle, athleteId, delay, onExitFullscreen],
@@ -698,25 +672,6 @@ export function Tasks2Panel({
             void savePoseTrackJson(clipId, serializePoseTrack(a.poseTrack)).catch(() => {
               /* pose track is still in memory for this session */
             })
-          }
-          if (athleteId) {
-            try {
-              await saveCapture(
-                {
-                  id: clipId,
-                  athleteId,
-                  taskId: seqRun.id,
-                  shapeId: 'handstand',
-                  shapeName: highlighted ? 'Longest handstand' : `Handstand hold ${i + 1}`,
-                  kind: 'clip',
-                  createdAt: new Date().toISOString(),
-                  holdSeconds: a.holdSeconds,
-                },
-                a.clipBlob,
-              )
-            } catch {
-              /* phone storage full — clip still plays and can save to Photos */
-            }
           }
         }
 
@@ -802,14 +757,29 @@ export function Tasks2Panel({
         setProgress(next)
         logHomeworkSequenceRun(built)
       }
-      setDeviceSave(null)
+      const bestBlob = replayCaptureId ? getRememberedBlob(replayCaptureId) : null
+      if (bestBlob && replayCaptureId) {
+        const filename = videoFileName(built, bestBlob.type)
+        setDeviceSave({ blob: bestBlob, filename, label: 'this hold' })
+        setHitsAsk({
+          id: replayCaptureId,
+          blob: bestBlob,
+          filename,
+          seconds: bestHold.holdSeconds,
+          seqId: seqRun.id,
+          nickname: seqRun.nickname,
+        })
+      } else {
+        setDeviceSave(null)
+        setHitsAsk(null)
+      }
       setReport(built)
       setSnaps(collected)
       snapsRef.current = collected
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. One line down the body, stopwatch, and live score are on the video. Save video to Photos.`,
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Watch it, then read the analysis and choose whether to keep the clips.`,
       )
     },
     [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
@@ -849,6 +819,9 @@ export function Tasks2Panel({
       setSnaps([])
       setReport(null)
       setSeekTo(null)
+      pendingStillsRef.current = []
+      setHitsAsk(null)
+      setDeviceSave(null)
 
       try {
         try {
@@ -1316,28 +1289,167 @@ export function Tasks2Panel({
     setPhase('replay')
   }
 
-  const saveDeviceOffer = async () => {
-    if (!deviceSave) return
-    const result = await saveVideoToDevice(deviceSave.blob, deviceSave.filename)
-    setFlash(saveResultMessage(result))
+  const extraHoldBlobs = () => {
+    const ids = new Set<string>()
+    if (hitsAsk) ids.add(hitsAsk.id)
+    const extras: { id: string; blob: Blob; name: string }[] = []
+    for (const hold of report?.holdAttempts ?? []) {
+      if (!hold.clipId || ids.has(hold.clipId)) continue
+      const blob = getRememberedBlob(hold.clipId)
+      if (!blob) continue
+      ids.add(hold.clipId)
+      extras.push({
+        id: hold.clipId,
+        blob,
+        name: `Hold ${hold.index} · ${formatSeconds(hold.holdSeconds)}`,
+      })
+    }
+    return extras
+  }
+
+  const dumpPendingMedia = () => {
+    if (hitsAsk) {
+      forgetCaptureBlob(hitsAsk.id)
+      void deleteCapture(hitsAsk.id).catch(() => {})
+    }
+    for (const extra of extraHoldBlobs()) {
+      forgetCaptureBlob(extra.id)
+      void deleteCapture(extra.id).catch(() => {})
+    }
+    for (const still of pendingStillsRef.current) {
+      forgetCaptureBlob(still.id)
+      void deleteCapture(still.id).catch(() => {})
+    }
+    pendingStillsRef.current = []
+    setHitsAsk(null)
+    setDeviceSave(null)
+  }
+
+  const keepToPhotos = async () => {
+    const clip = hitsAsk?.blob && hitsAsk.blob.type.startsWith('video') ? hitsAsk : deviceSave
+    if (clip && 'filename' in clip) {
+      const result = await saveVideoToDevice(clip.blob, clip.filename)
+      setFlash(saveResultMessage(result))
+    }
+    for (const extra of extraHoldBlobs()) {
+      const ext = extra.blob.type.includes('mp4') ? 'mp4' : 'webm'
+      await saveVideoToDevice(extra.blob, `shape-lab-hold-${extra.id}.${ext}`)
+    }
+    for (const still of pendingStillsRef.current) {
+      await saveImageToDevice(still.blob, `${still.shapeName.replace(/\s+/g, '-')}.jpg`)
+    }
+    dumpPendingMedia()
     window.setTimeout(() => setFlash(null), 5000)
   }
 
-  const saveLibraryOffer = async () => {
-    if (!deviceSave || !athleteId) return
+  const keepToLibrary = async () => {
+    if (!athleteId) {
+      setFlash('Unlock a profile first, then save to the video library.')
+      window.setTimeout(() => setFlash(null), 4000)
+      return
+    }
+    const blob = hitsAsk?.blob ?? deviceSave?.blob
+    if (!blob || !blob.type.startsWith('video')) {
+      setFlash('No video to put in the library — keep stills in My shapes if you want them.')
+      window.setTimeout(() => setFlash(null), 4000)
+      return
+    }
     try {
       await uploadAthleteVideo({
         athleteId,
-        blob: deviceSave.blob,
-        name: deviceSave.label,
-        source: seq.mode === 'hs-hold' ? 'hold' : 'tasks2',
+        blob,
+        name: hitsAsk?.nickname ?? deviceSave?.label ?? seq.nickname,
+        source: liveSeq.mode === 'hs-hold' ? 'hold' : 'tasks2',
+        durationSec: hitsAsk?.seconds ?? null,
       })
+      for (const extra of extraHoldBlobs()) {
+        await uploadAthleteVideo({
+          athleteId,
+          blob: extra.blob,
+          name: extra.name,
+          source: 'hold',
+        })
+      }
       setFlash('Saved into this profile’s video library.')
     } catch {
       setFlash('Could not save into the video library.')
     }
+    dumpPendingMedia()
     window.setTimeout(() => setFlash(null), 5000)
   }
+
+  const keepToMyShapes = async () => {
+    if (!athleteId) {
+      setFlash('Unlock a profile first, then save to My shapes.')
+      window.setTimeout(() => setFlash(null), 4000)
+      return
+    }
+    try {
+      if (hitsAsk && hitsAsk.blob.type.startsWith('video')) {
+        await saveCapture(
+          {
+            id: hitsAsk.id,
+            athleteId,
+            taskId: hitsAsk.seqId,
+            shapeId: liveSeq.previewShapes[0]?.shapeId ?? 'handstand',
+            shapeName: hitsAsk.nickname,
+            kind: 'clip',
+            createdAt: new Date().toISOString(),
+            holdSeconds: hitsAsk.seconds,
+          },
+          hitsAsk.blob,
+        )
+      }
+      for (const extra of extraHoldBlobs()) {
+        await saveCapture(
+          {
+            id: extra.id,
+            athleteId,
+            taskId: liveSeq.id,
+            shapeId: 'handstand',
+            shapeName: extra.name,
+            kind: 'clip',
+            createdAt: new Date().toISOString(),
+            holdSeconds: 0,
+          },
+          extra.blob,
+        )
+      }
+      for (const still of pendingStillsRef.current) {
+        await saveCapture(
+          {
+            id: still.id,
+            athleteId,
+            taskId: still.seqId,
+            shapeId: still.shapeId,
+            shapeName: still.shapeName,
+            kind: 'snapshot',
+            createdAt: new Date().toISOString(),
+            holdSeconds: 0,
+          },
+          still.blob,
+        )
+      }
+      setFlash('Saved to Learn → My shapes.')
+    } catch {
+      setFlash('Could not save into My shapes.')
+    }
+    pendingStillsRef.current = []
+    setHitsAsk(null)
+    setDeviceSave(null)
+    window.setTimeout(() => setFlash(null), 4000)
+  }
+
+  useEffect(() => {
+    onFlowPhase?.(phase)
+  }, [phase, onFlowPhase])
+
+  useEffect(() => {
+    if (!onRegisterStart) return
+    onRegisterStart(() => {
+      void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)
+    })
+  })
 
   useEffect(() => {
     if (phase !== 'replay' && phase !== 'review') return
@@ -1746,83 +1858,9 @@ export function Tasks2Panel({
                 : `Your run · ${seq.nickname} — scrub the delay-cam replay`}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
-              {hitsAsk && athleteId && (
-                <div className="mr-auto max-w-lg rounded-lg border border-[#f0b429]/50 bg-[#2a2312] px-3 py-2 text-left text-sm text-white">
-                  <p className="font-semibold text-[#f0b429]">
-                    Keep this {hitsAsk.nickname} video?
-                  </p>
-                  <p className="mt-1 text-[12px] text-white/80">
-                    About {Math.max(1, Math.round(hitsAsk.seconds))}s. If you save it, find it later
-                    under Learn → My shapes. If you do not want it, we dump it.
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void (async () => {
-                          try {
-                            await saveCapture(
-                              {
-                                id: hitsAsk.id,
-                                athleteId,
-                                taskId: hitsAsk.seqId,
-                                shapeId: 'seated_pike',
-                                shapeName: hitsAsk.nickname,
-                                kind: 'clip',
-                                createdAt: new Date().toISOString(),
-                                holdSeconds: hitsAsk.seconds,
-                              },
-                              hitsAsk.blob,
-                            )
-                            setFlash('Saved to Learn → My shapes.')
-                          } catch {
-                            setFlash('Could not save that clip into My shapes.')
-                          }
-                          setHitsAsk(null)
-                          window.setTimeout(() => setFlash(null), 4000)
-                        })()
-                      }}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
-                    >
-                      Save to My shapes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        forgetCaptureBlob(hitsAsk.id)
-                        void deleteCapture(hitsAsk.id).catch(() => {})
-                        setHitsAsk(null)
-                        setDeviceSave(null)
-                        setFlash('Video dumped. It is not in My shapes.')
-                        window.setTimeout(() => setFlash(null), 4000)
-                      }}
-                      className="rounded-lg border border-white/25 px-3 py-1.5 text-xs"
-                    >
-                      I don’t want the video
-                    </button>
-                  </div>
-                </div>
-              )}
-              {deviceSave && !holdMode && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => void saveDeviceOffer()}
-                    className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
-                  >
-                    Save {deviceSave.label} to Photos / Files
-                  </button>
-                  {athleteId && (
-                    <button
-                      type="button"
-                      onClick={() => void saveLibraryOffer()}
-                      className="rounded-lg border border-white/25 px-3 py-1.5 text-sm"
-                    >
-                      Save to video library
-                    </button>
-                  )}
-                </>
-              )}
+              <p className="mr-auto max-w-sm text-[11px] leading-snug text-white/70">
+                Watch first. Grades stay on the next screen — then choose whether to keep the clip.
+              </p>
               <button
                 type="button"
                 onClick={() => {
@@ -2192,31 +2230,53 @@ export function Tasks2Panel({
               </button>
             )}
           </div>
-          {deviceSave && (
-            <div className="mt-3 rounded-lg border border-[var(--accent)]/50 bg-[#102820] p-3">
-              <p className="text-sm font-semibold text-[var(--text)]">
-                Save {deviceSave.label} to Photos or Files
+          {(hitsAsk || pendingStillsRef.current.length > 0) && (
+            <div className="mt-3 rounded-lg border border-[#f0b429]/50 bg-[#2a2312] p-3">
+              <p className="text-sm font-semibold text-[#f0b429]">
+                Keep the {hitsAsk?.blob.type.startsWith('video') ? 'video' : 'stills'} from this run?
               </p>
-              <p className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
-                On iPhone this opens the share sheet — tap Save Video for Photos, or Save to Files.
-                Android uses the same share sheet.
+              <p className="mt-1 text-[12px] leading-snug text-white/80">
+                Your grades stay either way. Clips fill up phones if we keep every sequence, so pick a
+                home for this one — Photos, the video library, or Learn → My shapes — or dump it.
               </p>
-              <button
-                type="button"
-                onClick={() => void saveDeviceOffer()}
-                className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
-              >
-                Save video to Photos / Files
-              </button>
-              {athleteId && (
+              <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void saveLibraryOffer()}
-                  className="mt-2 ml-2 rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+                  onClick={() => void keepToPhotos()}
+                  className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
                 >
-                  Save to video library
+                  Save to Photos
                 </button>
-              )}
+                {athleteId && (
+                  <button
+                    type="button"
+                    onClick={() => void keepToLibrary()}
+                    className="rounded-lg border border-white/25 px-3 py-2 text-sm"
+                  >
+                    Video library
+                  </button>
+                )}
+                {athleteId && (
+                  <button
+                    type="button"
+                    onClick={() => void keepToMyShapes()}
+                    className="rounded-lg border border-white/25 px-3 py-2 text-sm"
+                  >
+                    My shapes
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    dumpPendingMedia()
+                    setFlash('Clip dumped. Grades stay on this page.')
+                    window.setTimeout(() => setFlash(null), 4000)
+                  }}
+                  className="rounded-lg border border-white/25 px-3 py-2 text-sm"
+                >
+                  Don’t keep the video
+                </button>
+              </div>
             </div>
           )}
           <div className="mt-3">

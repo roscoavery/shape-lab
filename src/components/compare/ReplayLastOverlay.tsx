@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
-import { IconPip } from './CompareHud'
+import { IconSwap } from './CompareHud'
 import { hudAvoidPipRightClass, useCompareLayout } from './compareLayout'
 
 export function IconBack() {
@@ -298,8 +298,8 @@ export function ReplayLastOverlay({
 
       <div className={`absolute z-[40] flex flex-col items-center gap-4 text-white ${chromeOpen ? 'bottom-[12.5rem]' : 'bottom-4'} ${chipRight}`}>
         {onMinimize && (
-          <button type="button" onClick={onMinimize} aria-label="Show reference, keep replay in the corner">
-            <IconPip />
+          <button type="button" onClick={onMinimize} aria-label="Swap replay with the reference still">
+            <IconSwap />
           </button>
         )}
         <button

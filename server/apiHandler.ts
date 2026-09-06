@@ -37,10 +37,13 @@ import {
   deleteFeedPost,
   postsForClient,
   sendFeedFile,
+  attachVideoToFeedPost,
+  celebrateFeedPost,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
 } from './feedStore.ts'
+import { readCoachStillsFile, writeCoachStillsFile } from './coachStillStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, toggleFollowOnDisk, writeSocialFile } from './socialStore.ts'
 import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
@@ -95,6 +98,7 @@ const API_PATHS = new Set([
   '/api/ig-still-file',
   '/api/shape-copy',
   '/api/learn-notes',
+  '/api/coach-stills',
   '/api/still-crops',
   '/api/athlete-videos',
   '/api/athlete-video-file',
@@ -330,6 +334,20 @@ export async function handleShapeLabApi(
     sendJson(res, 405, { error: 'Use GET or PUT' })
     return true
   }
+  if (path === '/api/coach-stills') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachStillsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      const saved = await writeCoachStillsFile(JSON.parse(body))
+      sendJson(res, 200, saved)
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
   if (path === '/api/learn-notes') {
     if (req.method === 'GET') {
       sendJson(res, 200, await readLearnNotesFile())
@@ -503,7 +521,9 @@ export async function handleShapeLabApi(
         url.searchParams.get('kind') === 'video' ||
         url.searchParams.get('kind') === 'like' ||
         url.searchParams.get('kind') === 'hi5' ||
-        url.searchParams.get('kind') === 'repost'
+        url.searchParams.get('kind') === 'repost' ||
+        url.searchParams.get('kind') === 'celebrate' ||
+        url.searchParams.get('kind') === 'attach'
       ) {
         let body: {
           kind?: string
@@ -534,7 +554,7 @@ export async function handleShapeLabApi(
               .map((s) => s.trim())
               .filter(Boolean)
         const kind = body.kind ?? url.searchParams.get('kind') ?? ''
-        if (kind === 'like' || kind === 'hi5' || kind === 'repost') {
+        if (kind === 'like' || kind === 'hi5' || kind === 'repost' || kind === 'celebrate') {
           const saved =
             kind === 'hi5'
               ? await toggleFeedHi5(
@@ -546,6 +566,11 @@ export async function handleShapeLabApi(
                     body.id ?? url.searchParams.get('id') ?? '',
                     body.authorId ?? url.searchParams.get('authorId') ?? '',
                   )
+                : kind === 'celebrate'
+                  ? await celebrateFeedPost(
+                      body.id ?? url.searchParams.get('id') ?? '',
+                      body.authorId ?? url.searchParams.get('authorId') ?? '',
+                    )
               : await toggleFeedLike(
                   body.id ?? url.searchParams.get('id') ?? '',
                   body.authorId ?? url.searchParams.get('authorId') ?? '',
@@ -564,6 +589,25 @@ export async function handleShapeLabApi(
           sendJson(res, 200, {
             ...saved,
             url: saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : '',
+          })
+          return true
+        }
+        if (kind === 'attach') {
+          const saved = await attachVideoToFeedPost({
+            postId: body.id ?? url.searchParams.get('id') ?? '',
+            actorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
+            admin: url.searchParams.get('admin') === '1' || Boolean((body as { admin?: boolean }).admin),
+            mime: body.mime ?? url.searchParams.get('mime') ?? 'video/mp4',
+            url: body.url ?? url.searchParams.get('url') ?? '',
+            sizeBytes: body.sizeBytes,
+          })
+          if (!saved) {
+            sendJson(res, 400, { error: 'Could not attach that clip to the win.' })
+            return true
+          }
+          sendJson(res, 200, {
+            ...saved,
+            url: saved.publicUrl || (saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : ''),
           })
           return true
         }
@@ -623,6 +667,24 @@ export async function handleShapeLabApi(
         return true
       }
       const buf = await readRequestBuffer(req)
+      if (url.searchParams.get('kind') === 'attach') {
+        const saved = await attachVideoToFeedPost({
+          postId: url.searchParams.get('id') ?? '',
+          actorId: url.searchParams.get('authorId') ?? '',
+          admin: url.searchParams.get('admin') === '1',
+          mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
+          buf,
+        })
+        if (!saved) {
+          sendJson(res, 400, { error: 'Could not attach that clip to the win.' })
+          return true
+        }
+        sendJson(res, 200, {
+          ...saved,
+          url: saved.publicUrl || (saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : ''),
+        })
+        return true
+      }
       const taggedRaw = url.searchParams.get('taggedIds') ?? ''
       const saved = await addFeedPostFromBody({
         id: url.searchParams.get('id') ?? '',

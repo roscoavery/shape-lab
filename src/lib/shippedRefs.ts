@@ -4,6 +4,7 @@
  * and the written cues in src/config/shapes.ts — not browser storage.
  */
 
+import { loadMainCoachStills } from './coachStillPrefs'
 import type { ReferencePhoto } from '../types'
 
 /** Filename under src/assets/references/ (and public/references/ as fallback). */
@@ -192,28 +193,40 @@ export function makeShippedPhotos(shapeId: string): ReferencePhoto[] {
   return out
 }
 
+/** Shipped stills plus extra coach uploads for this shape. */
+export function listCoachStills(
+  photos: ReferencePhoto[],
+  shapeId: string,
+): ReferencePhoto[] {
+  if (!shapeId) return []
+  const shipped = makeShippedPhotos(shapeId)
+  const seen = new Set(shipped.map((p) => p.id))
+  const extras = photos.filter((p) => {
+    if (p.shapeId !== shapeId) return false
+    if (p.library === 'ig' || p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
+    if (p.athleteId != null) return false
+    if (!isUsablePhotoSrc(p.dataUrl)) return false
+    if (seen.has(p.id)) return false
+    seen.add(p.id)
+    return true
+  })
+  return [...shipped, ...extras]
+}
+
 /**
  * Coach still for teaching / matching.
  * Hit snapshots are never used here — they live in the hit folder.
- * A Glossary data:image upload can stand in only for shapes that have no shipped file.
+ * Extra glossary uploads sit next to shipped files. The admin-picked
+ * main still wins; otherwise the first shipped picture, then the first extra.
  */
 export function pickCoachStill(
   photos: ReferencePhoto[],
   shapeId: string,
 ): ReferencePhoto | null {
-  if (!shapeId) return null
-  const shipped = makeShippedPhoto(shapeId)
-  if (shipped) return shipped
-  const uploaded = photos.find(
-    (p) =>
-      p.shapeId === shapeId &&
-      p.athleteId == null &&
-      p.library !== 'ig' &&
-      isUsablePhotoSrc(p.dataUrl) &&
-      p.dataUrl.startsWith('data:image') &&
-      !p.id.startsWith('hitref_'),
-  )
-  return uploaded ?? null
+  const list = listCoachStills(photos, shapeId)
+  if (list.length === 0) return null
+  const mainId = loadMainCoachStills()[shapeId]
+  return (mainId && list.find((p) => p.id === mainId)) || list[0] || null
 }
 
 /** Same as pickCoachStill — athlete hits do not replace coach pictures. */

@@ -22,6 +22,7 @@ import {
   saveExtraShape,
   type ExtraShape,
 } from '../lib/glossaryStore'
+import { persistCoachStillExtra } from '../lib/coachStillStore'
 import { createId, saveReferencePhoto } from '../lib/storage'
 import { ReferenceStill } from './ReferenceStill'
 import type { ReferencePhoto } from '../types'
@@ -88,12 +89,8 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
       library: 'coach',
     }
     await saveReferencePhoto(photo)
-    onReferencesChange([
-      photo,
-      ...referencePhotos.filter(
-        (p) => p.library === 'ig' || !(p.shapeId === shapeId && p.athleteId == null),
-      ),
-    ])
+    onReferencesChange([photo, ...referencePhotos.filter((p) => p.id !== photo.id)])
+    void persistCoachStillExtra(photo)
     setFlash(`Saved reference for ${shape?.name ?? shapeId}`)
     window.setTimeout(() => setFlash(null), 2500)
   }

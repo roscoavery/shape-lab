@@ -40,7 +40,7 @@ import {
 } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
 import { CompareSplitBar } from './CompareSplitBar'
-import { hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
+import { flipFocus, hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
 import { DelayCamHud, LiveBufferStart } from './DelayCamHud'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { uploadAthleteVideo } from '../../lib/athleteVideoStore'
@@ -187,11 +187,8 @@ export function CameraPane({
     return () => setAthleteReplay(false)
   }, [mode, clipSrc, setAthleteReplay])
 
-  useEffect(() => {
-    if (mode === 'replay' && clipSrc && fullscreen && focus === 'ref') {
-      setFocus('cam')
-    }
-  }, [mode, clipSrc, fullscreen, focus, setFocus])
+  // Replay last can sit full-screen or in the corner, same as the delay feed.
+  // Do not force the athlete pane full — Swap must reach the reference still.
 
   const pumpDelayQueue = useCallback(() => {
     const sb = delaySourceBufferRef.current
@@ -587,6 +584,14 @@ export function CameraPane({
           setTimeout(() => setFlash(null), 2500)
         })
         .catch(() => setError('Could not save the clip — device storage may be full.'))
+      const ext = extForVideoType(blob.type)
+      void saveVideoToDevice(blob, `shape-lab-delay-${Math.max(1, Math.round(durationSec))}s.${ext}`).then(
+        (result) => {
+          if (result === 'failed') return
+          setFlash(saveResultMessage(result))
+          window.setTimeout(() => setFlash(null), 4000)
+        },
+      )
       if (athleteId) {
         void uploadAthleteVideo({
           athleteId,
@@ -1143,7 +1148,7 @@ export function CameraPane({
               setCamZoom(1)
               delayFollowRef.current = true
             }}
-            onMinimize={() => setFocus('ref')}
+            onMinimize={() => setFocus(focus === 'split' ? 'ref' : flipFocus(focus))}
             onExit={() => {
               setCamZoom(1)
               setMode('live')
@@ -1234,7 +1239,7 @@ export function CameraPane({
               onBack={() => setMode(running ? 'delay' : 'live')}
               onSavePhotos={downloadReplay}
               onSaveInApp={saveReplayToApp}
-              onMinimize={() => setFocus('ref')}
+              onMinimize={() => setFocus(flipFocus(focus))}
               libraryBusy={replayBusy}
               libraryNotice={flash}
               libraryError={error}

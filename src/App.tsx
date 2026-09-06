@@ -126,6 +126,7 @@ import {
   mergeIgStills,
   subscribeIgStills,
 } from './lib/igStillStore'
+import { hydrateCoachStills } from './lib/coachStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
@@ -196,6 +197,8 @@ export default function App() {
     null,
   )
   const [camFullscreen, setCamFullscreen] = useState(false)
+  const [flowPhase, setFlowPhase] = useState('idle')
+  const startFlowRef = useRef<() => void>(() => {})
   const [holdClock, setHoldClock] = useState<number | null>(null)
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
@@ -225,6 +228,12 @@ export default function App() {
     })
     void hydrateIgStills()
     return unsub
+  }, [])
+
+  useEffect(() => {
+    void hydrateCoachStills(loadReferencePhotos()).then((next) => {
+      setReferencePhotos(next)
+    })
   }, [])
 
   const qualityThreshold =
@@ -888,6 +897,10 @@ export default function App() {
             onFullscreenChange={setCamFullscreen}
             holdSeconds={holdClock}
             holdSecondsRef={holdSecondsRef}
+            flowIdle={flowPhase === 'idle'}
+            onStartFlow={() => {
+              startFlowRef.current()
+            }}
           />
           </div>
 
@@ -917,6 +930,10 @@ export default function App() {
               landmarks={activeLandmarks}
               mirror={settings.mirrorVideo}
               cameraError={camera.error}
+              onFlowPhase={setFlowPhase}
+              onRegisterStart={(fn) => {
+                startFlowRef.current = fn
+              }}
               onHoldClock={(seconds) => {
                 holdSecondsRef.current = seconds
                 setHoldClock((prev) => {

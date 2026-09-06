@@ -290,6 +290,7 @@ export function EducationPanel({
           orderedShapeIds={filteredShapes.map((shape) => shape.id)}
           pathwayIds={pathwayIds}
           referencePhotos={referencePhotos}
+          onReferencesChange={onReferencesChange}
           onBack={goShapes}
           onOpenTask={openTask}
           onOpenShape={openShape}
@@ -929,6 +930,7 @@ function ShapeDetail({
   orderedShapeIds,
   pathwayIds,
   referencePhotos,
+  onReferencesChange,
   onBack,
   onOpenTask,
   onOpenShape,
@@ -939,6 +941,7 @@ function ShapeDetail({
   orderedShapeIds: string[]
   pathwayIds: Set<string>
   referencePhotos: ReferencePhoto[]
+  onReferencesChange: (photos: ReferencePhoto[]) => void
   onBack: () => void
   onOpenTask: (taskId: string) => void
   onOpenShape: (shapeId: string) => void
@@ -1067,6 +1070,8 @@ function ShapeDetail({
               emptyLabel="No coach still for this shape yet"
               imgClass="min-h-48 max-h-80 w-full object-contain"
               allowCrop={canEdit}
+              canEdit={canEdit}
+              onPhotosChange={onReferencesChange}
             />
           </div>
           <ShapeSideArrow

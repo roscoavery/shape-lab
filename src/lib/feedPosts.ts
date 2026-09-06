@@ -329,6 +329,80 @@ export async function toggleFeedLike(postId: string, actorId: string): Promise<F
   }
 }
 
+export async function celebrateFeedPost(postId: string, actorId: string): Promise<FeedPost | null> {
+  try {
+    const res = await fetch('/api/feed?kind=celebrate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'celebrate', id: postId, authorId: actorId }),
+    })
+    if (!res.ok) return null
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
+  } catch {
+    return null
+  }
+}
+
+export async function attachFeedVideoResult(
+  postId: string,
+  actorId: string,
+  blob: Blob,
+  admin = false,
+): Promise<PublishResult> {
+  const raw = blob.type || ''
+  const mime = raw.includes('mp4') || raw.includes('quicktime') ? 'video/mp4' : 'video/webm'
+  const uploaded = await uploadGymMedia(feedBlobPath(postId, mime), blob, mime)
+  if ('url' in uploaded) {
+    try {
+      const res = await fetch('/api/feed?kind=attach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          kind: 'attach',
+          id: postId,
+          authorId: actorId,
+          mime,
+          url: uploaded.url,
+          sizeBytes: blob.size,
+        }),
+      })
+      return readFeedResponse(res)
+    } catch {
+      return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+    }
+  }
+  if (uploaded.direct) {
+    const qs = new URLSearchParams({
+      kind: 'attach',
+      id: postId,
+      authorId: actorId,
+      mime,
+      admin: admin ? '1' : '0',
+    })
+    try {
+      const res = await fetch(`/api/feed?${qs.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': mime },
+        body: blob,
+      })
+      return readFeedResponse(res)
+    } catch {
+      return { post: null, error: 'Could not reach the gym link. Stay on this URL and try again.' }
+    }
+  }
+  return {
+    post: null,
+    error:
+      uploaded.error && uploaded.error !== 'direct'
+        ? uploaded.error
+        : 'That clip is too big to attach. Try a shorter video from Photos.',
+  }
+}
+
 export async function removeFeedPost(id: string, actorId: string, admin: boolean): Promise<boolean> {
   try {
     const qs = new URLSearchParams({

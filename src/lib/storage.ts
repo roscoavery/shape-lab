@@ -718,14 +718,14 @@ export function saveReferencePhotos(photos: ReferencePhoto[]) {
 export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
   const all = loadReferencePhotos()
   let next: ReferencePhoto[]
-  if (photo.library === 'ig') {
-    // Keep every IG crop. Never replace a coach still.
+  if (photo.library === 'ig' || photo.library === 'coach') {
+    // Keep every IG crop and every extra coach still. Never replace a sibling.
     next = [photo, ...all.filter((p) => p.id !== photo.id)]
   } else {
     next = [
       photo,
       ...all.filter((p) => {
-        if (p.library === 'ig') return true
+        if (p.library === 'ig' || p.library === 'coach') return true
         return !(p.shapeId === photo.shapeId && p.athleteId === photo.athleteId)
       }),
     ]

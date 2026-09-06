@@ -401,6 +401,73 @@ export async function toggleFeedRepost(
   return toggleFeedMark(postId, actorId, 'reposts')
 }
 
+export async function celebrateFeedPost(
+  postId: string,
+  actorId: string,
+): Promise<DiskFeedPost | null> {
+  const sid = safeId(postId)
+  const who = safeId(actorId)
+  if (!sid || !who) return null
+  const meta = await readFeedFile()
+  const found = meta.posts.find((p) => p.id === sid)
+  if (!found) return null
+  found.likes = [...new Set([...(found.likes ?? []), who])]
+  found.hi5s = [...new Set([...(found.hi5s ?? []), who])]
+  found.reposts = [...new Set([...(found.reposts ?? []), who])]
+  await writeMeta(meta.posts, meta.removedIds)
+  return found
+}
+
+export async function attachVideoToFeedPost(params: {
+  postId: string
+  actorId: string
+  admin?: boolean
+  mime?: string
+  buf?: Buffer
+  url?: string
+  sizeBytes?: number
+}): Promise<DiskFeedPost | null> {
+  const sid = safeId(params.postId)
+  const who = safeId(params.actorId)
+  if (!sid || !who) return null
+  const meta = await readFeedFile()
+  const found = meta.posts.find((p) => p.id === sid)
+  if (!found) return null
+  if (!params.admin && found.authorId !== who) return null
+  if (found.kind === 'collage' || found.collage) return null
+
+  if (params.url && (/^https:\/\//i.test(params.url) || params.url.startsWith('/api/'))) {
+    found.publicUrl = params.url
+    found.file = undefined
+    found.mime =
+      params.mime && (params.mime.includes('mp4') || params.mime.includes('quicktime'))
+        ? 'video/mp4'
+        : params.mime?.includes('webm')
+          ? 'video/webm'
+          : 'video/mp4'
+    found.sizeBytes = params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : found.sizeBytes
+    found.kind = 'video'
+    await writeMeta(meta.posts, meta.removedIds)
+    return found
+  }
+
+  if (!params.buf || !params.buf.length || params.buf.length > MAX_BYTES) return null
+  const mime =
+    (params.mime || '').includes('mp4') || (params.mime || '').includes('quicktime')
+      ? 'video/mp4'
+      : 'video/webm'
+  if (found.file) await removeFile(blobRel(found.file))
+  const file = `${sid}${extForMime(mime)}`
+  await writeBin(blobRel(file), params.buf, mime)
+  found.file = file
+  found.publicUrl = undefined
+  found.mime = mime
+  found.sizeBytes = params.buf.length
+  found.kind = 'video'
+  await writeMeta(meta.posts, meta.removedIds)
+  return found
+}
+
 async function toggleFeedMark(
   postId: string,
   actorId: string,

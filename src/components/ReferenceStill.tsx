@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   isUsablePhotoSrc,
-  makeShippedPhotos,
+  listCoachStills,
   pickCoachStill,
   shippedStillCandidates,
 } from '../lib/shippedRefs'
+import { persistCoachStillExtra, persistMainCoachStill } from '../lib/coachStillStore'
+import { loadMainCoachStills } from '../lib/coachStillPrefs'
+import { fileToJpegBlob, blobToDataUrl } from '../lib/glossaryStore'
+import { createId, saveReferencePhoto } from '../lib/storage'
 import type { ReferencePhoto } from '../types'
 import { CroppedStill } from './CroppedStill'
 import { StillCropEditor } from './StillCropEditor'
@@ -82,6 +86,8 @@ export function CoachStillGallery({
   emptyLabel = 'No photo yet',
   imgClass = 'max-h-80 w-full object-contain',
   allowCrop = false,
+  canEdit = false,
+  onPhotosChange,
 }: {
   shapeId: string
   photos: ReferencePhoto[]
@@ -90,53 +96,118 @@ export function CoachStillGallery({
   imgClass?: string
   /** Ryan: set display borders without rewriting the original JPEG. */
   allowCrop?: boolean
+  canEdit?: boolean
+  onPhotosChange?: (photos: ReferencePhoto[]) => void
 }) {
-  const shipped = makeShippedPhotos(shapeId)
-  const one = pickCoachStill(photos, shapeId)
-  const stills = shipped.length > 0 ? shipped : one ? [one] : []
-  if (stills.length === 0) {
+  const [mainTick, setMainTick] = useState(0)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const stills = listCoachStills(photos, shapeId)
+  const mainId = loadMainCoachStills()[shapeId] ?? stills[0]?.id ?? null
+
+  const setMain = (id: string) => {
+    void persistMainCoachStill(shapeId, id)
+    setMainTick((n) => n + 1)
+  }
+
+  const addStill = async (file: File) => {
+    if (!onPhotosChange) return
+    const jpeg = await fileToJpegBlob(file)
+    const dataUrl = await blobToDataUrl(jpeg)
+    const photo: ReferencePhoto = {
+      id: createId('coach'),
+      shapeId,
+      athleteId: null,
+      dataUrl,
+      label: `${alt || shapeId} extra`,
+      createdAt: new Date().toISOString(),
+      library: 'coach',
+    }
+    await saveReferencePhoto(photo)
+    void persistCoachStillExtra(photo)
+    onPhotosChange([photo, ...photos.filter((p) => p.id !== photo.id)])
+    if (stills.length === 0) setMain(photo.id)
+  }
+
+  if (stills.length === 0 && !canEdit) {
     return (
       <div className="flex min-h-16 items-center justify-center px-1 text-center text-[10px] leading-tight text-[var(--muted)]">
         {emptyLabel}
       </div>
     )
   }
-  if (stills.length === 1) {
-    return allowCrop ? (
-      <StillCropEditor photo={stills[0]!} alt={alt} imgClass={imgClass} />
-    ) : (
-      <ReferenceStill
-        shapeId={shapeId}
-        photos={photos}
-        photo={stills[0]}
-        alt={alt}
-        className={imgClass}
-        emptyLabel={emptyLabel}
-      />
-    )
-  }
+
   return (
-    <div className={`grid gap-2 ${stills.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-      {stills.map((p) =>
+    <div className="space-y-3">
+      {stills.length === 1 && !canEdit ? (
         allowCrop ? (
-          <StillCropEditor key={p.id} photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
+          <StillCropEditor photo={stills[0]!} alt={alt} imgClass={imgClass} />
         ) : (
-          <figure key={p.id} className="overflow-hidden rounded-md bg-[#0d1218]">
-            <ReferenceStill
-              shapeId={shapeId}
-              photos={photos}
-              photo={p}
-              alt={p.label ? `${alt} — ${p.label}` : alt}
-              className={imgClass}
-              emptyLabel={emptyLabel}
-            />
-            {p.label && (
-              <figcaption className="px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
-                {p.label}
+          <ReferenceStill
+            shapeId={shapeId}
+            photos={photos}
+            photo={stills[0]}
+            alt={alt}
+            className={imgClass}
+            emptyLabel={emptyLabel}
+          />
+        )
+      ) : (
+        <div className={`grid gap-2 ${stills.length >= 3 ? 'sm:grid-cols-3' : stills.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+          {stills.map((p) => (
+            <figure key={`${p.id}-${mainTick}`} className="overflow-hidden rounded-md bg-[#0d1218]">
+              {allowCrop ? (
+                <StillCropEditor photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
+              ) : (
+                <ReferenceStill
+                  shapeId={shapeId}
+                  photos={photos}
+                  photo={p}
+                  alt={p.label ? `${alt} — ${p.label}` : alt}
+                  className={imgClass}
+                  emptyLabel={emptyLabel}
+                />
+              )}
+              <figcaption className="flex items-center justify-between gap-2 px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                <span>{p.id === mainId ? 'Main still' : p.label || 'Coach still'}</span>
+                {canEdit && p.id !== mainId && (
+                  <button
+                    type="button"
+                    onClick={() => setMain(p.id)}
+                    className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[#06281f]"
+                  >
+                    Set as main
+                  </button>
+                )}
               </figcaption>
-            )}
-          </figure>
-        ),
+            </figure>
+          ))}
+        </div>
+      )}
+      {canEdit && onPhotosChange && (
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void addStill(file)
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+          >
+            Add another coach still
+          </button>
+          <p className="mt-1 text-[11px] text-[var(--muted)]">
+            Extra pictures for this body position. Pick which one is the main still used in class flows
+            and Compare.
+          </p>
+        </div>
       )}
     </div>
   )

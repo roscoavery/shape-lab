@@ -171,6 +171,25 @@ export type SaveVideoResult = 'shared' | 'downloaded' | 'failed'
  * Put a clip on the device. Call this from a tap so iOS keeps the user gesture.
  * Phones open the share sheet (Save Video / Save to Files). Desktop downloads.
  */
+export async function saveImageToDevice(
+  blob: Blob,
+  filename: string,
+): Promise<SaveVideoResult> {
+  if (!blob || blob.size < 16) return 'failed'
+  const type = blob.type || 'image/jpeg'
+  const file = new File([blob], filename, { type })
+  if (prefersShareSave()) {
+    if (await shareFile(file)) return 'shared'
+  }
+  try {
+    triggerAnchorDownload(blob, filename)
+    return 'downloaded'
+  } catch {
+    if (await shareFile(file)) return 'shared'
+    return 'failed'
+  }
+}
+
 export async function saveVideoToDevice(
   blob: Blob,
   filename: string,

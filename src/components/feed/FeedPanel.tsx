@@ -11,6 +11,8 @@ import {
   publishFeedPostResult,
   publishTextPostResult,
   isPassPost,
+  attachFeedVideoResult,
+  celebrateFeedPost,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
@@ -441,15 +443,42 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                         : ''}
                     </p>
                   </div>
-                  {(gymAdmin || post.authorId === athlete?.id) && (
-                    <button
-                      type="button"
-                      onClick={() => void drop(post)}
-                      className="ml-auto text-xs text-[var(--bad)]"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    {(gymAdmin || post.authorId === athlete?.id) &&
+                      post.kind !== 'collage' &&
+                      !post.url && (
+                      <label className="cursor-pointer text-xs font-semibold text-[var(--accent)]">
+                        Add clip
+                        <input
+                          type="file"
+                          accept={videoFileAccept()}
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            e.target.value = ''
+                            if (!file || !athlete) return
+                            void attachFeedVideoResult(post.id, athlete.id, file, gymAdmin).then((got) => {
+                              if (!got.post) {
+                                setError(got.error ?? 'Could not attach that clip.')
+                                return
+                              }
+                              setPosts((prev) => prev.map((p) => (p.id === got.post!.id ? got.post! : p)))
+                              setNotice('Clip attached to this win.')
+                            })
+                          }}
+                        />
+                      </label>
+                    )}
+                    {(gymAdmin || post.authorId === athlete?.id) && (
+                      <button
+                        type="button"
+                        onClick={() => void drop(post)}
+                        className="text-xs text-[var(--bad)]"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {post.kind === 'collage' && post.collage ? (
                   <CollageFeedCard
@@ -493,87 +522,13 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   </p>
                 )}
                 {athlete && (
-                  <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void toggleFeedLike(post.id, athlete.id).then((next) => {
-                          if (!next) return
-                          setPosts((prev) => prev.map((p) => (p.id === next.id ? { ...p, likes: next.likes } : p)))
-                          const liked = (next.likes ?? []).includes(athlete.id)
-                          if (liked && next.authorId !== athlete.id) {
-                            void pushNotice({
-                              toId: next.authorId,
-                              kind: 'like',
-                              title: `${athlete.name} liked your post`,
-                              body: next.caption || 'Open the feed.',
-                              href: postOnChannel(next, 'wins') ? 'wins' : 'feed',
-                            })
-                          }
-                        })
-                      }}
-                      className="text-xs font-semibold text-[var(--accent)]"
-                    >
-                      {(post.likes ?? []).includes(athlete.id) ? 'Liked' : 'Like'}
-                      {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
-                    </button>
-                    {athlete.id !== post.authorId && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void toggleFeedRepost(post.id, athlete.id).then((next) => {
-                            if (!next) return
-                            setPosts((prev) => prev.map((p) => (p.id === next.id ? next : p)))
-                            const on = (next.reposts ?? []).includes(athlete.id)
-                            setNotice(on ? 'On your profile.' : 'Removed from your profile.')
-                          })
-                        }}
-                        className="text-xs font-semibold text-[var(--accent)]"
-                      >
-                        {(post.reposts ?? []).includes(athlete.id) ? 'On your profile' : 'Repost'}
-                      </button>
-                    )}
-                    {canGiveHi5(athlete) && hi5Athletes(post, athletes, athlete.id).length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targets = hi5Athletes(post, athletes, athlete.id)
-                          void toggleFeedHi5(post.id, athlete.id).then((next) => {
-                            if (!next) return
-                            setPosts((prev) =>
-                              prev.map((p) => (p.id === next.id ? { ...p, hi5s: next.hi5s } : p)),
-                            )
-                            const on = (next.hi5s ?? []).includes(athlete.id)
-                            if (!on || targets.length === 0) return
-                            playGestureBurst('hi5')
-                            const names = targets.map((t) => givenName(t)).join(', ')
-                            const youDid =
-                              targets.length === 1
-                                ? `You high-fived ${names}`
-                                : `You high-fived ${names}`
-                            setNotice(youDid)
-                            window.setTimeout(
-                              () => setNotice((cur) => (cur === youDid ? null : cur)),
-                              4200,
-                            )
-                            for (const t of targets) {
-                              void pushNotice({
-                                toId: t.id,
-                                kind: 'hi5',
-                                title: `${givenName(athlete)} high-fived you`,
-                                body: youDid,
-                                href: postOnChannel(next, 'wins') ? 'wins' : 'feed',
-                              })
-                            }
-                          })
-                        }}
-                        className="text-xs font-semibold text-[var(--accent)]"
-                      >
-                        {(post.hi5s ?? []).includes(athlete.id) ? 'High-fived' : 'High five'}
-                        {(post.hi5s ?? []).length > 0 ? ` · ${(post.hi5s ?? []).length}` : ''}
-                      </button>
-                    )}
-                  </div>
+                  <WinReactBar
+                    post={post}
+                    athlete={athlete}
+                    athletes={athletes}
+                    onPosts={setPosts}
+                    onNotice={setNotice}
+                  />
                 )}
                 {taggedPeople.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-4 pb-3">
@@ -694,6 +649,178 @@ function RoleBadge({ athlete }: { athlete: Athlete | null }) {
     >
       {roleLabel(athlete)}
     </span>
+  )
+}
+
+function markOn(list: string[] | undefined, id: string, on: boolean): string[] {
+  const set = new Set(list ?? [])
+  if (on) set.add(id)
+  else set.delete(id)
+  return [...set]
+}
+
+function reactClass(on: boolean): string {
+  return on
+    ? 'rounded-full bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] transition-none'
+    : 'rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] transition-none'
+}
+
+function WinReactBar({
+  post,
+  athlete,
+  athletes,
+  onPosts,
+  onNotice,
+}: {
+  post: FeedPost
+  athlete: Athlete
+  athletes: Athlete[]
+  onPosts: (fn: (prev: FeedPost[]) => FeedPost[]) => void
+  onNotice: (text: string | null) => void
+}) {
+  const liked = (post.likes ?? []).includes(athlete.id)
+  const reposted = (post.reposts ?? []).includes(athlete.id)
+  const hi5ed = (post.hi5s ?? []).includes(athlete.id)
+  const hi5Targets = hi5Athletes(post, athletes, athlete.id)
+  const showHi5 = canGiveHi5(athlete) && hi5Targets.length > 0
+
+  const apply = (next: FeedPost) => {
+    onPosts((prev) => prev.map((p) => (p.id === next.id ? { ...p, ...next } : p)))
+  }
+
+  const revert = (snapshot: FeedPost) => {
+    onPosts((prev) => prev.map((p) => (p.id === snapshot.id ? snapshot : p)))
+  }
+
+  const tapLike = () => {
+    const snapshot = post
+    const nextOn = !liked
+    apply({ ...post, likes: markOn(post.likes, athlete.id, nextOn) })
+    void toggleFeedLike(post.id, athlete.id).then((server) => {
+      if (!server) {
+        revert(snapshot)
+        onNotice('Could not like that. Try again.')
+        return
+      }
+      apply(server)
+      if (nextOn && server.authorId !== athlete.id) {
+        void pushNotice({
+          toId: server.authorId,
+          kind: 'like',
+          title: `${athlete.name} liked your post`,
+          body: server.caption || 'Open the feed.',
+          href: postOnChannel(server, 'wins') ? 'wins' : 'feed',
+        })
+      }
+    })
+  }
+
+  const tapRepost = () => {
+    if (athlete.id === post.authorId) return
+    const snapshot = post
+    const nextOn = !reposted
+    apply({ ...post, reposts: markOn(post.reposts, athlete.id, nextOn) })
+    onNotice(nextOn ? 'On your profile.' : 'Removed from your profile.')
+    void toggleFeedRepost(post.id, athlete.id).then((server) => {
+      if (!server) {
+        revert(snapshot)
+        onNotice('Could not repost that. Try again.')
+        return
+      }
+      apply(server)
+    })
+  }
+
+  const tapHi5 = () => {
+    if (!showHi5) return
+    const snapshot = post
+    const nextOn = !hi5ed
+    apply({ ...post, hi5s: markOn(post.hi5s, athlete.id, nextOn) })
+    if (nextOn) {
+      playGestureBurst('hi5')
+      const names = hi5Targets.map((t) => givenName(t)).join(', ')
+      const youDid = `You high-fived ${names}`
+      onNotice(youDid)
+      window.setTimeout(() => onNotice(null), 4200)
+      for (const t of hi5Targets) {
+        void pushNotice({
+          toId: t.id,
+          kind: 'hi5',
+          title: `${givenName(athlete)} high-fived you`,
+          body: youDid,
+          href: postOnChannel(post, 'wins') ? 'wins' : 'feed',
+        })
+      }
+    }
+    void toggleFeedHi5(post.id, athlete.id).then((server) => {
+      if (!server) {
+        revert(snapshot)
+        onNotice('Could not high-five that. Try again.')
+        return
+      }
+      apply(server)
+    })
+  }
+
+  const tapAllThree = () => {
+    const snapshot = post
+    apply({
+      ...post,
+      likes: markOn(post.likes, athlete.id, true),
+      hi5s: showHi5 ? markOn(post.hi5s, athlete.id, true) : post.hi5s,
+      reposts: athlete.id === post.authorId ? post.reposts : markOn(post.reposts, athlete.id, true),
+    })
+    if (showHi5 && !hi5ed) {
+      playGestureBurst('hi5')
+      const names = hi5Targets.map((t) => givenName(t)).join(', ')
+      onNotice(`Liked, high-fived ${names}, and put it on your profile.`)
+      for (const t of hi5Targets) {
+        void pushNotice({
+          toId: t.id,
+          kind: 'hi5',
+          title: `${givenName(athlete)} high-fived you`,
+          body: `${givenName(athlete)} liked, high-fived, and reposted your win.`,
+          href: postOnChannel(post, 'wins') ? 'wins' : 'feed',
+        })
+      }
+    } else {
+      onNotice('Liked, high-fived, and put it on your profile.')
+    }
+    void celebrateFeedPost(post.id, athlete.id).then((server) => {
+      if (!server) {
+        revert(snapshot)
+        onNotice('Could not do all three. Try the buttons one at a time.')
+        return
+      }
+      apply(server)
+    })
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+      <button type="button" onClick={tapLike} className={reactClass(liked)}>
+        {liked ? 'Liked' : 'Like'}
+        {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
+      </button>
+      {athlete.id !== post.authorId && (
+        <button type="button" onClick={tapRepost} className={reactClass(reposted)}>
+          {reposted ? 'On your profile' : 'Repost'}
+        </button>
+      )}
+      {showHi5 && (
+        <button type="button" onClick={tapHi5} className={reactClass(hi5ed)}>
+          {hi5ed ? 'High-fived' : 'High five'}
+          {(post.hi5s ?? []).length > 0 ? ` · ${(post.hi5s ?? []).length}` : ''}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={tapAllThree}
+        className="rounded-full bg-[#f0b429] px-2.5 py-1 text-xs font-semibold text-[#2a1d08]"
+      >
+        All 3
+      </button>
+    </div>
   )
 }
 

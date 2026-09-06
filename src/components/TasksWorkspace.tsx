@@ -13,6 +13,7 @@ import { CroppedStill } from './CroppedStill'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { StillOverlayPicker } from './StillOverlayPicker'
 import { TaskDelayCam } from './TaskDelayCam'
+import { CornerChip } from './CornerChip'
 import { useOverlayStill } from './OverlayStillContext'
 
 export type TaskLiveKind = 'looking' | 'close' | 'holding' | 'gotit'
@@ -53,6 +54,9 @@ type Props = {
   /** Hold-challenge stopwatch burned into the live camera / grade replay. */
   holdSeconds?: number | null
   holdSecondsRef?: { current: number | null }
+  /** Class-flow fullscreen: show a big Start on the camera stage. */
+  flowIdle?: boolean
+  onStartFlow?: () => void
 }
 
 function scoreColor(n: number): string {
@@ -116,6 +120,8 @@ export function TasksWorkspace({
   onFullscreenChange,
   holdSeconds = null,
   holdSecondsRef,
+  flowIdle = false,
+  onStartFlow,
 }: Props) {
   const [localFullscreen, setLocalFullscreen] = useState(false)
   const fullscreen = fullscreenProp ?? localFullscreen
@@ -200,11 +206,11 @@ export function TasksWorkspace({
   const pipShapeName = overlayStill?.name ?? shape.name
   const pipLibrary = overlayStill?.library === 'ig' ? 'IG still' : 'Coach still'
 
-  const pipReference = (
+  const stillBody = (
     <div
       className={
         fullscreen
-          ? 'pointer-events-none fixed bottom-3 left-3 z-[90] w-[min(38vw,220px)] overflow-hidden rounded-xl border border-white/30 bg-black/70 shadow-2xl sm:bottom-4 sm:left-4'
+          ? 'w-[min(38vw,220px)] overflow-hidden rounded-xl border border-white/30 bg-black/70 shadow-2xl'
           : 'overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]'
       }
     >
@@ -255,23 +261,33 @@ export function TasksWorkspace({
     </div>
   )
 
-  const delayWrap = (
-    <div
-      className={
-        fullscreen
-          ? 'pointer-events-auto fixed bottom-3 right-3 z-[90] w-[min(42vw,260px)] sm:bottom-4 sm:right-4'
-          : ''
-      }
-    >
-      <TaskDelayCam
-        stream={stream}
-        cameraOn={cameraRunning}
-        mirror={mirror}
-        compact
-        pip={fullscreen}
-        defaultDelaySec={flowMode ? 20 : 6}
-      />
-    </div>
+  const pipReference = fullscreen ? (
+    <CornerChip persistKey="classflow-still" defaultCorner="tl">
+      {stillBody}
+    </CornerChip>
+  ) : (
+    stillBody
+  )
+
+  const delayCam = (
+    <TaskDelayCam
+      stream={stream}
+      cameraOn={cameraRunning}
+      mirror={mirror}
+      compact
+      pip={fullscreen}
+      defaultDelaySec={flowMode ? 20 : 6}
+    />
+  )
+
+  const showDelayPip = !(flowMode && fullscreen)
+
+  const delayWrap = !showDelayPip ? null : fullscreen ? (
+    <CornerChip persistKey="classflow-delay" defaultCorner="br" className="w-[min(42vw,260px)]">
+      {delayCam}
+    </CornerChip>
+  ) : (
+    <div>{delayCam}</div>
   )
 
   return (
@@ -413,6 +429,21 @@ export function TasksWorkspace({
                     </div>
                   )}
 
+                  {fullscreen && pipReference}
+                  {fullscreen && delayWrap}
+
+                  {fullscreen && flowMode && flowIdle && onStartFlow && (
+                    <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/35 px-6">
+                      <button
+                        type="button"
+                        onClick={onStartFlow}
+                        className="rounded-3xl bg-[var(--accent)] px-10 py-5 text-2xl font-black uppercase tracking-wide text-[#06281f] shadow-2xl sm:px-14 sm:py-6 sm:text-3xl"
+                      >
+                        Start
+                      </button>
+                    </div>
+                  )}
+
                   {onSkipNextTask && (
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 sm:right-3">
                       <NextTaskArrow onClick={onSkipNextTask} large={fullscreen} />
@@ -430,8 +461,8 @@ export function TasksWorkspace({
           </div>
         </div>
 
-        <div className={`flex min-w-0 flex-col gap-2 ${fullscreen ? 'pointer-events-none' : ''}`}>
-          {pipReference}
+        <div className={`flex min-w-0 flex-col gap-2 ${fullscreen ? 'pointer-events-none hidden' : ''}`}>
+          {!fullscreen && pipReference}
           {!fullscreen && <StillOverlayPicker photos={referencePhotos} compact />}
 
           {hitPreviewUrl && !fullscreen && (
@@ -493,7 +524,7 @@ export function TasksWorkspace({
             </div>
           )}
 
-          {delayWrap}
+          {!fullscreen && delayWrap}
         </div>
       </div>
 
