@@ -42,6 +42,46 @@ export function socialPlatform(url: string): SocialPlatform | null {
   return null
 }
 
+const YOUTUBE_HOSTS = new Set([
+  'youtube.com',
+  'm.youtube.com',
+  'music.youtube.com',
+  'youtube-nocookie.com',
+])
+
+/** YouTube watch / shorts / youtu.be — play in an embed, not <video src>. */
+export function youtubeVideoId(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./i, '')
+    if (host === 'youtu.be') {
+      const id = u.pathname.split('/').filter(Boolean)[0]
+      return id ? id.slice(0, 20) : null
+    }
+    if (YOUTUBE_HOSTS.has(host)) {
+      const v = u.searchParams.get('v')
+      if (v) return v.slice(0, 20)
+      const parts = u.pathname.split('/').filter(Boolean)
+      if (
+        parts[0] === 'shorts' ||
+        parts[0] === 'embed' ||
+        parts[0] === 'live' ||
+        parts[0] === 'watch'
+      ) {
+        return parts[1] ? parts[1].slice(0, 20) : null
+      }
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+export function youtubeEmbedSrc(url: string): string | null {
+  const id = youtubeVideoId(url)
+  return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0` : null
+}
+
 const IG_RESERVED = new Set([
   'p',
   'reel',
@@ -92,7 +132,11 @@ export function parseInstagramUrl(
   const m = url.match(
     /instagr(?:am\.com|\.am)\/(?:share\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i,
   )
-  if (!m) return null
+  if (!m) {
+    const share = url.match(/instagr(?:am\.com|\.am)\/share\/([A-Za-z0-9_-]+)/i)
+    if (share) return { type: 'reel', code: share[1]! }
+    return null
+  }
   const type = m[1]!.toLowerCase() === 'reels' ? 'reel' : (m[1]!.toLowerCase() as 'p' | 'reel' | 'tv')
   return { type, code: m[2]! }
 }
@@ -150,6 +194,20 @@ export function socialVideoKey(url: string): string | null {
 }
 
 const DROP_PARAMS = /^(utm_|igsi$|fbclid$|ttclid$|si$|_r$|rdid$)/i
+
+const BARE_VIDEO_HOST =
+  /^(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com|music\.youtube\.com|youtube-nocookie\.com|instagram\.com|instagr\.am|tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com|facebook\.com|fb\.com|fb\.watch)\//i
+
+/** Accept a paste that left off https:// — common from phone share sheets. */
+export function coerceHttpUrl(raw: string): string {
+  const t = raw.trim()
+  if (!t) return t
+  if (/^https?:\/\//i.test(t)) return t
+  if (BARE_VIDEO_HOST.test(t) || /^(youtu\.be|instagram\.com|tiktok\.com)\//i.test(t)) {
+    return `https://${t.replace(/^\/+/, '')}`
+  }
+  return t
+}
 
 export function stripTrackingParams(url: string): string {
   try {

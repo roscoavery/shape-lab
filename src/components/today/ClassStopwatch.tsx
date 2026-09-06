@@ -222,7 +222,7 @@ export function ClassStopwatch({
     if (otherKind === 'hold') {
       const secs = Number(manual || offer)
       if (!Number.isFinite(secs) || secs <= 0) {
-        setFlash('Start and stop the clock, or type the seconds.')
+        setFlash('Type how many seconds they held.')
         return
       }
       const n = logClassExtraForAthletes({
@@ -343,7 +343,7 @@ export function ClassStopwatch({
             ['hold', 'Core holds'],
             ['vups', 'V-ups'],
             ['skill', 'New skill / win'],
-            ['other', 'Other'],
+            ['other', 'Just did'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -478,7 +478,13 @@ export function ClassStopwatch({
             onStop={stop}
             onReset={reset}
           />
-          <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+          <RosterPicks
+            athletes={pool}
+            selected={selected}
+            onToggle={toggle}
+            onSelectAll={() => setSelected(pool.map((a) => a.id))}
+            onSelectNone={() => setSelected([])}
+          />
           <button
             type="button"
             onClick={logHold}
@@ -521,7 +527,13 @@ export function ClassStopwatch({
                 />
               </label>
             </div>
-            <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+            <RosterPicks
+              athletes={pool}
+              selected={selected}
+              onToggle={toggle}
+              onSelectAll={() => setSelected(pool.map((a) => a.id))}
+              onSelectNone={() => setSelected([])}
+            />
             <button
               type="button"
               onClick={() => logExtraReps(extra)}
@@ -536,8 +548,8 @@ export function ClassStopwatch({
       {mode === 'other' && (
         <>
           <p className="text-sm text-white/60">
-            Type what they just did if it is not on the clock. Holds use the
-            same start / stop watch as core holds. Reps take sets × count.
+            Already did it without the stopwatch? Type the name, pick hold
+            seconds or sets × reps, and log it.
           </p>
           <input
             className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
@@ -566,15 +578,18 @@ export function ClassStopwatch({
             </button>
           </div>
           {otherKind === 'hold' ? (
-            <HoldClock
-              ms={ms}
-              running={running}
-              manual={manual}
-              onManual={setManual}
-              onStart={start}
-              onStop={stop}
-              onReset={reset}
-            />
+            <label className="block text-sm">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                Seconds they held
+              </span>
+              <input
+                inputMode="decimal"
+                value={manual}
+                onChange={(e) => setManual(e.target.value)}
+                placeholder="e.g. 45"
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+              />
+            </label>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-sm">
@@ -601,7 +616,13 @@ export function ClassStopwatch({
               </label>
             </div>
           )}
-          <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+          <RosterPicks
+            athletes={pool}
+            selected={selected}
+            onToggle={toggle}
+            onSelectAll={() => setSelected(pool.map((a) => a.id))}
+            onSelectNone={() => setSelected([])}
+          />
           <button
             type="button"
             onClick={logOther}
@@ -641,7 +662,13 @@ export function ClassStopwatch({
             />
           </label>
           </div>
-          <RosterPicks athletes={pool} selected={selected} onToggle={toggle} />
+          <RosterPicks
+            athletes={pool}
+            selected={selected}
+            onToggle={toggle}
+            onSelectAll={() => setSelected(pool.map((a) => a.id))}
+            onSelectNone={() => setSelected([])}
+          />
           <button
             type="button"
             onClick={logVups}
@@ -846,20 +873,34 @@ function RosterPicks({
   athletes,
   selected,
   onToggle,
+  onSelectAll,
+  onSelectNone,
 }: {
   athletes: Athlete[]
   selected: string[]
   onToggle: (id: string) => void
+  onSelectAll: () => void
+  onSelectNone: () => void
 }) {
+  const allOn = athletes.length > 0 && selected.length === athletes.length
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
           Log for
         </p>
-        <span className="text-xs text-white/45">
-          {selected.length} of {athletes.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/45">
+            {selected.length} of {athletes.length}
+          </span>
+          <button
+            type="button"
+            onClick={allOn ? onSelectNone : onSelectAll}
+            className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white"
+          >
+            {allOn ? 'Deselect all' : 'Select all'}
+          </button>
+        </div>
       </div>
       {athletes.length === 0 ? (
         <p className="text-sm text-white/55">No athletes on this list yet.</p>

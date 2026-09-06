@@ -53,7 +53,7 @@ import {
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
-import { logHomeworkSequenceRun } from '../lib/homeworkFlow'
+import { chosenFlowCounts, logHomeworkSequenceRun } from '../lib/homeworkFlow'
 import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
@@ -542,6 +542,13 @@ export function Tasks2Panel({
         marker: s.marker,
         rep: s.rep,
       }))
+      const counts = chosenFlowCounts(seqRun.id, {
+        pikeHollowArchMode: phaMode,
+        pikeHollowArchReps: phaReps,
+        lemonPlan,
+        lemonSets,
+        lemonReps,
+      })
       const built: FlowRunReport = {
         id: createId('flow'),
         athleteId: athleteId ?? 'none',
@@ -553,6 +560,8 @@ export function Tasks2Panel({
         steps,
         summary: summaryFor(seqRun, steps),
         instagramHandle: athlete?.instagramHandle,
+        ...(counts.reps ? { chosenReps: counts.reps } : {}),
+        ...(counts.sets ? { chosenSets: counts.sets } : {}),
       }
       if (athleteId) {
         saveFlowAnalysis(built)
@@ -598,7 +607,7 @@ export function Tasks2Panel({
             : 'Watch your run. Then read the grades and choose whether to keep the clip.',
       )
     },
-    [athlete?.instagramHandle, athleteId, delay, onExitFullscreen],
+    [athlete?.instagramHandle, athleteId, delay, lemonPlan, lemonReps, lemonSets, onExitFullscreen, phaMode, phaReps],
   )
 
   const revokeClipUrls = useCallback(() => {
@@ -636,6 +645,7 @@ export function Tasks2Panel({
           bestHoldSeconds: 0,
           summary: summaryFor(seqRun, []),
           instagramHandle: athlete?.instagramHandle,
+          chosenReps: 1,
         }
         if (athleteId) {
           saveFlowAnalysis(built)
@@ -750,6 +760,7 @@ export function Tasks2Panel({
         bestHoldSeconds: bestHold.holdSeconds,
         summary: summaryFor(seqRun, steps),
         instagramHandle: athlete?.instagramHandle,
+        chosenReps: holds.length || 1,
       }
       if (athleteId) {
         saveFlowAnalysis(built)

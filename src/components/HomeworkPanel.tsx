@@ -377,6 +377,11 @@ function HoldTimesBoard({
                         {log.sourceLabel ?? 'in class'}
                       </span>
                     )}
+                    {log.kind === 'sequence' && log.sourceLabel && (
+                      <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                        {log.sourceLabel}
+                      </span>
+                    )}
                     {log.kind === 'journal' && log.journal && (
                       <span className="ml-1.5 text-[var(--text)]">{log.journal}</span>
                     )}

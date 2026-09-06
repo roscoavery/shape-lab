@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { AppSettings, Athlete } from '../types'
 import type { AppTab } from '../lib/storage'
 import {
@@ -83,8 +84,70 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
     setList((prev) => prev.map((x) => (x.id === id ? { ...x, read: true } : x)))
   }
 
+  const panel = (
+    <div className="fixed inset-x-3 top-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] z-[90] max-h-[min(70dvh,28rem)] overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] shadow-xl sm:inset-x-auto sm:right-3 sm:w-80">
+      {list.length === 0 ? (
+        <p className="px-3 py-4 text-sm text-[var(--muted)]">Nothing new.</p>
+      ) : (
+        <ul className="max-h-[min(70dvh,28rem)] overflow-y-auto overscroll-contain">
+          {list.slice(0, 16).map((n) => {
+            const log =
+              n.homeworkLogId && n.kind === 'homework'
+                ? loadHomeworkLogs().find((row) => row.id === n.homeworkLogId)
+                : undefined
+            const mine = log ? reactionOnLog(log, athlete.id) : undefined
+            const canReact = Boolean(coach && n.kind === 'homework' && n.homeworkLogId)
+            return (
+              <li key={n.id} className="border-b border-white/5 last:border-b-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    markRead(n.id)
+                    setOpen(false)
+                    if (n.href) onOpen(n.href as AppTab)
+                  }}
+                  className="block w-full px-3 py-2 text-left"
+                >
+                  <p className={`text-sm font-semibold ${n.read ? '' : 'text-[var(--accent)]'}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-xs text-[var(--muted)]">{n.body}</p>
+                </button>
+                {canReact && (
+                  <div className="flex flex-wrap items-center gap-0.5 px-3 pb-2" data-tick={logTick}>
+                    {HOMEWORK_REACTIONS.map((r) => (
+                      <button
+                        key={r.kind}
+                        type="button"
+                        title={r.label}
+                        onClick={() => {
+                          if (!n.homeworkLogId) return
+                          reactToHomeworkLog(n.homeworkLogId, athlete, r.kind)
+                          if (r.kind === 'hi5' || r.kind === 'fist') playGestureBurst(r.kind)
+                          markRead(n.id)
+                          setLogTick((n) => n + 1)
+                        }}
+                        className={`rounded-md px-1.5 py-0.5 text-sm ${
+                          mine?.kind === r.kind
+                            ? 'bg-[var(--accent)]/25 ring-1 ring-[var(--accent)]'
+                            : 'hover:bg-white/10'
+                        }`}
+                      >
+                        {r.emoji || (r.kind === 'hi5' ? 'Hi-5' : r.kind === 'fist' ? 'Bump' : r.label)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={() => {
@@ -102,67 +165,21 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
           </span>
         )}
       </button>
-      {open && (
-        <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] shadow-xl">
-          {list.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-[var(--muted)]">Nothing new.</p>
-          ) : (
-            <ul className="max-h-80 overflow-y-auto">
-              {list.slice(0, 16).map((n) => {
-                const log =
-                  n.homeworkLogId && n.kind === 'homework'
-                    ? loadHomeworkLogs().find((row) => row.id === n.homeworkLogId)
-                    : undefined
-                const mine = log ? reactionOnLog(log, athlete.id) : undefined
-                const canReact = Boolean(coach && n.kind === 'homework' && n.homeworkLogId)
-                return (
-                  <li key={n.id} className="border-b border-white/5 last:border-b-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        markRead(n.id)
-                        setOpen(false)
-                        if (n.href) onOpen(n.href as AppTab)
-                      }}
-                      className="block w-full px-3 py-2 text-left"
-                    >
-                      <p className={`text-sm font-semibold ${n.read ? '' : 'text-[var(--accent)]'}`}>
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-[var(--muted)]">{n.body}</p>
-                    </button>
-                    {canReact && (
-                      <div className="flex flex-wrap items-center gap-0.5 px-3 pb-2" data-tick={logTick}>
-                        {HOMEWORK_REACTIONS.map((r) => (
-                          <button
-                            key={r.kind}
-                            type="button"
-                            title={r.label}
-                            onClick={() => {
-                              if (!n.homeworkLogId) return
-                              reactToHomeworkLog(n.homeworkLogId, athlete, r.kind)
-                              if (r.kind === 'hi5' || r.kind === 'fist') playGestureBurst(r.kind)
-                              markRead(n.id)
-                              setLogTick((n) => n + 1)
-                            }}
-                            className={`rounded-md px-1.5 py-0.5 text-sm ${
-                              mine?.kind === r.kind
-                                ? 'bg-[var(--accent)]/25 ring-1 ring-[var(--accent)]'
-                                : 'hover:bg-white/10'
-                            }`}
-                          >
-                            {r.emoji || (r.kind === 'hi5' ? 'Hi-5' : r.kind === 'fist' ? 'Bump' : r.label)}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+      {open &&
+        (typeof document !== 'undefined'
+          ? createPortal(
+              <>
+                <button
+                  type="button"
+                  aria-label="Close alerts"
+                  className="fixed inset-0 z-[80] bg-black/45 sm:bg-transparent"
+                  onClick={() => setOpen(false)}
+                />
+                {panel}
+              </>,
+              document.body,
+            )
+          : panel)}
     </div>
   )
 }

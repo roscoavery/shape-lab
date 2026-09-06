@@ -449,6 +449,9 @@ export type FlowRunReport = {
   sharedWithCoachAt?: string | null
   /** Handle used on the Story caption for this run. */
   instagramHandle?: string
+  /** Chosen reps / sets when the sequence has a picker (pike–hollow–arch, lemons). */
+  chosenReps?: number
+  chosenSets?: number
 }
 
 export type FlowProgress = {

@@ -686,7 +686,9 @@ export default function App() {
           </h1>
         </div>
         <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
-        <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
+        <div className="ml-auto shrink-0">
+          <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
+        </div>
       </header>
 
       {tab === 'today' && (

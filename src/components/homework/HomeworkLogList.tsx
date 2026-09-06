@@ -134,6 +134,11 @@ export function HomeworkLogList({
                         {log.sourceLabel ?? 'in class'}
                       </span>
                     )}
+                    {log.kind === 'sequence' && log.sourceLabel && (
+                      <span className="ml-1.5 rounded bg-[#1a2a22] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                        {log.sourceLabel}
+                      </span>
+                    )}
                     {isManual && (
                       <span className="ml-1.5 rounded bg-[#2c3a52] px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-[var(--text)]">
                         logged

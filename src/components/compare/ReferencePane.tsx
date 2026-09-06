@@ -6,7 +6,7 @@
  * with shape keywords, reordered, and searched across collections.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   deleteBlob,
@@ -19,7 +19,6 @@ import {
   kindFromUrl,
   listCachedIds,
   mergeKeywords,
-  moveItem,
   parseKeywords,
   canonicalReferenceUrl,
   putBlob,
@@ -47,7 +46,14 @@ import {
 } from '../../lib/coachLibrary'
 import { createId } from '../../lib/storage'
 import { videoFileAccept } from '../../lib/saveMedia'
-import { defaultSocialName, clipLoopKey, postedByFromUrl } from '../../lib/socialUrls'
+import {
+  coerceHttpUrl,
+  defaultSocialName,
+  clipLoopKey,
+  postedByFromUrl,
+  youtubeEmbedSrc,
+} from '../../lib/socialUrls'
+import { DragReorderHandle, rowIndexFromPoint } from '../DragReorderHandle'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
@@ -130,6 +136,9 @@ export function ReferencePane({
   )
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragColId, setDragColId] = useState<string | null>(null)
+  const [watchItem, setWatchItem] = useState<RefItem | null>(null)
+  const collectionsRef = useRef<RefCollection[]>([])
+  const pendingOrderRef = useRef<{ colId: string; items: RefItem[] } | null>(null)
   const [skillCols, setSkillCols] = useState<RefCollection[]>(() => collectionsFromSkillRefs())
   const [libraryReady, setLibraryReady] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
@@ -150,8 +159,10 @@ export function ReferencePane({
   )
   const activeCollection =
     allCollections.find((c) => c.id === activeCollectionId) ?? null
+  collectionsRef.current = collections
   const activeItem =
-    activeCollection?.items.find((i) => i.id === activeItemId) ?? null
+    activeCollection?.items.find((i) => i.id === activeItemId) ??
+    (watchItem && watchItem.id === activeItemId ? watchItem : null)
   const searching = searchQuery.trim().length > 0
   const pip = fullscreen && focus === 'cam'
 
@@ -357,8 +368,9 @@ export function ReferencePane({
       setActiveCollectionId(collection.id)
     }
     setActiveItemId(item.id)
+    setWatchItem(item)
     if (!fullscreen && desk !== 'watch' && desk !== 'browse') setDesk('watch')
-    if (isSocialVideoItem(item)) {
+    if (isSocialVideoItem(item) || youtubeEmbedSrc(item.url ?? '')) {
       setItemSrc(null)
     } else if (item.kind === 'file' || !item.url) {
       const blob = await getBlob(item.id)
@@ -469,12 +481,14 @@ export function ReferencePane({
     if (!writable) return
     const urls = urlInput
       .split(/[\s,]+/)
-      .map((u) => u.trim())
+      .map((u) => coerceHttpUrl(u))
       .filter(Boolean)
     if (urls.length === 0) return
     const bad = urls.find((u) => !/^https?:\/\//i.test(u))
     if (bad) {
-      setError('Paste full URL(s) starting with http(s):// — Instagram, TikTok, Facebook, or a direct video URL.')
+      setError(
+        'Paste a YouTube, Instagram, TikTok, Facebook, or direct video URL. Include https:// if it is not one of those sites.',
+      )
       return
     }
     setError(null)
@@ -550,7 +564,10 @@ export function ReferencePane({
       )
     }
     const first = items[0]
-    if (first) await selectItem(first)
+    if (first) {
+      setDesk('watch')
+      await selectItem(first)
+    }
   }
 
   const addFile = async (file: File) => {
@@ -662,20 +679,38 @@ export function ReferencePane({
     await updateCollection({ ...collection, items: nextItems })
   }
 
-  const onMove = async (item: RefItem, dir: -1 | 1, collection = activeCollection) => {
-    if (!collection) return
-    await persistOrder(collection, moveItem(collection.items, item.id, dir))
+  const beginRowDrag = (item: RefItem, collection: RefCollection, e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    pendingOrderRef.current = { colId: collection.id, items: collection.items }
+    setDragId(item.id)
+    setDragColId(collection.id)
   }
 
-  const onDropOn = async (targetId: string, collection = activeCollection) => {
-    if (!collection || !dragId || dragColId !== collection.id) {
-      setDragId(null)
-      setDragColId(null)
-      return
-    }
-    await persistOrder(collection, reorderItems(collection.items, dragId, targetId))
+  const moveRowDrag = (collection: RefCollection, e: PointerEvent<HTMLButtonElement>) => {
+    if (!dragId || dragColId !== collection.id) return
+    const live =
+      pendingOrderRef.current?.colId === collection.id
+        ? { ...collection, items: pendingOrderRef.current.items }
+        : (collectionsRef.current.find((c) => c.id === collection.id) ?? collection)
+    const list = e.currentTarget.closest('ul')
+    const to = rowIndexFromPoint(list, e.clientY, live.items.length)
+    const from = live.items.findIndex((i) => i.id === dragId)
+    if (from < 0 || from === to) return
+    const next = reorderItems(live.items, dragId, live.items[to]!.id)
+    pendingOrderRef.current = { colId: collection.id, items: next }
+    setCollections((prev) => prev.map((c) => (c.id === collection.id ? { ...c, items: next } : c)))
+  }
+
+  const endRowDrag = () => {
+    const pending = pendingOrderRef.current
+    pendingOrderRef.current = null
     setDragId(null)
     setDragColId(null)
+    if (!pending) return
+    const col = collectionsRef.current.find((c) => c.id === pending.colId)
+    if (col) void persistOrder(col, pending.items)
   }
 
   const markCached = useCallback((id: string) => {
@@ -903,54 +938,19 @@ export function ReferencePane({
     return (
       <li
         key={item.id}
+        data-reorder-row={item.id}
         className={`flex items-center gap-1 rounded-md ${
-          dragId === item.id ? 'opacity-60' : ''
+          dragId === item.id ? 'z-10 scale-[1.02] bg-white/10 shadow-lg ring-1 ring-white/25' : ''
         }`}
-        draggable={opts.allowReorder && renamingId !== item.id && taggingId !== item.id}
-        onDragStart={() => {
-          setDragId(item.id)
-          setDragColId(opts.collection.id)
-        }}
-        onDragOver={(e) => {
-          if (!opts.allowReorder) return
-          e.preventDefault()
-        }}
-        onDrop={(e) => {
-          e.preventDefault()
-          void onDropOn(item.id, opts.collection)
-        }}
-        onDragEnd={() => {
-          setDragId(null)
-          setDragColId(null)
-        }}
       >
         {opts.allowReorder && (
-          <span className="flex shrink-0 flex-col">
-            <button
-              type="button"
-              disabled={opts.index === 0}
-              onClick={() => void onMove(item, -1, opts.collection)}
-              className={`rounded px-1.5 py-0.5 text-sm leading-none disabled:opacity-30 ${
-                viewer ? 'text-white/70 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--text)]'
-              }`}
-              aria-label={`Move ${item.name} up`}
-              title="Move up"
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              disabled={opts.index === opts.total - 1}
-              onClick={() => void onMove(item, 1, opts.collection)}
-              className={`rounded px-1.5 py-0.5 text-sm leading-none disabled:opacity-30 ${
-                viewer ? 'text-white/70 hover:text-white' : 'text-[var(--muted)] hover:text-[var(--text)]'
-              }`}
-              aria-label={`Move ${item.name} down`}
-              title="Move down"
-            >
-              ↓
-            </button>
-          </span>
+          <DragReorderHandle
+            label={item.name}
+            className={viewer ? 'text-white/70' : 'text-[var(--muted)]'}
+            onPointerDown={(e) => beginRowDrag(item, opts.collection, e)}
+            onPointerMove={(e) => moveRowDrag(opts.collection, e)}
+            onPointerUp={endRowDrag}
+          />
         )}
         {renamingId === item.id ? (
           <form
@@ -1140,24 +1140,28 @@ export function ReferencePane({
       : null
 
   const hudCorner =
-    fullscreen && !pip ? (
+    !pip ? (
       <>
-        <HudCircle
-          label="Clip"
-          active={clipHudOpen}
-          onClick={() =>
-            setClipHudOpen((open) => {
-              if (open) return false
-              setClipHudAll(false)
-              return true
-            })
-          }
-        >
-          <IconClips />
-        </HudCircle>
-        <HudCircle label={focus === 'split' ? 'Min' : 'Swap'} onClick={() => setFocus(focus === 'cam' ? 'ref' : 'cam')}>
-          {focus === 'split' ? <IconPip /> : <IconSwap />}
-        </HudCircle>
+        {fullscreen ? (
+          <>
+            <HudCircle
+              label="Clip"
+              active={clipHudOpen}
+              onClick={() =>
+                setClipHudOpen((open) => {
+                  if (open) return false
+                  setClipHudAll(false)
+                  return true
+                })
+              }
+            >
+              <IconClips />
+            </HudCircle>
+            <HudCircle label={focus === 'split' ? 'Min' : 'Swap'} onClick={() => setFocus(focus === 'cam' ? 'ref' : 'cam')}>
+              {focus === 'split' ? <IconPip /> : <IconSwap />}
+            </HudCircle>
+          </>
+        ) : null}
         {shareDraft ? (
           <ShareReference variant="story" draft={shareDraft} className="pointer-events-auto" />
         ) : null}
@@ -1174,7 +1178,22 @@ export function ReferencePane({
           : 'sticky top-2 z-10 min-w-0 bg-[var(--panel)] max-lg:[&_video]:max-h-[min(36vh,16.5rem)] lg:static'
       }
     >
-      {activeItem && isSocialVideoItem(activeItem) ? (
+      {activeItem && youtubeEmbedSrc(activeItem.url ?? '') ? (
+        <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
+          <iframe
+            title={activeItem.name}
+            src={youtubeEmbedSrc(activeItem.url ?? '') ?? undefined}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className={fill ? 'h-full w-full' : 'aspect-video w-full rounded-lg'}
+          />
+          {hudCorner ? (
+            <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+              {hudCorner}
+            </div>
+          ) : null}
+        </div>
+      ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
           itemId={activeItem.id}
@@ -1252,16 +1271,11 @@ export function ReferencePane({
           Full screen
         </button>
       )}
-      {!pip && !fullscreen && activeItem?.url && shareDraft ? (
-        <div className="pointer-events-auto absolute right-2 top-2 z-[40]">
-          <ShareReference variant="story" draft={shareDraft} />
-        </div>
-      ) : null}
       {clipHudOpen && fill && !pip && (
         <div className="pointer-events-auto absolute left-2 top-14 bottom-[5.75rem] z-[42] flex w-[min(16.75rem,46vw)] flex-col overflow-hidden rounded-2xl bg-[#0b0f14]/92 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/12 backdrop-blur-xl sm:bottom-24">
           <div className="flex items-center gap-2 px-3 pt-3">
             <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
-              Clips{canEditCollection(activeCollection) ? ' · ↑↓ reorder' : ''}
+              Clips{canEditCollection(activeCollection) ? ' · drag to reorder' : ''}
             </p>
             <button
               type="button"
@@ -1337,7 +1351,13 @@ export function ReferencePane({
                       const renaming = renamingId === item.id
                       const tagging = taggingId === item.id
                       return (
-                        <li key={item.id} className="rounded-xl bg-white/10">
+                        <li
+                          key={item.id}
+                          data-reorder-row={item.id}
+                          className={`rounded-xl bg-white/10 ${
+                            dragId === item.id ? 'z-10 scale-[1.02] shadow-lg ring-1 ring-white/30' : ''
+                          }`}
+                        >
                           {renaming ? (
                             <form
                               className="px-3 py-2"
@@ -1375,47 +1395,15 @@ export function ReferencePane({
                               />
                             </form>
                           ) : (
-                            <div
-                              className="flex items-start gap-1"
-                              draggable={editing && !q && renamingId !== item.id && taggingId !== item.id}
-                              onDragStart={() => {
-                                setDragId(item.id)
-                                setDragColId(col.id)
-                              }}
-                              onDragOver={(e) => {
-                                if (!editing || q) return
-                                e.preventDefault()
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault()
-                                void onDropOn(item.id, col)
-                              }}
-                              onDragEnd={() => {
-                                setDragId(null)
-                                setDragColId(null)
-                              }}
-                            >
+                            <div className="flex items-start gap-1">
                               {editing && !q ? (
-                                <span className="flex shrink-0 flex-col self-center pl-1">
-                                  <button
-                                    type="button"
-                                    disabled={col.items[0]?.id === item.id}
-                                    onClick={() => void onMove(item, -1, col)}
-                                    className="rounded px-1.5 py-0.5 text-sm leading-none text-white/70 hover:text-white disabled:opacity-30"
-                                    aria-label={`Move ${item.name} up`}
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={col.items[col.items.length - 1]?.id === item.id}
-                                    onClick={() => void onMove(item, 1, col)}
-                                    className="rounded px-1.5 py-0.5 text-sm leading-none text-white/70 hover:text-white disabled:opacity-30"
-                                    aria-label={`Move ${item.name} down`}
-                                  >
-                                    ↓
-                                  </button>
-                                </span>
+                                <DragReorderHandle
+                                  label={item.name}
+                                  className="self-center text-white/70"
+                                  onPointerDown={(e) => beginRowDrag(item, col, e)}
+                                  onPointerMove={(e) => moveRowDrag(col, e)}
+                                  onPointerUp={endRowDrag}
+                                />
                               ) : null}
                               <button
                                 type="button"
@@ -1791,7 +1779,7 @@ export function ReferencePane({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
-            placeholder="Instagram, TikTok, Facebook, or a direct video URL"
+            placeholder="YouTube, Instagram, TikTok, Facebook, or a direct video URL"
             className={`${inputCls} w-full`}
           />
           <div className="flex flex-wrap items-center gap-2">
