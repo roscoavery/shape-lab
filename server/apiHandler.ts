@@ -39,6 +39,7 @@ import {
   sendFeedFile,
   attachVideoToFeedPost,
   celebrateFeedPost,
+  feedPostClientUrl,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
@@ -588,7 +589,7 @@ export async function handleShapeLabApi(
           }
           sendJson(res, 200, {
             ...saved,
-            url: saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : '',
+            url: feedPostClientUrl(saved),
           })
           return true
         }
@@ -597,6 +598,7 @@ export async function handleShapeLabApi(
             postId: body.id ?? url.searchParams.get('id') ?? '',
             actorId: body.authorId ?? url.searchParams.get('authorId') ?? '',
             admin: url.searchParams.get('admin') === '1' || Boolean((body as { admin?: boolean }).admin),
+            coach: url.searchParams.get('coach') === '1' || Boolean((body as { coach?: boolean }).coach),
             mime: body.mime ?? url.searchParams.get('mime') ?? 'video/mp4',
             url: body.url ?? url.searchParams.get('url') ?? '',
             sizeBytes: body.sizeBytes,
@@ -672,6 +674,7 @@ export async function handleShapeLabApi(
           postId: url.searchParams.get('id') ?? '',
           actorId: url.searchParams.get('authorId') ?? '',
           admin: url.searchParams.get('admin') === '1',
+          coach: url.searchParams.get('coach') === '1',
           mime: url.searchParams.get('mime') || req.headers['content-type'] || 'video/webm',
           buf,
         })

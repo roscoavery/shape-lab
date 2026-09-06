@@ -11,15 +11,16 @@ import {
   publishFeedPostResult,
   publishTextPostResult,
   isPassPost,
-  attachFeedVideoResult,
   celebrateFeedPost,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
+  winSubjectIds,
   type FeedChannel,
   type FeedPost,
   removeFeedPost,
 } from '../../lib/feedPosts'
+import { AttachWinClip } from './AttachWinClip'
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { pushNotice } from '../../lib/notify'
@@ -412,7 +413,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
         <ul className="space-y-4">
           {visiblePosts.map((post) => {
             const author = authorOf(post.authorId)
-            const taggedPeople = post.taggedIds
+            const taggedPeople = winSubjectIds(post)
               .map((id) => authorOf(id))
               .filter((a): a is Athlete => Boolean(a))
             return (
@@ -444,31 +445,15 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                     </p>
                   </div>
                   <div className="ml-auto flex items-center gap-2">
-                    {(gymAdmin || post.authorId === athlete?.id) &&
-                      post.kind !== 'collage' &&
-                      !post.url && (
-                      <label className="cursor-pointer text-xs font-semibold text-[var(--accent)]">
-                        Add clip
-                        <input
-                          type="file"
-                          accept={videoFileAccept()}
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            e.target.value = ''
-                            if (!file || !athlete) return
-                            void attachFeedVideoResult(post.id, athlete.id, file, gymAdmin).then((got) => {
-                              if (!got.post) {
-                                setError(got.error ?? 'Could not attach that clip.')
-                                return
-                              }
-                              setPosts((prev) => prev.map((p) => (p.id === got.post!.id ? got.post! : p)))
-                              setNotice('Clip attached to this win.')
-                            })
-                          }}
-                        />
-                      </label>
-                    )}
+                    <AttachWinClip
+                      post={post}
+                      viewer={athlete}
+                      onAttached={(next) => {
+                        setPosts((prev) => prev.map((p) => (p.id === next.id ? next : p)))
+                        setNotice('Clip attached to this win.')
+                      }}
+                      onError={(message) => setError(message)}
+                    />
                     {(gymAdmin || post.authorId === athlete?.id) && (
                       <button
                         type="button"
@@ -719,7 +704,11 @@ function WinReactBar({
     if (athlete.id === post.authorId) return
     const snapshot = post
     const nextOn = !reposted
-    apply({ ...post, reposts: markOn(post.reposts, athlete.id, nextOn) })
+    apply({
+      ...post,
+      reposts: markOn(post.reposts, athlete.id, nextOn),
+      taggedIds: nextOn ? winSubjectIds(post) : post.taggedIds,
+    })
     onNotice(nextOn ? 'On your profile.' : 'Removed from your profile.')
     void toggleFeedRepost(post.id, athlete.id).then((server) => {
       if (!server) {
@@ -828,7 +817,7 @@ function hi5Athletes(post: FeedPost, people: Athlete[], viewerId?: string): Athl
   const ids = new Set<string>()
   const author = people.find((a) => a.id === post.authorId)
   if (author && isAthleteProfile(author)) ids.add(author.id)
-  for (const id of post.taggedIds) {
+  for (const id of winSubjectIds(post)) {
     const tagged = people.find((a) => a.id === id)
     if (tagged && isAthleteProfile(tagged)) ids.add(id)
   }

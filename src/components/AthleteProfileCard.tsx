@@ -28,8 +28,11 @@ import {
   publishFeedPostResult,
   toggleFeedRepost,
   removeFeedPost,
+  winOwnerId,
+  winSubjectIds,
   type FeedPost,
 } from '../lib/feedPosts'
+import { AttachWinClip } from './feed/AttachWinClip'
 import { WinComposer } from './feed/WinComposer'
 import { videoFileAccept } from '../lib/saveMedia'
 import { profileThemeStyle } from '../lib/profileTheme'
@@ -818,6 +821,7 @@ function PostsGrid({
   athletes: Athlete[]
   onChange: (next: FeedPost[] | ((prev: FeedPost[]) => FeedPost[])) => void
 }) {
+  const [clipNote, setClipNote] = useState<string | null>(null)
   if (items.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-[var(--muted)]">
@@ -827,30 +831,66 @@ function PostsGrid({
   }
   return (
     <ul className="space-y-3">
+      {clipNote ? (
+        <li className="text-xs font-semibold text-[var(--accent)]">{clipNote}</li>
+      ) : null}
       {items.map((p) => {
         const reposted = viewer ? (p.reposts ?? []).includes(viewer.id) : false
         const win = postOnChannel(p, 'wins')
+        const owner = athletes.find((a) => a.id === winOwnerId(p))
+        const taggedPeople = winSubjectIds(p)
+          .map((id) => athletes.find((a) => a.id === id))
+          .filter((a): a is Athlete => Boolean(a))
         return (
           <li key={p.id} className="overflow-hidden rounded-2xl bg-black/30">
             {p.url && p.kind !== 'text' && p.kind !== 'collage' && (
               <video src={p.url} controls playsInline className="max-h-80 w-full bg-black object-contain" />
             )}
             <div className="px-3 py-3">
-              {win && (
+              {win && p.authorId === athlete.id && (
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Win</p>
               )}
               {p.authorId !== athlete.id && (
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Repost</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                  {win && owner
+                    ? `Reposted ${givenName(owner)}'s win`
+                    : win
+                      ? "Reposted a win"
+                      : 'Repost'}
+                </p>
               )}
               {p.caption && (
                 <p className="text-sm">
                   <MentionText text={p.caption} athletes={athletes} />
                 </p>
               )}
+              {taggedPeople.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {taggedPeople.map((a) => (
+                    <span
+                      key={a.id}
+                      className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/80"
+                    >
+                      {a.name}
+                      {mentionLabel(a) ? ` ${mentionLabel(a)}` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 {new Date(p.createdAt).toLocaleString()}
               </p>
-              <div className="mt-2 flex flex-wrap gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+              <AttachWinClip
+                post={p}
+                viewer={viewer}
+                className="cursor-pointer text-xs font-semibold text-[var(--accent)]"
+                onAttached={(next) => {
+                  onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
+                  setClipNote('Clip attached to this win.')
+                }}
+                onError={(message) => setClipNote(message)}
+              />
               {viewer && viewer.id !== p.authorId && (
                 <button
                   type="button"

@@ -37,6 +37,42 @@ export function postOnChannel(post: Pick<FeedPost, 'channels'>, channel: FeedCha
   return postChannels(post).includes(channel)
 }
 
+/** Athlete the win belongs to — author when a coach posted it for them, else first tagged athlete. */
+export function winOwnerId(post: Pick<FeedPost, 'authorId' | 'taggedIds' | 'sharedById'>): string {
+  if (post.sharedById && post.authorId && post.authorId !== post.sharedById) return post.authorId
+  const other = (post.taggedIds ?? []).find((id) => id && id !== post.authorId)
+  return other ?? post.authorId
+}
+
+/** Tags to show on a win, including the athlete a coach posted it for. */
+export function winSubjectIds(post: Pick<FeedPost, 'authorId' | 'taggedIds' | 'sharedById'>): string[] {
+  const ids = [...(post.taggedIds ?? [])]
+  const owner = winOwnerId(post)
+  if (owner && !ids.includes(owner)) ids.unshift(owner)
+  return ids
+}
+
+export function feedPostHasVideo(post: Pick<FeedPost, 'url' | 'kind' | 'collage'>): boolean {
+  return Boolean(post.url) && post.kind !== 'text' && post.kind !== 'collage' && !post.collage
+}
+
+export function canAttachFeedVideo(
+  post: Pick<FeedPost, 'url' | 'kind' | 'collage' | 'authorId' | 'sharedById' | 'reposts'>,
+  viewerId: string | undefined,
+  opts: { admin?: boolean; coach?: boolean } = {},
+): boolean {
+  if (!viewerId) return false
+  if (post.kind === 'collage' || post.collage) return false
+  if (feedPostHasVideo(post)) return false
+  return Boolean(
+    opts.admin ||
+      opts.coach ||
+      post.authorId === viewerId ||
+      post.sharedById === viewerId ||
+      (post.reposts ?? []).includes(viewerId),
+  )
+}
+
 export function isPassPost(post: Pick<FeedPost, 'channels'>): boolean {
   return postOnChannel(post, 'passes')
 }
@@ -349,8 +385,10 @@ export async function attachFeedVideoResult(
   postId: string,
   actorId: string,
   blob: Blob,
-  admin = false,
+  access: boolean | { admin?: boolean; coach?: boolean } = false,
 ): Promise<PublishResult> {
+  const admin = typeof access === 'boolean' ? access : Boolean(access.admin)
+  const coach = typeof access === 'boolean' ? access : Boolean(access.coach)
   const raw = blob.type || ''
   const mime = raw.includes('mp4') || raw.includes('quicktime') ? 'video/mp4' : 'video/webm'
   const uploaded = await uploadGymMedia(feedBlobPath(postId, mime), blob, mime)
@@ -368,6 +406,8 @@ export async function attachFeedVideoResult(
           mime,
           url: uploaded.url,
           sizeBytes: blob.size,
+          admin,
+          coach,
         }),
       })
       return readFeedResponse(res)
@@ -382,6 +422,7 @@ export async function attachFeedVideoResult(
       authorId: actorId,
       mime,
       admin: admin ? '1' : '0',
+      coach: coach ? '1' : '0',
     })
     try {
       const res = await fetch(`/api/feed?${qs.toString()}`, {

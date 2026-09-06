@@ -37,6 +37,22 @@ export type DiskFeedPost = {
 
 type FeedChannel = 'gym' | 'wins' | 'passes'
 
+export function feedPostClientUrl(post: DiskFeedPost): string {
+  return post.publicUrl || (post.file ? `/api/feed-file?id=${encodeURIComponent(post.id)}` : '')
+}
+
+/** Coach posted this as the athlete's win — keep that athlete tagged, including after a repost. */
+export function ensureWinAthleteTagged(post: DiskFeedPost): DiskFeedPost {
+  const channels = cleanChannels(post.channels)
+  if (!channels.includes('wins')) return post
+  const tags = new Set(post.taggedIds ?? [])
+  if (post.sharedById && post.authorId && post.authorId !== post.sharedById) {
+    tags.add(post.authorId)
+  }
+  post.taggedIds = [...tags]
+  return post
+}
+
 function cleanChannels(raw: unknown): FeedChannel[] {
   const list = Array.isArray(raw)
     ? raw
@@ -143,16 +159,19 @@ export async function postsForClient(): Promise<Array<DiskFeedPost & { url: stri
   return (await readFeedFile())
     .posts.slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((p) => ({
-      ...p,
-      kind:
-        p.kind === 'collage' || p.collage
-          ? 'collage'
-          : p.kind === 'text' || (!p.file && (p.caption || '').trim())
-            ? 'text'
-            : 'video',
-      url: p.publicUrl || (p.file ? `/api/feed-file?id=${encodeURIComponent(p.id)}` : ''),
-    }))
+    .map((p) => {
+      ensureWinAthleteTagged(p)
+      return {
+        ...p,
+        kind:
+          p.kind === 'collage' || p.collage
+            ? 'collage'
+            : p.kind === 'text' || (!p.file && (p.caption || '').trim())
+              ? 'text'
+              : 'video',
+        url: feedPostClientUrl(p),
+      }
+    })
 }
 
 export function readRequestBuffer(
@@ -217,6 +236,7 @@ export async function addFeedPostFromBody(params: {
       ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
       : {}),
   }
+  ensureWinAthleteTagged(post)
   const meta = await readFeedFile()
   if ((meta.removedIds ?? []).includes(id)) return post
   const kept = mergePosts(meta.posts, [post])
@@ -272,6 +292,7 @@ export async function addFeedPostFromUrl(params: {
       ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
       : {}),
   }
+  ensureWinAthleteTagged(post)
   const meta = await readFeedFile()
   if ((meta.removedIds ?? []).includes(id)) return post
   const kept = mergePosts(meta.posts, [post])
@@ -373,6 +394,7 @@ export async function addTextFeedPost(params: {
       ? { sharedByName: params.sharedByName.trim().slice(0, 80) }
       : {}),
   }
+  ensureWinAthleteTagged(post)
   const meta = await readFeedFile()
   if ((meta.removedIds ?? []).includes(id)) return post
   const kept = mergePosts(meta.posts, [post])
@@ -398,7 +420,19 @@ export async function toggleFeedRepost(
   postId: string,
   actorId: string,
 ): Promise<DiskFeedPost | null> {
-  return toggleFeedMark(postId, actorId, 'reposts')
+  const next = await toggleFeedMark(postId, actorId, 'reposts')
+  if (!next) return null
+  const before = (next.taggedIds ?? []).join('|')
+  ensureWinAthleteTagged(next)
+  if ((next.taggedIds ?? []).join('|') !== before) {
+    const meta = await readFeedFile()
+    const found = meta.posts.find((p) => p.id === next.id)
+    if (found) {
+      found.taggedIds = next.taggedIds
+      await writeMeta(meta.posts, meta.removedIds)
+    }
+  }
+  return next
 }
 
 export async function celebrateFeedPost(
@@ -414,6 +448,7 @@ export async function celebrateFeedPost(
   found.likes = [...new Set([...(found.likes ?? []), who])]
   found.hi5s = [...new Set([...(found.hi5s ?? []), who])]
   found.reposts = [...new Set([...(found.reposts ?? []), who])]
+  ensureWinAthleteTagged(found)
   await writeMeta(meta.posts, meta.removedIds)
   return found
 }
@@ -422,6 +457,7 @@ export async function attachVideoToFeedPost(params: {
   postId: string
   actorId: string
   admin?: boolean
+  coach?: boolean
   mime?: string
   buf?: Buffer
   url?: string
@@ -433,8 +469,15 @@ export async function attachVideoToFeedPost(params: {
   const meta = await readFeedFile()
   const found = meta.posts.find((p) => p.id === sid)
   if (!found) return null
-  if (!params.admin && found.authorId !== who) return null
+  const allowed =
+    params.admin ||
+    params.coach ||
+    found.authorId === who ||
+    found.sharedById === who ||
+    (found.reposts ?? []).includes(who)
+  if (!allowed) return null
   if (found.kind === 'collage' || found.collage) return null
+  ensureWinAthleteTagged(found)
 
   if (params.url && (/^https:\/\//i.test(params.url) || params.url.startsWith('/api/'))) {
     found.publicUrl = params.url
