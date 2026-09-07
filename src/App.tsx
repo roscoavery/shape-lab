@@ -137,6 +137,7 @@ import { coachShareLabel } from './lib/coachShare'
 import {
   isProfileUnlocked,
   lockAllProfiles,
+  markProfileUnlocked,
   profileNeedsPasscode,
   unlockedProfileId,
   withRyanPasscode,
@@ -155,8 +156,8 @@ export default function App() {
   const [tab, setTab] = useState<AppTab>(() => {
     const saved = loadTab()
     if (!isRyanOnlyTab(saved)) return saved
-    const id = loadActiveAthleteId()
-    if (!id || !isProfileUnlocked(id)) return 'tasks2'
+    const id = unlockedProfileId() || loadActiveAthleteId()
+    if (!id) return 'tasks2'
     const roster = ensureRyanInAthletes(loadAthletes())
     return isRyanAthlete(roster.find((a) => a.id === id) ?? null) ? saved : 'today'
   })
@@ -179,8 +180,7 @@ export default function App() {
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(() => {
-    const id = loadActiveAthleteId()
-    return id && isProfileUnlocked(id) ? id : null
+    return unlockedProfileId() || loadActiveAthleteId()
   })
   const [parentFocusId, setParentFocusId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
@@ -311,6 +311,7 @@ export default function App() {
         return
       }
       if (isProfileUnlocked(a.id)) {
+        markProfileUnlocked(a.id)
         setActiveAthleteId(id)
         setAthleteGate(null)
         return
@@ -319,7 +320,7 @@ export default function App() {
         setAthleteGate(a)
         return
       }
-      lockAllProfiles()
+      markProfileUnlocked(a.id)
       setActiveAthleteId(id)
     },
     [athletes],
@@ -363,9 +364,10 @@ export default function App() {
       if (cancelled) return next
       rosterReadyRef.current = synced.fromServer && isServerRosterPushEnabled()
       setAthletes(next)
-      const unlocked = unlockedProfileId()
-      if (unlocked && next.some((a) => a.id === unlocked)) {
-        setActiveAthleteId(unlocked)
+      const remembered = unlockedProfileId() || loadActiveAthleteId()
+      if (remembered && next.some((a) => a.id === remembered)) {
+        markProfileUnlocked(remembered)
+        setActiveAthleteId(remembered)
       } else {
         setActiveAthleteId(null)
         setAthleteGate(null)
@@ -849,6 +851,7 @@ export default function App() {
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
               onSelect={requestSelectAthlete}
+              viewer={activeProfile}
             />
             <TaskTrainer
               athleteId={activeAthleteId}
@@ -1024,6 +1027,7 @@ export default function App() {
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
               onSelect={requestSelectAthlete}
+              viewer={activeProfile}
             />
           ) : null}
           <HomeworkPanel
@@ -1281,6 +1285,7 @@ export default function App() {
               activeId={activeAthleteId}
               onChangeAthletes={setAthleteRoster}
               onSelect={requestSelectAthlete}
+              viewer={activeProfile}
             />
             <SequencePanel
               currentShapeId={shape.id}

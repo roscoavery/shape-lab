@@ -15,6 +15,7 @@ import {
   canGiveHi5,
   isAthleteProfile,
   isCoachProfile,
+  canEditAthleteProfile,
   isGymAdmin,
   profileRole,
   roleLabel,
@@ -125,6 +126,7 @@ export function AthleteProfileCard({
   const write = writeNotes || writeWin
   const contest = handstandContest(athlete)
   const own = viewer?.id === athlete.id
+  const canEditProfile = canEditAthleteProfile(viewer, athlete)
   const coach = isCoachProfile(viewer)
   const theirCoaches = coachesOf(athlete, athletes)
   const gestureOk =
@@ -294,7 +296,7 @@ export function AthleteProfileCard({
           <ShareBtn label="Pass" hint="Short clip" onClick={() => setCompose('pass')} />
         </div>
       )}
-      {own && onAthleteChange && (
+      {canEditProfile && onAthleteChange && (
         <div className="flex flex-col gap-3">
           <button
             type="button"
@@ -339,7 +341,7 @@ export function AthleteProfileCard({
             >
               Add to story
             </button>
-            {onAthleteChange && (
+            {canEditProfile && onAthleteChange && (
               <button
                 type="button"
                 onClick={() => {

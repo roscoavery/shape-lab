@@ -2,9 +2,10 @@
  * 4-digit passcode for profiles. Hash is stored on the roster
  * (any browser / link); the plaintext never leaves the device.
  *
- * Only one profile is unlocked per tab. Switching to Ryan (or any other
- * passcode profile) always asks for that code — a shared link cannot open
- * gym admin by tapping the name.
+ * This device stays signed in as the last unlocked profile until they
+ * tap Switch profile. Switching to a different passcode profile still
+ * asks for that code — a shared link cannot open gym admin by tapping
+ * a name.
  */
 
 import type { Athlete } from '../types'
@@ -12,7 +13,7 @@ import { findRyan, isRyanAthlete } from './ryanProfile'
 
 const UNLOCKED_KEY = 'shape-lab.unlockedProfile.v2'
 const UNLOCKED_LS = 'shape-lab.unlockedProfile.v3'
-const UNLOCK_MS = 18 * 60 * 60 * 1000
+const DEVICE_SESSION = 'shape-lab.deviceSession.v1'
 
 type UnlockRec = { id: string; at: number }
 
@@ -59,26 +60,34 @@ export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> 
   return athletes.map((a) => (a.id === ryan.id ? { ...a, passcodeHash: hash } : a))
 }
 
+function parseUnlockRec(raw: string | null): string | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed === 'string' && parsed) return parsed
+    const rec = parsed as UnlockRec
+    if (rec?.id && typeof rec.id === 'string') return rec.id
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 function readUnlockedId(): string | null {
   try {
-    const raw = sessionStorage.getItem(UNLOCKED_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as unknown
-      if (typeof parsed === 'string' && parsed) return parsed
-    }
+    const tab = parseUnlockRec(sessionStorage.getItem(UNLOCKED_KEY))
+    if (tab) return tab
   } catch {
     /* keep going */
   }
   try {
-    const raw = localStorage.getItem(UNLOCKED_LS)
-    if (!raw) return null
-    const rec = JSON.parse(raw) as UnlockRec
-    if (!rec?.id || typeof rec.at !== 'number') return null
-    if (Date.now() - rec.at > UNLOCK_MS) {
-      localStorage.removeItem(UNLOCKED_LS)
-      return null
-    }
-    return rec.id
+    const device = parseUnlockRec(localStorage.getItem(DEVICE_SESSION))
+    if (device) return device
+  } catch {
+    /* keep going */
+  }
+  try {
+    return parseUnlockRec(localStorage.getItem(UNLOCKED_LS))
   } catch {
     return null
   }
@@ -92,30 +101,35 @@ export function isProfileUnlocked(athleteId: string): boolean {
   return readUnlockedId() === athleteId
 }
 
-/** Unlock this profile and lock every other one in this tab. */
+/** Unlock this profile on this device until they switch. */
 export function markProfileUnlocked(athleteId: string): void {
-  sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify(athleteId))
+  const rec: UnlockRec = { id: athleteId, at: Date.now() }
+  const json = JSON.stringify(rec)
   try {
-    localStorage.setItem(UNLOCKED_LS, JSON.stringify({ id: athleteId, at: Date.now() } satisfies UnlockRec))
+    sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify(athleteId))
+  } catch {
+    /* private */
+  }
+  try {
+    localStorage.setItem(DEVICE_SESSION, json)
+    localStorage.setItem(UNLOCKED_LS, json)
   } catch {
     /* quota */
   }
 }
 
 export function lockProfile(athleteId: string): void {
-  if (readUnlockedId() === athleteId) {
-    sessionStorage.removeItem(UNLOCKED_KEY)
-    try {
-      localStorage.removeItem(UNLOCKED_LS)
-    } catch {
-      /* private */
-    }
-  }
+  if (readUnlockedId() === athleteId) lockAllProfiles()
 }
 
 export function lockAllProfiles(): void {
-  sessionStorage.removeItem(UNLOCKED_KEY)
   try {
+    sessionStorage.removeItem(UNLOCKED_KEY)
+  } catch {
+    /* private */
+  }
+  try {
+    localStorage.removeItem(DEVICE_SESSION)
     localStorage.removeItem(UNLOCKED_LS)
   } catch {
     /* private */

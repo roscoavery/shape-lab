@@ -72,7 +72,8 @@ export function ProfileFieldsEditor({
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">Profile photo</h3>
           <p className="text-xs text-[var(--muted)]">
-            Take a snapshot or upload. This is the pic everyone sees on your page.
+            Take a snapshot or upload. Pinch or zoom in on a small face, then
+            save. This is the pic everyone sees on your page.
           </p>
           <StationSnapshot
             photoDataUrl={athlete.photoDataUrl}

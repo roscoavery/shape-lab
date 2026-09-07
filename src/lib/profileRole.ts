@@ -44,6 +44,16 @@ export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
   return isRyanAthlete(athlete)
 }
 
+/** Owner or gym admin. Signed-out visitors cannot edit anyone. */
+export function canEditAthleteProfile(
+  viewer: Athlete | null | undefined,
+  athlete: Athlete | null | undefined,
+): boolean {
+  if (!viewer || !athlete) return false
+  if (isGymAdmin(viewer)) return true
+  return viewer.id === athlete.id
+}
+
 export function roleLabel(athlete: Athlete | null | undefined): string {
   if (isRyanAthlete(athlete)) return 'Gym admin'
   const found = PROFILE_KINDS.find((k) => k.id === profileRole(athlete))

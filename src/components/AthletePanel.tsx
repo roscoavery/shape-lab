@@ -5,6 +5,7 @@ import { instagramUrl, normalizeInstagramHandle } from '../lib/flowShare'
 import { isRyanAthlete } from '../lib/ryanProfile'
 import {
   PROFILE_KINDS,
+  canEditAthleteProfile,
   isCoachProfile,
   profileRole,
   roleHint,
@@ -104,6 +105,7 @@ export function AthletePanel({
   const [pendingDelete, setPendingDelete] = useState<Athlete | null>(null)
 
   const active = athletes.find((a) => a.id === activeId) ?? null
+  const canEditActive = canEditAthleteProfile(viewer, active)
 
   useEffect(() => {
     setHandle(active?.instagramHandle ?? '')
@@ -210,7 +212,7 @@ export function AthletePanel({
   }
 
   const saveDetails = () => {
-    if (!active) return
+    if (!active || !canEditAthleteProfile(viewer, active)) return
     const instagramHandle = normalizeInstagramHandle(handle) || undefined
     const shapeLabHandle = normalizeInstagramHandle(shapeHandle) || undefined
     const nextGym = normalizeGymName(gymName)
@@ -247,7 +249,7 @@ export function AthletePanel({
   }
 
   const saveLegacyPin = async () => {
-    if (!active || active.passcodeHash) return
+    if (!active || active.passcodeHash || !canEditAthleteProfile(viewer, active)) return
     if (!passcodeLooksOk(legacyPin)) {
       flash('Use four digits, 0–9.')
       return
@@ -389,7 +391,7 @@ export function AthletePanel({
         <div className="mb-3">
           <AthleteProfileCard
             athlete={active}
-            viewer={viewer ?? active}
+            viewer={viewer}
             athletes={athletes}
             variant="embed"
             onDeleteProfile={allowDelete ? remove : undefined}
@@ -591,7 +593,7 @@ export function AthletePanel({
         <p className="text-[11px] leading-snug text-[var(--muted)]">{roleHint(newRole)}</p>
       </div>}
 
-      {active && !active.passcodeHash && (
+      {active && canEditActive && !active.passcodeHash && (
         <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <p className="text-[11px] font-semibold text-[var(--text)]">
             {active.name} does not have a passcode yet
@@ -630,7 +632,7 @@ export function AthletePanel({
         </div>
       )}
 
-      {active && (
+      {active && canEditActive && (
         <div className="mt-3 flex flex-col gap-2">
           {active.photoDataUrl ? (
             <div className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
@@ -823,10 +825,9 @@ export function AthletePanel({
         <strong>Athlete</strong>, or <strong>Parent</strong> so we know who you
         are. Gym owners and coaches can explore the tools, build collages, answer
         Research, and keep their own Compare collections. They cannot edit Ryan’s
-        gym collections, shape descriptions, or picture sizes. Selecting Ryan
-        always asks for his passcode — a shared link does not open gym admin by
-        tapping the name. Only one profile stays unlocked in this tab. Creating
-        the same name again selects the existing profile.
+        gym collections, shape descriptions, or picture sizes.         This device stays signed in as the last profile until you tap
+        Switch profile. Switching to a different passcode profile still asks
+        for that code. Creating the same name again selects the existing profile.
       </p>
     </div>
   )

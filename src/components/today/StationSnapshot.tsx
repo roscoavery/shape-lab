@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { isAndroid } from '../../lib/delayCameraPipeline'
+import { ProfilePhotoCropper } from './ProfilePhotoCropper'
 
 function cameraErrorMessage(err: unknown): string {
   const name = err instanceof DOMException ? err.name : ''
@@ -24,21 +25,18 @@ function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop())
 }
 
-function cropToSquareJpeg(
-  source: CanvasImageSource,
-  width: number,
-  height: number,
-): string {
-  const size = Math.min(width, height)
-  const sx = (width - size) / 2
-  const sy = (height - size) / 2
+function frameToJpeg(source: CanvasImageSource, width: number, height: number): string {
+  const maxEdge = 2000
+  const scale = Math.min(1, maxEdge / Math.max(width, height))
+  const w = Math.max(1, Math.round(width * scale))
+  const h = Math.max(1, Math.round(height * scale))
   const canvas = document.createElement('canvas')
-  canvas.width = 640
-  canvas.height = 640
+  canvas.width = w
+  canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) return ''
-  ctx.drawImage(source, sx, sy, size, size, 0, 0, 640, 640)
-  return canvas.toDataURL('image/jpeg', 0.86)
+  ctx.drawImage(source, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.9)
 }
 
 export async function photoFileToDataUrl(file: File): Promise<string> {
@@ -50,8 +48,8 @@ export async function photoFileToDataUrl(file: File): Promise<string> {
       image.onerror = () => reject(new Error('Could not read that photo.'))
       image.src = url
     })
-    const data = cropToSquareJpeg(img, img.naturalWidth || img.width, img.naturalHeight || img.height)
-    if (!data) throw new Error('Could not crop that photo.')
+    const data = frameToJpeg(img, img.naturalWidth || img.width, img.naturalHeight || img.height)
+    if (!data) throw new Error('Could not read that photo.')
     return data
   } finally {
     URL.revokeObjectURL(url)
@@ -71,6 +69,7 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState<string | null>(null)
 
   useEffect(() => {
     return () => {
@@ -124,23 +123,36 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
       setError('Wait for the preview, then tap Capture.')
       return
     }
-    const data = cropToSquareJpeg(video, video.videoWidth, video.videoHeight)
+    const data = frameToJpeg(video, video.videoWidth, video.videoHeight)
     if (!data) return
-    onCapture(data)
     stopStream(streamRef.current)
     streamRef.current = null
     setLive(false)
     setReady(false)
+    setPending(data)
   }
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
     setError(null)
     try {
-      onCapture(await photoFileToDataUrl(file))
+      setPending(await photoFileToDataUrl(file))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not use that photo.')
     }
+  }
+
+  if (pending) {
+    return (
+      <ProfilePhotoCropper
+        src={pending}
+        onSave={(dataUrl) => {
+          onCapture(dataUrl)
+          setPending(null)
+        }}
+        onCancel={() => setPending(null)}
+      />
+    )
   }
 
   return (
@@ -196,6 +208,15 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
                 onChange={(e) => void onFile(e.target.files?.[0])}
               />
             </label>
+          )}
+          {photoDataUrl && (
+            <button
+              type="button"
+              onClick={() => setPending(photoDataUrl)}
+              className="h-11 rounded-2xl border border-white/15 text-sm font-semibold"
+            >
+              Adjust crop
+            </button>
           )}
         </div>
       )}
