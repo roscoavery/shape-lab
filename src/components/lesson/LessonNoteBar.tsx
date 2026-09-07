@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { cuesForNote, saveNoteCue } from '../../lib/noteCues'
+import type { NoteAudience } from '../../lib/noteAudience'
 import { SkillPicker, emptySkillTopic, type SkillTopic } from './SkillPicker'
+import { NoteAudiencePicker } from './NoteAudiencePicker'
 
 type Props = {
   placeholder?: string
   /** When the coach already picked a hold skill, start the note on that same skill. */
   preset?: SkillTopic
   coachId?: string | null
-  onAdd: (text: string, topic: SkillTopic) => void
+  onAdd: (text: string, topic: SkillTopic, audience: NoteAudience) => void
 }
 
 export function LessonNoteBar({
@@ -21,6 +23,7 @@ export function LessonNoteBar({
   const [cueTick, setCueTick] = useState(0)
   const [filed, setFiled] = useState<string | null>(null)
   const [filedKey, setFiledKey] = useState<string | null>(null)
+  const [audience, setAudience] = useState<NoteAudience>('athlete')
 
   useEffect(() => {
     if (!preset?.label.trim()) return
@@ -42,7 +45,7 @@ export function LessonNoteBar({
   const file = (line: string, key?: string) => {
     const next = line.trim()
     if (!next || !label) return
-    onAdd(next, { ...topic, label })
+    onAdd(next, { ...topic, label }, audience)
     setFiled(next)
     setFiledKey(key ?? next)
     window.setTimeout(() => {
@@ -72,6 +75,7 @@ export function LessonNoteBar({
       }}
     >
       <SkillPicker value={topic} onChange={setTopic} label="Note is for" coachId={coachId} />
+      <NoteAudiencePicker value={audience} onChange={setAudience} />
       <div className="flex flex-wrap gap-2">
         <textarea
           value={text}

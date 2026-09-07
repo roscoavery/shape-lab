@@ -13,6 +13,7 @@ import {
 import { HoldProperTimes } from '../HoldProperTimes'
 import type { Athlete, Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
 import { lessonBlockLabel } from '../../lib/lessonPlan'
+import { noteAudienceLabel } from '../../lib/noteAudience'
 import { LessonTimesFields } from './LessonTimesFields'
 import { TodayDock } from '../today/TodayDock'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
@@ -268,15 +269,16 @@ export function LessonWorkspace({
           }
           onAddNote={
             coach && onAthletesChange
-              ? (text) => {
+              ? (text, audience) => {
                   onAthletesChange(
                     addCoachNotesToAthletes(athletes, [person.id], {
                       author: coach,
                       text,
                       lessonId: session.id,
+                      audience,
                     }),
                   )
-                  const next = addLessonNote(session.id, text, 'general')
+                  const next = addLessonNote(session.id, text, 'general', { audience })
                   if (next) onSessionChange(next)
                 }
               : undefined
@@ -490,21 +492,20 @@ export function LessonWorkspace({
         icon="📌"
         eyebrow="Lesson"
         title="Notes"
-        hint={`What ${athleteName} should remember.`}
+        hint="Athlete-facing or coach-only."
       >
         <p className="text-sm text-[var(--muted)]">
-          One note per thought is fine. File each on the shape or sequence so{' '}
-          {people.length > 1 ? 'they' : athleteName} can find “remember this” next to that
-          skill
+          Pick who can see each note. Athlete notes show on their recap. Coach-only
+          stays with you
           {people.length > 1 ? ' — notes land on every athlete in this lesson' : ''}.
         </p>
         <div className="mt-3">
           <LessonNoteBar
             preset={holdTopic.label.trim() ? holdTopic : undefined}
             coachId={session.coachId}
-            onAdd={(text, topic) => {
+            onAdd={(text, topic, audience) => {
               if (topic.kind === 'custom') rememberTypedHold(session.coachId, topic.label)
-              const next = addLessonNote(session.id, text, 'general', topic)
+              const next = addLessonNote(session.id, text, 'general', { ...topic, audience })
               if (next) onSessionChange(next)
               if (coach && onAthletesChange) {
                 onAthletesChange(
@@ -513,6 +514,7 @@ export function LessonWorkspace({
                     text,
                     lessonId: session.id,
                     topicLabel: topic.label,
+                    audience,
                   }),
                 )
               }
@@ -563,6 +565,9 @@ export function LessonWorkspace({
                 ))}
                 {g.notes.map((n) => (
                   <p key={n.id} className="mt-1 text-sm">
+                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      {noteAudienceLabel(n)} ·
+                    </span>
                     {n.text}
                   </p>
                 ))}

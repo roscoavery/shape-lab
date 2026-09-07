@@ -41,7 +41,7 @@ export function ClassAthleteDesk({
 
   const selected = present.find((a) => a.id === picked) ?? athletes.find((a) => a.id === picked)
 
-  const saveNote = (text: string) => {
+  const saveNote = (text: string, audience?: 'athlete' | 'coach') => {
     if (!selected) return
     onAthletesChange(
       addCoachNotesToAthletes(athletes, [selected.id], {
@@ -50,6 +50,7 @@ export function ClassAthleteDesk({
         meetingId,
         lessonId,
         className,
+        audience,
       }),
     )
     setFlash(`Saved note on ${selected.name}.`)

@@ -400,11 +400,12 @@ export function AthletePanel({
             }
             onAddNote={
               viewer && isCoachProfile(viewer)
-                ? (text) =>
+                ? (text, audience) =>
                     onChangeAthletes(
                       addCoachNotesToAthletes(athletes, [active.id], {
                         author: viewer,
                         text,
+                        audience,
                       }),
                     )
                 : undefined

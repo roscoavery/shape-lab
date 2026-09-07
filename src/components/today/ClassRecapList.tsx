@@ -10,6 +10,8 @@ import {
   notesForMeeting,
   relabelMeetingNotes,
 } from '../../lib/athleteNotes'
+import { noteAudienceLabel, type NoteAudience } from '../../lib/noteAudience'
+import { NoteAudiencePicker } from '../lesson/NoteAudiencePicker'
 import {
   attendeeLabel,
   classLabel,
@@ -319,6 +321,7 @@ function AthleteRecap({
   const classNotes = notesForMeeting(athlete, meeting.id)
   const grouped = groupNotesByAuthor(classNotes.length ? classNotes : [])
   const [draft, setDraft] = useState('')
+  const [audience, setAudience] = useState<NoteAudience>('athlete')
 
   return (
     <article className="rounded-xl bg-black/25 p-3">
@@ -402,6 +405,7 @@ function AthleteRecap({
           )}
           {canEdit && viewer && onAthletesChange && (
             <div className="mt-3 flex flex-col gap-2">
+              <NoteAudiencePicker value={audience} onChange={setAudience} />
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -421,6 +425,7 @@ function AthleteRecap({
                       className: getOffering(meeting.offeringId)
                         ? classLabel(getOffering(meeting.offeringId)!)
                         : undefined,
+                      audience,
                     }),
                   )
                   setDraft('')
@@ -503,6 +508,8 @@ function NoteRow({
       <p className="mt-0.5 text-[11px] text-[var(--muted)]">
         {note.authorName}
         {note.className ? ` · ${note.className}` : ''}
+        {' · '}
+        {noteAudienceLabel(note)}
         {' · '}
         {new Date(note.updatedAt ?? note.createdAt).toLocaleString()}
         {note.updatedAt ? ' · edited' : ''}

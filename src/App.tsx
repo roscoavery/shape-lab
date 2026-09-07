@@ -1177,11 +1177,12 @@ export default function App() {
                   <LessonNoteBar
                     coachId={liveLesson.coachId}
                     placeholder="Compare note for this athlete…"
-                    onAdd={(text, topic) => {
+                    onAdd={(text, topic, audience) => {
                       const next = addLessonNote(liveLesson.id, text, 'compare', {
                         kind: topic.kind,
                         id: topic.id,
                         label: topic.label,
+                        audience,
                       })
                       if (next) setLessonTick((n) => n + 1)
                     }}
@@ -1566,11 +1567,12 @@ export default function App() {
         onDeleteProfile={ryanEdit ? removeProfile : undefined}
         onAddNote={
           activeProfile && isCoachProfile(activeProfile)
-            ? (text) =>
+            ? (text, audience) =>
                 setAthleteRoster(
                   addCoachNotesToAthletes(athletes, [viewingAthleteId], {
                     author: activeProfile,
                     text,
+                    audience,
                   }),
                 )
             : undefined

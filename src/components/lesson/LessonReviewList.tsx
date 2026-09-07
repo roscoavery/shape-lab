@@ -10,6 +10,7 @@ import {
   sessionIncludesAthlete,
 } from '../../lib/lessonStore'
 import { lessonBlockLabel, lessonDisplayEnd, lessonDisplayStart } from '../../lib/lessonPlan'
+import { noteAudienceLabel, noteVisibleToAthlete } from '../../lib/noteAudience'
 import { LessonTimesFields } from './LessonTimesFields'
 import type { Athlete, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
@@ -215,15 +216,16 @@ export function LessonReviewList({
                     }
                     onAddNote={
                       canEdit && viewer && onAthletesChange
-                        ? (text) => {
+                        ? (text, audience) => {
                             onAthletesChange(
                               addCoachNotesToAthletes(athletes, [person.id], {
                                 author: viewer,
                                 text,
                                 lessonId: s.id,
+                                audience,
                               }),
                             )
-                            addLessonNote(s.id, text, 'general')
+                            addLessonNote(s.id, text, 'general', { audience })
                             onChanged?.()
                           }
                         : undefined
@@ -288,9 +290,16 @@ export function LessonReviewList({
                             />
                           </p>
                         ))}
-                        {g.notes.map((n) => (
+                        {(canEdit ? g.notes : g.notes.filter((n) => noteVisibleToAthlete(n))).map((n) => (
                           <div key={n.id} className="mt-0.5 flex items-start justify-between gap-2">
-                            <p className="text-sm">{n.text}</p>
+                            <p className="text-sm">
+                              {canEdit ? (
+                                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                                  {noteAudienceLabel(n)} ·
+                                </span>
+                              ) : null}
+                              {n.text}
+                            </p>
                             {canEdit &&
                               (askNoteId === n.id ? (
                                 <span className="flex shrink-0 gap-1">
@@ -350,12 +359,12 @@ export function LessonReviewList({
                 </CollapsibleSection>
                 {canEdit && (
                   <>
-                    <CollapsibleSection inset title="Notes" hint="Add something they should remember">
+                    <CollapsibleSection inset title="Notes" hint="Athlete-facing or coach-only">
                       <LessonNoteBar
-                        placeholder="Add something they should remember"
+                        placeholder="Add a note for this recap"
                         coachId={s.coachId}
-                        onAdd={(text, topic) => {
-                          addLessonNote(s.id, text, 'general', topic)
+                        onAdd={(text, topic, audience) => {
+                          addLessonNote(s.id, text, 'general', { ...topic, audience })
                           if (viewer && onAthletesChange) {
                             onAthletesChange(
                               addCoachNotesToAthletes(athletes, lessonAthleteIds(s), {
@@ -363,6 +372,7 @@ export function LessonReviewList({
                                 text,
                                 lessonId: s.id,
                                 topicLabel: topic.label,
+                                audience,
                               }),
                             )
                           }
@@ -379,7 +389,7 @@ export function LessonReviewList({
                         hideHeading
                         athleteIds={lessonAthleteIds(s)}
                         coachId={s.coachId}
-                        defaultNotes={s.notes[0]?.text}
+                        defaultNotes={s.notes.find((n) => noteVisibleToAthlete(n))?.text}
                         defaultShapeId={
                           s.holds.find((h) => !h.shapeId.startsWith('custom:'))?.shapeId
                         }
@@ -407,7 +417,9 @@ export function LessonReviewList({
         Recaps from the last day stay here. Older lessons stay in Older recaps — go back as far as
         you want. Remove hides a recap without deleting the notes — it asks first, and you can
         undo.
-        {canEdit ? ' Open one to add more notes or assign homework.' : ''}
+        {canEdit
+          ? ' Open one to add athlete notes, coach-only notes, or homework.'
+          : ' Notes marked athlete-facing show here.'}
       </p>
       {undoId && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">

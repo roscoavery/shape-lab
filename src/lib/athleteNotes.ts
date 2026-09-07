@@ -2,6 +2,7 @@ import type { Athlete, AthleteCoachNote } from '../types'
 import { isGymAdmin, isCoachProfile } from './profileRole'
 import { canSeePrivateCoaching } from './coachLink'
 import { createId } from './storage'
+import { noteVisibleToAthlete, type NoteAudience } from './noteAudience'
 
 export function visibleCoachNotes(
   athlete: Athlete,
@@ -9,10 +10,12 @@ export function visibleCoachNotes(
 ): AthleteCoachNote[] {
   const all = athlete.coachNotes ?? []
   if (!viewer) return []
+  const newest = all.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
   if (isGymAdmin(viewer) || (isCoachProfile(viewer) && canSeePrivateCoaching(viewer, athlete))) {
-    return all.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    return newest
   }
-  if (isCoachProfile(viewer)) return all.filter((n) => n.authorId === viewer.id)
+  if (isCoachProfile(viewer)) return newest.filter((n) => n.authorId === viewer.id)
+  if (canSeePrivateCoaching(viewer, athlete)) return newest.filter((n) => noteVisibleToAthlete(n))
   return []
 }
 
@@ -126,6 +129,7 @@ export function addCoachNotesToAthletes(
     lessonId?: string
     className?: string
     topicLabel?: string
+    audience?: NoteAudience
   },
 ): Athlete[] {
   const text = input.text.trim()
@@ -144,6 +148,7 @@ export function addCoachNotesToAthletes(
       ...(input.lessonId ? { lessonId: input.lessonId } : {}),
       ...(input.className ? { className: input.className } : {}),
       ...(input.topicLabel?.trim() ? { topicLabel: input.topicLabel.trim() } : {}),
+      audience: input.audience === 'coach' ? 'coach' : 'athlete',
     }
     return {
       ...a,

@@ -430,7 +430,7 @@ export function HomeDashboard({
           emptyText={
             profileRole(signedIn) === 'parent'
               ? 'When a coach ends a lesson with your athlete, notes and videos show here.'
-              : 'No lessons saved yet. After a coach ends a lesson, notes and videos show here.'
+              : 'No lessons saved yet. After a coach ends a lesson, the notes they shared with you show here.'
           }
           onChanged={() => setRefresh((n) => n + 1)}
           onViewProfile={onViewProfile}
@@ -898,7 +898,7 @@ export function HomeDashboard({
         viewer={signedIn}
         canEdit
         title="Recap of lessons"
-        emptyText="When you end a lesson, it lands here — notes, videos, more notes, and homework."
+        emptyText="When you end a lesson, it lands here — athlete notes, coach-only notes, videos, and homework."
         onChanged={() => setRefresh((n) => n + 1)}
         onAthletesChange={onAthletesChange}
         onViewProfile={onViewProfile}

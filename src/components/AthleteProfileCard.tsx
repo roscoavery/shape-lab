@@ -47,6 +47,8 @@ import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
+import { NoteAudiencePicker } from './lesson/NoteAudiencePicker'
+import { noteAudienceLabel, type NoteAudience } from '../lib/noteAudience'
 import { CoachAthleteActivity } from './CoachAthleteActivity'
 import {
   canSeePrivateCoaching,
@@ -77,7 +79,7 @@ type Props = {
   athletes?: Athlete[]
   variant?: 'page' | 'overlay' | 'embed'
   onClose?: () => void
-  onAddNote?: (text: string) => void
+  onAddNote?: (text: string, audience?: NoteAudience) => void
   onAddWin?: (text: string, big: boolean) => void
   onAthleteChange?: (next: Athlete) => void
   /** Gym admin only — delete this profile after an are-you-sure. */
@@ -105,6 +107,7 @@ export function AthleteProfileCard({
   const [editAnswers, setEditAnswers] = useState(false)
   const [seenTick, setSeenTick] = useState(0)
   const [note, setNote] = useState('')
+  const [noteAudience, setNoteAudience] = useState<NoteAudience>('athlete')
   const [win, setWin] = useState('')
   const [big, setBig] = useState(false)
   const [winError, setWinError] = useState<string | null>(null)
@@ -508,7 +511,7 @@ export function AthleteProfileCard({
       {viewer && (privateOk || notes.length > 0) && (coach || notes.length > 0) && (
         <section>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Notes
+            {coach ? 'Notes' : 'Notes from your coach'}
           </p>
           {classLive && coach && (
             <p className="mt-1 text-xs text-[var(--muted)]">
@@ -547,6 +550,7 @@ export function AthleteProfileCard({
         <section className="flex flex-col gap-2">
           {writeNotes && onAddNote && (
             <div className="flex flex-col gap-2">
+              <NoteAudiencePicker value={noteAudience} onChange={setNoteAudience} />
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -558,7 +562,7 @@ export function AthleteProfileCard({
                 type="button"
                 disabled={!note.trim()}
                 onClick={() => {
-                  onAddNote(note.trim())
+                  onAddNote(note.trim(), noteAudience)
                   setNote('')
                 }}
                 className="h-11 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f] disabled:opacity-40"
@@ -703,11 +707,9 @@ function ProfileNoteRow({
   const [text, setText] = useState(note.text)
   return (
     <li className="rounded-lg bg-black/25 px-3 py-2 text-sm">
-      {note.topicLabel && (
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          {note.topicLabel}
-        </p>
-      )}
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+        {[note.topicLabel, noteAudienceLabel(note)].filter(Boolean).join(' · ')}
+      </p>
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea

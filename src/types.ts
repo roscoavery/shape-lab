@@ -310,6 +310,8 @@ export type AthleteCoachNote = {
   lessonId?: string
   className?: string
   topicLabel?: string
+  /** Missing on older notes = athlete can see. */
+  audience?: 'athlete' | 'coach'
 }
 
 export type ShapeTestRecord = {
@@ -667,6 +669,8 @@ export type LessonNote = {
   topicKind?: LessonNoteTopicKind
   topicId?: string
   topicLabel?: string
+  /** Missing on older notes = athlete can see (they already showed on recaps). */
+  audience?: 'athlete' | 'coach'
 }
 
 export type LessonHold = {

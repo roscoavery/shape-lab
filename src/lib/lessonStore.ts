@@ -336,7 +336,7 @@ export function addLessonNote(
   sessionId: string,
   text: string,
   context: LessonNote['context'] = 'general',
-  topic?: { kind?: LessonNote['topicKind']; id?: string; label?: string },
+  topic?: { kind?: LessonNote['topicKind']; id?: string; label?: string; audience?: LessonNote['audience'] },
 ): LessonSession | null {
   const found = getLessonSession(sessionId)
   const trimmed = text.trim()
@@ -347,6 +347,7 @@ export function addLessonNote(
     text: trimmed.slice(0, 800),
     createdAt: new Date().toISOString(),
     context,
+    audience: topic?.audience === 'coach' ? 'coach' : 'athlete',
     ...(topic?.kind && topicLabel
       ? {
           topicKind: topic.kind,
