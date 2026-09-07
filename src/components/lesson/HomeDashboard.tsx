@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
 import {
+  attachPlanToLiveLesson,
   emptyPlan,
+  endLessonSession,
+  findLiveLesson,
+  lessonAthleteIds,
+  lessonNameList,
   plansForAthlete,
   sessionsForAthlete,
   sessionsForCoach,
@@ -85,6 +90,7 @@ export function HomeDashboard({
   signedIn,
   onUnlock,
   onStartLesson,
+  onOpenLesson,
   onShortcut,
   onStartClass,
   onOpenProfile,
@@ -113,6 +119,14 @@ export function HomeDashboard({
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
   const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
   const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
+  const liveLesson = coach && signedIn ? findLiveLesson(signedIn.id) : null
+  const liveLessonNames = liveLesson
+    ? lessonNameList(
+        lessonAthleteIds(liveLesson)
+          .map((id) => athletes.find((a) => a.id === id)?.name ?? '')
+          .filter(Boolean),
+      )
+    : ''
   const events = useMemo(() => {
     void refresh
     return listTrainingEvents()
@@ -479,6 +493,37 @@ export function HomeDashboard({
             </div>
           </div>
         )}
+        {liveLesson && (
+          <div className="mt-3 rounded-2xl border border-[#3aa8e8] bg-[#0d2430] px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7ad4ff]">
+              Lesson is still open
+            </p>
+            <p className="mt-1 text-xl font-bold text-[var(--text)]">{liveLessonNames}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {liveLesson.holds.length} hold{liveLesson.holds.length === 1 ? '' : 's'} already
+              logged. Come back anytime — End lesson writes the recap.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenLesson?.(liveLesson)}
+                className="rounded-lg bg-[#3aa8e8] px-4 py-2 text-sm font-semibold text-[#042433]"
+              >
+                Resume lesson
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  endLessonSession(liveLesson.id)
+                  setRefresh((n) => n + 1)
+                }}
+                className="rounded-lg border border-[var(--panel-border)] px-4 py-2 text-sm"
+              >
+                End lesson
+              </button>
+            </div>
+          </div>
+        )}
         {endAsk && liveClass && (
           <EndClassPrompt
             count={liveClass.attendees.length}
@@ -529,7 +574,7 @@ export function HomeDashboard({
             <span className="mt-1 block text-2xl font-bold">Start lesson</span>
             <span className="mt-1 block text-sm font-medium opacity-80">
               {withAthletes.length
-                ? lessonWithLabel
+                ? `${lessonWithLabel}${plans[0] ? ` · ${plans[0].title}` : ''}`
                 : 'Tap everyone in this lesson, then go'}
             </span>
           </button>
@@ -783,9 +828,23 @@ export function HomeDashboard({
         <LessonPlanEditor
           plan={editing}
           athleteName={withAthlete.name}
-          onSaved={() => {
+          onSaved={(plan) => {
+            if (signedIn) {
+              attachPlanToLiveLesson(
+                signedIn.id,
+                withAthletes.map((a) => a.id),
+                plan,
+              )
+            }
             setEditing(null)
             setRefresh((n) => n + 1)
+          }}
+          onStart={(plan) => {
+            setEditing(null)
+            onStartLesson(
+              withAthletes.map((a) => a.id),
+              plan.id,
+            )
           }}
           onCancel={() => setEditing(null)}
         />

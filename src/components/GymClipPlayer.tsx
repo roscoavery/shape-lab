@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
-import { socialPlatform } from '../lib/socialUrls'
+import { socialPlatform, youtubeEmbedSrc } from '../lib/socialUrls'
 import { prefetchInstagram } from '../lib/igCache'
 import { ClipWatchMeta } from './ClipWatchMeta'
 import { ShareReference } from './share/ShareReference'
@@ -64,6 +64,36 @@ export function GymClipPlayer({
       />
     </div>
   ) : null
+  const yt = youtubeEmbedSrc(url)
+  if (yt) {
+    const embed = (
+      <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
+        <iframe
+          title="YouTube clip"
+          src={yt}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className={fill ? 'h-full w-full' : 'aspect-video w-full rounded-lg'}
+        />
+        {hudCorner ? (
+          <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+            {hudCorner}
+          </div>
+        ) : null}
+      </div>
+    )
+    return fill ? (
+      <div className="relative h-full min-h-0 w-full">
+        {embed}
+        {share}
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {embed}
+        {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
+      </div>
+    )
+  }
   const social = socialPlatform(url)
   if (social) {
     const embed = (

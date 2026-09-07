@@ -99,11 +99,13 @@ import {
   shouldPushRoster,
 } from './lib/rosterSync'
 import {
-  getLessonPlan,
   getLessonSession,
   addLessonNote,
   hydrateLessons,
   loadActiveLessonId,
+  findLiveLesson,
+  planForSession,
+  resumeLessonSession,
   startLessonSession,
   subscribeLessons,
   lessonAthleteIds,
@@ -442,8 +444,14 @@ export default function App() {
     [hitPreviewUrl],
   )
 
-  const liveLesson = getLessonSession(loadActiveLessonId())
-  const liveLessonPlan = getLessonPlan(liveLesson?.planId ?? null)
+  const liveLesson = (() => {
+    const pointed = getLessonSession(loadActiveLessonId())
+    if (pointed && !pointed.endedAt) return pointed
+    const coach = athletes.find((a) => a.id === activeAthleteId)
+    if (coach && isCoachProfile(coach)) return findLiveLesson(coach.id)
+    return null
+  })()
+  const liveLessonPlan = planForSession(liveLesson)
   const liveLessonAthletes = liveLesson
     ? lessonAthleteIds(liveLesson)
         .map((id) => athletes.find((a) => a.id === id) ?? null)
@@ -744,6 +752,10 @@ export default function App() {
                 signedIn={activeProfile}
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
+                onOpenLesson={(session) => {
+                  resumeLessonSession(session.id)
+                  setLessonTick((n) => n + 1)
+                }}
                 onStartClass={() => setClassSessionOpen(true)}
                 onViewProfile={setViewingAthleteId}
                 onAthletesChange={setAthleteRoster}

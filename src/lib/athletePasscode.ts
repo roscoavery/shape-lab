@@ -11,6 +11,10 @@ import type { Athlete } from '../types'
 import { findRyan, isRyanAthlete } from './ryanProfile'
 
 const UNLOCKED_KEY = 'shape-lab.unlockedProfile.v2'
+const UNLOCKED_LS = 'shape-lab.unlockedProfile.v3'
+const UNLOCK_MS = 18 * 60 * 60 * 1000
+
+type UnlockRec = { id: string; at: number }
 
 /** Coach / gym-admin PIN — same on every link once the hash is on the roster. */
 export const RYAN_PASSCODE = '2223'
@@ -58,9 +62,23 @@ export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> 
 function readUnlockedId(): string | null {
   try {
     const raw = sessionStorage.getItem(UNLOCKED_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (typeof parsed === 'string' && parsed) return parsed
+    }
+  } catch {
+    /* keep going */
+  }
+  try {
+    const raw = localStorage.getItem(UNLOCKED_LS)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as unknown
-    return typeof parsed === 'string' && parsed ? parsed : null
+    const rec = JSON.parse(raw) as UnlockRec
+    if (!rec?.id || typeof rec.at !== 'number') return null
+    if (Date.now() - rec.at > UNLOCK_MS) {
+      localStorage.removeItem(UNLOCKED_LS)
+      return null
+    }
+    return rec.id
   } catch {
     return null
   }
@@ -77,12 +95,29 @@ export function isProfileUnlocked(athleteId: string): boolean {
 /** Unlock this profile and lock every other one in this tab. */
 export function markProfileUnlocked(athleteId: string): void {
   sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify(athleteId))
+  try {
+    localStorage.setItem(UNLOCKED_LS, JSON.stringify({ id: athleteId, at: Date.now() } satisfies UnlockRec))
+  } catch {
+    /* quota */
+  }
 }
 
 export function lockProfile(athleteId: string): void {
-  if (readUnlockedId() === athleteId) sessionStorage.removeItem(UNLOCKED_KEY)
+  if (readUnlockedId() === athleteId) {
+    sessionStorage.removeItem(UNLOCKED_KEY)
+    try {
+      localStorage.removeItem(UNLOCKED_LS)
+    } catch {
+      /* private */
+    }
+  }
 }
 
 export function lockAllProfiles(): void {
   sessionStorage.removeItem(UNLOCKED_KEY)
+  try {
+    localStorage.removeItem(UNLOCKED_LS)
+  } catch {
+    /* private */
+  }
 }

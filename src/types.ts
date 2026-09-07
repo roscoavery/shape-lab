@@ -630,7 +630,7 @@ export type ClassExtraExercise = {
   trackMode: 'hold' | 'reps'
 }
 
-export type LessonBlockKind = 'hold' | 'compare' | 'talk'
+export type LessonBlockKind = 'hold' | 'compare' | 'talk' | 'drill' | 'skill'
 
 export type LessonBlock = {
   id: string
@@ -692,10 +692,19 @@ export type LessonSession = {
   coachId: string
   startedAt: string
   endedAt?: string
+  /** Coach-entered lesson clock. Falls back to startedAt / endedAt. */
+  coachStartedAt?: string
+  coachEndedAt?: string
   /** Coach or athlete hid this recap from the default Today list. */
   hiddenAt?: string
   notes: LessonNote[]
   holds: LessonHold[]
+  /** Copy of the plan at start / last attach, so notes still show if the plan file lags. */
+  planSnapshot?: {
+    title: string
+    blocks: LessonBlock[]
+    extraExercises?: ClassExtraExercise[]
+  }
 }
 
 export type CoachProgression = {

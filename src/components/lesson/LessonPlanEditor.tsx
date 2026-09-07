@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type PointerEvent } from 'react'
 import { getShape } from '../../config/shapes'
 import { lessonScoreShapes } from '../../lib/lessonShapes'
 import { DEFAULT_FORM_STANDARD, createId } from '../../lib/storage'
 import { upsertLessonPlan } from '../../lib/lessonStore'
+import { lessonBlockLabel } from '../../lib/lessonPlan'
 import type { ClassExtraExercise, LessonBlock, LessonBlockKind, LessonPlan } from '../../types'
 import { ClassExtraPicker } from '../today/ClassExtraPicker'
+import { DragReorderHandle, rowIndexFromPoint } from '../DragReorderHandle'
 
 type Props = {
   plan: LessonPlan
   athleteName: string
   onSaved: (plan: LessonPlan) => void
+  onStart?: (plan: LessonPlan) => void
   onCancel?: () => void
 }
 
@@ -20,7 +23,15 @@ const HOLD_SHAPES = LESSON_SHAPES.filter((s) =>
   ),
 ).slice(0, 40)
 
-export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props) {
+const BLOCK_KINDS: { id: LessonBlockKind; label: string }[] = [
+  { id: 'hold', label: 'Hold' },
+  { id: 'drill', label: 'Drills / exercises' },
+  { id: 'skill', label: 'Skills to work' },
+  { id: 'compare', label: 'Compare' },
+  { id: 'talk', label: 'Talk' },
+]
+
+export function LessonPlanEditor({ plan, athleteName, onSaved, onStart, onCancel }: Props) {
   const [title, setTitle] = useState(plan.title)
   const [blocks, setBlocks] = useState<LessonBlock[]>(plan.blocks)
   const [kind, setKind] = useState<LessonBlockKind>('hold')
@@ -29,6 +40,9 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
   const [seconds, setSeconds] = useState(20)
   const [talk, setTalk] = useState('')
   const [extras, setExtras] = useState<ClassExtraExercise[]>(plan.extraExercises ?? [])
+  const [dragId, setDragId] = useState<string | null>(null)
+  const blocksRef = useRef(blocks)
+  blocksRef.current = blocks
 
   const shapeOptions = useMemo(() => {
     const ids = new Set(HOLD_SHAPES.map((s) => s.id))
@@ -45,12 +59,14 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
           id: createId('blk'),
           kind: 'hold',
           title: blockTitle.trim() || shape?.name || 'Hold',
+          notes: talk.trim() || undefined,
           shapeId,
           targetSeconds: seconds,
           formStandard: DEFAULT_FORM_STANDARD,
         },
       ])
       setBlockTitle('')
+      setTalk('')
       return
     }
     if (kind === 'compare') {
@@ -68,13 +84,40 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
       return
     }
     const text = talk.trim() || blockTitle.trim()
-    if (!text) return
+    if (!text && (kind === 'talk' || kind === 'drill' || kind === 'skill')) return
+    const fallback =
+      kind === 'drill' ? 'Drill / exercise' : kind === 'skill' ? 'Skill to work' : 'Talk through'
     setBlocks((prev) => [
       ...prev,
-      { id: createId('blk'), kind: 'talk', title: blockTitle.trim() || 'Talk through', notes: text },
+      {
+        id: createId('blk'),
+        kind,
+        title: blockTitle.trim() || fallback,
+        notes: talk.trim() || text || undefined,
+      },
     ])
     setBlockTitle('')
     setTalk('')
+  }
+
+  const beginDrag = (id: string, e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragId(id)
+  }
+
+  const moveDrag = (e: PointerEvent<HTMLButtonElement>) => {
+    if (!dragId) return
+    const live = blocksRef.current
+    const list = e.currentTarget.closest('ol')
+    const to = rowIndexFromPoint(list, e.clientY, live.length)
+    const from = live.findIndex((b) => b.id === dragId)
+    if (from < 0 || from === to) return
+    const next = [...live]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved!)
+    setBlocks(next)
   }
 
   const save = () => {
@@ -85,14 +128,27 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
       extraExercises: extras,
     })
     onSaved(next)
+    return next
   }
+
+  const notesPlaceholder =
+    kind === 'hold'
+      ? 'Cue for this hold'
+      : kind === 'compare'
+        ? 'What to look at on Compare'
+        : kind === 'drill'
+          ? 'How to run the drill'
+          : kind === 'skill'
+            ? 'What to work and how it should look'
+            : 'Cue or reminder'
 
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <h3 className="text-lg font-semibold">Lesson plan for {athleteName}</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Add holds, Compare clips, and talk-throughs. This plan shows up when you start
-        the lesson.
+        Add holds, drills / exercises, skills to work, Compare clips, and talk-throughs.
+        Drag the grip to reorder. Save the plan, then start — those notes sit at the
+        top of the live lesson.
       </p>
       <label className="mt-3 block text-xs uppercase tracking-wider text-[var(--muted)]">
         Plan name
@@ -110,11 +166,21 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
           {blocks.map((b, i) => (
             <li
               key={b.id}
-              className="flex items-start justify-between gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2"
+              data-reorder-row={b.id}
+              className={`flex items-start gap-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-2 ${
+                dragId === b.id ? 'scale-[1.01] ring-1 ring-white/25' : ''
+              }`}
             >
-              <div>
+              <DragReorderHandle
+                label={b.title}
+                className="text-[var(--muted)]"
+                onPointerDown={(e) => beginDrag(b.id, e)}
+                onPointerMove={moveDrag}
+                onPointerUp={() => setDragId(null)}
+              />
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] uppercase tracking-wider text-[var(--muted)]">
-                  {i + 1}. {b.kind}
+                  {i + 1}. {lessonBlockLabel(b.kind)}
                   {b.targetSeconds ? ` · ${b.targetSeconds}s` : ''}
                 </p>
                 <p className="text-sm font-medium">{b.title}</p>
@@ -135,18 +201,18 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
       <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
         <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Add a block</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {(['hold', 'compare', 'talk'] as const).map((k) => (
+          {BLOCK_KINDS.map((k) => (
             <button
-              key={k}
+              key={k.id}
               type="button"
-              onClick={() => setKind(k)}
+              onClick={() => setKind(k.id)}
               className={`rounded-md px-2.5 py-1 text-xs ${
-                kind === k
+                kind === k.id
                   ? 'bg-[var(--accent-dim)] font-semibold text-white'
                   : 'text-[var(--muted)] hover:text-[var(--text)]'
               }`}
             >
-              {k === 'hold' ? 'Hold' : k === 'compare' ? 'Compare' : 'Talk'}
+              {k.label}
             </button>
           ))}
         </div>
@@ -183,15 +249,13 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
             </label>
           </div>
         )}
-        {kind !== 'hold' && (
-          <textarea
-            value={talk}
-            onChange={(e) => setTalk(e.target.value)}
-            rows={2}
-            placeholder={kind === 'compare' ? 'What to look at on Compare' : 'Cue or reminder'}
-            className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
-          />
-        )}
+        <textarea
+          value={talk}
+          onChange={(e) => setTalk(e.target.value)}
+          rows={2}
+          placeholder={notesPlaceholder}
+          className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+        />
         <button
           type="button"
           onClick={addBlock}
@@ -213,6 +277,15 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onCancel }: Props
         >
           Save plan
         </button>
+        {onStart && (
+          <button
+            type="button"
+            onClick={() => onStart(save())}
+            className="rounded-lg bg-[var(--accent-dim)] px-4 py-2 text-sm font-semibold text-white"
+          >
+            Save & start lesson
+          </button>
+        )}
         {onCancel && (
           <button
             type="button"

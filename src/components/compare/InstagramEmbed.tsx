@@ -286,8 +286,12 @@ export function InstagramEmbed({
 
     void (async () => {
       let playedFromCache = Boolean(warm)
+      const cacheP = warm
+        ? Promise.resolve<Blob | null>(null)
+        : loadAnyCachedInstagramBlob(itemId, url)
+      const manifestP = fetchInstagramManifest(url)
       if (!warm) {
-        const cached = await loadAnyCachedInstagramBlob(itemId, url)
+        const cached = await cacheP
         if (cancelled || loadGen.current !== gen) return
         if (cached) {
           playedFromCache = true
@@ -295,7 +299,7 @@ export function InstagramEmbed({
         }
       }
       try {
-        const manifest = await fetchInstagramManifest(url)
+        const manifest = await manifestP
         if (cancelled || loadGen.current !== gen) return
         setSlides(manifest.slides)
         setSlidesFor(url)

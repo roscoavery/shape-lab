@@ -27,7 +27,7 @@ import {
   type RefCollection,
   type RefItem,
 } from '../../lib/clipStore'
-import { mediaCacheId, saveInstagramInApp } from '../../lib/igCache'
+import { mediaCacheId, prefetchInstagram, saveInstagramInApp } from '../../lib/igCache'
 import {
   allUrlsText,
   backupUrlCount,
@@ -568,6 +568,11 @@ export function ReferencePane({
       setDesk('watch')
       await selectItem(first)
     }
+    for (const item of items) {
+      if (item.url && isSocialVideoItem(item)) {
+        void prefetchInstagram(item.url, item.id, { download: true })
+      }
+    }
   }
 
   const addFile = async (file: File) => {
@@ -735,20 +740,30 @@ export function ReferencePane({
     setError(null)
     setNotice(null)
     const failures: string[] = []
-    for (let i = 0; i < uncachedSocial.length; i++) {
-      const item = uncachedSocial[i]
-      setSaving({ current: i + 1, total: uncachedSocial.length })
-      try {
-        await saveInstagramInApp(item.id, item.url)
-        markCached(item.id)
-      } catch (err) {
-        failures.push(item.name)
-        if (err instanceof Error && /storage|quota/i.test(err.message)) {
-          setError('Device storage is full — some videos could not be saved in the app.')
-          break
+    const total = uncachedSocial.length
+    let cursor = 0
+    let stop = false
+    const worker = async () => {
+      while (!stop) {
+        const i = cursor++
+        if (i >= total) return
+        const item = uncachedSocial[i]
+        if (!item) return
+        setSaving({ current: Math.min(i + 1, total), total })
+        try {
+          await saveInstagramInApp(item.id, item.url)
+          markCached(item.id)
+        } catch (err) {
+          failures.push(item.name)
+          if (err instanceof Error && /storage|quota/i.test(err.message)) {
+            setError('Device storage is full — some videos could not be saved in the app.')
+            stop = true
+            return
+          }
         }
       }
     }
+    await Promise.all(Array.from({ length: Math.min(3, total) }, () => worker()))
     setSaving(null)
     if (failures.length) {
       setNotice(

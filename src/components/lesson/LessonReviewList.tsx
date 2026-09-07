@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   addLessonNote,
+  planForSession,
   hideLessonRecap,
   removeLessonNote,
   unhideLessonRecap,
@@ -8,6 +9,8 @@ import {
   lessonNameList,
   sessionIncludesAthlete,
 } from '../../lib/lessonStore'
+import { lessonBlockLabel, lessonDisplayEnd, lessonDisplayStart } from '../../lib/lessonPlan'
+import { LessonTimesFields } from './LessonTimesFields'
 import type { Athlete, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { HoldProperTimes } from '../HoldProperTimes'
@@ -113,8 +116,11 @@ export function LessonReviewList({
                     </span>
                   </p>
                   <p className="text-xs text-[var(--muted)]">
-                    {new Date(s.endedAt ?? s.startedAt).toLocaleString()} · {s.notes.length} notes ·{' '}
-                    {s.holds.length} holds
+                    {new Date(lessonDisplayStart(s)).toLocaleString()}
+                    {lessonDisplayEnd(s)
+                      ? ` – ${new Date(lessonDisplayEnd(s)!).toLocaleString()}`
+                      : ''}{' '}
+                    · {s.notes.length} notes · {s.holds.length} holds
                   </p>
                 </div>
                 <span className="text-xs text-[var(--muted)]">{open ? 'Close' : 'Review'}</span>
@@ -168,6 +174,32 @@ export function LessonReviewList({
             </div>
             {open && (
               <div className="flex flex-col gap-2 border-t border-[var(--panel-border)] px-3 py-3">
+                {canEdit && (
+                  <LessonTimesFields
+                    session={s}
+                    onChange={() => onChanged?.()}
+                  />
+                )}
+                {(() => {
+                  const plan = planForSession(s)
+                  if (!plan || plan.blocks.length === 0) return null
+                  return (
+                    <div className="rounded-md bg-[#0d1218] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                        Plan · {plan.title}
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {plan.blocks.map((b) => (
+                          <li key={b.id} className="text-sm">
+                            <span className="text-[var(--muted)]">{lessonBlockLabel(b.kind)} · </span>
+                            {b.title}
+                            {b.notes ? <span className="block text-[var(--muted)]">{b.notes}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })()}
                 {people.map((person) => (
                   <AthleteProfileCard
                     key={person.id}

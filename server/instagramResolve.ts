@@ -2,7 +2,9 @@
  * Resolve a public Instagram / TikTok / Facebook video URL to a playable mp4.
  * Used by the Vite dev/preview server so Compare can loop the clip in-app.
  *
- * Tries (in order): public Cobalt instances, then local yt-dlp if installed.
+ * Instagram Reels and TikTok race public HTML vs Cobalt and return the first
+ * playable video. Carousel posts still prefer the HTML slide list. yt-dlp is
+ * the last fallback.
  */
 
 import { spawn } from 'node:child_process'
@@ -360,6 +362,27 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
   const htmlP = htmlCarouselSlides(pageUrl)
   const cobaltP = cobaltResolveAll(pageUrl)
   const ytP = ytdlpResolve(pageUrl)
+  const platform = socialPlatform(pageUrl)
+  const raceVideo =
+    ig?.type === 'reel' || ig?.type === 'tv' || platform === 'tiktok'
+
+  if (raceVideo) {
+    const firstReady = await Promise.any([
+      htmlP.then((slides) => {
+        if (!slides.some((s) => s.kind === 'video')) throw new Error('html-miss')
+        const ready = finish(slides)
+        if (ready) return ready
+        throw new Error('html-miss')
+      }),
+      cobaltP.then((slides) => {
+        if (slides.length === 0) throw new Error('cobalt-miss')
+        const ready = finish(slides)
+        if (ready) return ready
+        throw new Error('cobalt-miss')
+      }),
+    ]).catch(() => null)
+    if (firstReady) return firstReady
+  }
 
   const html = await htmlP
   if (html.some((s) => s.kind === 'video') || (ig?.type === 'p' && html.length > 1)) {

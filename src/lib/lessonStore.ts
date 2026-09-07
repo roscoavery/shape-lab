@@ -61,6 +61,36 @@ function persist(plans: LessonPlan[], sessions: LessonSession[]) {
   writeJson(SESSIONS_KEY, sessions.slice(0, 200))
   emit()
   void pushLessons()
+  ensureLessonFlush()
+}
+
+let flushBound = false
+function ensureLessonFlush() {
+  if (flushBound || typeof window === 'undefined') return
+  flushBound = true
+  const flush = () => {
+    try {
+      const body = JSON.stringify({
+        kind: 'shape-lab-lessons',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        plans: loadLessonPlans(),
+        sessions: loadLessonSessions(),
+      } satisfies LessonFile)
+      void fetch('/api/lessons', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      })
+    } catch {
+      /* leaving the app */
+    }
+  }
+  window.addEventListener('pagehide', flush)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush()
+  })
 }
 
 async function pushLessons() {
@@ -91,7 +121,7 @@ export async function hydrateLessons(): Promise<void> {
     const localPlans = loadLessonPlans()
     const localSessions = loadLessonSessions()
     const plans = mergeById(localPlans, data.plans ?? [], (p) => p.updatedAt)
-    const sessions = mergeById(localSessions, data.sessions ?? [], (s) => s.endedAt ?? s.startedAt)
+    const sessions = mergeById(localSessions, data.sessions ?? [], sessionStamp)
     persist(plans, sessions)
   } catch {
     /* first load */
@@ -177,6 +207,75 @@ export function getLessonPlan(id: string | null): LessonPlan | null {
   return loadLessonPlans().find((p) => p.id === id) ?? null
 }
 
+function snapshotPlan(plan: LessonPlan | null): LessonSession['planSnapshot'] | undefined {
+  if (!plan) return undefined
+  return {
+    title: plan.title,
+    blocks: plan.blocks,
+    extraExercises: plan.extraExercises,
+  }
+}
+
+/** Live plan file, or the snapshot baked onto the session. */
+export function planForSession(session: LessonSession | null): LessonPlan | null {
+  if (!session) return null
+  const live = getLessonPlan(session.planId)
+  if (live) return live
+  const snap = session.planSnapshot
+  if (!snap) return null
+  return {
+    id: session.planId ?? `snap-${session.id}`,
+    athleteId: session.athleteId,
+    coachId: session.coachId,
+    title: snap.title,
+    blocks: snap.blocks,
+    extraExercises: snap.extraExercises,
+    createdAt: session.startedAt,
+    updatedAt: session.startedAt,
+  }
+}
+
+export function attachPlanToLiveLesson(
+  coachId: string,
+  athleteIds: string[],
+  plan: LessonPlan,
+): LessonSession | null {
+  const live = findLiveLesson(coachId, athleteIds)
+  if (!live) return null
+  return saveLessonSession({
+    ...live,
+    planId: plan.id,
+    planSnapshot: snapshotPlan(plan),
+  })
+}
+
+function sessionStamp(s: LessonSession): string {
+  const lastNote = s.notes[0]?.createdAt ?? ''
+  const lastHold = s.holds[0]?.createdAt ?? ''
+  const stamps = [s.endedAt ?? '', s.coachEndedAt ?? '', lastNote, lastHold, s.startedAt]
+  return stamps.sort((a, b) => b.localeCompare(a))[0] || s.startedAt
+}
+
+export function findLiveLesson(coachId: string, athleteIds?: string[]): LessonSession | null {
+  const live = loadLessonSessions().filter(
+    (s) => s.coachId === coachId && !s.endedAt && !s.hiddenAt,
+  )
+  if (live.length === 0) return null
+  if (athleteIds?.length) {
+    const key = [...new Set(athleteIds)].sort().join('|')
+    const match = live.find((s) => [...lessonAthleteIds(s)].sort().join('|') === key)
+    if (match) return match
+  }
+  return [...live].sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] ?? null
+}
+
+export function resumeLessonSession(id: string): LessonSession | null {
+  const found = getLessonSession(id)
+  if (!found || found.endedAt) return null
+  setActiveLessonId(found.id)
+  return found
+}
+
 export function startLessonSession(opts: {
   athleteId?: string
   athleteIds?: string[]
@@ -188,6 +287,20 @@ export function startLessonSession(opts: {
   if (!athleteId) {
     throw new Error('Start a lesson with at least one athlete.')
   }
+  const incomingPlan = opts.planId ? getLessonPlan(opts.planId) : null
+  const existing = findLiveLesson(opts.coachId, athleteIds)
+  if (existing) {
+    const next = {
+      ...existing,
+      planId: opts.planId ?? existing.planId,
+      planSnapshot: incomingPlan
+        ? snapshotPlan(incomingPlan)
+        : existing.planSnapshot ?? snapshotPlan(getLessonPlan(existing.planId)),
+    }
+    saveLessonSession(next)
+    setActiveLessonId(next.id)
+    return next
+  }
   const session: LessonSession = {
     id: createId('les'),
     planId: opts.planId ?? null,
@@ -197,6 +310,7 @@ export function startLessonSession(opts: {
     startedAt: new Date().toISOString(),
     notes: [],
     holds: [],
+    planSnapshot: snapshotPlan(incomingPlan),
   }
   persist(loadLessonPlans(), [session, ...loadLessonSessions()])
   setActiveLessonId(session.id)
@@ -279,7 +393,8 @@ export function addLessonHold(sessionId: string, hold: Omit<LessonHold, 'id' | '
 
 export function loadActiveLessonId(): string | null {
   try {
-    return sessionStorage.getItem(ACTIVE_KEY)
+    const live = localStorage.getItem(ACTIVE_KEY) || sessionStorage.getItem(ACTIVE_KEY)
+    return live || null
   } catch {
     return null
   }
@@ -287,12 +402,30 @@ export function loadActiveLessonId(): string | null {
 
 export function setActiveLessonId(id: string | null) {
   try {
-    if (id) sessionStorage.setItem(ACTIVE_KEY, id)
-    else sessionStorage.removeItem(ACTIVE_KEY)
+    if (id) {
+      localStorage.setItem(ACTIVE_KEY, id)
+      sessionStorage.setItem(ACTIVE_KEY, id)
+    } else {
+      localStorage.removeItem(ACTIVE_KEY)
+      sessionStorage.removeItem(ACTIVE_KEY)
+    }
   } catch {
     /* private */
   }
   emit()
+}
+
+export function saveLessonTimes(
+  sessionId: string,
+  times: { coachStartedAt?: string; coachEndedAt?: string },
+): LessonSession | null {
+  const found = getLessonSession(sessionId)
+  if (!found) return null
+  return saveLessonSession({
+    ...found,
+    ...(times.coachStartedAt !== undefined ? { coachStartedAt: times.coachStartedAt || undefined } : {}),
+    ...(times.coachEndedAt !== undefined ? { coachEndedAt: times.coachEndedAt || undefined } : {}),
+  })
 }
 
 export function emptyPlan(athleteId: string, coachId: string): LessonPlan {

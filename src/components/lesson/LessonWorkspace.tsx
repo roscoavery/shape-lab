@@ -12,6 +12,8 @@ import {
 } from '../../lib/lessonStore'
 import { HoldProperTimes } from '../HoldProperTimes'
 import type { Athlete, Landmark, LessonPlan, LessonSession, ScoreResult } from '../../types'
+import { lessonBlockLabel } from '../../lib/lessonPlan'
+import { LessonTimesFields } from './LessonTimesFields'
 import { TodayDock } from '../today/TodayDock'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
@@ -172,8 +174,11 @@ export function LessonWorkspace({
         </h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
-          {athleteName} {people.length > 1 ? 'see' : 'sees'} notes grouped by skill after you end.
+          Leave the app if you need to — this lesson stays open until you End lesson.
         </p>
+        <div className="mt-3">
+          <LessonTimesFields session={session} onChange={onSessionChange} />
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -194,6 +199,60 @@ export function LessonWorkspace({
           </button>
         </div>
       </section>
+
+      {plan && (plan.blocks.length > 0 || (plan.extraExercises?.length ?? 0) > 0) && (
+        <section className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--accent)]">Today’s plan</p>
+          <h3 className="text-lg font-semibold">{plan.title}</h3>
+          {plan.blocks.length === 0 ? (
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Clock extras only — {plan.extraExercises?.map((ex) => ex.label).join(', ')}
+            </p>
+          ) : (
+            <ol className="mt-3 flex flex-col gap-2">
+              {plan.blocks.map((b, i) => (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-start justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-wider text-[var(--muted)]">
+                      {i + 1}. {lessonBlockLabel(b.kind)}
+                      {b.targetSeconds ? ` · ${b.targetSeconds}s` : ''}
+                    </p>
+                    <p className="text-sm font-medium">{b.title}</p>
+                    {b.notes ? <p className="mt-0.5 text-sm text-[var(--text)]">{b.notes}</p> : null}
+                  </div>
+                  {b.kind === 'hold' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        pickHold({
+                          kind: b.shapeId ? 'shape' : 'custom',
+                          id: b.shapeId,
+                          label: b.title,
+                        })
+                      }
+                      className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
+                    >
+                      Time this
+                    </button>
+                  )}
+                  {b.kind === 'compare' && (
+                    <button
+                      type="button"
+                      onClick={onGoCompare}
+                      className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
+                    >
+                      Open Compare
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
 
       {people.map((person) => (
         <AthleteProfileCard
@@ -249,57 +308,6 @@ export function LessonWorkspace({
           }
         />
       ))}
-
-      {plan && plan.blocks.length > 0 && (
-        <TodayDock
-          id="lesson-plan"
-          icon="📝"
-          eyebrow="Lesson"
-          title="Lesson plan"
-          hint={`${plan.blocks.length} block${plan.blocks.length === 1 ? '' : 's'} · ${plan.title}`}
-        >
-          <ol className="flex flex-col gap-2">
-            {plan.blocks.map((b, i) => (
-              <li
-                key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider text-[var(--muted)]">
-                    {i + 1}. {b.kind}
-                  </p>
-                  <p className="text-sm font-medium">{b.title}</p>
-                  {b.notes && <p className="text-xs text-[var(--muted)]">{b.notes}</p>}
-                </div>
-                {b.kind === 'hold' && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      pickHold({
-                        kind: b.shapeId ? 'shape' : 'custom',
-                        id: b.shapeId,
-                        label: b.title,
-                      })
-                    }
-                    className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
-                  >
-                    Time this
-                  </button>
-                )}
-                {b.kind === 'compare' && (
-                  <button
-                    type="button"
-                    onClick={onGoCompare}
-                    className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
-                  >
-                    Open Compare
-                  </button>
-                )}
-              </li>
-            ))}
-          </ol>
-        </TodayDock>
-      )}
 
       <TodayDock
         id="lesson-clock"

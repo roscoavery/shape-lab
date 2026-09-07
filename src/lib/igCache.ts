@@ -9,7 +9,7 @@
  */
 
 import { getBlob, hasBlob, putBlob } from './clipStore'
-import { socialPlatform, socialVideoKey } from './socialUrls'
+import { clipLoopKey, socialPlatform, socialVideoKey } from './socialUrls'
 
 export type IgSlide = {
   url: string
@@ -20,6 +20,50 @@ const manifestMem = new Map<string, { slides: IgSlide[]; postedBy?: string }>()
 const blobMem = new Map<string, Blob>()
 const inflightManifest = new Map<string, Promise<{ slides: IgSlide[]; postedBy?: string }>>()
 const inflightBlob = new Map<string, Promise<Blob>>()
+const MANIFEST_LS = 'shape-lab.ig-manifest.v1'
+const MANIFEST_TTL_MS = 2 * 60 * 60 * 1000
+
+type DiskManifest = {
+  slides: IgSlide[]
+  postedBy?: string
+  at: number
+}
+
+function manifestKey(pageUrl: string): string {
+  return socialVideoKey(pageUrl) || clipLoopKey(pageUrl) || pageUrl
+}
+
+function readDiskManifest(pageUrl: string): { slides: IgSlide[]; postedBy?: string } | null {
+  try {
+    const raw = localStorage.getItem(MANIFEST_LS)
+    if (!raw) return null
+    const all = JSON.parse(raw) as Record<string, DiskManifest>
+    const hit = all[manifestKey(pageUrl)]
+    if (!hit?.slides?.length || Date.now() - hit.at > MANIFEST_TTL_MS) return null
+    return { slides: hit.slides, postedBy: hit.postedBy }
+  } catch {
+    return null
+  }
+}
+
+function writeDiskManifest(pageUrl: string, result: { slides: IgSlide[]; postedBy?: string }) {
+  try {
+    const raw = localStorage.getItem(MANIFEST_LS)
+    const all = (raw ? JSON.parse(raw) : {}) as Record<string, DiskManifest>
+    all[manifestKey(pageUrl)] = { ...result, at: Date.now() }
+    const keys = Object.keys(all)
+    if (keys.length > 80) {
+      const oldest = keys
+        .map((k) => ({ k, at: all[k]!.at }))
+        .sort((a, b) => a.at - b.at)
+        .slice(0, keys.length - 80)
+      for (const row of oldest) delete all[row.k]
+    }
+    localStorage.setItem(MANIFEST_LS, JSON.stringify(all))
+  } catch {
+    /* quota */
+  }
+}
 
 export function isQuotaError(err: unknown): boolean {
   return (
@@ -42,6 +86,15 @@ export function mediaCacheId(itemId: string, pageUrl: string, index = 0): string
 export function forgetInstagramManifest(pageUrl: string) {
   manifestMem.delete(pageUrl)
   inflightManifest.delete(pageUrl)
+  try {
+    const raw = localStorage.getItem(MANIFEST_LS)
+    if (!raw) return
+    const all = JSON.parse(raw) as Record<string, DiskManifest>
+    delete all[manifestKey(pageUrl)]
+    localStorage.setItem(MANIFEST_LS, JSON.stringify(all))
+  } catch {
+    /* ignore */
+  }
 }
 
 export function peekCachedInstagramBlob(itemId: string): Blob | null {
@@ -66,6 +119,11 @@ export async function fetchInstagramManifest(
 ): Promise<{ slides: IgSlide[]; postedBy?: string }> {
   const cached = manifestMem.get(pageUrl)
   if (cached) return cached
+  const disk = readDiskManifest(pageUrl)
+  if (disk) {
+    manifestMem.set(pageUrl, disk)
+    return disk
+  }
   const pending = inflightManifest.get(pageUrl)
   if (pending) return pending
 
@@ -97,6 +155,7 @@ export async function fetchInstagramManifest(
     }
     const result = { slides, postedBy: data.postedBy }
     manifestMem.set(pageUrl, result)
+    writeDiskManifest(pageUrl, result)
     return result
   })()
 
