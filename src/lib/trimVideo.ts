@@ -54,6 +54,7 @@ export async function extractVideoRange(
   source: Blob,
   startSec: number,
   endSec: number,
+  opts?: { bakeIosDelayUnwind?: boolean },
 ): Promise<Blob> {
   if (!source || source.size < 800) return source
   const { video, url } = await loadVideo(source)
@@ -61,14 +62,19 @@ export async function extractVideoRange(
     const duration = await readDuration(video)
     const start = Math.max(0, Math.min(startSec, duration || startSec))
     const end = Math.max(start + 0.2, Math.min(endSec, duration || endSec))
-    if (duration > 0 && start <= 0.12 && end >= duration - 0.25) return source
+    const bake = Boolean(opts?.bakeIosDelayUnwind)
+    if (duration > 0 && start <= 0.12 && end >= duration - 0.25 && !bake) return source
 
     const srcW = video.videoWidth || 1280
     const srcH = video.videoHeight || 720
+    const landscape = srcW > srcH
+    const unwind = bake && landscape
+    const drawW = unwind ? srcH : srcW
+    const drawH = unwind ? srcW : srcH
     const maxEdge = 1280
-    const scale = Math.max(srcW, srcH) > maxEdge ? maxEdge / Math.max(srcW, srcH) : 1
-    const width = Math.max(16, Math.round(srcW * scale))
-    const height = Math.max(16, Math.round(srcH * scale))
+    const scale = Math.max(drawW, drawH) > maxEdge ? maxEdge / Math.max(drawW, drawH) : 1
+    const width = Math.max(16, Math.round(drawW * scale))
+    const height = Math.max(16, Math.round(drawH * scale))
 
     const canvas = document.createElement('canvas')
     canvas.width = width
@@ -80,6 +86,18 @@ export async function extractVideoRange(
     if (!ctx) {
       canvas.remove()
       throw new Error('Could not cut that clip')
+    }
+
+    const paint = () => {
+      if (unwind) {
+        ctx.save()
+        ctx.translate(width, 0)
+        ctx.rotate(Math.PI / 2)
+        ctx.drawImage(video, 0, 0, height, width)
+        ctx.restore()
+        return
+      }
+      ctx.drawImage(video, 0, 0, width, height)
     }
 
     const captured = canvas.captureStream(30)
@@ -103,7 +121,7 @@ export async function extractVideoRange(
     try {
       while (t <= end + 0.001) {
         await seek(video, t)
-        ctx.drawImage(video, 0, 0, width, height)
+        paint()
         await new Promise<void>((r) => requestAnimationFrame(() => r()))
         t += step
       }
@@ -122,13 +140,18 @@ export async function extractVideoRange(
 }
 
 /** Last `tailSeconds` of a rolling buffer (what Replay Last shows). */
-export async function extractVideoTail(source: Blob, tailSeconds: number): Promise<Blob> {
+export async function extractVideoTail(
+  source: Blob,
+  tailSeconds: number,
+  opts?: { bakeIosDelayUnwind?: boolean },
+): Promise<Blob> {
   if (!source || source.size < 800 || tailSeconds <= 0) return source
   const { video, url } = await loadVideo(source)
   try {
     const duration = await readDuration(video)
-    if (!(duration > tailSeconds + 0.35)) return source
-    return extractVideoRange(source, duration - tailSeconds, duration)
+    if (!(duration > tailSeconds + 0.35) && !opts?.bakeIosDelayUnwind) return source
+    const start = duration > tailSeconds ? duration - tailSeconds : 0
+    return extractVideoRange(source, start, duration || tailSeconds, opts)
   } finally {
     URL.revokeObjectURL(url)
     video.src = ''

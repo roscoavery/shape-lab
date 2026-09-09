@@ -759,6 +759,7 @@ export default function App() {
                   setLessonTick((n) => n + 1)
                 }}
                 onStartClass={() => setClassSessionOpen(true)}
+                classSessionOpen={classSessionOpen}
                 onViewProfile={setViewingAthleteId}
                 onAthletesChange={setAthleteRoster}
                 onParentHomework={(id) => {
@@ -1614,8 +1615,12 @@ export default function App() {
         onAthletesChange={setAthleteRoster}
         onViewProfile={setViewingAthleteId}
         onClose={() => setClassSessionOpen(false)}
-        onOpenStation={() => setStationOpen(true)}
+        onOpenStation={() => {
+          setClassSessionOpen(false)
+          setStationOpen(true)
+        }}
         onOpenShapeTest={() => {
+          setClassSessionOpen(false)
           setLearnIntent('quiz')
           goTab('learn')
         }}

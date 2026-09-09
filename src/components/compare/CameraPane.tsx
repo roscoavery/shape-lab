@@ -54,6 +54,7 @@ import {
   cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
 import { IosDelayUnwind } from '../IosDelayUnwind'
+import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -686,10 +687,29 @@ export function CameraPane({
     return blob.slice(0, blob.size, blob.type || 'video/mp4')
   }
 
+  const blobForReplaySave = async (): Promise<Blob | null> => {
+    const raw = cloneReplayBlob()
+    if (!raw) return null
+    const bake = { bakeIosDelayUnwind: isIosDevice() }
+    const win = replayWindowRef.current
+    try {
+      if (win && win.end > win.start + 0.15) {
+        return await extractVideoRange(raw, win.start, win.end, bake)
+      }
+      const tail = replayTailSec ?? delaySec
+      return await extractVideoTail(raw, tail, bake)
+    } catch {
+      setError('Could not cut that replay to the buffer window.')
+      return null
+    }
+  }
+
   const saveReplayToApp = () => {
     void (async () => {
-      const blob = cloneReplayBlob()
+      setReplayBusy(true)
+      const blob = await blobForReplaySave()
       if (!blob) {
+        setReplayBusy(false)
         setError('Nothing to save — open a replay first.')
         return
       }
@@ -710,6 +730,7 @@ export function CameraPane({
           setTimeout(() => setFlash(null), 2500)
         })
         .catch(() => setError('Could not save the clip — device storage may be full.'))
+        .finally(() => setReplayBusy(false))
       if (athleteId) {
         void uploadAthleteVideo({
           athleteId,
@@ -735,7 +756,7 @@ export function CameraPane({
   const sendReplay = async (
     dest: 'reference' | 'drill' | 'collection',
   ) => {
-    const blob = cloneReplayBlob()
+    const blob = await blobForReplaySave()
     if (!blob) {
       setError('Nothing to save — open a replay first.')
       return
@@ -852,12 +873,13 @@ export function CameraPane({
 
   const downloadReplay = () => {
     void (async () => {
-      const blob = cloneReplayBlob()
+      setSavingPhotos(true)
+      const blob = await blobForReplaySave()
       if (!blob) {
+        setSavingPhotos(false)
         setError('Nothing to download — open a replay first.')
         return
       }
-      setSavingPhotos(true)
       const seconds = replayTailSec ?? delaySec
       const ext = extForVideoType(blob.type)
       try {

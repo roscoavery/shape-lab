@@ -96,14 +96,20 @@ function seekEl(video: HTMLVideoElement, t: number): Promise<void> {
 function ReplayFilmstrip({
   src,
   duration,
+  windowStart = 0,
+  windowLen,
   time,
   onSeek,
 }: {
   src: string
   duration: number
+  windowStart?: number
+  windowLen?: number
   time: number
   onSeek: (t: number) => void
 }) {
+  const span = windowLen && windowLen > 0.05 ? windowLen : duration
+  const origin = windowStart > 0 ? windowStart : 0
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [ready, setReady] = useState(false)
@@ -127,6 +133,8 @@ function ReplayFilmstrip({
       })
       if (cancelled) return
       const d = Number.isFinite(video.duration) && video.duration < 1e6 ? video.duration : duration
+      const start = Math.max(0, Math.min(origin, Math.max(0, d - 0.05)))
+      const len = Math.max(0.05, Math.min(span, d - start))
       const n = FRAMES
       const fw = 48
       const fh = 72
@@ -138,7 +146,7 @@ function ReplayFilmstrip({
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       for (let i = 0; i < n; i++) {
         if (cancelled) return
-        const t = Math.min(d - 0.04, ((i + 0.5) / n) * d)
+        const t = Math.min(d - 0.04, start + ((i + 0.5) / n) * len)
         await seekEl(video, Math.max(0, t))
         if (cancelled) return
         ctx.drawImage(video, i * fw, 0, fw, fh)
@@ -151,16 +159,16 @@ function ReplayFilmstrip({
       cancelled = true
       video.src = ''
     }
-  }, [src, duration])
+  }, [src, duration, origin, span])
 
-  const at = duration > 0 ? Math.min(1, Math.max(0, time / duration)) : 0
+  const at = span > 0 ? Math.min(1, Math.max(0, (time - origin) / span)) : 0
 
   const fromEvent = (e: PointerEvent<HTMLDivElement>) => {
     const host = hostRef.current
-    if (!host || duration <= 0) return
+    if (!host || span <= 0) return
     const rect = host.getBoundingClientRect()
     const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-    onSeek(x * duration)
+    onSeek(origin + x * span)
   }
 
   return (
@@ -183,8 +191,8 @@ function ReplayFilmstrip({
       }}
       role="slider"
       aria-label="Scrub replay"
-      aria-valuemin={0}
-      aria-valuemax={duration}
+      aria-valuemin={origin}
+      aria-valuemax={origin + span}
       aria-valuenow={time}
     >
       <canvas
@@ -229,6 +237,8 @@ function Tile({
 type Props = {
   src: string
   duration: number
+  windowStart?: number
+  windowLen?: number
   time: number
   playing: boolean
   speed: number
@@ -257,6 +267,8 @@ type Props = {
 export function ReplayLastOverlay({
   src,
   duration,
+  windowStart = 0,
+  windowLen,
   time,
   playing,
   speed,
@@ -331,7 +343,11 @@ export function ReplayLastOverlay({
             <span
               className="absolute -translate-x-1/2 text-[11px] font-medium tabular-nums text-white"
               style={{
-                left: `clamp(1.7rem, ${duration > 0 ? (time / duration) * 100 : 0}%, calc(100% - 1.7rem))`,
+                left: `clamp(1.7rem, ${
+                  (windowLen ?? duration) > 0
+                    ? ((time - windowStart) / (windowLen ?? duration)) * 100
+                    : 0
+                }%, calc(100% - 1.7rem))`,
               }}
             >
               {time.toFixed(3)}s
@@ -376,7 +392,14 @@ export function ReplayLastOverlay({
           ) : libraryNotice ? (
             <p className="mb-1 rounded-md bg-[#102820] px-2 py-1 text-[11px] text-[var(--accent)]">{libraryNotice}</p>
           ) : null}
-          <ReplayFilmstrip src={src} duration={duration} time={time} onSeek={onSeek} />
+          <ReplayFilmstrip
+            src={src}
+            duration={duration}
+            windowStart={windowStart}
+            windowLen={windowLen}
+            time={time}
+            onSeek={onSeek}
+          />
           <div className="mt-2 flex items-center justify-evenly">
             <button type="button" onClick={() => step(-1)} aria-label="Previous frame" className="text-white">
               <IconSkipBack />

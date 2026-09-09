@@ -665,15 +665,26 @@ export function getActiveMeeting(coachId?: string | null): ClassMeeting | null {
   return mine ?? live[0] ?? null
 }
 
+function closeOtherLiveMeetings(file: CoachClassFile, keepId?: string | null) {
+  const now = new Date().toISOString()
+  for (const meeting of file.meetings) {
+    if (meeting.endedAt || meeting.id === keepId) continue
+    meeting.endedAt = now
+    meeting.attendanceLogged = false
+  }
+}
+
 export function startClassMeeting(offering: CoachClassOffering): ClassMeeting {
   const file = read()
   const existing = file.meetings.find((m) => m.offeringId === offering.id && !m.endedAt)
   if (existing) {
+    closeOtherLiveMeetings(file, existing.id)
     file.activeMeetingId = existing.id
     write(file)
     return existing
   }
   const now = new Date().toISOString()
+  closeOtherLiveMeetings(file)
   const meeting: ClassMeeting = {
     id: createId('mtg'),
     offeringId: offering.id,
@@ -710,13 +721,15 @@ export function endClassMeeting(
   const meeting = file.meetings.find((m) => m.id === id)
   if (!meeting) return null
   const log = opts?.logAttendance === true
-  meeting.endedAt = new Date().toISOString()
+  const now = new Date().toISOString()
+  meeting.endedAt = now
   meeting.attendanceLogged = log
   meeting.attendees = meeting.attendees.map((a) => ({
     ...a,
     logged: log ? true : a.logged === true,
   }))
-  if (file.activeMeetingId === id) file.activeMeetingId = pickLiveMeetingId(file.meetings)
+  closeOtherLiveMeetings(file, meeting.id)
+  file.activeMeetingId = pickLiveMeetingId(file.meetings)
   write(file)
   return meeting
 }
@@ -807,7 +820,14 @@ export function removeClassAttendance(meetingId: string, athleteId: string): Cla
 export function addClassNote(
   meetingId: string,
   text: string,
-  topic?: { kind?: LessonNote['topicKind']; id?: string; label?: string },
+  extra?: {
+    kind?: LessonNote['topicKind']
+    id?: string
+    label?: string
+    authorId?: string
+    authorName?: string
+    audience?: LessonNote['audience']
+  },
 ): ClassMeeting | null {
   const file = read()
   const meeting = file.meetings.find((m) => m.id === meetingId)
@@ -817,12 +837,41 @@ export function addClassNote(
     text: text.trim(),
     createdAt: new Date().toISOString(),
     context: 'general',
-    topicKind: topic?.kind,
-    topicId: topic?.id,
-    topicLabel: topic?.label,
+    topicKind: extra?.kind,
+    topicId: extra?.id,
+    topicLabel: extra?.label,
+    authorId: extra?.authorId,
+    authorName: extra?.authorName,
+    audience: extra?.audience,
   }
   if (!note.text) return meeting
   meeting.notes = [note, ...(meeting.notes ?? [])].slice(0, 200)
+  write(file)
+  return meeting
+}
+
+export function updateClassNote(
+  meetingId: string,
+  noteId: string,
+  text: string,
+): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === meetingId)
+  if (!meeting) return null
+  const note = (meeting.notes ?? []).find((n) => n.id === noteId)
+  if (!note) return meeting
+  const next = text.trim()
+  if (!next) return meeting
+  note.text = next
+  write(file)
+  return meeting
+}
+
+export function removeClassNote(meetingId: string, noteId: string): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === meetingId)
+  if (!meeting) return null
+  meeting.notes = (meeting.notes ?? []).filter((n) => n.id !== noteId)
   write(file)
   return meeting
 }

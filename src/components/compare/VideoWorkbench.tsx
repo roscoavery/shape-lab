@@ -13,6 +13,7 @@ import { ReplayLastOverlay } from './ReplayLastOverlay'
 import { HudCircle, IconHide, IconShow } from './CompareHud'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 import { useFavoritesOptional } from '../../lib/favorites'
+import { reelObjectFit } from '../../lib/reelFit'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -27,6 +28,8 @@ type Props = {
   fill?: boolean
   /** Fill players default to cover. Delay / Replay last on phone and laptop use contain. */
   objectFit?: 'cover' | 'contain'
+  /** Reference / reel fill: 9:16 covers; square and landscape contain. */
+  smartFit?: boolean
   /** Ghost still on this video (delay cam / replay). Off for the reference clip. */
   showStillOverlay?: boolean
   /** Gym URL used to persist A/B points for every section. */
@@ -91,6 +94,7 @@ function VideoWorkbenchInner({
   tailSeconds,
   fill = false,
   objectFit = 'cover',
+  smartFit = false,
   showStillOverlay = false,
   persistUrl,
   loopA,
@@ -138,6 +142,7 @@ function VideoWorkbenchInner({
     : presets
   const activeLoopId = loopSet?.activeId ?? null
   const [duration, setDuration] = useState(0)
+  const [autoFit, setAutoFit] = useState<'cover' | 'contain'>(objectFit)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState<number>(1)
@@ -224,6 +229,9 @@ function VideoWorkbenchInner({
   const onLoadedMetadata = () => {
     const v = videoRef.current
     if (!v) return
+    if (smartFit && v.videoWidth > 0 && v.videoHeight > 0) {
+      setAutoFit(reelObjectFit(v.videoWidth, v.videoHeight))
+    }
     if (Number.isFinite(v.duration)) {
       setDuration(v.duration)
       return
@@ -694,7 +702,7 @@ function VideoWorkbenchInner({
           }
           className={`${
             fill
-              ? `absolute inset-0 block h-full w-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`
+              ? `absolute inset-0 block h-full w-full ${(smartFit ? autoFit : objectFit) === 'contain' ? 'object-contain' : 'object-cover'}`
               : overlay
                 ? `block min-h-[16rem] max-h-[min(70vh,36rem)] w-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`
                 : 'max-h-[420px] w-full object-contain'
@@ -736,6 +744,8 @@ function VideoWorkbenchInner({
           <ReplayLastOverlay
             src={src}
             duration={duration}
+            windowStart={windowStart}
+            windowLen={windowLen}
             time={time}
             playing={playing}
             speed={speed}

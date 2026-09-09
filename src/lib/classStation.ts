@@ -3,6 +3,8 @@
  * Lives in localStorage so an iPad at a station can pick up next cycle.
  */
 
+import { weeklyQuestionId } from './intakeQuestions'
+
 export type CartwheelLeg = 'left' | 'right'
 export type HarderShape = 'hollow' | 'superman'
 export type OpenShoulderHardness = 1 | 2 | 3 | 4 | 5
@@ -22,6 +24,13 @@ export type StationStep =
   | 'hand'
   | 'skate'
   | 'photo'
+  | 'favoriteColor'
+  | 'handstandFloor'
+  | 'handstandWall'
+  | 'hollowHold'
+  | 'supermanHold'
+  | 'vUps'
+  | 'weekEnergy'
   | 'done'
 
 export type StationDraft = {
@@ -42,6 +51,13 @@ export type StationDraft = {
   dominantHand?: DominantHand
   skateStance?: SkateStance
   photoDataUrl?: string
+  favoriteColor?: string
+  handstandFloor?: string
+  handstandWall?: string
+  hollowHold?: string
+  supermanHold?: string
+  vUps?: string
+  weekEnergy?: string
   step: StationStep
   updatedAt: string
 }
@@ -147,6 +163,110 @@ export function forgetQuizGuest(firstName: string, lastName: string): QuizGuestN
   )
   writeJson(GUEST_KEY, next)
   return next
+}
+
+export const STATION_STEPS: StationStep[] = [
+  'who',
+  'parentPhone',
+  'cartwheel',
+  'harder',
+  'shoulder',
+  'twist',
+  'twistBetter',
+  'hand',
+  'skate',
+  'photo',
+  'favoriteColor',
+  'handstandFloor',
+  'handstandWall',
+  'hollowHold',
+  'supermanHold',
+  'vUps',
+  'weekEnergy',
+  'done',
+]
+
+function draftHas(value: string | undefined | null): boolean {
+  return Boolean(value && value.trim())
+}
+
+/** Skip intake cards the athlete (or this draft) already answered. */
+export function stationStepFilled(
+  step: StationStep,
+  draft: StationDraft,
+  athlete?: {
+    photoDataUrl?: string
+    parentPhone?: string
+    phone?: string
+    favoriteColor?: string
+    handstandFloor?: string
+    handstandWall?: string
+    hollowHold?: string
+    supermanHold?: string
+    vUps?: string
+    intakeAnswers?: { questionId: string }[]
+  } | null,
+): boolean {
+  if (step === 'photo') return Boolean(draft.photoDataUrl || athlete?.photoDataUrl)
+  if (step === 'favoriteColor') return draftHas(draft.favoriteColor) || Boolean(athlete?.favoriteColor)
+  if (step === 'handstandFloor') return draftHas(draft.handstandFloor) || Boolean(athlete?.handstandFloor)
+  if (step === 'handstandWall') return draftHas(draft.handstandWall) || Boolean(athlete?.handstandWall)
+  if (step === 'hollowHold') return draftHas(draft.hollowHold) || Boolean(athlete?.hollowHold)
+  if (step === 'supermanHold') return draftHas(draft.supermanHold) || Boolean(athlete?.supermanHold)
+  if (step === 'vUps') return draftHas(draft.vUps) || Boolean(athlete?.vUps)
+  if (step === 'weekEnergy') {
+    if (draftHas(draft.weekEnergy)) return true
+    const id = weeklyQuestionId('week_energy')
+    return Boolean(athlete?.intakeAnswers?.some((a) => a.questionId === id))
+  }
+  return false
+}
+
+export function nextStationStep(
+  from: StationStep,
+  draft: StationDraft,
+  athlete?: Parameters<typeof stationStepFilled>[2],
+): StationStep {
+  const start = STATION_STEPS.indexOf(from)
+  for (let i = start + 1; i < STATION_STEPS.length; i++) {
+    const step = STATION_STEPS[i]!
+    if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
+    if (step === 'done') return 'done'
+    const skipable =
+      step === 'favoriteColor' ||
+      step === 'handstandFloor' ||
+      step === 'handstandWall' ||
+      step === 'hollowHold' ||
+      step === 'supermanHold' ||
+      step === 'vUps' ||
+      step === 'weekEnergy'
+    if (skipable && stationStepFilled(step, draft, athlete)) continue
+    return step
+  }
+  return 'done'
+}
+
+export function prevStationStep(
+  from: StationStep,
+  draft: StationDraft,
+  athlete?: Parameters<typeof stationStepFilled>[2],
+): StationStep {
+  const start = STATION_STEPS.indexOf(from)
+  for (let i = start - 1; i >= 0; i--) {
+    const step = STATION_STEPS[i]!
+    if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
+    const skipable =
+      step === 'favoriteColor' ||
+      step === 'handstandFloor' ||
+      step === 'handstandWall' ||
+      step === 'hollowHold' ||
+      step === 'supermanHold' ||
+      step === 'vUps' ||
+      step === 'weekEnergy'
+    if (skipable && stationStepFilled(step, draft, athlete)) continue
+    return step
+  }
+  return 'who'
 }
 
 export function namesMatch(

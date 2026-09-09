@@ -13,6 +13,7 @@ import {
 import { noteAudienceLabel, type NoteAudience } from '../../lib/noteAudience'
 import { NoteAudiencePicker } from '../lesson/NoteAudiencePicker'
 import {
+  addClassNote,
   attendeeLabel,
   classLabel,
   deleteClassMeeting,
@@ -21,12 +22,15 @@ import {
   loadOfferings,
   markClassAttendance,
   removeClassAttendance,
+  removeClassNote,
   resolveAttendeeAthletes,
   setMeetingOffering,
   subscribeCoachClasses,
   type ClassMeeting,
 } from '../../lib/coachClasses'
-import { copyClassWorkToAthlete, relabelClassMeetingLogs } from '../../lib/classSessionLog'
+import { publishTextPost } from '../../lib/feedPosts'
+import { coachShareLabel } from '../../lib/coachShare'
+import { copyClassWorkToAthlete, logClassSkillForAthlete, relabelClassMeetingLogs } from '../../lib/classSessionLog'
 import { splitPersonName } from '../../lib/classStation'
 import { formatQuizScore, quizKindLabel } from '../../lib/quizGrades'
 import { CollapsibleSection } from '../CollapsibleSection'
@@ -43,7 +47,7 @@ type Props = {
 export function ClassRecapList({
   athletes,
   viewer,
-  classInSession,
+  classInSession: _classInSession,
   onAthletesChange,
   title = 'Class recaps',
 }: Props) {
@@ -53,7 +57,7 @@ export function ClassRecapList({
     .filter((m) => m.endedAt)
     .slice(0, 16)
   const coach = Boolean(viewer && canWriteCoachNotes(viewer))
-  const canEdit = coach && !classInSession && Boolean(onAthletesChange)
+  const canEdit = coach && Boolean(onAthletesChange)
 
   if (!coach) return null
 
@@ -106,6 +110,8 @@ function ClassRecapCard({
   const [askDelete, setAskDelete] = useState(false)
   const [addId, setAddId] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
+  const [classNote, setClassNote] = useState('')
+  const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
   const offering = getOffering(meeting.offeringId)
   const offerings = loadOfferings()
   const people = resolveAttendeeAthletes(meeting, athletes)
@@ -202,6 +208,68 @@ function ClassRecapCard({
               {flash}
             </p>
           )}
+          <div className="rounded-xl bg-black/25 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Class notes
+            </p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Notes for this hour — not tied to one athlete.
+            </p>
+            {(meeting.notes ?? []).length === 0 ? (
+              <p className="mt-2 text-sm text-[var(--muted)]">No class notes yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {(meeting.notes ?? []).map((note) => (
+                  <li key={note.id} className="rounded-lg bg-black/25 px-3 py-2 text-sm">
+                    <p>{note.text}</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                      {note.authorName || 'Coach'}
+                      {note.audience ? ` · ${noteAudienceLabel(note)}` : ''}
+                      {' · '}
+                      {new Date(note.createdAt).toLocaleString()}
+                    </p>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => removeClassNote(meeting.id, note.id)}
+                        className="mt-1 text-[11px] font-semibold text-[var(--muted)] underline"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canEdit && viewer && (
+              <div className="mt-3 flex flex-col gap-2">
+                <NoteAudiencePicker value={classAudience} onChange={setClassAudience} />
+                <textarea
+                  value={classNote}
+                  onChange={(e) => setClassNote(e.target.value)}
+                  rows={2}
+                  placeholder="Note for the whole class…"
+                  className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={!classNote.trim()}
+                  onClick={() => {
+                    addClassNote(meeting.id, classNote.trim(), {
+                      authorId: viewer.id,
+                      authorName: viewer.name,
+                      audience: classAudience,
+                    })
+                    setClassNote('')
+                    setFlash('Saved a class note.')
+                  }}
+                  className="h-10 self-start rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+                >
+                  Save class note
+                </button>
+              </div>
+            )}
+          </div>
           {people.length === 0 && guests.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Nobody was marked here.</p>
           ) : null}
@@ -322,6 +390,8 @@ function AthleteRecap({
   const grouped = groupNotesByAuthor(classNotes.length ? classNotes : [])
   const [draft, setDraft] = useState('')
   const [audience, setAudience] = useState<NoteAudience>('athlete')
+  const [win, setWin] = useState('')
+  const [bigWin, setBigWin] = useState(false)
 
   return (
     <article className="rounded-xl bg-black/25 p-3">
@@ -434,6 +504,59 @@ function AthleteRecap({
               >
                 Save note
               </button>
+              <div className="mt-2 flex flex-col gap-2 border-t border-white/10 pt-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                  Post a win
+                </p>
+                <input
+                  value={win}
+                  onChange={(e) => setWin(e.target.value)}
+                  placeholder={`A win for ${athlete.name.split(' ')[0]}…`}
+                  className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={bigWin} onChange={(e) => setBigWin(e.target.checked)} />
+                  Big win — also the gym feed
+                </label>
+                <button
+                  type="button"
+                  disabled={!win.trim()}
+                  onClick={() => {
+                    const text = win.trim()
+                    const label = getOffering(meeting.offeringId)
+                      ? classLabel(getOffering(meeting.offeringId)!)
+                      : undefined
+                    logClassSkillForAthlete({
+                      athleteId: athlete.id,
+                      text,
+                      className: label,
+                      meetingId: meeting.id,
+                    })
+                    void publishTextPost({
+                      authorId: athlete.id,
+                      caption: text,
+                      taggedIds: [athlete.id],
+                      channels: bigWin ? ['wins', 'gym'] : ['wins'],
+                      sharedById: viewer.id,
+                      sharedByName: coachShareLabel(viewer),
+                    })
+                    onAthletesChange(
+                      addCoachNotesToAthletes(athletes, [athlete.id], {
+                        author: viewer,
+                        text: `Win · ${text}`,
+                        meetingId: meeting.id,
+                        className: label,
+                        topicLabel: 'Win',
+                      }),
+                    )
+                    setWin('')
+                    setBigWin(false)
+                  }}
+                  className="h-10 self-start rounded-lg bg-white/10 px-3 text-sm font-semibold disabled:opacity-40"
+                >
+                  Post win
+                </button>
+              </div>
             </div>
           )}
         </CollapsibleSection>

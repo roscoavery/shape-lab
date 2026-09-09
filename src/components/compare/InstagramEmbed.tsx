@@ -28,6 +28,9 @@ import {
   slideCacheId,
   type IgSlide,
 } from '../../lib/igCache'
+import { rememberPostedBy } from '../../lib/postedByCache'
+import { markClipPlayable, markClipUnplayable } from '../../lib/clipPlayability'
+import { reelObjectFit } from '../../lib/reelFit'
 import { putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
 
@@ -263,6 +266,7 @@ export function InstagramEmbed({
       setKind(slideKind)
       setFromCache(cached)
       setLoading(false)
+      markClipPlayable(url)
     }
 
     const showStream = (streamUrl: string, slideKind: IgSlide['kind']) => {
@@ -272,6 +276,7 @@ export function InstagramEmbed({
       setKind(slideKind)
       setFromCache(false)
       setLoading(false)
+      markClipPlayable(url)
     }
 
     const warm = peekAnyCachedInstagramBlob(itemId, url)
@@ -306,6 +311,7 @@ export function InstagramEmbed({
         setSlide((prev) => Math.min(prev, Math.max(0, manifest.slides.length - 1)))
         if (manifest.postedBy) {
           setResolvedBy(manifest.postedBy)
+          rememberPostedBy(url, manifest.postedBy)
           onPostedByRef.current?.(manifest.postedBy)
         }
         if (!playedFromCache) {
@@ -321,6 +327,7 @@ export function InstagramEmbed({
           showBlob(cached, 'video', true)
           return
         }
+        markClipUnplayable(url)
         setError(
           err instanceof Error
             ? err.message
@@ -540,15 +547,7 @@ export function InstagramEmbed({
   const player =
     kind === 'image' && src ? (
       <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
-        <img
-          src={src}
-          alt=""
-          className={
-            fill
-              ? 'h-full w-full object-contain'
-              : 'max-h-[420px] w-full rounded-lg object-contain'
-          }
-        />
+        <ReelFitImage src={src} fill={fill} />
         {hudCorner ? (
           <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
             {hudCorner}
@@ -562,6 +561,7 @@ export function InstagramEmbed({
         allowAbLoop
         autoPlay={active !== false}
         fill={fill}
+        smartFit={fill}
         persistUrl={slidePersist}
         credit={credit}
         creditHref={socialProfileUrl(credit || '', platform)}
@@ -598,5 +598,24 @@ export function InstagramEmbed({
         </p>
       )}
     </div>
+  )
+}
+
+function ReelFitImage({ src, fill }: { src: string; fill: boolean }) {
+  const [fit, setFit] = useState<'cover' | 'contain'>('contain')
+  return (
+    <img
+      src={src}
+      alt=""
+      onLoad={(e) => {
+        const img = e.currentTarget
+        setFit(reelObjectFit(img.naturalWidth, img.naturalHeight))
+      }}
+      className={
+        fill
+          ? `h-full w-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`
+          : 'max-h-[420px] w-full rounded-lg object-contain'
+      }
+    />
   )
 }

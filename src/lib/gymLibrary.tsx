@@ -5,8 +5,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { RefItem } from './clipStore'
-import { isSameReferenceUrl } from './clipStore'
+import { getCollections, putCollection, isSameReferenceUrl, type RefItem } from './clipStore'
 import {
   pullServerLibrary,
   shippedCompareLibrary,
@@ -16,6 +15,8 @@ import { pullCoachLibrary } from './coachLibrary'
 import { clipLoopKey, postedByFromUrl, socialPlatform } from './socialUrls'
 import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
 import { listCoachSkillRefs, subscribeCoachContent } from './coachContentStore'
+import { playableRank, subscribeClipPlayability } from './clipPlayability'
+import { postedByForUrl, rememberPostedBy, subscribePostedBy } from './postedByCache'
 export type GymClip = {
   id: string
   name: string
@@ -42,7 +43,7 @@ function flattenSkillRefs(seen: Set<string>): GymClip[] {
       collectionId: `virtual:coach-refs:${ref.coachId}`,
       collectionName: `${ref.coachName} skill refs`,
       keywords: [ref.notes ?? '', 'skill'].filter(Boolean),
-      postedBy: postedByFromUrl(ref.src) ?? undefined,
+        postedBy: postedByForUrl(ref.src) || postedByFromUrl(ref.src) || undefined,
     })
   }
   return out
@@ -73,12 +74,13 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
         collectionId: col.id,
         collectionName: col.athleteId ? `${col.name} (mine)` : col.name,
         keywords: item.keywords,
-        postedBy: item.postedBy || postedByFromUrl(item.url) || undefined,
+        postedBy: item.postedBy || postedByForUrl(item.url) || postedByFromUrl(item.url) || undefined,
       })
     }
   }
   }
   out.push(...flattenSkillRefs(seen))
+  out.sort((a, b) => playableRank(a.url) - playableRank(b.url))
   return out
 }
 
@@ -89,6 +91,7 @@ type GymLibraryValue = {
   refresh: () => Promise<void>
   nameForUrl: (url: string) => string
   clipForUrl: (url: string) => GymClip | undefined
+  rememberHandle: (url: string, handle: string) => void
 }
 
 const GymLibraryContext = createContext<GymLibraryValue | null>(null)
@@ -102,6 +105,7 @@ export function GymLibraryProvider({
 }) {
   const [backup, setBackup] = useState<LibraryBackup | null>(() => shippedCompareLibrary())
   const [loading, setLoading] = useState(true)
+  const [metaTick, setMetaTick] = useState(0)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -129,14 +133,21 @@ export function GymLibraryProvider({
     window.addEventListener(LIBRARY_CHANGED_EVENT, onChange)
     window.addEventListener('focus', onChange)
     const unsub = subscribeCoachContent(onChange)
+    const unsubHandles = subscribePostedBy(() => setMetaTick((n) => n + 1))
+    const unsubPlay = subscribeClipPlayability(() => setMetaTick((n) => n + 1))
     return () => {
       window.removeEventListener(LIBRARY_CHANGED_EVENT, onChange)
       window.removeEventListener('focus', onChange)
       unsub()
+      unsubHandles()
+      unsubPlay()
     }
   }, [refresh])
 
-  const clips = useMemo(() => flattenLibrary(backup), [backup])
+  const clips = useMemo(() => {
+    void metaTick
+    return flattenLibrary(backup)
+  }, [backup, metaTick])
   const collections = backup?.collections ?? []
 
   const clipForUrl = useCallback(
@@ -149,9 +160,26 @@ export function GymLibraryProvider({
     [clipForUrl],
   )
 
+  const rememberHandle = useCallback((url: string, handle: string) => {
+    const saved = rememberPostedBy(url, handle)
+    if (!saved) return
+    void getCollections().then(async (cols) => {
+      for (const col of cols) {
+        let dirty = false
+        const items = col.items.map((item) => {
+          if (!item.url || item.postedBy === saved) return item
+          if (!isSameReferenceUrl(item.url, url)) return item
+          dirty = true
+          return { ...item, postedBy: saved }
+        })
+        if (dirty) await putCollection({ ...col, items })
+      }
+    })
+  }, [])
+
   const value = useMemo(
-    () => ({ clips, collections, loading, refresh, nameForUrl, clipForUrl }),
-    [clips, collections, loading, refresh, nameForUrl, clipForUrl],
+    () => ({ clips, collections, loading, refresh, nameForUrl, clipForUrl, rememberHandle }),
+    [clips, collections, loading, refresh, nameForUrl, clipForUrl, rememberHandle],
   )
 
   return <GymLibraryContext.Provider value={value}>{children}</GymLibraryContext.Provider>

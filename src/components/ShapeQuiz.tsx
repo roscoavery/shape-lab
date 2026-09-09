@@ -12,6 +12,7 @@ import { QuizReview } from './learn/QuizReview'
 import { ReferenceStill } from './ReferenceStill'
 import { QuizWho, type QuizTaker } from './learn/QuizWho'
 import { PreTestIntake } from './learn/PreTestIntake'
+import { pendingIntake } from '../lib/intakeQuestions'
 import { displayPersonName } from '../lib/classStation'
 import { makeShapeTestRecord } from '../lib/quizGrades'
 import type { ShapeTestRecord } from '../types'
@@ -53,9 +54,13 @@ export function ShapeQuiz({
   const { copyFor } = useShapeCopy()
   const parkedAtOpen = readTakerPark(presetTaker, athletes)
   const [taker, setTaker] = useState<QuizTaker | null>(presetTaker)
-  const [intakeDone, setIntakeDone] = useState(
-    () => parkedAtOpen?.phase === 'format' || parkedAtOpen?.phase === 'quiz',
-  )
+  const [intakeDone, setIntakeDone] = useState(() => {
+    if (parkedAtOpen?.phase === 'format' || parkedAtOpen?.phase === 'quiz') return true
+    const preset = presetTaker?.athleteId
+      ? athletes.find((a) => a.id === presetTaker.athleteId)
+      : null
+    return Boolean(preset && pendingIntake(preset).length === 0)
+  })
   const [format, setFormat] = useState<QuizFormat | null>(() =>
     parkedAtOpen?.phase === 'quiz' ? parkedAtOpen.format ?? null : null,
   )

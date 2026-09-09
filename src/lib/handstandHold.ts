@@ -18,7 +18,7 @@ export function formatSeconds(s: number): string {
   return `${sec.toFixed(1)}s`
 }
 
-export const HOLD_ENTER_FRAMES = 3
+export const HOLD_ENTER_FRAMES = 2
 export const HOLD_EXIT_FRAMES = 5
 export const MIN_HOLD_SEC = 0.45
 export const POST_FOOT_MS = 650
@@ -76,23 +76,27 @@ function freezeScore(live: ScoreResult): ScoreResult {
 /** Wrists toward the floor, both feet off the floor — side or front. */
 export function poseInverted(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
-  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.16))
-  const ankles = [lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE]].filter((p) => visOk(p, 0.12))
-  const hips = [lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP]].filter((p) => visOk(p, 0.16))
+  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.1))
+  const ankles = [lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE]].filter((p) => visOk(p, 0.08))
+  const hips = [lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP]].filter((p) => visOk(p, 0.1))
+  const shoulders = [lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER]].filter((p) => visOk(p, 0.1))
   if (wrists.length === 0 || ankles.length === 0) return false
 
-  const wristY = Math.max(...wrists.map((p) => p.y))
+  const wristY = wrists.reduce((s, p) => s + p.y, 0) / wrists.length
   const ankleLow = Math.min(...ankles.map((p) => p.y))
-  const ankleHigh = Math.max(...ankles.map((p) => p.y))
   const hipY = hips.length
     ? hips.reduce((s, p) => s + p.y, 0) / hips.length
-    : (wristY + ankleLow) / 2
+    : shoulders.length
+      ? shoulders.reduce((s, p) => s + p.y, 0) / shoulders.length
+      : (wristY + ankleLow) / 2
 
-  const longLine = wristY - ankleLow > 0.22
-  const handsLow = wristY > 0.48
-  const feetUp = ankleLow < 0.48 && ankleHigh < 0.56
-  const hipsAboveHands = hipY < wristY - 0.05
-  return longLine && handsLow && feetUp && hipsAboveHands
+  // Image y grows downward. A handstand is ankles (top) → hips → wrists (floor).
+  // Do not require wrists in the bottom half of the frame — iPad cover crop
+  // and a far camera often keep the whole body in the upper two-thirds.
+  const stacked = ankleLow < hipY - 0.04 && hipY < wristY - 0.04
+  const longLine = wristY - ankleLow > 0.14
+  const feetOffFloor = ankleLow < 0.72
+  return stacked && longLine && feetOffFloor
 }
 
 /** Either foot (ankle, heel, or toe) is back on the floor. */

@@ -25,7 +25,7 @@ type Props = {
 }
 
 export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
-  const { clips, loading } = useGymLibrary()
+  const { clips, loading, rememberHandle } = useGymLibrary()
   const favorites = useFavorites()
   const [active, setActive] = useState(0)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
@@ -226,6 +226,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                     shareChrome={false}
                     markup={false}
                     postedBy={clip.postedBy || postedByFromUrl(clip.url)}
+                    onPostedBy={(handle) => rememberHandle(clip.url, handle)}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-white/40">

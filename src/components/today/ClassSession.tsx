@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile, profileRole } from '../../lib/profileRole'
 import {
   WEEKDAYS,
+  addClassNote,
   attendeeLabel,
   classLabel,
   endClassMeeting,
@@ -41,6 +42,8 @@ import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
 import { ClassExtraPicker } from './ClassExtraPicker'
 import type { ClassExtraExercise } from '../../types'
+import { NoteAudiencePicker } from '../lesson/NoteAudiencePicker'
+import type { NoteAudience } from '../../lib/noteAudience'
 
 type Props = {
   coach: Athlete
@@ -68,6 +71,7 @@ export function ClassSession({
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
   const [endAsk, setEndAsk] = useState(false)
   const [tick, setTick] = useState(0)
+  const startingRef = useRef(false)
 
   const refresh = () => {
     setOfferings(loadOfferings())
@@ -155,8 +159,13 @@ export function ClassSession({
                     key={o.id}
                     type="button"
                     onClick={() => {
+                      if (startingRef.current) return
+                      startingRef.current = true
                       startClassMeeting(o)
                       setScreen('roll')
+                      window.setTimeout(() => {
+                        startingRef.current = false
+                      }, 800)
                     }}
                     className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f]"
                   >
@@ -430,6 +439,8 @@ function LiveClass({
   onAskEnd: () => void
 }) {
   const [pickId, setPickId] = useState('')
+  const [classNote, setClassNote] = useState('')
+  const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
   const pool = useMemo(() => {
     const roster = rosterAthletes(offering, athletes)
     if (roster.length > 0) return roster
@@ -602,6 +613,44 @@ function LiveClass({
         signedIn={coach}
         coach
       />
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+          Class notes
+        </p>
+        <p className="mt-1 text-xs text-white/55">
+          For the hour — not one athlete. Shows on the class recap.
+        </p>
+        {(meeting.notes ?? []).slice(0, 4).map((note) => (
+          <p key={note.id} className="mt-2 rounded-lg bg-black/25 px-3 py-2 text-sm">
+            {note.text}
+          </p>
+        ))}
+        <NoteAudiencePicker value={classAudience} onChange={setClassAudience} />
+        <textarea
+          value={classNote}
+          onChange={(e) => setClassNote(e.target.value)}
+          rows={2}
+          placeholder="Note for this class…"
+          className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
+        />
+        <button
+          type="button"
+          disabled={!classNote.trim()}
+          onClick={() => {
+            addClassNote(meeting.id, classNote.trim(), {
+              authorId: coach.id,
+              authorName: coach.name,
+              audience: classAudience,
+            })
+            setClassNote('')
+            onChanged()
+          }}
+          className="mt-2 h-11 rounded-xl bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+        >
+          Save class note
+        </button>
+      </div>
 
       <button
         type="button"

@@ -83,6 +83,7 @@ type Props = {
   onViewProfile?: (id: string) => void
   onAthletesChange?: (next: Athlete[]) => void
   onParentHomework?: (athleteId: string) => void
+  classSessionOpen?: boolean
 }
 
 export function HomeDashboard({
@@ -97,6 +98,7 @@ export function HomeDashboard({
   onViewProfile,
   onAthletesChange,
   onParentHomework,
+  classSessionOpen = false,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withIds, setWithIds] = useState<string[]>([])
@@ -524,7 +526,7 @@ export function HomeDashboard({
             </div>
           </div>
         )}
-        {endAsk && liveClass && (
+        {endAsk && liveClass && !classSessionOpen && (
           <EndClassPrompt
             count={liveClass.attendees.length}
             onLog={() => {

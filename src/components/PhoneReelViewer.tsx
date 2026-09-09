@@ -16,6 +16,7 @@ import { kindFromUrl, type RefItemKind } from '../lib/clipStore'
 import type { OrganizeEditor } from '../lib/organizeLibrary'
 import { prefetchNeighborClips } from '../lib/igCache'
 import { postedByFromUrl } from '../lib/socialUrls'
+import { useGymLibrary } from '../lib/gymLibrary'
 
 export type PhoneReelClip = {
   id: string
@@ -49,6 +50,7 @@ export function PhoneReelViewer({
   onCopied,
 }: Props) {
   const favorites = useFavorites()
+  const { rememberHandle } = useGymLibrary()
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const [active, setActive] = useState(() =>
     Math.min(Math.max(startIndex, 0), Math.max(0, items.length - 1)),
@@ -153,9 +155,10 @@ export function PhoneReelViewer({
                       markup
                       markupSwipeSafe
                       postedBy={handle}
-                      onPostedBy={(next) =>
+                      onPostedBy={(next) => {
+                        rememberHandle(clip.url, next)
                         setHandles((prev) => (prev[clip.id] === next ? prev : { ...prev, [clip.id]: next }))
-                      }
+                      }}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center bg-black text-sm text-white/35">

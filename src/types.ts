@@ -671,6 +671,8 @@ export type LessonNote = {
   topicLabel?: string
   /** Missing on older notes = athlete can see (they already showed on recaps). */
   audience?: 'athlete' | 'coach'
+  authorId?: string
+  authorName?: string
 }
 
 export type LessonHold = {

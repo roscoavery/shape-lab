@@ -135,6 +135,7 @@ export function GymClipPlayer({
       allowAbLoop
       autoPlay={active !== false}
       fill={fill}
+      smartFit={fill}
       persistUrl={persistUrl}
       loopA={loopA}
       loopB={loopB}

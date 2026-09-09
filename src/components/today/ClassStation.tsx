@@ -9,8 +9,11 @@ import {
   loadQuizGuests,
   loadStationDrafts,
   namesMatch,
+  nextStationStep,
+  prevStationStep,
   removeStationDraft,
   splitPersonName,
+  STATION_STEPS,
   upsertStationDraft,
   type DominantHand,
   type HarderShape,
@@ -20,6 +23,16 @@ import {
   type StationStep,
   type TwistDirection,
 } from '../../lib/classStation'
+import {
+  applyIntakeField,
+  HOLD_OPTS,
+  upsertIntakeAnswer,
+  VUP_OPTS,
+  WALL_OPTS,
+  WEEK_ENERGY_OPTS,
+  weeklyQuestionId,
+} from '../../lib/intakeQuestions'
+import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { AthleteName } from '../AthleteAvatar'
 import { TUMBLE_SMART, normalizeGymName, sameGym } from '../../config/gyms'
 import { trainsAtGym, viewerHomeGym, withClassGym } from '../../lib/gymScope'
@@ -39,19 +52,7 @@ type Props = {
   onStartShapeTest: (athlete: Athlete) => void
 }
 
-const STEPS: StationStep[] = [
-  'who',
-  'parentPhone',
-  'cartwheel',
-  'harder',
-  'shoulder',
-  'twist',
-  'twistBetter',
-  'hand',
-  'skate',
-  'photo',
-  'done',
-]
+const STEPS: StationStep[] = STATION_STEPS
 
 function emptyDraft(): StationDraft {
   return {
@@ -110,8 +111,21 @@ export function ClassStation({
     return saved
   }
 
+  const draftAthlete = draft.athleteId
+    ? athletes.find((a) => a.id === draft.athleteId)
+    : roster.find((a) => namesMatch(a, draft.firstName, draft.lastName))
+
   const go = (step: StationStep, patch: Partial<StationDraft> = {}) => {
     persist({ ...draft, ...patch, step })
+  }
+
+  const goNext = (from: StationStep, patch: Partial<StationDraft> = {}) => {
+    const nextDraft = { ...draft, ...patch }
+    persist({ ...nextDraft, step: nextStationStep(from, nextDraft, draftAthlete) })
+  }
+
+  const goPrev = (from: StationStep) => {
+    persist({ ...draft, step: prevStationStep(from, draft, draftAthlete) })
   }
 
   const pickName = (
@@ -142,6 +156,12 @@ export function ClassStation({
       dominantHand: draft.dominantHand || existing?.dominantHand,
       skateStance: draft.skateStance || existing?.skateStance,
       photoDataUrl: draft.photoDataUrl || existing?.photoDataUrl,
+      favoriteColor: draft.favoriteColor || existing?.favoriteColor,
+      handstandFloor: draft.handstandFloor || existing?.handstandFloor,
+      handstandWall: draft.handstandWall || existing?.handstandWall,
+      hollowHold: draft.hollowHold || existing?.hollowHold,
+      supermanHold: draft.supermanHold || existing?.supermanHold,
+      vUps: draft.vUps || existing?.vUps,
       step: 'parentPhone',
     })
   }
@@ -175,10 +195,31 @@ export function ClassStation({
       twistBetterSide: from.twistBetterSide || existing?.twistBetterSide,
       dominantHand: from.dominantHand || existing?.dominantHand,
       skateStance: from.skateStance || existing?.skateStance,
+      favoriteColor: (from.favoriteColor || existing?.favoriteColor) as Athlete['favoriteColor'],
+      handstandFloor: (from.handstandFloor || existing?.handstandFloor) as Athlete['handstandFloor'],
+      handstandWall: (from.handstandWall || existing?.handstandWall) as Athlete['handstandWall'],
+      hollowHold: (from.hollowHold || existing?.hollowHold) as Athlete['hollowHold'],
+      supermanHold: (from.supermanHold || existing?.supermanHold) as Athlete['supermanHold'],
+      vUps: (from.vUps || existing?.vUps) as Athlete['vUps'],
       shapeTests: mergeShapeTests(
         existing?.shapeTests,
         takeGuestGrades(from.firstName, from.lastName),
       ),
+    }
+    if (from.favoriteColor) athlete = applyIntakeField(athlete, 'favoriteColor', from.favoriteColor)
+    if (from.handstandFloor) athlete = applyIntakeField(athlete, 'handstandFloor', from.handstandFloor)
+    if (from.handstandWall) athlete = applyIntakeField(athlete, 'handstandWall', from.handstandWall)
+    if (from.hollowHold) athlete = applyIntakeField(athlete, 'hollowHold', from.hollowHold)
+    if (from.supermanHold) athlete = applyIntakeField(athlete, 'supermanHold', from.supermanHold)
+    if (from.vUps) athlete = applyIntakeField(athlete, 'vUps', from.vUps)
+    if (from.weekEnergy) {
+      const qid = weeklyQuestionId('week_energy')
+      athlete = upsertIntakeAnswer(athlete, {
+        questionId: qid,
+        prompt: 'How is your body feeling for tumbling this week?',
+        answer: WEEK_ENERGY_OPTS.find((o) => o.value === from.weekEnergy)?.label || from.weekEnergy,
+        askedAt: new Date().toISOString(),
+      })
     }
     if (from.takesClassHere !== false) {
       athlete = withClassGym(athlete, viewerGym)
@@ -699,7 +740,7 @@ export function ClassStation({
           <Question
             title="Quick snapshot?"
             hint="Optional. Opens this iPad’s camera so we can tell two kids with the same first name apart."
-            onBack={() => go('skate')}
+            onBack={() => goPrev('photo')}
           >
             <StationSnapshot
               photoDataUrl={draft.photoDataUrl}
@@ -707,11 +748,159 @@ export function ClassStation({
             />
             <button
               type="button"
-              onClick={() => go('done')}
+              onClick={() => goNext('photo')}
               className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
             >
               {draft.photoDataUrl ? 'Use this photo' : 'Skip'}
             </button>
+          </Question>
+        )}
+
+        {draft.step === 'favoriteColor' && (
+          <Question
+            title="Favorite color?"
+            hint="We theme your profile around it."
+            onBack={() => goPrev('favoriteColor')}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {FAVORITE_COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => goNext('favoriteColor', { favoriteColor: c.id })}
+                  className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  <span className="h-5 w-5 rounded-full" style={{ background: c.swatch }} />
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'handstandFloor' && (
+          <Question
+            title="How long can you hold a handstand without a wall?"
+            hint="Your best guess is fine."
+            onBack={() => goPrev('handstandFloor')}
+          >
+            <div className="grid gap-3">
+              {HOLD_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('handstandFloor', { handstandFloor: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'handstandWall' && (
+          <Question
+            title="How long can you hold a wall handstand?"
+            hint="Under or over a minute."
+            onBack={() => goPrev('handstandWall')}
+          >
+            <div className="grid gap-3">
+              {WALL_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('handstandWall', { handstandWall: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'hollowHold' && (
+          <Question
+            title="How long can you hold a hollow?"
+            hint="Under or over a minute."
+            onBack={() => goPrev('hollowHold')}
+          >
+            <div className="grid gap-3">
+              {WALL_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('hollowHold', { hollowHold: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'supermanHold' && (
+          <Question
+            title="How long can you hold a Superman?"
+            hint="Under or over a minute."
+            onBack={() => goPrev('supermanHold')}
+          >
+            <div className="grid gap-3">
+              {WALL_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('supermanHold', { supermanHold: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'vUps' && (
+          <Question
+            title="How many V-ups can you do?"
+            hint="Over 30 means you have to prove it to Coach Ryan."
+            onBack={() => goPrev('vUps')}
+          >
+            <div className="grid gap-3">
+              {VUP_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('vUps', { vUps: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Question>
+        )}
+
+        {draft.step === 'weekEnergy' && (
+          <Question
+            title="How is your body feeling for tumbling this week?"
+            hint="Asked again each week."
+            onBack={() => goPrev('weekEnergy')}
+          >
+            <div className="grid gap-3">
+              {WEEK_ENERGY_OPTS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => goNext('weekEnergy', { weekEnergy: opt.value })}
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </Question>
         )}
 
@@ -730,7 +919,7 @@ export function ClassStation({
                 const athlete = commitAthlete()
                 const parked = {
                   ...athlete,
-                  shapeTestPark: makeShapeTestPark('intake'),
+                  shapeTestPark: makeShapeTestPark('format'),
                 }
                 onSaveAthlete(parked, 'update')
                 setDrafts(removeStationDraft(draft.id))
