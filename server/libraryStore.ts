@@ -18,6 +18,8 @@ export type DiskLibrary = {
   exportedAt: string
   managed?: boolean
   collections: unknown[]
+  removedItemIds?: string[]
+  removedUrlKeys?: string[]
 }
 
 const EMPTY: DiskLibrary = {
@@ -25,23 +27,47 @@ const EMPTY: DiskLibrary = {
   version: 1,
   exportedAt: '',
   collections: [],
+  removedItemIds: [],
+  removedUrlKeys: [],
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && id.length > 0))].slice(
+    -2000,
+  )
+}
+
+function gymFileHasBeenWritten(data: DiskLibrary | null): boolean {
+  if (!data || data.kind !== 'shape-lab-library' || !Array.isArray(data.collections)) return false
+  return Boolean(
+    data.managed ||
+      (data.exportedAt && data.exportedAt.length > 0) ||
+      data.collections.length > 0 ||
+      (data.removedItemIds?.length ?? 0) > 0 ||
+      (data.removedUrlKeys?.length ?? 0) > 0,
+  )
 }
 
 export async function readLibraryFile(): Promise<DiskLibrary> {
   const data = await readJson<DiskLibrary>(FILE, { ...EMPTY })
-  if (data && data.kind === 'shape-lab-library' && Array.isArray(data.collections) && data.collections.length) {
-    return data
+  if (gymFileHasBeenWritten(data)) {
+    return withRemovals(data)
   }
   try {
     const shipped = JSON.parse(fs.readFileSync(SHIPPED, 'utf8')) as DiskLibrary
     if (shipped && shipped.kind === 'shape-lab-library' && Array.isArray(shipped.collections)) {
-      return shipped
+      return withRemovals({
+        ...shipped,
+        removedItemIds: asIdList(data.removedItemIds),
+        removedUrlKeys: asIdList(data.removedUrlKeys),
+      })
     }
   } catch {
-    /* optional seed */
+    /* optional seed — only used before the gym file exists */
   }
   if (data && data.kind === 'shape-lab-library' && Array.isArray(data.collections)) {
-    return data
+    return withRemovals(data)
   }
   return { ...EMPTY }
 }
@@ -168,6 +194,47 @@ function cleanCollections(raw: unknown[]): DiskCollection[] {
     .filter((c) => c.items.length > 0)
 }
 
+function itemIsRemoved(
+  item: DiskItem,
+  removedIds: Set<string>,
+  removedUrls: Set<string>,
+): boolean {
+  const id = typeof item.id === 'string' ? item.id : ''
+  const url = typeof item.url === 'string' ? item.url : ''
+  if (id && removedIds.has(id)) return true
+  if (url && (removedUrls.has(itemUrlKey(url)) || removedUrls.has(url))) return true
+  return false
+}
+
+function dropRemovedItems(
+  collections: DiskCollection[],
+  removedIds: string[],
+  removedUrls: string[],
+): DiskCollection[] {
+  const goneIds = new Set(removedIds)
+  const goneUrls = new Set(removedUrls)
+  return collections
+    .map((col) => ({
+      ...col,
+      items: col.items.filter((item) => !itemIsRemoved(item, goneIds, goneUrls)),
+    }))
+    .filter((col) => col.items.length > 0)
+}
+
+function withRemovals(data: DiskLibrary): DiskLibrary {
+  const removedItemIds = asIdList(data.removedItemIds)
+  const removedUrlKeys = asIdList(data.removedUrlKeys)
+  return {
+    kind: 'shape-lab-library',
+    version: 1,
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
+    managed: data.managed,
+    removedItemIds,
+    removedUrlKeys,
+    collections: dropRemovedItems(cleanCollections(data.collections), removedItemIds, removedUrlKeys),
+  }
+}
+
 /** Union gym libraries. Incoming names win; existing URLs are never dropped. */
 function unionCollections(existingRaw: unknown[], incomingRaw: unknown[]): DiskCollection[] {
   const existing = cleanCollections(existingRaw)
@@ -211,6 +278,9 @@ function unionCollections(existingRaw: unknown[], incomingRaw: unknown[]): DiskC
         const keywords = unionKeywords(match.keywords, item.keywords)
         if (keywords) match.keywords = keywords
         else delete match.keywords
+        const incomingSaved = typeof item.savedUrl === 'string' ? item.savedUrl : ''
+        if (incomingSaved.startsWith('http')) match.savedUrl = incomingSaved
+        else if (typeof match.savedUrl !== 'string' && incomingSaved) match.savedUrl = incomingSaved
       } else {
         target.items.push({ ...item })
       }
@@ -221,29 +291,44 @@ function unionCollections(existingRaw: unknown[], incomingRaw: unknown[]): DiskC
 }
 
 export async function writeLibraryFile(data: unknown): Promise<DiskLibrary> {
-  const parsed = data as DiskLibrary
+  const parsed = data as DiskLibrary & {
+    restoredItemIds?: unknown
+    restoredUrlKeys?: unknown
+  }
   if (!parsed || parsed.kind !== 'shape-lab-library' || !Array.isArray(parsed.collections)) {
     throw new Error('Invalid library payload')
   }
   const existing = await readLibraryFile()
-  const collections = unionCollections(existing.collections, parsed.collections)
+  const restoredIds = new Set(asIdList(parsed.restoredItemIds))
+  const restoredUrls = new Set(asIdList(parsed.restoredUrlKeys))
+  const removedItemIds = asIdList([
+    ...(existing.removedItemIds ?? []),
+    ...asIdList(parsed.removedItemIds),
+  ]).filter((id) => !restoredIds.has(id))
+  const removedUrlKeys = asIdList([
+    ...(existing.removedUrlKeys ?? []),
+    ...asIdList(parsed.removedUrlKeys),
+  ]).filter((key) => !restoredUrls.has(key))
+  const collections = dropRemovedItems(
+    unionCollections(existing.collections, parsed.collections),
+    removedItemIds,
+    removedUrlKeys,
+  )
   const next: DiskLibrary = {
     kind: 'shape-lab-library',
     version: 1,
     exportedAt: new Date().toISOString(),
     managed: true,
     collections,
+    removedItemIds,
+    removedUrlKeys,
   }
-  if (JSON.stringify(existing.collections) === JSON.stringify(next.collections)) {
-    return existing
-  }
+  const sameLiving =
+    JSON.stringify(existing.collections) === JSON.stringify(next.collections) &&
+    JSON.stringify(existing.removedItemIds ?? []) === JSON.stringify(next.removedItemIds) &&
+    JSON.stringify(existing.removedUrlKeys ?? []) === JSON.stringify(next.removedUrlKeys)
+  if (sameLiving) return existing
   await writeJson(FILE, next)
-  try {
-    fs.mkdirSync(path.dirname(SHIPPED), { recursive: true })
-    fs.writeFileSync(SHIPPED, JSON.stringify(next, null, 2) + '\n')
-  } catch {
-    /* shipped copy is optional on Vercel */
-  }
   return next
 }
 

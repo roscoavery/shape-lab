@@ -28,6 +28,7 @@ import {
   type RefItem,
 } from '../../lib/clipStore'
 import { mediaCacheId, prefetchInstagram, saveInstagramInApp } from '../../lib/igCache'
+import { isGymHostedClipUrl } from '../../lib/persistLibraryClip'
 import {
   allUrlsText,
   backupUrlCount,
@@ -39,6 +40,7 @@ import {
   restoreMetaIfIndexedDbEmpty,
   syncLibraryWithServer,
 } from '../../lib/libraryBackup'
+import { noteRemovedLibraryItem, noteRestoredLibraryItem } from '../../lib/libraryRemovals'
 import {
   attachPersonalCollections,
   isGymCollection,
@@ -520,7 +522,7 @@ export function ReferencePane({
         continue
       }
       const kind = kindFromUrl(url)
-      items.push({
+      const item = {
         id: createId('ref'),
         kind,
         name: kind === 'url' ? (() => {
@@ -535,7 +537,9 @@ export function ReferencePane({
         ...(keywords.length ? { keywords } : {}),
         ...(postedByFromUrl(url) ? { postedBy: postedByFromUrl(url)! } : {}),
         createdAt: new Date().toISOString(),
-      })
+      }
+      noteRestoredLibraryItem(item.id, url)
+      items.push(item)
     }
     if (items.length === 0 && taggedExisting === 0) {
       setNotice(
@@ -613,6 +617,7 @@ export function ReferencePane({
       ? 'This removes it from the gym library after you save into the app.'
       : 'This only removes it from your collection — Ryan’s gym clips stay.'
     if (!confirm(`Remove “${item.name}” from ${collection.name}?\n\n${who}`)) return
+    noteRemovedLibraryItem(item.id, item.url)
     await deleteBlob(item.id)
     if (item.url) await deleteBlob(mediaCacheId(item.id, item.url)).catch(() => {})
     await updateCollection({
@@ -1208,10 +1213,24 @@ export function ReferencePane({
             </div>
           ) : null}
         </div>
+      ) : activeItem?.savedUrl && isGymHostedClipUrl(activeItem.savedUrl) ? (
+        <VideoWorkbench
+          src={activeItem.savedUrl}
+          allowAbLoop
+          fill={fill}
+          persistUrl={activeItem.url}
+          loopA={activeItem.trimStart ?? null}
+          loopB={activeItem.trimEnd ?? null}
+          hudCorner={hudCorner}
+          bare={pip}
+          compact={Boolean(viewer)}
+          markup={!viewer && !pip}
+        />
       ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
           url={activeItem.url}
           itemId={activeItem.id}
+          savedUrl={activeItem.savedUrl}
           onCached={markCached}
           postedBy={activeItem.postedBy || postedByFromUrl(activeItem.url)}
           onPostedBy={(handle) => {

@@ -203,8 +203,9 @@ export function listCoachStills(
   const seen = new Set(shipped.map((p) => p.id))
   const extras = photos.filter((p) => {
     if (p.shapeId !== shapeId) return false
-    if (p.library === 'ig' || p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
-    if (p.athleteId != null) return false
+    if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
+    if (p.library === 'ig' && !p.showInShapeLibrary) return false
+    if (p.library !== 'ig' && p.athleteId != null) return false
     if (!isUsablePhotoSrc(p.dataUrl)) return false
     if (seen.has(p.id)) return false
     seen.add(p.id)

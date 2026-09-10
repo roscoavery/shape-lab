@@ -7,6 +7,7 @@ import {
   proxyInstagramMedia,
   lookupPostedBy,
   resolveSocialSlides,
+  forgetResolvedSocial,
   sendJson,
 } from './instagramResolve.ts'
 import { postedByFromUrl } from '../src/lib/socialUrls.ts'
@@ -156,7 +157,7 @@ export async function handleShapeLabApi(
 
   if (path === '/api/ig-stills') {
     if (req.method === 'GET') {
-      sendJson(res, 200, { kind: 'shape-lab-ig-stills', stills: await stillsForClient() })
+      sendJson(res, 200, { kind: 'shape-lab-ig-stills', ...(await stillsForClient()) })
       return true
     }
     if (req.method === 'POST') {
@@ -235,7 +236,8 @@ export async function handleShapeLabApi(
       !(
         pathname.startsWith('data/feed-blobs/') ||
         pathname.startsWith('data/roster-photos/') ||
-        pathname.startsWith('data/athlete-video-blobs/')
+        pathname.startsWith('data/athlete-video-blobs/') ||
+        pathname.startsWith('data/library-blobs/')
       )
     ) {
       sendJson(res, 400, { error: 'That upload path is not allowed.' })
@@ -1066,11 +1068,14 @@ export async function handleShapeLabApi(
       sendJson(res, 200, postedBy ? { postedBy } : {})
       return true
     }
+    if (url.searchParams.get('fresh') === '1' || url.searchParams.get('retry') === '1') {
+      forgetResolvedSocial(page)
+    }
     const resolved = await resolveSocialSlides(page)
     if (!resolved) {
       sendJson(res, 422, {
         error:
-          'Could not get a playable file for that video. It may be private, deleted, or blocked in this region.',
+          'Could not get a playable file for that video yet. Shape Lab will keep a copy once it loads.',
       })
       return true
     }

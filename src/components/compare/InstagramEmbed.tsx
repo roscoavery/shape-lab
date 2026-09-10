@@ -32,6 +32,7 @@ import { rememberPostedBy } from '../../lib/postedByCache'
 import { forgetClipPlayability, markClipPlayable, markClipUnplayable } from '../../lib/clipPlayability'
 import { reelObjectFit } from '../../lib/reelFit'
 import { putBlob } from '../../lib/clipStore'
+import { persistLibraryClipBlob } from '../../lib/persistLibraryClip'
 import { VideoWorkbench } from './VideoWorkbench'
 
 /** Keep carousel chevrons out of the left markup stack / right Show HUD. */
@@ -184,6 +185,8 @@ type Props = {
   /** Letterbox the full frame (chalkboard) instead of cropping 9:16. */
   fit?: 'cover' | 'contain'
   smartFit?: boolean
+  /** Gym-hosted mp4 so we do not need Instagram to play this clip. */
+  savedUrl?: string
 }
 
 export function InstagramEmbed({
@@ -207,6 +210,7 @@ export function InstagramEmbed({
   overlayChrome,
   fit,
   smartFit,
+  savedUrl,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -223,6 +227,7 @@ export function InstagramEmbed({
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
+  const retriedRef = useRef(false)
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
   onPostedByRef.current = onPostedBy
@@ -270,8 +275,10 @@ export function InstagramEmbed({
       setSrc(objectUrl)
       setKind(slideKind)
       setFromCache(cached)
+      setSaved(true)
       setLoading(false)
       markClipPlayable(url)
+      if (itemId && slideKind === 'video') void persistLibraryClipBlob(itemId, blob)
     }
 
     const showStream = (streamUrl: string, slideKind: IgSlide['kind']) => {
@@ -285,7 +292,10 @@ export function InstagramEmbed({
     }
 
     const warm = peekAnyCachedInstagramBlob(itemId, url)
-    if (warm) {
+    if (savedUrl && !warm) {
+      showStream(savedUrl, 'video')
+      setFromCache(true)
+    } else if (warm) {
       setFromCache(true)
       setLoading(false)
       showBlob(warm, 'video', true)
@@ -357,6 +367,14 @@ export function InstagramEmbed({
             : 'Could not load that video in Shape Lab. Keep the gym link open, then try again.',
         )
         setLoading(false)
+        if (!retriedRef.current) {
+          retriedRef.current = true
+          forgetInstagramManifest(url)
+          forgetClipPlayability(url)
+          window.setTimeout(() => {
+            if (!cancelled) setRetry((n) => n + 1)
+          }, 600)
+        }
       }
     })()
 
@@ -364,7 +382,7 @@ export function InstagramEmbed({
       cancelled = true
       if (loadGen.current === gen) revoke()
     }
-  }, [url, itemId, retry])
+  }, [url, itemId, retry, savedUrl])
 
   useEffect(() => {
     if (slides.length === 0 || slidesFor !== url) return
@@ -428,6 +446,7 @@ export function InstagramEmbed({
             if (scoped) rememberInstagramBlob(scoped, blob)
             if (legacy) rememberInstagramBlob(legacy, blob)
             if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
+            if (itemId && current.kind === 'video') void persistLibraryClipBlob(itemId, blob)
             try {
               if (scoped) await putBlob(scoped, blob)
               if (legacy && legacy !== scoped) await putBlob(legacy, blob)

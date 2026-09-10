@@ -23,7 +23,8 @@ import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
-import { groupIgStillsByShape, igStillsForShape, listIgStills } from '../lib/igStills'
+import { customShapeId, groupIgStillsByShape, igStillDisplayName, igStillsForShape, listIgStills } from '../lib/igStills'
+import { HScrollRow } from './HScrollRow'
 import { deleteReferencePhoto } from '../lib/storage'
 import { removeIgStill, updateIgStill } from '../lib/igStillStore'
 import { useShapeCopy } from './ShapeCopyContext'
@@ -1449,9 +1450,14 @@ function IgShapesLibrary({
 }) {
   const groups = groupIgStillsByShape(referencePhotos)
   const total = groups.reduce((n, g) => n + g.stills.length, 0)
+  const listedShapes = useMemo(() => learnLibraryShapes(), [])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftLabel, setDraftLabel] = useState('')
   const [draftNotes, setDraftNotes] = useState('')
+  const [draftShapeId, setDraftShapeId] = useState('')
+  const [draftCustomName, setDraftCustomName] = useState('')
+  const [draftShowInLibrary, setDraftShowInLibrary] = useState(false)
+  const [shapeQuery, setShapeQuery] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [viewStill, setViewStill] = useState<ReferencePhoto | null>(null)
@@ -1466,19 +1472,39 @@ function IgShapesLibrary({
   }
 
   const beginEdit = (still: ReferencePhoto) => {
+    const custom = still.shapeId.startsWith('custom_')
     setEditingId(still.id)
     setDraftLabel(still.label ?? '')
     setDraftNotes(still.notes ?? '')
+    setDraftShapeId(custom ? '' : still.shapeId)
+    setDraftCustomName(
+      custom ? still.customName?.trim() || igStillDisplayName(still) : still.customName ?? '',
+    )
+    setDraftShowInLibrary(Boolean(still.showInShapeLibrary))
+    setShapeQuery('')
     setEditError(null)
   }
 
   const saveDescription = async (still: ReferencePhoto) => {
+    const custom = draftCustomName.trim()
+    const listed = draftShapeId
+    if (!custom && !listed) {
+      setEditError('Pick a listed shape, or type a custom name if it is not in the list.')
+      return
+    }
+    const shapeKey = custom && !listed ? customShapeId(custom) : listed
     setSaving(true)
     setEditError(null)
     try {
       const saved = await updateIgStill(
         still.id,
-        { label: draftLabel, notes: draftNotes },
+        {
+          shapeId: shapeKey,
+          customName: custom && !listed ? custom : custom || undefined,
+          label: draftLabel,
+          notes: draftNotes,
+          showInShapeLibrary: draftShowInLibrary,
+        },
         { persistToApp: Boolean(still.persistedToApp) },
       )
       onReferencesChange(
@@ -1509,11 +1535,10 @@ function IgShapesLibrary({
             inset
           >
             <p className="text-sm leading-relaxed text-[var(--muted)]">
-              These stills are cropped from Compare, Learn scroll, and reels — looping
-              Instagram clips, uploaded reference video, or athlete replay. They do not
-              replace the coach stills in Shape library. Every Screenshot / Shot saves
-              into this library and onto the gym computer, so a new browser or phone
-              link still has them. Only Ryan can rename or delete gym-wide stills.
+              These stills are cropped from Compare, Learn scroll, and reels. Every
+              Screenshot / Shot saves here and onto the gym computer. Ryan can move a
+              crop to another shape, rewrite its name and notes, or pin it into the
+              main Shape library as a coach still.
             </p>
           </CollapsibleSection>
         </div>
@@ -1548,6 +1573,7 @@ function IgShapesLibrary({
                   <p className="min-w-0 truncate text-[11px] text-[var(--muted)]">
                     {still.label || group.name}
                     {still.persistedToApp ? ' · In the app' : ''}
+                    {still.showInShapeLibrary ? ' · Shape library' : ''}
                   </p>
                   <button
                     type="button"
@@ -1589,16 +1615,66 @@ function IgShapesLibrary({
                     onClick={() => beginEdit(still)}
                     className="mx-2 mb-2 text-xs text-[var(--accent)] underline"
                   >
-                    Edit name and description
+                    Edit shape, name, and library
                   </button>
                 )}
                 {persistIgToApp && editingId === still.id && (
                   <div className="border-t border-[var(--panel-border)] p-2">
+                    <p className="text-[11px] text-[var(--muted)]">
+                      Move this crop to another listed shape, or type a custom name.
+                    </p>
+                    <input
+                      type="search"
+                      value={shapeQuery}
+                      onChange={(event) => setShapeQuery(event.target.value)}
+                      placeholder="Search listed shapes…"
+                      className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                    />
+                    <HScrollRow label="Listed shapes" className="mt-1.5">
+                      {listedShapes
+                        .filter((shape) => {
+                          const q = shapeQuery.trim().toLowerCase()
+                          if (!q) return true
+                          return `${shape.name} ${shape.id}`.toLowerCase().includes(q)
+                        })
+                        .map((shape) => {
+                          const on = !draftCustomName.trim() && draftShapeId === shape.id
+                          return (
+                            <button
+                              key={shape.id}
+                              type="button"
+                              role="option"
+                              aria-selected={on}
+                              onClick={() => {
+                                setDraftShapeId(shape.id)
+                                setDraftCustomName('')
+                                setEditError(null)
+                              }}
+                              className={`max-w-[9rem] shrink-0 snap-start truncate rounded-md px-2 py-1.5 text-left text-[11px] font-semibold ${
+                                on
+                                  ? 'bg-[var(--accent)] text-[#06281f]'
+                                  : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
+                              }`}
+                            >
+                              {shape.name}
+                            </button>
+                          )
+                        })}
+                    </HScrollRow>
+                    <input
+                      value={draftCustomName}
+                      onChange={(event) => {
+                        setDraftCustomName(event.target.value)
+                        if (event.target.value.trim()) setDraftShapeId('')
+                      }}
+                      placeholder="Custom name if it is not listed"
+                      className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                    />
                     <input
                       value={draftLabel}
                       onChange={(event) => setDraftLabel(event.target.value)}
-                      placeholder="Shape name or short label"
-                      className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
+                      placeholder="Short label (optional)"
+                      className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
                     />
                     <textarea
                       value={draftNotes}
@@ -1607,6 +1683,17 @@ function IgShapesLibrary({
                       rows={3}
                       className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
                     />
+                    <label className="mt-2 flex items-start gap-2 text-xs text-[var(--text)]">
+                      <input
+                        type="checkbox"
+                        checked={draftShowInLibrary}
+                        onChange={(event) => setDraftShowInLibrary(event.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        Show in the main Shape library for this shape, so it can be the coach still.
+                      </span>
+                    </label>
                     <div className="mt-2 flex gap-2">
                       <button
                         type="button"
@@ -1614,7 +1701,7 @@ function IgShapesLibrary({
                         onClick={() => void saveDescription(still)}
                         className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                       >
-                        {saving ? 'Saving…' : 'Save description'}
+                        {saving ? 'Saving…' : 'Save changes'}
                       </button>
                       <button
                         type="button"

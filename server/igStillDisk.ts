@@ -23,6 +23,7 @@ export type DiskIgStill = {
   createdAt: string
   library: 'ig'
   file: string
+  showInShapeLibrary?: boolean
 }
 
 export type DiskIgLibrary = {
@@ -30,6 +31,7 @@ export type DiskIgLibrary = {
   version: 1
   exportedAt: string
   stills: DiskIgStill[]
+  removedStillIds?: string[]
 }
 
 const EMPTY: DiskIgLibrary = {
@@ -37,6 +39,14 @@ const EMPTY: DiskIgLibrary = {
   version: 1,
   exportedAt: '',
   stills: [],
+  removedStillIds: [],
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && id.length > 0))].slice(
+    -2000,
+  )
 }
 
 function safeId(id: string): string | null {
@@ -120,53 +130,69 @@ const SHIPPED_FALLBACK: DiskIgStill[] = [
 export async function readIgStillMeta(): Promise<DiskIgLibrary> {
   const remote = await readJson<DiskIgLibrary>(META, { ...EMPTY })
   const disk = readDiskJson<DiskIgLibrary>(META, { ...EMPTY })
+  const removedStillIds = asIdList([
+    ...(remote.removedStillIds ?? []),
+    ...(disk.removedStillIds ?? []),
+  ])
+  const gone = new Set(removedStillIds)
   const map = new Map<string, DiskIgStill>()
   const addAll = (lib: DiskIgLibrary | null) => {
     if (!lib || lib.kind !== 'shape-lab-ig-stills' || !Array.isArray(lib.stills)) return
     for (const raw of lib.stills) {
       const row = asDiskStill(raw)
-      if (row) map.set(row.id, row)
+      if (row && !gone.has(row.id)) map.set(row.id, row)
     }
   }
   addAll(disk)
   addAll(remote)
   for (const shipped of SHIPPED_FALLBACK) {
-    if (!map.has(shipped.id)) map.set(shipped.id, shipped)
+    if (!gone.has(shipped.id) && !map.has(shipped.id)) map.set(shipped.id, shipped)
   }
   return {
     ...EMPTY,
     exportedAt: remote.exportedAt || disk.exportedAt || '',
     stills: [...map.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
+    removedStillIds,
   }
 }
 
-async function writeMeta(stills: DiskIgStill[]): Promise<DiskIgLibrary> {
+async function writeMeta(stills: DiskIgStill[], removedStillIds?: string[]): Promise<DiskIgLibrary> {
+  const current = removedStillIds ? null : await readIgStillMeta().catch(() => EMPTY)
   const next: DiskIgLibrary = {
     kind: 'shape-lab-ig-stills',
     version: 1,
     exportedAt: new Date().toISOString(),
     stills: stills.slice(0, MAX_STILLS),
+    removedStillIds: asIdList(removedStillIds ?? current?.removedStillIds ?? []),
   }
   await writeJson(META, next)
   return next
 }
 
-export async function stillsForClient(): Promise<Array<Record<string, unknown>>> {
+export async function stillsForClient(): Promise<{
+  stills: Array<Record<string, unknown>>
+  removedStillIds: string[]
+}> {
   const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
-  return (await readIgStillMeta()).stills.map((s) => ({
-    id: s.id,
-    shapeId: s.shapeId,
-    athleteId: s.athleteId,
-    label: s.label,
-    customName: s.customName,
-    notes: s.notes,
-    createdAt: s.createdAt,
-    library: 'ig',
-    persistedToApp: true,
-    dataUrl: shippedIds.has(s.id)
-      ? `/learn/ig-stills/${s.file}`
-      : `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
-  }))
+  const meta = await readIgStillMeta()
+  return {
+    removedStillIds: meta.removedStillIds ?? [],
+    stills: meta.stills.map((s) => ({
+      id: s.id,
+      shapeId: s.shapeId,
+      athleteId: s.athleteId,
+      label: s.label,
+      customName: s.customName,
+      notes: s.notes,
+      createdAt: s.createdAt,
+      library: 'ig',
+      persistedToApp: true,
+      showInShapeLibrary: Boolean(s.showInShapeLibrary),
+      dataUrl: shippedIds.has(s.id)
+        ? `/learn/ig-stills/${s.file}`
+        : `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
+    })),
+  }
 }
 
 export async function addIgStillFromBody(body: unknown): Promise<Record<string, unknown>> {
@@ -192,9 +218,15 @@ export async function addIgStillFromBody(body: unknown): Promise<Record<string, 
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
     library: 'ig',
     file,
+    ...(typeof p.showInShapeLibrary === 'boolean'
+      ? { showInShapeLibrary: p.showInShapeLibrary }
+      : {}),
   }
   const stills = [row, ...meta.stills.filter((s) => s.id !== id)].slice(0, MAX_STILLS)
-  await writeMeta(stills)
+  await writeMeta(
+    stills,
+    asIdList(meta.removedStillIds).filter((removed) => removed !== id),
+  )
   return {
     ...row,
     persistedToApp: true,
@@ -219,6 +251,7 @@ export async function updateIgStillMeta(
   const found = meta.stills.find((still) => still.id === id)
   if (!found) return null
   const patch = body as Record<string, unknown>
+  const shapeId = optionalText(patch.shapeId, 80)
   const next: DiskIgStill = {
     ...found,
     ...(Object.hasOwn(patch, 'label') ? { label: optionalText(patch.label, 120) } : {}),
@@ -226,8 +259,15 @@ export async function updateIgStillMeta(
       ? { customName: optionalText(patch.customName, 120) }
       : {}),
     ...(Object.hasOwn(patch, 'notes') ? { notes: optionalText(patch.notes, 1200) } : {}),
+    ...(shapeId ? { shapeId } : {}),
+    ...(typeof patch.showInShapeLibrary === 'boolean'
+      ? { showInShapeLibrary: patch.showInShapeLibrary }
+      : {}),
   }
-  await writeMeta(meta.stills.map((still) => (still.id === id ? next : still)))
+  await writeMeta(
+    meta.stills.map((still) => (still.id === id ? next : still)),
+    meta.removedStillIds,
+  )
   return {
     ...next,
     persistedToApp: true,
@@ -240,9 +280,13 @@ export async function deleteIgStill(idRaw: string): Promise<boolean> {
   if (!id) return false
   const meta = await readIgStillMeta()
   const row = meta.stills.find((s) => s.id === id)
-  if (!row) return false
-  await writeMeta(meta.stills.filter((s) => s.id !== id))
-  await removeFile(blobRel(row.file))
+  const removedStillIds = asIdList([...(meta.removedStillIds ?? []), id])
+  if (!row && (meta.removedStillIds ?? []).includes(id)) return true
+  await writeMeta(
+    meta.stills.filter((s) => s.id !== id),
+    removedStillIds,
+  )
+  if (row) await removeFile(blobRel(row.file))
   return true
 }
 

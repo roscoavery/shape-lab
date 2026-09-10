@@ -17,10 +17,17 @@ import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
 import { listCoachSkillRefs, subscribeCoachContent } from './coachContentStore'
 import { playableRank, subscribeClipPlayability } from './clipPlayability'
 import { postedByForUrl, rememberPostedBy, subscribePostedBy } from './postedByCache'
+import {
+  libraryUrlKey,
+  loadRemovedLibraryItemIds,
+  loadRemovedLibraryUrlKeys,
+} from './libraryRemovals'
+
 export type GymClip = {
   id: string
   name: string
   url: string
+  savedUrl?: string
   kind: RefItem['kind']
   collectionId: string
   collectionName: string
@@ -28,12 +35,18 @@ export type GymClip = {
   postedBy?: string
 }
 
-function flattenSkillRefs(seen: Set<string>): GymClip[] {
+function flattenSkillRefs(
+  seen: Set<string>,
+  goneIds: Set<string>,
+  goneUrls: Set<string>,
+): GymClip[] {
   const out: GymClip[] = []
   for (const ref of listCoachSkillRefs()) {
     if (!ref.src) continue
     const key = clipLoopKey(ref.src).toLowerCase()
     if (seen.has(key)) continue
+    const urlKey = libraryUrlKey(ref.src)
+    if (goneUrls.has(urlKey) || goneUrls.has(ref.src) || goneIds.has(ref.id)) continue
     seen.add(key)
     out.push({
       id: ref.id,
@@ -51,11 +64,22 @@ function flattenSkillRefs(seen: Set<string>): GymClip[] {
 
 function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
   const seen = new Set<string>()
+  const goneIds = new Set([
+    ...loadRemovedLibraryItemIds(),
+    ...(backup?.removedItemIds ?? []),
+  ])
+  const goneUrls = new Set([
+    ...loadRemovedLibraryUrlKeys(),
+    ...(backup?.removedUrlKeys ?? []),
+  ])
   const out: GymClip[] = []
   if (backup) {
   for (const col of backup.collections) {
     for (const item of col.items) {
       if (!item.url) continue
+      if (item.id && goneIds.has(item.id)) continue
+      const urlKey = libraryUrlKey(item.url)
+      if (goneUrls.has(urlKey) || goneUrls.has(item.url)) continue
       const key = clipLoopKey(item.url).toLowerCase()
       if (seen.has(key)) continue
       seen.add(key)
@@ -64,6 +88,7 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
         id: item.id,
         name: item.name || item.url,
         url: item.url,
+        ...(item.savedUrl ? { savedUrl: item.savedUrl } : {}),
         kind:
           item.kind === 'instagram' ||
           item.kind === 'tiktok' ||
@@ -79,7 +104,7 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
     }
   }
   }
-  out.push(...flattenSkillRefs(seen))
+  out.push(...flattenSkillRefs(seen, goneIds, goneUrls))
   out.sort((a, b) => playableRank(a.url) - playableRank(b.url))
   return out
 }
@@ -113,7 +138,11 @@ export function GymLibraryProvider({
       const server = await pullServerLibrary()
       const personal = profileId ? await pullCoachLibrary(profileId) : null
       const gym =
-        server && server.collections.length > 0 ? server : shippedCompareLibrary()
+        server && (server.managed || server.exportedAt || (server.removedItemIds?.length ?? 0) > 0)
+          ? server
+          : server && server.collections.length > 0
+            ? server
+            : shippedCompareLibrary()
       if (!gym && !personal) return
       setBackup({
         kind: 'shape-lab-library',

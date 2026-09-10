@@ -86,6 +86,8 @@ export function mediaCacheId(itemId: string, pageUrl: string, index = 0): string
 export function forgetInstagramManifest(pageUrl: string) {
   manifestMem.delete(pageUrl)
   inflightManifest.delete(pageUrl)
+  inflightManifest.set(`${pageUrl}::fresh`, Promise.resolve({ slides: [], postedBy: undefined }))
+  window.setTimeout(() => inflightManifest.delete(`${pageUrl}::fresh`), 15_000)
   try {
     const raw = localStorage.getItem(MANIFEST_LS)
     if (!raw) return
@@ -128,7 +130,10 @@ export async function fetchInstagramManifest(
   if (pending) return pending
 
   const work = (async () => {
-    const res = await fetch(`/api/ig-resolve?url=${encodeURIComponent(pageUrl)}`)
+    const fresh = inflightManifest.has(`${pageUrl}::fresh`)
+    const res = await fetch(
+      `/api/ig-resolve?url=${encodeURIComponent(pageUrl)}${fresh ? '&fresh=1' : ''}`,
+    )
     const data = (await res.json()) as {
       videoUrl?: string
       slides?: IgSlide[]

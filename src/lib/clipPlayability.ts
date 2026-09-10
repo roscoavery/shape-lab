@@ -54,7 +54,7 @@ export function markClipUnplayable(url: string) {
 }
 
 /** One failed resolve should not bury a clip forever — Instagram helpers flap. */
-const UNPLAYABLE_TTL_MS = 30 * 60 * 1000
+const UNPLAYABLE_TTL_MS = 2 * 60 * 1000
 
 export function forgetClipPlayability(url: string) {
   if (!url) return

@@ -10,6 +10,43 @@ const DB_NAME = 'shape-lab-ig-stills'
 const DB_VERSION = 1
 const STORE = 'stills'
 const MAX_IG = 400
+const REMOVED_KEY = 'shape-lab.removedIgStills.v1'
+
+function loadRemovedIgStillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(REMOVED_KEY)
+    if (!raw) return []
+    const data = JSON.parse(raw) as unknown
+    if (!Array.isArray(data)) return []
+    return data.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  } catch {
+    return []
+  }
+}
+
+function saveRemovedIgStillIds(ids: string[]) {
+  try {
+    localStorage.setItem(REMOVED_KEY, JSON.stringify([...new Set(ids)].slice(-2000)))
+  } catch {
+    /* quota */
+  }
+}
+
+export function noteRemovedIgStill(id: string) {
+  if (!id) return
+  saveRemovedIgStillIds([...loadRemovedIgStillIds(), id])
+}
+
+export function forgetRemovedIgStill(id: string) {
+  if (!id) return
+  saveRemovedIgStillIds(loadRemovedIgStillIds().filter((row) => row !== id))
+}
+
+function dropRemovedIgStills(photos: ReferencePhoto[]): ReferencePhoto[] {
+  const gone = new Set(loadRemovedIgStillIds())
+  if (gone.size === 0) return photos
+  return photos.filter((p) => !gone.has(p.id))
+}
 
 let dbPromise: Promise<IDBDatabase> | null = null
 let memory: ReferencePhoto[] = []
@@ -100,15 +137,23 @@ async function loadAllFromDb(): Promise<ReferencePhoto[]> {
     .slice(0, MAX_IG)
 }
 
-async function pullServerIgStills(): Promise<ReferencePhoto[]> {
+async function pullServerIgStills(): Promise<{
+  stills: ReferencePhoto[]
+  removedStillIds: string[]
+}> {
   try {
     const res = await fetch('/api/ig-stills')
-    if (!res.ok) return []
-    const data = (await res.json()) as { stills?: ReferencePhoto[] }
-    if (!Array.isArray(data.stills)) return []
-    return data.stills.map((p) => ({ ...p, library: 'ig' as const, persistedToApp: true }))
+    if (!res.ok) return { stills: [], removedStillIds: [] }
+    const data = (await res.json()) as { stills?: ReferencePhoto[]; removedStillIds?: unknown }
+    const stills = Array.isArray(data.stills)
+      ? data.stills.map((p) => ({ ...p, library: 'ig' as const, persistedToApp: true }))
+      : []
+    const removedStillIds = Array.isArray(data.removedStillIds)
+      ? data.removedStillIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : []
+    return { stills, removedStillIds }
   } catch {
-    return []
+    return { stills: [], removedStillIds: [] }
   }
 }
 
@@ -120,8 +165,11 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
     local = memory.filter((p) => p.library === 'ig')
   }
   const remote = await pullServerIgStills()
-  const remoteIds = new Set(remote.map((p) => p.id))
-  memory = unionIgLists([...SHIPPED_IG_STILLS, ...local], remote)
+  if (remote.removedStillIds.length) {
+    saveRemovedIgStillIds([...loadRemovedIgStillIds(), ...remote.removedStillIds])
+  }
+  const remoteIds = new Set(remote.stills.map((p) => p.id))
+  memory = dropRemovedIgStills(unionIgLists([...SHIPPED_IG_STILLS, ...local], remote.stills))
   emit()
   // Re-upload any still this device still has as pixels if the gym file is
   // missing that id — recovers crops after an empty Blob overwrite.
@@ -174,6 +222,7 @@ export async function addIgStill(
   photo: ReferencePhoto,
   _opts?: { persistToApp?: boolean },
 ): Promise<ReferencePhoto> {
+  forgetRemovedIgStill(photo.id)
   let next: ReferencePhoto = { ...photo, library: 'ig' }
   memory = [next, ...memory.filter((p) => p.id !== next.id)].slice(0, MAX_IG)
   emit()
@@ -189,7 +238,7 @@ export async function addIgStill(
 }
 
 export type IgStillTextPatch = Partial<
-  Pick<ReferencePhoto, 'label' | 'customName' | 'notes'>
+  Pick<ReferencePhoto, 'label' | 'customName' | 'notes' | 'shapeId' | 'showInShapeLibrary'>
 >
 
 /** Merge text edits without replacing the image, crop, ownership, or timestamps. */
@@ -231,6 +280,7 @@ export async function removeIgStill(
   id: string,
   opts?: { fromApp?: boolean },
 ): Promise<void> {
+  noteRemovedIgStill(id)
   memory = memory.filter((p) => p.id !== id)
   emit()
   try {

@@ -26,6 +26,10 @@ export function athleteVideoBlobPath(id: string, mime: string): string {
   return `data/athlete-video-blobs/${id}.${extForMime(mime, 'mp4')}`
 }
 
+export function libraryClipBlobPath(id: string, mime: string): string {
+  return `data/library-blobs/${id}.${extForMime(mime, 'mp4')}`
+}
+
 export async function uploadGymMedia(
   pathname: string,
   body: Blob,

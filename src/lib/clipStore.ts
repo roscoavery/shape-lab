@@ -30,6 +30,11 @@ export type RefItem = {
   /** Playback window for coach skill references saved from a lesson clip. */
   trimStart?: number
   trimEnd?: number
+  /**
+   * Gym-hosted mp4 (Vercel Blob) so Compare / Learn can play without
+   * resolving Instagram again. Prefer this over the social page URL.
+   */
+  savedUrl?: string
   createdAt: string
 }
 

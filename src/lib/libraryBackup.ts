@@ -18,6 +18,15 @@ import { createId } from './storage'
 import shippedLibrary from '../config/compareLibrary.json'
 import { loadCompareLibraries } from './compareLibraries'
 import { dispatchLibraryChanged } from './libraryEvents'
+import {
+  clearRestoredLibraryMarks,
+  libraryUrlKey,
+  loadRemovedLibraryItemIds,
+  loadRemovedLibraryUrlKeys,
+  loadRestoredLibraryItemIds,
+  loadRestoredLibraryUrlKeys,
+  rememberServerLibraryRemovals,
+} from './libraryRemovals'
 
 export const LIBRARY_META_KEY = 'shape-lab.library-meta.v1'
 
@@ -37,11 +46,16 @@ export type LibraryBackup = {
       kind: RefItem['kind']
       name: string
       url?: string
+      savedUrl?: string
       keywords?: string[]
       postedBy?: string
       createdAt: string
     }>
   }>
+  removedItemIds?: string[]
+  removedUrlKeys?: string[]
+  restoredItemIds?: string[]
+  restoredUrlKeys?: string[]
 }
 
 export function collectionsToBackup(collections: RefCollection[]): LibraryBackup {
@@ -60,11 +74,16 @@ export function collectionsToBackup(collections: RefCollection[]): LibraryBackup
         kind: i.kind,
         name: i.name,
         url: i.url,
+        ...(i.savedUrl ? { savedUrl: i.savedUrl } : {}),
         ...(i.keywords && i.keywords.length ? { keywords: i.keywords } : {}),
         ...(i.postedBy ? { postedBy: i.postedBy } : {}),
         createdAt: i.createdAt,
       })),
     })),
+    removedItemIds: loadRemovedLibraryItemIds(),
+    removedUrlKeys: loadRemovedLibraryUrlKeys(),
+    restoredItemIds: loadRestoredLibraryItemIds(),
+    restoredUrlKeys: loadRestoredLibraryUrlKeys(),
   }
 }
 
@@ -194,6 +213,9 @@ export function coalesceCollections(
 export async function mergeLibraryBackup(
   backup: LibraryBackup,
 ): Promise<{ collections: RefCollection[]; added: number; skipped: number }> {
+  rememberServerLibraryRemovals(backup.removedItemIds, backup.removedUrlKeys)
+  const mergeGoneIds = new Set([...loadRemovedLibraryItemIds(), ...(backup.removedItemIds ?? [])])
+  const mergeGoneUrls = new Set([...loadRemovedLibraryUrlKeys(), ...(backup.removedUrlKeys ?? [])])
   const collections = [...(await getCollections())]
   let added = 0
   let skipped = 0
@@ -231,51 +253,54 @@ export async function mergeLibraryBackup(
         skipped += 1
         continue
       }
+      if (itemMatchesRemoval(item, mergeGoneIds, mergeGoneUrls)) {
+        skipped += 1
+        continue
+      }
       const match = target.items.find(
         (existing) =>
           existing.id === item.id ||
           (existing.url && isSameReferenceUrl(existing.url, item.url!)),
       )
-      if (match) {
-        const renamed = preferName(match.name, item.name || '')
-        if (renamed !== match.name) match.name = renamed
-        match.keywords = mergeKeywords(match.keywords, parseKeywords(item.keywords))
-        if (!match.postedBy && item.postedBy) match.postedBy = item.postedBy
-        skipped += 1
-        continue
-      }
-      const next: RefItem = {
-        id: item.id || createId('ref'),
-        kind:
-          item.kind === 'instagram' ||
-          item.kind === 'tiktok' ||
-          item.kind === 'facebook' ||
-          item.kind === 'url'
-            ? item.kind
-            : 'url',
-        name: item.name || item.url,
-        url: item.url,
-        keywords: parseKeywords(item.keywords),
-        postedBy: item.postedBy,
-        createdAt: item.createdAt || new Date().toISOString(),
-      }
+        if (match) {
+          const renamed = preferName(match.name, item.name || '')
+          if (renamed !== match.name) match.name = renamed
+          match.keywords = mergeKeywords(match.keywords, parseKeywords(item.keywords))
+          if (!match.postedBy && item.postedBy) match.postedBy = item.postedBy
+          if (item.savedUrl && !match.savedUrl) match.savedUrl = item.savedUrl
+          skipped += 1
+          continue
+        }
+        const next: RefItem = {
+          id: item.id || createId('ref'),
+          kind:
+            item.kind === 'instagram' ||
+            item.kind === 'tiktok' ||
+            item.kind === 'facebook' ||
+            item.kind === 'url'
+              ? item.kind
+              : 'url',
+          name: item.name || item.url,
+          url: item.url,
+          ...(item.savedUrl ? { savedUrl: item.savedUrl } : {}),
+          keywords: parseKeywords(item.keywords),
+          postedBy: item.postedBy,
+          createdAt: item.createdAt || new Date().toISOString(),
+        }
       target.items = [...target.items, next]
       added += 1
     }
   }
 
-  const coalesced = coalesceCollections(
-    collections,
-    new Set(backup.collections.map((c) => c.id).filter(Boolean)),
+  const coalesced = applyLibraryRemovals(
+    coalesceCollections(
+      collections,
+      new Set(backup.collections.map((c) => c.id).filter(Boolean)),
+    ),
+    backup.removedItemIds,
+    backup.removedUrlKeys,
   )
-  const keepIds = new Set(coalesced.map((c) => c.id))
-  for (const col of collections) {
-    if (!keepIds.has(col.id)) await deleteCollectionRecord(col.id)
-  }
-  for (const col of coalesced) {
-    await putCollection(col)
-  }
-  persistLibraryMeta(coalesced)
+  await writeFilteredCollections(coalesced)
   return { collections: coalesced, added, skipped }
 }
 
@@ -287,6 +312,7 @@ export async function pullServerLibrary(): Promise<LibraryBackup | null> {
     if (!data || data.kind !== 'shape-lab-library' || !Array.isArray(data.collections)) {
       return null
     }
+    rememberServerLibraryRemovals(data.removedItemIds, data.removedUrlKeys)
     return data
   } catch {
     return null
@@ -301,7 +327,10 @@ export async function pushServerLibrary(collections: RefCollection[]): Promise<b
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collectionsToBackup(gym)),
     })
-    if (res.ok) dispatchLibraryChanged()
+    if (res.ok) {
+      clearRestoredLibraryMarks()
+      dispatchLibraryChanged()
+    }
     return res.ok
   } catch {
     return false
@@ -322,31 +351,72 @@ export function libraryIsManaged(backup: LibraryBackup | null): boolean {
   return Boolean(extra.managed) || Boolean(backup.exportedAt)
 }
 
+function itemMatchesRemoval(item: { id?: string; url?: string }, ids: Set<string>, urls: Set<string>) {
+  if (item.id && ids.has(item.id)) return true
+  if (item.url) {
+    const key = libraryUrlKey(item.url)
+    if (urls.has(key) || urls.has(item.url)) return true
+  }
+  return false
+}
+
+export function applyLibraryRemovals(
+  collections: RefCollection[],
+  extraIds: string[] = [],
+  extraUrls: string[] = [],
+): RefCollection[] {
+  const ids = new Set([...loadRemovedLibraryItemIds(), ...extraIds])
+  const urls = new Set([...loadRemovedLibraryUrlKeys(), ...extraUrls])
+  if (ids.size === 0 && urls.size === 0) return collections
+  return collections
+    .map((col) => ({
+      ...col,
+      items: col.items.filter((item) => !itemMatchesRemoval(item, ids, urls)),
+    }))
+    .filter((col) => col.items.length > 0 || Boolean(col.athleteId))
+}
+
+async function writeFilteredCollections(collections: RefCollection[]): Promise<RefCollection[]> {
+  const existing = await getCollections()
+  const keep = new Set(collections.map((c) => c.id))
+  for (const col of existing) {
+    if (!keep.has(col.id)) await deleteCollectionRecord(col.id)
+  }
+  for (const col of collections) await putCollection(col)
+  persistLibraryMeta(collections)
+  return collections
+}
+
 function backupToCollections(backup: LibraryBackup): RefCollection[] {
-  return backup.collections.map((c) => ({
-    id: c.id,
-    name: c.name,
-    createdAt: c.createdAt,
-    ...(c.athleteId ? { athleteId: c.athleteId } : {}),
-    items: c.items
-      .filter((i) => i.kind !== 'file' || i.url)
-      .filter((i) => i.url)
-      .map((item) => ({
-        id: item.id,
-        kind:
-          item.kind === 'instagram' ||
-          item.kind === 'tiktok' ||
-          item.kind === 'facebook' ||
-          item.kind === 'url'
-            ? item.kind
-            : 'url',
-        name: item.name || item.url || 'Clip',
-        url: item.url,
-        keywords: parseKeywords(item.keywords),
-        postedBy: item.postedBy,
-        createdAt: item.createdAt,
-      })),
-  }))
+  return applyLibraryRemovals(
+    backup.collections.map((c) => ({
+      id: c.id,
+      name: c.name,
+      createdAt: c.createdAt,
+      ...(c.athleteId ? { athleteId: c.athleteId } : {}),
+      items: c.items
+        .filter((i) => i.kind !== 'file' || i.url)
+        .filter((i) => i.url)
+        .map((item) => ({
+          id: item.id,
+          kind:
+            item.kind === 'instagram' ||
+            item.kind === 'tiktok' ||
+            item.kind === 'facebook' ||
+            item.kind === 'url'
+              ? item.kind
+              : 'url',
+          name: item.name || item.url || 'Clip',
+          url: item.url,
+          keywords: parseKeywords(item.keywords),
+          postedBy: item.postedBy,
+          createdAt: item.createdAt,
+          ...(item.savedUrl ? { savedUrl: item.savedUrl } : {}),
+        })),
+    })),
+    backup.removedItemIds,
+    backup.removedUrlKeys,
+  )
 }
 
 /** Replace IndexedDB collections with a backup (deletes stick). */
@@ -408,6 +478,13 @@ export async function syncLibraryWithServer(
 ): Promise<{ collections: RefCollection[]; pulled: number }> {
   const seed = shippedCompareLibrary()
   const server = await pullServerLibrary()
+  const serverHasGym = Boolean(
+    server &&
+      (libraryIsManaged(server) ||
+        backupUrlCount(server) > 0 ||
+        (server.removedItemIds?.length ?? 0) > 0 ||
+        (server.removedUrlKeys?.length ?? 0) > 0),
+  )
 
   const mergeIn = async (backup: LibraryBackup | null): Promise<number> => {
     if (!backup || backupUrlCount(backup) === 0) return 0
@@ -418,16 +495,19 @@ export async function syncLibraryWithServer(
   if (persistToApp) {
     let pulled = 0
     pulled += await mergeIn(server)
-    pulled += await mergeIn(seed)
-    const all = await getCollections()
+    if (!serverHasGym) pulled += await mergeIn(seed)
+    const all = applyLibraryRemovals(
+      await getCollections(),
+      server?.removedItemIds,
+      server?.removedUrlKeys,
+    )
+    await writeFilteredCollections(all)
     const collections = all.filter((c) => !c.athleteId)
-    // Only push when this browser added URLs the gym file did not have.
-    // Never auto-publish a stale tab's names over a newer saved library.
     if (pulled > 0) await pushServerLibrary(collections)
     return { collections, pulled }
   }
 
-  if (server && backupUrlCount(server) > 0 && libraryIsManaged(server)) {
+  if (server && serverHasGym) {
     const collections = await replaceGymKeepPersonal(server, profileId)
     return {
       collections: collections.filter(
@@ -437,24 +517,21 @@ export async function syncLibraryWithServer(
     }
   }
 
-  let collections = local
+  let collections = applyLibraryRemovals(local)
   let pulled = 0
   if (server && backupUrlCount(server) > 0) {
     const merged = await mergeLibraryBackup(server)
     collections = merged.collections
     pulled += merged.added
   } else if (seed && backupUrlCount(seed) > 0) {
-    const localUrls = local.reduce(
-      (n, c) => n + c.items.filter((i) => i.url).length,
-      0,
-    )
+    const localUrls = local.reduce((n, c) => n + c.items.filter((i) => i.url).length, 0)
     if (localUrls === 0) {
       const merged = await mergeLibraryBackup(seed)
       collections = merged.collections
       pulled += merged.added
     }
   }
-  return { collections, pulled }
+  return { collections: applyLibraryRemovals(collections), pulled }
 }
 
 export function downloadBackupFile(collections: RefCollection[]): void {

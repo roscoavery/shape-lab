@@ -9,6 +9,9 @@
 
 import { spawn } from 'node:child_process'
 import { Readable } from 'node:stream'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   canonicalSocialUrl,
@@ -23,7 +26,11 @@ const UA =
 
 /** Instagram’s desktop page is a login wall. The mobile embed still has video_url. */
 const IG_EMBED_UA =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
+
+/** Instagram in-app browser — embed pages more often include video_url. */
+const IG_APP_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/21E219 Instagram 192.168.1.2.111 (iPhone14,3; iOS 17_4; en_US; en-US; scale=3.00; 1170x2532; 596392151)'
 
 /** Community Cobalt APIs that currently accept unauthenticated requests. */
 const COBALT_APIS = [
@@ -31,6 +38,8 @@ const COBALT_APIS = [
   'https://cobaltapi.cjs.nz/',
   'https://co.wuk.sh/',
   'https://cobalt-api.kwiatekmiki.com/',
+  'https://cobalt.api.timelessnesses.me/',
+  'https://api.cobalt.best/',
 ]
 
 export type ResolvedSlide = {
@@ -103,7 +112,7 @@ function handleFromField(raw: string | null | undefined): string | null {
 
 type YtHit = { url: string | null; postedBy: string | null }
 
-function spawnYtdlp(cmd: string, args: string[], ms = 12_000): Promise<YtHit> {
+function spawnYtdlp(cmd: string, args: string[], ms = 14_000): Promise<YtHit> {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
     let out = ''
@@ -135,8 +144,47 @@ function spawnYtdlp(cmd: string, args: string[], ms = 12_000): Promise<YtHit> {
   })
 }
 
+function cookieFileFromHeader(header: string): string | null {
+  const envCookies = process.env.IG_COOKIES?.trim()
+  const raw = envCookies || header
+  if (!raw) return null
+  const lines = ['# Netscape HTTP Cookie File']
+  for (const part of raw.split(';')) {
+    const piece = part.trim()
+    const i = piece.indexOf('=')
+    if (i <= 0) continue
+    const name = piece.slice(0, i)
+    const value = piece.slice(i + 1)
+    if (!name || !value) continue
+    lines.push(`.instagram.com\tTRUE\t/\tTRUE\t2147483647\t${name}\t${value}`)
+  }
+  if (lines.length < 2) return null
+  try {
+    const file = path.join(os.tmpdir(), 'shape-lab-ig-cookies.txt')
+    fs.writeFileSync(file, lines.join('\n') + '\n')
+    return file
+  } catch {
+    return null
+  }
+}
+
 async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
-  const args = ['-f', 'b', '-g', '--print', '%(channel)s', '--no-warnings', '--no-playlist', pageUrl]
+  await refreshInstagramCookies()
+  const cookieFile = cookieFileFromHeader(igCookieHeader)
+  const args = [
+    '-f',
+    'b',
+    '-g',
+    '--print',
+    '%(channel)s',
+    '--no-warnings',
+    '--no-playlist',
+    '--user-agent',
+    IG_APP_UA,
+    ...(cookieFile ? ['--cookies', cookieFile] : []),
+    ...(igCookieHeader && !cookieFile ? ['--add-header', `Cookie:${igCookieHeader}`] : []),
+    pageUrl,
+  ]
   const first = await spawnYtdlp('yt-dlp', args)
   if (first.url || first.postedBy) return first
   return spawnYtdlp('python3', ['-m', 'yt_dlp', ...args])
@@ -286,12 +334,30 @@ function slidesFromPageHtml(html: string): ResolvedSlide[] {
     const loose = html.match(/video_url[^h]{0,12}(https?:[^"\\]+)/)
     if (loose?.[1]) push(loose[1])
   }
+  push(html.match(/"playback_url"\s*:\s*"(https?:[^"]+)"/)?.[1])
+  const versions = html.match(/"video_versions"\s*:\s*\[([\s\S]{0,4000}?)\]/)
+  if (versions?.[1]) {
+    const urls = versions[1].matchAll(/"url"\s*:\s*"(https?:[^"]+)"/g)
+    for (const hit of urls) push(hit[1])
+  }
+  const xdt = html.match(
+    /"xdt_shortcode_media"\s*:\s*\{[\s\S]{0,12000}?"video_url"\s*:\s*"(https?:[^"]+)"/,
+  )
+  if (xdt?.[1]) push(xdt[1])
   push(
     html.match(/property="og:video(?::secure_url)?"\s+content="(https?:[^"]+)"/i)?.[1]
       ?? html.match(/content="(https?:[^"]+)"\s+property="og:video(?::secure_url)?"/i)?.[1],
   )
   push(html.match(/"playAddr"\s*:\s*"(https?:[^"]+)"/)?.[1])
   push(html.match(/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i)?.[1])
+  push(html.match(/<meta[^>]+property="og:video"[^>]+content="(https?:[^"]+)"/i)?.[1])
+  push(html.match(/<video[^>]+src="(https?:[^"]+)"/i)?.[1])
+  if (slides.length === 0) {
+    const cdn = html.match(
+      /https?:\\?\/\\?\/[^"'\\\s]+(?:cdninstagram\.com|fbcdn\.net)[^"'\\\s]*\/(?:o1|v)\/t[^"'\\\s]+\.mp4[^"'\\\s]*/i,
+    )
+    if (cdn?.[0]) push(cdn[0].replace(/\\\//g, '/'))
+  }
   return slides
 }
 
@@ -304,23 +370,100 @@ function embedPageUrls(pageUrl: string): string[] {
     `https://www.instagram.com/${kind}/${ig.code}/embed/captioned/`,
     `https://www.instagram.com/${other}/${ig.code}/embed/captioned/`,
     `https://www.instagram.com/${kind}/${ig.code}/embed/`,
+    `https://www.instagram.com/${kind}/${ig.code}/embed/captioned/?cr=1&v=14&wp=540`,
+    `https://www.ddinstagram.com/${kind}/${ig.code}/`,
+    `https://ddinstagram.com/${kind}/${ig.code}`,
+    `https://imginn.com/p/${ig.code}/`,
     pageUrl,
   ]
 }
 
+async function fetchText(
+  url: string,
+  ms = 6000,
+  ua = UA,
+  extra: Record<string, string> = {},
+): Promise<string | null> {
+  try {
+    const instagram = /instagram\.com|ddinstagram|imginn/i.test(url)
+    const embed = /\/embed/i.test(url)
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': ua,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        ...(instagram && igCookieHeader ? { Cookie: igCookieHeader } : {}),
+        ...(embed
+          ? {
+              Referer: 'https://www.instagram.com/',
+              Origin: 'https://www.instagram.com/',
+              'Sec-Fetch-Dest': 'iframe',
+              'Sec-Fetch-Mode': 'navigate',
+              'Sec-Fetch-Site': 'same-origin',
+            }
+          : instagram
+            ? { Referer: 'https://www.instagram.com/' }
+            : {}),
+        ...extra,
+      },
+      signal: AbortSignal.timeout(ms),
+      redirect: 'follow',
+    })
+    if (/instagram\.com/i.test(url)) rememberIgCookies(res)
+    if (!res.ok) return null
+    return await res.text()
+  } catch {
+    return null
+  }
+}
+
 async function htmlCarouselSlides(pageUrl: string): Promise<ResolvedSlide[]> {
-  const seen = new Set<string>()
-  for (const candidate of embedPageUrls(pageUrl)) {
-    if (seen.has(candidate)) continue
-    seen.add(candidate)
-    const html = await fetchText(
-      candidate,
-      7000,
-      /instagram\.com\/.*\/embed/i.test(candidate) ? IG_EMBED_UA : UA,
-    )
+  const urls = embedPageUrls(pageUrl)
+  const tryOne = async (candidate: string, ua: string): Promise<ResolvedSlide[]> => {
+    const html = await fetchText(candidate, 7000, ua)
+    if (!html) return []
+    return slidesFromPageHtml(normalizeIgHtml(html))
+  }
+  const videoOrThrow = async (candidate: string, ua: string) => {
+    const slides = await tryOne(candidate, ua)
+    if (!slides.some((s) => s.kind === 'video')) throw new Error('html-miss')
+    return slides
+  }
+  const embeds = urls.filter((u) => /instagram\.com\/.*\/embed/i.test(u)).slice(0, 4)
+  const first = await Promise.any(
+    embeds.flatMap((candidate) => [videoOrThrow(candidate, IG_APP_UA), videoOrThrow(candidate, IG_EMBED_UA)]),
+  ).catch(() => [] as ResolvedSlide[])
+  if (first.some((s) => s.kind === 'video')) return first
+
+  for (const candidate of urls.filter((u) => !/instagram\.com\/.*\/embed/i.test(u))) {
+    const slides = await tryOne(candidate, IG_EMBED_UA)
+    if (slides.some((s) => s.kind === 'video') || slides.length > 0) return slides
+  }
+  const ig = parseInstagramUrl(pageUrl)
+  if (ig) {
+    const api = await instagramApiSlides(ig.code)
+    if (api.length > 0) return api
+  }
+  return first
+}
+
+async function instagramApiSlides(code: string): Promise<ResolvedSlide[]> {
+  await refreshInstagramCookies()
+  const endpoints = [
+    `https://www.instagram.com/graphql/query/?query_hash=b3055c01b4b222b8a47dc12b090e4e64&variables=${encodeURIComponent(JSON.stringify({ shortcode: code }))}`,
+    `https://www.instagram.com/api/v1/media/${encodeURIComponent(code)}/info/`,
+    `https://i.instagram.com/api/v1/media/${encodeURIComponent(code)}/info/`,
+  ]
+  for (const endpoint of endpoints) {
+    const html = await fetchText(endpoint, 7000, IG_APP_UA, {
+      'X-IG-App-ID': '936619743392459',
+      'X-ASBD-ID': '129477',
+      'X-IG-WWW-Claim': '0',
+      Referer: 'https://www.instagram.com/',
+    })
     if (!html) continue
     const slides = slidesFromPageHtml(normalizeIgHtml(html))
-    if (slides.some((s) => s.kind === 'video') || slides.length > 0) return slides
+    if (slides.some((s) => s.kind === 'video')) return slides
   }
   return []
 }
@@ -348,25 +491,6 @@ function pickCarouselSlides(pageUrl: string, ...lists: ResolvedSlide[][]): Resol
     if (looksLikeCarousel(list, pageUrl) && list.length > best.length) best = list
   }
   return best
-}
-
-async function fetchText(url: string, ms = 6000, ua = UA): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': ua,
-        Accept: 'text/html,application/json',
-        ...(igCookieHeader && /instagram\.com/i.test(url) ? { Cookie: igCookieHeader } : {}),
-      },
-      signal: AbortSignal.timeout(ms),
-      redirect: 'follow',
-    })
-    if (/instagram\.com/i.test(url)) rememberIgCookies(res)
-    if (!res.ok) return null
-    return await res.text()
-  } catch {
-    return null
-  }
 }
 
 async function refreshInstagramCookies(): Promise<string> {
@@ -425,6 +549,10 @@ export async function lookupPostedBy(rawUrl: string): Promise<string | null> {
     return htmlPostedBy(pageUrl)
   }
   return null
+}
+
+export function forgetResolvedSocial(rawUrl: string) {
+  cache.delete(canonicalSocialUrl(rawUrl))
 }
 
 export async function resolveSocialSlides(rawUrl: string): Promise<{
@@ -527,7 +655,9 @@ function mediaHostAllowed(src: string): boolean {
       /(^|\.)byteoversea\.com$/i.test(host) ||
       /(^|\.)ibyteimg\.com$/i.test(host) ||
       /(^|\.)akamaized\.net$/i.test(host) ||
-      /(^|\.)cjs\.nz$/i.test(host)
+      /(^|\.)cjs\.nz$/i.test(host) ||
+      /(^|\.)ddinstagram\.com$/i.test(host) ||
+      /(^|\.)imginn\.com$/i.test(host)
     )
   } catch {
     return false

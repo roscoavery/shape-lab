@@ -841,6 +841,11 @@ export type ReferencePhoto = {
    * Written to the Shape Lab server (Ryan profile). Shows on every browser / link.
    */
   persistedToApp?: boolean
+  /**
+   * Ryan can pin an IG crop into the main Shape library for this shape
+   * (coach still gallery / main still), not only the IG shapes shelf.
+   */
+  showInShapeLibrary?: boolean
 }
 
 /** Coach-authored exercise that can be assigned as homework. */

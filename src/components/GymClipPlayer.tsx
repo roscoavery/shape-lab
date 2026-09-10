@@ -7,6 +7,7 @@ import { ClipWatchMeta } from './ClipWatchMeta'
 import { ShareReference } from './share/ShareReference'
 import { clipShareDraft } from '../lib/shareReference'
 import { useGymLibrary } from '../lib/gymLibrary'
+import { isGymHostedClipUrl } from '../lib/persistLibraryClip'
 
 type Props = {
   url: string
@@ -62,7 +63,9 @@ export function GymClipPlayer({
     if (socialPlatform(url) && itemId) void prefetchInstagram(url, itemId)
   }, [url, itemId])
   const persist = persistUrl || url
-  const { nameForUrl } = useGymLibrary()
+  const { nameForUrl, clipForUrl, clips } = useGymLibrary()
+  const gymClip = (itemId && clips.find((c) => c.id === itemId)) || clipForUrl(url)
+  const hosted = gymClip?.savedUrl && isGymHostedClipUrl(gymClip.savedUrl) ? gymClip.savedUrl : null
   const showShare = shareChrome ?? (fill && !bare)
   const share = showShare ? (
     <div className="pointer-events-auto absolute right-2 bottom-[5.75rem] z-30 sm:bottom-24">
@@ -103,11 +106,46 @@ export function GymClipPlayer({
     )
   }
   const social = socialPlatform(url)
+  if (hosted) {
+    const bench = (
+      <VideoWorkbench
+        src={hosted}
+        allowAbLoop
+        autoPlay={active !== false}
+        fill={fill}
+        objectFit={objectFit}
+        smartFit={useSmartFit}
+        persistUrl={persistUrl}
+        loopA={loopA}
+        loopB={loopB}
+        onAbChange={onAbChange}
+        markup={markup ?? (!compact && !bare)}
+        markupSwipeSafe={markupSwipeSafe}
+        compact={compact}
+        bare={bare}
+        active={active}
+        hudCorner={hudCorner}
+        overlayChrome={overlayChrome}
+      />
+    )
+    return fill ? (
+      <div className="relative h-full min-h-0 w-full">
+        {bench}
+        {share}
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {bench}
+        {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
+      </div>
+    )
+  }
   if (social) {
     const embed = (
-      <InstagramEmbed
+        <InstagramEmbed
         url={url}
         itemId={itemId}
+        savedUrl={gymClip?.savedUrl}
         fill={fill}
         persistUrl={persistUrl}
         loopA={loopA}

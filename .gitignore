@@ -31,7 +31,7 @@ data/coach-stills.json
 data/athlete-videos.json
 data/athlete-video-blobs/
 data/feed-posts.json
-data/feed-blobs/
+data/library-blobs/
 data/research.json
 data/coach-libraries.json
 data/social.json
