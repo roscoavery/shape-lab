@@ -25,6 +25,8 @@ import { withDefaultGym } from '../config/gyms'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
 const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
+const REMOVED_HW_LOGS_KEY = 'shape-lab.removedHomeworkLogs.v1'
+const REMOVED_HW_IDS_KEY = 'shape-lab.removedHomeworkIds.v1'
 const ATTEMPTS_KEY = 'shape-lab.attempts.v1'
 const SETTINGS_KEY = 'shape-lab.settings.v1'
 const ACTIVE_ATHLETE_KEY = 'shape-lab.activeAthlete.v1'
@@ -103,6 +105,36 @@ export function saveRemovedAthleteIds(ids: string[]) {
 export function noteRemovedAthlete(id: string) {
   if (!id || id === 'ath_ryan') return
   saveRemovedAthleteIds([...loadRemovedAthleteIds(), id])
+}
+
+export function loadRemovedHomeworkLogIds(): string[] {
+  const raw = readJson<unknown>(REMOVED_HW_LOGS_KEY, [])
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+export function saveRemovedHomeworkLogIds(ids: string[]) {
+  writeJson(REMOVED_HW_LOGS_KEY, [...new Set(ids)].slice(-2000))
+}
+
+export function noteRemovedHomeworkLog(id: string) {
+  if (!id) return
+  saveRemovedHomeworkLogIds([...loadRemovedHomeworkLogIds(), id])
+}
+
+export function loadRemovedHomeworkIds(): string[] {
+  const raw = readJson<unknown>(REMOVED_HW_IDS_KEY, [])
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+export function saveRemovedHomeworkIds(ids: string[]) {
+  writeJson(REMOVED_HW_IDS_KEY, [...new Set(ids)].slice(-2000))
+}
+
+export function noteRemovedHomeworkItem(id: string) {
+  if (!id) return
+  saveRemovedHomeworkIds([...loadRemovedHomeworkIds(), id])
 }
 
 export function loadAttempts(): AttemptRecord[] {
@@ -481,7 +513,8 @@ function remapOrphanHomeworkLogs(before: HomeworkItem[], after: HomeworkItem[]) 
 }
 
 export function loadAllHomework(): HomeworkItem[] {
-  const items = readJson<HomeworkItem[]>(HOMEWORK_KEY, [])
+  const gone = new Set(loadRemovedHomeworkIds())
+  const items = readJson<HomeworkItem[]>(HOMEWORK_KEY, []).filter((h) => h && !gone.has(h.id))
   let changed = false
   for (const item of items) {
     if (item.shapeId === 'hollow') {
@@ -518,7 +551,10 @@ export function subscribeHomework(cb: () => void): () => void {
 }
 
 export function saveAllHomework(items: HomeworkItem[]) {
-  const cleaned = filterDismissedHomework(dedupeHomeworkItems(items))
+  const gone = new Set(loadRemovedHomeworkIds())
+  const cleaned = filterDismissedHomework(dedupeHomeworkItems(items)).filter(
+    (h) => h && !gone.has(h.id),
+  )
   remapOrphanHomeworkLogs(items, cleaned)
   writeJson(HOMEWORK_KEY, cleaned)
   pushRosterSoon()
@@ -623,6 +659,7 @@ export function removeHomeworkItem(id: string): void {
   const target = all.find((h) => h.id === id)
   if (!target || target.source === 'auto') return
   dismissHomeworkKey(homeworkDedupeKey(target))
+  noteRemovedHomeworkItem(id)
   saveAllHomework(all.filter((h) => h.id !== id))
 }
 
@@ -643,7 +680,8 @@ export function progressHollowHomework(homeworkId: string): HomeworkItem | null 
 }
 
 export function loadHomeworkLogs(athleteId?: string): HomeworkLog[] {
-  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  const gone = new Set(loadRemovedHomeworkLogIds())
+  const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, []).filter((l) => l && !gone.has(l.id))
   return athleteId ? all.filter((l) => l.athleteId === athleteId) : all
 }
 
@@ -687,6 +725,7 @@ export function removeHomeworkLog(id: string): HomeworkLog | null {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
   const found = all.find((l) => l.id === id) ?? null
   if (!found) return null
+  noteRemovedHomeworkLog(id)
   writeJson(HOMEWORK_LOGS_KEY, all.filter((l) => l.id !== id))
   emitHomework()
   pushRosterSoon()

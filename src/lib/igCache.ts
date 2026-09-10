@@ -184,6 +184,9 @@ export async function fetchIgMediaBlob(proxyUrl: string): Promise<Blob> {
       throw new Error('Could not download that video.')
     }
     const mime = videoRes.headers.get('content-type') || raw.type || 'video/mp4'
+    if (!mime.startsWith('video/') && !mime.startsWith('image/')) {
+      throw new Error('Could not download that video.')
+    }
     const blob =
       mime.startsWith('video/') || mime.startsWith('image/')
         ? raw.type === mime

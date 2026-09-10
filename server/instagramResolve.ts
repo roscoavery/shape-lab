@@ -48,6 +48,41 @@ type CacheHit = {
 const cache = new Map<string, CacheHit>()
 const CACHE_MS = 25 * 60 * 1000
 const CAROUSEL_CAP = 12
+const IG_COOKIE_MS = 20 * 60 * 1000
+
+let igCookieHeader = ''
+let igCookieAt = 0
+
+function cookiesFromResponse(res: Response): string {
+  const raw =
+    typeof res.headers.getSetCookie === 'function'
+      ? res.headers.getSetCookie()
+      : res.headers.get('set-cookie')
+        ? [res.headers.get('set-cookie') as string]
+        : []
+  return raw
+    .map((row) => row.split(';')[0]?.trim())
+    .filter((part): part is string => Boolean(part) && part.includes('='))
+    .join('; ')
+}
+
+function mergeCookieHeader(prev: string, next: string): string {
+  const map = new Map<string, string>()
+  for (const part of `${prev};${next}`.split(';')) {
+    const piece = part.trim()
+    const i = piece.indexOf('=')
+    if (i <= 0) continue
+    map.set(piece.slice(0, i), piece.slice(i + 1))
+  }
+  return [...map.entries()].map(([k, v]) => `${k}=${v}`).join('; ')
+}
+
+function rememberIgCookies(res: Response) {
+  const next = cookiesFromResponse(res)
+  if (!next) return
+  igCookieHeader = mergeCookieHeader(igCookieHeader, next)
+  igCookieAt = Date.now()
+}
 
 export function isResolvableVideoUrl(url: string): boolean {
   return socialPlatform(url) !== null
@@ -318,15 +353,27 @@ function pickCarouselSlides(pageUrl: string, ...lists: ResolvedSlide[][]): Resol
 async function fetchText(url: string, ms = 6000, ua = UA): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': ua, Accept: 'text/html,application/json' },
+      headers: {
+        'User-Agent': ua,
+        Accept: 'text/html,application/json',
+        ...(igCookieHeader && /instagram\.com/i.test(url) ? { Cookie: igCookieHeader } : {}),
+      },
       signal: AbortSignal.timeout(ms),
       redirect: 'follow',
     })
+    if (/instagram\.com/i.test(url)) rememberIgCookies(res)
     if (!res.ok) return null
     return await res.text()
   } catch {
     return null
   }
+}
+
+async function refreshInstagramCookies(): Promise<string> {
+  if (igCookieHeader && Date.now() - igCookieAt < IG_COOKIE_MS) return igCookieHeader
+  await fetchText('https://www.instagram.com/', 5000, IG_EMBED_UA)
+  await fetchText('https://www.instagram.com/reel/embed/', 5000, IG_EMBED_UA)
+  return igCookieHeader
 }
 
 async function oembedPostedBy(pageUrl: string): Promise<string | null> {
@@ -509,12 +556,75 @@ export async function proxyInstagramMedia(
     res.end(JSON.stringify({ error: 'That media host is not allowed.' }))
     return
   }
-  const headers: Record<string, string> = {
-    'User-Agent': UA,
-    Referer: refererFor(src),
+  const instagram = /instagram|cdninstagram|fbcdn/i.test(src)
+  if (instagram) await refreshInstagramCookies()
+  const tries: Array<Record<string, string>> = instagram
+    ? [
+        {
+          'User-Agent': IG_EMBED_UA,
+          Referer: 'https://www.instagram.com/',
+          Origin: 'https://www.instagram.com/',
+          Accept: '*/*',
+          ...(igCookieHeader ? { Cookie: igCookieHeader } : {}),
+        },
+        {
+          'User-Agent': UA,
+          Referer: 'https://www.instagram.com/',
+          Origin: 'https://www.instagram.com/',
+          Accept: '*/*',
+          ...(igCookieHeader ? { Cookie: igCookieHeader } : {}),
+        },
+        {
+          'User-Agent': IG_EMBED_UA,
+          Referer: refererFor(src),
+          Accept: '*/*',
+        },
+      ]
+    : [
+        {
+          'User-Agent': UA,
+          Referer: refererFor(src),
+          Accept: '*/*',
+        },
+      ]
+  let upstream: Response | null = null
+  for (const base of tries) {
+    const headers = { ...base }
+    if (typeof req.headers.range === 'string' && !upstream) headers.Range = req.headers.range
+    const hit = await fetch(src, { headers, redirect: 'follow' })
+    rememberIgCookies(hit)
+    const type = hit.headers.get('content-type') || ''
+    if (hit.ok && (type.startsWith('video/') || type.startsWith('image/') || type.startsWith('application/octet-stream'))) {
+      upstream = hit
+      break
+    }
+    if (hit.status === 206 && type.startsWith('video/')) {
+      upstream = hit
+      break
+    }
+    // Range + missing session often 403s. Retry this header set without Range.
+    if (headers.Range && (hit.status === 403 || hit.status === 401)) {
+      delete headers.Range
+      const retry = await fetch(src, { headers, redirect: 'follow' })
+      rememberIgCookies(retry)
+      const retryType = retry.headers.get('content-type') || ''
+      if (
+        retry.ok &&
+        (retryType.startsWith('video/') ||
+          retryType.startsWith('image/') ||
+          retryType.startsWith('application/octet-stream'))
+      ) {
+        upstream = retry
+        break
+      }
+    }
   }
-  if (typeof req.headers.range === 'string') headers.Range = req.headers.range
-  const upstream = await fetch(src, { headers, redirect: 'follow' })
+  if (!upstream) {
+    res.statusCode = 502
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'Could not fetch that video file.' }))
+    return
+  }
   res.statusCode = upstream.status
   const type = upstream.headers.get('content-type')
   if (type) res.setHeader('Content-Type', type)

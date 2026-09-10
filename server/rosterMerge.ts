@@ -120,6 +120,8 @@ export type RosterLists = {
   removedAthleteIds: string[]
   activeAthleteId: string | null
   dismissedHomeworkKeys: string[]
+  removedHomeworkLogIds: string[]
+  removedHomeworkIds: string[]
   injuryLogs: unknown[]
   painJournals: unknown[]
   coachExercises: unknown[]
@@ -216,6 +218,15 @@ function mergeReactions(a: unknown, b: unknown): unknown[] {
     }
   }
   return [...byFrom.values()]
+}
+
+function dropRemovedRows(list: unknown[], ids: string[]): unknown[] {
+  if (ids.length === 0) return list
+  const gone = new Set(ids)
+  return list.filter((raw) => {
+    if (!isRecord(raw) || typeof raw.id !== 'string') return true
+    return !gone.has(raw.id)
+  })
 }
 
 function mergeHomeworkLogs(local: unknown[], remote: unknown[], cap: number): unknown[] {
@@ -547,6 +558,8 @@ export function emptyRosterLists(): RosterLists {
     removedAthleteIds: [],
     activeAthleteId: null,
     dismissedHomeworkKeys: [],
+    removedHomeworkLogIds: [],
+    removedHomeworkIds: [],
     injuryLogs: [],
     painJournals: [],
     coachExercises: [],
@@ -580,6 +593,8 @@ export function rosterListsFromUnknown(data: unknown): RosterLists {
     removedAthleteIds: asIdList(data.removedAthleteIds),
     activeAthleteId: typeof data.activeAthleteId === 'string' ? data.activeAthleteId : null,
     dismissedHomeworkKeys: asIdList(data.dismissedHomeworkKeys),
+    removedHomeworkLogIds: asIdList(data.removedHomeworkLogIds),
+    removedHomeworkIds: asIdList(data.removedHomeworkIds),
     injuryLogs: Array.isArray(data.injuryLogs) ? data.injuryLogs : [],
     painJournals: Array.isArray(data.painJournals) ? data.painJournals : [],
     coachExercises: Array.isArray(data.coachExercises) ? data.coachExercises : [],
@@ -600,15 +615,29 @@ export function mergeRosterLists(
   const dismissedHomeworkKeys = [
     ...new Set([...local.dismissedHomeworkKeys, ...remote.dismissedHomeworkKeys]),
   ]
-  const homework = dropDismissedHomework(
-    mergeHomework(local.homework, remote.homework),
-    dismissedHomeworkKeys,
+  const removedHomeworkLogIds = normalizeRemovedIds([
+    ...local.removedHomeworkLogIds,
+    ...remote.removedHomeworkLogIds,
+  ]).slice(-2000)
+  const removedHomeworkIds = normalizeRemovedIds([
+    ...local.removedHomeworkIds,
+    ...remote.removedHomeworkIds,
+  ]).slice(-2000)
+  const homework = dropRemovedRows(
+    dropDismissedHomework(
+      mergeHomework(local.homework, remote.homework),
+      dismissedHomeworkKeys,
+    ),
+    removedHomeworkIds,
   )
   const athletes = restoreMissingAthletes(
     {
       athletes: applyRemovals(mergeAthleteLists(local.athletes, remote.athletes), removed),
       homework,
-      homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
+      homeworkLogs: dropRemovedRows(
+        mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
+        removedHomeworkLogIds,
+      ),
       taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
       flowProgress: mergeStampMaps(local.flowProgress, remote.flowProgress),
       attempts: mergeByRowId(local.attempts, remote.attempts, 2000),
@@ -616,6 +645,8 @@ export function mergeRosterLists(
       removedAthleteIds: removed,
       activeAthleteId: remote.activeAthleteId || local.activeAthleteId,
       dismissedHomeworkKeys,
+      removedHomeworkLogIds,
+      removedHomeworkIds,
       injuryLogs: mergeByRowId(local.injuryLogs, remote.injuryLogs, 400),
       painJournals: mergeByRowId(local.painJournals, remote.painJournals, 400),
       coachExercises: mergeByRowId(local.coachExercises, remote.coachExercises, 200),
@@ -625,7 +656,10 @@ export function mergeRosterLists(
   return {
     athletes: applyRemovals(athletes, removed),
     homework,
-    homeworkLogs: mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
+    homeworkLogs: dropRemovedRows(
+      mergeHomeworkLogs(local.homeworkLogs, remote.homeworkLogs, 1000),
+      removedHomeworkLogIds,
+    ),
     taskProgress: mergeMaps(local.taskProgress, remote.taskProgress),
     flowProgress: mergeStampMaps(local.flowProgress, remote.flowProgress),
     attempts: mergeByRowId(local.attempts, remote.attempts, 2000),
@@ -633,6 +667,8 @@ export function mergeRosterLists(
     removedAthleteIds: removed,
     activeAthleteId: remote.activeAthleteId || local.activeAthleteId,
     dismissedHomeworkKeys,
+    removedHomeworkLogIds,
+    removedHomeworkIds,
     injuryLogs: mergeByRowId(local.injuryLogs, remote.injuryLogs, 400),
     painJournals: mergeByRowId(local.painJournals, remote.painJournals, 400),
     coachExercises: mergeByRowId(local.coachExercises, remote.coachExercises, 200),

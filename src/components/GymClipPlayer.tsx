@@ -28,6 +28,10 @@ type Props = {
   onPostedBy?: (handle: string) => void
   /** Overlay Share on fill players. Off for reels that already have Share in chrome. */
   shareChrome?: boolean
+  /** Letterbox the full frame instead of cropping. */
+  fit?: 'cover' | 'contain'
+  /** 9:16 cover / other contain. Off when `fit` is set. */
+  smartFit?: boolean
 }
 
 export function GymClipPlayer({
@@ -49,7 +53,11 @@ export function GymClipPlayer({
   postedBy,
   onPostedBy,
   shareChrome,
+  fit,
+  smartFit,
 }: Props) {
+  const objectFit = fit ?? (fill ? 'cover' : 'contain')
+  const useSmartFit = smartFit ?? (fill && !fit)
   useEffect(() => {
     if (socialPlatform(url) && itemId) void prefetchInstagram(url, itemId)
   }, [url, itemId])
@@ -115,6 +123,8 @@ export function GymClipPlayer({
         overlayChrome={overlayChrome}
         postedBy={postedBy}
         onPostedBy={onPostedBy}
+        fit={objectFit}
+        smartFit={useSmartFit}
       />
     )
     return fill ? (
@@ -135,7 +145,8 @@ export function GymClipPlayer({
       allowAbLoop
       autoPlay={active !== false}
       fill={fill}
-      smartFit={fill}
+      objectFit={objectFit}
+      smartFit={useSmartFit}
       persistUrl={persistUrl}
       loopA={loopA}
       loopB={loopB}

@@ -37,6 +37,8 @@ import {
   loadFlowProgress,
   loadHomeworkLogs,
   loadRemovedAthleteIds,
+  loadRemovedHomeworkIds,
+  loadRemovedHomeworkLogIds,
   saveActiveAthleteId,
   saveAllHomework,
   saveAllTaskProgress,
@@ -44,6 +46,8 @@ import {
   saveAttempts,
   saveFlowProgress,
   saveRemovedAthleteIds,
+  saveRemovedHomeworkIds,
+  saveRemovedHomeworkLogIds,
 } from './storage'
 import {
   loadCoachExercises,
@@ -72,6 +76,8 @@ export type RosterBackup = {
   compareLibraries?: Record<string, RefCollection[]>
   removedAthleteIds?: string[]
   dismissedHomeworkKeys?: string[]
+  removedHomeworkLogIds?: string[]
+  removedHomeworkIds?: string[]
   injuryLogs?: InjuryEntry[]
   painJournals?: PainJournalEntry[]
   coachExercises?: CoachExercise[]
@@ -123,6 +129,8 @@ function listsFromLocal(): RosterLists {
     removedAthleteIds: loadRemovedAthleteIds(),
     activeAthleteId: loadActiveAthleteId(),
     dismissedHomeworkKeys: loadDismissedHomeworkKeys(),
+    removedHomeworkLogIds: loadRemovedHomeworkLogIds(),
+    removedHomeworkIds: loadRemovedHomeworkIds(),
     injuryLogs: loadInjuryLogs(),
     painJournals: loadPainJournal(),
     coachExercises: loadCoachExercises(),
@@ -145,6 +153,8 @@ export function localRosterSnapshot(): RosterBackup {
     compareLibraries: loadCompareLibraries(),
     removedAthleteIds: loadRemovedAthleteIds(),
     dismissedHomeworkKeys: loadDismissedHomeworkKeys(),
+    removedHomeworkLogIds: loadRemovedHomeworkLogIds(),
+    removedHomeworkIds: loadRemovedHomeworkIds(),
     injuryLogs: loadInjuryLogs(),
     painJournals: loadPainJournal(),
     coachExercises: loadCoachExercises(),
@@ -167,14 +177,25 @@ function persistLists(lists: RosterLists): Athlete[] {
     saveRemovedAthleteIds(lists.removedAthleteIds.filter((id) => !livingIds.has(id))),
   )
   trySave(() => saveDismissedHomeworkKeys(lists.dismissedHomeworkKeys))
+  trySave(() => saveRemovedHomeworkLogIds(lists.removedHomeworkLogIds))
+  trySave(() => saveRemovedHomeworkIds(lists.removedHomeworkIds))
   trySave(() => saveInjuryLogs(lists.injuryLogs as InjuryEntry[]))
   trySave(() => savePainJournal(lists.painJournals as PainJournalEntry[]))
   trySave(() => saveCoachExercises(lists.coachExercises as CoachExercise[]))
   trySave(() => saveAllHomework(lists.homework as HomeworkItem[]))
+  const goneLogs = new Set(lists.removedHomeworkLogIds)
   trySave(() => {
     localStorage.setItem(
       'shape-lab.homeworkLogs.v1',
-      JSON.stringify(lists.homeworkLogs.slice(0, 1000)),
+      JSON.stringify(
+        lists.homeworkLogs
+          .filter((row) => {
+            if (!row || typeof row !== 'object' || !('id' in row)) return true
+            const id = (row as { id?: unknown }).id
+            return typeof id !== 'string' || !goneLogs.has(id)
+          })
+          .slice(0, 1000),
+      ),
     )
   })
   trySave(() => saveAllTaskProgress(lists.taskProgress as Record<string, AthleteTaskProgress>))

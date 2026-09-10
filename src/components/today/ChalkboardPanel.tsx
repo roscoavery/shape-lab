@@ -54,7 +54,7 @@ type Props = {
 export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, embed = false }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
-  const [size, setSize] = useState<Size>(embed ? 'more' : 'compact')
+  const [size, setSize] = useState<Size>('more')
   const [offerings, setOfferings] = useState(() => loadOfferings())
   const [pickOffering, setPickOffering] = useState(offeringId ?? '')
   const [newName, setNewName] = useState('')
@@ -130,6 +130,7 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
               Chalkboard
             </p>
             <p className="text-lg font-bold">{offering ? classLabel(offering) : 'Class'}</p>
+            <p className="text-xs text-white/55">Scroll the board. Every clip shows the full frame.</p>
           </div>
           <button
             type="button"
@@ -461,6 +462,7 @@ function ChalkboardBody({
                 item={item}
                 coach={coach}
                 compact={compact}
+                boardSize={size}
                 sourceLabel={
                   source === 'type'
                     ? `Every ${offering?.name ?? 'class'} time`
@@ -483,22 +485,46 @@ function ChalkboardCard({
   item,
   coach,
   compact,
+  boardSize,
   sourceLabel,
 }: {
   item: ChalkboardItem
   coach: boolean
   compact: boolean
+  boardSize: Size
   sourceLabel?: string
 }) {
   const { nameForUrl } = useGymLibrary()
   const [collage, setCollage] = useState<Awaited<ReturnType<typeof listCollages>>[number] | null>(null)
   const [full, setFull] = useState(false)
+  const [clipFull, setClipFull] = useState(false)
   const drills = item.kind === 'drill-list' || item.kind === 'drill' ? listDrills() : []
+  const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
+  const playerH =
+    boardSize === 'full'
+      ? 'h-[min(78vh,46rem)]'
+      : compact
+        ? 'h-56'
+        : 'h-[min(28rem,70vh)]'
 
   useEffect(() => {
     if (item.kind !== 'collage' || !item.collageId) return
     void listCollages().then((list) => setCollage(list.find((c) => c.id === item.collageId) ?? null))
   }, [item.kind, item.collageId])
+
+  const clipPlayer = item.url ? (
+    <GymClipPlayer
+      url={item.url}
+      persistUrl={item.url}
+      loopA={item.loopA}
+      loopB={item.loopB}
+      compact
+      fill
+      fit="contain"
+      smartFit={false}
+      quiet
+    />
+  ) : null
 
   return (
     <article className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]">
@@ -514,6 +540,15 @@ function ChalkboardCard({
         </div>
         {coach && (
           <div className="flex shrink-0 gap-2">
+            {isClip && (
+              <button
+                type="button"
+                onClick={() => setClipFull(true)}
+                className="text-[11px] font-semibold text-[var(--accent)]"
+              >
+                Full screen
+              </button>
+            )}
             <button
               type="button"
               onClick={() => pinChalkboardItem(item.id, !item.pinned)}
@@ -530,20 +565,20 @@ function ChalkboardCard({
             </button>
           </div>
         )}
+        {!coach && isClip && (
+          <button
+            type="button"
+            onClick={() => setClipFull(true)}
+            className="shrink-0 text-[11px] font-semibold text-[var(--accent)]"
+          >
+            Full screen
+          </button>
+        )}
       </div>
-      {!compact && (item.kind === 'clip' || item.kind === 'loop') && item.url && (
-        <div className="aspect-[9/16] max-h-80 w-full bg-black">
-          <GymClipPlayer
-            url={item.url}
-            persistUrl={item.url}
-            loopA={item.loopA}
-            loopB={item.loopB}
-            compact
-            fill
-          />
-        </div>
+      {isClip && (
+        <div className={`relative w-full bg-black ${playerH}`}>{clipPlayer}</div>
       )}
-      {!compact && (item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
+      {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
         <div className="flex max-h-72 items-center justify-center bg-black">
           <CroppedStill
             src={item.photoSrc}
@@ -553,10 +588,10 @@ function ChalkboardCard({
           />
         </div>
       )}
-      {!compact && item.kind === 'drill' && item.drillId && (
+      {item.kind === 'drill' && item.drillId && (
         <DrillPreview drillId={item.drillId} />
       )}
-      {!compact && item.kind === 'drill-list' && (
+      {item.kind === 'drill-list' && (
         <ul className="space-y-1 px-3 pb-3">
           {(item.drillIds ?? []).map((id) => {
             const d = drills.find((x) => x.id === id)
@@ -568,7 +603,7 @@ function ChalkboardCard({
           })}
         </ul>
       )}
-      {!compact && item.kind === 'collage' && collage && (
+      {item.kind === 'collage' && collage && (
         <div className="px-2 pb-2">
           <CollageStage
             collage={collage}
@@ -580,13 +615,35 @@ function ChalkboardCard({
           />
         </div>
       )}
-      {compact && (
-        <p className="px-3 pb-2 text-xs text-[var(--muted)]">
-          {item.kind === 'loop' && item.loopA != null && item.loopB != null
-            ? `Loop ${item.loopA.toFixed(1)}s–${item.loopB.toFixed(1)}s`
-            : kindLabel(item.kind)}
-        </p>
-      )}
+      {clipFull &&
+        item.url &&
+        createPortal(
+          <div className="fixed inset-0 z-[90] flex flex-col bg-black">
+            <header className="flex items-center justify-between gap-3 px-4 py-3 text-white">
+              <p className="truncate text-sm font-semibold">{item.title}</p>
+              <button
+                type="button"
+                onClick={() => setClipFull(false)}
+                className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </header>
+            <div className="relative min-h-0 flex-1">
+              <GymClipPlayer
+                url={item.url}
+                persistUrl={item.url}
+                loopA={item.loopA}
+                loopB={item.loopB}
+                fill
+                fit="contain"
+                smartFit={false}
+                quiet
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </article>
   )
 }

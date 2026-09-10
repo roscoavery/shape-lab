@@ -7,9 +7,8 @@
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import {
-  instagramSlideIndex,
+    instagramSlideIndex,
   postedByFromUrl,
-  socialEmbedSrc,
   socialOpenLabel,
   socialPlatform,
   socialProfileUrl,
@@ -182,6 +181,9 @@ type Props = {
   markup?: boolean
   markupSwipeSafe?: boolean
   overlayChrome?: boolean
+  /** Letterbox the full frame (chalkboard) instead of cropping 9:16. */
+  fit?: 'cover' | 'contain'
+  smartFit?: boolean
 }
 
 export function InstagramEmbed({
@@ -203,6 +205,8 @@ export function InstagramEmbed({
   markup,
   markupSwipeSafe = false,
   overlayChrome,
+  fit,
+  smartFit,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -219,7 +223,6 @@ export function InstagramEmbed({
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
-  const [useEmbed, setUseEmbed] = useState(false)
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
   onPostedByRef.current = onPostedBy
@@ -248,7 +251,6 @@ export function InstagramEmbed({
     setError(null)
     setSaved(false)
     setQuotaWarn(false)
-    setUseEmbed(false)
     setResolvedBy(null)
     setSlides([])
     setSlidesFor(null)
@@ -320,7 +322,25 @@ export function InstagramEmbed({
         if (!playedFromCache) {
           const index = Math.min(instagramSlideIndex(url), Math.max(0, manifest.slides.length - 1))
           const current = manifest.slides[index] ?? manifest.slides[0]
-          if (current?.url) showStream(current.url, current.kind)
+          if (current?.url) {
+            try {
+              const blob = await fetchIgMediaBlob(current.url)
+              if (cancelled || loadGen.current !== gen) return
+              showBlob(blob, current.kind, false)
+              const scoped = itemId ? mediaCacheId(itemId, url, index) : null
+              if (scoped) rememberInstagramBlob(scoped, blob)
+              if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
+              try {
+                if (scoped) await putBlob(scoped, blob)
+                if (itemId && index === 0) await putBlob(itemId, blob)
+              } catch (err) {
+                if (isQuotaError(err)) setQuotaWarn(true)
+              }
+            } catch {
+              if (cancelled || loadGen.current !== gen) return
+              showStream(current.url, current.kind)
+            }
+          }
         }
       } catch (err) {
         if (cancelled || loadGen.current !== gen) return
@@ -330,17 +350,11 @@ export function InstagramEmbed({
           showBlob(cached, 'video', true)
           return
         }
-        if (socialEmbedSrc(url)) {
-          setUseEmbed(true)
-          setLoading(false)
-          markClipPlayable(url)
-          return
-        }
         markClipUnplayable(url)
         setError(
           err instanceof Error
             ? err.message
-            : 'Could not reach the local video helper. Keep the Shape Lab dev server running (npm run dev).',
+            : 'Could not load that video in Shape Lab. Keep the gym link open, then try again.',
         )
         setLoading(false)
       }
@@ -398,28 +412,41 @@ export function InstagramEmbed({
           return
         }
         if (current.url) {
-          revoke()
-          setSrc(current.url)
-          setKind(current.kind)
-          setFromCache(false)
-          setLoading(false)
-          void fetchIgMediaBlob(current.url)
-            .then(async (blob) => {
-              if (cancelled || loadGen.current !== gen) return
-              if (scoped) rememberInstagramBlob(scoped, blob)
-              if (legacy) rememberInstagramBlob(legacy, blob)
-              if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
-              try {
-                if (scoped) await putBlob(scoped, blob)
-                if (legacy && legacy !== scoped) await putBlob(legacy, blob)
-                if (itemId && index === 0) await putBlob(itemId, blob)
-                if (!cancelled && itemId) onCachedRef.current?.(itemId)
-              } catch (err) {
-                if (isQuotaError(err)) setQuotaWarn(true)
-              }
-            })
-            .catch(() => {})
-          return
+          setLoading(true)
+          try {
+            const blob = await fetchIgMediaBlob(current.url)
+            if (cancelled || loadGen.current !== gen) return
+            revoke()
+            const objectUrl = URL.createObjectURL(asPlayableBlob(blob, current.kind))
+            objectUrlRef.current = objectUrl
+            setSrc(objectUrl)
+            setKind(current.kind)
+            setFromCache(false)
+            setSaved(true)
+            setLoading(false)
+            markClipPlayable(url)
+            if (scoped) rememberInstagramBlob(scoped, blob)
+            if (legacy) rememberInstagramBlob(legacy, blob)
+            if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
+            try {
+              if (scoped) await putBlob(scoped, blob)
+              if (legacy && legacy !== scoped) await putBlob(legacy, blob)
+              if (itemId && index === 0) await putBlob(itemId, blob)
+              if (!cancelled && itemId) onCachedRef.current?.(itemId)
+            } catch (err) {
+              if (isQuotaError(err)) setQuotaWarn(true)
+            }
+            return
+          } catch {
+            if (cancelled || loadGen.current !== gen) return
+            revoke()
+            setSrc(current.url)
+            setKind(current.kind)
+            setFromCache(false)
+            setLoading(false)
+            markClipPlayable(url)
+            return
+          }
         }
         setLoading(false)
       } catch (err) {
@@ -488,9 +515,7 @@ export function InstagramEmbed({
     )
   }
 
-  const embedSrc = socialEmbedSrc(url)
-
-  if (loading && !src && !useEmbed) {
+  if (loading && !src) {
     return (
       <div
         className={`flex items-center justify-center text-sm text-[var(--muted)] ${
@@ -500,29 +525,6 @@ export function InstagramEmbed({
         }`}
       >
         Opening video…
-      </div>
-    )
-  }
-
-  if (useEmbed && embedSrc) {
-    return (
-      <div className={fill ? 'flex h-full min-h-0 w-full flex-col' : 'flex flex-col gap-2'}>
-        <iframe
-          src={embedSrc}
-          title="Reference video"
-          className={
-            fill
-              ? 'h-full min-h-0 w-full border-0 bg-black'
-              : 'h-[28rem] w-full rounded-lg border-0 bg-black'
-          }
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-        />
-        {!fill && !quiet ? (
-          <p className="text-xs text-[var(--muted)]">
-            Playing the original Instagram / TikTok player. Delay-cam overlay needs a saved in-app
-            copy — tap Try again after it loads, or Open on the site.
-          </p>
-        ) : null}
       </div>
     )
   }
@@ -539,7 +541,6 @@ export function InstagramEmbed({
             onClick={() => {
               forgetInstagramManifest(url)
               forgetClipPlayability(url)
-              setUseEmbed(false)
               setRetry((n) => n + 1)
             }}
             className="text-xs font-semibold text-[var(--accent)] hover:underline"
@@ -583,7 +584,7 @@ export function InstagramEmbed({
   const player =
     kind === 'image' && src ? (
       <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
-        <ReelFitImage src={src} fill={fill} />
+        <ClipFitImage src={src} fill={fill} contain={(fit ?? (fill ? 'cover' : 'contain')) === 'contain'} />
         {hudCorner ? (
           <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
             {hudCorner}
@@ -597,7 +598,8 @@ export function InstagramEmbed({
         allowAbLoop
         autoPlay={active !== false}
         fill={fill}
-        smartFit={fill}
+        objectFit={fit ?? (fill ? 'cover' : 'contain')}
+        smartFit={smartFit ?? (fill && !fit)}
         persistUrl={slidePersist}
         credit={credit}
         creditHref={socialProfileUrl(credit || '', platform)}
@@ -613,10 +615,11 @@ export function InstagramEmbed({
         overlayChrome={overlayChrome}
         pictureChrome={carouselChrome}
         onError={() => {
-          if (socialEmbedSrc(url)) {
-            setUseEmbed(true)
-            markClipPlayable(url)
-          }
+          markClipUnplayable(url)
+          setSrc(null)
+          setError(
+            'Could not play that video in Shape Lab. Try again, or open it on the original site.',
+          )
         }}
       />
     ) : null
@@ -643,19 +646,20 @@ export function InstagramEmbed({
   )
 }
 
-function ReelFitImage({ src, fill }: { src: string; fill: boolean }) {
-  const [fit, setFit] = useState<'cover' | 'contain'>('contain')
+function ClipFitImage({ src, fill, contain }: { src: string; fill: boolean; contain: boolean }) {
+  const [auto, setAuto] = useState<'cover' | 'contain'>(contain ? 'contain' : 'cover')
   return (
     <img
       src={src}
       alt=""
       onLoad={(e) => {
+        if (contain) return
         const img = e.currentTarget
-        setFit(reelObjectFit(img.naturalWidth, img.naturalHeight))
+        setAuto(reelObjectFit(img.naturalWidth, img.naturalHeight))
       }}
       className={
         fill
-          ? `h-full w-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`
+          ? `h-full w-full ${contain || auto === 'contain' ? 'object-contain' : 'object-cover'}`
           : 'max-h-[420px] w-full rounded-lg object-contain'
       }
     />

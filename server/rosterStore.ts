@@ -33,6 +33,8 @@ export type DiskRoster = {
   compareLibraries?: Record<string, unknown>
   removedAthleteIds?: string[]
   dismissedHomeworkKeys?: string[]
+  removedHomeworkLogIds?: string[]
+  removedHomeworkIds?: string[]
   injuryLogs?: unknown[]
   painJournals?: unknown[]
   coachExercises?: unknown[]
@@ -52,6 +54,8 @@ const EMPTY: DiskRoster = {
   compareLibraries: {},
   removedAthleteIds: [],
   dismissedHomeworkKeys: [],
+  removedHomeworkLogIds: [],
+  removedHomeworkIds: [],
   injuryLogs: [],
   painJournals: [],
   coachExercises: [],
@@ -72,6 +76,8 @@ function listsToDisk(lists: RosterLists, exportedAt = new Date().toISOString()):
     compareLibraries: lists.compareLibraries,
     removedAthleteIds: lists.removedAthleteIds,
     dismissedHomeworkKeys: lists.dismissedHomeworkKeys,
+    removedHomeworkLogIds: lists.removedHomeworkLogIds,
+    removedHomeworkIds: lists.removedHomeworkIds,
     injuryLogs: lists.injuryLogs.slice(-400),
     painJournals: lists.painJournals.slice(-400),
     coachExercises: lists.coachExercises.slice(-200),
@@ -130,6 +136,10 @@ function normalizeRoster(data: DiskRoster | null | undefined): DiskRoster {
     dismissedHomeworkKeys: Array.isArray(data.dismissedHomeworkKeys)
       ? data.dismissedHomeworkKeys
       : [],
+    removedHomeworkLogIds: Array.isArray(data.removedHomeworkLogIds)
+      ? data.removedHomeworkLogIds
+      : [],
+    removedHomeworkIds: Array.isArray(data.removedHomeworkIds) ? data.removedHomeworkIds : [],
     injuryLogs: Array.isArray(data.injuryLogs) ? data.injuryLogs : [],
     painJournals: Array.isArray(data.painJournals) ? data.painJournals : [],
     coachExercises: Array.isArray(data.coachExercises) ? data.coachExercises : [],

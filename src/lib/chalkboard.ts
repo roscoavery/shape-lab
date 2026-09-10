@@ -71,6 +71,8 @@ export type ChalkboardFile = {
   version: 1
   exportedAt: string
   boards: ChalkboardBoard[]
+  removedItemIds?: string[]
+  removedBoardIds?: string[]
 }
 
 export type ChalkboardDraft = {
@@ -96,6 +98,26 @@ function emptyFile(): ChalkboardFile {
     version: 1,
     exportedAt: '',
     boards: [],
+    removedItemIds: [],
+    removedBoardIds: [],
+  }
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && id.length > 0))].slice(
+    -2000,
+  )
+}
+
+function dropRemoved(file: ChalkboardFile): ChalkboardFile {
+  const goneBoards = new Set(file.removedBoardIds ?? [])
+  const goneItems = new Set(file.removedItemIds ?? [])
+  return {
+    ...file,
+    boards: file.boards
+      .filter((b) => !goneBoards.has(b.id))
+      .map((b) => ({ ...b, items: b.items.filter((i) => !goneItems.has(i.id)) })),
   }
 }
 
@@ -156,12 +178,14 @@ function read(): ChalkboardFile {
     if (!raw) return emptyFile()
     const data = JSON.parse(raw) as ChalkboardFile
     if (data?.kind !== 'shape-lab-chalkboards') return emptyFile()
-    return {
+    return dropRemoved({
       kind: 'shape-lab-chalkboards',
       version: 1,
       exportedAt: data.exportedAt ?? '',
       boards: (data.boards ?? []).map(normalizeBoard).filter((b): b is ChalkboardBoard => !!b),
-    }
+      removedItemIds: asIdList(data.removedItemIds),
+      removedBoardIds: asIdList(data.removedBoardIds),
+    })
   } catch {
     return emptyFile()
   }
@@ -316,7 +340,11 @@ export function removeBoard(id: string) {
       boards = boards.map((b) => (b.id === sibling.id ? { ...b, active: true } : b))
     }
   }
-  write({ ...file, boards })
+  write({
+    ...file,
+    boards,
+    removedBoardIds: asIdList([...(file.removedBoardIds ?? []), id]),
+  })
 }
 
 export function ensureBoardForOffering(offeringId: string, createdById: string): ChalkboardBoard {
@@ -435,6 +463,7 @@ export function eraseChalkboardItem(itemId: string) {
   const file = read()
   write({
     ...file,
+    removedItemIds: asIdList([...(file.removedItemIds ?? []), itemId]),
     boards: file.boards.map((b) =>
       b.items.some((i) => i.id === itemId)
         ? { ...b, items: b.items.filter((i) => i.id !== itemId), updatedAt: new Date().toISOString() }
@@ -527,16 +556,25 @@ export async function hydrateChalkboards(): Promise<void> {
     const data = (await res.json()) as ChalkboardFile
     if (data?.kind !== 'shape-lab-chalkboards') return
     const local = read()
-    const remote = (data.boards ?? []).map(normalizeBoard).filter((b): b is ChalkboardBoard => !!b)
-    const boards = mergeById(local.boards, remote, (b) => b.updatedAt || b.createdAt)
-    write({ ...local, boards }, false)
+    const remoteBoards = (data.boards ?? []).map(normalizeBoard).filter((b): b is ChalkboardBoard => !!b)
+    const removedItemIds = asIdList([...(local.removedItemIds ?? []), ...asIdList(data.removedItemIds)])
+    const removedBoardIds = asIdList([...(local.removedBoardIds ?? []), ...asIdList(data.removedBoardIds)])
+    const boards = mergeById(local.boards, remoteBoards, (b) => b.updatedAt || b.createdAt)
+    write(
+      dropRemoved({ ...local, boards, removedItemIds, removedBoardIds }),
+      false,
+    )
     const next = read()
+    const remoteGoneItems = asIdList(data.removedItemIds)
+    const remoteGoneBoards = asIdList(data.removedBoardIds)
     if (
-      next.boards.length !== remote.length ||
+      next.boards.length !== remoteBoards.filter((b) => !removedBoardIds.includes(b.id)).length ||
       next.boards.some((b) => {
-        const other = remote.find((r) => r.id === b.id)
-        return !other || b.items.length > other.items.length
-      })
+        const other = remoteBoards.find((r) => r.id === b.id)
+        return !other || b.items.length !== other.items.filter((i) => !removedItemIds.includes(i.id)).length
+      }) ||
+      (next.removedItemIds ?? []).some((id) => !remoteGoneItems.includes(id)) ||
+      (next.removedBoardIds ?? []).some((id) => !remoteGoneBoards.includes(id))
     ) {
       await publishChalkboards()
     }
