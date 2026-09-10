@@ -1,4 +1,5 @@
 import { handstandContest } from '../lib/intakeQuestions'
+import { photoDisplayKey } from '../lib/profilePhoto'
 
 type AvatarAthlete = {
   name: string
@@ -38,6 +39,7 @@ export function AthleteAvatar({
   if (athlete?.photoDataUrl) {
     return (
       <img
+        key={photoDisplayKey(athlete.photoDataUrl)}
         src={athlete.photoDataUrl}
         alt=""
         className={`${box} shrink-0 rounded-full object-cover ${className}`}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from 
 
 type Props = {
   src: string
+  athleteId?: string
   onSave: (dataUrl: string) => void
   onCancel: () => void
 }
@@ -10,14 +11,51 @@ const VIEW = 280
 const OUT = 720
 const MAX_ZOOM = 10
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function decodeImage(href: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    if (/^https?:/i.test(src) || src.startsWith('/')) img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error('Could not read that photo.'))
-    img.src = src
+    img.src = href
   })
+}
+
+async function fetchObjectUrl(src: string): Promise<string> {
+  const res = await fetch(src, { credentials: 'same-origin', cache: 'reload' })
+  if (!res.ok) throw new Error('Could not read that photo.')
+  return URL.createObjectURL(await res.blob())
+}
+
+async function loadCropSource(
+  src: string,
+  athleteId?: string,
+): Promise<{ img: HTMLImageElement; preview: string; revoke: string | null }> {
+  if (src.startsWith('data:') || src.startsWith('blob:')) {
+    return { img: await decodeImage(src), preview: src, revoke: null }
+  }
+
+  const candidates: string[] = []
+  if (athleteId && (/^https?:/i.test(src) || src.startsWith('/'))) {
+    candidates.push(`/api/roster-photo-file?id=${encodeURIComponent(athleteId)}&v=${Date.now()}`)
+  }
+  if (/^https?:/i.test(src) || src.startsWith('/')) candidates.push(src)
+
+  let lastErr: unknown
+  for (const href of candidates) {
+    try {
+      const objectUrl = await fetchObjectUrl(href)
+      try {
+        const img = await decodeImage(objectUrl)
+        return { img, preview: objectUrl, revoke: objectUrl }
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl)
+        lastErr = err
+      }
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Could not read that photo.')
 }
 
 function minCover(nw: number, nh: number): number {
@@ -34,13 +72,15 @@ function clampOffset(tx: number, ty: number, scale: number, nw: number, nh: numb
   }
 }
 
-export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
+export function ProfilePhotoCropper({ src, athleteId, onSave, onCancel }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const revokeRef = useRef<string | null>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const pinch = useRef<{ dist: number; scale: number } | null>(null)
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null)
   const [natural, setNatural] = useState({ w: 1, h: 1 })
+  const [preview, setPreview] = useState(src)
   const [scale, setScale] = useState(1)
   const [tx, setTx] = useState(0)
   const [ty, setTy] = useState(0)
@@ -50,27 +90,57 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
   const cover = minCover(natural.w, natural.h)
   const maxScale = cover * MAX_ZOOM
 
+  const releaseAll = () => {
+    const host = hostRef.current
+    pointers.current.forEach((_, id) => {
+      if (host?.hasPointerCapture?.(id)) {
+        try {
+          host.releasePointerCapture(id)
+        } catch {
+          /* already released */
+        }
+      }
+    })
+    pointers.current.clear()
+    pinch.current = null
+    drag.current = null
+  }
+
   useEffect(() => {
     let cancelled = false
-    void loadImage(src)
-      .then((img) => {
-        if (cancelled) return
-        const w = img.naturalWidth || img.width
-        const h = img.naturalHeight || img.height
+    if (revokeRef.current) {
+      URL.revokeObjectURL(revokeRef.current)
+      revokeRef.current = null
+    }
+    void loadCropSource(src, athleteId)
+      .then((next) => {
+        if (cancelled) {
+          if (next.revoke) URL.revokeObjectURL(next.revoke)
+          return
+        }
+        revokeRef.current = next.revoke
+        const w = next.img.naturalWidth || next.img.width
+        const h = next.img.naturalHeight || next.img.height
         setNatural({ w, h })
-        const next = minCover(w, h)
-        setScale(next)
+        const coverScale = minCover(w, h)
+        setScale(coverScale)
         setTx(0)
         setTy(0)
-        imgRef.current = img
+        setPreview(next.preview)
+        imgRef.current = next.img
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not read that photo.')
       })
     return () => {
       cancelled = true
+      releaseAll()
+      if (revokeRef.current) {
+        URL.revokeObjectURL(revokeRef.current)
+        revokeRef.current = null
+      }
     }
-  }, [src])
+  }, [src, athleteId])
 
   const applyScale = (next: number, around?: { x: number; y: number }) => {
     const clamped = Math.min(maxScale, Math.max(cover, next))
@@ -85,7 +155,13 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
   }
 
   const down = (e: PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
+    e.stopPropagation()
+    e.preventDefault()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* iPad Safari may already own the pointer */
+    }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()]
@@ -99,6 +175,7 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
 
   const move = (e: PointerEvent<HTMLDivElement>) => {
     if (!pointers.current.has(e.pointerId)) return
+    e.preventDefault()
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointers.current.size >= 2 && pinch.current) {
       const [a, b] = [...pointers.current.values()]
@@ -119,11 +196,39 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
     setTy(next.ty)
   }
 
-  const up = (e: PointerEvent<HTMLDivElement>) => {
-    pointers.current.delete(e.pointerId)
+  const release = (el: HTMLDivElement | null, id: number) => {
+    if (el && el.hasPointerCapture?.(id)) {
+      try {
+        el.releasePointerCapture(id)
+      } catch {
+        /* already released */
+      }
+    }
+    pointers.current.delete(id)
     if (pointers.current.size < 2) pinch.current = null
     if (pointers.current.size === 0) drag.current = null
   }
+
+  const up = (e: PointerEvent<HTMLDivElement>) => {
+    release(e.currentTarget, e.pointerId)
+  }
+
+  useEffect(() => {
+    const host = hostRef.current
+    const end = (e: globalThis.PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return
+      release(host, e.pointerId)
+    }
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
+    window.addEventListener('blur', releaseAll)
+    return () => {
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
+      window.removeEventListener('blur', releaseAll)
+      releaseAll()
+    }
+  }, [])
 
   const wheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -136,20 +241,46 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
   const save = async () => {
     const img = imgRef.current
     if (!img) return
+    releaseAll()
     setBusy(true)
     setError(null)
     try {
       const crop = VIEW / scale
-      const sx = natural.w / 2 - tx / scale - crop / 2
-      const sy = natural.h / 2 - ty / scale - crop / 2
+      const sx = Math.min(natural.w - crop, Math.max(0, natural.w / 2 - tx / scale - crop / 2))
+      const sy = Math.min(natural.h - crop, Math.max(0, natural.h / 2 - ty / scale - crop / 2))
       const canvas = document.createElement('canvas')
       canvas.width = OUT
       canvas.height = OUT
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Could not crop that photo.')
       ctx.drawImage(img, sx, sy, crop, crop, 0, 0, OUT, OUT)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
-      if (!dataUrl.startsWith('data:image')) throw new Error('Could not save that crop.')
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const finish = (blob: Blob | null) => {
+          if (!blob) {
+            try {
+              const fallback = canvas.toDataURL('image/jpeg', 0.88)
+              if (fallback.startsWith('data:image')) resolve(fallback)
+              else reject(new Error('Could not save that crop.'))
+            } catch {
+              reject(new Error('Could not save that crop.'))
+            }
+            return
+          }
+          const reader = new FileReader()
+          reader.onload = () => {
+            const next = typeof reader.result === 'string' ? reader.result : ''
+            if (!next.startsWith('data:image')) reject(new Error('Could not save that crop.'))
+            else resolve(next)
+          }
+          reader.onerror = () => reject(new Error('Could not save that crop.'))
+          reader.readAsDataURL(blob)
+        }
+        try {
+          canvas.toBlob(finish, 'image/jpeg', 0.88)
+        } catch {
+          finish(null)
+        }
+      })
       onSave(dataUrl)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that crop.')
@@ -165,7 +296,7 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
       </p>
       <div
         ref={hostRef}
-        className="relative mx-auto overflow-hidden rounded-full bg-black touch-none"
+        className="relative mx-auto overflow-hidden rounded-full bg-black [touch-action:none]"
         style={{ width: VIEW, height: VIEW }}
         onPointerDown={down}
         onPointerMove={move}
@@ -174,7 +305,7 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
         onWheel={wheel}
       >
         <img
-          src={src}
+          src={preview}
           alt=""
           draggable={false}
           className="pointer-events-none absolute max-w-none select-none"
@@ -210,7 +341,10 @@ export function ProfilePhotoCropper({ src, onSave, onCancel }: Props) {
         </button>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={() => {
+            releaseAll()
+            onCancel()
+          }}
           className="h-12 rounded-2xl border border-white/15 px-4 text-sm font-semibold"
         >
           Cancel

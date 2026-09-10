@@ -3,7 +3,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getPoseLandmarker, resultToLandmarks } from '../lib/pose'
 import { hintMotion } from '../lib/saveMedia'
 import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../lib/delayCameraPipeline'
 import type { Landmark } from '../types'
@@ -61,6 +60,7 @@ export function usePoseCamera(): PoseCameraState {
     }
 
     try {
+      const { getPoseLandmarker, resultToLandmarks } = await import('../lib/pose')
       const landmarker = await getPoseLandmarker()
       const now = performance.now()
       const minGap = isAndroid() ? 50 : 0
@@ -128,6 +128,7 @@ export function usePoseCamera(): PoseCameraState {
           void loop()
         })
         try {
+          const { getPoseLandmarker } = await import('../lib/pose')
           await getPoseLandmarker()
           setReady(true)
         } catch (err) {

@@ -11,6 +11,12 @@ export function isPhotoUrl(value: string | undefined): boolean {
   return value.startsWith('https://') || value.startsWith('http://') || value.startsWith('/api/')
 }
 
+/** Every JPEG data URL starts the same, so slice(0, 80) never remounts a new crop. */
+export function photoDisplayKey(src: string): string {
+  if (!src.startsWith('data:')) return src
+  return `data:${src.length}:${src.slice(32, 56)}:${src.slice(-32)}`
+}
+
 export async function compressProfilePhoto(src: string): Promise<Blob | null> {
   if (!src || isPhotoUrl(src)) return null
   if (!src.startsWith('data:')) return null

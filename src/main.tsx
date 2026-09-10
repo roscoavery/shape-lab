@@ -1,8 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { installLegacySafariShims } from './lib/legacySafari'
 import './index.css'
 import App from './App.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
+
+installLegacySafariShims()
 
 function applyAndroidShell() {
   if (!isAndroid()) return

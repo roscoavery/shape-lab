@@ -162,6 +162,39 @@ export function AthleteProfileCard({
     return () => window.removeEventListener('shape-lab-gym-pulled', onPull)
   }, [athlete.id])
 
+  useEffect(() => {
+    if (variant !== 'overlay') return
+    const html = document.documentElement
+    const body = document.body
+    const scrollY = window.scrollY
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+    }
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    return () => {
+      html.style.overflow = prev.htmlOverflow
+      body.style.overflow = prev.bodyOverflow
+      body.style.position = prev.bodyPosition
+      body.style.top = prev.bodyTop
+      body.style.left = prev.bodyLeft
+      body.style.right = prev.bodyRight
+      body.style.width = prev.bodyWidth
+      window.scrollTo(0, scrollY)
+    }
+  }, [variant])
+
   const gesture = async (kind: ProfileGesture['kind']) => {
     if (!viewer || viewer.id === athlete.id) return
     const row: ProfileGesture = {
@@ -646,8 +679,8 @@ export function AthleteProfileCard({
 
   if (variant === 'overlay') {
     return (
-      <div className="fixed inset-0 z-[85] flex flex-col text-[var(--text)]" style={shellStyle}>
-        <header className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="fixed inset-0 z-[85] flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden text-[var(--text)]" style={shellStyle}>
+        <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--profile-accent)' }}>
             {own ? 'My profile' : handle}
           </p>
@@ -661,7 +694,12 @@ export function AthleteProfileCard({
             </button>
           )}
         </header>
-        <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto px-4 pb-10">{body}</div>
+        <div
+          className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] [touch-action:pan-y]"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {body}
+        </div>
       </div>
     )
   }

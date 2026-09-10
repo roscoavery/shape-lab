@@ -2,6 +2,7 @@ import type { Athlete } from '../../types'
 import { StationSnapshot } from './StationSnapshot'
 import { CoachPicker } from '../CoachPicker'
 import { profileRole } from '../../lib/profileRole'
+import { rememberLocalPhoto } from '../../lib/rosterSync'
 
 type TwistDirection = NonNullable<Athlete['twistDirection']>
 type DominantHand = NonNullable<Athlete['dominantHand']>
@@ -78,7 +79,11 @@ export function ProfileFieldsEditor({
           <StationSnapshot
             photoDataUrl={athlete.photoDataUrl}
             allowUpload
-            onCapture={(photoDataUrl) => patch({ photoDataUrl })}
+            onCapture={(photoDataUrl) => {
+              rememberLocalPhoto(athlete.id, photoDataUrl)
+              patch({ photoDataUrl })
+            }}
+            athleteId={athlete.id}
           />
         </section>
       )}

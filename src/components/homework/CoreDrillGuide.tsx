@@ -43,7 +43,7 @@ function stepsFor(item: HomeworkItem): Step[] {
 function shortCue(item: HomeworkItem, shape?: ShapeDef): string {
   const tip = shape?.tips?.[0]
   if (tip && tip.length < 80) return tip
-  const note = item.notes?.split(/(?<=\.)\s/)[0]
+  const note = item.notes?.split('. ')[0]
   if (note) return note
   return shape?.description ?? ''
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { isAndroid } from '../../lib/delayCameraPipeline'
+import { photoDisplayKey } from '../../lib/profilePhoto'
 import { ProfilePhotoCropper } from './ProfilePhotoCropper'
 
 function cameraErrorMessage(err: unknown): string {
@@ -58,11 +59,12 @@ export async function photoFileToDataUrl(file: File): Promise<string> {
 
 type Props = {
   photoDataUrl?: string
+  athleteId?: string
   onCapture: (dataUrl: string) => void
   allowUpload?: boolean
 }
 
-export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props) {
+export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUpload }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [live, setLive] = useState(false)
@@ -70,6 +72,8 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<string | null>(null)
+  const [savedPreview, setSavedPreview] = useState<string | null>(null)
+  const shownPhoto = savedPreview || photoDataUrl
 
   useEffect(() => {
     return () => {
@@ -146,7 +150,9 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
     return (
       <ProfilePhotoCropper
         src={pending}
+        athleteId={athleteId}
         onSave={(dataUrl) => {
+          setSavedPreview(dataUrl)
           onCapture(dataUrl)
           setPending(null)
         }}
@@ -157,9 +163,10 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
 
   return (
     <div className="flex flex-col gap-3">
-      {photoDataUrl && !live ? (
+      {shownPhoto && !live ? (
         <img
-          src={photoDataUrl}
+          key={photoDisplayKey(shownPhoto)}
+          src={shownPhoto}
           alt=""
           className="mx-auto h-40 w-40 rounded-full object-cover"
         />
@@ -196,7 +203,7 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
             onClick={() => void openCamera()}
             className="h-14 rounded-2xl border border-white/15 text-base font-semibold disabled:opacity-40"
           >
-            {busy ? 'Opening camera…' : photoDataUrl ? 'Retake snapshot' : 'Take a snapshot'}
+            {busy ? 'Opening camera…' : shownPhoto ? 'Retake snapshot' : 'Take a snapshot'}
           </button>
           {allowUpload && (
             <label className="flex h-12 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-white/20 text-sm font-semibold text-white/80">
@@ -209,10 +216,10 @@ export function StationSnapshot({ photoDataUrl, onCapture, allowUpload }: Props)
               />
             </label>
           )}
-          {photoDataUrl && (
+          {shownPhoto && (
             <button
               type="button"
-              onClick={() => setPending(photoDataUrl)}
+              onClick={() => setPending(shownPhoto)}
               className="h-11 rounded-2xl border border-white/15 text-sm font-semibold"
             >
               Adjust crop

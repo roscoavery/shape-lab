@@ -38,6 +38,7 @@ import { TUMBLE_SMART, normalizeGymName, sameGym } from '../../config/gyms'
 import { trainsAtGym, viewerHomeGym, withClassGym } from '../../lib/gymScope'
 import { GymBadge } from './GymBadge'
 import { StationSnapshot } from './StationSnapshot'
+import { rememberLocalPhoto } from '../../lib/rosterSync'
 import {
   loadGuestParks,
   makeShapeTestPark,
@@ -744,7 +745,11 @@ export function ClassStation({
           >
             <StationSnapshot
               photoDataUrl={draft.photoDataUrl}
-              onCapture={(photoDataUrl) => persist({ ...draft, photoDataUrl })}
+              athleteId={draft.athleteId}
+              onCapture={(photoDataUrl) => {
+                if (draft.athleteId) rememberLocalPhoto(draft.athleteId, photoDataUrl)
+                persist({ ...draft, photoDataUrl })
+              }}
             />
             <button
               type="button"

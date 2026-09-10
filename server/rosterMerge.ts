@@ -313,7 +313,10 @@ function profileStamp(athlete: Pick<Athlete, 'updatedAt' | 'createdAt'>): string
 }
 
 function pickPhoto(newer?: string, older?: string): string | undefined {
-  if (newer && older) return newer.length >= older.length ? newer : older
+  // A just-saved crop is a data URL. The gym roster JSON has no photos, so a
+  // merge must not trade that crop for a leftover http URL on the other row.
+  if (newer?.startsWith('data:')) return newer
+  if (older?.startsWith('data:')) return older
   return newer || older
 }
 

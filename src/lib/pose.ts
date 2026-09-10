@@ -66,11 +66,30 @@ export async function getFloorPoseLandmarker(): Promise<PoseLandmarker> {
   return floorLandmarkerPromise
 }
 
+const CORE_LM = [0, 11, 12, 23, 24] // nose, shoulders, hips
+
+/** Reject wallpaper / empty-frame ghosts so Train does not start a hold. */
+export function landmarksLookPresent(
+  pose: Array<{ x: number; y: number; visibility?: number }>,
+): boolean {
+  if (!pose || pose.length < 25) return false
+  const core = CORE_LM.map((i) => pose[i]).filter(Boolean)
+  if (core.length < 5) return false
+  const visible = core.filter((p) => (p!.visibility ?? 0) >= 0.52)
+  if (visible.length < 4) return false
+  const xs = visible.map((p) => p!.x)
+  const ys = visible.map((p) => p!.y)
+  const w = Math.max(...xs) - Math.min(...xs)
+  const h = Math.max(...ys) - Math.min(...ys)
+  return w > 0.1 && h > 0.16
+}
+
 export function resultToLandmarks(
   result: PoseLandmarkerResult,
 ): Landmark[] | null {
   const pose = result.landmarks?.[0]
   if (!pose || pose.length < 33) return null
+  if (!landmarksLookPresent(pose)) return null
   return pose.map((lm) => ({
     x: lm.x,
     y: lm.y,

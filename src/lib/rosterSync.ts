@@ -293,16 +293,50 @@ function photosFromSnapshot(athletes: Athlete[]): Record<string, string> {
   return photos
 }
 
-function attachPhotos(athletes: Athlete[], photos: Record<string, string>): Athlete[] {
+/** Crops just saved on this device — gym pulls must not swap them for the old URL. */
+const localPhotoHold = new Map<string, { url: string; until: number }>()
+const PHOTO_HOLD_MS = 12 * 60_000
+
+export function rememberLocalPhoto(id: string, url: string) {
+  if (!id || !url) return
+  localPhotoHold.set(id, { url, until: Date.now() + PHOTO_HOLD_MS })
+}
+
+function holdingLocalPhoto(id: string, local: string | undefined): boolean {
+  const held = localPhotoHold.get(id)
+  if (!held || !local) return false
+  if (Date.now() > held.until) {
+    localPhotoHold.delete(id)
+    return false
+  }
+  return true
+}
+
+function attachPhotos(
+  athletes: Athlete[],
+  photos: Record<string, string>,
+  fromUpload = false,
+): Athlete[] {
   if (Object.keys(photos).length === 0) return athletes
   return athletes.map((a) => {
     const incoming = photos[a.id]
     if (!incoming) return a
-    if (!a.photoDataUrl) return { ...a, photoDataUrl: incoming }
-    if (isPhotoUrl(incoming) && a.photoDataUrl.startsWith('data:')) {
+    const local = a.photoDataUrl
+    if (!local) return { ...a, photoDataUrl: incoming }
+    // A fresh crop is a data URL. Gym photo pulls used to replace it with the
+    // previous hosted pic, so zoom/save looked like it never stuck.
+    if (local.startsWith('data:') && !fromUpload) {
+      rememberLocalPhoto(a.id, local)
+      return a
+    }
+    if (fromUpload) {
+      rememberLocalPhoto(a.id, incoming)
       return { ...a, photoDataUrl: incoming }
     }
-    if (incoming.length > a.photoDataUrl.length) return { ...a, photoDataUrl: incoming }
+    if (local === incoming) return a
+    if (holdingLocalPhoto(a.id, local)) return a
+    if (isPhotoUrl(incoming)) return { ...a, photoDataUrl: incoming }
+    if (incoming.length > local.length) return { ...a, photoDataUrl: incoming }
     return a
   })
 }
@@ -443,7 +477,7 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
           if (url) nextUrls[id] = url
         }
         if (Object.keys(nextUrls).length > 0) {
-          saveAthletes(attachPhotos(loadAthletes(), nextUrls))
+          saveAthletes(attachPhotos(loadAthletes(), nextUrls, true))
         }
       }
       return true
@@ -522,7 +556,7 @@ export async function pushThisDeviceToGym(): Promise<{
       const url = await pushOnePhoto(row.id, row.photoDataUrl)
       if (url) {
         photos += 1
-        saveAthletes(attachPhotos(loadAthletes(), { [row.id]: url }))
+        saveAthletes(attachPhotos(loadAthletes(), { [row.id]: url }, true))
       }
     }
   }

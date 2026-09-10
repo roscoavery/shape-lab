@@ -1,11 +1,24 @@
 /**
  * Resolve a public Instagram / TikTok / Facebook video URL to a playable mp4.
  *
- * Instagram’s official /embed/ iframe is a login / “post removed” wall when it
- * sits on another site. Continue on web (first-party on instagram.com) sets
- * ig_nrcb=1 and then serves the reel. Shape Lab does the same on the server:
- * guest cookies + that flag, GraphQL, then the permalink as a document, then
- * yt-dlp. The player is always a first-party <video>, never Instagram’s iframe.
+ * ---------------------------------------------------------------------------
+ * KEEP THIS PATH. Ryan’s public reels play in Safari after “Continue on web”
+ * but Instagram’s official /embed/ iframe on another site is a fake
+ * “post removed / Visit Instagram” wall. Do not put that iframe back in the
+ * player. We cannot click Continue on web inside a cross-origin iframe.
+ *
+ * What Continue on web actually does (copy this, do not iframe it):
+ *   1. Always send Cookie: ig_nrcb=1 (CONTINUE_ON_WEB) plus guest csrftoken.
+ *   2. Warm https://www.instagram.com/ as a document to get LSD + cookies.
+ *   3. POST www.instagram.com/api/graphql PolarIS logged-out query
+ *      (doc_id IG_GRAPHQL_DOC, media_id from the shortcode).
+ *   4. If that misses, fetch the permalink as Sec-Fetch-Dest: document and
+ *      parse video_versions / scontent…cdninstagram.com … .mp4.
+ *   5. yt-dlp last, with NO Instagram in-app user-agent (that empties media).
+ *
+ * Play the cdninstagram mp4 in a first-party <video> via /api/ig-media.
+ * Persist savedUrl after a successful play so Production does not need IG again.
+ * ---------------------------------------------------------------------------
  */
 
 import { spawn } from 'node:child_process'
