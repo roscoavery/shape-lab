@@ -4,7 +4,15 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
+import {
+  isDirectHttpUrl,
+  readBin,
+  readJson,
+  removeFile,
+  sendPublicRedirect,
+  writeJson,
+  writePublicBin,
+} from './persist.ts'
 
 const META = 'data/athlete-videos.json'
 const blobRel = (file: string) => `data/athlete-video-blobs/${file}`
@@ -31,6 +39,8 @@ export type DiskAthleteVideo = {
   sizeBytes: number
   mime: string
   file: string
+  /** Public Blob URL — phones play this instead of streaming through the function. */
+  publicUrl?: string
   lessonId?: string
   skillId?: string
   skillLabel?: string
@@ -109,6 +119,24 @@ export async function videosForClient(
   return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
+export function athleteVideoClientUrl(video: Pick<DiskAthleteVideo, 'id' | 'publicUrl'>): string {
+  return video.publicUrl || `/api/athlete-video-file?id=${encodeURIComponent(video.id)}`
+}
+
+async function rememberVideo(video: DiskAthleteVideo): Promise<DiskAthleteVideo> {
+  const meta = await readAthleteVideoMeta()
+  const others = meta.videos.filter((v) => v.id !== video.id)
+  const mine = others.filter((v) => v.athleteId === video.athleteId)
+  const rest = others.filter((v) => v.athleteId !== video.athleteId)
+  const kept = [video, ...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const pruned = kept.slice(MAX_PER_ATHLETE)
+  for (const drop of pruned) {
+    await removeFile(blobRel(drop.file))
+  }
+  await writeMeta([...kept.slice(0, MAX_PER_ATHLETE), ...rest])
+  return video
+}
+
 export function readRequestBuffer(
   req: IncomingMessage,
   max = MAX_BYTES,
@@ -153,7 +181,7 @@ export async function addAthleteVideoFromBody(params: {
     : 'compare-replay'
   const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  await writeBin(blobRel(file), params.buf, mime)
+  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
   const video: DiskAthleteVideo = {
     id,
     athleteId,
@@ -167,6 +195,7 @@ export async function addAthleteVideoFromBody(params: {
     sizeBytes: params.buf.length,
     mime,
     file,
+    ...(publicUrl ? { publicUrl } : {}),
     ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
     ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
     ...(params.skillLabel?.trim()
@@ -177,17 +206,59 @@ export async function addAthleteVideoFromBody(params: {
       ? { className: params.className.trim().slice(0, 120) }
       : {}),
   }
-  const meta = await readAthleteVideoMeta()
-  const others = meta.videos.filter((v) => v.id !== id)
-  const mine = others.filter((v) => v.athleteId === athleteId)
-  const rest = others.filter((v) => v.athleteId !== athleteId)
-  const kept = [video, ...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const pruned = kept.slice(MAX_PER_ATHLETE)
-  for (const drop of pruned) {
-    await removeFile(blobRel(drop.file))
+  return rememberVideo(video)
+}
+
+export async function addAthleteVideoFromUrl(params: {
+  id: string
+  athleteId: string
+  name: string
+  source: string
+  createdAt?: string
+  durationSec?: number | null
+  mime: string
+  url: string
+  sizeBytes?: number
+  lessonId?: string
+  skillId?: string
+  skillLabel?: string
+  classId?: string
+  className?: string
+}): Promise<DiskAthleteVideo | null> {
+  const id = safeId(params.id)
+  const athleteId = safeId(params.athleteId)
+  const url = params.url.trim()
+  if (!id || !athleteId || !url || !isDirectHttpUrl(url)) return null
+  const source = SOURCES.has(params.source as AthleteVideoSource)
+    ? (params.source as AthleteVideoSource)
+    : 'compare-replay'
+  const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
+  const file = `${id}${extForMime(mime)}`
+  const video: DiskAthleteVideo = {
+    id,
+    athleteId,
+    name: params.name.trim() || 'Clip',
+    source,
+    createdAt: params.createdAt || new Date().toISOString(),
+    durationSec:
+      typeof params.durationSec === 'number' && Number.isFinite(params.durationSec)
+        ? params.durationSec
+        : null,
+    sizeBytes: params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : 0,
+    mime,
+    file,
+    publicUrl: url,
+    ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
+    ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
+    ...(params.skillLabel?.trim()
+      ? { skillLabel: params.skillLabel.trim().slice(0, 120) }
+      : {}),
+    ...(safeId(params.classId ?? '') ? { classId: safeId(params.classId ?? '')! } : {}),
+    ...(params.className?.trim()
+      ? { className: params.className.trim().slice(0, 120) }
+      : {}),
   }
-  await writeMeta([...kept.slice(0, MAX_PER_ATHLETE), ...rest])
-  return video
+  return rememberVideo(video)
 }
 
 export async function deleteAthleteVideo(id: string, athleteId?: string): Promise<boolean> {
@@ -207,8 +278,24 @@ export async function sendAthleteVideoFile(id: string, res: ServerResponse): Pro
   if (!sid) return false
   const found = (await readAthleteVideoMeta()).videos.find((v) => v.id === sid)
   if (!found) return false
+  if (found.publicUrl && isDirectHttpUrl(found.publicUrl)) {
+    sendPublicRedirect(res, found.publicUrl)
+    return true
+  }
   const buf = await readBin(blobRel(found.file))
   if (!buf) return false
+  try {
+    const publicUrl = await writePublicBin(blobRel(found.file), buf, found.mime || 'video/webm')
+    if (publicUrl) {
+      found.publicUrl = publicUrl
+      const meta = await readAthleteVideoMeta()
+      await writeMeta(meta.videos.map((v) => (v.id === found.id ? { ...v, publicUrl } : v)))
+      sendPublicRedirect(res, publicUrl)
+      return true
+    }
+  } catch {
+    /* stream the bytes this once */
+  }
   res.statusCode = 200
   res.setHeader('Content-Type', found.mime || 'video/webm')
   res.setHeader('Content-Length', String(buf.length))

@@ -7,6 +7,7 @@ import { hydrateChalkboards } from './chalkboard'
 import { hydrateCoachClasses } from './coachClasses'
 import { hydrateCoachContent } from './coachContentStore'
 import { listFeedPosts } from './feedPosts'
+import { loadNotices } from './notify'
 import {
   attachPhotosToLocal,
   pullServerRoster,
@@ -24,6 +25,7 @@ export type GymRevisionStores = {
   classes: string
   content: string
   chalkboards: string
+  notices: string
 }
 
 let last: GymRevisionStores | null = null
@@ -45,14 +47,14 @@ function sameStamp(a: GymRevisionStores, b: GymRevisionStores): boolean {
     a.feed === b.feed &&
     a.classes === b.classes &&
     a.content === b.content &&
-    a.chalkboards === b.chalkboards
+    a.chalkboards === b.chalkboards &&
+    a.notices === b.notices
   )
 }
 
 export async function pullGymRevision(): Promise<GymRevisionStores | null> {
   try {
     const res = await fetch('/api/revision', {
-      cache: 'no-store',
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     })
@@ -101,6 +103,7 @@ export async function syncGymIfChanged(
     if (!prev || prev.classes !== rev.classes) jobs.push(hydrateCoachClasses())
     if (!prev || prev.content !== rev.content) jobs.push(hydrateCoachContent())
     if (!prev || prev.chalkboards !== rev.chalkboards) jobs.push(hydrateChalkboards())
+    if (!prev || prev.notices !== rev.notices) jobs.push(loadNotices())
     await Promise.allSettled(jobs)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('shape-lab-gym-pulled'))

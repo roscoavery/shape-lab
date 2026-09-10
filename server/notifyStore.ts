@@ -20,6 +20,7 @@ export type DiskNotice = {
 type DiskFile = {
   kind: 'shape-lab-notices'
   version: 1
+  exportedAt?: string
   notices: DiskNotice[]
 }
 
@@ -68,6 +69,7 @@ export async function addNotice(raw: unknown): Promise<DiskNotice | null> {
   await writeJson(FILE, {
     kind: 'shape-lab-notices',
     version: 1,
+    exportedAt: new Date().toISOString(),
     notices: [notice, ...existing.filter((n) => n.id !== id)].slice(0, MAX),
   } satisfies DiskFile)
   return notice
@@ -79,6 +81,11 @@ export async function markNoticesRead(ids: unknown): Promise<DiskNotice[]> {
   )
   const existing = await noticesForClient()
   const next = existing.map((n) => (want.has(n.id) ? { ...n, read: true } : n))
-  await writeJson(FILE, { kind: 'shape-lab-notices', version: 1, notices: next } satisfies DiskFile)
+  await writeJson(FILE, {
+    kind: 'shape-lab-notices',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    notices: next,
+  } satisfies DiskFile)
   return next
 }

@@ -5,6 +5,7 @@
  * otherwise /tmp plus an in-process cache so a warm function keeps writes.
  */
 
+import type { ServerResponse } from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { Readable } from 'node:stream'
@@ -81,6 +82,34 @@ async function writeBlob(rel: string, body: string | Buffer, contentType: string
   } catch {
     await put(rel, body, { ...options, access: 'public' })
   }
+}
+
+/** Photos and clips the phone can load from Blob CDN — not through the function. */
+async function writePublicBlob(
+  rel: string,
+  body: string | Buffer,
+  contentType: string,
+): Promise<string | null> {
+  const { put } = await import('@vercel/blob')
+  const saved = await put(rel, body, {
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType,
+    access: 'public',
+    cacheControlMaxAge: 31536000,
+  })
+  return typeof saved?.url === 'string' && saved.url ? saved.url : null
+}
+
+export function isDirectHttpUrl(url: string): boolean {
+  return /^https:\/\//i.test(url.trim())
+}
+
+export function sendPublicRedirect(res: ServerResponse, location: string): void {
+  res.statusCode = 302
+  res.setHeader('Location', location)
+  res.setHeader('Cache-Control', 'public, max-age=86400')
+  res.end()
 }
 
 export async function readText(rel: string): Promise<string | null> {
@@ -201,6 +230,23 @@ export async function writeBin(rel: string, buf: Buffer, contentType: string): P
   fs.writeFileSync(dest, buf)
 }
 
+/** Store media on the public Blob CDN and return that URL (null on disk). */
+export async function writePublicBin(
+  rel: string,
+  buf: Buffer,
+  contentType: string,
+): Promise<string | null> {
+  assertDurableWrite()
+  mem.set(rel, buf)
+  if (useBlob()) {
+    return await writePublicBlob(rel, buf, contentType)
+  }
+  const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.writeFileSync(dest, buf)
+  return null
+}
+
 export async function removeFile(rel: string): Promise<void> {
   mem.delete(rel)
   if (useBlob()) {
@@ -227,6 +273,7 @@ export type GymRevisionStores = {
   classes: string
   content: string
   chalkboards: string
+  notices: string
 }
 
 export type GymRevision = {
@@ -244,6 +291,7 @@ const FILE_TO_STORE: Record<string, keyof GymRevisionStores> = {
   'data/coach-classes.json': 'classes',
   'data/coach-content.json': 'content',
   'data/chalkboards.json': 'chalkboards',
+  'data/notices.json': 'notices',
 }
 
 function emptyRevision(): GymRevision {
@@ -257,11 +305,15 @@ function emptyRevision(): GymRevision {
       classes: '',
       content: '',
       chalkboards: '',
+      notices: '',
     },
   }
 }
 
 let revMem: GymRevision | null = null
+let revMemAt = 0
+/** Warm function: answer /api/revision from memory. Other instances catch up on this TTL. */
+const REV_TTL_MS = 8_000
 
 function stampFromJson(text: string | null): string {
   if (!text) return ''
@@ -284,6 +336,7 @@ async function touchRevision(rel: string): Promise<void> {
     stores: { ...emptyRevision().stores, ...prev.stores, [store]: now },
   }
   revMem = next
+  revMemAt = Date.now()
   const buf = Buffer.from(JSON.stringify(next) + '\n', 'utf8')
   mem.set(REV_FILE, buf)
   if (useBlob()) {
@@ -300,17 +353,19 @@ async function touchRevision(rel: string): Promise<void> {
 }
 
 export async function readRevision(): Promise<GymRevision> {
+  if (revMem && Date.now() - revMemAt < REV_TTL_MS) return revMem
   const stored = await readJson<GymRevision>(REV_FILE, emptyRevision())
   const stores: GymRevisionStores = { ...emptyRevision().stores, ...(stored.stores ?? {}) }
   const hasAny = Object.values(stores).some(Boolean)
-  if (!hasAny) {
-    const [roster, photos, feed, classes, content, chalkboards] = await Promise.all([
+  if (!hasAny && !revMem) {
+    const [roster, photos, feed, classes, content, chalkboards, notices] = await Promise.all([
       readText('data/roster.json'),
       readText('data/roster-photos.json'),
       readText('data/feed-posts.json'),
       readText('data/coach-classes.json'),
       readText('data/coach-content.json'),
       readText('data/chalkboards.json'),
+      readText('data/notices.json'),
     ])
     stores.roster = stampFromJson(roster)
     stores.photos = stampFromJson(photos)
@@ -318,8 +373,10 @@ export async function readRevision(): Promise<GymRevision> {
     stores.classes = stampFromJson(classes)
     stores.content = stampFromJson(content)
     stores.chalkboards = stampFromJson(chalkboards)
+    stores.notices = stampFromJson(notices)
   }
   const next: GymRevision = { kind: 'shape-lab-revision', version: 1, stores }
   revMem = next
+  revMemAt = Date.now()
   return next
 }

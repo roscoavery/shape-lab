@@ -81,13 +81,25 @@ Sign in with the claim URL, then in the Vercel project connect [github.com/rosco
 How to add it:
 
 1. Vercel project → **Storage** → create a **Blob** store.
-2. Keep **Private** (phones stay off the public internet).
+2. Keep the store **Private** for gym JSON. Photos and clips are saved as public Blob URLs so phones load them from the CDN instead of through a billed function.
 3. Check **Add a read-write token env var to this connection**.
 4. Create, then redeploy **Production** on the same gym URL.
 
 No other secrets are required. Instagram / TikTok resolve uses public Cobalt instances (yt-dlp is not available on Vercel).
 
 Hobby plan upload cap is about **4.5 MB** per request — keep athlete/feed clips short on the public URL.
+
+### Keep the Vercel bill low
+
+Stay on this same gym URL. Do not make a second project or turn Blob off.
+
+The app used to ask `/api/revision` every 2.5 seconds and stream photos/videos through the function (Blob → function → phone, billed twice). It now:
+
+- Answers revision from memory on a warm function, and phones poll every 12 seconds (paused in a background tab)
+- Uploads clips straight to Blob, then saves the public URL
+- Redirects old `/api/…-file` links to that URL after the first hit
+
+Set a **Spend Management** cap on the Vercel project (pause at 100%) so a bad week cannot run up on-demand again. Redeploy Production after this change, then hard-refresh iPad and phone.
 
 ### Update the live site from Cursor
 

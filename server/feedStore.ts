@@ -5,7 +5,15 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { cleanCollageShare, type DiskCollageShare } from './collageStore.ts'
-import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
+import {
+  isDirectHttpUrl,
+  readBin,
+  readJson,
+  removeFile,
+  sendPublicRedirect,
+  writeJson,
+  writePublicBin,
+} from './persist.ts'
 
 const META = 'data/feed-posts.json'
 const blobRel = (file: string) => `data/feed-blobs/${file}`
@@ -215,7 +223,7 @@ export async function addFeedPostFromBody(params: {
       ? 'video/mp4'
       : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  await writeBin(blobRel(file), params.buf, mime)
+  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
   const taggedIds = params.taggedIds
     .map((x) => safeId(x))
     .filter((x): x is string => Boolean(x))
@@ -229,6 +237,7 @@ export async function addFeedPostFromBody(params: {
     mime,
     sizeBytes: params.buf.length,
     file,
+    ...(publicUrl ? { publicUrl } : {}),
     kind: 'video',
     channels: cleanChannels(params.channels),
     ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
@@ -501,9 +510,9 @@ export async function attachVideoToFeedPost(params: {
       : 'video/webm'
   if (found.file) await removeFile(blobRel(found.file))
   const file = `${sid}${extForMime(mime)}`
-  await writeBin(blobRel(file), params.buf, mime)
+  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
   found.file = file
-  found.publicUrl = undefined
+  found.publicUrl = publicUrl || undefined
   found.mime = mime
   found.sizeBytes = params.buf.length
   found.kind = 'video'
@@ -534,9 +543,29 @@ export async function sendFeedFile(id: string, res: ServerResponse): Promise<boo
   const sid = safeId(id)
   if (!sid) return false
   const found = (await readFeedFile()).posts.find((p) => p.id === sid)
-  if (!found || !found.file) return false
+  if (!found) return false
+  if (found.publicUrl && isDirectHttpUrl(found.publicUrl)) {
+    sendPublicRedirect(res, found.publicUrl)
+    return true
+  }
+  if (!found.file) return false
   const buf = await readBin(blobRel(found.file))
   if (!buf) return false
+  try {
+    const publicUrl = await writePublicBin(blobRel(found.file), buf, found.mime || 'video/webm')
+    if (publicUrl) {
+      found.publicUrl = publicUrl
+      const meta = await readFeedFile()
+      await writeMeta(
+        meta.posts.map((p) => (p.id === found.id ? { ...p, publicUrl } : p)),
+        meta.removedIds,
+      )
+      sendPublicRedirect(res, publicUrl)
+      return true
+    }
+  } catch {
+    /* stream the bytes this once */
+  }
   res.statusCode = 200
   res.setHeader('Content-Type', found.mime || 'video/webm')
   res.setHeader('Content-Length', String(buf.length))

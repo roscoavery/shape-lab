@@ -1,3 +1,4 @@
+import { athleteVideoBlobPath, uploadGymMedia } from './mediaUpload'
 import { createId } from './storage'
 
 export type AthleteVideoSource =
@@ -74,6 +75,35 @@ export async function uploadAthleteVideo(opts: {
 }): Promise<AthleteVideo> {
   const id = createId('vid')
   const mime = opts.blob.type || 'video/webm'
+  const uploaded = await uploadGymMedia(athleteVideoBlobPath(id, mime), opts.blob, mime)
+  if ('url' in uploaded) {
+    const res = await fetch('/api/athlete-videos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        id,
+        athleteId: opts.athleteId,
+        name: opts.name,
+        source: opts.source,
+        mime,
+        url: uploaded.url,
+        sizeBytes: opts.blob.size,
+        durationSec: opts.durationSec ?? null,
+        lessonId: opts.lessonId ?? undefined,
+        skillId: opts.skillId ?? undefined,
+        skillLabel: opts.skillLabel ?? undefined,
+        classId: opts.classId ?? undefined,
+        className: opts.className ?? undefined,
+      }),
+    })
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string }
+      throw new Error(err.error || 'Could not save that video into the library.')
+    }
+    return (await res.json()) as AthleteVideo
+  }
   const lessonQ = opts.lessonId ? `&lessonId=${encodeURIComponent(opts.lessonId)}` : ''
   const skillQ = opts.skillId ? `&skillId=${encodeURIComponent(opts.skillId)}` : ''
   const skillLabelQ = opts.skillLabel

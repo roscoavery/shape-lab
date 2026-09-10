@@ -22,6 +22,10 @@ export function photoBlobPath(id: string): string {
   return `data/roster-photos/${id}.bin`
 }
 
+export function athleteVideoBlobPath(id: string, mime: string): string {
+  return `data/athlete-video-blobs/${id}.${extForMime(mime, 'mp4')}`
+}
+
 export async function uploadGymMedia(
   pathname: string,
   body: Blob,

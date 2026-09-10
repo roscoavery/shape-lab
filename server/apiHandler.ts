@@ -61,6 +61,8 @@ import { readShapeCopyFile, writeShapeCopyFile } from './shapeCopyStore.ts'
 import { readStillCropFile, writeStillCropFile } from './stillCropStore.ts'
 import {
   addAthleteVideoFromBody,
+  addAthleteVideoFromUrl,
+  athleteVideoClientUrl,
   deleteAthleteVideo,
   readRequestBuffer,
   sendAthleteVideoFile,
@@ -203,7 +205,10 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/revision') {
-    sendJson(res, 200, await readRevision())
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Cache-Control', 'public, max-age=5, s-maxage=5')
+    res.end(JSON.stringify(await readRevision()))
     return true
   }
   if (path === '/api/media-token') {
@@ -227,7 +232,11 @@ export async function handleShapeLabApi(
     if (
       !pathname ||
       pathname.includes('..') ||
-      !(pathname.startsWith('data/feed-blobs/') || pathname.startsWith('data/roster-photos/'))
+      !(
+        pathname.startsWith('data/feed-blobs/') ||
+        pathname.startsWith('data/roster-photos/') ||
+        pathname.startsWith('data/athlete-video-blobs/')
+      )
     ) {
       sendJson(res, 400, { error: 'That upload path is not allowed.' })
       return true
@@ -397,12 +406,60 @@ export async function handleShapeLabApi(
       const classId = url.searchParams.get('classId') ?? ''
       const videos = (await videosForClient(athleteId || undefined, classId || undefined)).map((v) => ({
         ...v,
-        url: `/api/athlete-video-file?id=${encodeURIComponent(v.id)}`,
+        url: athleteVideoClientUrl(v),
       }))
       sendJson(res, 200, { kind: 'shape-lab-athlete-videos', videos })
       return true
     }
     if (req.method === 'POST') {
+      const ct = String(req.headers['content-type'] || '').toLowerCase()
+      if (ct.includes('application/json')) {
+        let body: {
+          id?: string
+          athleteId?: string
+          name?: string
+          source?: string
+          createdAt?: string
+          durationSec?: number | null
+          mime?: string
+          url?: string
+          sizeBytes?: number
+          lessonId?: string
+          skillId?: string
+          skillLabel?: string
+          classId?: string
+          className?: string
+        } = {}
+        try {
+          const raw = await readRequestBody(req)
+          body = raw ? (JSON.parse(raw) as typeof body) : {}
+        } catch {
+          sendJson(res, 400, { error: 'Could not save that video.' })
+          return true
+        }
+        const saved = await addAthleteVideoFromUrl({
+          id: body.id ?? url.searchParams.get('id') ?? '',
+          athleteId: body.athleteId ?? url.searchParams.get('athleteId') ?? '',
+          name: body.name ?? url.searchParams.get('name') ?? 'Clip',
+          source: body.source ?? url.searchParams.get('source') ?? 'compare-replay',
+          createdAt: body.createdAt,
+          durationSec: body.durationSec,
+          mime: body.mime ?? url.searchParams.get('mime') ?? 'video/webm',
+          url: body.url ?? '',
+          sizeBytes: body.sizeBytes,
+          lessonId: body.lessonId,
+          skillId: body.skillId,
+          skillLabel: body.skillLabel,
+          classId: body.classId,
+          className: body.className,
+        })
+        if (!saved) {
+          sendJson(res, 400, { error: 'Could not save that video.' })
+          return true
+        }
+        sendJson(res, 200, { ...saved, url: athleteVideoClientUrl(saved) })
+        return true
+      }
       const buf = await readRequestBuffer(req)
       const saved = await addAthleteVideoFromBody({
         id: url.searchParams.get('id') ?? '',
@@ -427,7 +484,7 @@ export async function handleShapeLabApi(
       }
       sendJson(res, 200, {
         ...saved,
-        url: `/api/athlete-video-file?id=${encodeURIComponent(saved.id)}`,
+        url: athleteVideoClientUrl(saved),
       })
       return true
     }

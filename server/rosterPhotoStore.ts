@@ -1,5 +1,14 @@
 import type { ServerResponse } from 'node:http'
-import { readBin, readJson, readText, removeFile, writeBin, writeJson } from './persist.ts'
+import {
+  isDirectHttpUrl,
+  readBin,
+  readJson,
+  readText,
+  removeFile,
+  sendPublicRedirect,
+  writeJson,
+  writePublicBin,
+} from './persist.ts'
 
 const FILE = 'data/roster-photos.json'
 
@@ -82,9 +91,9 @@ async function writePhotoBytes(
   mime: string,
 ): Promise<PhotoRef> {
   const updatedAt = new Date().toISOString()
-  await writeBin(photoBinRel(id), buf, mime || 'image/jpeg')
+  const publicUrl = await writePublicBin(photoBinRel(id), buf, mime || 'image/jpeg')
   return {
-    url: photoFileUrl(id, updatedAt),
+    url: publicUrl || photoFileUrl(id, updatedAt),
     mime: mime || 'image/jpeg',
     updatedAt,
   }
@@ -255,10 +264,15 @@ async function dataUrlForId(id: string, data: DiskRosterPhotos): Promise<string 
 export async function sendRosterPhotoFile(id: string, res: ServerResponse): Promise<boolean> {
   const sid = safePhotoId(id)
   if (!sid) return false
+  const data = await loadIndex()
+  const ref = asRef(data.photos[sid], data.exportedAt)
+  if (ref?.url && isDirectHttpUrl(ref.url)) {
+    sendPublicRedirect(res, ref.url)
+    return true
+  }
   let buf = await readBin(photoBinRel(sid))
-  let mime = 'image/jpeg'
+  let mime = ref?.mime || 'image/jpeg'
   if (!buf) {
-    const data = await loadIndex()
     const dataUrl = await dataUrlForId(sid, data)
     if (dataUrl) {
       const migrated = await migrateDataUrl(sid, dataUrl)
@@ -266,16 +280,28 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
         const current = clientPhotoMap(data)
         current[sid] = migrated
         await persistIndex(current)
+        if (isDirectHttpUrl(migrated.url)) {
+          sendPublicRedirect(res, migrated.url)
+          return true
+        }
         buf = await readBin(photoBinRel(sid))
         mime = migrated.mime
       }
     }
-  } else {
-    const data = await loadIndex()
-    const ref = asRef(data.photos[sid], data.exportedAt)
-    if (ref?.mime) mime = ref.mime
   }
   if (!buf) return false
+  try {
+    const publicUrl = await writePublicBin(photoBinRel(sid), buf, mime)
+    if (publicUrl) {
+      const current = clientPhotoMap(data)
+      current[sid] = { url: publicUrl, mime, updatedAt: new Date().toISOString() }
+      await persistIndex(current)
+      sendPublicRedirect(res, publicUrl)
+      return true
+    }
+  } catch {
+    /* stream the bytes this once */
+  }
   res.statusCode = 200
   res.setHeader('Content-Type', mime)
   res.setHeader('Content-Length', String(buf.length))

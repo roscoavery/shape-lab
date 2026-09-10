@@ -47,10 +47,13 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
       }
     }
     window.addEventListener(NOTICE_EVENT, onNotice)
-    const id = window.setInterval(refresh, 8000)
+    const onPull = () => refresh()
+    window.addEventListener('shape-lab-gym-pulled', onPull)
+    const id = window.setInterval(refresh, 45_000)
     return () => {
       cancelled = true
       window.removeEventListener(NOTICE_EVENT, onNotice)
+      window.removeEventListener('shape-lab-gym-pulled', onPull)
       window.clearInterval(id)
     }
   }, [athlete?.id])

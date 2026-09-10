@@ -410,16 +410,30 @@ export default function App() {
         setAthletes(ensureRyanInAthletes(next))
       })
     }
+    window.addEventListener('focus', pull)
+    let tick = 0
+    const start = () => {
+      if (tick) return
+      tick = window.setInterval(pull, 12_000)
+    }
+    const stop = () => {
+      window.clearInterval(tick)
+      tick = 0
+    }
     const onVis = () => {
-      if (document.visibilityState === 'visible') pull()
+      if (document.visibilityState === 'visible') {
+        pull()
+        start()
+      } else {
+        stop()
+      }
     }
     document.addEventListener('visibilitychange', onVis)
-    window.addEventListener('focus', pull)
-    const tick = window.setInterval(pull, 2_500)
+    if (document.visibilityState === 'visible') start()
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('focus', pull)
-      window.clearInterval(tick)
+      stop()
     }
   }, [gymBoot])
 
