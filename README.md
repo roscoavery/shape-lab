@@ -86,7 +86,7 @@ How to add it:
 3. Check **Add a read-write token env var to this connection**.
 4. Create, then redeploy **Production** on the same gym URL.
 
-No other secrets are required. Instagram / TikTok resolve uses public Cobalt instances (yt-dlp is not available on Vercel).
+No other secrets are required. Instagram resolve pretends to tap Continue on web (`ig_nrcb=1` + guest session), then reads the public GraphQL / permalink mp4. Cobalt and yt-dlp are extras; yt-dlp is not on Vercel.
 
 Hobby plan upload cap is about **4.5 MB** per request — keep athlete/feed clips short on the public URL.
 

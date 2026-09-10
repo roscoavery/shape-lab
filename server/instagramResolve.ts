@@ -1,10 +1,11 @@
 /**
  * Resolve a public Instagram / TikTok / Facebook video URL to a playable mp4.
- * Used by the Vite dev/preview server so Compare can loop the clip in-app.
  *
- * Instagram Reels and TikTok race public HTML vs Cobalt and return the first
- * playable video. Carousel posts still prefer the HTML slide list. yt-dlp is
- * the last fallback.
+ * Instagram’s official /embed/ iframe is a login / “post removed” wall when it
+ * sits on another site. Continue on web (first-party on instagram.com) sets
+ * ig_nrcb=1 and then serves the reel. Shape Lab does the same on the server:
+ * guest cookies + that flag, GraphQL, then the permalink as a document, then
+ * yt-dlp. The player is always a first-party <video>, never Instagram’s iframe.
  */
 
 import { spawn } from 'node:child_process'
@@ -28,9 +29,16 @@ const UA =
 const IG_EMBED_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
 
-/** Instagram in-app browser — embed pages more often include video_url. */
-const IG_APP_UA =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/21E219 Instagram 192.168.1.2.111 (iPhone14,3; iOS 17_4; en_US; en-US; scale=3.00; 1170x2532; 596392151)'
+/**
+ * Same flag Instagram sets when you tap Continue on web. Without it, guest
+ * HTML is a login / rate-limit shell with no video file.
+ */
+const CONTINUE_ON_WEB = 'ig_nrcb=1'
+
+const IG_SHORTCODE_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+
+const IG_GRAPHQL_DOC = '27130156389949648'
 
 /** Community Cobalt APIs that currently accept unauthenticated requests. */
 const COBALT_APIS = [
@@ -59,8 +67,10 @@ const CACHE_MS = 25 * 60 * 1000
 const CAROUSEL_CAP = 12
 const IG_COOKIE_MS = 20 * 60 * 1000
 
-let igCookieHeader = ''
+let igCookieHeader = CONTINUE_ON_WEB
 let igCookieAt = 0
+let igLsd = ''
+const igPostedBy = new Map<string, string>()
 
 function cookiesFromResponse(res: Response): string {
   const raw =
@@ -89,8 +99,36 @@ function mergeCookieHeader(prev: string, next: string): string {
 function rememberIgCookies(res: Response) {
   const next = cookiesFromResponse(res)
   if (!next) return
-  igCookieHeader = mergeCookieHeader(igCookieHeader, next)
+  igCookieHeader = mergeCookieHeader(CONTINUE_ON_WEB, mergeCookieHeader(igCookieHeader, next))
   igCookieAt = Date.now()
+}
+
+function cookieHeader(): string {
+  return mergeCookieHeader(CONTINUE_ON_WEB, igCookieHeader)
+}
+
+function rememberLsd(html: string) {
+  const hit =
+    html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ??
+    html.match(/<script\b[^>]*\bid="__eqmc"[^>]*>[\s\S]*?"l"\s*:\s*"([^"]+)"/)
+  if (hit?.[1]) igLsd = hit[1]
+}
+
+function shortcodeToMediaId(code: string): string | null {
+  const short = code.length > 28 ? code.slice(0, -28) : code
+  let n = 0n
+  for (const ch of short) {
+    const i = IG_SHORTCODE_ALPHABET.indexOf(ch)
+    if (i < 0) return null
+    n = n * 64n + BigInt(i)
+  }
+  if (n <= 0n) return null
+  return n.toString()
+}
+
+function rememberPostedHandle(code: string, handle: string | null | undefined) {
+  const h = handleFromField(handle)
+  if (h) igPostedBy.set(code, h)
 }
 
 export function isResolvableVideoUrl(url: string): boolean {
@@ -195,7 +233,7 @@ async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
   const first = await run([])
   if (first.url) return first
   await refreshInstagramCookies()
-  const cookieFile = cookieFileFromHeader(igCookieHeader)
+  const cookieFile = cookieFileFromHeader(cookieHeader())
   if (!cookieFile) return first
   const cookied = await run(['--cookies', cookieFile])
   return cookied.url ? cookied : first
@@ -363,30 +401,21 @@ function slidesFromPageHtml(html: string): ResolvedSlide[] {
   push(html.match(/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i)?.[1])
   push(html.match(/<meta[^>]+property="og:video"[^>]+content="(https?:[^"]+)"/i)?.[1])
   push(html.match(/<video[^>]+src="(https?:[^"]+)"/i)?.[1])
+  push(html.match(/"browser_native_hd_url"\s*:\s*"(https?:[^"]+)"/)?.[1])
+  push(html.match(/"browser_native_sd_url"\s*:\s*"(https?:[^"]+)"/)?.[1])
   if (slides.length === 0) {
-    const cdn = html.match(
-      /https?:\\?\/\\?\/[^"'\\\s]+(?:cdninstagram\.com|fbcdn\.net)[^"'\\\s]*\/(?:o1|v)\/t[^"'\\\s]+\.mp4[^"'\\\s]*/i,
+    const versionsLoose = html.matchAll(
+      /"url"\s*:\s*"(https?:[^"]+(?:cdninstagram\.com|fbcdn\.net)[^"]+\.mp4[^"]*)"/gi,
     )
-    if (cdn?.[0]) push(cdn[0].replace(/\\\//g, '/'))
+    for (const hit of versionsLoose) push(hit[1])
+  }
+  if (slides.length === 0) {
+    const cdn = html.matchAll(
+      /https?:\/\/scontent[^"'\\\s]+(?:cdninstagram\.com|fbcdn\.net)[^"'\\\s]*\/o1\/v\/t[^"'\\\s]+\.mp4[^"'\\\s]*/gi,
+    )
+    for (const hit of cdn) push(hit[0])
   }
   return slides
-}
-
-function embedPageUrls(pageUrl: string): string[] {
-  const ig = parseInstagramUrl(pageUrl)
-  if (!ig) return [pageUrl]
-  const kind = ig.type === 'tv' ? 'tv' : ig.type === 'p' ? 'p' : 'reel'
-  const other = kind === 'p' ? 'reel' : 'p'
-  return [
-    `https://www.instagram.com/${kind}/${ig.code}/embed/captioned/`,
-    `https://www.instagram.com/${other}/${ig.code}/embed/captioned/`,
-    `https://www.instagram.com/${kind}/${ig.code}/embed/`,
-    `https://www.instagram.com/${kind}/${ig.code}/embed/captioned/?cr=1&v=14&wp=540`,
-    `https://www.ddinstagram.com/${kind}/${ig.code}/`,
-    `https://ddinstagram.com/${kind}/${ig.code}`,
-    `https://imginn.com/p/${ig.code}/`,
-    pageUrl,
-  ]
 }
 
 async function fetchText(
@@ -403,7 +432,7 @@ async function fetchText(
         'User-Agent': ua,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        ...(instagram && igCookieHeader ? { Cookie: igCookieHeader } : {}),
+        ...(instagram ? { Cookie: cookieHeader() } : {}),
         ...(embed
           ? {
               Referer: 'https://www.instagram.com/',
@@ -413,14 +442,27 @@ async function fetchText(
               'Sec-Fetch-Site': 'same-origin',
             }
           : instagram
-            ? { Referer: 'https://www.instagram.com/' }
+            ? {
+                Referer: 'https://www.instagram.com/',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
+              }
             : {}),
         ...extra,
       },
       signal: AbortSignal.timeout(ms),
       redirect: 'follow',
     })
-    if (/instagram\.com/i.test(url)) rememberIgCookies(res)
+    if (/instagram\.com/i.test(url)) {
+      rememberIgCookies(res)
+      const text = await res.text()
+      rememberLsd(text)
+      if (!res.ok) return null
+      return text
+    }
     if (!res.ok) return null
     return await res.text()
   } catch {
@@ -428,55 +470,163 @@ async function fetchText(
   }
 }
 
-async function htmlCarouselSlides(pageUrl: string): Promise<ResolvedSlide[]> {
-  const urls = embedPageUrls(pageUrl)
-  const tryOne = async (candidate: string, ua: string): Promise<ResolvedSlide[]> => {
-    const html = await fetchText(candidate, 7000, ua)
-    if (!html) return []
-    return slidesFromPageHtml(normalizeIgHtml(html))
+function slidesFromGraphqlJson(raw: string): ResolvedSlide[] {
+  const slides: ResolvedSlide[] = []
+  const seen = new Set<string>()
+  const push = (url: unknown, kind: ResolvedSlide['kind'] = 'video') => {
+    if (typeof url !== 'string') return
+    const clean = unescapeIgUrl(url)
+    if (!clean.startsWith('http') || seen.has(clean) || slides.length >= CAROUSEL_CAP) return
+    seen.add(clean)
+    slides.push({ url: clean, kind })
   }
-  const videoOrThrow = async (candidate: string, ua: string) => {
-    const slides = await tryOne(candidate, ua)
-    if (!slides.some((s) => s.kind === 'video')) throw new Error('html-miss')
-    return slides
-  }
-  const embeds = urls.filter((u) => /instagram\.com\/.*\/embed/i.test(u)).slice(0, 4)
-  const first = await Promise.any(
-    embeds.flatMap((candidate) => [videoOrThrow(candidate, IG_APP_UA), videoOrThrow(candidate, IG_EMBED_UA)]),
-  ).catch(() => [] as ResolvedSlide[])
-  if (first.some((s) => s.kind === 'video')) return first
 
-  for (const candidate of urls.filter((u) => !/instagram\.com\/.*\/embed/i.test(u))) {
-    const slides = await tryOne(candidate, IG_EMBED_UA)
-    if (slides.some((s) => s.kind === 'video') || slides.length > 0) return slides
+  const takeMedia = (media: Record<string, unknown> | null | undefined) => {
+    if (!media || typeof media !== 'object') return
+    const versions = media.video_versions
+    if (Array.isArray(versions)) {
+      for (const row of versions) {
+        if (row && typeof row === 'object' && 'url' in row) push((row as { url?: string }).url)
+      }
+    }
+    push(media.video_url)
+    push(media.browser_native_hd_url)
+    push(media.browser_native_sd_url)
+    const carousel = media.carousel_media
+    if (Array.isArray(carousel)) {
+      for (const item of carousel) {
+        if (!item || typeof item !== 'object') continue
+        const block = item as Record<string, unknown>
+        const nested = block.video_versions
+        if (Array.isArray(nested) && nested[0] && typeof nested[0] === 'object') {
+          push((nested[0] as { url?: string }).url, 'video')
+        } else if (typeof block.video_url === 'string') {
+          push(block.video_url, 'video')
+        } else if (typeof block.display_uri === 'string') {
+          push(block.display_uri, 'image')
+        } else if (typeof block.display_url === 'string') {
+          push(block.display_url, 'image')
+        }
+      }
+    }
   }
-  const ig = parseInstagramUrl(pageUrl)
-  if (ig) {
-    const api = await instagramApiSlides(ig.code)
-    if (api.length > 0) return api
+
+  try {
+    const data = JSON.parse(raw) as {
+      data?: {
+        xig_polaris_media?: {
+          code?: string
+          if_not_gated_logged_out?: Record<string, unknown> & {
+            user?: { username?: string }
+            video_versions?: Array<{ url?: string }>
+          }
+        }
+      }
+    }
+    const media = data.data?.xig_polaris_media
+    const info = media?.if_not_gated_logged_out
+    rememberPostedHandle(media?.code ?? '', info?.user?.username)
+    takeMedia(info)
+    if (slides.some((s) => s.kind === 'video')) return slides
+  } catch {
+    /* fall through to regex */
   }
-  return first
+  return slidesFromPageHtml(normalizeIgHtml(raw))
 }
 
-async function instagramApiSlides(code: string): Promise<ResolvedSlide[]> {
+async function instagramGraphqlSlides(code: string, pageUrl: string): Promise<ResolvedSlide[]> {
   await refreshInstagramCookies()
-  const endpoints = [
-    `https://www.instagram.com/graphql/query/?query_hash=b3055c01b4b222b8a47dc12b090e4e64&variables=${encodeURIComponent(JSON.stringify({ shortcode: code }))}`,
-    `https://www.instagram.com/api/v1/media/${encodeURIComponent(code)}/info/`,
-    `https://i.instagram.com/api/v1/media/${encodeURIComponent(code)}/info/`,
-  ]
-  for (const endpoint of endpoints) {
-    const html = await fetchText(endpoint, 7000, IG_APP_UA, {
-      'X-IG-App-ID': '936619743392459',
-      'X-ASBD-ID': '129477',
-      'X-IG-WWW-Claim': '0',
+  const mediaId = shortcodeToMediaId(code)
+  if (!mediaId || !igLsd) return []
+  const csrf = cookieHeader().match(/(?:^|;\s*)csrftoken=([^;]+)/i)?.[1] ?? ''
+  try {
+    const res = await fetch('https://www.instagram.com/api/graphql', {
+      method: 'POST',
+      headers: {
+        'User-Agent': UA,
+        Accept: '*/*',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: cookieHeader(),
+        Origin: 'https://www.instagram.com',
+        Referer: pageUrl,
+        'X-FB-Friendly-Name': 'PolarisLoggedOutDesktopWWWPostRootContentQuery',
+        'X-CSRFToken': csrf,
+        'X-FB-LSD': igLsd,
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-IG-App-ID': '936619743392459',
+        'X-ASBD-ID': '359341',
+        'X-IG-WWW-Claim': '0',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+      body: new URLSearchParams({
+        lsd: igLsd,
+        fb_api_caller_class: 'RelayModern',
+        fb_api_req_friendly_name: 'PolarisLoggedOutDesktopWWWPostRootContentQuery',
+        server_timestamps: 'true',
+        variables: JSON.stringify({ media_id: mediaId }),
+        doc_id: IG_GRAPHQL_DOC,
+      }).toString(),
+      signal: AbortSignal.timeout(10_000),
+    })
+    rememberIgCookies(res)
+    if (!res.ok) return []
+    const text = await res.text()
+    rememberLsd(text)
+    return slidesFromGraphqlJson(text)
+  } catch {
+    return []
+  }
+}
+
+async function instagramPermalinkSlides(pageUrl: string): Promise<ResolvedSlide[]> {
+  await refreshInstagramCookies()
+  for (const ua of [UA, IG_EMBED_UA]) {
+    const html = await fetchText(pageUrl, 9000, ua, {
       Referer: 'https://www.instagram.com/',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
     })
     if (!html) continue
     const slides = slidesFromPageHtml(normalizeIgHtml(html))
     if (slides.some((s) => s.kind === 'video')) return slides
   }
   return []
+}
+
+async function htmlCarouselSlides(pageUrl: string): Promise<ResolvedSlide[]> {
+  const ig = parseInstagramUrl(pageUrl)
+  if (ig) {
+    const permalink = `https://www.instagram.com/${ig.type}/${ig.code}/`
+    const videoOrThrow = async (slides: ResolvedSlide[]) => {
+      if (!slides.some((s) => s.kind === 'video') && slides.length < 2) throw new Error('ig-miss')
+      return slides
+    }
+    const first = await Promise.any([
+      instagramGraphqlSlides(ig.code, permalink).then(videoOrThrow),
+      instagramPermalinkSlides(permalink).then(videoOrThrow),
+    ]).catch(() => [] as ResolvedSlide[])
+    if (first.some((s) => s.kind === 'video') || first.length > 0) return first
+    for (const candidate of [
+      `https://www.ddinstagram.com/${ig.type}/${ig.code}/`,
+      `https://ddinstagram.com/${ig.type}/${ig.code}`,
+      `https://imginn.com/p/${ig.code}/`,
+    ]) {
+      const html = await fetchText(candidate, 7000, IG_EMBED_UA)
+      if (!html) continue
+      const slides = slidesFromPageHtml(normalizeIgHtml(html))
+      if (slides.some((s) => s.kind === 'video') || slides.length > 0) return slides
+    }
+    return first
+  }
+
+  const html = await fetchText(pageUrl, 7000, UA)
+  if (!html) return []
+  return slidesFromPageHtml(normalizeIgHtml(html))
 }
 
 function firstVideoSlides(lists: ResolvedSlide[][]): ResolvedSlide[] | null {
@@ -505,10 +655,20 @@ function pickCarouselSlides(pageUrl: string, ...lists: ResolvedSlide[][]): Resol
 }
 
 async function refreshInstagramCookies(): Promise<string> {
-  if (igCookieHeader && Date.now() - igCookieAt < IG_COOKIE_MS) return igCookieHeader
-  await fetchText('https://www.instagram.com/', 5000, IG_EMBED_UA)
-  await fetchText('https://www.instagram.com/reel/embed/', 5000, IG_EMBED_UA)
-  return igCookieHeader
+  const fresh =
+    igLsd &&
+    /csrftoken=/i.test(cookieHeader()) &&
+    Date.now() - igCookieAt < IG_COOKIE_MS
+  if (fresh) return cookieHeader()
+  await fetchText('https://www.instagram.com/', 8000, UA, {
+    Referer: 'https://www.instagram.com/',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+  })
+  return cookieHeader()
 }
 
 async function oembedPostedBy(pageUrl: string): Promise<string | null> {
@@ -545,6 +705,8 @@ export async function lookupPostedBy(rawUrl: string): Promise<string | null> {
   const fromUrl = postedByFromUrl(rawUrl)
   if (fromUrl) return fromUrl
   const pageUrl = canonicalSocialUrl(rawUrl)
+  const igHandle = parseInstagramUrl(pageUrl)
+  if (igHandle && igPostedBy.get(igHandle.code)) return igPostedBy.get(igHandle.code) ?? null
   const hit = cache.get(pageUrl)
   if (hit?.postedBy) return hit.postedBy
   const fromYt = await ytdlpPostedBy(pageUrl)
@@ -583,7 +745,7 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
   const finish = (slides: ResolvedSlide[], postedBy?: string | null) => {
     const direct = slides.find((s) => s.kind === 'video')?.url ?? slides[0]?.url ?? null
     if (!direct || slides.length === 0) return null
-    const posted = postedBy ?? fromUrl
+    const posted = postedBy ?? fromUrl ?? (ig ? igPostedBy.get(ig.code) : null)
     cache.set(pageUrl, { url: direct, slides, at: Date.now(), postedBy: posted })
     return { url: direct, slides, postedBy: posted }
   }
@@ -712,14 +874,14 @@ export async function proxyInstagramMedia(
           Referer: 'https://www.instagram.com/',
           Origin: 'https://www.instagram.com/',
           Accept: '*/*',
-          ...(igCookieHeader ? { Cookie: igCookieHeader } : {}),
+          Cookie: cookieHeader(),
         },
         {
           'User-Agent': UA,
           Referer: 'https://www.instagram.com/',
           Origin: 'https://www.instagram.com/',
           Accept: '*/*',
-          ...(igCookieHeader ? { Cookie: igCookieHeader } : {}),
+          Cookie: cookieHeader(),
         },
         {
           'User-Agent': IG_EMBED_UA,
