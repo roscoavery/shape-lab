@@ -169,9 +169,7 @@ function cookieFileFromHeader(header: string): string | null {
 }
 
 async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
-  await refreshInstagramCookies()
-  const cookieFile = cookieFileFromHeader(igCookieHeader)
-  const args = [
+  const base = [
     '-f',
     'b',
     '-g',
@@ -179,15 +177,28 @@ async function ytdlpResolve(pageUrl: string): Promise<YtHit> {
     '%(channel)s',
     '--no-warnings',
     '--no-playlist',
-    '--user-agent',
-    IG_APP_UA,
-    ...(cookieFile ? ['--cookies', cookieFile] : []),
-    ...(igCookieHeader && !cookieFile ? ['--add-header', `Cookie:${igCookieHeader}`] : []),
     pageUrl,
   ]
-  const first = await spawnYtdlp('yt-dlp', args)
-  if (first.url || first.postedBy) return first
-  return spawnYtdlp('python3', ['-m', 'yt_dlp', ...args])
+  const run = async (extra: string[]) => {
+    const args = extra.length ? [...extra, ...base] : base
+    const localBin = path.join(os.homedir(), '.local', 'bin', 'yt-dlp')
+    for (const [cmd, cmdArgs] of [
+      [localBin, args],
+      ['yt-dlp', args],
+      ['python3', ['-m', 'yt_dlp', ...args]],
+    ] as Array<[string, string[]]>) {
+      const hit = await spawnYtdlp(cmd, cmdArgs, 10_000)
+      if (hit.url || hit.postedBy) return hit
+    }
+    return { url: null, postedBy: null }
+  }
+  const first = await run([])
+  if (first.url) return first
+  await refreshInstagramCookies()
+  const cookieFile = cookieFileFromHeader(igCookieHeader)
+  if (!cookieFile) return first
+  const cookied = await run(['--cookies', cookieFile])
+  return cookied.url ? cookied : first
 }
 
 async function ytdlpPostedBy(pageUrl: string): Promise<string | null> {
@@ -597,6 +608,12 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
         const ready = finish(slides)
         if (ready) return ready
         throw new Error('cobalt-miss')
+      }),
+      ytP.then((yt) => {
+        if (!yt.url) throw new Error('yt-miss')
+        const ready = finish([{ url: yt.url, kind: 'video' }], yt.postedBy)
+        if (ready) return ready
+        throw new Error('yt-miss')
       }),
     ]).catch(() => null)
     if (firstReady) return firstReady
