@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 import {
     instagramSlideIndex,
   postedByFromUrl,
+  socialEmbedSrc,
   socialOpenLabel,
   socialPlatform,
   socialProfileUrl,
@@ -228,6 +229,7 @@ export function InstagramEmbed({
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
   const retriedRef = useRef(false)
+  const [useEmbed, setUseEmbed] = useState(false)
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
   onPostedByRef.current = onPostedBy
@@ -239,6 +241,7 @@ export function InstagramEmbed({
 
   useEffect(() => {
     setSlide(instagramSlideIndex(url))
+    retriedRef.current = false
   }, [url])
 
   useEffect(() => {
@@ -256,6 +259,7 @@ export function InstagramEmbed({
     setError(null)
     setSaved(false)
     setQuotaWarn(false)
+    setUseEmbed(false)
     setResolvedBy(null)
     setSlides([])
     setSlidesFor(null)
@@ -358,6 +362,12 @@ export function InstagramEmbed({
         const cached = await loadAnyCachedInstagramBlob(itemId, url)
         if (cached && loadGen.current === gen) {
           showBlob(cached, 'video', true)
+          return
+        }
+        if (socialEmbedSrc(url)) {
+          setUseEmbed(true)
+          setLoading(false)
+          markClipPlayable(url)
           return
         }
         markClipUnplayable(url)
@@ -534,7 +544,9 @@ export function InstagramEmbed({
     )
   }
 
-  if (loading && !src) {
+  const embedSrc = socialEmbedSrc(url)
+
+  if (loading && !src && !useEmbed) {
     return (
       <div
         className={`flex items-center justify-center text-sm text-[var(--muted)] ${
@@ -544,6 +556,30 @@ export function InstagramEmbed({
         }`}
       >
         Opening video…
+      </div>
+    )
+  }
+
+  if (useEmbed && embedSrc) {
+    return (
+      <div className={fill ? 'flex h-full min-h-0 w-full flex-col' : 'flex flex-col gap-2'}>
+        <iframe
+          src={embedSrc}
+          title="Reference video"
+          className={
+            fill
+              ? 'h-full min-h-0 w-full border-0 bg-black'
+              : 'h-[min(28rem,70dvh)] w-full rounded-lg border-0 bg-black'
+          }
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+        />
+        {!fill && !quiet ? (
+          <p className="text-xs text-[var(--muted)]">
+            Playing in Instagram / TikTok’s player. Shape Lab will keep an in-app copy the next time
+            a playable file is available.
+          </p>
+        ) : null}
       </div>
     )
   }
@@ -634,6 +670,11 @@ export function InstagramEmbed({
         overlayChrome={overlayChrome}
         pictureChrome={carouselChrome}
         onError={() => {
+          if (socialEmbedSrc(url)) {
+            setUseEmbed(true)
+            markClipPlayable(url)
+            return
+          }
           markClipUnplayable(url)
           setSrc(null)
           setError(

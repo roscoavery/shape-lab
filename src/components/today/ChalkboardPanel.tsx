@@ -123,24 +123,26 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
 
   if (size === 'full') {
     return createPortal(
-      <div className="fixed inset-0 z-[80] flex flex-col bg-[#07110e] text-[var(--text)]">
-        <header className="flex items-center justify-between gap-3 px-4 py-3">
-          <div>
+      <div className="fixed inset-0 z-[80] flex h-[100dvh] max-h-[100dvh] flex-col bg-[#07110e] text-[var(--text)]">
+        <header className="flex shrink-0 items-center justify-between gap-3 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
+          <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Chalkboard
             </p>
-            <p className="text-lg font-bold">{offering ? classLabel(offering) : 'Class'}</p>
+            <p className="truncate text-lg font-bold">{offering ? classLabel(offering) : 'Class'}</p>
             <p className="text-xs text-white/55">Scroll the board. Every clip shows the full frame.</p>
           </div>
           <button
             type="button"
             onClick={() => setSize('more')}
-            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
+            className="shrink-0 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
           >
             Show less
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">{body}</div>
+        <div className="panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-4">
+          {body}
+        </div>
       </div>,
       document.body,
     )
@@ -169,13 +171,15 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
     return (
       <div>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-          <p className="text-sm text-white/55">
+          <p className="min-w-0 text-sm text-white/55">
             {offering ? offering.name : 'Chalkboard'}
             {inSession ? ' · live' : ''}
           </p>
           {sizeButtons}
         </div>
-        {body}
+        <div className="panel-scroll max-h-[min(70dvh,calc(var(--sl-vh)-9rem))] overflow-y-auto overscroll-contain">
+          {body}
+        </div>
       </div>
     )
   }
@@ -455,7 +459,7 @@ function ChalkboardBody({
             : 'Pin a reference from Compare, Learn, drills, or collages — for every class with this name, or only this hour.'}
         </p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid gap-3 pb-4">
           {items.map(({ item, source }) => (
             <li key={item.id}>
               <ChalkboardCard
@@ -494,7 +498,8 @@ function ChalkboardCard({
   boardSize: Size
   sourceLabel?: string
 }) {
-  const { nameForUrl } = useGymLibrary()
+  const { nameForUrl, clipForUrl } = useGymLibrary()
+  const gymClip = item.url ? clipForUrl(item.url) : undefined
   const [collage, setCollage] = useState<Awaited<ReturnType<typeof listCollages>>[number] | null>(null)
   const [full, setFull] = useState(false)
   const [clipFull, setClipFull] = useState(false)
@@ -502,10 +507,10 @@ function ChalkboardCard({
   const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
   const playerH =
     boardSize === 'full'
-      ? 'h-[min(78vh,46rem)]'
+      ? 'h-[min(58dvh,34rem)] max-sm:h-[min(52dvh,24rem)]'
       : compact
-        ? 'h-56'
-        : 'h-[min(28rem,70vh)]'
+        ? 'h-40 max-sm:h-36'
+        : 'h-[min(20rem,48dvh)] max-sm:h-[min(16.5rem,42dvh)]'
 
   useEffect(() => {
     if (item.kind !== 'collage' || !item.collageId) return
@@ -515,6 +520,7 @@ function ChalkboardCard({
   const clipPlayer = item.url ? (
     <GymClipPlayer
       url={item.url}
+      itemId={gymClip?.id}
       persistUrl={item.url}
       loopA={item.loopA}
       loopB={item.loopB}
@@ -528,9 +534,9 @@ function ChalkboardCard({
 
   return (
     <article className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]">
-      <div className="flex items-start justify-between gap-2 px-3 py-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{item.title}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2 px-3 py-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-snug">{item.title}</p>
           <p className="text-[11px] text-[var(--muted)]">
             {sourceLabel ? `${sourceLabel} · ` : ''}
             {kindLabel(item.kind)}
@@ -539,7 +545,7 @@ function ChalkboardCard({
           </p>
         </div>
         {coach && (
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
             {isClip && (
               <button
                 type="button"
@@ -576,7 +582,7 @@ function ChalkboardCard({
         )}
       </div>
       {isClip && (
-        <div className={`relative w-full bg-black ${playerH}`}>{clipPlayer}</div>
+        <div className={`relative w-full touch-pan-y bg-black ${playerH}`}>{clipPlayer}</div>
       )}
       {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
         <div className="flex max-h-72 items-center justify-center bg-black">
@@ -618,20 +624,21 @@ function ChalkboardCard({
       {clipFull &&
         item.url &&
         createPortal(
-          <div className="fixed inset-0 z-[90] flex flex-col bg-black">
-            <header className="flex items-center justify-between gap-3 px-4 py-3 text-white">
-              <p className="truncate text-sm font-semibold">{item.title}</p>
+          <div className="fixed inset-0 z-[90] flex h-[100dvh] max-h-[100dvh] flex-col bg-black">
+            <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
+              <p className="min-w-0 truncate text-sm font-semibold">{item.title}</p>
               <button
                 type="button"
                 onClick={() => setClipFull(false)}
-                className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
+                className="shrink-0 rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
               >
                 Close
               </button>
             </header>
-            <div className="relative min-h-0 flex-1">
+            <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
               <GymClipPlayer
                 url={item.url}
+                itemId={gymClip?.id}
                 persistUrl={item.url}
                 loopA={item.loopA}
                 loopB={item.loopB}
