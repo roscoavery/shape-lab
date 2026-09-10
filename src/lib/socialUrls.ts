@@ -77,6 +77,18 @@ export function youtubeVideoId(url: string): string | null {
   return null
 }
 
+/** Official embed page — plays in the phone’s Instagram / TikTok player. */
+export function socialEmbedSrc(url: string): string | null {
+  const ig = parseInstagramUrl(url)
+  if (ig) {
+    const kind = ig.type === 'tv' ? 'tv' : ig.type === 'p' ? 'p' : 'reel'
+    return `https://www.instagram.com/${kind}/${ig.code}/embed/`
+  }
+  const tt = parseTikTokUrl(url)
+  if (tt && /^\d{5,}$/.test(tt.id)) return `https://www.tiktok.com/embed/v2/${tt.id}`
+  return null
+}
+
 export function youtubeEmbedSrc(url: string): string | null {
   const id = youtubeVideoId(url)
   return id ? `https://www.youtube.com/embed/${id}?playsinline=1&rel=0` : null

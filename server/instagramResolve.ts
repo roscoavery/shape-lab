@@ -21,6 +21,10 @@ import {
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 
+/** Instagram’s desktop page is a login wall. The mobile embed still has video_url. */
+const IG_EMBED_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+
 /** Community Cobalt APIs that currently accept unauthenticated requests. */
 const COBALT_APIS = [
   'https://api.cobalt.tools/',
@@ -167,10 +171,21 @@ async function cobaltResolveAll(pageUrl: string): Promise<ResolvedSlide[]> {
 }
 
 function unescapeIgUrl(raw: string): string {
-  return raw
-    .replace(/\\u0026/g, '&')
-    .replace(/\\u003d/g, '=')
-    .replace(/\\\//g, '/')
+  let s = raw
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\u003d/gi, '=')
+    .replace(/&amp;/g, '&')
+  for (let i = 0; i < 5; i++) {
+    const next = s.replace(/\\\//g, '/')
+    if (next === s) break
+    s = next
+  }
+  return s
+}
+
+/** Instagram now hides video_url on the public page; the embed page still has it, escaped. */
+function normalizeIgHtml(html: string): string {
+  return unescapeIgUrl(html).replace(/\\"/g, '"')
 }
 
 function slidesFromInstagramHtml(html: string): ResolvedSlide[] {
@@ -232,6 +247,10 @@ function slidesFromPageHtml(html: string): ResolvedSlide[] {
     slides.push({ url: clean, kind })
   }
   push(html.match(/"video_url"\s*:\s*"(https?:[^"]+)"/)?.[1])
+  if (slides.length === 0) {
+    const loose = html.match(/video_url[^h]{0,12}(https?:[^"\\]+)/)
+    if (loose?.[1]) push(loose[1])
+  }
   push(
     html.match(/property="og:video(?::secure_url)?"\s+content="(https?:[^"]+)"/i)?.[1]
       ?? html.match(/content="(https?:[^"]+)"\s+property="og:video(?::secure_url)?"/i)?.[1],
@@ -241,10 +260,34 @@ function slidesFromPageHtml(html: string): ResolvedSlide[] {
   return slides
 }
 
+function embedPageUrls(pageUrl: string): string[] {
+  const ig = parseInstagramUrl(pageUrl)
+  if (!ig) return [pageUrl]
+  const kind = ig.type === 'tv' ? 'tv' : ig.type === 'p' ? 'p' : 'reel'
+  const other = kind === 'p' ? 'reel' : 'p'
+  return [
+    `https://www.instagram.com/${kind}/${ig.code}/embed/captioned/`,
+    `https://www.instagram.com/${other}/${ig.code}/embed/captioned/`,
+    `https://www.instagram.com/${kind}/${ig.code}/embed/`,
+    pageUrl,
+  ]
+}
+
 async function htmlCarouselSlides(pageUrl: string): Promise<ResolvedSlide[]> {
-  const html = await fetchText(pageUrl, 4500)
-  if (!html) return []
-  return slidesFromPageHtml(html)
+  const seen = new Set<string>()
+  for (const candidate of embedPageUrls(pageUrl)) {
+    if (seen.has(candidate)) continue
+    seen.add(candidate)
+    const html = await fetchText(
+      candidate,
+      7000,
+      /instagram\.com\/.*\/embed/i.test(candidate) ? IG_EMBED_UA : UA,
+    )
+    if (!html) continue
+    const slides = slidesFromPageHtml(normalizeIgHtml(html))
+    if (slides.some((s) => s.kind === 'video') || slides.length > 0) return slides
+  }
+  return []
 }
 
 function firstVideoSlides(lists: ResolvedSlide[][]): ResolvedSlide[] | null {
@@ -272,10 +315,10 @@ function pickCarouselSlides(pageUrl: string, ...lists: ResolvedSlide[][]): Resol
   return best
 }
 
-async function fetchText(url: string, ms = 6000): Promise<string | null> {
+async function fetchText(url: string, ms = 6000, ua = UA): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': UA, Accept: 'text/html,application/json' },
+      headers: { 'User-Agent': ua, Accept: 'text/html,application/json' },
       signal: AbortSignal.timeout(ms),
       redirect: 'follow',
     })

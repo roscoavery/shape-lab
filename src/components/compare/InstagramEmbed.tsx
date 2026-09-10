@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 import {
   instagramSlideIndex,
   postedByFromUrl,
+  socialEmbedSrc,
   socialOpenLabel,
   socialPlatform,
   socialProfileUrl,
@@ -29,7 +30,7 @@ import {
   type IgSlide,
 } from '../../lib/igCache'
 import { rememberPostedBy } from '../../lib/postedByCache'
-import { markClipPlayable, markClipUnplayable } from '../../lib/clipPlayability'
+import { forgetClipPlayability, markClipPlayable, markClipUnplayable } from '../../lib/clipPlayability'
 import { reelObjectFit } from '../../lib/reelFit'
 import { putBlob } from '../../lib/clipStore'
 import { VideoWorkbench } from './VideoWorkbench'
@@ -218,6 +219,7 @@ export function InstagramEmbed({
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
+  const [useEmbed, setUseEmbed] = useState(false)
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
   onPostedByRef.current = onPostedBy
@@ -246,6 +248,7 @@ export function InstagramEmbed({
     setError(null)
     setSaved(false)
     setQuotaWarn(false)
+    setUseEmbed(false)
     setResolvedBy(null)
     setSlides([])
     setSlidesFor(null)
@@ -325,6 +328,12 @@ export function InstagramEmbed({
         const cached = await loadAnyCachedInstagramBlob(itemId, url)
         if (cached && loadGen.current === gen) {
           showBlob(cached, 'video', true)
+          return
+        }
+        if (socialEmbedSrc(url)) {
+          setUseEmbed(true)
+          setLoading(false)
+          markClipPlayable(url)
           return
         }
         markClipUnplayable(url)
@@ -479,7 +488,9 @@ export function InstagramEmbed({
     )
   }
 
-  if (loading && !src) {
+  const embedSrc = socialEmbedSrc(url)
+
+  if (loading && !src && !useEmbed) {
     return (
       <div
         className={`flex items-center justify-center text-sm text-[var(--muted)] ${
@@ -489,6 +500,29 @@ export function InstagramEmbed({
         }`}
       >
         Opening video…
+      </div>
+    )
+  }
+
+  if (useEmbed && embedSrc) {
+    return (
+      <div className={fill ? 'flex h-full min-h-0 w-full flex-col' : 'flex flex-col gap-2'}>
+        <iframe
+          src={embedSrc}
+          title="Reference video"
+          className={
+            fill
+              ? 'h-full min-h-0 w-full border-0 bg-black'
+              : 'h-[28rem] w-full rounded-lg border-0 bg-black'
+          }
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+        />
+        {!fill && !quiet ? (
+          <p className="text-xs text-[var(--muted)]">
+            Playing the original Instagram / TikTok player. Delay-cam overlay needs a saved in-app
+            copy — tap Try again after it loads, or Open on the site.
+          </p>
+        ) : null}
       </div>
     )
   }
@@ -504,6 +538,8 @@ export function InstagramEmbed({
             type="button"
             onClick={() => {
               forgetInstagramManifest(url)
+              forgetClipPlayability(url)
+              setUseEmbed(false)
               setRetry((n) => n + 1)
             }}
             className="text-xs font-semibold text-[var(--accent)] hover:underline"
@@ -576,6 +612,12 @@ export function InstagramEmbed({
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
         pictureChrome={carouselChrome}
+        onError={() => {
+          if (socialEmbedSrc(url)) {
+            setUseEmbed(true)
+            markClipPlayable(url)
+          }
+        }}
       />
     ) : null
 

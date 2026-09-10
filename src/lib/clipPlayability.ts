@@ -53,9 +53,24 @@ export function markClipUnplayable(url: string) {
   write(store)
 }
 
+/** One failed resolve should not bury a clip forever — Instagram helpers flap. */
+const UNPLAYABLE_TTL_MS = 30 * 60 * 1000
+
+export function forgetClipPlayability(url: string) {
+  if (!url) return
+  const store = read()
+  const key = keyFor(url)
+  if (!store[key]) return
+  delete store[key]
+  write(store)
+}
+
 export function isClipUnplayable(url: string | null | undefined): boolean {
   if (!url) return false
-  return read()[keyFor(url)]?.ok === false
+  const row = read()[keyFor(url)]
+  if (!row || row.ok) return false
+  if (Date.now() - row.at > UNPLAYABLE_TTL_MS) return false
+  return true
 }
 
 export function playableRank(url: string | null | undefined): number {

@@ -74,6 +74,7 @@ type Props = {
   onUseAsReference?: () => void
   onSaveToDrill?: () => void
   onSaveToCollection?: () => void
+  onError?: () => void
 }
 
 function fmt(t: number): string {
@@ -125,6 +126,7 @@ function VideoWorkbenchInner({
   onUseAsReference,
   onSaveToDrill,
   onSaveToCollection,
+  onError,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -690,6 +692,7 @@ function VideoWorkbenchInner({
           onDurationChange={onDurationChange}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
+          onError={() => onError?.()}
           style={
             pinchZoom
               ? {
