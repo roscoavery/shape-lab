@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   FLOW_SEQUENCES,
   getFlowSequence,
@@ -107,6 +108,7 @@ type Props = {
   onAssignedSequenceConsumed?: () => void
   onFlowPhase?: (phase: Phase) => void
   onRegisterStart?: (fn: () => void) => void
+  onRegisterHoldDone?: (fn: () => void) => void
 }
 
 function scoreColor(n: number): string {
@@ -142,13 +144,13 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   if (seq.mode === 'hs-hold') {
     const holds = steps.filter((s) => s.holdSeconds != null)
     if (holds.length === 0) {
-      return `${seq.name}. No timed handstands this run. Kick up, hold, and tap Done when you are finished. Snapshots map the replay — they are not grades. Not a gate.`
+      return `${seq.name}. No timed handstands this run. Hands on the floor, kick up so both feet leave, then tap Done. Not a gate.`
     }
     const longest = [...holds].sort((a, b) => (b.holdSeconds ?? 0) - (a.holdSeconds ?? 0))[0]!
     const bits = holds.map(
       (s) => `Hold ${s.rep ?? '?'}: ${formatSeconds(s.holdSeconds ?? 0)}`,
     )
-    return `${seq.name}. ${holds.length} hold${holds.length === 1 ? '' : 's'}. Longest ${formatSeconds(longest.holdSeconds ?? 0)} (hold ${longest.rep}). ${bits.join(' · ')}. Snapshots map the replay playhead — they are not grades. Not a gate.`
+    return `${seq.name}. ${holds.length} hold${holds.length === 1 ? '' : 's'}. Longest ${formatSeconds(longest.holdSeconds ?? 0)} (hold ${longest.rep}). ${bits.join(' · ')}. Best-frame stills are graded. Not a gate.`
   }
   const hsReps = graded.filter((s) => s.shapeId === 'handstand' && s.rep != null)
   if (hsReps.length > 1) {
@@ -216,6 +218,7 @@ export function Tasks2Panel({
   onAssignedSequenceConsumed,
   onFlowPhase,
   onRegisterStart,
+  onRegisterHoldDone,
 }: Props) {
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(() => readLastFlowId() ?? FLOW_SEQUENCES[0]!.id)
@@ -698,8 +701,8 @@ export function Tasks2Panel({
             )
           : null
         if (stillView) {
-          stillView.overall = 0
-          stillView.cues = highlighted ? cues : []
+          stillView.overall = livePeak || live?.overall || 0
+          stillView.cues = cues
           stillView.marker = 'playhead'
           stillView.holdSeconds = a.holdSeconds
           stillView.clipId = clipId
@@ -710,7 +713,7 @@ export function Tasks2Panel({
           index: i + 1,
           holdSeconds: a.holdSeconds,
           livePeak,
-          cues: highlighted ? cues : [],
+          cues,
           clipId,
           snapshotId: stillView?.captureId ?? null,
           playheadSec: a.playheadSec,
@@ -738,7 +741,7 @@ export function Tasks2Panel({
       const steps: FlowStepSnap[] = collected.map((s) => ({
         shapeId: s.shapeId,
         shapeName: s.shapeName,
-        overall: 0,
+        overall: s.overall,
         cues: s.cues,
         captureId: s.captureId,
         atSec: s.atSec,
@@ -790,7 +793,7 @@ export function Tasks2Panel({
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Watch it, then read the analysis and choose whether to keep the clips.`,
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Watch each kick-up, then save to Photos if you want. Clips are not saved to My shapes unless you choose that.`,
       )
     },
     [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
@@ -1462,6 +1465,16 @@ export function Tasks2Panel({
     })
   })
 
+  const requestHoldDone = useCallback(() => {
+    holdDoneRef.current = true
+    setFlash('Finishing this hold, then your analysis.')
+    window.setTimeout(() => setFlash(null), 2000)
+  }, [])
+
+  useEffect(() => {
+    onRegisterHoldDone?.(requestHoldDone)
+  }, [onRegisterHoldDone, requestHoldDone])
+
   useEffect(() => {
     if (phase !== 'replay' && phase !== 'review') return
     if (!report?.holdAttempts?.length) return
@@ -1557,12 +1570,8 @@ export function Tasks2Panel({
           {phase === 'holding' && (
             <button
               type="button"
-              onClick={() => {
-                holdDoneRef.current = true
-                setFlash('Finishing this hold, then your analysis.')
-                window.setTimeout(() => setFlash(null), 2000)
-              }}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              onClick={requestHoldDone}
+              className="h-14 min-w-[12rem] flex-1 rounded-2xl bg-[var(--accent)] px-4 text-base font-bold text-[#06281f]"
             >
               Done — see my holds
             </button>
@@ -1579,10 +1588,9 @@ export function Tasks2Panel({
     </div>
   )
 
-  return (
-    <>
-      {cameraFullscreen && phase !== 'replay' && (
-        <div className="pointer-events-auto fixed bottom-3 left-1/2 z-[95] w-[min(96vw,34rem)] -translate-x-1/2 rounded-2xl border border-white/25 bg-black/80 p-3 text-white shadow-2xl backdrop-blur">
+  const holdHud =
+    (cameraFullscreen || phase === 'holding') && phase !== 'replay' ? (
+        <div className="pointer-events-auto fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[220] mx-auto w-[min(96vw,34rem)] rounded-2xl border border-white/25 bg-black/85 p-3 text-white shadow-2xl backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
             {phase === 'holding'
               ? 'Handstand hold challenge'
@@ -1604,9 +1612,16 @@ export function Tasks2Panel({
                 <p className="mt-1 text-[12px] text-[#f07178]">{cameraError}</p>
               )}
               <p className="mt-1 text-[11px] text-white/60">
-                {holdTick
-                  ? `${holdTick.running ? `Hold ${(holdTick.tries ?? 0) + 1}` : `${holdTick.tries} timed`} · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
-                  : 'Clock starts when you are inverted. Stops when a foot hits.'}
+                {holdTick?.running
+                  ? `Hold ${(holdTick.tries ?? 0) + 1} · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
+                  : holdTick
+                    ? `${holdTick.tries} timed · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
+                    : 'Clock starts when hands are down and feet leave the ground.'}
+                {holdTick && !holdTick.running
+                  ? holdTick.handsDown
+                    ? ' · Hands down — kick your feet up'
+                    : ' · Place both hands on the floor'
+                  : ''}
               </p>
             </>
           ) : busy ? (
@@ -1660,7 +1675,11 @@ export function Tasks2Panel({
             </p>
           )}
         </div>
-      )}
+    ) : null
+
+  return (
+    <>
+      {holdHud && createPortal(holdHud, document.body)}
 
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
       <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-2xl border border-white/10 bg-[#121820] p-3 shadow-lg">
@@ -1962,7 +1981,7 @@ export function Tasks2Panel({
             <div className="shrink-0 border-t border-white/15 bg-black/80 px-3 py-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">
                 {holdMode
-                  ? 'Each hold — highlighted is your longest. Tap to watch. Stills map the playhead, not a grade.'
+                  ? 'Each hold — highlighted is your longest. Tap to watch. The still is your best frame with a live grade.'
                   : seq.id === 'flow_mc_hs_5reps'
                   ? 'Handstand 1–5 — tap to jump in the replay'
                   : seq.id === 'flow_long_bridge'
@@ -2013,6 +2032,7 @@ export function Tasks2Panel({
                     {holdMode ? (
                       <p className="px-1 pb-1 text-[10px] tabular-nums text-[#f0b429]">
                         {s.holdSeconds != null ? formatSeconds(s.holdSeconds) : '—'}
+                        {s.overall > 0 ? ` · ${s.overall}` : ''}
                       </p>
                     ) : (
                     <p className="px-1 pb-1 text-[10px] tabular-nums" style={{ color: scoreColor(s.overall) }}>
@@ -2108,10 +2128,21 @@ export function Tasks2Panel({
                         </button>
                       )}
                     </div>
-                    {h.highlighted && (
-                      <div className="border-t border-[var(--panel-border)] px-3 py-2">
+                    <div className="border-t border-[var(--panel-border)] px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                          Written form analysis · verbal cues from your longest hold
+                          {h.highlighted
+                            ? 'Best frame · longest hold · verbal cues'
+                            : `Best frame · hold ${h.index} · ${h.livePeak}/100`}
+                        </p>
+                        {still?.url && (
+                          <img
+                            src={still.url}
+                            alt={`Hold ${h.index} best frame`}
+                            className="mt-2 max-h-48 w-full rounded-md bg-black object-contain"
+                          />
+                        )}
+                        <p className="mt-1 text-sm font-bold tabular-nums" style={{ color: scoreColor(h.livePeak) }}>
+                          Handstand {h.livePeak}/100
                         </p>
                         {h.cues.length > 0 ? (
                           <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12px] leading-snug text-[var(--text)]">
@@ -2126,11 +2157,10 @@ export function Tasks2Panel({
                           </p>
                         )}
                         <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          The still is a playhead map only — it is not a snapshot grade. Live score,
-                          stopwatch, and joint angles are on the video.
+                          Watch the clip with joint tracking, then Save video to Photos if you want it
+                          on this device. It is not saved to My shapes unless you choose that.
                         </p>
                       </div>
-                    )}
                   </li>
                 )
               })}

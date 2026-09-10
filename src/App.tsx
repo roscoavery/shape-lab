@@ -201,6 +201,7 @@ export default function App() {
   const [camFullscreen, setCamFullscreen] = useState(false)
   const [flowPhase, setFlowPhase] = useState('idle')
   const startFlowRef = useRef<() => void>(() => {})
+  const holdDoneRef = useRef<() => void>(() => {})
   const [holdClock, setHoldClock] = useState<number | null>(null)
   const holdSecondsRef = useRef<number | null>(null)
   const skipNextRef = useRef<(() => void) | null>(null)
@@ -933,6 +934,8 @@ export default function App() {
             onStartFlow={() => {
               startFlowRef.current()
             }}
+            showHoldDone={flowPhase === 'holding'}
+            onDoneHold={() => holdDoneRef.current()}
           />
           </div>
 
@@ -965,6 +968,9 @@ export default function App() {
               onFlowPhase={setFlowPhase}
               onRegisterStart={(fn) => {
                 startFlowRef.current = fn
+              }}
+              onRegisterHoldDone={(fn) => {
+                holdDoneRef.current = fn
               }}
               onHoldClock={(seconds) => {
                 holdSecondsRef.current = seconds

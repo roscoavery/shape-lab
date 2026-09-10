@@ -89,7 +89,6 @@ export function resultToLandmarks(
 ): Landmark[] | null {
   const pose = result.landmarks?.[0]
   if (!pose || pose.length < 33) return null
-  if (!landmarksLookPresent(pose)) return null
   return pose.map((lm) => ({
     x: lm.x,
     y: lm.y,

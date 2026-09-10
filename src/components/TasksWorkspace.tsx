@@ -57,6 +57,9 @@ type Props = {
   /** Class-flow fullscreen: show a big Start on the camera stage. */
   flowIdle?: boolean
   onStartFlow?: () => void
+  /** Hold challenge: a Done control that stays on the live camera. */
+  showHoldDone?: boolean
+  onDoneHold?: () => void
 }
 
 function scoreColor(n: number): string {
@@ -122,6 +125,8 @@ export function TasksWorkspace({
   holdSecondsRef,
   flowIdle = false,
   onStartFlow,
+  showHoldDone = false,
+  onDoneHold,
 }: Props) {
   const [localFullscreen, setLocalFullscreen] = useState(false)
   const fullscreen = fullscreenProp ?? localFullscreen
@@ -440,6 +445,18 @@ export function TasksWorkspace({
                         className="rounded-3xl bg-[var(--accent)] px-10 py-5 text-2xl font-black uppercase tracking-wide text-[#06281f] shadow-2xl sm:px-14 sm:py-6 sm:text-3xl"
                       >
                         Start
+                      </button>
+                    </div>
+                  )}
+
+                  {fullscreen && flowMode && showHoldDone && onDoneHold && (
+                    <div className="pointer-events-auto absolute inset-x-3 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] z-50 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={onDoneHold}
+                        className="h-14 min-w-[16rem] rounded-2xl bg-[var(--accent)] px-6 text-lg font-black text-[#06281f] shadow-2xl"
+                      >
+                        Done — see my holds
                       </button>
                     </div>
                   )}

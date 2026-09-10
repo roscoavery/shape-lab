@@ -5,6 +5,7 @@
 
 import { poseInverted } from './handstandHold'
 import { LM } from './landmarks'
+import { landmarksLookPresent } from './pose'
 import { mergePair } from './skeleton'
 import type { Landmark } from '../types'
 
@@ -216,6 +217,10 @@ export function homeworkLooksReady(
   lm: Landmark[] | null | undefined,
   overall: number,
 ): boolean {
+  if (shapeId === 'wall_handstand' || shapeId === 'handstand') {
+    return poseInverted(lm)
+  }
+  if (!lm || !landmarksLookPresent(lm)) return false
   if (shapeId.startsWith('hollow')) {
     return poseLooksHollow(lm) || overall >= 32
   }
@@ -247,11 +252,6 @@ export function homeworkLooksReady(
   }
   if (shapeId === 'arch') {
     return poseLooksTightArch(lm) || overall >= 32
-  }
-  if (shapeId === 'wall_handstand' || shapeId === 'handstand') {
-    // Total hold must wait for an invert. A middling score while standing
-    // at the wall used to start the clock; proper hold already required form.
-    return poseInverted(lm)
   }
   return overall >= 28
 }
