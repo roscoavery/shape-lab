@@ -12,7 +12,8 @@
     "share": "node scripts/share.mjs",
     "share:quick": "node scripts/share.mjs --quick",
     "gym": "node scripts/gym-home.mjs",
-    "gym:pull": "node scripts/pull-from-blob.mjs"
+    "gym:pull": "node scripts/pull-from-blob.mjs",
+    "gym:up": "node scripts/gym-up.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

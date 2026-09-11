@@ -44,11 +44,15 @@ async function streamToBuffer(stream) {
 await applyDotEnv()
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim()
 if (!token) {
-  console.error(
-    'Missing BLOB_READ_WRITE_TOKEN in .env. Copy it from the Vercel project → Storage → Blob while Production is still up.',
-  )
-  process.exit(1)
-}
+  console.log('No BLOB_READ_WRITE_TOKEN — pulling from the live gym URL instead.')
+  const { spawn } = await import('node:child_process')
+  const child = spawn(process.execPath, [join(ROOT, 'scripts', 'pull-from-live.mjs')], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: process.env,
+  })
+  child.on('exit', (code) => process.exit(code ?? 0))
+} else {
 
 const { list, get } = await import('@vercel/blob')
 
@@ -169,3 +173,4 @@ console.log('')
 console.log(`Pulled ${files} gym files (${Math.round(bytes / 1024)} KB) into ${join(ROOT, 'data')}.`)
 console.log('Next: npm run gym')
 console.log('Keep this computer on. After phones use the home URL, pause the Vercel project.')
+}

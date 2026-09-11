@@ -182,7 +182,8 @@ This Cursor cloud VM is **not** 24/7. Run these commands on the computer that st
 
    ```bash
    npm install
-   npm run gym:pull
+   npm run gym:pull    # Blob token if you have it; otherwise the live Vercel URL
+   npm run gym:up      # disk gym + public HTTPS tunnel
    ```
 
    That writes Blob `data/` (roster, photos, feed, classes, clips) into this computer’s `data/` folder. Keep the Blob store. Do not delete it.
