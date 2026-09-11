@@ -100,7 +100,11 @@ const tokenRaw = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
 const shareArgs = tokenLooksReal(tokenRaw) ? ['run', 'share'] : ['run', 'share:quick']
 if (tokenRaw && !tokenLooksReal(tokenRaw)) {
   console.warn(
-    'CLOUDFLARE_TUNNEL_TOKEN in .env is the example text, not the real Cloudflare token. Using a temporary tunnel until you paste the token from the dashboard.',
+    'CLOUDFLARE_TUNNEL_TOKEN in .env is not a real Cloudflare token. Using a temporary tunnel. Copy box 3 on the tunnel page, then: npm run gym:token',
+  )
+} else if (!tokenRaw) {
+  console.warn(
+    'No Cloudflare tunnel token in .env yet. Using a temporary tunnel. After you copy box 3: npm run gym:token',
   )
 }
 
@@ -109,11 +113,13 @@ void waitForGym().then((ok) => {
   if (!ok) {
     console.warn(`Nothing answered at ${ORIGIN} yet. Starting the tunnel anyway.`)
   } else {
-    const named = process.env.CLOUDFLARE_TUNNEL_HOSTNAME?.trim()
+    const named = tokenLooksReal(tokenRaw)
+      ? process.env.CLOUDFLARE_TUNNEL_HOSTNAME?.trim()
+      : ''
     console.log(
       named
         ? `Gym is up at ${ORIGIN}. Publishing ${named} …`
-        : `Gym is up at ${ORIGIN}. Publishing HTTPS…`,
+        : `Gym is up at ${ORIGIN}. Publishing a temporary HTTPS link (named tunnel needs a real token via npm run gym:token)…`,
     )
   }
   const share = spawn(npm, shareArgs, {

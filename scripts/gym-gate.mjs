@@ -102,6 +102,16 @@ server.on('clientError', (_err, socket) => {
   socket.destroy()
 })
 
+server.on('connection', (socket) => {
+  socket.on('error', () => {
+    /* cloudflared or a phone hung up */
+  })
+})
+
+server.on('error', (err) => {
+  console.error(`Gym gate: ${err.message}`)
+})
+
 server.listen(PUBLIC_PORT, '0.0.0.0', () => {
   console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})`)
 })

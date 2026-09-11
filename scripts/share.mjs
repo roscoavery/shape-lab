@@ -144,9 +144,14 @@ function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
     )
   }
 
+  const env = { ...process.env }
+  if (!tokenLooksReal(env.CLOUDFLARE_TUNNEL_TOKEN)) {
+    delete env.CLOUDFLARE_TUNNEL_TOKEN
+  }
+
   const child = spawn(bin.cmd, argv, {
     stdio: printUrl ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-    env: process.env,
+    env,
   })
 
   let announced = false

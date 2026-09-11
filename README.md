@@ -191,8 +191,8 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
    ```
 
    That installs deps, copies Production onto this Mac (`data/`), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off.
-4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari. Confirm names and faces. Bookmark it. The old Vercel tab is a different site. A `https://….trycloudflare.com` line is optional and often 502s — skip it. After a gym-script update: in the Mac Terminal stop with Ctrl+C, `git pull`, then `npm run gym:mac` again.
-5. **Then** pause the Vercel project. Do not delete the project or the Blob store.
+4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari to confirm names and faces. The camera will **not** start on that http link — phones need HTTPS. A `https://….trycloudflare.com` line is optional and often 502s — skip it. `zsh: command not found: cloudflared` is expected; do not brew-install it.
+5. Save the named-tunnel token (`npm run gym:token`, below), then `npm run gym:mac` again. On iPad / phone open **https://gym.shapelab.win**. Confirm names, faces, **and** that the camera starts. Bookmark that HTTPS link. **Then** pause the Vercel project. Do not delete the project or the Blob store.
 
 A Cursor / trycloudflare link from this cloud VM will not resolve on your phone. Use the Mac’s Wi-Fi address.
 
@@ -210,25 +210,27 @@ If `gym:mac` is missing, `npm install` then `npm run gym:pull` and `npm run gym:
 ### Dashboard (once)
 
 1. Open [Networking → Tunnels](https://one.dash.cloudflare.com/) (or dash.cloudflare.com → Zero Trust / Networking → Tunnels).
-2. **Create a tunnel** named `shape-lab`. Copy the install **token**.
+2. **Create a tunnel** named `shape-lab`.
 3. Add a **published application**:
    - Hostname: `gym.shapelab.win`
    - Service URL: `http://127.0.0.1:43127`
-4. In this repo:
+4. On that tunnel page, choose **macOS**. Do **not** run `brew install` or `sudo cloudflared service install` — those fight `npm run gym:mac`. Copy the icon on **box 3 only** (the line that starts `cloudflared tunnel run --token eyJ…`).
+
+**That line is not a Terminal command.** This Mac has no `cloudflared` command. Shape Lab starts the tunnel with `npx`. Copy the line, then:
 
 ```bash
-cp .env.example .env
+cd ~/shape-lab
+git pull
+npm run gym:token
 ```
 
-Paste into `.env`:
+You want `Saved tunnel token (N characters) to .env`. If it says the clipboard is empty, paste the token as an argument (one line, after `--`):
 
 ```bash
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_…   # only for npm run gym:pull
-CLOUDFLARE_TUNNEL_TOKEN=eyJ...
-CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win
+npm run gym:token -- --token eyJ…theRestFromBox3
 ```
 
-`.env` is gitignored. Do not commit the token.
+`.env` is gitignored. Do not commit the token. Do not paste `eyJ...paste the token...` from `.env.example`.
 
 ### Gym computer (every session, or on boot)
 
