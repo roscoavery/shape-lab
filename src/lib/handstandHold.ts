@@ -21,8 +21,10 @@ export function formatSeconds(s: number): string {
 }
 
 export const HOLD_ENTER_FRAMES = 2
-export const HOLD_EXIT_FRAMES = 5
+export const HOLD_EXIT_FRAMES = 10
 export const MIN_HOLD_SEC = 0.45
+/** Done with no detected kick-up still keeps a clip this long. */
+export const SALVAGE_HOLD_SEC = 2.4
 export const PRE_ROLL_SEC = 2
 export const POST_ROLL_SEC = 2
 export const POST_FOOT_MS = POST_ROLL_SEC * 1000
@@ -62,12 +64,25 @@ export type HoldSessionOpts = {
   onCue: (line: string) => void
 }
 
-function visOk(p: Landmark | undefined, min = 0.18): p is Landmark {
-  return Boolean(p) && (p!.visibility ?? 1) >= min
+function visOk(p: Landmark | undefined, min = 0.04): p is Landmark {
+  return Boolean(p) && Number.isFinite(p!.x) && Number.isFinite(p!.y) && (p!.visibility ?? 1) >= min
 }
 
 function avgY(pts: Landmark[]): number {
   return pts.reduce((s, p) => s + p.y, 0) / pts.length
+}
+
+function pairY(a: Landmark | undefined, b: Landmark | undefined, min = 0.04): number | null {
+  const pts = [a, b].filter((p): p is Landmark => visOk(p, min))
+  if (pts.length === 0) return null
+  return avgY(pts)
+}
+
+function headY(lm: Landmark[]): number | null {
+  const nose = visOk(lm[LM.NOSE], 0.03) ? lm[LM.NOSE]!.y : null
+  const ears = pairY(lm[LM.LEFT_EAR], lm[LM.RIGHT_EAR], 0.03)
+  if (nose != null && ears != null) return (nose + ears) / 2
+  return nose ?? ears
 }
 
 function wait(ms: number) {
@@ -87,72 +102,96 @@ function sideFootOnFloor(lm: Landmark[], left: boolean, floorY: number): boolean
   const pts = left
     ? [lm[LM.LEFT_ANKLE], lm[LM.LEFT_HEEL], lm[LM.LEFT_FOOT_INDEX]]
     : [lm[LM.RIGHT_ANKLE], lm[LM.RIGHT_HEEL], lm[LM.RIGHT_FOOT_INDEX]]
-  return pts.some((p) => visOk(p, 0.1) && p.y > floorY)
+  return pts.some((p) => visOk(p, 0.05) && p.y > floorY)
 }
 
 /** Palms / wrists planted toward the floor (image y grows downward). */
 export function handsOnGround(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
-  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.12))
-  const tips = [lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX]].filter((p) => visOk(p, 0.1))
-  const hands = wrists.length >= 1 ? wrists : tips
-  if (hands.length === 0) return false
-  const shoulders = [lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER]].filter((p) => visOk(p, 0.1))
-  const hips = [lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP]].filter((p) => visOk(p, 0.1))
-  const handY = avgY(hands)
-  if (shoulders.length && handY < avgY(shoulders) + 0.04) return false
-  if (hips.length && handY < avgY(hips) - 0.02) return false
+  const wristY = pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03)
+  const tipY = pairY(lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX], 0.03)
+  const handY = wristY ?? tipY
+  if (handY == null) return false
+  const shoulderY = pairY(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.03)
+  const hipY = pairY(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.03)
+  // Arms overhead (stand or walk) put the wrists above the shoulders.
+  if (shoulderY != null && handY < shoulderY - 0.02) return false
+  // Hands must be at or below the hips — stacked on the floor, not a T.
+  if (hipY != null && handY < hipY - 0.08) return false
   return true
 }
 
-/** Both feet have left the floor — the kick-up moment. */
+/**
+ * Both feet have left the floor. Missing ankles count as off when the
+ * hips are already stacked above the hands — the feet often leave the frame.
+ */
 export function feetOffGround(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
-  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.1))
-  const handY = wrists.length ? avgY(wrists) : 0.82
-  const floorY = Math.max(0.7, handY - 0.12)
+  const wristY =
+    pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03) ??
+    pairY(lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX], 0.03) ??
+    0.82
+  const hipY = pairY(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.03)
+  const ankleY = pairY(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.03)
+  const heelY = pairY(lm[LM.LEFT_HEEL], lm[LM.RIGHT_HEEL], 0.03)
+  const footY = ankleY ?? heelY
+  if (footY == null) {
+    return hipY != null && hipY < wristY - 0.04
+  }
+  const floorY = wristY - 0.1
   const left = sideFootOnFloor(lm, true, floorY)
   const right = sideFootOnFloor(lm, false, floorY)
-  const ankles = [lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE]].filter((p) => visOk(p, 0.08))
-  if (ankles.length === 0) return false
   return !left && !right
 }
 
 /**
- * Wrists toward the floor, both feet off — side or front.
+ * In a handstand — side or front, feet in frame or not.
  * Used for the hold clock and for homework wall / freestanding HS.
+ *
+ * MediaPipe often drops ankles once the feet leave the top of the frame,
+ * and visibility on planted wrists is low. Any one strong stacked signal
+ * is enough; standing with arms up must not pass.
  */
 export function poseInverted(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
-  if (!handsOnGround(lm) || !feetOffGround(lm)) return false
 
-  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.1))
-  const ankles = [lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE]].filter((p) => visOk(p, 0.08))
-  const hips = [lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP]].filter((p) => visOk(p, 0.1))
-  const shoulders = [lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER]].filter((p) => visOk(p, 0.1))
-  if (wrists.length === 0 || ankles.length === 0) return false
+  const wristY =
+    pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03) ??
+    pairY(lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX], 0.03)
+  const hipY = pairY(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.03)
+  const shoulderY = pairY(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.03)
+  const ankleY =
+    pairY(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.03) ??
+    pairY(lm[LM.LEFT_HEEL], lm[LM.RIGHT_HEEL], 0.03)
+  const noseY = headY(lm)
+  const handsDown = handsOnGround(lm)
+  const feetOff = feetOffGround(lm)
 
-  const wristY = avgY(wrists)
-  const ankleLow = Math.min(...ankles.map((p) => p.y))
-  const hipY = hips.length
-    ? avgY(hips)
-    : shoulders.length
-      ? avgY(shoulders)
-      : (wristY + ankleLow) / 2
+  const headLow = noseY != null && hipY != null && noseY > hipY + 0.05
+  const hipsAboveHands = wristY != null && hipY != null && hipY < wristY - 0.04
+  const feetAboveHands = wristY != null && ankleY != null && ankleY < wristY - 0.08
+  const feetAboveShoulders =
+    shoulderY != null && ankleY != null && ankleY < shoulderY - 0.04
+  const longInvert = wristY != null && ankleY != null && wristY - ankleY > 0.2
 
-  // Image y grows downward. The clock starts at kick-up: hands planted, feet
-  // off, and the hips or feet have risen above the hands.
-  const hipsAboveHands = hipY < wristY - 0.03
-  const feetAboveHands = ankleLow < wristY - 0.08
-  return hipsAboveHands || feetAboveHands
+  if (handsDown && (hipsAboveHands || feetAboveHands || feetAboveShoulders || feetOff)) {
+    return true
+  }
+  if (headLow && (handsDown || hipsAboveHands || feetAboveHands)) return true
+  if (handsDown && longInvert) return true
+  return false
 }
 
-/** Either foot (ankle, heel, or toe) is back on the floor. */
+/** Either foot (ankle, heel, or toe) is back near the hands / floor. */
 export function footOnGround(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
-  const wrists = [lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST]].filter((p) => visOk(p, 0.1))
-  const wristY = wrists.length ? avgY(wrists) : 0.82
-  const floorY = Math.max(0.62, wristY - 0.14)
+  const wristY =
+    pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03) ??
+    pairY(lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX], 0.03)
+  if (wristY == null) return false
+  // Floor lives at the hands. A mid-air foot in the lower half of the
+  // frame must not end a hold — that was the old 0.62 absolute cutoff.
+  const floorY = wristY - 0.1
   return sideFootOnFloor(lm, true, floorY) || sideFootOnFloor(lm, false, floorY)
 }
 
@@ -241,6 +280,75 @@ async function trimHoldClip(
   }
 }
 
+function longestInvertedSpan(poseTrack: PoseTrack, elapsed: number): {
+  start: number
+  end: number
+  found: boolean
+} {
+  let bestStart = 0
+  let bestEnd = elapsed
+  let found = false
+  let spanStart: number | null = null
+  for (const p of poseTrack) {
+    if (poseInverted(p.lm)) {
+      if (spanStart == null) spanStart = p.t
+    } else if (spanStart != null) {
+      if (!found || p.t - spanStart > bestEnd - bestStart) {
+        bestStart = spanStart
+        bestEnd = p.t
+        found = true
+      }
+      spanStart = null
+    }
+  }
+  if (spanStart != null && (!found || elapsed - spanStart > bestEnd - bestStart)) {
+    return { start: spanStart, end: elapsed, found: true }
+  }
+  return { start: bestStart, end: bestEnd, found }
+}
+
+async function salvageWaitingHold(
+  opts: HoldSessionOpts,
+  session: ReturnType<typeof startClipRecorder> | null,
+  recStart: number,
+  poseTrack: PoseTrack,
+): Promise<RawHoldAttempt | null> {
+  const elapsed = session ? (performance.now() - recStart) / 1000 : 0
+  if (!session || elapsed < SALVAGE_HOLD_SEC) return null
+
+  const span = longestInvertedSpan(poseTrack, elapsed)
+  const holdSeconds = span.found
+    ? Math.max(MIN_HOLD_SEC, span.end - span.start)
+    : elapsed
+  const clockOffsetSec = span.found ? span.start : 0
+  const playheadSec = span.found ? (span.start + span.end) / 2 : elapsed / 2
+
+  let clipBlob: Blob | null = null
+  try {
+    const blob = await session.stop()
+    if (blob.size > 800) clipBlob = await durableBlob(blob)
+  } catch {
+    clipBlob = null
+  }
+
+  const live = opts.score()
+  const peakFrozen = live.overall > 0 ? freezeScore(live) : null
+  const peakBlob = snapshotCanvas(opts.canvas())
+  const trimmed = clipBlob
+    ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
+    : { clipBlob, clockOffsetSec, playheadSec, poseTrack }
+
+  return {
+    holdSeconds,
+    livePeak: peakFrozen,
+    snapshotBlob: peakBlob,
+    clipBlob: trimmed.clipBlob,
+    playheadSec: trimmed.playheadSec,
+    clockOffsetSec: trimmed.clockOffsetSec,
+    poseTrack: trimmed.poseTrack,
+  }
+}
+
 export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<RawHoldAttempt[]> {
   const attempts: RawHoldAttempt[] = []
   let last: number | null = null
@@ -308,8 +416,23 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       await wait(33)
     }
 
-    if (opts.cancelled() || opts.doneRequested()) {
+    if (opts.cancelled()) {
       if (rec.session) void rec.session.stop()
+      break
+    }
+    if (opts.doneRequested()) {
+      const salvaged = await salvageWaitingHold(opts, rec.session, recStart, poseTrack)
+      if (salvaged) {
+        last = salvaged.holdSeconds
+        best = best == null ? salvaged.holdSeconds : Math.max(best, salvaged.holdSeconds)
+        attempts.push(salvaged)
+        tick({ seconds: salvaged.holdSeconds, running: false, inverted: false })
+        opts.onCue(
+          `Kept your hold — ${formatSeconds(salvaged.holdSeconds)}. The clock missed the kick-up, so this is the recorded clip.`,
+        )
+      } else if (rec.session) {
+        void rec.session.stop()
+      }
       break
     }
 

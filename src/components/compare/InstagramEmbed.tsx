@@ -17,6 +17,7 @@ import {
 } from '../../lib/socialUrls'
 import {
   asPlayableBlob,
+  confirmInstagramManifest,
   fetchIgMediaBlob,
   fetchInstagramManifest,
   forgetInstagramManifest,
@@ -33,7 +34,7 @@ import { rememberPostedBy } from '../../lib/postedByCache'
 import { forgetClipPlayability, markClipPlayable, markClipUnplayable } from '../../lib/clipPlayability'
 import { reelObjectFit } from '../../lib/reelFit'
 import { putBlob } from '../../lib/clipStore'
-import { persistLibraryClipBlob } from '../../lib/persistLibraryClip'
+import { isGymHostedClipUrl, persistLibraryClipBlob } from '../../lib/persistLibraryClip'
 import { VideoWorkbench } from './VideoWorkbench'
 
 /** Keep carousel chevrons out of the left markup stack / right Show HUD. */
@@ -234,6 +235,9 @@ export function InstagramEmbed({
   onPostedByRef.current = onPostedBy
   const objectUrlRef = useRef<string | null>(null)
   const dragRef = useRef<{ id: number; x: number; y: number } | null>(null)
+  const savedUrlRef = useRef(savedUrl)
+  savedUrlRef.current = savedUrl
+  const skipHostedRef = useRef(false)
 
   const slideCount = slides.length
   const safeSlide = slideCount > 0 ? Math.min(slide, slideCount - 1) : 0
@@ -241,6 +245,7 @@ export function InstagramEmbed({
   useEffect(() => {
     setSlide(instagramSlideIndex(url))
     retriedRef.current = false
+    skipHostedRef.current = false
   }, [url])
 
   useEffect(() => {
@@ -280,6 +285,7 @@ export function InstagramEmbed({
       setSaved(true)
       setLoading(false)
       markClipPlayable(url)
+      confirmInstagramManifest(url)
       if (itemId && slideKind === 'video') void persistLibraryClipBlob(itemId, blob)
     }
 
@@ -293,9 +299,13 @@ export function InstagramEmbed({
       markClipPlayable(url)
     }
 
+    const hosted =
+      !skipHostedRef.current && isGymHostedClipUrl(savedUrlRef.current)
+        ? savedUrlRef.current
+        : undefined
     const warm = peekAnyCachedInstagramBlob(itemId, url)
-    if (savedUrl && !warm) {
-      showStream(savedUrl, 'video')
+    if (hosted && !warm) {
+      showStream(hosted, 'video')
       setFromCache(true)
     } else if (warm) {
       setFromCache(true)
@@ -307,7 +317,7 @@ export function InstagramEmbed({
     }
 
     void (async () => {
-      let playedFromCache = Boolean(warm)
+      let playedFromCache = Boolean(warm || hosted)
       const cacheP = warm
         ? Promise.resolve<Blob | null>(null)
         : loadAnyCachedInstagramBlob(itemId, url)
@@ -339,6 +349,7 @@ export function InstagramEmbed({
               const blob = await fetchIgMediaBlob(current.url)
               if (cancelled || loadGen.current !== gen) return
               showBlob(blob, current.kind, false)
+              confirmInstagramManifest(url)
               const scoped = itemId ? mediaCacheId(itemId, url, index) : null
               if (scoped) rememberInstagramBlob(scoped, blob)
               if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
@@ -350,7 +361,7 @@ export function InstagramEmbed({
               }
             } catch {
               if (cancelled || loadGen.current !== gen) return
-              showStream(current.url, current.kind)
+              if (!playedFromCache) showStream(current.url, current.kind)
             }
           }
         }
@@ -384,7 +395,7 @@ export function InstagramEmbed({
       cancelled = true
       if (loadGen.current === gen) revoke()
     }
-  }, [url, itemId, retry, savedUrl])
+  }, [url, itemId, retry])
 
   useEffect(() => {
     if (slides.length === 0 || slidesFor !== url) return
@@ -448,6 +459,7 @@ export function InstagramEmbed({
             if (scoped) rememberInstagramBlob(scoped, blob)
             if (legacy) rememberInstagramBlob(legacy, blob)
             if (itemId && index === 0) rememberInstagramBlob(itemId, blob)
+            confirmInstagramManifest(url)
             if (itemId && current.kind === 'video') void persistLibraryClipBlob(itemId, blob)
             try {
               if (scoped) await putBlob(scoped, blob)
@@ -636,6 +648,16 @@ export function InstagramEmbed({
         overlayChrome={overlayChrome}
         pictureChrome={carouselChrome}
         onError={() => {
+          skipHostedRef.current = true
+          forgetInstagramManifest(url)
+          forgetClipPlayability(url)
+          if (!retriedRef.current) {
+            retriedRef.current = true
+            setSrc(null)
+            setLoading(true)
+            setRetry((n) => n + 1)
+            return
+          }
           markClipUnplayable(url)
           setSrc(null)
           setError(

@@ -763,36 +763,13 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
     return { url: direct, slides, postedBy: posted }
   }
 
-  const htmlP = htmlCarouselSlides(pageUrl)
-  const cobaltP = cobaltResolveAll(pageUrl)
-  const ytP = ytdlpResolve(pageUrl)
   const platform = socialPlatform(pageUrl)
-  const raceVideo =
-    ig?.type === 'reel' || ig?.type === 'tv' || platform === 'tiktok'
-
-  if (raceVideo) {
-    const firstReady = await Promise.any([
-      htmlP.then((slides) => {
-        if (!slides.some((s) => s.kind === 'video')) throw new Error('html-miss')
-        const ready = finish(slides)
-        if (ready) return ready
-        throw new Error('html-miss')
-      }),
-      cobaltP.then((slides) => {
-        if (slides.length === 0) throw new Error('cobalt-miss')
-        const ready = finish(slides)
-        if (ready) return ready
-        throw new Error('cobalt-miss')
-      }),
-      ytP.then((yt) => {
-        if (!yt.url) throw new Error('yt-miss')
-        const ready = finish([{ url: yt.url, kind: 'video' }], yt.postedBy)
-        if (ready) return ready
-        throw new Error('yt-miss')
-      }),
-    ]).catch(() => null)
-    if (firstReady) return firstReady
-  }
+  const htmlP = htmlCarouselSlides(pageUrl)
+  const ytP = ytdlpResolve(pageUrl)
+  // Cobalt can return a URL that 502s in <video>. Never let it win a race
+  // against Continue-on-web (GraphQL / permalink) or yt-dlp.
+  const cobaltP =
+    platform === 'instagram' ? null : cobaltResolveAll(pageUrl)
 
   const html = await htmlP
   if (html.some((s) => s.kind === 'video') || (ig?.type === 'p' && html.length > 1)) {
@@ -800,7 +777,13 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
     if (ready) return ready
   }
 
-  const cobalt = await cobaltP
+  const yt = await ytP
+  if (yt.url) {
+    const ready = finish([{ url: yt.url, kind: 'video' }], yt.postedBy)
+    if (ready) return ready
+  }
+
+  const cobalt = await (cobaltP ?? cobaltResolveAll(pageUrl))
   const htmlOrCobalt = pickCarouselSlides(pageUrl, html, cobalt)
   if (htmlOrCobalt.length > 0) {
     const ready = finish(htmlOrCobalt)
@@ -811,7 +794,6 @@ export async function resolveSocialSlides(rawUrl: string): Promise<{
     if (ready) return ready
   }
 
-  const yt = await ytP
   const ytSlides: ResolvedSlide[] = yt.url ? [{ url: yt.url, kind: 'video' }] : []
   const chosen = firstVideoSlides([html, cobalt, ytSlides]) ?? []
   return finish(chosen, yt.postedBy)

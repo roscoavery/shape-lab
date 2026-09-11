@@ -267,10 +267,10 @@ function VideoWorkbenchInner({
     }
     v.currentTime = start
     setTime(start)
-    if (autoPlay) {
+    if (autoPlay && active !== false) {
       void v.play().catch(() => {})
     }
-  }, [duration, tailSeconds, autoPlay])
+  }, [duration, tailSeconds, autoPlay, active])
 
   useEffect(() => {
     if (!onWindowChange || duration <= 0) return

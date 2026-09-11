@@ -14,6 +14,7 @@ import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
 import { useIgStillSave } from './IgStillContext'
 import { CompareControlsButton, HudCircle, IconArrow, IconDraw, IconLine, IconShot, IconX } from './CompareHud'
+import { releasePointerCaptures, resetIosPageZoom } from '../../lib/iosPageZoom'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
 
@@ -414,6 +415,20 @@ export function VideoMarkOverlay({
     setCropPts(null)
   }
 
+  const releaseShotPointers = () => {
+    releasePointerCaptures(canvasRef.current, pointersRef.current)
+    pointersRef.current.clear()
+  }
+
+  const afterShot = (resumeVideo: boolean) => {
+    releaseShotPointers()
+    resetIosPageZoom()
+    if (resumeVideo) {
+      const v = videoRef.current
+      if (v && v.paused) void v.play().catch(() => {})
+    }
+  }
+
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (pendingRef.current) return
     pointersRef.current.add(e.pointerId)
@@ -568,11 +583,15 @@ export function VideoMarkOverlay({
         const dataUrl = cropVideoFrame(videoRef.current, start, end, mirrorRef.current)
         if (!dataUrl) {
           setError('Crop was too small, or this video cannot be captured. Pause a saved clip and try again.')
+          afterShot(true)
           return
         }
         setPending({ dataUrl })
         setShapeId((id) => id || shapes[0]?.id || '')
         setError(null)
+        afterShot(false)
+      } else {
+        afterShot(true)
       }
       return
     }
@@ -669,6 +688,7 @@ export function VideoMarkOverlay({
     }
     setNotice('Saved into IG shapes — every gym link will have this still.')
     window.setTimeout(() => setNotice(null), 4000)
+    afterShot(true)
   }
 
   const pickTool = (id: MarkTool) => {
@@ -738,10 +758,10 @@ export function VideoMarkOverlay({
       <canvas
         ref={canvasRef}
         className={`absolute inset-0 h-full w-full ${
-          tool && !pending ? 'pointer-events-auto touch-none' : 'pointer-events-none'
+          tool && !pending ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
         style={{
-          touchAction: tool ? 'none' : 'pan-y',
+          touchAction: tool === 'crop' ? 'manipulation' : tool ? 'none' : 'pan-y',
           cursor: tool ? cursor : 'default',
           pointerEvents: pending || !tool ? 'none' : 'auto',
         }}
@@ -895,6 +915,7 @@ export function VideoMarkOverlay({
                 setError(null)
                 setCustomName('')
                 setShapeQuery('')
+                afterShot(true)
               }}
               className="rounded-md border border-white/25 px-2.5 py-1 text-[11px] text-white"
             >

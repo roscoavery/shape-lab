@@ -738,18 +738,32 @@ export function Tasks2Panel({
         /* ignore */
       }
 
-      const steps: FlowStepSnap[] = collected.map((s) => ({
-        shapeId: s.shapeId,
-        shapeName: s.shapeName,
-        overall: s.overall,
-        cues: s.cues,
-        captureId: s.captureId,
-        atSec: s.atSec,
-        clipId: s.clipId,
-        marker: 'playhead',
-        rep: s.rep,
-        holdSeconds: s.holdSeconds,
-      }))
+      const steps: FlowStepSnap[] =
+        collected.length > 0
+          ? collected.map((s) => ({
+              shapeId: s.shapeId,
+              shapeName: s.shapeName,
+              overall: s.overall,
+              cues: s.cues,
+              captureId: s.captureId,
+              atSec: s.atSec,
+              clipId: s.clipId,
+              marker: 'playhead',
+              rep: s.rep,
+              holdSeconds: s.holdSeconds,
+            }))
+          : holds.map((h) => ({
+              shapeId: 'handstand',
+              shapeName: 'Handstand',
+              overall: h.livePeak,
+              cues: h.cues,
+              captureId: h.snapshotId,
+              atSec: h.playheadSec,
+              clipId: h.clipId,
+              marker: 'playhead' as const,
+              rep: h.index,
+              holdSeconds: h.holdSeconds,
+            }))
       const built: FlowRunReport = {
         id: createId('flow'),
         athleteId: athleteId ?? 'none',
@@ -1618,9 +1632,15 @@ export function Tasks2Panel({
                     ? `${holdTick.tries} timed · Best ${holdTick.best != null ? formatSeconds(holdTick.best) : '—'}`
                     : 'Clock starts when hands are down and feet leave the ground.'}
                 {holdTick && !holdTick.running
-                  ? holdTick.handsDown
-                    ? ' · Hands down — kick your feet up'
-                    : ' · Place both hands on the floor'
+                  ? holdTick.inverted
+                    ? ' · Starting the clock…'
+                    : holdTick.handsDown && holdTick.feetOff
+                      ? ' · Hands down, feet up — lining up the handstand'
+                      : holdTick.handsDown
+                        ? ' · Hands down — kick your feet up'
+                        : holdTick.feetOff
+                          ? ' · Feet are up — plant both hands'
+                          : ' · Place both hands on the floor, then kick up'
                   : ''}
               </p>
             </>

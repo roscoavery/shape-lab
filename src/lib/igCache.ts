@@ -83,6 +83,12 @@ export function mediaCacheId(itemId: string, pageUrl: string, index = 0): string
   return index <= 0 ? base : `${base}::s${index}`
 }
 
+/** Persist a manifest only after the mp4 actually downloaded. */
+export function confirmInstagramManifest(pageUrl: string) {
+  const cached = manifestMem.get(pageUrl)
+  if (cached?.slides.length) writeDiskManifest(pageUrl, cached)
+}
+
 export function forgetInstagramManifest(pageUrl: string) {
   manifestMem.delete(pageUrl)
   inflightManifest.delete(pageUrl)
@@ -160,7 +166,6 @@ export async function fetchInstagramManifest(
     }
     const result = { slides, postedBy: data.postedBy }
     manifestMem.set(pageUrl, result)
-    writeDiskManifest(pageUrl, result)
     return result
   })()
 
@@ -324,6 +329,7 @@ export async function prefetchInstagram(
     const first = manifest.slides.find((s) => s.kind === 'video') ?? manifest.slides[0]
     if (!first?.url) return
     const blob = await fetchIgMediaBlob(first.url)
+    confirmInstagramManifest(pageUrl)
     rememberInstagramBlob(scoped, blob)
     rememberInstagramBlob(itemId, blob)
     rememberInstagramBlob(slideCacheId(itemId, 0), blob)
