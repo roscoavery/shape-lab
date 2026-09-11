@@ -141,11 +141,28 @@ function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
     env: process.env,
   })
 
+  let announced = false
   const onChunk = (buf) => {
     const text = buf.toString()
     process.stderr.write(text)
     const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
-    if (match) console.log(`\nTemporary URL (dies when you stop this): ${match[0]}\n`)
+    if (!match || announced) return
+    announced = true
+    console.log(`\nTemporary URL (dies when you stop this): ${match[0]}`)
+    console.log('If that https link 502s, ignore it and use the Wi-Fi http://192.168… link.\n')
+    setTimeout(() => {
+      fetch(match[0])
+        .then((res) => {
+          if (!res.ok) {
+            console.warn(
+              `Tunnel returned ${res.status}. Use the Wi-Fi link printed above — do not pause Vercel yet.`,
+            )
+          }
+        })
+        .catch(() => {
+          console.warn('Tunnel is not reachable. Use the Wi-Fi link printed above.')
+        })
+    }, 4000)
   }
 
   if (printUrl) {
@@ -183,7 +200,16 @@ if (wantsService) {
 } else if (wantsQuick) {
   console.log('Starting a quick TryCloudflare tunnel. The hostname will change next time.')
   runCloudflared(
-    ['tunnel', '--protocol', 'http2', '--url', ORIGIN, '--no-autoupdate'],
+    [
+      'tunnel',
+      '--protocol',
+      'http2',
+      '--url',
+      ORIGIN,
+      '--http-host-header',
+      '127.0.0.1',
+      '--no-autoupdate',
+    ],
     { printUrl: true },
   )
 } else if (!token) {

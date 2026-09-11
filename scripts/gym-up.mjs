@@ -8,6 +8,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { printLanUrls } from './lan-urls.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.SHAPE_LAB_PORT || '43127'
@@ -46,14 +47,20 @@ const gym = spawn(npm, ['run', 'gym'], {
   shell,
 })
 
-function originUp() {
-  return fetch(`${ORIGIN}/api/persist`)
-    .then((r) => r.ok)
-    .catch(() => false)
+async function originUp() {
+  try {
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 2500)
+    const res = await fetch(ORIGIN, { signal: ac.signal })
+    clearTimeout(timer)
+    return Number.isInteger(res.status)
+  } catch {
+    return false
+  }
 }
 
 async function waitForGym() {
-  for (let i = 0; i < 60; i += 1) {
+  for (let i = 0; i < 90; i += 1) {
     if (await originUp()) return true
     await new Promise((resolveWait) => setTimeout(resolveWait, 500))
   }
@@ -65,10 +72,11 @@ const shareArgs = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
   : ['run', 'share:quick']
 
 void waitForGym().then((ok) => {
+  printLanUrls(PORT)
   if (!ok) {
     console.warn(`Nothing answered at ${ORIGIN} yet. Starting the tunnel anyway.`)
   } else {
-    console.log(`Gym is up at ${ORIGIN}. Publishing HTTPS…`)
+    console.log(`Gym is up at ${ORIGIN}. Optional HTTPS tunnel next (often 502 — use Wi-Fi first).`)
   }
   const share = spawn(npm, shareArgs, {
     cwd: ROOT,

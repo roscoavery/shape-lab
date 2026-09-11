@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { printLanUrls } from './lan-urls.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.SHAPE_LAB_PORT || '43127'
@@ -45,6 +46,7 @@ if (!existsSync(roster)) {
 }
 
 console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pause after phones switch)`)
+printLanUrls(PORT)
 console.log('Leave this running. In another terminal: npm run share')
 const child = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'dev'], {
   cwd: ROOT,

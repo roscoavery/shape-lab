@@ -30,8 +30,9 @@ npm run gym:pull
 
 echo
 echo "Starting the gym. Keep this window open and the Mac plugged in."
-echo "When you see a https://….trycloudflare.com line, open THAT on iPad and phone."
-echo "Do not pause Vercel until faces show on that new link."
+echo "On iPad and phone (same Wi-Fi as this Mac), open the http://192.168… link."
+echo "Ignore a trycloudflare https link if it 502s."
+echo "Do not pause Vercel until faces show on the Wi-Fi link."
 echo
 
 if command -v caffeinate >/dev/null 2>&1; then
