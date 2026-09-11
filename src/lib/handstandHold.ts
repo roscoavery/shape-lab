@@ -15,6 +15,7 @@ import {
 } from './handstandDetect'
 import { LM } from './landmarks'
 import { cloneLandmarks, type PoseTrack } from './poseTrack'
+import { isIosDevice } from './delayCameraPipeline'
 import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
 import { playHoldEnterBeep, playHoldExitBeep } from './sounds'
 import { handstandPeakScore } from './scoring'
@@ -180,16 +181,19 @@ export function startClipRecorder(stream: MediaStream): {
   stop: () => Promise<Blob>
 } {
   const owned: MediaStreamTrack[] = []
-  const clones = stream.getVideoTracks().map((t) => {
-    try {
-      const c = t.clone()
-      owned.push(c)
-      return c
-    } catch {
-      return t
-    }
-  })
-  const recStream = new MediaStream(clones)
+  // iPad Safari writes an empty blob if we record a cloned track.
+  const tracks = isIosDevice()
+    ? stream.getVideoTracks()
+    : stream.getVideoTracks().map((t) => {
+        try {
+          const c = t.clone()
+          owned.push(c)
+          return c
+        } catch {
+          return t
+        }
+      })
+  const recStream = new MediaStream(tracks)
   hintMotion(recStream)
   const rec = createRecorder(recStream)
   const chunks: Blob[] = []
@@ -278,7 +282,7 @@ export async function attachHoldClips(
   if (!trim) {
     return attempts.map((a) => ({
       ...a,
-      clipBlob: a.clipBlob && a.clipBlob.size > 800 ? a.clipBlob : durable,
+      clipBlob: durable,
     }))
   }
   const out: RawHoldAttempt[] = []

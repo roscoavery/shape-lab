@@ -25,9 +25,11 @@ export function burnedOverlayKey(
   clipId: string | null | undefined,
   mode: JointDrawMode,
   mirror: boolean,
+  showSkeleton = true,
+  showAngles = true,
 ): string | null {
   if (!clipId) return null
-  return `${clipId}:${mode}:${mirror ? 'm' : 'c'}`
+  return `${clipId}:${mode}:${mirror ? 'm' : 'c'}:sk${showSkeleton ? 1 : 0}:ang${showAngles ? 1 : 0}`
 }
 
 export function getBurnedOverlay(key: string | null): Blob | null {
@@ -91,18 +93,18 @@ function paintFrame(
   const shape = getShape('handstand')
   const lm = landmarksAt(opts.track, t)
   const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
-  drawPoseOverlay(ctx, lm, {
-    width,
-    height,
-    mirror: opts.mirror,
-    mode: opts.mode,
-    showAngles: true,
-    lineColor: overlayLineColor(score),
-  })
-  const clock = Math.max(0, Math.min(opts.holdSeconds, t - opts.clockOffsetSec))
-  if (score) {
-    drawGradeHud(ctx, width, height, Math.round(score.overall), 'Handstand', clock)
+  if (opts.showSkeleton !== false) {
+    drawPoseOverlay(ctx, lm, {
+      width,
+      height,
+      mirror: opts.mirror,
+      mode: opts.mode,
+      showAngles: opts.showAngles !== false,
+      lineColor: overlayLineColor(score),
+    })
   }
+  const clock = Math.max(0, Math.min(opts.holdSeconds, t - opts.clockOffsetSec))
+  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Handstand', clock)
 }
 
 export type BurnOverlayOpts = {
@@ -112,6 +114,8 @@ export type BurnOverlayOpts = {
   mirror: boolean
   holdSeconds: number
   clockOffsetSec: number
+  showSkeleton?: boolean
+  showAngles?: boolean
   cancelled?: () => boolean
   onProgress?: (p: number) => void
 }

@@ -15,6 +15,7 @@ import { StillOverlayPicker } from './StillOverlayPicker'
 import { TaskDelayCam } from './TaskDelayCam'
 import { CornerChip } from './CornerChip'
 import { useOverlayStill } from './OverlayStillContext'
+import { unlockHoldTones } from '../lib/sounds'
 
 export type TaskLiveKind = 'looking' | 'close' | 'holding' | 'gotit'
 
@@ -368,7 +369,7 @@ export function TasksWorkspace({
               shape={shape}
               score={score}
               burnInHud={flowMode}
-              jointMode={flowMode ? 'merged' : 'split'}
+              jointMode={flowMode ? 'auto' : 'split'}
               holdSeconds={holdSeconds}
               holdSecondsRef={holdSecondsRef}
               fill={fullscreen}
@@ -441,6 +442,10 @@ export function TasksWorkspace({
                     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/35 px-6">
                       <button
                         type="button"
+                        onPointerDown={(e) => {
+                          if (e.button !== 0) return
+                          unlockHoldTones()
+                        }}
                         onClick={onStartFlow}
                         className="rounded-3xl bg-[var(--accent)] px-10 py-5 text-2xl font-black uppercase tracking-wide text-[#06281f] shadow-2xl sm:px-14 sm:py-6 sm:text-3xl"
                       >

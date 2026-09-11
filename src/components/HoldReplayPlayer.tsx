@@ -64,8 +64,10 @@ export function HoldReplayPlayer({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [mode, setMode] = useState<JointDrawMode>('merged')
+  const [mode, setMode] = useState<JointDrawMode>('auto')
   const [showOverlay, setShowOverlay] = useState(true)
+  const [showAngles, setShowAngles] = useState(true)
+  const [videoReady, setVideoReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -79,6 +81,10 @@ export function HoldReplayPlayer({
   useEffect(() => {
     saveJointDrawMode(mode)
   }, [mode])
+
+  useEffect(() => {
+    setVideoReady(false)
+  }, [src, blob])
 
   useEffect(() => {
     const video = videoRef.current
@@ -117,6 +123,7 @@ export function HoldReplayPlayer({
       const w = video.videoWidth
       const h = video.videoHeight
       if (w > 8 && h > 8) {
+        if (!videoReady) setVideoReady(true)
         if (canvas.width !== w || canvas.height !== h) {
           canvas.width = w
           canvas.height = h
@@ -134,21 +141,19 @@ export function HoldReplayPlayer({
           }
           const t = video.currentTime
           const clock = Math.max(0, Math.min(holdSeconds, t - clockOffsetSec))
+          const lm = landmarksAt(track, t)
+          const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
           if (showOverlay) {
-            const lm = landmarksAt(track, t)
-            const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
             drawPoseOverlay(ctx, lm, {
               width: w,
               height: h,
               mirror,
               mode,
-              showAngles: true,
+              showAngles,
               lineColor: overlayLineColor(score),
             })
-            if (score) {
-              drawGradeHud(ctx, w, h, Math.round(score.overall), 'Handstand', clock)
-            }
           }
+          drawGradeHud(ctx, w, h, Math.round(score?.overall ?? 0), 'Handstand', clock)
         }
       }
       setTime(video.currentTime)
@@ -174,14 +179,14 @@ export function HoldReplayPlayer({
       video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
     }
-  }, [src, blob, track, mode, mirror, holdSeconds, clockOffsetSec, playheadSec, showOverlay])
+  }, [src, blob, track, mode, mirror, holdSeconds, clockOffsetSec, playheadSec, showOverlay, showAngles, videoReady])
 
   const runEncode = useCallback(async () => {
     if (!blob) {
       setFlash('Clip is still loading — wait a moment, then tap Prepare save.')
       return
     }
-    const key = burnedOverlayKey(clipId, mode, mirror)
+    const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
     const cached = getBurnedOverlay(key)
     if (cached) {
       setPrepared(cached)
@@ -202,6 +207,8 @@ export function HoldReplayPlayer({
         mirror,
         holdSeconds,
         clockOffsetSec,
+        showSkeleton: showOverlay,
+        showAngles,
         cancelled: () => gen !== genRef.current,
         onProgress: (p) => {
           if (gen === genRef.current) setPrep(p)
@@ -221,10 +228,10 @@ export function HoldReplayPlayer({
     } finally {
       if (gen === genRef.current) setBusy(false)
     }
-  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId])
+  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, showOverlay, showAngles])
 
   useEffect(() => {
-    const key = burnedOverlayKey(clipId, mode, mirror)
+    const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
     const cached = getBurnedOverlay(key)
     if (cached) {
       setPrepared(cached)
@@ -238,7 +245,7 @@ export function HoldReplayPlayer({
     return () => {
       genRef.current += 1
     }
-  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, encodeOnReady, runEncode])
+  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, encodeOnReady, runEncode, showOverlay, showAngles])
 
   const save = async () => {
     setSaving(true)
@@ -250,7 +257,7 @@ export function HoldReplayPlayer({
           setFlash('Clip is still loading — wait a moment, then tap Save again.')
           return
         }
-        const key = burnedOverlayKey(clipId, mode, mirror)
+        const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
         const cached = getBurnedOverlay(key)
         if (cached) {
           fileBlob = cached
@@ -264,6 +271,8 @@ export function HoldReplayPlayer({
             mirror,
             holdSeconds,
             clockOffsetSec,
+            showSkeleton: showOverlay,
+            showAngles,
             cancelled: () => false,
             onProgress: (p) => setPrep(p),
           })
@@ -300,10 +309,16 @@ export function HoldReplayPlayer({
   return (
     <div>
       <div className="overflow-hidden rounded-md bg-black">
-        <video ref={videoRef} className="hidden" playsInline muted={compact} />
+        <video
+          ref={videoRef}
+          className={videoReady ? 'hidden' : `block w-full bg-black object-contain ${compact ? 'max-h-56' : 'max-h-[70vh]'}`}
+          playsInline
+          muted={compact}
+          controls={!videoReady}
+        />
         <canvas
           ref={canvasRef}
-          className={`block w-full bg-black object-contain ${compact ? 'max-h-56' : 'max-h-[70vh]'}`}
+          className={`${videoReady ? 'block' : 'hidden'} w-full bg-black object-contain ${compact ? 'max-h-56' : 'max-h-[70vh]'}`}
         />
         <div className="flex items-center gap-2 bg-black/80 px-2 py-1.5">
           <button
@@ -344,6 +359,17 @@ export function HoldReplayPlayer({
         </span>
         <button
           type="button"
+          onClick={() => setMode('auto')}
+          className={`rounded-full px-3 py-1 text-[12px] ${
+            mode === 'auto'
+              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+              : 'border border-[var(--panel-border)] text-[var(--muted)]'
+          }`}
+        >
+          Auto · both legs
+        </button>
+        <button
+          type="button"
           onClick={() => setMode('merged')}
           className={`rounded-full px-3 py-1 text-[12px] ${
             mode === 'merged'
@@ -352,17 +378,6 @@ export function HoldReplayPlayer({
           }`}
         >
           Side view · one line
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowOverlay((on) => !on)}
-          className={`rounded-full px-3 py-1 text-[12px] ${
-            showOverlay
-              ? 'border border-[var(--panel-border)] text-[var(--muted)]'
-              : 'bg-[var(--accent)] font-semibold text-[#06281f]'
-          }`}
-        >
-          {showOverlay ? 'Hide skeleton' : 'Skeleton off'}
         </button>
         <button
           type="button"
@@ -375,11 +390,36 @@ export function HoldReplayPlayer({
         >
           Front · left & right
         </button>
+        <button
+          type="button"
+          onClick={() => setShowOverlay((on) => !on)}
+          className={`rounded-full px-3 py-1 text-[12px] ${
+            showOverlay
+              ? 'border border-[var(--panel-border)] text-[var(--muted)]'
+              : 'bg-[var(--accent)] font-semibold text-[#06281f]'
+          }`}
+        >
+          {showOverlay ? 'Hide skeleton' : 'Show skeleton'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAngles((on) => !on)}
+          disabled={!showOverlay}
+          className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${
+            showOverlay && showAngles
+              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+              : 'border border-[var(--panel-border)] text-[var(--muted)]'
+          }`}
+        >
+          {showAngles ? 'Angles on' : 'Show angles'}
+        </button>
       </div>
       <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">
-        {mode === 'merged'
-          ? 'One line: hands, shoulders, hips, knees, ankles, toes. Use this for a side-view handstand.'
-          : 'Left and right drawn separately. Use this if you filmed from the front.'}
+        {mode === 'auto'
+          ? 'Left and right while you kick up. One line when you are stacked sideways — both legs stay if they are apart. Score and stopwatch stay on the clip.'
+          : mode === 'merged'
+            ? 'One line: hands, elbows, shoulders, hips, knees, ankles, toes. Score and stopwatch stay on the clip.'
+            : 'Left and right drawn separately — shoulders, elbows, hips, and ankles. Score and stopwatch stay on the clip.'}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button

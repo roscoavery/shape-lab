@@ -302,7 +302,9 @@ export function Tasks2Panel({
     holdAudio,
     supported: speechSupported,
   } = useSpeechCoach(true)
-  const recordStream = overlayStream ?? stream
+  const holdChallenge = seq.mode === 'hs-hold' || runSeq?.mode === 'hs-hold'
+  // Canvas captureStream is empty / unplayable on iPad. Hold clips use the camera.
+  const recordStream = holdChallenge ? stream : overlayStream ?? stream
   const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
 
   useEffect(() => {
@@ -631,10 +633,12 @@ export function Tasks2Panel({
     async (seqRun: FlowSequence, rawIn: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
       onHoldClockRef.current?.(null)
       setHoldTick(null)
-      const rolled =
-        rawIn.some((a) => a.clipBlob && a.clipBlob.size > 800)
-          ? null
-          : await (flushedHoldRef.current ?? delay.flushRollingBlob())
+      let rolled: Blob | null = null
+      try {
+        rolled = await (flushedHoldRef.current ?? delay.flushRollingBlob())
+      } catch {
+        rolled = null
+      }
       flushedHoldRef.current = null
       const raw = await attachHoldClips(rawIn, rolled, { trim: false })
 
@@ -705,8 +709,10 @@ export function Tasks2Panel({
         const live = a.livePeak
         const cues = live ? writtenCues(live, 'handstand', 6) : []
         const livePeak = live ? Math.round(live.overall) : 0
+        let snapshotId: string | null = null
         if (a.snapshotBlob) {
           const captureId = createId('snap')
+          snapshotId = captureId
           rememberCaptureBlob(captureId, a.snapshotBlob)
           collected.push({
             shapeId: 'handstand',
@@ -735,6 +741,7 @@ export function Tasks2Panel({
             stillView.marker = 'playhead'
             stillView.holdSeconds = a.holdSeconds
             stillView.clipId = clipId
+            snapshotId = stillView.captureId ?? null
             collected.push(stillView)
           }
         }
@@ -745,7 +752,7 @@ export function Tasks2Panel({
           livePeak,
           cues,
           clipId,
-          snapshotId: stillView?.captureId ?? null,
+          snapshotId,
           playheadSec: a.playheadSec,
           clockOffsetSec: a.clockOffsetSec,
           highlighted,
@@ -858,6 +865,7 @@ export function Tasks2Panel({
       onVoiceEnabledChange?.(true)
       resetSpeech()
       unlockSpeech()
+      unlockHoldTones()
       runGen.current += 1
       const gen = runGen.current
       const alive = () => gen === runGen.current
@@ -953,21 +961,22 @@ export function Tasks2Panel({
           )
           let rolling = false
           try {
-            rolling = await delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
-          } catch {
-            try {
+            rolling = await delay.restartRolling(streamRef.current)
+            if (rolling) await wait(420)
+            if (!delay.hasRollingData()) {
               rolling = await delay.restartRolling(streamRef.current)
-            } catch {
-              rolling = false
+              if (rolling) await wait(420)
             }
+            rolling = rolling && delay.hasRollingData()
+          } catch {
+            rolling = false
           }
           const holdP = runHandstandHoldSession({
             cancelled: () => !alive(),
             doneRequested: () => holdDoneRef.current || !alive(),
             landmarks: () => landmarksRef.current,
             score: () => scoreRef.current,
-            stream: () =>
-              rolling ? null : streamRef.current ?? overlayStreamRef.current,
+            stream: () => (rolling ? null : streamRef.current),
             timelineSec: rolling ? () => delay.capturedSec() : undefined,
             canvas: () => canvasRef.current,
             onTick: (tick) => {
@@ -993,7 +1002,14 @@ export function Tasks2Panel({
           })()
           const raw = await holdP
           if (!alive()) return
-          await finishHoldRun(seqRun, raw)
+          try {
+            await finishHoldRun(seqRun, raw)
+          } catch (err) {
+            console.warn('[tasks2] finish hold', err)
+            setPhase('review')
+            setCue('Could not open the hold clips. Kick up again, or check that the camera stayed on.')
+            onExitFullscreen?.()
+          }
           return
         }
 
@@ -1661,6 +1677,7 @@ export function Tasks2Panel({
           onPointerDown={(e) => {
             if (e.button !== 0) return
             unlockSpeech()
+            unlockHoldTones()
             void onEnsureCamera?.()
           }}
           onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}

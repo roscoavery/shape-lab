@@ -5,18 +5,22 @@
  */
 
 import { VISIBILITY_DRAW, jointAngle } from './angles'
+import { evaluateHandstandGeometry } from './handstandDetect'
 import { LM, POSE_EDGES } from './landmarks'
 import type { Landmark, ScoreResult } from '../types'
 
-export type JointDrawMode = 'merged' | 'split'
+export type JointDrawMode = 'merged' | 'split' | 'auto'
 
 const MODE_KEY = 'shape-lab.hold-joint-mode'
+const ANGLE_DRAW_VIS = 0.18
 
 export function loadJointDrawMode(): JointDrawMode {
   try {
-    return localStorage.getItem(MODE_KEY) === 'split' ? 'split' : 'merged'
+    const v = localStorage.getItem(MODE_KEY)
+    if (v === 'split' || v === 'merged' || v === 'auto') return v
+    return 'auto'
   } catch {
-    return 'merged'
+    return 'auto'
   }
 }
 
@@ -56,6 +60,7 @@ export function mergePair(a?: Landmark, b?: Landmark, min = 0.14): Landmark | nu
 
 export type MergedJoints = {
   hands: Landmark
+  elbows: Landmark
   shoulders: Landmark
   hips: Landmark
   knees: Landmark
@@ -69,15 +74,17 @@ export function mergeSideJoints(lm: Landmark[] | null | undefined): MergedJoints
   const shoulders = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.12)
   const hips = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.12)
   if (!hands || !shoulders || !hips) return null
+  const elbows = mergePair(lm[LM.LEFT_ELBOW], lm[LM.RIGHT_ELBOW], 0.1) ?? shoulders
   const knees = mergePair(lm[LM.LEFT_KNEE], lm[LM.RIGHT_KNEE], 0.1) ?? hips
   const ankles = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.1) ?? knees
   const toes =
     mergePair(lm[LM.LEFT_FOOT_INDEX], lm[LM.RIGHT_FOOT_INDEX], 0.08) ?? ankles
-  return { hands, shoulders, hips, knees, ankles, toes }
+  return { hands, elbows, shoulders, hips, knees, ankles, toes }
 }
 
 const MERGED_ORDER: (keyof MergedJoints)[] = [
   'hands',
+  'elbows',
   'shoulders',
   'hips',
   'knees',
@@ -87,9 +94,10 @@ const MERGED_ORDER: (keyof MergedJoints)[] = [
 
 const MERGED_ANGLES: { label: string; keys: [keyof MergedJoints, keyof MergedJoints, keyof MergedJoints]; color: string }[] =
   [
-    { label: 'Shoulders', keys: ['hands', 'shoulders', 'hips'], color: '#f0b429' },
+    { label: 'Elbows', keys: ['hands', 'elbows', 'shoulders'], color: '#2dd4a8' },
+    { label: 'Shoulders', keys: ['elbows', 'shoulders', 'hips'], color: '#f0b429' },
     { label: 'Hips', keys: ['shoulders', 'hips', 'knees'], color: '#7db7ff' },
-    { label: 'Knees', keys: ['hips', 'knees', 'ankles'], color: '#c4a5ff' },
+    { label: 'Ankles', keys: ['knees', 'ankles', 'toes'], color: '#f0c400' },
   ]
 
 const SPLIT_ANGLES: { label: string; points: [number, number, number]; color: string }[] = [
@@ -99,9 +107,17 @@ const SPLIT_ANGLES: { label: string; points: [number, number, number]; color: st
   { label: 'R shoulder', points: [LM.RIGHT_HIP, LM.RIGHT_SHOULDER, LM.RIGHT_ELBOW], color: '#f0b429' },
   { label: 'L hip', points: [LM.LEFT_SHOULDER, LM.LEFT_HIP, LM.LEFT_KNEE], color: '#7db7ff' },
   { label: 'R hip', points: [LM.RIGHT_SHOULDER, LM.RIGHT_HIP, LM.RIGHT_KNEE], color: '#7db7ff' },
-  { label: 'L knee', points: [LM.LEFT_HIP, LM.LEFT_KNEE, LM.LEFT_ANKLE], color: '#c4a5ff' },
-  { label: 'R knee', points: [LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE], color: '#c4a5ff' },
+  { label: 'L ankle', points: [LM.LEFT_KNEE, LM.LEFT_ANKLE, LM.LEFT_FOOT_INDEX], color: '#f0c400' },
+  { label: 'R ankle', points: [LM.RIGHT_KNEE, LM.RIGHT_ANKLE, LM.RIGHT_FOOT_INDEX], color: '#f0c400' },
 ]
+
+export function legsAreApart(lm: Landmark[] | null | undefined, min = 0.045): boolean {
+  if (!lm || lm.length < 33) return false
+  const a = visOk(lm[LM.LEFT_ANKLE], 0.16) ? lm[LM.LEFT_ANKLE] : null
+  const b = visOk(lm[LM.RIGHT_ANKLE], 0.16) ? lm[LM.RIGHT_ANKLE] : null
+  if (!a || !b) return false
+  return Math.hypot(a.x - b.x, a.y - b.y) > min
+}
 
 function scoreFill(n: number): string {
   if (n >= 85) return '#2dd4a8'
@@ -166,7 +182,7 @@ function drawMerged(
     const ia = MERGED_ORDER.indexOf(readout.keys[0])
     const ib = MERGED_ORDER.indexOf(readout.keys[1])
     const ic = MERGED_ORDER.indexOf(readout.keys[2])
-    const ang = jointAngle(fake, ia, ib, ic)
+    const ang = jointAngle(fake, ia, ib, ic, ANGLE_DRAW_VIS)
     if (ang === null) continue
     const at = px[ib]!
     const text = `${readout.label} ${Math.round(ang)}°`
@@ -215,7 +231,7 @@ function drawSplit(
   ctx.font = `600 ${Math.max(12, width * 0.018)}px sans-serif`
   ctx.textAlign = 'left'
   for (const readout of SPLIT_ANGLES) {
-    const ang = jointAngle(landmarks, ...readout.points)
+    const ang = jointAngle(landmarks, ...readout.points, ANGLE_DRAW_VIS)
     if (ang === null) continue
     const joint = landmarks[readout.points[1]]
     if (!joint || (joint.visibility ?? 1) < VISIBILITY_DRAW) continue
@@ -287,6 +303,18 @@ export function drawPoseOverlay(
       drawMerged(ctx, merged, opts.width, opts.height, opts.mirror, showAngles, color)
       drawCenterOfMass(ctx, landmarks, opts.width, opts.height, opts.mirror)
       return
+    }
+  }
+  if (opts.mode === 'auto') {
+    const geo = evaluateHandstandGeometry(landmarks)
+    const stacked = geo.confidence >= 0.62 && !geo.hardFail
+    if (stacked && !legsAreApart(landmarks)) {
+      const merged = mergeSideJoints(landmarks)
+      if (merged) {
+        drawMerged(ctx, merged, opts.width, opts.height, opts.mirror, showAngles, color)
+        drawCenterOfMass(ctx, landmarks, opts.width, opts.height, opts.mirror)
+        return
+      }
     }
   }
   drawSplit(ctx, landmarks, opts.width, opts.height, opts.mirror, showAngles, color)

@@ -7,6 +7,7 @@ import {
   SubjectLock,
   SUBJECT_DROP_MS,
   SUBJECT_HOLD_MS,
+  looksInverted,
   looksLikePole,
   poseLooksHuman,
   sanitizePose,
@@ -85,6 +86,27 @@ sideHs[12] = pt(0.43, 0.72, 0.2)
 sideHs[14] = pt(0.43, 0.8, 0.15)
 sideHs[16] = pt(0.43, 0.9, 0.12)
 assert('side-view handstand is not a pole', !looksLikePole(sideHs) && poseLooksHuman(sideHs))
+const sideNoFace = stacked(0.42, { 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
+for (let i = 0; i <= 10; i++) sideNoFace[i] = pt(0.42, 0.78, 0.04)
+assert(
+  'side HS with hidden face is still inverted, not a pole',
+  looksInverted(sideNoFace) && !looksLikePole(sideNoFace) && poseLooksHuman(sideNoFace),
+)
+const loneSide = new SubjectLock().select([sideNoFace], 150)
+assert(
+  'locks the only inverted athlete even without a face',
+  Boolean(loneSide.landmarks),
+  loneSide.debug,
+)
+const straddle = hsAt(0.4)
+straddle[27] = pt(0.28, 0.14, 0.82)
+straddle[28] = pt(0.52, 0.16, 0.8)
+const keptLegs = sanitizePose(straddle)
+assert(
+  'legs-apart ankles both stay visible',
+  (keptLegs[27].visibility ?? 1) > 0.5 && (keptLegs[28].visibility ?? 1) > 0.5,
+  keptLegs[27],
+)
 const ghost = hsAt(0.4)
 ghost[12] = pt(0.92, 0.2, 0.45)
 const cleaned = sanitizePose(ghost)

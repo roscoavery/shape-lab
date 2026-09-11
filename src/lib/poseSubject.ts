@@ -244,11 +244,13 @@ function limbFoldedImpossible(lm: Landmark[]): string | null {
   return seen >= 2 && bad >= 2 ? 'impossible joints' : null
 }
 
-const PAIR_JOINTS: Array<[number, number]> = [
+const UPPER_PAIRS: Array<[number, number]> = [
   [LM.LEFT_SHOULDER, LM.RIGHT_SHOULDER],
   [LM.LEFT_ELBOW, LM.RIGHT_ELBOW],
   [LM.LEFT_WRIST, LM.RIGHT_WRIST],
   [LM.LEFT_HIP, LM.RIGHT_HIP],
+]
+const LEG_PAIRS: Array<[number, number]> = [
   [LM.LEFT_KNEE, LM.RIGHT_KNEE],
   [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
   [LM.LEFT_HEEL, LM.RIGHT_HEEL],
@@ -257,11 +259,11 @@ const PAIR_JOINTS: Array<[number, number]> = [
 
 /**
  * Side-view MediaPipe invents the hidden side across the room.
- * Keep the visible sibling; zero-out the ghost.
+ * Drop upper-body ghosts. Keep both legs when they are actually apart.
  */
 export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): Landmark[] {
   const out = lm.map((p) => ({ ...p }))
-  for (const [i, j] of PAIR_JOINTS) {
+  for (const [i, j] of UPPER_PAIRS) {
     const a = out[i]
     const b = out[j]
     if (!a || !b) continue
@@ -271,6 +273,21 @@ export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): La
     const vb = b.visibility ?? 1
     if (va >= vb) b.visibility = 0
     else a.visibility = 0
+  }
+  for (const [i, j] of LEG_PAIRS) {
+    const a = out[i]
+    const b = out[j]
+    if (!a || !b) continue
+    const gap = Math.hypot(a.x - b.x, a.y - b.y)
+    if (gap <= 0.22) continue
+    const va = a.visibility ?? 1
+    const vb = b.visibility ?? 1
+    const weak = va >= vb ? b : a
+    const strong = va >= vb ? a : b
+    const weakVis = weak.visibility ?? 1
+    const strongVis = strong.visibility ?? 1
+    // Real straddle / legs-apart: both ankles stay. Only drop a faint ghost.
+    if (weakVis < 0.28 && strongVis > 0.55) weak.visibility = 0
   }
   const prevTorso = prev && prev.length >= 33 ? torsoCenter(prev) : null
   const nextTorso = torsoCenter(out)
@@ -294,17 +311,31 @@ export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): La
 }
 
 function hasHead(lm: Landmark[]): boolean {
-  const nose = lm[LM.NOSE]
-  if (!visOk(nose, 0.28)) return false
-  const sh = mid(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.2)
+  const sh = mid(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.16)
   if (!sh) return false
-  const d = dist(nose, sh)
-  return d > 0.045 && d < 0.28
+  const nose = lm[LM.NOSE]
+  if (visOk(nose, 0.12)) {
+    const d = dist(nose, sh)
+    if (d > 0.03 && d < 0.32) return true
+  }
+  return false
+}
+
+/** Wrists on the floor, hips/feet up — a real handstand, not furniture. */
+export function looksInverted(lm: Landmark[]): boolean {
+  const wrist = mid(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.12)
+  const hip = mid(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.12)
+  const ankle =
+    mid(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.1) ??
+    mid(lm[LM.LEFT_HEEL], lm[LM.RIGHT_HEEL], 0.1)
+  if (wrist && hip && hip.y < wrist.y - 0.04) return true
+  if (wrist && ankle && ankle.y < wrist.y - 0.08) return true
+  return false
 }
 
 /** Keyboard stands / coat racks — not a side-view athlete (those have a head). */
 export function looksLikePole(lm: Landmark[]): boolean {
-  if (hasHead(lm)) return false
+  if (hasHead(lm) || looksInverted(lm)) return false
   const idx = [
     LM.LEFT_SHOULDER,
     LM.RIGHT_SHOULDER,
@@ -338,7 +369,7 @@ export function looksLikePole(lm: Landmark[]): boolean {
 
 /** Keyboard on a stick: one column plus a thin horizontal bar. */
 export function looksLikeFurniture(lm: Landmark[]): boolean {
-  if (hasHead(lm)) return false
+  if (hasHead(lm) || looksInverted(lm)) return false
   if (looksLikePole(lm)) return true
   const idx = [
     LM.LEFT_SHOULDER,
@@ -682,6 +713,16 @@ export class SubjectLock {
       }
       if (!best || scored.score > best.score) {
         best = { lm: clean, score: scored.score, motionBias: scored.motionBias }
+      }
+    }
+
+    // iPad side-view: nose/ears often drop out. Do not discard the only
+    // inverted body just because it looked like a pole without a face.
+    if (!best && candidates.length === 1) {
+      const clean = sanitizePose(candidates[0]!, this.lastLm)
+      if (looksInverted(clean)) {
+        const box = poseBox(clean)
+        best = { lm: clean, score: 0.5, motionBias: motion?.scoreBox(box) ?? 0 }
       }
     }
 

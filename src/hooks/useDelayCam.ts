@@ -4,7 +4,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getDelayCameraPipeline, prepareDelayVideo } from '../lib/delayCameraPipeline'
+import {
+  getDelayCameraPipeline,
+  pickRecorderMime,
+  prepareDelayVideo,
+} from '../lib/delayCameraPipeline'
 
 export const DELAY_MIN = 6
 export const DELAY_MAX = 20
@@ -52,8 +56,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     (live: MediaStream): Promise<boolean> => {
       return new Promise((resolve) => {
         const pipeline = getDelayCameraPipeline()
-        const mime = pipeline?.mime
-        if (!mime) {
+        const mime = pipeline?.mime ?? pickRecorderMime()
+        if (typeof MediaRecorder === 'undefined') {
           resolve(false)
           return
         }
@@ -63,12 +67,24 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           return
         }
         window.clearInterval(rollingPumpRef.current)
-        rollingMimeRef.current = mime
+        rollingMimeRef.current = mime ?? 'video/mp4'
         rollingChunksRef.current = []
         rollingStartRef.current = performance.now()
         rollingGenRef.current += 1
         const gen = rollingGenRef.current
-        const rec = new MediaRecorder(live, { mimeType: mime })
+        let rec: MediaRecorder
+        try {
+          rec = mime ? new MediaRecorder(live, { mimeType: mime }) : new MediaRecorder(live)
+        } catch {
+          try {
+            rec = new MediaRecorder(live)
+          } catch (err) {
+            rollingRecorderRef.current = null
+            setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
+            resolve(false)
+            return
+          }
+        }
         rollingRecorderRef.current = rec
         let settled = false
         const done = (ok: boolean) => {
@@ -81,6 +97,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           if (gen !== rollingGenRef.current) return
           if (!e.data || e.data.size === 0) return
           rollingChunksRef.current.push(e.data)
+          if (!settled) done(true)
           if (delayMediaSourceRef.current) {
             void e.data.arrayBuffer().then((buf) => {
               delayQueueRef.current.push(buf)
@@ -100,7 +117,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         }
         try {
           rec.start(200)
-          if (pipeline.managed) {
+          if (pipeline?.managed) {
             rollingPumpRef.current = window.setInterval(() => {
               if (rec.state === 'recording') {
                 try {
@@ -117,7 +134,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           done(false)
           return
         }
-        window.setTimeout(() => done(true), 700)
+        window.setTimeout(() => done(rec.state === 'recording' || rollingChunksRef.current.length > 0), 800)
       })
     },
     [pumpDelayQueue],
@@ -310,6 +327,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   )
 
   const capturedSec = () => (performance.now() - rollingStartRef.current) / 1000
+  const hasRollingData = () => rollingChunksRef.current.some((part) => part.size > 200)
 
   return {
     delayVideoRef,
@@ -322,5 +340,6 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     startRolling,
     restartRolling,
     capturedSec,
+    hasRollingData,
   }
 }

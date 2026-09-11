@@ -25,11 +25,12 @@ export function jointAngle(
   a: number,
   b: number,
   c: number,
+  minVis = VISIBILITY_MIN,
 ): number | null {
   const A = landmarks[a]
   const B = landmarks[b]
   const C = landmarks[c]
-  if (!isVisible(A) || !isVisible(B) || !isVisible(C)) return null
+  if (!isVisible(A, minVis) || !isVisible(B, minVis) || !isVisible(C, minVis)) return null
 
   const bax = A.x - B.x
   const bay = A.y - B.y

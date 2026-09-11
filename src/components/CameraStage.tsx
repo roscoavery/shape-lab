@@ -99,6 +99,8 @@ const ANGLE_READOUTS: { label: string; points: [number, number, number]; color: 
   { label: 'R hip', points: [LM.RIGHT_SHOULDER, LM.RIGHT_HIP, LM.RIGHT_KNEE], color: '#7db7ff' },
   { label: 'L knee', points: [LM.LEFT_HIP, LM.LEFT_KNEE, LM.LEFT_ANKLE], color: '#c4a5ff' },
   { label: 'R knee', points: [LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE], color: '#c4a5ff' },
+  { label: 'L ankle', points: [LM.LEFT_KNEE, LM.LEFT_ANKLE, LM.LEFT_FOOT_INDEX], color: '#f0c400' },
+  { label: 'R ankle', points: [LM.RIGHT_KNEE, LM.RIGHT_ANKLE, LM.RIGHT_FOOT_INDEX], color: '#f0c400' },
 ]
 
 export function CameraStage({
@@ -176,13 +178,13 @@ export function CameraStage({
       }
 
       if (landmarks) {
-        if (jointMode === 'merged') {
+        if (jointMode === 'merged' || jointMode === 'auto') {
           ctx.restore()
           drawPoseOverlay(ctx, landmarks, {
             width: canvas.width,
             height: canvas.height,
             mirror,
-            mode: 'merged',
+            mode: jointMode,
             showAngles,
             lineColor: overlayLineColor(score),
           })

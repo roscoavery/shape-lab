@@ -653,7 +653,7 @@ export default function App() {
             setSettings((s) => ({ ...s, showAngles: e.target.checked }))
           }
         />
-        Show joint angles
+        Show joint angles (shoulders, elbows, hips, ankles)
       </label>
       <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
         <input

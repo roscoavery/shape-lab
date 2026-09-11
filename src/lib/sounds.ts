@@ -1,16 +1,28 @@
 /** Short success chime when a hold is complete and the task advances. */
 
-let ctx: AudioContext | null = null;
+let ctx: AudioContext | null = null
 
-function audio(): AudioContext {
-  if (!ctx) ctx = new AudioContext();
-  return ctx;
+function audioContextCtor(): (new () => AudioContext) | null {
+  if (typeof window === 'undefined') return null
+  const w = window as unknown as {
+    AudioContext?: new () => AudioContext
+    webkitAudioContext?: new () => AudioContext
+  }
+  return w.AudioContext ?? w.webkitAudioContext ?? null
+}
+
+function audio(): AudioContext | null {
+  const Ctor = audioContextCtor()
+  if (!Ctor) return null
+  if (!ctx || ctx.state === 'closed') ctx = new Ctor()
+  return ctx
 }
 
 export function playSuccessChime(): void {
   try {
-    const ac = audio();
-    void ac.resume();
+    const ac = audio()
+    if (!ac) return
+    void ac.resume()
     const now = ac.currentTime;
     const master = ac.createGain();
     master.gain.setValueAtTime(0.0001, now);
@@ -38,10 +50,24 @@ export function playSuccessChime(): void {
   }
 }
 
-/** Single bright tick when they first match the shape (hold chime is separate). */
+/**
+ * Call from the Start-hold pointer/click — iPad Safari only unlocks
+ * Web Audio during that gesture. A silent tick is required, not just resume().
+ */
 export function unlockHoldTones(): void {
   try {
-    void audio().resume()
+    const ac = audio()
+    if (!ac) return
+    void ac.resume()
+    const now = ac.currentTime
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.frequency.value = 440
+    g.gain.setValueAtTime(0.00001, now)
+    osc.connect(g)
+    g.connect(ac.destination)
+    osc.start(now)
+    osc.stop(now + 0.04)
   } catch {
     /* audio blocked */
   }
@@ -50,6 +76,7 @@ export function unlockHoldTones(): void {
 function playTone(freq: number, ms: number, gain = 0.2) {
   try {
     const ac = audio()
+    if (!ac) return
     void ac.resume()
     const now = ac.currentTime
     const osc = ac.createOscillator()
@@ -81,6 +108,7 @@ export function playHoldExitBeep(): void {
 export function playHitTick(): void {
   try {
     const ac = audio()
+    if (!ac) return
     void ac.resume()
     const now = ac.currentTime
     const osc = ac.createOscillator()
