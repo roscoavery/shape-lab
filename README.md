@@ -212,7 +212,7 @@ If `gym:mac` is missing, `npm install` then `npm run gym:pull` and `npm run gym:
 1. Open [Networking → Tunnels](https://one.dash.cloudflare.com/) (or dash.cloudflare.com → Zero Trust / Networking → Tunnels).
 2. **Create a tunnel** named `shape-lab`. Copy the install **token**.
 3. Add a **published application**:
-   - Hostname: `gym.yourdomain.com` (any subdomain on that domain)
+   - Hostname: `gym.shapelab.win`
    - Service URL: `http://127.0.0.1:43127`
 4. In this repo:
 
@@ -225,7 +225,7 @@ Paste into `.env`:
 ```bash
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_…   # only for npm run gym:pull
 CLOUDFLARE_TUNNEL_TOKEN=eyJ...
-CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
+CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win
 ```
 
 `.env` is gitignored. Do not commit the token.

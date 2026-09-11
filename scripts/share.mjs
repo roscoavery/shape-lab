@@ -77,12 +77,12 @@ Dashboard (once)
      (or dash.cloudflare.com → Zero Trust / Networking → Tunnels)
   2. Create a tunnel named shape-lab. Copy the token.
   3. Add a published application:
-       Hostname:   gym.yourdomain.com
+       Hostname:   gym.shapelab.win
        Service:    ${ORIGIN}
   4. Copy .env.example to .env and paste:
 
        CLOUDFLARE_TUNNEL_TOKEN=eyJ...
-       CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
+       CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win
 
 Gym computer every session
   Terminal 1:  npm run gym

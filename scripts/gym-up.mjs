@@ -5,7 +5,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { printLanUrls } from './lan-urls.mjs'
@@ -15,6 +15,28 @@ const PORT = process.env.SHAPE_LAB_PORT || '43127'
 const ORIGIN = `http://127.0.0.1:${PORT}`
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const shell = process.platform === 'win32'
+
+function loadEnvFile() {
+  const path = join(ROOT, '.env')
+  if (!existsSync(path)) return
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    const key = trimmed.slice(0, eq).trim()
+    let value = trimmed.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (process.env[key] == null || process.env[key] === '') process.env[key] = value
+  }
+}
+
+loadEnvFile()
 
 function photoCount() {
   const dir = join(ROOT, 'data', 'roster-photos')
@@ -76,7 +98,12 @@ void waitForGym().then((ok) => {
   if (!ok) {
     console.warn(`Nothing answered at ${ORIGIN} yet. Starting the tunnel anyway.`)
   } else {
-    console.log(`Gym is up at ${ORIGIN}. Optional HTTPS tunnel next (often 502 — use Wi-Fi first).`)
+    const named = process.env.CLOUDFLARE_TUNNEL_HOSTNAME?.trim()
+    console.log(
+      named
+        ? `Gym is up at ${ORIGIN}. Publishing ${named} …`
+        : `Gym is up at ${ORIGIN}. Publishing HTTPS…`,
+    )
   }
   const share = spawn(npm, shareArgs, {
     cwd: ROOT,
