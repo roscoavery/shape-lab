@@ -17,10 +17,12 @@ let landmarkerPromise: Promise<PoseLandmarker> | null = null
 let floorLandmarkerPromise: Promise<PoseLandmarker> | null = null
 
 const POSE_MODELS = [
-  '/models/pose_landmarker_full.task',
+  // Lite is what Tasks 2 used on day one. Full is a fallback, not the first pick —
+  // it hallucinates the hidden side on a side-view handstand.
   '/models/pose_landmarker_lite.task',
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+  '/models/pose_landmarker_full.task',
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
 ]
 
 async function createLandmarker(

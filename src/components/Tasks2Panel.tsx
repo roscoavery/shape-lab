@@ -275,6 +275,7 @@ export function Tasks2Panel({
   } | null>(null)
   const clipUrlsRef = useRef<Map<string, string>>(new Map())
   const holdDoneRef = useRef(false)
+  const flushedHoldRef = useRef<Promise<Blob | null> | null>(null)
   const holdPersistRef = useRef<{ reportId: string; logId: string | null } | null>(null)
   const [holdLogged, setHoldLogged] = useState(true)
   const pendingStillsRef = useRef<
@@ -630,13 +631,12 @@ export function Tasks2Panel({
     async (seqRun: FlowSequence, rawIn: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
       onHoldClockRef.current?.(null)
       setHoldTick(null)
-      const raw = await attachHoldClips(
-        rawIn,
+      const rolled =
         rawIn.some((a) => a.clipBlob && a.clipBlob.size > 800)
           ? null
-          : await delay.flushRollingBlob(),
-        { trim: false },
-      )
+          : await (flushedHoldRef.current ?? delay.flushRollingBlob())
+      flushedHoldRef.current = null
+      const raw = await attachHoldClips(rawIn, rolled, { trim: false })
 
       revokeClipUrls()
       if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
@@ -862,6 +862,7 @@ export function Tasks2Panel({
       const gen = runGen.current
       const alive = () => gen === runGen.current
       holdDoneRef.current = false
+      flushedHoldRef.current = null
       setHoldTick(null)
       onHoldClockRef.current?.(null)
       setActiveClipId(null)
@@ -1527,9 +1528,10 @@ export function Tasks2Panel({
 
   const requestHoldDone = useCallback(() => {
     holdDoneRef.current = true
+    if (!flushedHoldRef.current) flushedHoldRef.current = delay.flushRollingBlob()
     setFlash('Opening your holds…')
     window.setTimeout(() => setFlash(null), 4000)
-  }, [])
+  }, [delay])
 
   const dropHoldFromLog = useCallback((index: number) => {
     setReport((prev) => {

@@ -244,8 +244,67 @@ function limbFoldedImpossible(lm: Landmark[]): string | null {
   return seen >= 2 && bad >= 2 ? 'impossible joints' : null
 }
 
-/** Keyboard stands / coat racks become a single vertical “body” in MediaPipe. */
+const PAIR_JOINTS: Array<[number, number]> = [
+  [LM.LEFT_SHOULDER, LM.RIGHT_SHOULDER],
+  [LM.LEFT_ELBOW, LM.RIGHT_ELBOW],
+  [LM.LEFT_WRIST, LM.RIGHT_WRIST],
+  [LM.LEFT_HIP, LM.RIGHT_HIP],
+  [LM.LEFT_KNEE, LM.RIGHT_KNEE],
+  [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+  [LM.LEFT_HEEL, LM.RIGHT_HEEL],
+  [LM.LEFT_FOOT_INDEX, LM.RIGHT_FOOT_INDEX],
+]
+
+/**
+ * Side-view MediaPipe invents the hidden side across the room.
+ * Keep the visible sibling; zero-out the ghost.
+ */
+export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): Landmark[] {
+  const out = lm.map((p) => ({ ...p }))
+  for (const [i, j] of PAIR_JOINTS) {
+    const a = out[i]
+    const b = out[j]
+    if (!a || !b) continue
+    const gap = Math.hypot(a.x - b.x, a.y - b.y)
+    if (gap <= 0.18) continue
+    const va = a.visibility ?? 1
+    const vb = b.visibility ?? 1
+    if (va >= vb) b.visibility = 0
+    else a.visibility = 0
+  }
+  const prevTorso = prev && prev.length >= 33 ? torsoCenter(prev) : null
+  const nextTorso = torsoCenter(out)
+  const sameBody = Boolean(prevTorso && nextTorso && dist(prevTorso, nextTorso) < 0.22)
+  if (sameBody && prev) {
+    for (let i = 0; i < 33; i++) {
+      const a = out[i]
+      const q = prev[i]
+      if (!a || !q || (q.visibility ?? 1) < 0.2) continue
+      const jump = Math.hypot(a.x - q.x, a.y - q.y)
+      const limb = i >= LM.LEFT_ELBOW
+      if (jump > (limb ? 0.36 : 0.24) && (a.visibility ?? 1) < 0.92) {
+        a.x = q.x
+        a.y = q.y
+        a.z = q.z
+        a.visibility = Math.min(q.visibility ?? 1, 0.38)
+      }
+    }
+  }
+  return out
+}
+
+function hasHead(lm: Landmark[]): boolean {
+  const nose = lm[LM.NOSE]
+  if (!visOk(nose, 0.28)) return false
+  const sh = mid(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.2)
+  if (!sh) return false
+  const d = dist(nose, sh)
+  return d > 0.045 && d < 0.28
+}
+
+/** Keyboard stands / coat racks — not a side-view athlete (those have a head). */
 export function looksLikePole(lm: Landmark[]): boolean {
+  if (hasHead(lm)) return false
   const idx = [
     LM.LEFT_SHOULDER,
     LM.RIGHT_SHOULDER,
@@ -279,6 +338,7 @@ export function looksLikePole(lm: Landmark[]): boolean {
 
 /** Keyboard on a stick: one column plus a thin horizontal bar. */
 export function looksLikeFurniture(lm: Landmark[]): boolean {
+  if (hasHead(lm)) return false
   if (looksLikePole(lm)) return true
   const idx = [
     LM.LEFT_SHOULDER,
@@ -613,14 +673,15 @@ export class SubjectLock {
     const rejected: RejectedPose[] = []
     let best: { lm: Landmark[]; score: number; motionBias: number } | null = null
     for (const raw of candidates) {
-      const scored = this.scoreAgainstLock(raw, now, motion, reacquire)
+      const clean = sanitizePose(raw, this.lastLm)
+      const scored = this.scoreAgainstLock(clean, now, motion, reacquire)
       if (scored.reason) {
-        const box = poseBox(raw)
+        const box = poseBox(clean)
         if (box) rejected.push({ box, reason: scored.reason, score: scored.score })
         continue
       }
       if (!best || scored.score > best.score) {
-        best = { lm: raw, score: scored.score, motionBias: scored.motionBias }
+        best = { lm: clean, score: scored.score, motionBias: scored.motionBias }
       }
     }
 

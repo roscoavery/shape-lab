@@ -57,6 +57,13 @@ function pair(
 ): { x: number; y: number; vis: number } | null {
   const pts = [a, b].filter((p): p is Landmark => visOk(p, min))
   if (!pts.length) return null
+  if (pts.length === 2) {
+    const gap = Math.hypot(pts[0]!.x - pts[1]!.x, pts[0]!.y - pts[1]!.y)
+    if (gap > 0.16) {
+      const pick = (pts[0]!.visibility ?? 1) >= (pts[1]!.visibility ?? 1) ? pts[0]! : pts[1]!
+      return { x: pick.x, y: pick.y, vis: pick.visibility ?? 1 }
+    }
+  }
   return {
     x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
     y: pts.reduce((s, p) => s + p.y, 0) / pts.length,

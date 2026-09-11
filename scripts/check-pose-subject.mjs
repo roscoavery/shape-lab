@@ -9,6 +9,7 @@ import {
   SUBJECT_HOLD_MS,
   looksLikePole,
   poseLooksHuman,
+  sanitizePose,
   torsoCenter,
 } from '../src/lib/poseSubject.ts'
 
@@ -66,7 +67,7 @@ function assert(name, ok, extra) {
 
 const pianoStand = Array.from({ length: 33 }, (_, i) => {
   const y = 0.28 + (i % 12) * 0.04
-  return pt(0.78, y, 0.8)
+  return pt(0.78, y, i === 0 ? 0.05 : 0.8)
 })
 
 const com = bodyCenterOfMass(hsAt(0.4))
@@ -79,6 +80,19 @@ assert('standing looks human', poseLooksHuman(standAt(0.4)))
 assert('handstand looks human', poseLooksHuman(hsAt(0.4)))
 assert('tiny furniture cluster is not a person', !poseLooksHuman(chair))
 assert('keyboard stand is a pole, not a person', looksLikePole(pianoStand) && !poseLooksHuman(pianoStand))
+const sideHs = stacked(0.42, { 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
+sideHs[12] = pt(0.43, 0.72, 0.2)
+sideHs[14] = pt(0.43, 0.8, 0.15)
+sideHs[16] = pt(0.43, 0.9, 0.12)
+assert('side-view handstand is not a pole', !looksLikePole(sideHs) && poseLooksHuman(sideHs))
+const ghost = hsAt(0.4)
+ghost[12] = pt(0.92, 0.2, 0.45)
+const cleaned = sanitizePose(ghost)
+assert(
+  'hidden-side shoulder across the room is dropped',
+  (cleaned[12].visibility ?? 1) < 0.1 && Math.abs(cleaned[11].x - 0.33) < 0.1,
+  cleaned[12],
+)
 const onlyPole = new SubjectLock().select([pianoStand], 100)
 assert('never locks onto a stand alone', !onlyPole.landmarks && !onlyPole.debug.locked, onlyPole.debug)
 

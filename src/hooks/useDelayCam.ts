@@ -186,6 +186,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         resolve(blob)
       }
       flushWaiterRef.current = done
+      // Wait for onstop so iPad Safari writes a playable file.
+      // Only fall back if onstop never fires.
       window.setTimeout(() => {
         const parts = rollingChunksRef.current
         done(
@@ -193,7 +195,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
             ? new Blob(parts, { type: rollingMimeRef.current || 'video/webm' })
             : null,
         )
-      }, 280)
+      }, 1600)
       try {
         rec.requestData()
       } catch {

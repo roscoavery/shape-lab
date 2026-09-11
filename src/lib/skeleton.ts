@@ -38,6 +38,9 @@ export function mergePair(a?: Landmark, b?: Landmark, min = 0.14): Landmark | nu
   const A = visOk(a, min) ? a : null
   const B = visOk(b, min) ? b : null
   if (A && B) {
+    const gap = Math.hypot(A.x - B.x, A.y - B.y)
+    // Hidden-side guess across the room — keep the nearer/stronger joint.
+    if (gap > 0.16) return (A.visibility ?? 1) >= (B.visibility ?? 1) ? A : B
     const wa = A.visibility ?? 1
     const wb = B.visibility ?? 1
     const w = wa + wb
