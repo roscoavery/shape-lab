@@ -15,20 +15,37 @@ import type { Landmark } from '../types'
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null
 let floorLandmarkerPromise: Promise<PoseLandmarker> | null = null
+let lastVideoTs = 0
+let activeModelLabel = 'lite'
 
-const POSE_MODELS = [
-  // Lite is what Tasks 2 used on day one. Full is a fallback, not the first pick —
-  // it hallucinates the hidden side on a side-view handstand.
+const LITE_MODELS = [
   '/models/pose_landmarker_lite.task',
-  '/models/pose_landmarker_full.task',
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+]
+const FULL_MODELS = [
+  '/models/pose_landmarker_full.task',
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
 ]
+const POSE_MODELS = [
+  ...LITE_MODELS,
+  ...FULL_MODELS,
+]
+
+export function activePoseModelLabel(): string {
+  return activeModelLabel
+}
+
+function nextVideoTimestamp(now: number): number {
+  if (now <= lastVideoTs) lastVideoTs += 1
+  else lastVideoTs = now
+  return lastVideoTs
+}
 
 async function createLandmarker(
   delegate: 'GPU' | 'CPU',
   numPoses: number,
   modelAssetPath: string,
+  opts?: { detect?: number; presence?: number; track?: number },
 ): Promise<PoseLandmarker> {
   const vision = await FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm',
@@ -40,20 +57,24 @@ async function createLandmarker(
     },
     runningMode: 'VIDEO',
     numPoses,
-    minPoseDetectionConfidence: 0.32,
-    minPosePresenceConfidence: 0.32,
-    minTrackingConfidence: 0.32,
+    minPoseDetectionConfidence: opts?.detect ?? 0.45,
+    minPosePresenceConfidence: opts?.presence ?? 0.4,
+    minTrackingConfidence: opts?.track ?? 0.4,
   })
 }
 
 async function createLandmarkerWithFallback(
   delegate: 'GPU' | 'CPU',
   numPoses: number,
+  models: string[] = POSE_MODELS,
+  opts?: { detect?: number; presence?: number; track?: number },
 ): Promise<PoseLandmarker> {
   let last: unknown
-  for (const path of POSE_MODELS) {
+  for (const path of models) {
     try {
-      return await createLandmarker(delegate, numPoses, path)
+      const lm = await createLandmarker(delegate, numPoses, path, opts)
+      activeModelLabel = path.includes('full') ? 'full' : 'lite'
+      return lm
     } catch (err) {
       last = err
     }
@@ -61,16 +82,23 @@ async function createLandmarkerWithFallback(
   throw last instanceof Error ? last : new Error('Pose model failed to load')
 }
 
-export async function getPoseLandmarker(): Promise<PoseLandmarker> {
+export async function getPoseLandmarker(quality: 'fast' | 'balanced' | 'accurate' = 'balanced'): Promise<PoseLandmarker> {
   if (!landmarkerPromise) {
     landmarkerPromise = (async () => {
+      const preferFull = quality === 'accurate'
+      const models = preferFull ? [...FULL_MODELS, ...LITE_MODELS] : [...LITE_MODELS, ...FULL_MODELS]
+      const numPoses = quality === 'fast' ? 2 : 3
+      const conf =
+        quality === 'accurate'
+          ? { detect: 0.5, presence: 0.45, track: 0.45 }
+          : quality === 'fast'
+            ? { detect: 0.4, presence: 0.36, track: 0.36 }
+            : { detect: 0.48, presence: 0.42, track: 0.42 }
       try {
-        // Two extra candidates let SubjectLock reject a background ghost
-        // without changing the Today floor detector (numPoses: 4).
-        return await createLandmarkerWithFallback('GPU', 4)
+        return await createLandmarkerWithFallback('GPU', numPoses, models, conf)
       } catch (err) {
         console.warn('GPU pose landmarker failed, falling back to CPU', err)
-        return createLandmarkerWithFallback('CPU', 4)
+        return createLandmarkerWithFallback('CPU', numPoses, models, conf)
       }
     })()
   }
@@ -82,10 +110,18 @@ export async function getFloorPoseLandmarker(): Promise<PoseLandmarker> {
   if (!floorLandmarkerPromise) {
     floorLandmarkerPromise = (async () => {
       try {
-        return await createLandmarkerWithFallback('GPU', 4)
+        return await createLandmarkerWithFallback('GPU', 4, POSE_MODELS, {
+          detect: 0.32,
+          presence: 0.32,
+          track: 0.32,
+        })
       } catch (err) {
         console.warn('GPU floor landmarker failed, falling back to CPU', err)
-        return createLandmarkerWithFallback('CPU', 4)
+        return createLandmarkerWithFallback('CPU', 4, POSE_MODELS, {
+          detect: 0.32,
+          presence: 0.32,
+          track: 0.32,
+        })
       }
     })()
   }
@@ -127,12 +163,18 @@ export function resultToMultipleLandmarks(result: PoseLandmarkerResult): Landmar
   return (result.landmarks ?? [])
     .filter((pose) => pose.length >= 33)
     .slice(0, 4)
-    .map((pose) =>
-      pose.map((lm) => ({
+    .map((pose, poseIdx) => {
+      const world = result.worldLandmarks?.[poseIdx]
+      return pose.map((lm, i) => ({
         x: lm.x,
         y: lm.y,
-        z: lm.z,
+        z: world?.[i]?.z ?? lm.z,
         visibility: lm.visibility,
-      })),
-    )
+      }))
+    })
+}
+
+/** VIDEO-mode detect with a monotonic timestamp. Never reuse a stale ts. */
+export function detectPosesForVideo(landmarker: PoseLandmarker, video: HTMLVideoElement, now: number) {
+  return landmarker.detectForVideo(video, nextVideoTimestamp(now))
 }

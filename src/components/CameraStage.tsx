@@ -7,14 +7,18 @@ import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import {
-  drawSubjectDebug,
-  getLastSubjectDebug,
-  isPoseDebugEnabled,
-} from '../lib/poseSubject'
+  drawTrackDebug,
+  getLastTrackDebug,
+  isTrackDebugEnabled,
+  jointDrawColor,
+} from '../lib/athleteTrack'
+import { syncCanvasToVideo } from '../lib/poseCoords'
+import { isPoseDebugEnabled } from '../lib/poseSubject'
 import {
   drawCenterOfMass,
   drawGradeHud,
   drawPoseOverlay,
+  edgePlausible,
   overlayLineColor,
   type JointDrawMode,
 } from '../lib/skeleton'
@@ -123,6 +127,20 @@ export function CameraStage({
   compact = false,
 }: Props) {
   const localHoldRef = useRef<number | null>(null)
+  const landmarksRef = useRef(landmarks)
+  const scoreRef = useRef(score)
+  const shapeRef = useRef(shape)
+  const runningRef = useRef(running)
+  const mirrorRef = useRef(mirror)
+  const showAnglesRef = useRef(showAngles)
+  const jointModeRef = useRef(jointMode)
+  landmarksRef.current = landmarks
+  scoreRef.current = score
+  shapeRef.current = shape
+  runningRef.current = running
+  mirrorRef.current = mirror
+  showAnglesRef.current = showAngles
+  jointModeRef.current = jointMode
 
   useEffect(() => {
     localHoldRef.current = holdSeconds
@@ -134,6 +152,13 @@ export function CameraStage({
     const draw = () => {
       const video = videoRef.current
       const canvas = canvasRef.current
+      const landmarks = landmarksRef.current
+      const score = scoreRef.current
+      const shape = shapeRef.current
+      const running = runningRef.current
+      const mirror = mirrorRef.current
+      const showAngles = showAnglesRef.current
+      const jointMode = jointModeRef.current
       if (!canvas) {
         raf = requestAnimationFrame(draw)
         return
@@ -142,10 +167,7 @@ export function CameraStage({
       // Demo mode uses a fixed canvas size; live mode follows the video.
       const hasVideo = Boolean(running && video && video.videoWidth)
       if (hasVideo && video) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-        }
+        syncCanvasToVideo(canvas, video)
       } else if (demoMode) {
         if (canvas.width !== 960 || canvas.height !== 720) {
           canvas.width = 960
@@ -197,6 +219,7 @@ export function CameraStage({
             const B = landmarks[b]
             if (!A || !B) continue
             if ((A.visibility ?? 1) < VISIBILITY_DRAW || (B.visibility ?? 1) < VISIBILITY_DRAW) continue
+            if (!edgePlausible(A, B)) continue
             const color = edgeTint(a, b, shape, score)
             ctx.lineWidth = Math.max(5, canvas.width * 0.006)
             ctx.strokeStyle = color
@@ -206,10 +229,12 @@ export function CameraStage({
             ctx.stroke()
           }
 
-          for (const lm of landmarks.slice(LM.LEFT_SHOULDER)) {
-            if ((lm.visibility ?? 1) < VISIBILITY_DRAW) continue
+          const flags = isTrackDebugEnabled() ? getLastTrackDebug()?.flags : null
+          for (let i = LM.LEFT_SHOULDER; i < landmarks.length; i++) {
+            const lm = landmarks[i]
+            if (!lm || (lm.visibility ?? 1) < VISIBILITY_DRAW) continue
             ctx.beginPath()
-            ctx.fillStyle = '#ffffff'
+            ctx.fillStyle = flags ? jointDrawColor(flags[i]) : '#ffffff'
             ctx.arc(
               lm.x * canvas.width,
               lm.y * canvas.height,
@@ -248,28 +273,29 @@ export function CameraStage({
 
       ctx.restore()
 
-      if (isPoseDebugEnabled()) {
-        const subject = getLastSubjectDebug()
-        if (subject) {
+      if (isPoseDebugEnabled() || isTrackDebugEnabled()) {
+        const track = getLastTrackDebug()
+        if (track) {
           ctx.save()
           if (mirror) {
             ctx.translate(canvas.width, 0)
             ctx.scale(-1, 1)
           }
-          drawSubjectDebug(ctx, subject, canvas.width, canvas.height)
+          drawTrackDebug(ctx, track, canvas.width, canvas.height)
           ctx.restore()
           const lines = [
-            `lock ${subject.locked ? 'ON' : 'off'}  ${subject.pickReason}`,
-            `reacquire ${subject.reacquire}  conf ${subject.confidence.toFixed(2)}`,
-            `lm vis ${subject.landmarkVis.toFixed(2)}  motion ${subject.motionBias.toFixed(2)}`,
-            ...subject.rejected.slice(0, 3).map((r) => `reject ${r.reason}`),
+            `${track.state}  ${track.pickReason}`,
+            `model ${track.model}  ${track.quality}  ${track.candidates} cand`,
+            `conf ${track.poseConf.toFixed(2)}  cont ${track.continuity.toFixed(2)}  anat ${track.anatomy.toFixed(2)}`,
+            `fps ${track.fps}  infer ${track.inferMs.toFixed(1)}ms  motion ${track.motion.toFixed(2)}`,
+            ...track.rejected.slice(0, 3).map((r) => `reject ${r.reason}`),
           ]
           ctx.save()
           ctx.font = `600 ${Math.max(12, canvas.width * 0.016)}px ui-monospace, monospace`
           ctx.textAlign = 'left'
           const pad = 8
           const lineH = Math.max(16, canvas.width * 0.02)
-          const boxW = Math.min(canvas.width - 16, 420)
+          const boxW = Math.min(canvas.width - 16, 440)
           ctx.fillStyle = 'rgba(0,0,0,0.62)'
           ctx.fillRect(8, 8, boxW, pad * 2 + lineH * lines.length)
           ctx.fillStyle = '#7dffc8'
@@ -295,7 +321,7 @@ export function CameraStage({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, landmarks, mirror, showAngles, running, demoMode, shape, score, burnInHud, holdSecondsRef, jointMode])
+  }, [videoRef, canvasRef, demoMode, burnInHud, holdSecondsRef])
 
   return (
     <div

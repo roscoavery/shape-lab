@@ -7,7 +7,19 @@
 import { VISIBILITY_DRAW, jointAngle } from './angles'
 import { evaluateHandstandGeometry } from './handstandDetect'
 import { LM, POSE_EDGES } from './landmarks'
+import { landmarkToDisplay } from './poseCoords'
 import type { Landmark, ScoreResult } from '../types'
+
+const EDGE_MAX = 0.42
+
+export function edgePlausible(
+  a: Landmark | undefined,
+  b: Landmark | undefined,
+  max = EDGE_MAX,
+): boolean {
+  if (!a || !b) return false
+  return Math.hypot(a.x - b.x, a.y - b.y) <= max
+}
 
 export type JointDrawMode = 'merged' | 'split' | 'auto'
 
@@ -134,10 +146,7 @@ export function formatHoldClock(seconds: number): string {
 }
 
 function toPx(p: Landmark, width: number, height: number, mirror: boolean): { x: number; y: number } {
-  return {
-    x: mirror ? (1 - p.x) * width : p.x * width,
-    y: p.y * height,
-  }
+  return landmarkToDisplay(p, width, height, mirror)
 }
 
 function drawDot(
@@ -211,6 +220,7 @@ function drawSplit(
     const B = landmarks[b]
     if (!A || !B) continue
     if ((A.visibility ?? 1) < VISIBILITY_DRAW || (B.visibility ?? 1) < VISIBILITY_DRAW) continue
+    if (!edgePlausible(A, B)) continue
     const pa = toPx(A, width, height, mirror)
     const pb = toPx(B, width, height, mirror)
     ctx.lineWidth = Math.max(5, width * 0.006)

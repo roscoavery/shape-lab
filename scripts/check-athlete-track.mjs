@@ -1,0 +1,113 @@
+/**
+ * Athlete tracker: lock the person, reject furniture limbs, keep a handstand.
+ * Run: npx tsx scripts/check-athlete-track.mjs
+ */
+import { AthleteTracker, clipImpossibleBones } from '../src/lib/athleteTrack.ts'
+import { looksLikePole } from '../src/lib/poseSubject.ts'
+
+function pt(x, y, vis = 0.85) {
+  return { x, y, z: 0, visibility: vis }
+}
+
+function stacked(x, yMap, vis = 0.85) {
+  const lm = Array.from({ length: 33 }, () => pt(x, 0.5, 0.4))
+  const put = (i, px, py, v = vis) => {
+    lm[i] = pt(px, py, v)
+  }
+  put(0, x, yMap[0])
+  put(11, x - 0.07, yMap.sh)
+  put(12, x + 0.07, yMap.sh)
+  put(13, x - 0.08, yMap.el)
+  put(14, x + 0.08, yMap.el)
+  put(15, x - 0.07, yMap.wr)
+  put(16, x + 0.07, yMap.wr)
+  put(23, x - 0.04, yMap.hp)
+  put(24, x + 0.04, yMap.hp)
+  put(25, x - 0.04, yMap.kn)
+  put(26, x + 0.04, yMap.kn)
+  put(27, x - 0.04, yMap.an)
+  put(28, x + 0.04, yMap.an)
+  return lm
+}
+
+const standAt = (x) =>
+  stacked(x, { 0: 0.16, sh: 0.28, el: 0.42, wr: 0.58, hp: 0.55, kn: 0.72, an: 0.9 })
+const hsAt = (x) =>
+  stacked(x, { 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
+
+const pianoStand = Array.from({ length: 33 }, (_, i) => {
+  const y = 0.28 + (i % 12) * 0.04
+  return pt(0.78, y, i === 0 ? 0.05 : 0.8)
+})
+
+let failed = 0
+function assert(name, ok, extra) {
+  if (!ok) {
+    failed += 1
+    console.error('FAIL', name, extra ?? '')
+  } else {
+    console.log('ok', name)
+  }
+}
+
+const chimera = standAt(0.35)
+chimera[15] = pt(0.92, 0.08, 0.9)
+chimera[16] = pt(0.94, 0.1, 0.88)
+const clipped = clipImpossibleBones(chimera)
+assert(
+  'room-crossing wrists are clipped off the skeleton',
+  (clipped.lm[15].visibility ?? 1) < 0.1 && (clipped.lm[16].visibility ?? 1) < 0.1,
+  clipped.lm[15],
+)
+assert('torso survives a wild wrist', (clipped.lm[11].visibility ?? 1) > 0.5)
+
+assert('keyboard stand is still a pole', looksLikePole(pianoStand))
+
+const tracker = new AthleteTracker()
+const empty = tracker.push([], 1_000)
+assert('empty room publishes no skeleton', empty.stabilized == null)
+
+const first = tracker.push([standAt(0.32), pianoStand], 1_040)
+assert('acquires the person, not the stand', Boolean(first.stabilized), first.debug)
+assert(
+  'state is acquiring or locked',
+  first.state === 'acquiring' || first.state === 'locked',
+  first.state,
+)
+
+const locked = tracker.push([standAt(0.33)], 1_040 + 200)
+assert('locks after the acquire window', locked.state === 'locked', locked.debug)
+
+const stolen = tracker.push([pianoStand], 1_280)
+assert(
+  'furniture-only frame keeps the last athlete',
+  stolen.stabilized != null && stolen.debug.predicted,
+  stolen.debug,
+)
+
+const kick = tracker.push([hsAt(0.34)], 1_360)
+assert('kick-up at the same place stays locked', kick.state === 'locked' && Boolean(kick.stabilized), kick.debug)
+
+const fly = hsAt(0.34)
+fly[16] = pt(0.97, 0.04, 0.95)
+const gated = tracker.push([fly], 1_400)
+assert(
+  'teleporting wrist is not drawn across the frame',
+  gated.stabilized != null && (gated.stabilized[16].visibility ?? 1) < 0.5,
+  gated.stabilized?.[16],
+)
+
+const lone = new AthleteTracker()
+const side = hsAt(0.42)
+for (let i = 0; i <= 10; i++) side[i] = pt(0.42, 0.78, 0.04)
+const hit = lone.push([side], 2_000)
+assert('side handstand without a face still acquires', Boolean(hit.stabilized), hit.debug)
+
+const onlyPole = new AthleteTracker().push([pianoStand], 3_000)
+assert('never locks a stand alone', onlyPole.stabilized == null, onlyPole.debug)
+
+if (failed) {
+  console.error(`${failed} athlete track checks failed`)
+  process.exit(1)
+}
+console.log('athlete track ok')

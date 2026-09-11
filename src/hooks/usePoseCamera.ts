@@ -1,11 +1,13 @@
 /**
- * Camera + MediaPipe pose loop
+ * Camera + MediaPipe pose loop.
+ * One in-flight detect at a time. AthleteTracker owns subject lock.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { hintMotion } from '../lib/saveMedia'
 import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../lib/delayCameraPipeline'
-import { BackgroundMotion, SubjectLock } from '../lib/poseSubject'
+import { AthleteTracker, loadPoseQuality } from '../lib/athleteTrack'
+import { BackgroundMotion } from '../lib/poseSubject'
 import type { Landmark } from '../types'
 
 export type PoseCameraState = {
@@ -28,6 +30,10 @@ export function usePoseCamera(): PoseCameraState {
   const rafRef = useRef<number>(0)
   const lastTsRef = useRef<number>(0)
   const fpsCountRef = useRef({ frames: 0, last: performance.now() })
+  const loopGenRef = useRef(0)
+  const busyRef = useRef(false)
+  const lastPublishRef = useRef(0)
+  const lastLmKeyRef = useRef('')
 
   const [ready, setReady] = useState(false)
   const [running, setRunning] = useState(false)
@@ -36,69 +42,96 @@ export function usePoseCamera(): PoseCameraState {
   const [fps, setFps] = useState(0)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const startLockRef = useRef<Promise<void> | null>(null)
-  const subjectRef = useRef<SubjectLock | null>(null)
+  const trackerRef = useRef<AthleteTracker | null>(null)
   const motionRef = useRef<BackgroundMotion | null>(null)
 
   const stop = useCallback(() => {
+    loopGenRef.current += 1
     cancelAnimationFrame(rafRef.current)
+    rafRef.current = 0
+    busyRef.current = false
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
     setStream(null)
     if (videoRef.current) videoRef.current.srcObject = null
     setRunning(false)
     setLandmarks(null)
-    subjectRef.current?.reset()
+    trackerRef.current?.reset()
     motionRef.current?.reset()
   }, [])
 
-  const loop = useCallback(async () => {
+  const publish = useCallback((lm: Landmark[] | null, now: number) => {
+    const key = lm
+      ? lm
+          .slice(11, 29)
+          .map((p) => `${(p.x * 80) | 0},${(p.y * 80) | 0},${((p.visibility ?? 1) * 4) | 0}`)
+          .join(';')
+      : ''
+    if (key === lastLmKeyRef.current && now - lastPublishRef.current < 80) return
+    lastLmKeyRef.current = key
+    lastPublishRef.current = now
+    setLandmarks(lm)
+  }, [])
+
+  const loop = useCallback(() => {
+    const gen = loopGenRef.current
     const video = videoRef.current
-    if (!video) {
-      // Stage unmounted (user left Tasks/Coach) — do not spin rAF.
+    if (!video) return
+    if (busyRef.current) {
+      rafRef.current = requestAnimationFrame(loop)
       return
     }
     if (video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(() => {
-        void loop()
-      })
+      rafRef.current = requestAnimationFrame(loop)
       return
     }
 
-    try {
-      const { getPoseLandmarker, resultToMultipleLandmarks } = await import('../lib/pose')
-      const landmarker = await getPoseLandmarker()
-      const now = performance.now()
-      const minGap = isAndroid() ? 50 : 0
-      if (now - lastTsRef.current >= minGap) {
-        const result = landmarker.detectForVideo(video, now)
-        lastTsRef.current = now
-        if (!subjectRef.current) subjectRef.current = new SubjectLock()
-        if (!motionRef.current) motionRef.current = new BackgroundMotion()
-        motionRef.current.sample(video, now)
-        const picked = subjectRef.current.select(
-          resultToMultipleLandmarks(result),
-          now,
-          motionRef.current,
-        )
-        setLandmarks(picked.landmarks)
-      }
+    busyRef.current = true
+    void (async () => {
+      try {
+        const quality = loadPoseQuality()
+        const { getPoseLandmarker, resultToMultipleLandmarks, detectPosesForVideo, activePoseModelLabel } =
+          await import('../lib/pose')
+        if (gen !== loopGenRef.current) return
+        const landmarker = await getPoseLandmarker(quality)
+        if (gen !== loopGenRef.current) return
+        const now = performance.now()
+        const minGap = isAndroid() ? 50 : 16
+        if (now - lastTsRef.current >= minGap) {
+          const t0 = performance.now()
+          const result = detectPosesForVideo(landmarker, video, now)
+          const inferMs = performance.now() - t0
+          lastTsRef.current = now
+          if (!trackerRef.current) trackerRef.current = new AthleteTracker()
+          if (!motionRef.current) motionRef.current = new BackgroundMotion()
+          trackerRef.current.setMeta(quality, activePoseModelLabel(), inferMs)
+          motionRef.current.sample(video, now)
+          const frame = trackerRef.current.push(
+            resultToMultipleLandmarks(result),
+            now,
+            motionRef.current,
+          )
+          publish(frame.stabilized, now)
+        }
 
-      const fc = fpsCountRef.current
-      fc.frames += 1
-      if (now - fc.last >= 1000) {
-        setFps(fc.frames)
-        fc.frames = 0
-        fc.last = now
+        const fc = fpsCountRef.current
+        fc.frames += 1
+        if (now - fc.last >= 1000) {
+          setFps(fc.frames)
+          fc.frames = 0
+          fc.last = now
+        }
+      } catch (err) {
+        console.error(err)
+        setError(err instanceof Error ? err.message : 'Pose detection failed')
+      } finally {
+        busyRef.current = false
+        if (gen === loopGenRef.current) {
+          rafRef.current = requestAnimationFrame(loop)
+        }
       }
-    } catch (err) {
-      console.error(err)
-      setError(err instanceof Error ? err.message : 'Pose detection failed')
-    }
-
-    rafRef.current = requestAnimationFrame(() => {
-      void loop()
-    })
-  }, [])
+    })()
+  }, [publish])
 
   const start = useCallback(async () => {
     if (streamRef.current && videoRef.current?.srcObject === streamRef.current) {
@@ -111,7 +144,6 @@ export function usePoseCamera(): PoseCameraState {
     const run = (async () => {
       setError(null)
       try {
-        // getUserMedia must be the first await after the tap on iPad Safari.
         const media = await requestUserCamera()
         streamRef.current = media
         setStream(media)
@@ -136,13 +168,14 @@ export function usePoseCamera(): PoseCameraState {
           await video.play()
         }
         setRunning(true)
+        loopGenRef.current += 1
         cancelAnimationFrame(rafRef.current)
-        rafRef.current = requestAnimationFrame(() => {
-          void loop()
-        })
+        busyRef.current = false
+        trackerRef.current?.reset()
+        rafRef.current = requestAnimationFrame(loop)
         try {
           const { getPoseLandmarker } = await import('../lib/pose')
-          await getPoseLandmarker()
+          await getPoseLandmarker(loadPoseQuality())
           setReady(true)
         } catch (err) {
           console.warn(err)
