@@ -59,7 +59,6 @@ import {
   saveInjuryLogs,
   savePainJournal,
 } from './careStore'
-import { photoBlobPath, uploadGymMedia } from './mediaUpload'
 import { compressProfilePhoto, isPhotoUrl } from './profilePhoto'
 
 export type RosterBackup = {
@@ -264,10 +263,15 @@ function gymGetInit(timeoutMs = 18_000): RequestInit {
   return init
 }
 
-export async function pullServerRoster(): Promise<RosterBackup | null> {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+export async function pullServerRoster(opts?: {
+  attempts?: number
+  timeoutMs?: number
+}): Promise<RosterBackup | null> {
+  const attempts = opts?.attempts ?? 6
+  const timeoutMs = opts?.timeoutMs ?? 18_000
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      const res = await fetch('/api/roster', gymGetInit())
+      const res = await fetch('/api/roster', gymGetInit(timeoutMs))
       if (!res.ok) {
         await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
         continue
@@ -539,8 +543,11 @@ export function attachPhotosToLocal(photos: Record<string, string>): Athlete[] {
   return athletes
 }
 
-export async function syncRosterWithServer(): Promise<RosterSyncResult> {
-  const server = await pullServerRoster()
+export async function syncRosterWithServer(opts?: {
+  attempts?: number
+  timeoutMs?: number
+}): Promise<RosterSyncResult> {
+  const server = await pullServerRoster(opts)
   if (!server) {
     // GET failed. Do not PUT — that is how a Ryan-only tab wiped the gym.
     return {

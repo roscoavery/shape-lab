@@ -77,7 +77,10 @@ function prefetchGymPanels(): void {
 
 export async function hydrateGymAtBoot(): Promise<GymHydrateResult> {
   try {
-    const [persist, roster] = await Promise.all([pullPersist(), syncRosterWithServer()])
+    const [persist, roster] = await Promise.all([
+      pullPersist(),
+      syncRosterWithServer({ attempts: 2, timeoutMs: 6000 }),
+    ])
     prefetchGymPanels()
     return {
       ...roster,

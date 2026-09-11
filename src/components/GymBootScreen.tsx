@@ -17,10 +17,15 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
         {phase === 'loading' ? 'Loading this gym' : 'This phone cannot see the gym yet'}
       </h1>
       {phase === 'loading' ? (
-        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-          Pulling the name list first. Pictures load after, so this phone
-          does not sit on a blank screen.
-        </p>
+        <>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+            Pulling the name list from the Mac. This should take a few seconds.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+            If this sits here, the Mac gym is not running the latest code — in
+            Terminal: git pull, then npm run gym:mac. Then refresh.
+          </p>
+        </>
       ) : (
         <>
           <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">

@@ -353,15 +353,11 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    const applyRoster = async (synced: {
-      athletes: Athlete[]
-      fromServer: boolean
-    }) => {
-      const raw =
+    const applyRoster = (synced: { athletes: Athlete[]; fromServer: boolean }) => {
+      const next =
         synced.athletes.length > 0
           ? ensureRyanInAthletes(synced.athletes)
           : ensureRyanInAthletes(loadAthletes())
-      const next = await withRyanPasscode(raw)
       if (cancelled) return next
       rosterReadyRef.current = synced.fromServer && isServerRosterPushEnabled()
       setAthletes((prev) =>
@@ -378,38 +374,62 @@ export default function App() {
         setActiveAthleteId(null)
         setAthleteGate(null)
       }
+      void withRyanPasscode(next).then((hashed) => {
+        if (cancelled) return
+        setAthletes((prev) =>
+          hashed.map((a) => ({
+            ...a,
+            photoDataUrl: a.photoDataUrl || prev.find((p) => p.id === a.id)?.photoDataUrl,
+          })),
+        )
+      })
       return next
+    }
+    let settled = false
+    let watchdog = 0
+    const settle = (state: 'ready' | 'error', message?: string) => {
+      if (cancelled || settled) return
+      settled = true
+      window.clearTimeout(watchdog)
+      if (message) setGymBootError(message)
+      setGymBoot(state)
     }
     const run = async () => {
       setGymBoot('loading')
       setGymBootError(null)
-      for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
+      const deadline = Date.now() + 12_000
+      for (let attempt = 0; attempt < 3 && !cancelled && !settled; attempt += 1) {
         try {
           const synced = await hydrateGymAtBoot()
-          if (cancelled) return
+          if (cancelled || settled) return
           setGymPersist(synced.persist)
-          await applyRoster(synced)
-          if (synced.fromServer) {
-            setGymBoot('ready')
-            return
-          }
-          if (localHasGymRoster()) {
-            setGymBoot('ready')
+          applyRoster(synced)
+          if (synced.fromServer || localHasGymRoster()) {
+            settle('ready')
             return
           }
         } catch (err) {
-          if (cancelled) return
+          if (cancelled || settled) return
           setGymBootError(err instanceof Error ? err.message : 'Could not load the gym file from this URL.')
         }
-        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+        if (Date.now() > deadline) break
+        await new Promise((resolve) => window.setTimeout(resolve, 800))
       }
-      if (cancelled) return
-      setGymBootError((prev) => prev || 'Could not load the gym file from this URL.')
-      setGymBoot('error')
+      settle(
+        'error',
+        'Could not load the gym file from this URL. On the Mac run git pull and npm run gym:mac, then refresh.',
+      )
     }
+    watchdog = window.setTimeout(() => {
+      settle(
+        'error',
+        'This Wi-Fi link reached the Mac but the name list did not finish. On the Mac: git pull, then npm run gym:mac. Then refresh this page.',
+      )
+    }, 12_000)
     void run()
     return () => {
       cancelled = true
+      window.clearTimeout(watchdog)
     }
   }, [gymBootTick])
 
@@ -694,10 +714,8 @@ export default function App() {
         phase={gymBoot === 'error' ? 'error' : 'loading'}
         error={gymBootError}
         persist={gymPersist}
-        onRetry={gymBoot === 'error' ? () => setGymBootTick((n) => n + 1) : undefined}
-        onContinueLocal={
-          gymBoot === 'error' ? () => setGymBoot('ready') : undefined
-        }
+        onRetry={() => setGymBootTick((n) => n + 1)}
+        onContinueLocal={() => setGymBoot('ready')}
       />
     )
   }
