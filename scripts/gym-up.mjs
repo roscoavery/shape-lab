@@ -9,6 +9,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { printLanUrls } from './lan-urls.mjs'
+import { originReady, waitForOrigin } from './gym-ready.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.SHAPE_LAB_PORT || '43127'
@@ -76,24 +77,22 @@ const gym = spawn(npm, ['run', 'gym'], {
   shell,
 })
 
-async function originUp() {
-  try {
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 2500)
-    const res = await fetch(`${ORIGIN}/api/persist`, { signal: ac.signal })
-    clearTimeout(timer)
-    return res.ok
-  } catch {
-    return false
-  }
-}
+let gymAlive = true
+gym.on('exit', (code) => {
+  gymAlive = false
+  process.exit(code ?? 0)
+})
 
 async function waitForGym() {
-  for (let i = 0; i < 90; i += 1) {
-    if (await originUp()) return true
-    await new Promise((resolveWait) => setTimeout(resolveWait, 500))
-  }
-  return false
+  return waitForOrigin(ORIGIN, {
+    maxMs: 240_000,
+    stopped: () => !gymAlive,
+    onWait: (elapsed) => {
+      console.log(
+        `Waiting for the gym on ${ORIGIN} (${Math.round(elapsed / 1000)}s). First start after git pull builds the app — phones cannot use the https link yet.`,
+      )
+    },
+  })
 }
 
 const tokenRaw = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
@@ -108,10 +107,12 @@ if (tokenRaw && !tokenLooksReal(tokenRaw)) {
   )
 }
 
-void waitForGym().then((ok) => {
+void waitForGym().then(async (ok) => {
   printLanUrls(PORT)
   if (!ok) {
-    console.warn(`Nothing answered at ${ORIGIN} yet. Starting the tunnel anyway.`)
+    console.warn(`Nothing answered at ${ORIGIN} after 4 minutes.`)
+    console.warn('Do not use a trycloudflare https link. Use the Wi-Fi http://192.168…:43127/ line above, or stay on Vercel.')
+    console.warn('Starting the tunnel anyway in case the gym comes up late.')
   } else {
     const named = tokenLooksReal(tokenRaw)
       ? process.env.CLOUDFLARE_TUNNEL_HOSTNAME?.trim()
@@ -119,8 +120,11 @@ void waitForGym().then((ok) => {
     console.log(
       named
         ? `Gym is up at ${ORIGIN}. Publishing ${named} …`
-        : `Gym is up at ${ORIGIN}. Publishing a temporary HTTPS link (named tunnel needs a real token via npm run gym:token)…`,
+        : `Gym is up at ${ORIGIN}. Publishing a temporary HTTPS link (this hostname is new every start — yesterday’s trycloudflare URL is dead).`,
     )
+  }
+  if (!(await originReady(ORIGIN)) && !ok) {
+    console.warn('Tunnel will 502 until this Mac answers on port', PORT)
   }
   const share = spawn(npm, shareArgs, {
     cwd: ROOT,
@@ -133,5 +137,3 @@ void waitForGym().then((ok) => {
     process.exit(code ?? 0)
   })
 })
-
-gym.on('exit', (code) => process.exit(code ?? 0))

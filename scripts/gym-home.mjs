@@ -97,7 +97,7 @@ function buildApp() {
     console.log('Using the existing production build (phones get a few hashed files, not Vite source).')
     return true
   }
-  console.log('Building Shape Lab for phones (one-time; this is why Vercel felt faster)…')
+  console.log('Building Shape Lab for phones (can take a minute). Do not open the https link yet.')
   const viteBin = existsSync(viteJs) ? [process.execPath, viteJs, 'build'] : null
   const result = viteBin
     ? spawnSync(viteBin[0], viteBin.slice(1), {
@@ -135,8 +135,8 @@ console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pau
 printLanUrls(PORT)
 console.log(
   useStatic
-    ? 'Serving the production build. Leave this running. In another terminal: npm run share'
-    : 'Leave this running. In another terminal: npm run share',
+    ? 'Serving the production build. Leave this window open. A trycloudflare https link from an old run is dead.'
+    : 'Leave this window open. A trycloudflare https link from an old run is dead.',
 )
 
 const env = {

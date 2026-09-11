@@ -15,6 +15,8 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { printLanUrls } from './lan-urls.mjs'
+import { originReady, waitForOrigin } from './gym-ready.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
@@ -110,19 +112,7 @@ function findCloudflared() {
 }
 
 function originUp() {
-  try {
-    const result = spawnSync(
-      process.execPath,
-      [
-        '-e',
-        `fetch(${JSON.stringify(`${ORIGIN}/api/persist`)}).then(r=>{process.exit(r.ok?0:2)}).catch(()=>process.exit(1))`,
-      ],
-      { encoding: 'utf8', timeout: 4000 },
-    )
-    return result.status === 0
-  } catch {
-    return false
-  }
+  return originReady(ORIGIN)
 }
 
 function tokenLooksReal(token) {
@@ -132,17 +122,38 @@ function tokenLooksReal(token) {
   return token.startsWith('eyJ')
 }
 
+function explainDeadTunnel() {
+  console.warn('')
+  console.warn('The public https link cannot reach this Mac right now.')
+  console.warn('A trycloudflare URL also dies if you closed the gym window or reused yesterday’s link.')
+  console.warn('On the same Wi-Fi, use the http://192.168…:43127/ line. Camera still needs HTTPS (Vercel or gym.shapelab.win).')
+  printLanUrls(PORT)
+}
+
+async function waitUntilGymOrWarn() {
+  if (await originUp()) return true
+  console.log(`Waiting for Shape Lab at ${ORIGIN} before opening the tunnel…`)
+  const ok = await waitForOrigin(ORIGIN, {
+    maxMs: 180_000,
+    onWait: (elapsed) => {
+      console.log(`Still waiting for ${ORIGIN} (${Math.round(elapsed / 1000)}s)…`)
+    },
+  })
+  if (!ok) {
+    console.warn(
+      `Warning: nothing answered at ${ORIGIN}. Start Shape Lab first with npm run gym (home PC).`,
+    )
+    printLanUrls(PORT)
+  }
+  return ok
+}
+
 function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
   const bin = findCloudflared()
   const argv = [...bin.prefix, ...extraArgs]
   const shown = argv.map((part, i) => (argv[i - 1] === '--token' ? '(hidden)' : part))
   console.log(`Using ${bin.cmd} ${shown.join(' ')}`)
   if (hostname) console.log(`Gym URL: ${hostname}`)
-  if (!originUp()) {
-    console.warn(
-      `Warning: nothing answered at ${ORIGIN}. Start Shape Lab first with npm run gym (home PC) or npm run dev.`,
-    )
-  }
 
   const env = { ...process.env }
   if (!tokenLooksReal(env.CLOUDFLARE_TUNNEL_TOKEN)) {
@@ -150,37 +161,50 @@ function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
   }
 
   const child = spawn(bin.cmd, argv, {
-    stdio: printUrl ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    stdio: ['ignore', printUrl ? 'pipe' : 'inherit', 'pipe'],
     env,
   })
 
   let announced = false
+  let lastOriginFail = 0
   const onChunk = (buf) => {
     const text = buf.toString()
     process.stderr.write(text)
     const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
-    if (!match || announced) return
-    announced = true
-    console.log(`\nTemporary URL (dies when you stop this): ${match[0]}`)
-    console.log('If that https link 502s, ignore it and use the Wi-Fi http://192.168… link.\n')
-    setTimeout(() => {
-      fetch(match[0])
-        .then((res) => {
-          if (!res.ok) {
-            console.warn(
-              `Tunnel returned ${res.status}. Use the Wi-Fi link printed above — do not pause Vercel yet.`,
-            )
-          }
-        })
-        .catch(() => {
-          console.warn('Tunnel is not reachable. Use the Wi-Fi link printed above.')
-        })
-    }, 4000)
+    if (match && !announced) {
+      announced = true
+      console.log(`\nTemporary URL (dies when you stop this — do not bookmark it): ${match[0]}`)
+      console.log('If that https link 502s, ignore it and use the Wi-Fi http://192.168… link.\n')
+      setTimeout(() => {
+        fetch(match[0])
+          .then((res) => {
+            if (!res.ok) {
+              console.warn(
+                `Tunnel returned ${res.status}. Use the Wi-Fi link printed above — do not pause Vercel yet.`,
+              )
+            }
+          })
+          .catch(() => {
+            console.warn('Tunnel is not reachable. Use the Wi-Fi link printed above.')
+          })
+      }, 4000)
+    }
+    if (
+      /Unable to reach the origin service|connection reset by peer|Failed to proxy HTTP/i.test(
+        text,
+      )
+    ) {
+      const now = Date.now()
+      if (now - lastOriginFail > 30_000) {
+        lastOriginFail = now
+        explainDeadTunnel()
+      }
+    }
   }
 
+  child.stderr?.on('data', onChunk)
   if (printUrl) {
     child.stdout?.on('data', onChunk)
-    child.stderr?.on('data', onChunk)
   }
 
   child.on('error', (err) => {
@@ -212,19 +236,24 @@ if (wantsService) {
   runCloudflared(['service', 'install', token])
 } else if (wantsQuick) {
   console.log('Starting a quick TryCloudflare tunnel. The hostname will change next time.')
-  runCloudflared(
-    [
-      'tunnel',
-      '--protocol',
-      'http2',
-      '--url',
-      ORIGIN,
-      '--http-host-header',
-      '127.0.0.1',
-      '--no-autoupdate',
-    ],
-    { printUrl: true },
-  )
+  console.log('Yesterday’s trycloudflare link is dead. Use the URL printed in THIS window.')
+  void waitUntilGymOrWarn().then(() => {
+    runCloudflared(
+      [
+        'tunnel',
+        '--protocol',
+        'http2',
+        '--url',
+        ORIGIN,
+        '--http-host-header',
+        '127.0.0.1',
+        '--retries',
+        '15',
+        '--no-autoupdate',
+      ],
+      { printUrl: true },
+    )
+  })
 } else if (!tokenLooksReal(token)) {
   printGymSetup()
   console.error(
@@ -235,7 +264,9 @@ if (wantsService) {
   process.exit(1)
 } else {
   console.log('Starting the named Shape Lab tunnel. Leave this running on the gym computer.')
-  runCloudflared(['tunnel', '--no-autoupdate', 'run', '--token', token], {
-    hostname,
+  void waitUntilGymOrWarn().then(() => {
+    runCloudflared(['tunnel', '--retries', '15', '--no-autoupdate', 'run', '--token', token], {
+      hostname,
+    })
   })
 }

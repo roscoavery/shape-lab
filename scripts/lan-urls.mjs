@@ -23,7 +23,8 @@ export function printLanUrls(port) {
   } else {
     for (const u of urls) console.log(`  ${u}/`)
   }
-  console.log('Skip the trycloudflare https link if it fails (502).')
+  console.log('That http link is on this Wi-Fi only. Camera needs HTTPS.')
+  console.log('Skip trycloudflare if it 502s — that hostname is new every start.')
   console.log('Keep the Vercel tab until names and faces show here.')
   console.log('────────────────────────────────────────')
   console.log('')

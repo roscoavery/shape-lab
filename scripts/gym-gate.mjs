@@ -143,6 +143,14 @@ function serveStatic(req, res) {
 
 const server = http.createServer((req, res) => {
   const url = req.url || '/'
+  if (url === '/api/health' || url.startsWith('/api/health?')) {
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    })
+    res.end(JSON.stringify({ ok: true, static: STATIC, port: PUBLIC_PORT }))
+    return
+  }
   if (url.startsWith('/api/') || url === '/api') {
     void handleShapeLabApi(req, res)
       .then((hit) => {
@@ -199,7 +207,18 @@ server.on('connection', (socket) => {
   })
 })
 
+server.keepAliveTimeout = 65_000
+server.headersTimeout = 70_000
+server.requestTimeout = 0
+server.timeout = 0
+
 server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PUBLIC_PORT} is already in use.`)
+    console.error('Another gym window is probably still open. Ctrl+C there, then start again.')
+    console.error(`Or: lsof -nP -iTCP:${PUBLIC_PORT} -sTCP:LISTEN`)
+    process.exit(1)
+  }
   console.error(`Gym gate: ${err.message}`)
 })
 

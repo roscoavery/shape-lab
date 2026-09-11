@@ -99,6 +99,7 @@ const API_PATHS = new Set([
   '/api/media-token',
   '/api/contacts',
   '/api/contacts.csv',
+  '/api/health',
   '/api/persist',
   '/api/ig-stills',
   '/api/ig-still-file',
@@ -196,6 +197,10 @@ export async function handleShapeLabApi(
     if (!(await sendIgStillFile(id, res))) {
       sendJson(res, 404, { error: 'Still file not found' })
     }
+    return true
+  }
+  if (path === '/api/health') {
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode() })
     return true
   }
   if (path === '/api/persist') {
