@@ -15,7 +15,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
-const STATIC = process.env.GYM_STATIC === '1' && existsSync(join(DIST, 'index.html'))
+const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
+
+function distReady() {
+  return existsSync(join(DIST, 'index.html'))
+}
 
 const { handleShapeLabApi } = await import(
   pathToFileURL(resolve(ROOT, 'server/apiHandler.ts')).href
@@ -115,6 +119,28 @@ function safeDistFile(pathname) {
   return file
 }
 
+function serveBoot(res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store',
+  })
+  res.end(
+    '<!doctype html><meta charset="utf-8"><title>Shape Lab</title><body style="font-family:system-ui;background:#111;color:#eee;padding:2rem"><p>Shape Lab is starting on the Mac. Refresh in a few seconds.</p>',
+  )
+}
+
+function servePages(req, res) {
+  if (distReady()) {
+    serveStatic(req, res)
+    return
+  }
+  if (WANT_VITE) {
+    proxyVite(req, res)
+    return
+  }
+  serveBoot(res)
+}
+
 function serveStatic(req, res) {
   const raw = (req.url || '/').split('?')[0]
   let pathname = '/'
@@ -148,15 +174,14 @@ const server = http.createServer((req, res) => {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
     })
-    res.end(JSON.stringify({ ok: true, static: STATIC, port: PUBLIC_PORT }))
+    res.end(JSON.stringify({ ok: true, static: distReady(), port: PUBLIC_PORT }))
     return
   }
   if (url.startsWith('/api/') || url === '/api') {
     void handleShapeLabApi(req, res)
       .then((hit) => {
         if (hit || res.headersSent) return
-        if (STATIC) serveStatic(req, res)
-        else proxyVite(req, res)
+        servePages(req, res)
       })
       .catch((err) => {
         if (res.headersSent) return
@@ -166,19 +191,15 @@ const server = http.createServer((req, res) => {
       })
     return
   }
-  if (STATIC) {
-    serveStatic(req, res)
-    return
-  }
-  proxyVite(req, res)
+  servePages(req, res)
 })
 
 server.on('upgrade', (req, socket, head) => {
   socket.on('error', () => {
     /* ignore */
   })
-  if (STATIC) {
-    socket.destroy()
+  if (distReady() && !WANT_VITE) {
+    socket.end()
     return
   }
   const p = net.connect(VITE_PORT, '127.0.0.1', () => {
@@ -198,7 +219,8 @@ server.on('upgrade', (req, socket, head) => {
 })
 
 server.on('clientError', (_err, socket) => {
-  socket.destroy()
+  if (!socket.writable || socket.destroyed) return
+  socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
 })
 
 server.on('connection', (socket) => {
@@ -223,9 +245,11 @@ server.on('error', (err) => {
 })
 
 server.listen(PUBLIC_PORT, '0.0.0.0', () => {
-  if (STATIC) {
+  if (distReady()) {
     console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API + production build)`)
-  } else {
+  } else if (WANT_VITE) {
     console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})`)
+  } else {
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API up; app build still running)`)
   }
 })

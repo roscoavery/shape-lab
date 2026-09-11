@@ -129,22 +129,29 @@ if (!existsSync(roster)) {
   console.warn('data/roster.json is missing. Run npm run gym:pull while Vercel is still up.')
 }
 
-const useStatic = !wantDev && buildApp()
-
-console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pause after phones switch)`)
-printLanUrls(PORT)
-console.log(
-  useStatic
-    ? 'Serving the production build. Leave this window open. A trycloudflare https link from an old run is dead.'
-    : 'Leave this window open. A trycloudflare https link from an old run is dead.',
-)
-
 const env = {
   ...process.env,
   GYM_HOME: '1',
   SHAPE_LAB_PORT: PORT,
   SHAPE_LAB_VITE_PORT: VITE_PORT,
-  GYM_STATIC: useStatic ? '1' : '',
+  GYM_DEV: wantDev ? '1' : '',
+}
+
+console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pause after phones switch)`)
+printLanUrls(PORT)
+console.log('Opening port 43127 now so the https link does not 502 while the app builds.')
+
+const gate = spawn(
+  process.execPath,
+  ['--experimental-strip-types', join(ROOT, 'scripts', 'gym-gate.mjs')],
+  { cwd: ROOT, stdio: 'inherit', env },
+)
+
+const useStatic = !wantDev && buildApp()
+if (useStatic) {
+  console.log('Serving the production build. Leave this window open.')
+} else {
+  console.log('Leave this window open. A trycloudflare https link from an old run is dead.')
 }
 
 let vite = null
@@ -163,19 +170,15 @@ if (!useStatic) {
       })
 }
 
-const gate = spawn(
-  process.execPath,
-  ['--experimental-strip-types', join(ROOT, 'scripts', 'gym-gate.mjs')],
-  { cwd: ROOT, stdio: 'inherit', env },
-)
-
 function shutdown(code = 0) {
   vite?.kill('SIGTERM')
   gate.kill('SIGTERM')
   process.exit(code)
 }
 
-vite?.on('exit', (code) => shutdown(code ?? 0))
+vite?.on('exit', (code) => {
+  if (!existsSync(distIndex)) shutdown(code ?? 0)
+})
 gate.on('exit', (code) => shutdown(code ?? 0))
 process.on('SIGINT', () => shutdown(0))
 process.on('SIGTERM', () => shutdown(0))
