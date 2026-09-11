@@ -1,4 +1,4 @@
-import { LASTING_GYM_URL } from '../lib/gymLink'
+import { gymUrlForHumans } from '../lib/gymLink'
 import type { PersistInfo } from '../lib/gymHydrate'
 
 type Props = {
@@ -27,7 +27,7 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
             {error ??
               'The gym file on this URL did not load. Profiles stay on the lasting gym link, not on Preview, a tunnel, or a new Vercel hostname.'}
           </p>
-          <p className="mt-3 break-all text-sm text-[var(--text)]">{LASTING_GYM_URL}</p>
+          <p className="mt-3 break-all text-sm text-[var(--text)]">{gymUrlForHumans()}</p>
           {persist && !persist.lasting ? (
             <p className="mt-3 rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
               This link is not keeping gym data overnight. Connect a Blob store on

@@ -191,7 +191,7 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
    ```
 
    That installs deps, copies Production onto this Mac (`data/`), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off.
-4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari. Confirm names and faces. Bookmark it. The old Vercel tab is a different site. A `https://….trycloudflare.com` line is optional and often 502s — skip it.
+4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari. Confirm names and faces. Bookmark it. The old Vercel tab is a different site. A `https://….trycloudflare.com` line is optional and often 502s — skip it. After a gym-script update: in the Mac Terminal stop with Ctrl+C, `git pull`, then `npm run gym:mac` again.
 5. **Then** pause the Vercel project. Do not delete the project or the Blob store.
 
 A Cursor / trycloudflare link from this cloud VM will not resolve on your phone. Use the Mac’s Wi-Fi address.

@@ -8,7 +8,7 @@ import { hydrateCoachClasses } from './coachClasses'
 import { hydrateCoachContent } from './coachContentStore'
 import { listCollages } from './collages'
 import { listFeedPosts } from './feedPosts'
-import { LASTING_GYM_URL, isLastingGymOrigin } from './gymLink'
+import { gymUrlForHumans, isLastingGymOrigin } from './gymLink'
 import { rememberGymRevision, type GymRevisionStores } from './gymLive'
 import { hydrateIgStills } from './igStillStore'
 import { hydrateLessons } from './lessonStore'
@@ -20,6 +20,8 @@ import {
   syncRosterWithServer,
   type RosterSyncResult,
 } from './rosterSync'
+import { ensureRyanInAthletes } from './ryanProfile'
+import { loadActiveAthleteId, loadAthletes } from './storage'
 import { loadSocial } from './social'
 import { loadStories } from './stories'
 import { hydrateTrainingEvents } from './trainingEvents'
@@ -39,7 +41,11 @@ export type GymHydrateResult = RosterSyncResult & {
 
 async function pullPersist(): Promise<PersistInfo | null> {
   try {
-    const res = await fetch('/api/persist', { cache: 'no-store', credentials: 'same-origin' })
+    const init: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      init.signal = AbortSignal.timeout(12_000)
+    }
+    const res = await fetch('/api/persist', init)
     if (!res.ok) return null
     const data = (await res.json()) as PersistInfo
     if (data?.mode !== 'blob' && data?.mode !== 'disk' && data?.mode !== 'tmp') return null
@@ -70,14 +76,27 @@ function prefetchGymPanels(): void {
 }
 
 export async function hydrateGymAtBoot(): Promise<GymHydrateResult> {
-  const [persist, roster] = await Promise.all([pullPersist(), syncRosterWithServer()])
-  prefetchGymPanels()
-  return {
-    ...roster,
-    persist,
-    lasting: persist?.lasting ?? roster.fromServer,
-    wrongOrigin: !isLastingGymOrigin(),
-    gymUrl: LASTING_GYM_URL,
+  try {
+    const [persist, roster] = await Promise.all([pullPersist(), syncRosterWithServer()])
+    prefetchGymPanels()
+    return {
+      ...roster,
+      persist,
+      lasting: persist?.lasting ?? roster.fromServer,
+      wrongOrigin: !isLastingGymOrigin(),
+      gymUrl: gymUrlForHumans(),
+    }
+  } catch {
+    return {
+      athletes: ensureRyanInAthletes(loadAthletes()),
+      activeAthleteId: loadActiveAthleteId(),
+      fromServer: false,
+      error: 'Could not load the gym file from this URL.',
+      persist: null,
+      lasting: false,
+      wrongOrigin: !isLastingGymOrigin(),
+      gymUrl: gymUrlForHumans(),
+    }
   }
 }
 

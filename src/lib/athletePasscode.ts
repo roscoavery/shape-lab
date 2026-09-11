@@ -10,6 +10,7 @@
 
 import type { Athlete } from '../types'
 import { findRyan, isRyanAthlete } from './ryanProfile'
+import { sha256Hex } from './sha256'
 
 const UNLOCKED_KEY = 'shape-lab.unlockedProfile.v2'
 const UNLOCKED_LS = 'shape-lab.unlockedProfile.v3'
@@ -27,8 +28,16 @@ function bytesToHex(buf: ArrayBuffer): string {
 export async function hashPasscode(athleteId: string, passcode: string): Promise<string> {
   const trimmed = passcode.trim()
   const data = new TextEncoder().encode(`shape-lab:${athleteId}:${trimmed}`)
-  const buf = await crypto.subtle.digest('SHA-256', data)
-  return bytesToHex(buf)
+  const subtle = globalThis.crypto?.subtle
+  if (subtle && typeof subtle.digest === 'function') {
+    try {
+      const buf = await subtle.digest('SHA-256', data)
+      return bytesToHex(buf)
+    } catch {
+      /* http://192.168… is not a secure context — Web Crypto refuses */
+    }
+  }
+  return sha256Hex(data)
 }
 
 export function digitsOnlyPin(raw: string): string {
@@ -55,9 +64,13 @@ export async function expectedPasscodeHash(athlete: Athlete): Promise<string | n
 export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> {
   const ryan = findRyan(athletes)
   if (!ryan) return athletes
-  const hash = await hashPasscode(ryan.id, RYAN_PASSCODE)
-  if (ryan.passcodeHash === hash) return athletes
-  return athletes.map((a) => (a.id === ryan.id ? { ...a, passcodeHash: hash } : a))
+  try {
+    const hash = await hashPasscode(ryan.id, RYAN_PASSCODE)
+    if (ryan.passcodeHash === hash) return athletes
+    return athletes.map((a) => (a.id === ryan.id ? { ...a, passcodeHash: hash } : a))
+  } catch {
+    return athletes
+  }
 }
 
 function parseUnlockRec(raw: string | null): string | null {

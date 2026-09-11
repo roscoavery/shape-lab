@@ -384,22 +384,27 @@ export default function App() {
       setGymBoot('loading')
       setGymBootError(null)
       for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
-        const synced = await hydrateGymAtBoot()
-        if (cancelled) return
-        setGymPersist(synced.persist)
-        await applyRoster(synced)
-        if (synced.fromServer) {
-          setGymBoot('ready')
-          return
-        }
-        if (localHasGymRoster()) {
-          setGymBoot('ready')
-          return
+        try {
+          const synced = await hydrateGymAtBoot()
+          if (cancelled) return
+          setGymPersist(synced.persist)
+          await applyRoster(synced)
+          if (synced.fromServer) {
+            setGymBoot('ready')
+            return
+          }
+          if (localHasGymRoster()) {
+            setGymBoot('ready')
+            return
+          }
+        } catch (err) {
+          if (cancelled) return
+          setGymBootError(err instanceof Error ? err.message : 'Could not load the gym file from this URL.')
         }
         await new Promise((resolve) => window.setTimeout(resolve, 2000))
       }
       if (cancelled) return
-      setGymBootError('Could not load the gym file from this URL.')
+      setGymBootError((prev) => prev || 'Could not load the gym file from this URL.')
       setGymBoot('error')
     }
     void run()
