@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { hintMotion } from '../lib/saveMedia'
 import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../lib/delayCameraPipeline'
+import { BackgroundMotion, SubjectLock } from '../lib/poseSubject'
 import type { Landmark } from '../types'
 
 export type PoseCameraState = {
@@ -35,6 +36,8 @@ export function usePoseCamera(): PoseCameraState {
   const [fps, setFps] = useState(0)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const startLockRef = useRef<Promise<void> | null>(null)
+  const subjectRef = useRef<SubjectLock | null>(null)
+  const motionRef = useRef<BackgroundMotion | null>(null)
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -44,6 +47,8 @@ export function usePoseCamera(): PoseCameraState {
     if (videoRef.current) videoRef.current.srcObject = null
     setRunning(false)
     setLandmarks(null)
+    subjectRef.current?.reset()
+    motionRef.current?.reset()
   }, [])
 
   const loop = useCallback(async () => {
@@ -60,14 +65,22 @@ export function usePoseCamera(): PoseCameraState {
     }
 
     try {
-      const { getPoseLandmarker, resultToLandmarks } = await import('../lib/pose')
+      const { getPoseLandmarker, resultToMultipleLandmarks } = await import('../lib/pose')
       const landmarker = await getPoseLandmarker()
       const now = performance.now()
       const minGap = isAndroid() ? 50 : 0
       if (now - lastTsRef.current >= minGap) {
         const result = landmarker.detectForVideo(video, now)
         lastTsRef.current = now
-        setLandmarks(resultToLandmarks(result))
+        if (!subjectRef.current) subjectRef.current = new SubjectLock()
+        if (!motionRef.current) motionRef.current = new BackgroundMotion()
+        motionRef.current.sample(video, now)
+        const picked = subjectRef.current.select(
+          resultToMultipleLandmarks(result),
+          now,
+          motionRef.current,
+        )
+        setLandmarks(picked.landmarks)
       }
 
       const fc = fpsCountRef.current

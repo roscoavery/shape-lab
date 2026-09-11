@@ -7,6 +7,11 @@ import { jointAngle, VISIBILITY_DRAW } from '../lib/angles'
 import { LM, POSE_EDGES } from '../lib/landmarks'
 import { isLungeArmHold, isShoulderCriterionId, isSoftShoulderShape } from '../lib/scoring'
 import {
+  drawSubjectDebug,
+  getLastSubjectDebug,
+  isPoseDebugEnabled,
+} from '../lib/poseSubject'
+import {
   drawGradeHud,
   drawPoseOverlay,
   overlayLineColor,
@@ -236,7 +241,40 @@ export function CameraStage({
           }
         }
       }
+
       ctx.restore()
+
+      if (isPoseDebugEnabled()) {
+        const subject = getLastSubjectDebug()
+        if (subject) {
+          ctx.save()
+          if (mirror) {
+            ctx.translate(canvas.width, 0)
+            ctx.scale(-1, 1)
+          }
+          drawSubjectDebug(ctx, subject, canvas.width, canvas.height)
+          ctx.restore()
+          const lines = [
+            `lock ${subject.locked ? 'ON' : 'off'}  ${subject.pickReason}`,
+            `reacquire ${subject.reacquire}  conf ${subject.confidence.toFixed(2)}`,
+            `lm vis ${subject.landmarkVis.toFixed(2)}  motion ${subject.motionBias.toFixed(2)}`,
+            ...subject.rejected.slice(0, 3).map((r) => `reject ${r.reason}`),
+          ]
+          ctx.save()
+          ctx.font = `600 ${Math.max(12, canvas.width * 0.016)}px ui-monospace, monospace`
+          ctx.textAlign = 'left'
+          const pad = 8
+          const lineH = Math.max(16, canvas.width * 0.02)
+          const boxW = Math.min(canvas.width - 16, 420)
+          ctx.fillStyle = 'rgba(0,0,0,0.62)'
+          ctx.fillRect(8, 8, boxW, pad * 2 + lineH * lines.length)
+          ctx.fillStyle = '#7dffc8'
+          lines.forEach((line, i) => {
+            ctx.fillText(line, 16, 8 + pad + lineH * (i + 0.75))
+          })
+          ctx.restore()
+        }
+      }
 
       if (burnInHud && score) {
         drawGradeHud(
