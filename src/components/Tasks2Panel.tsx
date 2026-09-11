@@ -46,6 +46,7 @@ import {
   rememberPoseTrack,
   serializePoseTrack,
 } from '../lib/poseTrack'
+import { unlockHoldTones } from '../lib/sounds'
 import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
 import {
@@ -932,6 +933,7 @@ export function Tasks2Panel({
         // Camera / recorder steal the Start-tap speech unlock on iPhone Safari.
         holdAudio()
         unlockSpeech()
+        unlockHoldTones()
         await wait(200)
         if (!alive()) return
         setCue(seqRun.previewSpeak)

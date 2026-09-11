@@ -16,6 +16,7 @@ import {
 import { LM } from './landmarks'
 import { cloneLandmarks, type PoseTrack } from './poseTrack'
 import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
+import { playHoldEnterBeep, playHoldExitBeep } from './sounds'
 import { handstandPeakScore } from './scoring'
 import { extractVideoRange } from './trimVideo'
 
@@ -488,6 +489,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     let holdSeconds = 0
 
     opts.onCue('Holding — clock is running. Walking is allowed. Clock stops when you come down.')
+    playHoldEnterBeep()
     tick({ seconds: 0, running: true, inverted: true, handsDown: true, feetOff: true })
 
     while (!opts.cancelled()) {
@@ -529,6 +531,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     tick({ seconds: holdSeconds, running: false, inverted: false })
+    playHoldExitBeep()
     opts.onCue(
       holdSeconds >= MIN_HOLD_SEC
         ? `Foot down — ${formatSeconds(holdSeconds)}. Kick up again when you are ready, or tap Done.`

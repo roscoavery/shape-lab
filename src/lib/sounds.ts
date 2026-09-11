@@ -39,6 +39,45 @@ export function playSuccessChime(): void {
 }
 
 /** Single bright tick when they first match the shape (hold chime is separate). */
+export function unlockHoldTones(): void {
+  try {
+    void audio().resume()
+  } catch {
+    /* audio blocked */
+  }
+}
+
+function playTone(freq: number, ms: number, gain = 0.2) {
+  try {
+    const ac = audio()
+    void ac.resume()
+    const now = ac.currentTime
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = freq
+    g.gain.setValueAtTime(0.0001, now)
+    g.gain.exponentialRampToValueAtTime(gain, now + 0.012)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + ms / 1000)
+    osc.connect(g)
+    g.connect(ac.destination)
+    osc.start(now)
+    osc.stop(now + ms / 1000 + 0.02)
+  } catch {
+    /* audio blocked */
+  }
+}
+
+/** Handstand Lab-style: bright beep when the clock starts. */
+export function playHoldEnterBeep(): void {
+  playTone(1046.5, 140, 0.22)
+}
+
+/** Lower beep when they come down and the clock stops. */
+export function playHoldExitBeep(): void {
+  playTone(349.23, 180, 0.2)
+}
+
 export function playHitTick(): void {
   try {
     const ac = audio()

@@ -12,6 +12,7 @@ import {
   isPoseDebugEnabled,
 } from '../lib/poseSubject'
 import {
+  drawCenterOfMass,
   drawGradeHud,
   drawPoseOverlay,
   overlayLineColor,
@@ -174,7 +175,7 @@ export function CameraStage({
         ctx.fillRect(0, 0, canvas.width, canvas.height)
       }
 
-      if (landmarks && showAngles) {
+      if (landmarks) {
         if (jointMode === 'merged') {
           ctx.restore()
           drawPoseOverlay(ctx, landmarks, {
@@ -217,6 +218,7 @@ export function CameraStage({
             ctx.fill()
           }
 
+          drawCenterOfMass(ctx, landmarks, canvas.width, canvas.height, false)
           if (showAngles) {
             ctx.restore()
             ctx.save()

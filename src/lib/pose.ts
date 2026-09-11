@@ -16,25 +16,47 @@ import type { Landmark } from '../types'
 let landmarkerPromise: Promise<PoseLandmarker> | null = null
 let floorLandmarkerPromise: Promise<PoseLandmarker> | null = null
 
+const POSE_MODELS = [
+  '/models/pose_landmarker_full.task',
+  '/models/pose_landmarker_lite.task',
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+]
+
 async function createLandmarker(
   delegate: 'GPU' | 'CPU',
   numPoses: number,
+  modelAssetPath: string,
 ): Promise<PoseLandmarker> {
-  // WASM from jsDelivr; pose model is shipped in /public/models (correct .task bundle)
   const vision = await FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm',
   )
   return PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath: '/models/pose_landmarker_lite.task',
+      modelAssetPath,
       delegate,
     },
     runningMode: 'VIDEO',
     numPoses,
-    minPoseDetectionConfidence: 0.45,
-    minPosePresenceConfidence: 0.45,
-    minTrackingConfidence: 0.45,
+    minPoseDetectionConfidence: 0.32,
+    minPosePresenceConfidence: 0.32,
+    minTrackingConfidence: 0.32,
   })
+}
+
+async function createLandmarkerWithFallback(
+  delegate: 'GPU' | 'CPU',
+  numPoses: number,
+): Promise<PoseLandmarker> {
+  let last: unknown
+  for (const path of POSE_MODELS) {
+    try {
+      return await createLandmarker(delegate, numPoses, path)
+    } catch (err) {
+      last = err
+    }
+  }
+  throw last instanceof Error ? last : new Error('Pose model failed to load')
 }
 
 export async function getPoseLandmarker(): Promise<PoseLandmarker> {
@@ -43,10 +65,10 @@ export async function getPoseLandmarker(): Promise<PoseLandmarker> {
       try {
         // Two extra candidates let SubjectLock reject a background ghost
         // without changing the Today floor detector (numPoses: 4).
-        return await createLandmarker('GPU', 4)
+        return await createLandmarkerWithFallback('GPU', 4)
       } catch (err) {
         console.warn('GPU pose landmarker failed, falling back to CPU', err)
-        return createLandmarker('CPU', 4)
+        return createLandmarkerWithFallback('CPU', 4)
       }
     })()
   }
@@ -58,10 +80,10 @@ export async function getFloorPoseLandmarker(): Promise<PoseLandmarker> {
   if (!floorLandmarkerPromise) {
     floorLandmarkerPromise = (async () => {
       try {
-        return await createLandmarker('GPU', 4)
+        return await createLandmarkerWithFallback('GPU', 4)
       } catch (err) {
         console.warn('GPU floor landmarker failed, falling back to CPU', err)
-        return createLandmarker('CPU', 4)
+        return createLandmarkerWithFallback('CPU', 4)
       }
     })()
   }

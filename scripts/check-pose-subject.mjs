@@ -2,6 +2,7 @@
  * Subject-lock cases: keep the athlete, reject background ghosts.
  * Run: npx tsx scripts/check-pose-subject.mjs
  */
+import { bodyCenterOfMass } from '../src/lib/skeleton.ts'
 import {
   SubjectLock,
   SUBJECT_DROP_MS,
@@ -68,6 +69,12 @@ const pianoStand = Array.from({ length: 33 }, (_, i) => {
   return pt(0.78, y, 0.8)
 })
 
+const com = bodyCenterOfMass(hsAt(0.4))
+assert(
+  'COM sits between hips and shoulders',
+  Boolean(com) && com.y > 0.4 && com.y < 0.7,
+  com,
+)
 assert('standing looks human', poseLooksHuman(standAt(0.4)))
 assert('handstand looks human', poseLooksHuman(hsAt(0.4)))
 assert('tiny furniture cluster is not a person', !poseLooksHuman(chair))

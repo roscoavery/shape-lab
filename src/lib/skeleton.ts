@@ -227,6 +227,42 @@ function drawSplit(
   }
 }
 
+/** Hip-weighted torso center — same idea as Handstand Lab’s COM dot. */
+export function bodyCenterOfMass(lm: Landmark[] | null | undefined): Landmark | null {
+  if (!lm || lm.length < 33) return null
+  const hips = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.12)
+  const shoulders = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.12)
+  if (!hips || !shoulders) return null
+  return {
+    x: hips.x * 0.58 + shoulders.x * 0.42,
+    y: hips.y * 0.58 + shoulders.y * 0.42,
+    z: hips.z * 0.58 + shoulders.z * 0.42,
+    visibility: Math.min(hips.visibility ?? 1, shoulders.visibility ?? 1),
+  }
+}
+
+export function drawCenterOfMass(
+  ctx: CanvasRenderingContext2D,
+  lm: Landmark[],
+  width: number,
+  height: number,
+  mirror: boolean,
+) {
+  const com = bodyCenterOfMass(lm)
+  if (!com || (com.visibility ?? 1) < 0.2) return
+  const p = toPx(com, width, height, mirror)
+  const r = Math.max(7, width * 0.011)
+  ctx.beginPath()
+  ctx.strokeStyle = '#f0c400'
+  ctx.lineWidth = Math.max(2, width * 0.003)
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.fillStyle = '#f0c400'
+  ctx.arc(p.x, p.y, r * 0.38, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 export function drawPoseOverlay(
   ctx: CanvasRenderingContext2D,
   landmarks: Landmark[] | null,
@@ -246,10 +282,12 @@ export function drawPoseOverlay(
     const merged = mergeSideJoints(landmarks)
     if (merged) {
       drawMerged(ctx, merged, opts.width, opts.height, opts.mirror, showAngles, color)
+      drawCenterOfMass(ctx, landmarks, opts.width, opts.height, opts.mirror)
       return
     }
   }
   drawSplit(ctx, landmarks, opts.width, opts.height, opts.mirror, showAngles, color)
+  drawCenterOfMass(ctx, landmarks, opts.width, opts.height, opts.mirror)
 }
 
 export function drawGradeHud(
