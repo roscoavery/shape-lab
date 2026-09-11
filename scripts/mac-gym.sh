@@ -30,9 +30,9 @@ npm run gym:pull
 
 echo
 echo "Starting the gym. Keep this window open and the Mac plugged in."
-echo "On iPad and phone (same Wi-Fi as this Mac), open the http://192.168… link."
-echo "Ignore a trycloudflare https link if it 502s."
-echo "Do not pause Vercel until faces show on the Wi-Fi link."
+echo "Paste this on iPad / phone / laptop (same Wi-Fi), including the port:"
+echo "  http://192.168.0.115:43127/"
+echo "Do not paste 127.0.0.1 on the iPad. Do not pause Vercel yet."
 echo
 
 if command -v caffeinate >/dev/null 2>&1; then
