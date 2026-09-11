@@ -574,7 +574,7 @@ export function ReferencePane({
     }
     for (const item of items) {
       if (item.url && isSocialVideoItem(item)) {
-        void prefetchInstagram(item.url, item.id, { download: true })
+        void prefetchInstagram(item.url, item.id, { download: false })
       }
     }
   }

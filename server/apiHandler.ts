@@ -4,6 +4,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   isResolvableVideoUrl,
+  cacheResolvedIgMedia,
+  publicOrProxyIgUrl,
   proxyInstagramMedia,
   lookupPostedBy,
   resolveSocialSlides,
@@ -1080,14 +1082,21 @@ export async function handleShapeLabApi(
       return true
     }
     const postedBy = resolved.postedBy ?? postedByFromUrl(page)
-    sendJson(res, 200, {
-      videoUrl: `/api/ig-media?src=${encodeURIComponent(resolved.url)}`,
-      slides: resolved.slides.map((slide) => ({
-        url: `/api/ig-media?src=${encodeURIComponent(slide.url)}`,
+    const slides = await Promise.all(
+      resolved.slides.map(async (slide) => ({
+        url: await publicOrProxyIgUrl(slide.url, page),
         kind: slide.kind,
       })),
+    )
+    sendJson(res, 200, {
+      videoUrl: slides.find((s) => s.kind === 'video')?.url ?? slides[0]?.url,
+      slides,
       ...(postedBy ? { postedBy } : {}),
     })
+    const firstVideo = resolved.slides.find((s) => s.kind === 'video') ?? resolved.slides[0]
+    if (firstVideo?.url && persistMode() === 'blob') {
+      void cacheResolvedIgMedia(firstVideo.url, page)
+    }
     return true
   }
   const src = url.searchParams.get('src') ?? ''

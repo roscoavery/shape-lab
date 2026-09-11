@@ -107,7 +107,16 @@ Phones share gym data (profiles, stills, library, feed) through Blob + `/api/rev
 - **Blob** + `BLOB_READ_WRITE_TOKEN`
 - Automatic Production deploys from **`main`** (GitHub connected). A `git push` to `main` is how hold-challenge / reel fixes reach the iPad. If you turned that off, click **Redeploy → Production** on this project after each push.
 
-**Spend Management:** set a dollar cap and **email / notify only**. Do not “pause all production at 100%” — that freezes the gym URL for every phone. Hobby has no on-demand dollar charges if you stay on Hobby and inside the included quota; Pro is where on-demand Active CPU / extra builds get billed.
+**The “on-demand budget” switch is not a billing off switch.** That is Spend Management (a cap / pause). Turning it **off** removes the brake — Vercel keeps charging Pro overages. Turning **On-Demand Concurrent Builds** off only stops extra parallel *builds*. It does not stop **Fluid Active CPU** or **Fast Data Transfer**.
+
+What actually ran the bill up: reference reels. Safari asks for a video in many Range chunks. Each chunk used to go Instagram → Vercel function → phone, so one class clip was billed many times. The app now copies each reel to Blob **once**, then phones load that public URL. Redeploy Production for that to take effect.
+
+To stop new charges tonight:
+
+1. Vercel → the gym project → **Usage**. Note whether the spike is **Fluid Active CPU** or **Fast Data Transfer** (almost always the reel proxy).
+2. Stay on **Hobby** if you can. Hobby does not add on-demand dollars; it may pause the account if you blow the included quota. Pro is the plan that invoices overages.
+3. If you stay on Pro: Spend Management → set a low cap and **pause production** at that cap. Painful, but it is the only hard stop besides Hobby.
+4. Redeploy **Production** on this project after this change, then hard-refresh iPad and phone.
 
 The app used to ask `/api/revision` every 2.5 seconds and stream photos/videos through the function (Blob → function → phone, billed twice). It now:
 

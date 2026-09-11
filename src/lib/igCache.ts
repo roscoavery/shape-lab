@@ -354,6 +354,6 @@ export function prefetchNeighborClips(
   for (let i = start; i <= end; i++) {
     const clip = clips[i]
     if (!clip) continue
-    void prefetchInstagram(clip.url, clip.id, { download: i === active || i === active + 1 })
+    void prefetchInstagram(clip.url, clip.id, { download: false })
   }
 }

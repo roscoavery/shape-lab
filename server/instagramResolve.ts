@@ -16,13 +16,13 @@
  *      parse video_versions / scontent…cdninstagram.com … .mp4.
  *   5. yt-dlp last, with NO Instagram in-app user-agent (that empties media).
  *
- * Play the cdninstagram mp4 in a first-party <video> via /api/ig-media.
- * Persist savedUrl after a successful play so Production does not need IG again.
+ * Copy the cdninstagram mp4 to public Blob once, then play that URL in a
+ * first-party <video>. Do not stream the file through /api/ig-media on every
+ * Range request — that is what billed Fluid CPU + Fast Data Transfer.
  * ---------------------------------------------------------------------------
  */
 
 import { spawn } from 'node:child_process'
-import { Readable } from 'node:stream'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -34,6 +34,8 @@ import {
   postedByFromUrl,
   socialPlatform,
 } from '../src/lib/socialUrls.ts'
+import { lookupIgPublicUrl, storeIgPublicMedia } from './igMediaStore.ts'
+import { persistMode, sendPublicRedirect } from './persist.ts'
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -849,20 +851,9 @@ function refererFor(src: string): string {
   return 'https://www.instagram.com/'
 }
 
-export async function proxyInstagramMedia(
-  src: string,
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> {
-  if (!mediaHostAllowed(src)) {
-    res.statusCode = 400
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ error: 'That media host is not allowed.' }))
-    return
-  }
+function igFetchHeaders(src: string): Array<Record<string, string>> {
   const instagram = /instagram|cdninstagram|fbcdn/i.test(src)
-  if (instagram) await refreshInstagramCookies()
-  const tries: Array<Record<string, string>> = instagram
+  return instagram
     ? [
         {
           'User-Agent': IG_EMBED_UA,
@@ -891,59 +882,95 @@ export async function proxyInstagramMedia(
           Accept: '*/*',
         },
       ]
-  let upstream: Response | null = null
-  for (const base of tries) {
-    const headers = { ...base }
-    if (typeof req.headers.range === 'string' && !upstream) headers.Range = req.headers.range
+}
+
+async function fetchIgFile(
+  src: string,
+): Promise<{ buf: Buffer; type: string } | null> {
+  const instagram = /instagram|cdninstagram|fbcdn/i.test(src)
+  if (instagram) await refreshInstagramCookies()
+  for (const headers of igFetchHeaders(src)) {
     const hit = await fetch(src, { headers, redirect: 'follow' })
     rememberIgCookies(hit)
     const type = hit.headers.get('content-type') || ''
-    if (hit.ok && (type.startsWith('video/') || type.startsWith('image/') || type.startsWith('application/octet-stream'))) {
-      upstream = hit
-      break
-    }
-    if (hit.status === 206 && type.startsWith('video/')) {
-      upstream = hit
-      break
-    }
-    // Range + missing session often 403s. Retry this header set without Range.
-    if (headers.Range && (hit.status === 403 || hit.status === 401)) {
-      delete headers.Range
-      const retry = await fetch(src, { headers, redirect: 'follow' })
-      rememberIgCookies(retry)
-      const retryType = retry.headers.get('content-type') || ''
-      if (
-        retry.ok &&
-        (retryType.startsWith('video/') ||
-          retryType.startsWith('image/') ||
-          retryType.startsWith('application/octet-stream'))
-      ) {
-        upstream = retry
-        break
-      }
+    const usable =
+      hit.ok &&
+      (type.startsWith('video/') ||
+        type.startsWith('image/') ||
+        type.startsWith('application/octet-stream') ||
+        type === '')
+    if (!usable) continue
+    const raw = Buffer.from(await hit.arrayBuffer())
+    if (raw.length < 800) continue
+    return {
+      buf: raw,
+      type: type.startsWith('video/') || type.startsWith('image/') ? type : 'video/mp4',
     }
   }
-  if (!upstream) {
+  return null
+}
+
+/** Copy a resolved mp4 onto the public Blob CDN. Safe to fire-and-forget. */
+export async function cacheResolvedIgMedia(
+  src: string,
+  pageUrl?: string,
+): Promise<string | null> {
+  const existing = await lookupIgPublicUrl(pageUrl, src)
+  if (existing) return existing
+  if (persistMode() !== 'blob') return null
+  const file = await fetchIgFile(src)
+  if (!file) return null
+  return storeIgPublicMedia(src, file.buf, file.type, pageUrl)
+}
+
+export async function publicOrProxyIgUrl(
+  src: string,
+  pageUrl?: string,
+): Promise<string> {
+  const hosted = await lookupIgPublicUrl(pageUrl, src)
+  if (hosted) return hosted
+  return `/api/ig-media?src=${encodeURIComponent(src)}`
+}
+
+export async function proxyInstagramMedia(
+  src: string,
+  _req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  if (!mediaHostAllowed(src)) {
+    res.statusCode = 400
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'That media host is not allowed.' }))
+    return
+  }
+
+  const cached = await lookupIgPublicUrl(undefined, src)
+  if (cached) {
+    sendPublicRedirect(res, cached)
+    return
+  }
+
+  const file = await fetchIgFile(src)
+  if (!file) {
     res.statusCode = 502
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ error: 'Could not fetch that video file.' }))
     return
   }
-  res.statusCode = upstream.status
-  const type = upstream.headers.get('content-type')
-  if (type) res.setHeader('Content-Type', type)
-  else res.setHeader('Content-Type', 'video/mp4')
-  const len = upstream.headers.get('content-length')
-  if (len) res.setHeader('Content-Length', len)
-  const cr = upstream.headers.get('content-range')
-  if (cr) res.setHeader('Content-Range', cr)
-  res.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes')
-  res.setHeader('Cache-Control', 'private, max-age=1200')
-  if (!upstream.body) {
-    res.end()
-    return
+
+  if (persistMode() === 'blob') {
+    const publicUrl = await storeIgPublicMedia(src, file.buf, file.type)
+    if (publicUrl) {
+      sendPublicRedirect(res, publicUrl)
+      return
+    }
   }
-  Readable.fromWeb(upstream.body as import('node:stream/web').ReadableStream).pipe(res)
+
+  res.statusCode = 200
+  res.setHeader('Content-Type', file.type)
+  res.setHeader('Content-Length', String(file.buf.length))
+  res.setHeader('Cache-Control', 'public, max-age=86400')
+  res.end(file.buf)
 }
 
 export function sendJson(res: ServerResponse, status: number, body: unknown) {

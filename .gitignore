@@ -32,6 +32,8 @@ data/athlete-videos.json
 data/athlete-video-blobs/
 data/feed-posts.json
 data/library-blobs/
+data/ig-media/
+data/ig-media-index.json
 data/research.json
 data/coach-libraries.json
 data/social.json

@@ -9,7 +9,7 @@
   "functions": {
     "api/[[...path]].js": {
       "includeFiles": "{data/**,src/config/compareLibrary.json}",
-      "maxDuration": 60
+      "maxDuration": 30
     }
   }
 }
