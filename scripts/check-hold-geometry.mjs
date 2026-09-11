@@ -11,11 +11,11 @@ if (!src.includes('feet often leave the frame')) {
 if (!src.includes('SALVAGE_HOLD_SEC')) {
   throw new Error('handstandHold.ts is missing Done salvage')
 }
-if (!src.includes('A pike / reach used to count')) {
-  throw new Error('handstandHold.ts is missing the planted-hands + feet-off gate')
+if (!src.includes('HoldDetector')) {
+  throw new Error('handstandHold.ts should use HoldDetector for the timer')
 }
 if (!src.includes('HOLD_ENTER_FRAMES = 8')) {
-  throw new Error('handstandHold.ts should wait ~8 frames before the clock starts')
+  throw new Error('handstandHold.ts should keep the enter-frame constant')
 }
 
 function pt(y, vis = 0.9) {

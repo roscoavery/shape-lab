@@ -1,12 +1,18 @@
 /**
  * One-person handstand hold challenge.
- * Clock starts when both hands are on the ground and the feet leave
- * (kick-up). Clock stops when a foot returns to the ground.
- * Walking on the hands does not stop the clock.
+ * Clock starts after HoldDetector sees a stable inverted stack.
+ * Clock stops after a sustained come-down. Walking on the hands
+ * does not stop the clock. Quality / form stays in scoring.ts.
  */
 
 import type { Landmark, ScoreResult } from '../types'
 import { snapshotCanvas } from './captureStore'
+import {
+  HoldDetector,
+  isHoldDebugEnabled,
+  poseLooksLikeHandstand,
+  type HoldDetectDebug,
+} from './handstandDetect'
 import { LM } from './landmarks'
 import { cloneLandmarks, type PoseTrack } from './poseTrack'
 import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
@@ -20,8 +26,9 @@ export function formatSeconds(s: number): string {
   return `${sec.toFixed(1)}s`
 }
 
+/** @deprecated Timer uses HoldDetector time windows; kept for older calls. */
 export const HOLD_ENTER_FRAMES = 8
-export const HOLD_EXIT_FRAMES = 20
+export const HOLD_EXIT_FRAMES = 15
 export const MIN_HOLD_SEC = 1.2
 /** Done with no detected kick-up still keeps a clip this long. */
 export const SALVAGE_HOLD_SEC = 2.4
@@ -51,6 +58,7 @@ export type HoldTick = {
   inverted: boolean
   handsDown?: boolean
   feetOff?: boolean
+  detect?: HoldDetectDebug
 }
 
 export type HoldSessionOpts = {
@@ -78,13 +86,6 @@ function pairY(a: Landmark | undefined, b: Landmark | undefined, min = 0.04): nu
   const pts = [a, b].filter((p): p is Landmark => visOk(p, min))
   if (pts.length === 0) return null
   return avgY(pts)
-}
-
-function headY(lm: Landmark[]): number | null {
-  const nose = visOk(lm[LM.NOSE], 0.03) ? lm[LM.NOSE]!.y : null
-  const ears = pairY(lm[LM.LEFT_EAR], lm[LM.RIGHT_EAR], 0.03)
-  if (nose != null && ears != null) return (nose + ears) / 2
-  return nose ?? ears
 }
 
 function wait(ms: number) {
@@ -153,39 +154,11 @@ export function feetOffGround(lm: Landmark[] | null | undefined): boolean {
 }
 
 /**
- * In a handstand — side or front, feet in frame or not.
- * Used for the hold clock and for homework wall / freestanding HS.
- *
- * MediaPipe often drops ankles once the feet leave the top of the frame,
- * and visibility on planted wrists is low. Any one strong stacked signal
- * is enough; standing with arms up must not pass.
+ * Single-frame handstand recognition (homework / clip salvage).
+ * The hold timer uses HoldDetector so one jittered landmark cannot toggle it.
  */
 export function poseInverted(lm: Landmark[] | null | undefined): boolean {
-  if (!lm || lm.length < 33) return false
-
-  const wristY =
-    pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03) ??
-    pairY(lm[LM.LEFT_INDEX], lm[LM.RIGHT_INDEX], 0.03)
-  const hipY = pairY(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.03)
-  const shoulderY = pairY(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.03)
-  const ankleY =
-    pairY(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.03) ??
-    pairY(lm[LM.LEFT_HEEL], lm[LM.RIGHT_HEEL], 0.03)
-  const noseY = headY(lm)
-  const handsDown = handsOnGround(lm)
-  const feetOff = feetOffGround(lm)
-
-  const headLow = noseY != null && hipY != null && noseY > hipY + 0.05
-  const hipsAboveHands = wristY != null && hipY != null && hipY < wristY - 0.04
-  const feetAboveHands = wristY != null && ankleY != null && ankleY < wristY - 0.08
-  const feetAboveShoulders =
-    shoulderY != null && ankleY != null && ankleY < shoulderY - 0.04
-  const longInvert = wristY != null && ankleY != null && wristY - ankleY > 0.2
-
-  // Clock starts only when hands are planted AND both feet have left.
-  // A pike / reach used to count as a hold before the hands even touched.
-  if (!handsDown || !feetOff) return false
-  return hipsAboveHands || feetAboveHands || feetAboveShoulders || longInvert || headLow
+  return poseLooksLikeHandstand(lm)
 }
 
 /** Either foot (ankle, heel, or toe) is back near the hands / floor. */
@@ -413,9 +386,10 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     'Kick to a handstand when you are ready. The clock starts when both hands are on the floor and both feet leave the ground. Tap Done when you are finished.',
   )
   tick({ seconds: null, running: false, inverted: false, handsDown: false, feetOff: false })
+  const detector = new HoldDetector()
+  const debugOn = isHoldDebugEnabled()
 
   while (!opts.cancelled() && !opts.doneRequested()) {
-    let enterFrames = 0
     const rec = {
       session: null as ReturnType<typeof startClipRecorder> | null,
     }
@@ -456,18 +430,18 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
 
     while (!opts.cancelled() && !opts.doneRequested()) {
       const lm = opts.landmarks()
-      const handsDown = handsOnGround(lm)
-      const feetOff = feetOffGround(lm)
-      const inverted = poseInverted(lm)
+      const sample = detector.push(lm, performance.now())
       samplePose(lm)
-      if (inverted) {
-        enterFrames += 1
-        startRec()
-        if (enterFrames >= HOLD_ENTER_FRAMES) break
-      } else {
-        enterFrames = 0
-      }
-      tick({ seconds: null, running: false, inverted, handsDown, feetOff })
+      if (sample.holding || sample.candidate) startRec()
+      tick({
+        seconds: null,
+        running: false,
+        inverted: sample.holding || sample.candidate,
+        handsDown: sample.handsDown,
+        feetOff: sample.feetOff,
+        detect: debugOn ? sample.debug : undefined,
+      })
+      if (sample.holding) break
       await wait(33)
     }
 
@@ -499,20 +473,17 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     let peakAt = holdStart
     let peakSec = holdStartSec
     let lastPeakSample = 0
-    let exitFrames = 0
     let holdSeconds = 0
 
-    opts.onCue('Holding — clock is running. Walking is allowed. Clock stops when a foot hits.')
+    opts.onCue('Holding — clock is running. Walking is allowed. Clock stops when you come down.')
     tick({ seconds: 0, running: true, inverted: true, handsDown: true, feetOff: true })
 
     while (!opts.cancelled()) {
       const now = performance.now()
       holdSeconds = (now - holdStart) / 1000
       const lm = opts.landmarks()
+      const sample = detector.push(lm, now)
       samplePose(lm)
-      const down = footOnGround(lm)
-      if (down) exitFrames += 1
-      else exitFrames = 0
 
       if (now - lastPeakSample >= PEAK_SAMPLE_MS) {
         lastPeakSample = now
@@ -527,9 +498,16 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         }
       }
 
-      tick({ seconds: holdSeconds, running: true, inverted: true, handsDown: true, feetOff: !down })
+      tick({
+        seconds: holdSeconds,
+        running: true,
+        inverted: sample.holding,
+        handsDown: sample.handsDown,
+        feetOff: sample.feetOff,
+        detect: debugOn ? sample.debug : undefined,
+      })
 
-      if (opts.doneRequested() || exitFrames >= HOLD_EXIT_FRAMES || holdSeconds >= MAX_HOLD_SEC) break
+      if (opts.doneRequested() || !sample.holding || holdSeconds >= MAX_HOLD_SEC) break
       await wait(33)
     }
 

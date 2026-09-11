@@ -46,6 +46,7 @@ import {
   rememberPoseTrack,
   serializePoseTrack,
 } from '../lib/poseTrack'
+import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
 import {
   createId,
@@ -1921,6 +1922,7 @@ export function Tasks2Panel({
                     : 'Clock waits until both hands are on the floor'}
               </p>
             )}
+            {phase === 'holding' ? <HoldDetectHud detect={holdTick?.detect} /> : null}
           </div>
         )}
       </div>
