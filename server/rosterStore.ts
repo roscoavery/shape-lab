@@ -13,6 +13,7 @@ import {
 import { readDiskJson, readJson, writeJson } from './persist.ts'
 import {
   attachRosterPhotos,
+  photoUrlIfStored,
   photosFromAthletes,
   readRosterPhotosFile,
   stripRosterPhotos,
@@ -168,13 +169,16 @@ async function withPhotoUrls(roster: DiskRoster): Promise<DiskRoster> {
   try {
     const index = await readRosterPhotosFile()
     const urls = urlsFromPhotoIndex(index)
+    const athletes = roster.athletes as { id: string; photoDataUrl?: string }[]
+    for (const row of athletes) {
+      if (!row?.id || urls[row.id]) continue
+      const stored = await photoUrlIfStored(row.id)
+      if (stored) urls[row.id] = stored
+    }
     if (Object.keys(urls).length === 0) return roster
     return {
       ...roster,
-      athletes: attachRosterPhotos(
-        roster.athletes as { id: string; photoDataUrl?: string }[],
-        urls,
-      ),
+      athletes: attachRosterPhotos(athletes, urls),
     }
   } catch {
     return roster

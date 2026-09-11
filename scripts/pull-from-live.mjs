@@ -88,15 +88,30 @@ for (const [path, rel] of JSON_ENDPOINTS) {
 }
 
 const photoIndexPath = join(ROOT, 'data', 'roster-photos.json')
-if (existsSync(photoIndexPath)) {
-  const index = JSON.parse((await import('node:fs')).readFileSync(photoIndexPath, 'utf8'))
+const rosterPath = join(ROOT, 'data', 'roster.json')
+{
+  const index = existsSync(photoIndexPath)
+    ? JSON.parse((await import('node:fs')).readFileSync(photoIndexPath, 'utf8'))
+    : { kind: 'shape-lab-roster-photos', version: 2, exportedAt: '', photos: {}, ids: [] }
   const photos = index.photos && typeof index.photos === 'object' ? index.photos : {}
   const ids = new Set([
     ...(Array.isArray(index.ids) ? index.ids : []),
     ...Object.keys(photos),
   ])
+  if (existsSync(rosterPath)) {
+    try {
+      const roster = JSON.parse((await import('node:fs')).readFileSync(rosterPath, 'utf8'))
+      for (const row of Array.isArray(roster.athletes) ? roster.athletes : []) {
+        if (row && typeof row.id === 'string') ids.add(row.id)
+      }
+    } catch {
+      /* roster still used for names even if photo ids cannot be listed */
+    }
+  }
   for (const id of ids) {
     if (!id || /[^a-zA-Z0-9_-]/.test(id)) continue
+    const destRel = `data/roster-photos/${id}.bin`
+    const dest = join(ROOT, destRel)
     const raw = photos[id]
     const url =
       typeof raw === 'string' && /^https:\/\//i.test(raw)
@@ -104,14 +119,17 @@ if (existsSync(photoIndexPath)) {
         : raw && typeof raw === 'object' && typeof raw.url === 'string' && /^https:\/\//i.test(raw.url)
           ? raw.url
           : `${BASE}/api/roster-photo-file?id=${encodeURIComponent(id)}`
-    const buf = await getBytes(url)
-    if (!buf) {
+    let buf = existsSync(dest) ? null : await getBytes(url)
+    if (!buf && !existsSync(dest)) {
       console.warn(`skipped photo ${id}`)
       continue
     }
-    writeBinFile(`data/roster-photos/${id}.bin`, buf)
-    files += 1
-    bytes += buf.length
+    if (buf) {
+      writeBinFile(destRel, buf)
+      files += 1
+      bytes += buf.length
+      console.log(`saved ${destRel} (${buf.length} bytes)`)
+    }
     const stamp =
       (raw && typeof raw === 'object' && typeof raw.updatedAt === 'string' && raw.updatedAt) ||
       (typeof index.exportedAt === 'string' ? index.exportedAt : '')
@@ -120,7 +138,6 @@ if (existsSync(photoIndexPath)) {
       mime: (raw && typeof raw === 'object' && raw.mime) || 'image/jpeg',
       updatedAt: stamp || new Date().toISOString(),
     }
-    console.log(`saved data/roster-photos/${id}.bin (${buf.length} bytes)`)
   }
   index.photos = photos
   index.ids = Object.keys(photos)

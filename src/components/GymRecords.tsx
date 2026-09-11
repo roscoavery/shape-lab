@@ -9,9 +9,11 @@ import {
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import {
   athleteContact,
+  applyGymBackup,
   buildGymBackup,
   downloadGymBackup,
   leftoverLocalPhotos,
+  parseGymBackup,
   saveLeftoverProfilePhotos,
 } from '../lib/gymBackup'
 import { roleLabel } from '../lib/profileRole'
@@ -28,7 +30,7 @@ type Props = {
   onAthletes: (next: Athlete[]) => void
 }
 
-export function GymRecords({ athletes }: Props) {
+export function GymRecords({ athletes, onAthletes }: Props) {
   const [persist, setPersist] = useState<PersistInfo | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -78,6 +80,31 @@ export function GymRecords({ athletes }: Props) {
   const flash = (msg: string) => {
     setStatus(msg)
     window.setTimeout(() => setStatus(null), 6000)
+  }
+
+  const restoreGymFile = async (file: File | undefined) => {
+    if (!file) return
+    setBusy(true)
+    try {
+      const parsed = parseGymBackup(JSON.parse(await file.text()))
+      if (!parsed) {
+        flash('That file is not a Shape Lab gym backup.')
+        return
+      }
+      const { athletes: next } = await applyGymBackup(parsed)
+      onAthletes(next)
+      const faces = leftoverLocalPhotos(parsed.roster.athletes)
+        .map((a) => a.name.split(/\s+/)[0] || a.name)
+      flash(
+        faces.length
+          ? `Restored ${next.length} profiles, including ${faces.join(' and ')}’s pictures.`
+          : `Restored ${next.length} profiles from ${file.name}.`,
+      )
+    } catch {
+      flash('Could not read that gym file.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const saveToLink = async () => {
@@ -195,6 +222,20 @@ export function GymRecords({ athletes }: Props) {
         >
           Send everything on this device
         </button>
+        <label className="cursor-pointer rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold">
+          Restore gym file
+          <input
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              void restoreGymFile(file)
+            }}
+          />
+        </label>
         <button
           type="button"
           disabled={busy}

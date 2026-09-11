@@ -1,10 +1,12 @@
 import type { Athlete } from '../types'
+import { loadAthletes } from './storage'
 import { compressProfilePhoto } from './profilePhoto'
 import { saveImageToDevice } from './saveMedia'
 import { loadResearch, saveResearch, type ResearchFile } from './research'
 import {
   applyRosterSnapshot,
   enableServerRosterPush,
+  flushLocalPhotos,
   localRosterSnapshot,
   pushServerRoster,
   type RosterBackup,
@@ -52,11 +54,13 @@ export function parseGymBackup(raw: unknown): GymBackup | null {
 export async function applyGymBackup(backup: GymBackup): Promise<{ athletes: Athlete[] }> {
   const { athletes } = applyRosterSnapshot(backup.roster)
   enableServerRosterPush()
+  await flushLocalPhotos()
   await pushServerRoster()
+  await flushLocalPhotos()
   if (backup.research?.kind === 'shape-lab-research') {
     await saveResearch(backup.research)
   }
-  return { athletes }
+  return { athletes: loadAthletes() }
 }
 
 function fileSafeName(name: string): string {

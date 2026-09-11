@@ -203,6 +203,17 @@ export async function readRosterPhotosFile(): Promise<DiskRosterPhotos> {
   }
 }
 
+/** Face file on disk / Blob even if the JSON index dropped this athlete. */
+export async function photoUrlIfStored(id: string): Promise<string | null> {
+  const sid = safePhotoId(id)
+  if (!sid) return null
+  const buf = await readBin(photoBinRel(sid))
+  if (!buf || buf.length < 32) return null
+  const data = await loadIndex()
+  const ref = asRef(data.photos[sid], data.exportedAt)
+  return photoFileUrl(sid, ref?.updatedAt || data.exportedAt || new Date().toISOString())
+}
+
 /** Tiny URL map for GET /api/roster — read-only, no Blob writes. */
 export function urlsFromPhotoIndex(data: DiskRosterPhotos): Record<string, string> {
   const out: Record<string, string> = {}
