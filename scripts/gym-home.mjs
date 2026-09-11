@@ -13,6 +13,10 @@ import { printLanUrls } from './lan-urls.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.SHAPE_LAB_PORT || '43127'
+const VITE_PORT = process.env.SHAPE_LAB_VITE_PORT || '43128'
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+const shell = process.platform === 'win32'
+const viteJs = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js')
 
 function applyDotEnv() {
   const path = join(ROOT, '.env')
@@ -48,10 +52,40 @@ if (!existsSync(roster)) {
 console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pause after phones switch)`)
 printLanUrls(PORT)
 console.log('Leave this running. In another terminal: npm run share')
-const child = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'dev'], {
-  cwd: ROOT,
-  stdio: 'inherit',
-  env: { ...process.env, GYM_HOME: '1', SHAPE_LAB_PORT: PORT },
-  shell: process.platform === 'win32',
-})
-child.on('exit', (code) => process.exit(code ?? 0))
+
+const env = {
+  ...process.env,
+  GYM_HOME: '1',
+  SHAPE_LAB_PORT: PORT,
+  SHAPE_LAB_VITE_PORT: VITE_PORT,
+}
+
+const vite = existsSync(viteJs)
+  ? spawn(process.execPath, [viteJs, '--host', '127.0.0.1', '--port', VITE_PORT, '--strictPort'], {
+      cwd: ROOT,
+      stdio: 'inherit',
+      env,
+    })
+  : spawn(npm, ['exec', '--', 'vite', '--host', '127.0.0.1', '--port', VITE_PORT, '--strictPort'], {
+      cwd: ROOT,
+      stdio: 'inherit',
+      env,
+      shell,
+    })
+
+const gate = spawn(
+  process.execPath,
+  ['--experimental-strip-types', join(ROOT, 'scripts', 'gym-gate.mjs')],
+  { cwd: ROOT, stdio: 'inherit', env },
+)
+
+function shutdown(code = 0) {
+  vite.kill('SIGTERM')
+  gate.kill('SIGTERM')
+  process.exit(code)
+}
+
+vite.on('exit', (code) => shutdown(code ?? 0))
+gate.on('exit', (code) => shutdown(code ?? 0))
+process.on('SIGINT', () => shutdown(0))
+process.on('SIGTERM', () => shutdown(0))

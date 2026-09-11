@@ -252,14 +252,15 @@ export function applyRosterSnapshot(data: RosterBackup): {
 }
 
 function gymGetInit(timeoutMs = 18_000): RequestInit {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   const init: RequestInit = {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
+    signal: ctrl.signal,
   }
-  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-    init.signal = AbortSignal.timeout(timeoutMs)
-  }
+  void timer
   return init
 }
 

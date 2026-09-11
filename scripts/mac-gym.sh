@@ -21,6 +21,7 @@ if [ -d .git ]; then
   git fetch origin v2-rebuild 2>/dev/null || true
   git checkout v2-rebuild 2>/dev/null || true
   git pull --ff-only origin v2-rebuild 2>/dev/null || git pull --ff-only 2>/dev/null || true
+  echo "Code: $(git rev-parse --short HEAD)  $(git log -1 --pretty=%s)"
 fi
 
 npm install

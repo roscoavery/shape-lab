@@ -41,16 +41,22 @@ export type GymHydrateResult = RosterSyncResult & {
 
 async function pullPersist(): Promise<PersistInfo | null> {
   try {
-    const init: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
-    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-      init.signal = AbortSignal.timeout(12_000)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 6000)
+    try {
+      const res = await fetch('/api/persist', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        signal: ctrl.signal,
+      })
+      if (!res.ok) return null
+      const data = (await res.json()) as PersistInfo
+      if (data?.mode !== 'blob' && data?.mode !== 'disk' && data?.mode !== 'tmp') return null
+      if (data.revision?.stores) rememberGymRevision(data.revision.stores)
+      return data
+    } finally {
+      clearTimeout(timer)
     }
-    const res = await fetch('/api/persist', init)
-    if (!res.ok) return null
-    const data = (await res.json()) as PersistInfo
-    if (data?.mode !== 'blob' && data?.mode !== 'disk' && data?.mode !== 'tmp') return null
-    if (data.revision?.stores) rememberGymRevision(data.revision.stores)
-    return data
   } catch {
     return null
   }

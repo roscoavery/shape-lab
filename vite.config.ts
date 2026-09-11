@@ -17,6 +17,7 @@ export default defineConfig({
     port: 43127,
     strictPort: true,
     allowedHosts: true,
+    hmr: process.env.GYM_HOME ? false : true,
     headers: {
       'Cache-Control': 'no-store',
     },

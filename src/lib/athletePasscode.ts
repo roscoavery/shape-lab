@@ -29,12 +29,12 @@ export async function hashPasscode(athleteId: string, passcode: string): Promise
   const trimmed = passcode.trim()
   const data = new TextEncoder().encode(`shape-lab:${athleteId}:${trimmed}`)
   const subtle = globalThis.crypto?.subtle
-  if (subtle && typeof subtle.digest === 'function') {
+  if (globalThis.isSecureContext && subtle && typeof subtle.digest === 'function') {
     try {
       const buf = await subtle.digest('SHA-256', data)
       return bytesToHex(buf)
     } catch {
-      /* http://192.168… is not a secure context — Web Crypto refuses */
+      /* some browsers expose subtle but refuse digest */
     }
   }
   return sha256Hex(data)
