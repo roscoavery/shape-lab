@@ -94,13 +94,26 @@ Hobby plan upload cap is about **4.5 MB** per request — keep athlete/feed clip
 
 Stay on this same gym URL. Do not make a second project or turn Blob off.
 
+Phones share gym data (profiles, stills, library, feed) through Blob + `/api/revision`. That keeps working without a new deploy, as long as Production is not paused.
+
+**Turn this OFF (saves money, does not stop the gym):**
+
+- **On-Demand Concurrent Builds** — Settings → Build and Deployment. Leave it off. Extra parallel builds are what Vercel bills as “on-demand.” One Production build at a time is enough.
+- **Preview deployments** — same page, Ignored Build Step → **Only build production**. Agent branches should not mint billed preview URLs.
+
+**Leave this ON (this is how every device updates):**
+
+- The existing Production project (`temporary-racing-sulfur-78x9doy.vercel.app`) — do not **Pause project**
+- **Blob** + `BLOB_READ_WRITE_TOKEN`
+- Automatic Production deploys from **`main`** (GitHub connected). A `git push` to `main` is how hold-challenge / reel fixes reach the iPad. If you turned that off, click **Redeploy → Production** on this project after each push.
+
+**Spend Management:** set a dollar cap and **email / notify only**. Do not “pause all production at 100%” — that freezes the gym URL for every phone. Hobby has no on-demand dollar charges if you stay on Hobby and inside the included quota; Pro is where on-demand Active CPU / extra builds get billed.
+
 The app used to ask `/api/revision` every 2.5 seconds and stream photos/videos through the function (Blob → function → phone, billed twice). It now:
 
 - Answers revision from memory on a warm function, and phones poll every 12 seconds (paused in a background tab)
 - Uploads clips straight to Blob, then saves the public URL
 - Redirects old `/api/…-file` links to that URL after the first hit
-
-Set a **Spend Management** cap on the Vercel project (pause at 100%) so a bad week cannot run up on-demand again. Redeploy Production after this change, then hard-refresh iPad and phone.
 
 ### Update the live site from Cursor
 
