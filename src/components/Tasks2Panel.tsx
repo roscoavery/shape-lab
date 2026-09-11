@@ -457,7 +457,7 @@ export function Tasks2Panel({
           resolve()
         }
         const spoken = text.trim()
-        if (!spoken) {
+        if (!spoken || holdDoneRef.current) {
           done()
           return
         }
@@ -656,7 +656,7 @@ export function Tasks2Panel({
           rolled = rolled && rolled.size > 800 ? rolled : null
         }
       }
-      const raw = await attachHoldClips(rawIn, rolled, { trim: false })
+      const raw = await attachHoldClips(rawIn, rolled, { trim: true })
 
       revokeClipUrls()
       if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
@@ -992,7 +992,7 @@ export function Tasks2Panel({
             canvas: () => canvasRef.current,
             onTick: (tick) => {
               setHoldTick(tick)
-              onHoldClockRef.current?.(tick.running ? tick.seconds : tick.seconds)
+              onHoldClockRef.current?.(tick.running ? tick.seconds : null)
             },
             onCue: (line) => {
               if (alive()) setCue(line)
@@ -1000,12 +1000,12 @@ export function Tasks2Panel({
           })
           void (async () => {
             await speakLine(seqRun.previewSpeak)
-            if (!alive()) return
+            if (!alive() || holdDoneRef.current) return
             if (seqRun.setupSpeak) {
               setCue(seqRun.setupSpeak)
               await speakLine(seqRun.setupSpeak)
             }
-            if (!alive()) return
+            if (!alive() || holdDoneRef.current) return
             if (seqRun.setupExtraSpeak) {
               setCue(seqRun.setupExtraSpeak)
               await speakLine(seqRun.setupExtraSpeak)
@@ -1556,6 +1556,7 @@ export function Tasks2Panel({
   const requestHoldDone = useCallback(() => {
     if (holdDoneRef.current) return
     holdDoneRef.current = true
+    resetSpeech()
     setPhase('finishing')
     setCue('Loading your hold clips…')
     setFlash('Loading your hold clips…')
@@ -1569,7 +1570,7 @@ export function Tasks2Panel({
         }, 180)
       })
     }
-  }, [delay])
+  }, [delay, resetSpeech])
 
   const dropHoldFromLog = useCallback((index: number) => {
     setReport((prev) => {
@@ -1705,7 +1706,13 @@ export function Tasks2Panel({
           onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
         >
-          {completions > 0 ? 'Go again' : seq.mode === 'hs-hold' ? 'Start hold' : 'Start'}
+          {seq.mode === 'hs-hold'
+            ? report
+              ? 'Go again'
+              : 'Start hold'
+            : completions > 0
+              ? 'Go again'
+              : 'Start'}
         </button>
       )}
       {!busy && !cameraFullscreen && (

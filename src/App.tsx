@@ -964,6 +964,7 @@ export default function App() {
             onFullscreenChange={setCamFullscreen}
             holdSeconds={holdClock}
             holdSecondsRef={holdSecondsRef}
+            holdScoreGate={holdChallenge}
             flowIdle={flowPhase === 'idle'}
             onStartFlow={() => {
               startFlowRef.current()

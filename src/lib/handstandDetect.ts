@@ -162,6 +162,7 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
   bodyAxisDeg: number | null
   landmarkVis: number
   hardFail: string | null
+  feetPlanted: boolean
 } {
   const empty = {
     confidence: 0,
@@ -175,6 +176,7 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
     bodyAxisDeg: null as number | null,
     landmarkVis: 0,
     hardFail: 'no pose' as string | null,
+    feetPlanted: false,
   }
   if (!lm || lm.length < 33) return empty
 
@@ -197,10 +199,13 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
   // Planted hands: wrists below shoulders, and not still reaching above the feet.
   const handsDown = wrist.y > shoulder.y + 0.03 && (ankle == null || !(ankle.y > wrist.y + 0.07))
   const feetOff = ankle == null ? hip.y < wrist.y - 0.06 : ankle.y < wrist.y - 0.1
+  // Planted = feet have come back down toward the hands / floor. Walking
+  // on the hands keeps ankles above the wrists, so the clock stays up.
+  const feetPlanted = Boolean(ankle && ankle.y > wrist.y - 0.06)
 
   let hardFail: string | null = null
   if (wrist.y < shoulder.y) hardFail = 'hands above shoulders'
-  else if (ankle && ankle.y > wrist.y - 0.06) hardFail = 'feet still down'
+  else if (feetPlanted) hardFail = 'feet still down'
   else if (hip.y > wrist.y - 0.03) hardFail = 'hips not above hands'
 
   const ordered: Array<[{ y: number } | null, { y: number } | null, number]> = [
@@ -260,6 +265,7 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
     bodyAxisDeg,
     landmarkVis,
     hardFail,
+    feetPlanted,
   }
 }
 
@@ -298,11 +304,12 @@ export class HoldDetector {
       return this.finishSample(
         evaluateHandstandGeometry(null),
         {
-          comeDown: this.state === 'holding',
+          comeDown: false,
           lostPose: true,
           enterAt,
           exitAt,
           now,
+          feetPlanted: false,
         },
       )
     }
@@ -311,8 +318,9 @@ export class HoldDetector {
     const geo = evaluateHandstandGeometry(this.smoothed)
     const rawGeo = evaluateHandstandGeometry(raw)
     // Raw feet-down / hands-up wins so EMA cannot hide a real come-down.
-    const comeDown = isComeDownFail(rawGeo.hardFail) || isComeDownFail(geo.hardFail)
-    return this.finishSample(geo, { comeDown, lostPose: false, enterAt, exitAt, now })
+    const feetPlanted = rawGeo.feetPlanted || geo.feetPlanted
+    const comeDown = feetPlanted
+    return this.finishSample(geo, { comeDown, lostPose: false, enterAt, exitAt, now, feetPlanted })
   }
 
   private finishSample(
@@ -323,13 +331,16 @@ export class HoldDetector {
       enterAt: number
       exitAt: number
       now: number
+      feetPlanted?: boolean
     },
   ): HoldDetectSample {
     const { comeDown, lostPose, enterAt, exitAt, now } = opts
+    const feetPlanted = Boolean(opts.feetPlanted || comeDown)
     const confidence = lostPose ? 0 : geo.confidence
-    const looksEnter = !lostPose && !comeDown && confidence >= enterAt
-    const looksHold = !lostPose && !comeDown && confidence >= exitAt
-    const looksExit = lostPose || comeDown || confidence < exitAt
+    const stacked = Boolean(geo.handsDown && geo.feetOff && !geo.hardFail)
+    const looksEnter = !lostPose && stacked && confidence >= enterAt
+    const looksHold = !lostPose && stacked && !feetPlanted
+    const looksExit = feetPlanted
 
     if (looksEnter) {
       if (!this.validSince) this.validSince = now
@@ -343,25 +354,28 @@ export class HoldDetector {
     } else if (looksExit) {
       if (!this.invalidSince) this.invalidSince = now
       this.invalidFrames += 1
-      if (lostPose || comeDown || confidence < exitAt - 0.08) {
-        this.validSince = 0
-        this.validFrames = 0
-      }
+      this.validSince = 0
+      this.validFrames = 0
+    } else if (this.state !== 'holding') {
+      this.validSince = 0
+      this.validFrames = 0
     }
 
     const validMs = this.validSince ? now - this.validSince : 0
     const invalidMs = this.invalidSince ? now - this.invalidSince : 0
-    const exitNeed = comeDown || lostPose ? HOLD_COME_DOWN_MS : HOLD_EXIT_MS
+    const exitNeed = HOLD_COME_DOWN_MS
 
     if (this.state === 'idle') {
       if (looksEnter) this.state = 'candidate'
     }
     if (this.state === 'candidate') {
-      if (!looksHold) this.state = 'idle'
+      if (!looksEnter) this.state = 'idle'
       else if (validMs >= HOLD_ENTER_MS) this.state = 'holding'
     }
     if (this.state === 'holding') {
-      if (invalidMs >= exitNeed) this.state = 'idle'
+      // Skeleton glitches / furniture locks must not stop the clock.
+      // Only a planted foot ends the hold.
+      if (looksExit && invalidMs >= exitNeed) this.state = 'idle'
     }
 
     const holding = this.state === 'holding'

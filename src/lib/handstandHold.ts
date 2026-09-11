@@ -37,7 +37,7 @@ export const MIN_HOLD_SEC = 1.2
 /** Done with no detected kick-up still keeps a clip this long. */
 export const SALVAGE_HOLD_SEC = 2.4
 export const PRE_ROLL_SEC = 2
-export const POST_ROLL_SEC = 2
+export const POST_ROLL_SEC = 1
 export const POST_FOOT_MS = POST_ROLL_SEC * 1000
 export const MAX_HOLD_SEC = 90
 export const PEAK_SAMPLE_MS = 90
@@ -266,7 +266,7 @@ async function trimHoldClip(
   }
 }
 
-/** Attach the delay-cam recording to each hold. Skip re-encode so Done opens replay fast. */
+/** Attach and trim each hold: 2s before kick-up, the hold, 1s after feet down. */
 export async function attachHoldClips(
   attempts: RawHoldAttempt[],
   fullBlob: Blob | null,
@@ -274,28 +274,22 @@ export async function attachHoldClips(
 ): Promise<RawHoldAttempt[]> {
   if (!attempts.length) return attempts
   const trim = opts?.trim !== false
-  const durable =
-    fullBlob && fullBlob.size > 800
-      ? trim
-        ? await durableBlob(fullBlob)
-        : fullBlob
-      : null
-  if (!durable) return attempts
-  if (!trim) {
-    return attempts.map((a) => ({
-      ...a,
-      clipBlob: durable,
-    }))
-  }
+  const durable = fullBlob && fullBlob.size > 800 ? await durableBlob(fullBlob) : null
   const out: RawHoldAttempt[] = []
   for (const a of attempts) {
-    if (a.clipBlob && a.clipBlob.size > 800) {
+    const source =
+      a.clipBlob && a.clipBlob.size > 800 ? a.clipBlob : durable
+    if (!source) {
       out.push(a)
+      continue
+    }
+    if (!trim) {
+      out.push({ ...a, clipBlob: source })
       continue
     }
     try {
       const trimmed = await trimHoldClip(
-        durable,
+        source,
         a.clockOffsetSec,
         a.holdSeconds,
         a.playheadSec,
@@ -303,12 +297,8 @@ export async function attachHoldClips(
       )
       out.push({ ...a, ...trimmed })
     } catch {
-      out.push({ ...a, clipBlob: durable })
+      out.push({ ...a, clipBlob: source })
     }
-  }
-  if (out.every((a) => !a.clipBlob || a.clipBlob.size < 800)) {
-    const i = out.reduce((best, a, idx) => (a.holdSeconds > out[best]!.holdSeconds ? idx : best), 0)
-    out[i] = { ...out[i]!, clipBlob: durable }
   }
   return out
 }
@@ -353,11 +343,10 @@ async function salvageWaitingHold(
   if (!session && !opts.timelineSec) return null
 
   const span = longestInvertedSpan(poseTrack, elapsed)
-  const holdSeconds = span.found
-    ? Math.max(MIN_HOLD_SEC, span.end - span.start)
-    : elapsed
-  const clockOffsetSec = span.found ? span.start : 0
-  const playheadSec = span.found ? (span.start + span.end) / 2 : elapsed / 2
+  if (!span.found || span.end - span.start < MIN_HOLD_SEC) return null
+  const holdSeconds = span.end - span.start
+  const clockOffsetSec = span.start
+  const playheadSec = (span.start + span.end) / 2
 
   let clipBlob: Blob | null = null
   if (session) {
@@ -567,12 +556,21 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
           peakBlob = peakBlob ?? snapshotCanvas(opts.canvas())
         }
       }
-      const playheadSec = rec.session
+      let playheadSec = rec.session
         ? Math.max(0, (peakAt - recStart) / 1000)
         : Math.max(0, peakSec)
-      const clockOffsetSec = rec.session
+      let clockOffsetSec = rec.session
         ? Math.max(0, (holdStart - recStart) / 1000)
         : Math.max(0, holdStartSec)
+      const span = longestInvertedSpan(poseTrack, clockNow())
+      if (span.found) {
+        const spanSec = span.end - span.start
+        if (spanSec >= MIN_HOLD_SEC && holdSeconds > spanSec + 2) {
+          holdSeconds = spanSec
+          clockOffsetSec = span.start
+          playheadSec = (span.start + span.end) / 2
+        }
+      }
       last = holdSeconds
       best = best == null ? holdSeconds : Math.max(best, holdSeconds)
       const trimmed =

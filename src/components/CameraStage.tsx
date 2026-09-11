@@ -44,6 +44,8 @@ type Props = {
   /** Hold-challenge stopwatch burned in next to the live score. */
   holdSeconds?: number | null
   holdSecondsRef?: { current: number | null }
+  /** Hold challenge: live score stays 0 until the clock is running. */
+  holdScoreGate?: boolean
   /** merged = one side-view line (Tasks 2 hold). split = left and right. */
   jointMode?: JointDrawMode
   className?: string
@@ -121,6 +123,7 @@ export function CameraStage({
   burnInHud = false,
   holdSeconds = null,
   holdSecondsRef,
+  holdScoreGate = false,
   jointMode = 'split',
   className = '',
   fill = false,
@@ -307,13 +310,14 @@ export function CameraStage({
       }
 
       if (burnInHud && score) {
+        const clock = (holdSecondsRef ?? localHoldRef).current
         drawGradeHud(
           ctx,
           canvas.width,
           canvas.height,
-          score.overall,
+          holdScoreGate && clock == null ? 0 : score.overall,
           shape?.name ?? 'Live score',
-          (holdSecondsRef ?? localHoldRef).current,
+          clock,
         )
       }
       raf = requestAnimationFrame(draw)
@@ -321,7 +325,7 @@ export function CameraStage({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [videoRef, canvasRef, demoMode, burnInHud, holdSecondsRef])
+  }, [videoRef, canvasRef, demoMode, burnInHud, holdSecondsRef, holdScoreGate])
 
   return (
     <div

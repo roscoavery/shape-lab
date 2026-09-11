@@ -55,6 +55,7 @@ type Props = {
   /** Hold-challenge stopwatch burned into the live camera / grade replay. */
   holdSeconds?: number | null
   holdSecondsRef?: { current: number | null }
+  holdScoreGate?: boolean
   /** Class-flow fullscreen: show a big Start on the camera stage. */
   flowIdle?: boolean
   onStartFlow?: () => void
@@ -128,6 +129,7 @@ export function TasksWorkspace({
   onFullscreenChange,
   holdSeconds = null,
   holdSecondsRef,
+  holdScoreGate = false,
   flowIdle = false,
   onStartFlow,
   showHoldDone = false,
@@ -378,6 +380,7 @@ export function TasksWorkspace({
               jointMode={flowMode ? 'auto' : 'split'}
               holdSeconds={holdSeconds}
               holdSecondsRef={holdSecondsRef}
+              holdScoreGate={holdScoreGate}
               fill={fullscreen}
               className={fullscreen ? 'h-full min-h-0 flex-1' : ''}
               overlay={
