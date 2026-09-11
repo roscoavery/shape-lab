@@ -30,5 +30,7 @@ const origin = `http://127.0.0.1:${port}`
 assert(await portOpen(port), 'listening port should be open')
 assert(await originReady(origin), 'originReady against local gym')
 assert(await waitForOrigin(origin, { maxMs: 1000 }), 'waitForOrigin already up')
+const abs = await fetch(`${origin}/api/health`, { headers: { Host: 'gym.shapelab.win' } })
+assert(abs.ok && (await abs.json()).ok === true, 'health with public Host header')
 server.close()
 console.log('gym-ready ok')

@@ -156,9 +156,7 @@ function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
   if (hostname) console.log(`Gym URL: ${hostname}`)
 
   const env = { ...process.env }
-  if (!tokenLooksReal(env.CLOUDFLARE_TUNNEL_TOKEN)) {
-    delete env.CLOUDFLARE_TUNNEL_TOKEN
-  }
+  delete env.CLOUDFLARE_TUNNEL_TOKEN
 
   const child = spawn(bin.cmd, argv, {
     stdio: ['ignore', printUrl ? 'pipe' : 'inherit', 'pipe'],

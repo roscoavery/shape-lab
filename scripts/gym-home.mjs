@@ -137,13 +137,31 @@ const env = {
   GYM_DEV: wantDev ? '1' : '',
 }
 
+function freeGymPort() {
+  if (process.platform === 'win32') return
+  const result = spawnSync(
+    'bash',
+    [
+      '-lc',
+      `pids=$(lsof -nP -iTCP:${PORT} -sTCP:LISTEN -t 2>/dev/null || true); if [ -n "$pids" ]; then echo "Freeing port ${PORT} (old gym still listening): $pids"; kill $pids 2>/dev/null || true; sleep 0.5; fi`,
+    ],
+    { encoding: 'utf8' },
+  )
+  if (result.stdout) process.stdout.write(result.stdout)
+}
+
 console.log(`Home gym on http://127.0.0.1:${PORT}  (disk only — Vercel can pause after phones switch)`)
 printLanUrls(PORT)
 console.log('Opening port 43127 now so the https link does not 502 while the app builds.')
+freeGymPort()
 
 const gate = spawn(
   process.execPath,
-  ['--experimental-strip-types', join(ROOT, 'scripts', 'gym-gate.mjs')],
+  [
+    '--experimental-strip-types',
+    '--max-http-header-size=131072',
+    join(ROOT, 'scripts', 'gym-gate.mjs'),
+  ],
   { cwd: ROOT, stdio: 'inherit', env },
 )
 

@@ -3,9 +3,13 @@
  * Public home-gym port. /api is answered here (disk). Pages come from the
  * production `dist/` build (few hashed files, like Vercel) unless GYM_DEV=1,
  * in which case they are proxied to Vite on 127.0.0.1.
+ *
+ * cloudflared may speak HTTP/1.1 or HTTP/2 and may send an absolute URL
+ * (https://gym.shapelab.win/…). A plain Node HTTP/1 server RSTs those.
  */
 
 import http from 'node:http'
+import http2 from 'node:http2'
 import net from 'node:net'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
@@ -19,6 +23,19 @@ const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
 
 function distReady() {
   return existsSync(join(DIST, 'index.html'))
+}
+
+function requestUrl(req) {
+  let raw = String(req.url || req.headers?.[':path'] || '/')
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw)
+      raw = `${u.pathname}${u.search}`
+    } catch {
+      /* keep raw */
+    }
+  }
+  return raw || '/'
 }
 
 const { handleShapeLabApi } = await import(
@@ -51,6 +68,10 @@ function rewriteHeaders(headers) {
   next.host = `127.0.0.1:${VITE_PORT}`
   delete next['accept-encoding']
   delete next.connection
+  delete next[':method']
+  delete next[':path']
+  delete next[':scheme']
+  delete next[':authority']
   return next
 }
 
@@ -65,19 +86,22 @@ function proxyVite(req, res) {
     {
       hostname: '127.0.0.1',
       port: VITE_PORT,
-      path: req.url,
+      path: requestUrl(req),
       method: req.method,
       headers: rewriteHeaders(req.headers),
     },
     (incoming) => {
-      incoming.on('error', () => res.destroy())
+      incoming.on('error', () => {
+        if (!res.headersSent) res.writeHead(502)
+        res.end()
+      })
       res.writeHead(incoming.statusCode ?? 502, incoming.headers)
       incoming.pipe(res)
     },
   )
   p.on('error', () => {
     if (res.headersSent) {
-      res.destroy()
+      res.end()
       return
     }
     res.statusCode = 503
@@ -107,7 +131,7 @@ function sendFile(res, file) {
         : 'public, max-age=3600',
   }
   res.writeHead(200, headers)
-  createReadStream(file).on('error', () => res.destroy()).pipe(res)
+  createReadStream(file).on('error', () => res.end()).pipe(res)
   return true
 }
 
@@ -142,7 +166,7 @@ function servePages(req, res) {
 }
 
 function serveStatic(req, res) {
-  const raw = (req.url || '/').split('?')[0]
+  const raw = requestUrl(req).split('?')[0]
   let pathname = '/'
   try {
     pathname = decodeURIComponent(raw)
@@ -167,34 +191,72 @@ function serveStatic(req, res) {
   sendFile(res, join(DIST, 'index.html'))
 }
 
-const server = http.createServer((req, res) => {
-  const url = req.url || '/'
-  if (url === '/api/health' || url.startsWith('/api/health?')) {
-    res.writeHead(200, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-    })
-    res.end(JSON.stringify({ ok: true, static: distReady(), port: PUBLIC_PORT }))
-    return
-  }
-  if (url.startsWith('/api/') || url === '/api') {
-    void handleShapeLabApi(req, res)
-      .then((hit) => {
-        if (hit || res.headersSent) return
-        servePages(req, res)
+function onRequest(req, res) {
+  req.on('error', () => {
+    /* cloudflared hung up */
+  })
+  res.on('error', () => {
+    /* cloudflared hung up */
+  })
+  try {
+    const url = requestUrl(req)
+    req.url = url
+    if (url === '/api/health' || url.startsWith('/api/health?')) {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
       })
-      .catch((err) => {
-        if (res.headersSent) return
-        res.statusCode = 500
-        res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'API failed' }))
-      })
-    return
+      res.end(JSON.stringify({ ok: true, static: distReady(), port: PUBLIC_PORT }))
+      return
+    }
+    if (url.startsWith('/api/') || url === '/api') {
+      void handleShapeLabApi(req, res)
+        .then((hit) => {
+          if (hit || res.headersSent) return
+          servePages(req, res)
+        })
+        .catch((err) => {
+          if (res.headersSent) return
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'API failed' }))
+        })
+      return
+    }
+    servePages(req, res)
+  } catch (err) {
+    if (res.headersSent) {
+      res.end()
+      return
+    }
+    res.statusCode = 500
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.end(err instanceof Error ? err.message : 'Gym gate failed')
   }
-  servePages(req, res)
-})
+}
 
-server.on('upgrade', (req, socket, head) => {
+const http1 = http.createServer(
+  {
+    insecureHTTPParser: true,
+    keepAlive: true,
+    joinDuplicateHeaders: true,
+  },
+  onRequest,
+)
+const http2Server = http2.createServer({ settings: { maxConcurrentStreams: 200 } }, onRequest)
+
+let first = true
+function logFirst(req) {
+  if (!first) return
+  first = false
+  console.log(
+    `Gym gate first request: HTTP/${req.httpVersion || '?'} ${req.method} ${requestUrl(req)} host=${req.headers.host || req.headers[':authority'] || ''}`,
+  )
+}
+http1.on('request', logFirst)
+http2Server.on('request', logFirst)
+
+http1.on('upgrade', (req, socket, head) => {
   socket.on('error', () => {
     /* ignore */
   })
@@ -203,7 +265,7 @@ server.on('upgrade', (req, socket, head) => {
     return
   }
   const p = net.connect(VITE_PORT, '127.0.0.1', () => {
-    let preamble = `${req.method} ${req.url} HTTP/1.1\r\n`
+    let preamble = `${req.method} ${requestUrl(req)} HTTP/1.1\r\n`
     const headers = rewriteHeaders(req.headers)
     for (const [key, value] of Object.entries(headers)) {
       if (value == null) continue
@@ -215,24 +277,36 @@ server.on('upgrade', (req, socket, head) => {
     p.pipe(socket)
     socket.pipe(p)
   })
-  p.on('error', () => socket.destroy())
+  p.on('error', () => socket.end())
 })
 
-server.on('clientError', (_err, socket) => {
+http1.on('clientError', (_err, socket) => {
   if (!socket.writable || socket.destroyed) return
   socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
 })
 
-server.on('connection', (socket) => {
+http2Server.on('sessionError', () => {
+  /* HTTP/2 session closed by cloudflared */
+})
+
+for (const s of [http1, http2Server]) {
+  s.keepAliveTimeout = 90_000
+  s.headersTimeout = 95_000
+  s.requestTimeout = 0
+  s.timeout = 0
+}
+
+const server = net.createServer((socket) => {
   socket.on('error', () => {
     /* cloudflared or a phone hung up */
   })
+  socket.once('data', (chunk) => {
+    socket.unshift(chunk)
+    const preface = chunk.subarray(0, Math.min(3, chunk.length)).toString('latin1')
+    if (preface === 'PRI') http2Server.emit('connection', socket)
+    else http1.emit('connection', socket)
+  })
 })
-
-server.keepAliveTimeout = 65_000
-server.headersTimeout = 70_000
-server.requestTimeout = 0
-server.timeout = 0
 
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {

@@ -24,33 +24,23 @@ export function portOpen(port, host = '127.0.0.1', timeoutMs = 1500) {
   })
 }
 
-async function httpAlive(url, timeoutMs) {
+export async function originReady(origin, timeoutMs = 2500) {
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), timeoutMs)
   try {
-    const res = await fetch(url, { signal: ac.signal, redirect: 'manual' })
-    return Number.isFinite(res.status)
+    const res = await fetch(`${String(origin).replace(/\/$/, '')}/api/health`, {
+      signal: ac.signal,
+      redirect: 'manual',
+      headers: { Host: 'gym.shapelab.win', Accept: 'application/json' },
+    })
+    if (!res.ok) return false
+    const body = await res.json().catch(() => null)
+    return Boolean(body && body.ok === true)
   } catch {
     return false
   } finally {
     clearTimeout(timer)
   }
-}
-
-export async function originReady(origin, timeoutMs = 2500) {
-  let parsed
-  try {
-    parsed = new URL(origin)
-  } catch {
-    return false
-  }
-  const port = Number(parsed.port || (parsed.protocol === 'https:' ? 443 : 80))
-  const listening = await portOpen(port, parsed.hostname, Math.min(timeoutMs, 1500))
-  if (!listening) return false
-  if (await httpAlive(`${origin.replace(/\/$/, '')}/api/health`, timeoutMs)) return true
-  if (await httpAlive(`${origin.replace(/\/$/, '')}/api/persist`, timeoutMs)) return true
-  if (await httpAlive(origin, timeoutMs)) return true
-  return true
 }
 
 export async function waitForOrigin(origin, opts = {}) {
