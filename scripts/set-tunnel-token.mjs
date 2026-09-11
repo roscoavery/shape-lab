@@ -41,10 +41,20 @@ function extractToken(raw) {
 }
 
 function argvToken() {
-  const args = process.argv.slice(2).filter((a) => a !== "--self-test");
+  const args = process.argv.slice(2).filter((a) => a !== "--self-test" && a !== "--if-missing" && a !== "--no-prompt");
   const i = args.indexOf("--token");
   if (i >= 0) return extractToken(args.slice(i + 1).join(" "));
   return extractToken(args.join(" "));
+}
+
+function envToken() {
+  if (!existsSync(envPath)) return "";
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*CLOUDFLARE_TUNNEL_TOKEN=(.*)$/);
+    if (!m) continue;
+    return extractToken(m[1]);
+  }
+  return "";
 }
 
 if (process.argv.includes("--self-test")) {
@@ -129,11 +139,21 @@ function saveToken(token) {
 }
 
 async function main() {
+  const ifMissing = process.argv.includes("--if-missing");
+  const noPrompt = process.argv.includes("--no-prompt");
+  if (ifMissing && envToken()) {
+    console.log("Tunnel token already saved in .env");
+    return;
+  }
   let token = argvToken() || extractToken(clipboard());
-  if (!token) {
+  if (!token && !noPrompt) {
     token = extractToken(await promptPaste());
   }
   if (!token) {
+    if (noPrompt) {
+      console.warn("No tunnel token in .env or clipboard. gym.shapelab.win will 502 until you copy the box-3 line and start again.");
+      process.exit(0);
+    }
     console.error(`That paste was not a Cloudflare token.
 
 Paste the box-3 line into this command (quotes matter), then press Return:

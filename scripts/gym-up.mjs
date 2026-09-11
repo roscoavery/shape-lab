@@ -95,6 +95,15 @@ async function waitForGym() {
   })
 }
 
+const tokenHelper = spawnSync(
+  process.execPath,
+  [join(ROOT, 'scripts', 'set-tunnel-token.mjs'), '--if-missing', '--no-prompt'],
+  { cwd: ROOT, encoding: 'utf8' },
+)
+if (tokenHelper.stdout) process.stdout.write(tokenHelper.stdout)
+if (tokenHelper.stderr) process.stderr.write(tokenHelper.stderr)
+loadEnvFile()
+
 const tokenRaw = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
 const shareArgs = tokenLooksReal(tokenRaw) ? ['run', 'share'] : ['run', 'share:quick']
 if (tokenRaw && !tokenLooksReal(tokenRaw)) {
@@ -126,12 +135,31 @@ void waitForGym().then(async (ok) => {
   if (!(await originReady(ORIGIN)) && !ok) {
     console.warn('Tunnel will 502 until this Mac answers on port', PORT)
   }
+  const publicHost = tokenLooksReal(tokenRaw)
+    ? process.env.CLOUDFLARE_TUNNEL_HOSTNAME?.trim() || 'https://gym.shapelab.win'
+    : ''
   const share = spawn(npm, shareArgs, {
     cwd: ROOT,
     stdio: 'inherit',
     env: { ...process.env, SHAPE_LAB_PORT: PORT },
     shell,
   })
+  if (publicHost) {
+    setTimeout(() => {
+      fetch(`${publicHost.replace(/\/$/, '')}/api/health`)
+        .then((res) => {
+          if (res.ok) {
+            console.log(`\nPhones can open ${publicHost}\n`)
+            return
+          }
+          console.warn(`\n${publicHost} returned ${res.status}. The Mac gym is not connected yet.`)
+          console.warn('Use the Wi-Fi http://192.168…:43127/ line, or stay on Vercel.\n')
+        })
+        .catch(() => {
+          console.warn(`\n${publicHost} did not answer. Use the Wi-Fi line or Vercel.\n`)
+        })
+    }, 10000)
+  }
   share.on('exit', (code) => {
     gym.kill('SIGTERM')
     process.exit(code ?? 0)

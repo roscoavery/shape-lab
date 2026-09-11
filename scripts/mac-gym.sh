@@ -42,8 +42,7 @@ fi
 
 echo
 echo "Starting the gym. Keep this window open and the Mac plugged in."
-echo "If a https://….trycloudflare.com bookmark from earlier fails, that is expected —"
-echo "that hostname dies when the window closes or you start again."
+echo "If the box-3 token is on the clipboard, this start saves it automatically."
 echo "Do not paste 127.0.0.1 on the iPad. Do not pause Vercel yet."
 echo
 node --input-type=module -e "import { printLanUrls } from './scripts/lan-urls.mjs'; printLanUrls(process.env.SHAPE_LAB_PORT || 43127)"
