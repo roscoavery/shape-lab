@@ -20,9 +20,9 @@ export function formatSeconds(s: number): string {
   return `${sec.toFixed(1)}s`
 }
 
-export const HOLD_ENTER_FRAMES = 2
-export const HOLD_EXIT_FRAMES = 10
-export const MIN_HOLD_SEC = 0.45
+export const HOLD_ENTER_FRAMES = 8
+export const HOLD_EXIT_FRAMES = 20
+export const MIN_HOLD_SEC = 1.2
 /** Done with no detected kick-up still keeps a clip this long. */
 export const SALVAGE_HOLD_SEC = 2.4
 export const PRE_ROLL_SEC = 2
@@ -60,6 +60,8 @@ export type HoldSessionOpts = {
   score: () => ScoreResult
   stream: () => MediaStream | null
   canvas: () => HTMLCanvasElement | null
+  /** Rolling delay-cam clock. When set, do not attach a second recorder. */
+  timelineSec?: () => number
   onTick: (tick: HoldTick) => void
   onCue: (line: string) => void
 }
@@ -105,7 +107,7 @@ function sideFootOnFloor(lm: Landmark[], left: boolean, floorY: number): boolean
   return pts.some((p) => visOk(p, 0.05) && p.y > floorY)
 }
 
-/** Palms / wrists planted toward the floor (image y grows downward). */
+/** Palms / wrists planted on the floor (image y grows downward). */
 export function handsOnGround(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
   const wristY = pairY(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.03)
@@ -114,10 +116,16 @@ export function handsOnGround(lm: Landmark[] | null | undefined): boolean {
   if (handY == null) return false
   const shoulderY = pairY(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.03)
   const hipY = pairY(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.03)
+  const ankleY = pairY(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.03)
+  const heelY = pairY(lm[LM.LEFT_HEEL], lm[LM.RIGHT_HEEL], 0.03)
+  const footY = ankleY ?? heelY
   // Arms overhead (stand or walk) put the wrists above the shoulders.
-  if (shoulderY != null && handY < shoulderY - 0.02) return false
-  // Hands must be at or below the hips — stacked on the floor, not a T.
-  if (hipY != null && handY < hipY - 0.08) return false
+  if (shoulderY != null && handY < shoulderY) return false
+  // Reaching for the floor: feet are still lower than the hands.
+  if (footY != null && footY > handY + 0.07) return false
+  // No feet in frame — wrists must actually be low, not a T or a reach.
+  if (footY == null && handY < 0.42) return false
+  if (hipY != null && handY < hipY - 0.02) return false
   return true
 }
 
@@ -174,12 +182,10 @@ export function poseInverted(lm: Landmark[] | null | undefined): boolean {
     shoulderY != null && ankleY != null && ankleY < shoulderY - 0.04
   const longInvert = wristY != null && ankleY != null && wristY - ankleY > 0.2
 
-  if (handsDown && (hipsAboveHands || feetAboveHands || feetAboveShoulders || feetOff)) {
-    return true
-  }
-  if (headLow && (handsDown || hipsAboveHands || feetAboveHands)) return true
-  if (handsDown && longInvert) return true
-  return false
+  // Clock starts only when hands are planted AND both feet have left.
+  // A pike / reach used to count as a hold before the hands even touched.
+  if (!handsDown || !feetOff) return false
+  return hipsAboveHands || feetAboveHands || feetAboveShoulders || longInvert || headLow
 }
 
 /** Either foot (ankle, heel, or toe) is back near the hands / floor. */
@@ -280,6 +286,41 @@ async function trimHoldClip(
   }
 }
 
+/** Cut each hold out of the one delay-cam recording (no second MediaRecorder). */
+export async function attachHoldClips(
+  attempts: RawHoldAttempt[],
+  fullBlob: Blob | null,
+): Promise<RawHoldAttempt[]> {
+  if (!attempts.length) return attempts
+  const durable =
+    fullBlob && fullBlob.size > 800 ? await durableBlob(fullBlob) : null
+  if (!durable) return attempts
+  const out: RawHoldAttempt[] = []
+  for (const a of attempts) {
+    if (a.clipBlob && a.clipBlob.size > 800) {
+      out.push(a)
+      continue
+    }
+    try {
+      const trimmed = await trimHoldClip(
+        durable,
+        a.clockOffsetSec,
+        a.holdSeconds,
+        a.playheadSec,
+        a.poseTrack,
+      )
+      out.push({ ...a, ...trimmed })
+    } catch {
+      out.push({ ...a, clipBlob: durable })
+    }
+  }
+  if (out.every((a) => !a.clipBlob || a.clipBlob.size < 800)) {
+    const i = out.reduce((best, a, idx) => (a.holdSeconds > out[best]!.holdSeconds ? idx : best), 0)
+    out[i] = { ...out[i]!, clipBlob: durable }
+  }
+  return out
+}
+
 function longestInvertedSpan(poseTrack: PoseTrack, elapsed: number): {
   start: number
   end: number
@@ -313,8 +354,11 @@ async function salvageWaitingHold(
   recStart: number,
   poseTrack: PoseTrack,
 ): Promise<RawHoldAttempt | null> {
-  const elapsed = session ? (performance.now() - recStart) / 1000 : 0
-  if (!session || elapsed < SALVAGE_HOLD_SEC) return null
+  const elapsed = session
+    ? (performance.now() - recStart) / 1000
+    : opts.timelineSec?.() ?? (poseTrack[poseTrack.length - 1]?.t ?? 0)
+  if (elapsed < SALVAGE_HOLD_SEC) return null
+  if (!session && !opts.timelineSec) return null
 
   const span = longestInvertedSpan(poseTrack, elapsed)
   const holdSeconds = span.found
@@ -324,11 +368,13 @@ async function salvageWaitingHold(
   const playheadSec = span.found ? (span.start + span.end) / 2 : elapsed / 2
 
   let clipBlob: Blob | null = null
-  try {
-    const blob = await session.stop()
-    if (blob.size > 800) clipBlob = await durableBlob(blob)
-  } catch {
-    clipBlob = null
+  if (session) {
+    try {
+      const blob = await session.stop()
+      if (blob.size > 800) clipBlob = await durableBlob(blob)
+    } catch {
+      clipBlob = null
+    }
   }
 
   const live = opts.score()
@@ -364,7 +410,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
   }
 
   opts.onCue(
-    'Kick to a handstand when you are ready. The clock starts when your hands are down and your feet leave the ground. Tap Done when you are finished.',
+    'Kick to a handstand when you are ready. The clock starts when both hands are on the floor and both feet leave the ground. Tap Done when you are finished.',
   )
   tick({ seconds: null, running: false, inverted: false, handsDown: false, feetOff: false })
 
@@ -376,8 +422,14 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     let recStart = 0
     const poseTrack: PoseTrack = []
 
+    const clockNow = () => {
+      if (opts.timelineSec && !rec.session) return opts.timelineSec()
+      if (rec.session) return (performance.now() - recStart) / 1000
+      return opts.timelineSec?.() ?? 0
+    }
+
     const startRec = () => {
-      if (rec.session) return
+      if (rec.session || opts.timelineSec) return
       const stream = opts.stream()
       if (!stream || typeof MediaRecorder === 'undefined') return
       try {
@@ -389,14 +441,17 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     const samplePose = (lm: Landmark[] | null) => {
-      if (!rec.session || !lm || lm.length < 33) return
-      const t = (performance.now() - recStart) / 1000
+      if (!lm || lm.length < 33) return
+      if (!rec.session && !opts.timelineSec) return
+      const t = clockNow()
       const lastSample = poseTrack[poseTrack.length - 1]
       if (lastSample && t - lastSample.t < 0.05) return
       poseTrack.push({ t, lm: cloneLandmarks(lm) })
     }
 
     // Record while we wait so the clip can start ~2s before the kick-up.
+    // When timelineSec is set, the delay-cam buffer is already recording —
+    // a second MediaRecorder on iPad Safari yields an empty clip.
     startRec()
 
     while (!opts.cancelled() && !opts.doneRequested()) {
@@ -437,10 +492,12 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     const holdStart = performance.now()
+    const holdStartSec = clockNow()
     let peakRank = -1
     let peakFrozen: ScoreResult | null = null
     let peakBlob: Blob | null = null
     let peakAt = holdStart
+    let peakSec = holdStartSec
     let lastPeakSample = 0
     let exitFrames = 0
     let holdSeconds = 0
@@ -466,6 +523,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
           peakFrozen = freezeScore(live)
           peakBlob = snapshotCanvas(opts.canvas())
           peakAt = now
+          peakSec = clockNow()
         }
       }
 
@@ -499,8 +557,12 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     if (holdSeconds >= MIN_HOLD_SEC) {
-      const playheadSec = Math.max(0, (peakAt - recStart) / 1000)
-      const clockOffsetSec = Math.max(0, (holdStart - recStart) / 1000)
+      const playheadSec = rec.session
+        ? Math.max(0, (peakAt - recStart) / 1000)
+        : Math.max(0, peakSec)
+      const clockOffsetSec = rec.session
+        ? Math.max(0, (holdStart - recStart) / 1000)
+        : Math.max(0, holdStartSec)
       last = holdSeconds
       best = best == null ? holdSeconds : Math.max(best, holdSeconds)
       const trimmed = clipBlob

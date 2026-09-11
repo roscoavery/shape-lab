@@ -11,6 +11,12 @@ if (!src.includes('feet often leave the frame')) {
 if (!src.includes('SALVAGE_HOLD_SEC')) {
   throw new Error('handstandHold.ts is missing Done salvage')
 }
+if (!src.includes('A pike / reach used to count')) {
+  throw new Error('handstandHold.ts is missing the planted-hands + feet-off gate')
+}
+if (!src.includes('HOLD_ENTER_FRAMES = 8')) {
+  throw new Error('handstandHold.ts should wait ~8 frames before the clock starts')
+}
 
 function pt(y, vis = 0.9) {
   return { x: 0.5, y, z: 0, visibility: vis }
@@ -20,10 +26,6 @@ function pose(overrides) {
   const lm = Array.from({ length: 33 }, () => pt(0.5))
   for (const [i, v] of Object.entries(overrides)) lm[Number(i)] = v
   return lm
-}
-
-function avg(a, b) {
-  return (a + b) / 2
 }
 
 function visOk(p, min = 0.04) {
@@ -43,8 +45,13 @@ function handsOnGround(lm) {
   if (handY == null) return false
   const shoulderY = pairY(lm[11], lm[12], 0.03)
   const hipY = pairY(lm[23], lm[24], 0.03)
-  if (shoulderY != null && handY < shoulderY - 0.02) return false
-  if (hipY != null && handY < hipY - 0.08) return false
+  const ankleY = pairY(lm[27], lm[28], 0.03)
+  const heelY = pairY(lm[29], lm[30], 0.03)
+  const footY = ankleY ?? heelY
+  if (shoulderY != null && handY < shoulderY) return false
+  if (footY != null && footY > handY + 0.07) return false
+  if (footY == null && handY < 0.42) return false
+  if (hipY != null && handY < hipY - 0.02) return false
   return true
 }
 
@@ -74,10 +81,8 @@ function poseInverted(lm) {
   const feetAboveHands = wristY != null && ankleY != null && ankleY < wristY - 0.08
   const feetAboveShoulders = shoulderY != null && ankleY != null && ankleY < shoulderY - 0.04
   const longInvert = wristY != null && ankleY != null && wristY - ankleY > 0.2
-  if (handsDown && (hipsAboveHands || feetAboveHands || feetAboveShoulders || feetOff)) return true
-  if (headLow && (handsDown || hipsAboveHands || feetAboveHands)) return true
-  if (handsDown && longInvert) return true
-  return false
+  if (!handsDown || !feetOff) return false
+  return hipsAboveHands || feetAboveHands || feetAboveShoulders || longInvert || headLow
 }
 
 const hs = pose({
@@ -124,12 +129,39 @@ const armsUp = pose({
   27: pt(0.9),
   28: pt(0.9),
 })
+const pikeReach = pose({
+  0: pt(0.4),
+  11: pt(0.38),
+  12: pt(0.38),
+  15: pt(0.72),
+  16: pt(0.72),
+  23: pt(0.5),
+  24: pt(0.5),
+  27: pt(0.9),
+  28: pt(0.9),
+})
+const pikePlanted = pose({
+  0: pt(0.48),
+  11: pt(0.52),
+  12: pt(0.52),
+  15: pt(0.88),
+  16: pt(0.88),
+  23: pt(0.48),
+  24: pt(0.48),
+  27: pt(0.9),
+  28: pt(0.9),
+})
 
 const checks = [
   ['handstand', poseInverted(hs), true],
   ['handstand feet out of frame', poseInverted(hsNoFeet), true],
   ['standing', poseInverted(stand), false],
   ['standing arms up', poseInverted(armsUp), false],
+  ['pike reaching (hands not planted)', poseInverted(pikeReach), false],
+  ['pike planted, feet still down', poseInverted(pikePlanted), false],
+  ['standing hands not planted', handsOnGround(stand), false],
+  ['pike reach hands not planted', handsOnGround(pikeReach), false],
+  ['handstand hands planted', handsOnGround(hs), true],
 ]
 let failed = 0
 for (const [name, got, want] of checks) {
@@ -141,4 +173,4 @@ for (const [name, got, want] of checks) {
   }
 }
 if (failed) process.exit(1)
-console.log(`geometry ok (${avg(1, 1)})`)
+console.log('geometry ok')

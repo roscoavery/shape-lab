@@ -27,6 +27,7 @@ import {
 import { videoFileName } from '../lib/flowShare'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
 import {
+  attachHoldClips,
   formatSeconds,
   runHandstandHoldSession,
   type HoldTick,
@@ -620,9 +621,15 @@ export function Tasks2Panel({
   }, [])
 
   const finishHoldRun = useCallback(
-    async (seqRun: FlowSequence, raw: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
+    async (seqRun: FlowSequence, rawIn: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
       onHoldClockRef.current?.(null)
       setHoldTick(null)
+      const raw = await attachHoldClips(
+        rawIn,
+        rawIn.some((a) => a.clipBlob && a.clipBlob.size > 800)
+          ? null
+          : await delay.flushRollingBlob(),
+      )
 
       revokeClipUrls()
       if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
@@ -810,7 +817,7 @@ export function Tasks2Panel({
         `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Watch each kick-up, then save to Photos if you want. Clips are not saved to My shapes unless you choose that.`,
       )
     },
-    [athlete?.instagramHandle, athleteId, onExitFullscreen, revokeClipUrls, takeSnapshot],
+    [athlete?.instagramHandle, athleteId, delay, onExitFullscreen, revokeClipUrls, takeSnapshot],
   )
 
   const startSequence = useCallback(
@@ -916,12 +923,24 @@ export function Tasks2Panel({
           setCue(
             'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
           )
+          let rolling = false
+          try {
+            rolling = await delay.restartRolling(overlayStreamRef.current ?? streamRef.current)
+          } catch {
+            try {
+              rolling = await delay.restartRolling(streamRef.current)
+            } catch {
+              rolling = false
+            }
+          }
           const holdP = runHandstandHoldSession({
             cancelled: () => !alive(),
             doneRequested: () => holdDoneRef.current || !alive(),
             landmarks: () => landmarksRef.current,
             score: () => scoreRef.current,
-            stream: () => streamRef.current ?? overlayStreamRef.current,
+            stream: () =>
+              rolling ? null : streamRef.current ?? overlayStreamRef.current,
+            timelineSec: rolling ? () => delay.capturedSec() : undefined,
             canvas: () => canvasRef.current,
             onTick: (tick) => {
               setHoldTick(tick)
@@ -1893,24 +1912,34 @@ export function Tasks2Panel({
                 </span>
               </p>
             )}
+            {phase === 'holding' && holdTick && !holdTick.running && (
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                {holdTick.handsDown && holdTick.feetOff
+                  ? 'Stacked — stay there for the clock'
+                  : holdTick.handsDown
+                    ? 'Hands are on the floor — kick both feet off'
+                    : 'Clock waits until both hands are on the floor'}
+              </p>
+            )}
           </div>
         )}
       </div>
 
       {flash && <p className="mb-2 text-sm text-[var(--accent)]">{flash}</p>}
 
-      {phase === 'replay' && (
+      {phase === 'replay' &&
+        createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col bg-black">
-          <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 text-white">
-            <p className="text-sm font-semibold">
+          <div className="flex shrink-0 flex-col gap-2 px-3 py-2 text-white">
+            <p className="text-sm font-medium leading-snug">
               {holdMode
                 ? `Your longest hold${report?.bestHoldSeconds != null ? ` · ${formatSeconds(report.bestHoldSeconds)}` : ''} — snapshots jump the playhead (not grades)`
                 : `Your run · ${seq.nickname} — scrub the delay-cam replay`}
             </p>
-            <div className="flex flex-wrap justify-end gap-2">
-              <p className="mr-auto max-w-sm text-[11px] leading-snug text-white/70">
-                Watch first. Grades stay on the next screen — then choose whether to keep the clip.
-              </p>
+            <p className="text-[11px] leading-snug text-white/70">
+              Watch first. Grades stay on the next screen — then choose whether to keep the clip.
+            </p>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -1993,8 +2022,8 @@ export function Tasks2Panel({
             />
           ) : (
             <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-white/70">
-              No replay buffer this time (keep the camera on for the whole sequence). Your snapshots and
-              grades are still saved.
+              No video this time — keep the camera on for the whole hold. Your snapshots and grades are
+              still saved.
             </p>
           )}
           {snaps.length > 0 && (
@@ -2065,7 +2094,8 @@ export function Tasks2Panel({
               </div>
             </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
 
       {phase === 'review' && report && (
