@@ -368,7 +368,7 @@ async function salvageWaitingHold(
   }
 
   const live = opts.score()
-  const peakFrozen = live.overall > 0 ? freezeScore(live) : null
+  const peakFrozen = live.overall > 0 || live.criteria.length > 0 ? freezeScore(live) : null
   const peakBlob = snapshotCanvas(opts.canvas())
   const trimmed = clipBlob
     ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
@@ -554,6 +554,13 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     }
 
     if (holdSeconds >= MIN_HOLD_SEC) {
+      if (!peakFrozen) {
+        const live = opts.score()
+        if (live.overall > 0 || live.criteria.length > 0) {
+          peakFrozen = freezeScore(live)
+          peakBlob = peakBlob ?? snapshotCanvas(opts.canvas())
+        }
+      }
       const playheadSec = rec.session
         ? Math.max(0, (peakAt - recStart) / 1000)
         : Math.max(0, peakSec)

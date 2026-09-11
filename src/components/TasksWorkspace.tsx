@@ -61,6 +61,10 @@ type Props = {
   /** Hold challenge: a Done control that stays on the live camera. */
   showHoldDone?: boolean
   onDoneHold?: () => void
+  /** Done was tapped — clips are packing. Keep the button visible but locked. */
+  holdDoneBusy?: boolean
+  /** Hold challenge records its own buffer. A second delay-cam recorder empties iPad clips. */
+  hideDelayCam?: boolean
 }
 
 function scoreColor(n: number): string {
@@ -128,6 +132,8 @@ export function TasksWorkspace({
   onStartFlow,
   showHoldDone = false,
   onDoneHold,
+  holdDoneBusy = false,
+  hideDelayCam = false,
 }: Props) {
   const [localFullscreen, setLocalFullscreen] = useState(false)
   const fullscreen = fullscreenProp ?? localFullscreen
@@ -275,7 +281,7 @@ export function TasksWorkspace({
     stillBody
   )
 
-  const delayCam = (
+  const delayCam = hideDelayCam ? null : (
     <TaskDelayCam
       stream={stream}
       cameraOn={cameraRunning}
@@ -286,7 +292,7 @@ export function TasksWorkspace({
     />
   )
 
-  const showDelayPip = !(flowMode && fullscreen)
+  const showDelayPip = !hideDelayCam && !(flowMode && fullscreen)
 
   const delayWrap = !showDelayPip ? null : fullscreen ? (
     <CornerChip persistKey="classflow-delay" defaultCorner="br" className="w-[min(42vw,260px)]">
@@ -459,9 +465,11 @@ export function TasksWorkspace({
                       <button
                         type="button"
                         onClick={onDoneHold}
-                        className="h-14 min-w-[16rem] rounded-2xl bg-[var(--accent)] px-6 text-lg font-black text-[#06281f] shadow-2xl"
+                        disabled={holdDoneBusy}
+                        aria-busy={holdDoneBusy}
+                        className="h-14 min-w-[16rem] rounded-2xl bg-[var(--accent)] px-6 text-lg font-black text-[#06281f] shadow-2xl disabled:opacity-80"
                       >
-                        Done — see my holds
+                        {holdDoneBusy ? 'Loading clips…' : 'Done — see my holds'}
                       </button>
                     </div>
                   )}

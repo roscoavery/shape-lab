@@ -200,6 +200,7 @@ export default function App() {
   )
   const [camFullscreen, setCamFullscreen] = useState(false)
   const [flowPhase, setFlowPhase] = useState('idle')
+  const [holdChallenge, setHoldChallenge] = useState(false)
   const startFlowRef = useRef<() => void>(() => {})
   const holdDoneRef = useRef<() => void>(() => {})
   const [holdClock, setHoldClock] = useState<number | null>(null)
@@ -967,7 +968,9 @@ export default function App() {
             onStartFlow={() => {
               startFlowRef.current()
             }}
-            showHoldDone={flowPhase === 'holding'}
+            showHoldDone={flowPhase === 'holding' || flowPhase === 'finishing'}
+            holdDoneBusy={flowPhase === 'finishing'}
+            hideDelayCam={holdChallenge}
             onDoneHold={() => holdDoneRef.current()}
           />
           </div>
@@ -999,6 +1002,7 @@ export default function App() {
               mirror={settings.mirrorVideo}
               cameraError={camera.error}
               onFlowPhase={setFlowPhase}
+              onHoldChallenge={setHoldChallenge}
               onRegisterStart={(fn) => {
                 startFlowRef.current = fn
               }}

@@ -19,6 +19,8 @@ type Props = {
   pip?: boolean
   /** Initial delay (Tasks 2 uses a 20s buffer). */
   defaultDelaySec?: number
+  /** When false, do not start a rolling recorder on this stream. */
+  enabled?: boolean
 }
 
 export function TaskDelayCam({
@@ -28,6 +30,7 @@ export function TaskDelayCam({
   compact = false,
   pip = false,
   defaultDelaySec = 6,
+  enabled = true,
 }: Props) {
   const [delaySec, setDelaySec] = useState(defaultDelaySec)
   useEffect(() => {
@@ -41,8 +44,8 @@ export function TaskDelayCam({
   const replayUrlRef = useRef<string | null>(null)
   const replayVideoRef = useRef<HTMLVideoElement | null>(null)
 
-  const delayOn = cameraOn && Boolean(stream) && mode === 'delay'
-  const delay = useDelayCam(stream, delaySec, cameraOn && Boolean(stream))
+  const delayOn = enabled && cameraOn && Boolean(stream) && mode === 'delay'
+  const delay = useDelayCam(stream, delaySec, enabled && cameraOn && Boolean(stream))
 
   useEffect(() => {
     if (delayOn) {

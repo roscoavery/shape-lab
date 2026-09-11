@@ -76,7 +76,7 @@ import { FlowShareActions } from './FlowShareActions'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { ReferenceStill } from './ReferenceStill'
 
-type Phase = 'idle' | 'preview' | 'running' | 'holding' | 'replay' | 'review'
+type Phase = 'idle' | 'preview' | 'running' | 'holding' | 'finishing' | 'replay' | 'review'
 
 type SnapView = FlowStepSnap & { url: string | null }
 
@@ -112,6 +112,7 @@ type Props = {
   assignedSequenceId?: string | null
   onAssignedSequenceConsumed?: () => void
   onFlowPhase?: (phase: Phase) => void
+  onHoldChallenge?: (on: boolean) => void
   onRegisterStart?: (fn: () => void) => void
   onRegisterHoldDone?: (fn: () => void) => void
 }
@@ -222,6 +223,7 @@ export function Tasks2Panel({
   assignedSequenceId = null,
   onAssignedSequenceConsumed,
   onFlowPhase,
+  onHoldChallenge,
   onRegisterStart,
   onRegisterHoldDone,
 }: Props) {
@@ -306,6 +308,10 @@ export function Tasks2Panel({
   // Canvas captureStream is empty / unplayable on iPad. Hold clips use the camera.
   const recordStream = holdChallenge ? stream : overlayStream ?? stream
   const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
+
+  useEffect(() => {
+    onHoldChallenge?.(holdChallenge)
+  }, [holdChallenge, onHoldChallenge])
 
   useEffect(() => {
     if (!cameraRunning) {
@@ -640,6 +646,16 @@ export function Tasks2Panel({
         rolled = null
       }
       flushedHoldRef.current = null
+      if (!rolled || rolled.size < 800) {
+        rolled = delay.peekRollingBlob()
+      }
+      if (!rolled || rolled.size < 800) {
+        try {
+          rolled = await delay.flushRollingBlob()
+        } catch {
+          rolled = rolled && rolled.size > 800 ? rolled : null
+        }
+      }
       const raw = await attachHoldClips(rawIn, rolled, { trim: false })
 
       revokeClipUrls()
@@ -706,7 +722,11 @@ export function Tasks2Panel({
           }
         }
 
-        const live = a.livePeak
+        const live =
+          a.livePeak ??
+          (scoreRef.current.overall > 0 || scoreRef.current.criteria.length > 0
+            ? scoreRef.current
+            : null)
         const cues = live ? writtenCues(live, 'handstand', 6) : []
         const livePeak = live ? Math.round(live.overall) : 0
         let snapshotId: string | null = null
@@ -769,11 +789,6 @@ export function Tasks2Panel({
       setReplayUrl(replayUrl)
       setActiveClipId(replayCaptureId)
       setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
-      try {
-        window.history.pushState({ shapeLab: 'hold-replay' }, '')
-      } catch {
-        /* ignore */
-      }
 
       const steps: FlowStepSnap[] =
         collected.length > 0
@@ -845,9 +860,9 @@ export function Tasks2Panel({
       setSnaps(collected)
       snapsRef.current = collected
       onExitFullscreen?.()
-      setPhase('replay')
+      setPhase('review')
       setCue(
-        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Watch each kick-up, then save to Photos if you want. Clips are not saved to My shapes unless you choose that.`,
+        `Your longest hold is highlighted — ${formatSeconds(bestHold.holdSeconds)}. Each clip plays the live score and stopwatch. Cues are under that hold.`,
       )
     },
     [athlete?.instagramHandle, athleteId, delay, onExitFullscreen, revokeClipUrls, takeSnapshot],
@@ -962,12 +977,8 @@ export function Tasks2Panel({
           let rolling = false
           try {
             rolling = await delay.restartRolling(streamRef.current)
-            if (rolling) await wait(420)
-            if (!delay.hasRollingData()) {
-              rolling = await delay.restartRolling(streamRef.current)
-              if (rolling) await wait(420)
-            }
-            rolling = rolling && delay.hasRollingData()
+            // If the recorder started, do not attach a second one while
+            // waiting for the first timeslice — two recorders empty iPad clips.
           } catch {
             rolling = false
           }
@@ -1261,7 +1272,7 @@ export function Tasks2Panel({
   )
 
   const selectSeq = (id: string) => {
-    if (phase === 'preview' || phase === 'running' || phase === 'holding') return
+    if (phase === 'preview' || phase === 'running' || phase === 'holding' || phase === 'finishing') return
     setSeqId(id)
     writeLastFlowId(id)
     setRunSeq(null)
@@ -1543,10 +1554,21 @@ export function Tasks2Panel({
   })
 
   const requestHoldDone = useCallback(() => {
+    if (holdDoneRef.current) return
     holdDoneRef.current = true
-    if (!flushedHoldRef.current) flushedHoldRef.current = delay.flushRollingBlob()
-    setFlash('Opening your holds…')
-    window.setTimeout(() => setFlash(null), 4000)
+    setPhase('finishing')
+    setCue('Loading your hold clips…')
+    setFlash('Loading your hold clips…')
+    if (!flushedHoldRef.current) {
+      flushedHoldRef.current = new Promise((resolve) => {
+        window.setTimeout(() => {
+          void delay
+            .flushRollingBlob()
+            .then(resolve)
+            .catch(() => resolve(null))
+        }, 180)
+      })
+    }
   }, [delay])
 
   const dropHoldFromLog = useCallback((index: number) => {
@@ -1653,7 +1675,7 @@ export function Tasks2Panel({
 
   const askedBeat = phase === 'running' ? liveSeq.beats[beatIndex] : null
   const askedShapeId =
-    phase === 'holding'
+    phase === 'holding' || phase === 'finishing'
       ? 'handstand'
       : askedBeat?.shapeId ??
     [...liveSeq.beats.slice(0, Math.max(0, beatIndex + 1))].reverse().find((b) => b.shapeId)?.shapeId ??
@@ -1663,7 +1685,7 @@ export function Tasks2Panel({
     seq.previewShapes[0]?.shapeId
 
   const completions = progress?.completions[seq.id] ?? 0
-  const busy = phase === 'preview' || phase === 'running' || phase === 'holding'
+  const busy = phase === 'preview' || phase === 'running' || phase === 'holding' || phase === 'finishing'
   const holdMode = seq.mode === 'hs-hold' || Boolean(report?.holdAttempts)
   const nextSeqDef =
     FLOW_SEQUENCES[(FLOW_SEQUENCES.findIndex((s) => s.id === seq.id) + 1) % FLOW_SEQUENCES.length] ??
@@ -1697,13 +1719,15 @@ export function Tasks2Panel({
       )}
       {busy && (
         <>
-          {phase === 'holding' && (
+          {(phase === 'holding' || phase === 'finishing') && (
             <button
               type="button"
               onClick={requestHoldDone}
-              className="h-14 min-w-[12rem] flex-1 rounded-2xl bg-[var(--accent)] px-4 text-base font-bold text-[#06281f]"
+              disabled={phase === 'finishing'}
+              aria-busy={phase === 'finishing'}
+              className="h-14 min-w-[12rem] flex-1 rounded-2xl bg-[var(--accent)] px-4 text-base font-bold text-[#06281f] disabled:opacity-80"
             >
-              Done — see my holds
+              {phase === 'finishing' ? 'Loading clips…' : 'Done — see my holds'}
             </button>
           )}
           <button
@@ -1719,16 +1743,31 @@ export function Tasks2Panel({
   )
 
   const holdHud =
-    (cameraFullscreen || phase === 'holding') && phase !== 'replay' ? (
+    (cameraFullscreen || phase === 'holding' || phase === 'finishing') && phase !== 'replay' ? (
         <div className="pointer-events-auto fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[220] mx-auto w-[min(96vw,34rem)] rounded-2xl border border-white/25 bg-black/85 p-3 text-white shadow-2xl backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
-            {phase === 'holding'
+            {phase === 'finishing'
+              ? 'Packing your holds'
+              : phase === 'holding'
               ? 'Handstand hold challenge'
               : busy
                 ? 'Stay with the voice'
                 : seq.nickname}
           </p>
-          {phase === 'holding' ? (
+          {phase === 'finishing' ? (
+            <div className="mt-2 flex items-center gap-3">
+              <span
+                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#f0b429]"
+                aria-hidden
+              />
+              <div>
+                <p className="text-base font-bold leading-snug">Loading your hold clips…</p>
+                <p className="mt-0.5 text-[12px] text-white/70">
+                  Score, stopwatch, and cues for each kick-up.
+                </p>
+              </div>
+            </div>
+          ) : phase === 'holding' ? (
             <>
               <p className="mt-1 text-3xl font-black tabular-nums text-[#f0b429]">
                 {holdTick?.running && holdTick.seconds != null
@@ -1816,6 +1855,25 @@ export function Tasks2Panel({
   return (
     <>
       {holdHud && createPortal(holdHud, document.body)}
+      {phase === 'finishing' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[240] flex flex-col items-center justify-center bg-black/80 px-6 text-center text-white"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#f0b429]"
+              aria-hidden
+            />
+            <p className="mt-4 text-xl font-black">Loading your hold clips…</p>
+            <p className="mt-2 max-w-sm text-sm leading-snug text-white/75">
+              Packing what you just did — each kick-up with the live score, stopwatch, and written
+              cues.
+            </p>
+          </div>,
+          document.body,
+        )}
 
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
       <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-2xl border border-white/10 bg-[#121820] p-3 shadow-lg">
@@ -1991,6 +2049,8 @@ export function Tasks2Panel({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
               {phase === 'preview'
                 ? 'Get set — then the sequence starts'
+                : phase === 'finishing'
+                  ? 'Loading your hold clips'
                 : phase === 'holding'
                   ? 'Hold challenge — clock runs in the handstand'
                   : 'Class flow — stay with the voice'}
@@ -2212,7 +2272,7 @@ export function Tasks2Panel({
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             {holdMode
-              ? 'Hold challenge · not a gate'
+              ? 'Your holds · live score + clock on each clip'
               : report.sequenceId === 'flow_mc_hs_5reps'
               ? 'Handstand reps · not a gate'
               : report.sequenceId === 'flow_mc_hs_lg_assist'

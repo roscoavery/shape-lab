@@ -30,10 +30,28 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   const rollingGenRef = useRef(0)
   const rollingPumpRef = useRef(0)
   const flushWaiterRef = useRef<((blob: Blob | null) => void) | null>(null)
+  const lastBlobRef = useRef<Blob | null>(null)
 
   const [buffering, setBuffering] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const restartingRef = useRef(false)
+
+  const blobFromParts = useCallback((): Blob | null => {
+    const parts = rollingChunksRef.current.filter((part) => part.size > 0)
+    if (parts.length > 0) {
+      try {
+        const blob = new Blob(parts, { type: rollingMimeRef.current || 'video/webm' })
+        if (blob.size > 500) {
+          lastBlobRef.current = blob
+          return blob
+        }
+      } catch {
+        /* keep lastBlob */
+      }
+    }
+    const last = lastBlobRef.current
+    return last && last.size > 500 ? last : null
+  }, [])
 
   useEffect(() => {
     delaySecRef.current = delaySec
@@ -69,6 +87,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         window.clearInterval(rollingPumpRef.current)
         rollingMimeRef.current = mime ?? 'video/mp4'
         rollingChunksRef.current = []
+        lastBlobRef.current = null
         rollingStartRef.current = performance.now()
         rollingGenRef.current += 1
         const gen = rollingGenRef.current
@@ -97,6 +116,13 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           if (gen !== rollingGenRef.current) return
           if (!e.data || e.data.size === 0) return
           rollingChunksRef.current.push(e.data)
+          try {
+            lastBlobRef.current = new Blob(rollingChunksRef.current, {
+              type: rec.mimeType || rollingMimeRef.current,
+            })
+          } catch {
+            /* keep prior lastBlob */
+          }
           if (!settled) done(true)
           if (delayMediaSourceRef.current) {
             void e.data.arrayBuffer().then((buf) => {
@@ -109,10 +135,18 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           const waiter = flushWaiterRef.current
           flushWaiterRef.current = null
           const parts = rollingChunksRef.current
-          const blob =
-            parts.length > 0
-              ? new Blob(parts, { type: rec.mimeType || rollingMimeRef.current })
-              : null
+          let blob: Blob | null = null
+          if (parts.length > 0) {
+            try {
+              blob = new Blob(parts, { type: rec.mimeType || rollingMimeRef.current })
+            } catch {
+              blob = null
+            }
+          }
+          if ((!blob || blob.size <= 500) && lastBlobRef.current && lastBlobRef.current.size > 500) {
+            blob = lastBlobRef.current
+          }
+          if (blob && blob.size > 500) lastBlobRef.current = blob
           if (waiter) waiter(blob && blob.size > 500 ? blob : null)
         }
         try {
@@ -164,6 +198,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
       rollingRecorderRef.current = null
       flushWaiterRef.current = null
       rollingChunksRef.current = []
+      lastBlobRef.current = null
       rollingStartRef.current = performance.now()
       rollingGenRef.current += 1
       if (rec && rec.state !== 'inactive') {
@@ -190,9 +225,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   const flushRollingBlob = useCallback((): Promise<Blob | null> => {
     const rec = rollingRecorderRef.current
     if (!rec || rec.state === 'inactive') {
-      const parts = rollingChunksRef.current
-      if (parts.length === 0) return Promise.resolve(null)
-      return Promise.resolve(new Blob(parts, { type: rollingMimeRef.current || 'video/webm' }))
+      return Promise.resolve(blobFromParts())
     }
     return new Promise((resolve) => {
       let settled = false
@@ -200,28 +233,33 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         if (settled) return
         settled = true
         flushWaiterRef.current = null
-        resolve(blob)
+        resolve(blob && blob.size > 500 ? blob : blobFromParts())
       }
       flushWaiterRef.current = done
-      // Wait for onstop so iPad Safari writes a playable file.
-      // Only fall back if onstop never fires.
-      window.setTimeout(() => {
-        const parts = rollingChunksRef.current
-        done(
-          parts.length > 0
-            ? new Blob(parts, { type: rollingMimeRef.current || 'video/webm' })
-            : null,
-        )
-      }, 1600)
+      // iPad Safari often needs requestData, a short pause, then stop
+      // before onstop writes a playable file.
       try {
         rec.requestData()
       } catch {
         /* stop still flushes */
       }
-      rec.stop()
-      rollingRecorderRef.current = null
+      window.setTimeout(() => {
+        try {
+          rec.requestData()
+        } catch {
+          /* ignore */
+        }
+        try {
+          rec.stop()
+        } catch {
+          done(blobFromParts())
+          return
+        }
+        rollingRecorderRef.current = null
+      }, 160)
+      window.setTimeout(() => done(blobFromParts()), 2800)
     })
-  }, [])
+  }, [blobFromParts])
 
   const stopDelay = useCallback(() => {
     window.clearInterval(delayTimerRef.current)
@@ -327,7 +365,10 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   )
 
   const capturedSec = () => (performance.now() - rollingStartRef.current) / 1000
-  const hasRollingData = () => rollingChunksRef.current.some((part) => part.size > 200)
+  const hasRollingData = () =>
+    rollingChunksRef.current.some((part) => part.size > 200) ||
+    Boolean(lastBlobRef.current && lastBlobRef.current.size > 500)
+  const peekRollingBlob = () => blobFromParts()
 
   return {
     delayVideoRef,
@@ -337,6 +378,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     startDelay,
     stopDelay,
     flushRollingBlob,
+    peekRollingBlob,
     startRolling,
     restartRolling,
     capturedSec,
