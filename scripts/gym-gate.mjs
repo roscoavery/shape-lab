@@ -22,10 +22,17 @@ function rewriteHeaders(headers) {
   const next = { ...headers }
   next.host = `127.0.0.1:${VITE_PORT}`
   delete next['accept-encoding']
+  delete next.connection
   return next
 }
 
 function proxyVite(req, res) {
+  req.on('error', () => {
+    /* client hung up */
+  })
+  res.on('error', () => {
+    /* client hung up */
+  })
   const p = http.request(
     {
       hostname: '127.0.0.1',
@@ -35,12 +42,16 @@ function proxyVite(req, res) {
       headers: rewriteHeaders(req.headers),
     },
     (incoming) => {
+      incoming.on('error', () => res.destroy())
       res.writeHead(incoming.statusCode ?? 502, incoming.headers)
       incoming.pipe(res)
     },
   )
   p.on('error', () => {
-    if (res.headersSent) return
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
     res.statusCode = 503
     res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     res.end('Shape Lab is starting on the Mac. Refresh in a few seconds.')
@@ -68,6 +79,9 @@ const server = http.createServer((req, res) => {
 })
 
 server.on('upgrade', (req, socket, head) => {
+  socket.on('error', () => {
+    /* ignore */
+  })
   const p = net.connect(VITE_PORT, '127.0.0.1', () => {
     let preamble = `${req.method} ${req.url} HTTP/1.1\r\n`
     const headers = rewriteHeaders(req.headers)
@@ -82,6 +96,10 @@ server.on('upgrade', (req, socket, head) => {
     socket.pipe(p)
   })
   p.on('error', () => socket.destroy())
+})
+
+server.on('clientError', (_err, socket) => {
+  socket.destroy()
 })
 
 server.listen(PUBLIC_PORT, '0.0.0.0', () => {

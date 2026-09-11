@@ -38,6 +38,13 @@ function loadEnvFile() {
 
 loadEnvFile()
 
+function tokenLooksReal(token) {
+  if (!token) return false
+  if (/paste the token/i.test(token)) return false
+  if (token.length < 80) return false
+  return token.startsWith('eyJ')
+}
+
 function photoCount() {
   const dir = join(ROOT, 'data', 'roster-photos')
   if (!existsSync(dir)) return 0
@@ -73,9 +80,9 @@ async function originUp() {
   try {
     const ac = new AbortController()
     const timer = setTimeout(() => ac.abort(), 2500)
-    const res = await fetch(ORIGIN, { signal: ac.signal })
+    const res = await fetch(`${ORIGIN}/api/persist`, { signal: ac.signal })
     clearTimeout(timer)
-    return Number.isInteger(res.status)
+    return res.ok
   } catch {
     return false
   }
@@ -89,9 +96,13 @@ async function waitForGym() {
   return false
 }
 
-const shareArgs = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
-  ? ['run', 'share']
-  : ['run', 'share:quick']
+const tokenRaw = process.env.CLOUDFLARE_TUNNEL_TOKEN?.trim()
+const shareArgs = tokenLooksReal(tokenRaw) ? ['run', 'share'] : ['run', 'share:quick']
+if (tokenRaw && !tokenLooksReal(tokenRaw)) {
+  console.warn(
+    'CLOUDFLARE_TUNNEL_TOKEN in .env is the example text, not the real Cloudflare token. Using a temporary tunnel until you paste the token from the dashboard.',
+  )
+}
 
 void waitForGym().then((ok) => {
   printLanUrls(PORT)

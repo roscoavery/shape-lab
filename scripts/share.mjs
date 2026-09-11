@@ -61,7 +61,7 @@ Shape Lab — named Cloudflare tunnel (permanent HTTPS link)
 ==========================================================
 
 A trycloudflare URL dies when this process dies. A named tunnel keeps
-the same hostname (gym.yourdomain.com) as long as the gym computer is
+the same hostname (gym.shapelab.win) as long as the gym computer is
 on and running this script.
 
 This Cursor cloud machine is not 24/7. Run the tunnel on the gym PC.
@@ -115,7 +115,7 @@ function originUp() {
       process.execPath,
       [
         '-e',
-        `fetch(${JSON.stringify(ORIGIN)}).then(r=>{process.exit(r.ok?0:2)}).catch(()=>process.exit(1))`,
+        `fetch(${JSON.stringify(`${ORIGIN}/api/persist`)}).then(r=>{process.exit(r.ok?0:2)}).catch(()=>process.exit(1))`,
       ],
       { encoding: 'utf8', timeout: 4000 },
     )
@@ -125,10 +125,18 @@ function originUp() {
   }
 }
 
+function tokenLooksReal(token) {
+  if (!token) return false
+  if (/paste the token/i.test(token)) return false
+  if (token.length < 80) return false
+  return token.startsWith('eyJ')
+}
+
 function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
   const bin = findCloudflared()
   const argv = [...bin.prefix, ...extraArgs]
-  console.log(`Using ${bin.cmd} ${argv.join(' ')}`)
+  const shown = argv.map((part, i) => (argv[i - 1] === '--token' ? '(hidden)' : part))
+  console.log(`Using ${bin.cmd} ${shown.join(' ')}`)
   if (hostname) console.log(`Gym URL: ${hostname}`)
   if (!originUp()) {
     console.warn(
@@ -212,9 +220,13 @@ if (wantsService) {
     ],
     { printUrl: true },
   )
-} else if (!token) {
+} else if (!tokenLooksReal(token)) {
   printGymSetup()
-  console.error('No CLOUDFLARE_TUNNEL_TOKEN yet. Create the tunnel in the dashboard, then re-run.')
+  console.error(
+    token
+      ? 'CLOUDFLARE_TUNNEL_TOKEN in .env is not the real token. Open Cloudflare → Tunnels → shape-lab, copy the install token (a long eyJ… string), paste it into .env, save, then npm run gym:mac.'
+      : 'No CLOUDFLARE_TUNNEL_TOKEN yet. Create the tunnel in the dashboard, then re-run.',
+  )
   process.exit(1)
 } else {
   console.log('Starting the named Shape Lab tunnel. Leave this running on the gym computer.')
