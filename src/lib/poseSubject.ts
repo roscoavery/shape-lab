@@ -274,7 +274,44 @@ export function looksLikePole(lm: Landmark[]): boolean {
     visOk(lm[LM.LEFT_HIP], 0.22) && visOk(lm[LM.RIGHT_HIP], 0.22)
       ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
       : spanX
-  return spanY > 0.2 && spanX < 0.055 && shW < 0.045 && hpW < 0.04
+  return spanY > 0.18 && spanX < 0.08 && shW < 0.07 && hpW < 0.06
+}
+
+/** Keyboard on a stick: one column plus a thin horizontal bar. */
+export function looksLikeFurniture(lm: Landmark[]): boolean {
+  if (looksLikePole(lm)) return true
+  const idx = [
+    LM.LEFT_SHOULDER,
+    LM.RIGHT_SHOULDER,
+    LM.LEFT_ELBOW,
+    LM.RIGHT_ELBOW,
+    LM.LEFT_WRIST,
+    LM.RIGHT_WRIST,
+    LM.LEFT_HIP,
+    LM.RIGHT_HIP,
+    LM.LEFT_KNEE,
+    LM.RIGHT_KNEE,
+    LM.LEFT_ANKLE,
+    LM.RIGHT_ANKLE,
+  ]
+  const pts = idx.map((i) => lm[i]).filter((p): p is Landmark => visOk(p, 0.22))
+  if (pts.length < 8) return false
+  const xs = pts.map((p) => p.x).sort((a, b) => a - b)
+  const xMid = xs[Math.floor(xs.length / 2)]!
+  const column = pts.filter((p) => Math.abs(p.x - xMid) < 0.045)
+  const off = pts.filter((p) => Math.abs(p.x - xMid) >= 0.045)
+  if (column.length < 5 || off.length < 2) return false
+  const offY = off.map((p) => p.y)
+  const barH = Math.max(...offY) - Math.min(...offY)
+  const shW =
+    visOk(lm[LM.LEFT_SHOULDER], 0.22) && visOk(lm[LM.RIGHT_SHOULDER], 0.22)
+      ? Math.abs(lm[LM.LEFT_SHOULDER]!.x - lm[LM.RIGHT_SHOULDER]!.x)
+      : 1
+  const hpW =
+    visOk(lm[LM.LEFT_HIP], 0.22) && visOk(lm[LM.RIGHT_HIP], 0.22)
+      ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
+      : 1
+  return barH < 0.09 && shW < 0.1 && hpW < 0.08
 }
 
 export function poseLooksHuman(lm: Landmark[] | null | undefined): boolean {
@@ -284,7 +321,7 @@ export function poseLooksHuman(lm: Landmark[] | null | undefined): boolean {
   if (!box) return false
   if (box.h < 0.12 || box.w < 0.035) return false
   if (box.w > 0.98 && box.h > 0.98) return false
-  if (looksLikePole(lm)) return false
+  if (looksLikePole(lm) || looksLikeFurniture(lm)) return false
   if (limbFoldedImpossible(lm)) return false
   // Homework "present" wants a wide torso. Side-on handstands are thinner.
   if (landmarksLookPresent(lm)) return true
@@ -336,6 +373,10 @@ export class BackgroundMotion {
 
   constructor() {
     this.heat = new Float32Array(this.cols * this.rows)
+  }
+
+  get ready(): boolean {
+    return Boolean(this.bg)
   }
 
   reset() {
@@ -492,8 +533,14 @@ export class SubjectLock {
     const scale = torsoScale(lm)
     const vis = meanVis(lm)
     const motionBias = motion?.scoreBox(box) ?? 0
-    if (looksLikePole(lm) && !(this.locked && this.lastBox && this.lastBox.w < 0.12)) {
+    if (
+      (looksLikePole(lm) || looksLikeFurniture(lm)) &&
+      !(this.locked && this.lastLm && this.lastBox && this.lastBox.w < 0.14 && poseLooksHuman(this.lastLm))
+    ) {
       return { score: 0, reason: 'pole / stand', motionBias }
+    }
+    if (!this.locked && motion && box && motion.ready && motionBias < 0.08) {
+      return { score: 0, reason: 'static object', motionBias }
     }
     if (!poseLooksHuman(lm) && visibleCount(lm, 0.28) < 10) {
       return { score: 0, reason: 'not a body', motionBias }
@@ -577,6 +624,29 @@ export class SubjectLock {
       }
     }
 
+    const lockIsProp =
+      Boolean(this.lastLm) && (looksLikePole(this.lastLm!) || looksLikeFurniture(this.lastLm!))
+    const lockIsStatic =
+      Boolean(this.lastBox) && Boolean(motion?.ready) && (motion?.scoreBox(this.lastBox) ?? 1) < 0.1
+    if ((lockIsProp || lockIsStatic) && this.locked) {
+      let steal: { lm: Landmark[]; score: number; motionBias: number } | null = null
+      for (const raw of candidates) {
+        if (looksLikePole(raw) || looksLikeFurniture(raw) || !poseLooksHuman(raw)) continue
+        const heat = motion?.scoreBox(poseBox(raw)) ?? 0
+        const score = 0.55 + 0.45 * heat
+        if (!steal || score > steal.score) steal = { lm: raw, score, motionBias: heat }
+      }
+      if (steal && (lockIsProp || steal.motionBias > 0.22)) {
+        this.locked = false
+        this.lastLm = null
+        this.lastCenter = null
+        this.lastPublished = null
+        this.bones = null
+        this.boneFrames = 0
+        best = steal
+      }
+    }
+
     const need = this.locked ? (reacquire === 'full' ? 0.4 : 0.48) : 0.38
     if (best && best.score >= need) {
       const wasLocked = this.locked
@@ -601,7 +671,12 @@ export class SubjectLock {
       return { landmarks: stable, debug }
     }
 
-    if (this.lastPublished && lostMs < SUBJECT_HOLD_MS) {
+    if (
+      this.lastPublished &&
+      lostMs < SUBJECT_HOLD_MS &&
+      !looksLikePole(this.lastPublished) &&
+      !looksLikeFurniture(this.lastPublished)
+    ) {
       const debug = emptyDebug({
         locked: true,
         reacquire,

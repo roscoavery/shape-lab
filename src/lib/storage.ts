@@ -334,6 +334,14 @@ export function saveFlowAnalysis(report: FlowRunReport): void {
   writeJson(FLOW_ANALYSES_KEY, all.slice(0, MAX_FLOW_ANALYSES))
 }
 
+export function removeFlowAnalysis(reportId: string): void {
+  const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
+  writeJson(
+    FLOW_ANALYSES_KEY,
+    all.filter((r) => r.id !== reportId),
+  )
+}
+
 export function markFlowSharedWithCoach(reportId: string): FlowRunReport | null {
   const all = readJson<FlowRunReport[]>(FLOW_ANALYSES_KEY, [])
   const i = all.findIndex((r) => r.id === reportId)

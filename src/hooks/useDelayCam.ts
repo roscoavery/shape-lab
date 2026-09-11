@@ -193,7 +193,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
             ? new Blob(parts, { type: rollingMimeRef.current || 'video/webm' })
             : null,
         )
-      }, 1800)
+      }, 280)
       try {
         rec.requestData()
       } catch {

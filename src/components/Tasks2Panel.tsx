@@ -53,6 +53,8 @@ import {
   flowHistoryForSequence,
   loadFlowProgress,
   recordFlowCompletion,
+  removeFlowAnalysis,
+  removeHomeworkLog,
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
@@ -272,6 +274,8 @@ export function Tasks2Panel({
   } | null>(null)
   const clipUrlsRef = useRef<Map<string, string>>(new Map())
   const holdDoneRef = useRef(false)
+  const holdPersistRef = useRef<{ reportId: string; logId: string | null } | null>(null)
+  const [holdLogged, setHoldLogged] = useState(true)
   const pendingStillsRef = useRef<
     { id: string; blob: Blob; shapeId: string; shapeName: string; seqId: string }[]
   >([])
@@ -630,6 +634,7 @@ export function Tasks2Panel({
         rawIn.some((a) => a.clipBlob && a.clipBlob.size > 800)
           ? null
           : await delay.flushRollingBlob(),
+        { trim: false },
       )
 
       revokeClipUrls()
@@ -699,22 +704,38 @@ export function Tasks2Panel({
         const live = a.livePeak
         const cues = live ? writtenCues(live, 'handstand', 6) : []
         const livePeak = live ? Math.round(live.overall) : 0
-        const stillView = live
-          ? await takeSnapshot(
-              'handstand',
-              a.playheadSec,
-              live,
-              a.snapshotBlob,
-              i + 1,
-            )
-          : null
-        if (stillView) {
-          stillView.overall = livePeak || live?.overall || 0
-          stillView.cues = cues
-          stillView.marker = 'playhead'
-          stillView.holdSeconds = a.holdSeconds
-          stillView.clipId = clipId
-          collected.push(stillView)
+        if (a.snapshotBlob) {
+          const captureId = createId('snap')
+          rememberCaptureBlob(captureId, a.snapshotBlob)
+          collected.push({
+            shapeId: 'handstand',
+            shapeName: 'Handstand',
+            overall: livePeak || live?.overall || 0,
+            cues,
+            captureId,
+            atSec: a.playheadSec,
+            url: URL.createObjectURL(a.snapshotBlob),
+            rep: i + 1,
+            holdSeconds: a.holdSeconds,
+            clipId,
+            marker: 'playhead',
+          })
+        } else if (live) {
+          const stillView = await takeSnapshot(
+            'handstand',
+            a.playheadSec,
+            live,
+            a.snapshotBlob,
+            i + 1,
+          )
+          if (stillView) {
+            stillView.overall = livePeak || live?.overall || 0
+            stillView.cues = cues
+            stillView.marker = 'playhead'
+            stillView.holdSeconds = a.holdSeconds
+            stillView.clipId = clipId
+            collected.push(stillView)
+          }
         }
 
         holds.push({
@@ -787,11 +808,14 @@ export function Tasks2Panel({
         instagramHandle: athlete?.instagramHandle,
         chosenReps: holds.length || 1,
       }
+      holdPersistRef.current = null
+      setHoldLogged(Boolean(athleteId))
       if (athleteId) {
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
-        logHomeworkSequenceRun(built)
+        const log = logHomeworkSequenceRun(built)
+        holdPersistRef.current = { reportId: built.id, logId: log?.id ?? null }
       }
       const bestBlob = replayCaptureId ? getRememberedBlob(replayCaptureId) : null
       if (bestBlob && replayCaptureId) {
@@ -1501,8 +1525,59 @@ export function Tasks2Panel({
 
   const requestHoldDone = useCallback(() => {
     holdDoneRef.current = true
-    setFlash('Finishing this hold, then your analysis.')
-    window.setTimeout(() => setFlash(null), 2000)
+    setFlash('Opening your holds…')
+    window.setTimeout(() => setFlash(null), 4000)
+  }, [])
+
+  const dropHoldFromLog = useCallback((index: number) => {
+    setReport((prev) => {
+      if (!prev?.holdAttempts) return prev
+      const nextHolds = prev.holdAttempts.filter((h) => h.index !== index)
+      if (nextHolds.length === 0) {
+        const persist = holdPersistRef.current
+        if (persist) {
+          removeFlowAnalysis(persist.reportId)
+          if (persist.logId) removeHomeworkLog(persist.logId)
+          holdPersistRef.current = null
+        }
+        setHoldLogged(false)
+        setFlash('Dropped. This run is not in your log.')
+        window.setTimeout(() => setFlash(null), 3500)
+        return {
+          ...prev,
+          holdAttempts: [],
+          bestHoldSeconds: 0,
+          steps: [],
+          replayCaptureId: null,
+        }
+      }
+      const longest = nextHolds.reduce(
+        (best, h) => (h.holdSeconds > best.holdSeconds ? h : best),
+        nextHolds[0]!,
+      )
+      const next: FlowRunReport = {
+        ...prev,
+        holdAttempts: nextHolds.map((h) => ({ ...h, highlighted: h.index === longest.index })),
+        bestHoldSeconds: longest.holdSeconds,
+        replayCaptureId: longest.clipId ?? prev.replayCaptureId,
+        steps: (prev.steps ?? []).filter((s) => s.rep !== index),
+      }
+      if (holdPersistRef.current) saveFlowAnalysis(next)
+      return next
+    })
+    setSnaps((prev) => prev.filter((s) => s.rep !== index))
+  }, [])
+
+  const dontLogHoldRun = useCallback(() => {
+    const persist = holdPersistRef.current
+    if (persist) {
+      removeFlowAnalysis(persist.reportId)
+      if (persist.logId) removeHomeworkLog(persist.logId)
+      holdPersistRef.current = null
+    }
+    setHoldLogged(false)
+    setFlash('This run is not in your log.')
+    window.setTimeout(() => setFlash(null), 3500)
   }, [])
 
   useEffect(() => {
@@ -1983,6 +2058,18 @@ export function Tasks2Panel({
               >
                 Continue to {holdMode ? 'analysis' : 'grades'}
               </button>
+              {holdMode && holdLogged ? (
+                <button
+                  type="button"
+                  onClick={dontLogHoldRun}
+                  className="rounded-lg border border-[#e03131]/70 px-3 py-1.5 text-sm text-[#ff8787]"
+                >
+                  Don’t log this run
+                </button>
+              ) : null}
+              {holdMode && !holdLogged ? (
+                <span className="self-center text-[11px] text-white/65">Not in your log</span>
+              ) : null}
             </div>
           </div>
           {holdMode && replayUrl && report ? (
@@ -2113,6 +2200,18 @@ export function Tasks2Panel({
           </p>
           <h3 className="text-sm font-semibold text-[var(--text)]">{report.sequenceName}</h3>
           <p className="mt-1 text-sm leading-snug text-[var(--text)]">{report.summary}</p>
+          {holdMode && holdLogged ? (
+            <button
+              type="button"
+              onClick={dontLogHoldRun}
+              className="mt-2 rounded-md border border-[var(--warn)]/50 px-2 py-1 text-xs text-[var(--warn)]"
+            >
+              Don’t log this run
+            </button>
+          ) : null}
+          {holdMode && !holdLogged ? (
+            <p className="mt-2 text-xs text-[var(--muted)]">This run is not in your homework log.</p>
+          ) : null}
           {holdMode && report.holdAttempts && report.holdAttempts.length > 0 ? (
             <ul className="mt-3 space-y-2">
               {report.holdAttempts.map((h) => {
@@ -2134,6 +2233,15 @@ export function Tasks2Panel({
                       <p className="text-lg font-black tabular-nums text-[#f0b429]">
                         {formatSeconds(h.holdSeconds)}
                       </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 px-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => dropHoldFromLog(h.index)}
+                        className="rounded-md border border-[var(--warn)]/50 px-2 py-1 text-[11px] text-[var(--warn)]"
+                      >
+                        Drop — tracking missed me
+                      </button>
                     </div>
                     {h.clipId && (clipUrl || getRememberedBlob(h.clipId)) ? (
                       <div className="mt-2 px-2">

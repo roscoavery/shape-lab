@@ -259,15 +259,27 @@ async function trimHoldClip(
   }
 }
 
-/** Cut each hold out of the one delay-cam recording (no second MediaRecorder). */
+/** Attach the delay-cam recording to each hold. Skip re-encode so Done opens replay fast. */
 export async function attachHoldClips(
   attempts: RawHoldAttempt[],
   fullBlob: Blob | null,
+  opts?: { trim?: boolean },
 ): Promise<RawHoldAttempt[]> {
   if (!attempts.length) return attempts
+  const trim = opts?.trim !== false
   const durable =
-    fullBlob && fullBlob.size > 800 ? await durableBlob(fullBlob) : null
+    fullBlob && fullBlob.size > 800
+      ? trim
+        ? await durableBlob(fullBlob)
+        : fullBlob
+      : null
   if (!durable) return attempts
+  if (!trim) {
+    return attempts.map((a) => ({
+      ...a,
+      clipBlob: a.clipBlob && a.clipBlob.size > 800 ? a.clipBlob : durable,
+    }))
+  }
   const out: RawHoldAttempt[] = []
   for (const a of attempts) {
     if (a.clipBlob && a.clipBlob.size > 800) {
@@ -523,12 +535,12 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         : 'That kick did not stick. Kick up again when you are ready, or tap Done.',
     )
 
-    await wait(opts.doneRequested() ? 400 : POST_FOOT_MS)
+    await wait(opts.doneRequested() ? 80 : POST_FOOT_MS)
     let clipBlob: Blob | null = null
     if (rec.session) {
       try {
         const blob = await rec.session.stop()
-        if (blob.size > 800) clipBlob = await durableBlob(blob)
+        if (blob.size > 800) clipBlob = opts.doneRequested() ? blob : await durableBlob(blob)
       } catch {
         clipBlob = null
       }
@@ -543,14 +555,15 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         : Math.max(0, holdStartSec)
       last = holdSeconds
       best = best == null ? holdSeconds : Math.max(best, holdSeconds)
-      const trimmed = clipBlob
-        ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
-        : {
-            clipBlob,
-            clockOffsetSec,
-            playheadSec,
-            poseTrack,
-          }
+      const trimmed =
+        clipBlob && !opts.doneRequested()
+          ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
+          : {
+              clipBlob,
+              clockOffsetSec,
+              playheadSec,
+              poseTrack,
+            }
       attempts.push({
         holdSeconds,
         livePeak: peakFrozen,

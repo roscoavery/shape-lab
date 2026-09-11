@@ -43,10 +43,10 @@ export async function getPoseLandmarker(): Promise<PoseLandmarker> {
       try {
         // Two extra candidates let SubjectLock reject a background ghost
         // without changing the Today floor detector (numPoses: 4).
-        return await createLandmarker('GPU', 3)
+        return await createLandmarker('GPU', 4)
       } catch (err) {
         console.warn('GPU pose landmarker failed, falling back to CPU', err)
-        return createLandmarker('CPU', 3)
+        return createLandmarker('CPU', 4)
       }
     })()
   }

@@ -72,6 +72,8 @@ assert('standing looks human', poseLooksHuman(standAt(0.4)))
 assert('handstand looks human', poseLooksHuman(hsAt(0.4)))
 assert('tiny furniture cluster is not a person', !poseLooksHuman(chair))
 assert('keyboard stand is a pole, not a person', looksLikePole(pianoStand) && !poseLooksHuman(pianoStand))
+const onlyPole = new SubjectLock().select([pianoStand], 100)
+assert('never locks onto a stand alone', !onlyPole.landmarks && !onlyPole.debug.locked, onlyPole.debug)
 
 const lock = new SubjectLock()
 const first = lock.select([standAt(0.32), chair], 1_000)

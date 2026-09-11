@@ -65,6 +65,7 @@ export function HoldReplayPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [mode, setMode] = useState<JointDrawMode>('merged')
+  const [showOverlay, setShowOverlay] = useState(true)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -132,19 +133,21 @@ export function HoldReplayPlayer({
             ctx.drawImage(video, 0, 0, w, h)
           }
           const t = video.currentTime
-          const lm = landmarksAt(track, t)
-          const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
-          drawPoseOverlay(ctx, lm, {
-            width: w,
-            height: h,
-            mirror,
-            mode,
-            showAngles: true,
-            lineColor: overlayLineColor(score),
-          })
           const clock = Math.max(0, Math.min(holdSeconds, t - clockOffsetSec))
-          if (score) {
-            drawGradeHud(ctx, w, h, Math.round(score.overall), 'Handstand', clock)
+          if (showOverlay) {
+            const lm = landmarksAt(track, t)
+            const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
+            drawPoseOverlay(ctx, lm, {
+              width: w,
+              height: h,
+              mirror,
+              mode,
+              showAngles: true,
+              lineColor: overlayLineColor(score),
+            })
+            if (score) {
+              drawGradeHud(ctx, w, h, Math.round(score.overall), 'Handstand', clock)
+            }
           }
         }
       }
@@ -171,7 +174,7 @@ export function HoldReplayPlayer({
       video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
     }
-  }, [src, blob, track, mode, mirror, holdSeconds, clockOffsetSec, playheadSec])
+  }, [src, blob, track, mode, mirror, holdSeconds, clockOffsetSec, playheadSec, showOverlay])
 
   const runEncode = useCallback(async () => {
     if (!blob) {
@@ -349,6 +352,17 @@ export function HoldReplayPlayer({
           }`}
         >
           Side view · one line
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowOverlay((on) => !on)}
+          className={`rounded-full px-3 py-1 text-[12px] ${
+            showOverlay
+              ? 'border border-[var(--panel-border)] text-[var(--muted)]'
+              : 'bg-[var(--accent)] font-semibold text-[#06281f]'
+          }`}
+        >
+          {showOverlay ? 'Hide skeleton' : 'Skeleton off'}
         </button>
         <button
           type="button"
