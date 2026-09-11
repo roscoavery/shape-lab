@@ -170,38 +170,33 @@ Shape-library crop sizes ship in the app (the framings set on Aug 28). Later cro
 
 Athlete names, parent phones, and class photos stay **in the app** on **More → Profiles**. You do not need a spreadsheet.
 
-### Move the gym onto the home computer (then pause Vercel)
+### Move the gym onto the Mac (then pause Vercel)
 
-The iPad and phone only share faces that have been **sent off that Safari tab**. A picture sitting in the iPad browser is not on Vercel yet, so the phone cannot show it. Do this **before** you change URLs or pause Production.
+Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so you can copy them now.
 
-This Cursor cloud VM is **not** 24/7. Run these commands on the computer that stays on at home.
-
-1. **While Production is still up**, on the iPad, open the current gym URL (`temporary-racing-sulfur-78x9doy.vercel.app`). Unlock Ryan → **More → Profiles** → **Send everything on this device**. Wait until it says the pictures left this device. Hard-refresh the phone on that **same** URL and confirm faces.
-2. On the home PC, clone this repo (or `git pull` on `v2-rebuild`). Copy `.env.example` to `.env`. Paste `BLOB_READ_WRITE_TOKEN` from Vercel → the gym project → **Storage → Blob** (the existing store — do not make a second one).
-3. Pull a copy of the live gym onto disk:
+1. Install Node LTS from [nodejs.org](https://nodejs.org) if `node -v` fails in Terminal.
+2. Get the repo (once):
 
    ```bash
-   npm install
-   npm run gym:pull    # Blob token if you have it; otherwise the live Vercel URL
-   npm run gym:up      # disk gym + public HTTPS tunnel
+   git clone https://github.com/roscoavery/shape-lab.git
+   cd shape-lab
+   git checkout v2-rebuild
    ```
 
-   That writes Blob `data/` (roster, photos, feed, classes, clips) into this computer’s `data/` folder. Keep the Blob store. Do not delete it.
-4. Start the gym on disk only (this strips the Blob token so the PC does not keep writing paid storage):
+   Or `cd` into the folder you already have and `git pull`.
+3. Start the gym. Either double-click **`Start-Gym.command`** in Finder, or:
 
    ```bash
-   npm run gym
+   npm run gym:mac
    ```
 
-5. In a second terminal, publish HTTPS:
-   - **Try it tonight** (new hostname every time you restart): `npm run share:quick`
-   - **Keep the same name** (needs a domain on Cloudflare — setup below): `npm run share`
-6. Open **that home URL** on the iPad and the phone. Confirm profiles and pictures. The old Vercel tab is a different origin — bookmark the new link.
-7. **Then** pause the Vercel project (Project Settings → pause). Do not delete the project or the Blob store. Pausing stops function billing. The copy on disk is now the gym.
+   That installs deps, copies Production onto this Mac (`data/`), keeps the laptop awake, and prints a `https://….trycloudflare.com` link. Leave the Terminal window open. Plug the Mac in and leave sleep off.
+4. Open **that new URL** on the iPad and the phone. Confirm names and faces. Bookmark it. The old Vercel tab is a different site.
+5. **Then** pause the Vercel project. Do not delete the project or the Blob store.
 
-If you pause Vercel before step 1, pictures that never left the iPad stay stuck in that Safari tab and will not appear on the home URL.
+A Cursor / trycloudflare link from this cloud VM will not resolve on your phone. The Mac’s home network is what makes the public name work.
 
-Leave the PC awake (plugged in, sleep off). `npm run gym` and the share tunnel must stay running.
+If `gym:mac` is missing, `npm install` then `npm run gym:pull` and `npm run gym:up`.
 
 ### Gym computer — named Cloudflare tunnel (stable URL)
 
