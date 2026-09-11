@@ -310,7 +310,7 @@ export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): La
   return out
 }
 
-function hasHead(lm: Landmark[]): boolean {
+export function hasHead(lm: Landmark[]): boolean {
   const sh = mid(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.16)
   if (!sh) return false
   const nose = lm[LM.NOSE]
@@ -403,6 +403,40 @@ export function looksLikeFurniture(lm: Landmark[]): boolean {
       ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
       : 1
   return barH < 0.09 && shW < 0.1 && hpW < 0.08
+}
+
+/** Furniture that can fake an inverted stick-figure after a handstand. */
+export function looksLikeBackgroundProp(lm: Landmark[]): boolean {
+  if (looksLikePole(lm) || looksLikeFurniture(lm)) return true
+  if (hasHead(lm)) return false
+  const idx = [
+    LM.LEFT_SHOULDER,
+    LM.RIGHT_SHOULDER,
+    LM.LEFT_ELBOW,
+    LM.RIGHT_ELBOW,
+    LM.LEFT_WRIST,
+    LM.RIGHT_WRIST,
+    LM.LEFT_HIP,
+    LM.RIGHT_HIP,
+    LM.LEFT_KNEE,
+    LM.RIGHT_KNEE,
+    LM.LEFT_ANKLE,
+    LM.RIGHT_ANKLE,
+  ]
+  const pts = idx.map((i) => lm[i]).filter((p): p is Landmark => visOk(p, 0.2))
+  if (pts.length < 6) return false
+  const xs = pts.map((p) => p.x)
+  const spanX = Math.max(...xs) - Math.min(...xs)
+  const shW =
+    visOk(lm[LM.LEFT_SHOULDER], 0.2) && visOk(lm[LM.RIGHT_SHOULDER], 0.2)
+      ? Math.abs(lm[LM.LEFT_SHOULDER]!.x - lm[LM.RIGHT_SHOULDER]!.x)
+      : spanX
+  const hpW =
+    visOk(lm[LM.LEFT_HIP], 0.2) && visOk(lm[LM.RIGHT_HIP], 0.2)
+      ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
+      : spanX
+  if (spanX < 0.07 && shW < 0.06 && hpW < 0.055) return true
+  return false
 }
 
 export function poseLooksHuman(lm: Landmark[] | null | undefined): boolean {

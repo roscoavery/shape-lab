@@ -6,6 +6,7 @@
  */
 
 import type { Landmark, ScoreResult } from '../types'
+import { getLastTrackDebug } from './athleteTrack'
 import { snapshotCanvas } from './captureStore'
 import {
   HoldDetector,
@@ -14,6 +15,7 @@ import {
   type HoldDetectDebug,
 } from './handstandDetect'
 import { LM } from './landmarks'
+import { looksLikeBackgroundProp, looksInverted, poseLooksHuman } from './poseSubject'
 import { cloneLandmarks, type PoseTrack } from './poseTrack'
 import { isIosDevice } from './delayCameraPipeline'
 import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
@@ -434,6 +436,10 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     const samplePose = (lm: Landmark[] | null) => {
       if (!lm || lm.length < 33) return
       if (!rec.session && !opts.timelineSec) return
+      if (looksLikeBackgroundProp(lm) && !looksInverted(lm)) return
+      const dbg = getLastTrackDebug()
+      if (dbg?.predicted) return
+      if (!looksInverted(lm) && !poseLooksHuman(lm) && (dbg?.poseConf ?? 0) < 0.34) return
       const t = clockNow()
       const lastSample = poseTrack[poseTrack.length - 1]
       if (lastSample && t - lastSample.t < 0.05) return

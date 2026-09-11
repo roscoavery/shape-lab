@@ -106,6 +106,18 @@ assert('side handstand without a face still acquires', Boolean(hit.stabilized), 
 const onlyPole = new AthleteTracker().push([pianoStand], 3_000)
 assert('never locks a stand alone', onlyPole.stabilized == null, onlyPole.debug)
 
+const down = new AthleteTracker()
+down.push([hsAt(0.36)], 4_000)
+down.push([hsAt(0.36)], 4_200)
+const after = down.push([standAt(0.36), pianoStand], 4_360)
+assert(
+  'come-down locks the standing person, not the furniture',
+  Boolean(after.stabilized) && !looksLikePole(after.stabilized),
+  after.debug,
+)
+const torsoX = after.stabilized ? (after.stabilized[11].x + after.stabilized[12].x) / 2 : 0
+assert('come-down torso stays on the athlete', Math.abs(torsoX - 0.36) < 0.12, torsoX)
+
 if (failed) {
   console.error(`${failed} athlete track checks failed`)
   process.exit(1)

@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getShape } from '../config/shapes'
 import { formatSeconds } from '../lib/handstandHold'
+import { looksLikeBackgroundProp } from '../lib/poseSubject'
 import {
   burnOverlayVideo,
   burnedOverlayKey,
@@ -46,6 +47,8 @@ type Props = {
   /** When false, overlay file is encoded only after you tap Prepare save. */
   encodeOnReady?: boolean
   athleteId?: string | null
+  /** Fill the parent (fullscreen hold review). */
+  fill?: boolean
 }
 
 export function HoldReplayPlayer({
@@ -61,6 +64,7 @@ export function HoldReplayPlayer({
   compact = false,
   encodeOnReady = false,
   athleteId = null,
+  fill = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -141,8 +145,10 @@ export function HoldReplayPlayer({
           }
           const t = video.currentTime
           const clock = Math.max(0, Math.min(holdSeconds, t - clockOffsetSec))
-          const lm = landmarksAt(track, t)
-          const score = shape ? scoreShape(lm, shape, null, { profileOk: true }) : null
+          const rawLm = landmarksAt(track, t)
+          const lm =
+            rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
+          const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
           if (showOverlay) {
             drawPoseOverlay(ctx, lm, {
               width: w,
@@ -306,19 +312,25 @@ export function HoldReplayPlayer({
     }
   }
 
+  const frameH = fill
+    ? 'min-h-0 flex-1'
+    : compact
+      ? 'max-h-56'
+      : 'max-h-[70vh]'
+
   return (
-    <div>
-      <div className="overflow-hidden rounded-md bg-black">
+    <div className={fill ? 'flex h-full min-h-0 flex-col' : ''}>
+      <div className={`overflow-hidden bg-black ${fill ? 'flex min-h-0 flex-1 flex-col rounded-none' : 'rounded-md'}`}>
         <video
           ref={videoRef}
-          className={videoReady ? 'hidden' : `block w-full bg-black object-contain ${compact ? 'max-h-56' : 'max-h-[70vh]'}`}
+          className={videoReady ? 'hidden' : `block w-full bg-black object-contain ${frameH}`}
           playsInline
           muted={compact}
           controls={!videoReady}
         />
         <canvas
           ref={canvasRef}
-          className={`${videoReady ? 'block' : 'hidden'} w-full bg-black object-contain ${compact ? 'max-h-56' : 'max-h-[70vh]'}`}
+          className={`${videoReady ? 'block' : 'hidden'} w-full bg-black object-contain ${frameH}`}
         />
         <div className="flex items-center gap-2 bg-black/80 px-2 py-1.5">
           <button

@@ -883,9 +883,8 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       'Handstand walking is allowed, but try not to walk. Start clean. Hit a mountain climber and hit a handstand when you are ready, and hold for as long as you can.',
     setupExtraSpeak:
       'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
-    setupShapeId: 'stand_clean',
+    setupShapeId: 'handstand',
     previewShapes: [
-      { shapeId: 'mountain_climber', label: 'MC' },
       { shapeId: 'handstand', label: 'HS' },
     ],
     reviewShapeIds: ['handstand'],

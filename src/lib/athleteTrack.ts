@@ -11,8 +11,7 @@ import {
   BackgroundMotion,
   expandBox,
   looksInverted,
-  looksLikeFurniture,
-  looksLikePole,
+  looksLikeBackgroundProp,
   poseBox,
   poseLooksHuman,
   sanitizePose,
@@ -305,8 +304,11 @@ export class AthleteTracker {
     const human = poseLooksHuman(lm) || looksInverted(lm)
     const complete = completeCount(lm, 0.32)
 
-    if ((looksLikePole(lm) || looksLikeFurniture(lm)) && !looksInverted(lm)) {
+    if (looksLikeBackgroundProp(lm) && !looksInverted(lm)) {
       return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'pole / stand' }
+    }
+    if (looksLikeBackgroundProp(lm) && looksInverted(lm) && heat < 0.12 && complete < 9) {
+      return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'background stick' }
     }
     if (cleaned.broken >= 5 && complete < 8) {
       return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'impossible skeleton' }
@@ -314,11 +316,26 @@ export class AthleteTracker {
     if (!human && complete < 7) {
       return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'not a body' }
     }
+    if (
+      !this.lastStable &&
+      motion?.ready &&
+      box &&
+      heat < 0.08 &&
+      !looksInverted(lm)
+    ) {
+      return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'static object' }
+    }
 
     const center = torsoCenter(lm)
     const scale = torsoScale(lm)
+    const comingDown =
+      Boolean(this.lastStable && looksInverted(this.lastStable)) &&
+      !looksInverted(lm) &&
+      (poseLooksHuman(lm) || complete >= 8)
     let continuity = 0.35
-    if (this.lastCenter && center && this.lastSeen) {
+    if (comingDown) {
+      continuity = 0.62
+    } else if (this.lastCenter && center && this.lastSeen) {
       const dt = Math.max(0.016, (now - this.lastSeen) / 1000)
       const predicted = {
         x: this.lastCenter.x + this.lastVel.x * dt,
@@ -450,7 +467,7 @@ export class AthleteTracker {
     // Sole inverted athlete with a hidden face still counts.
     if (!best && candidates.length === 1) {
       const fallback = clipImpossibleBones(sanitizePose(candidates[0]!, this.lastStable))
-      if (looksInverted(fallback.lm) && fallback.broken < 5) {
+      if (looksInverted(fallback.lm) && !looksLikeBackgroundProp(fallback.lm) && fallback.broken < 5) {
         best = {
           lm: fallback.lm,
           flags: fallback.flags,
@@ -460,6 +477,38 @@ export class AthleteTracker {
           continuity: 0.4,
           reason: null,
         }
+      }
+    }
+
+    const lockIsProp =
+      Boolean(this.lastStable) && looksLikeBackgroundProp(this.lastStable!)
+    if (lockIsProp || (this.lastStable && looksInverted(this.lastStable))) {
+      let steal: ReturnType<AthleteTracker['scoreCandidate']> | null = null
+      for (const raw of candidates) {
+        const cleaned = clipImpossibleBones(sanitizePose(raw, null))
+        if (looksLikeBackgroundProp(cleaned.lm)) continue
+        const standing =
+          poseLooksHuman(cleaned.lm) && !looksInverted(cleaned.lm)
+        const athlete = standing || looksInverted(cleaned.lm)
+        if (!athlete) continue
+        const heat = motion?.scoreBox(poseBox(cleaned.lm)) ?? 0
+        const scored = {
+          lm: cleaned.lm,
+          flags: cleaned.flags,
+          score: 0.58 + 0.3 * heat,
+          anatomy: anatomyScore(cleaned.lm),
+          motion: heat,
+          continuity: 0.55,
+          reason: null,
+        }
+        if (!steal || scored.score > steal.score) steal = scored
+      }
+      const bestIsAthlete = Boolean(best && !looksLikeBackgroundProp(best.lm))
+      if (steal && !bestIsAthlete) {
+        this.euro.reset()
+        this.state = 'acquiring'
+        this.acquireSince = now
+        best = steal
       }
     }
 
@@ -500,7 +549,15 @@ export class AthleteTracker {
       return { raw: best.lm, stabilized: stable, state: this.state, debug }
     }
 
-    if (this.lastStable && lostMs < UNCERTAIN_MS) {
+    const lastInv = Boolean(this.lastStable && looksInverted(this.lastStable))
+    const stillInv = candidates.some((c) => looksInverted(c))
+    const lastProp = Boolean(this.lastStable && looksLikeBackgroundProp(this.lastStable))
+    if (
+      this.lastStable &&
+      lostMs < UNCERTAIN_MS &&
+      !lastProp &&
+      !(lastInv && !stillInv && lostMs > 80)
+    ) {
       const predicted = this.predict(now)
       this.state = this.state === 'locked' ? 'uncertain' : this.state
       const debug = emptyDebug({

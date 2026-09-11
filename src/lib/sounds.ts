@@ -73,15 +73,53 @@ export function unlockHoldTones(): void {
   }
 }
 
-function playTone(freq: number, ms: number, gain = 0.2) {
+let keepAlive: { osc: OscillatorNode; g: GainNode } | null = null
+
+function stopHoldToneKeepAlive() {
+  if (!keepAlive) return
+  try {
+    keepAlive.osc.stop()
+  } catch {
+    /* already stopped */
+  }
+  try {
+    keepAlive.g.disconnect()
+  } catch {
+    /* already disconnected */
+  }
+  keepAlive = null
+}
+
+/** Silent oscillator so iPad does not suspend Web Audio between kick-up and come-down. */
+function startHoldToneKeepAlive() {
   try {
     const ac = audio()
     if (!ac) return
     void ac.resume()
-    const now = ac.currentTime
+    if (keepAlive) return
     const osc = ac.createOscillator()
     const g = ac.createGain()
+    osc.frequency.value = 40
     osc.type = 'sine'
+    g.gain.setValueAtTime(0.00001, ac.currentTime)
+    osc.connect(g)
+    g.connect(ac.destination)
+    osc.start()
+    keepAlive = { osc, g }
+  } catch {
+    /* audio blocked */
+  }
+}
+
+function playTone(freq: number, ms: number, gain = 0.2, delay = 0, type: OscillatorType = 'sine') {
+  try {
+    const ac = audio()
+    if (!ac) return
+    void ac.resume()
+    const now = ac.currentTime + delay
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = type
     osc.frequency.value = freq
     g.gain.setValueAtTime(0.0001, now)
     g.gain.exponentialRampToValueAtTime(gain, now + 0.012)
@@ -89,7 +127,7 @@ function playTone(freq: number, ms: number, gain = 0.2) {
     osc.connect(g)
     g.connect(ac.destination)
     osc.start(now)
-    osc.stop(now + ms / 1000 + 0.02)
+    osc.stop(now + ms / 1000 + 0.03)
   } catch {
     /* audio blocked */
   }
@@ -97,12 +135,16 @@ function playTone(freq: number, ms: number, gain = 0.2) {
 
 /** Handstand Lab-style: bright beep when the clock starts. */
 export function playHoldEnterBeep(): void {
-  playTone(1046.5, 140, 0.22)
+  startHoldToneKeepAlive()
+  playTone(1046.5, 160, 0.34, 0, 'triangle')
 }
 
-/** Lower beep when they come down and the clock stops. */
+/** Two-note drop when they come down and the clock stops. */
 export function playHoldExitBeep(): void {
-  playTone(349.23, 180, 0.2)
+  stopHoldToneKeepAlive()
+  void audio()?.resume()
+  playTone(523.25, 130, 0.36, 0, 'triangle')
+  playTone(349.23, 220, 0.34, 0.12, 'triangle')
 }
 
 export function playHitTick(): void {
