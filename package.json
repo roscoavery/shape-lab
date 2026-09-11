@@ -10,7 +10,9 @@
     "lint": "oxlint",
     "preview": "vite preview --host --port 43127",
     "share": "node scripts/share.mjs",
-    "share:quick": "node scripts/share.mjs --quick"
+    "share:quick": "node scripts/share.mjs --quick",
+    "gym": "node scripts/gym-home.mjs",
+    "gym:pull": "node scripts/pull-from-blob.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

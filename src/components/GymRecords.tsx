@@ -4,6 +4,7 @@ import { athleteContact } from '../lib/gymBackup'
 import {
   enableServerRosterPush,
   isServerRosterPushEnabled,
+  localOnlyPhotoCount,
   pushThisDeviceToGym,
 } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
@@ -14,6 +15,7 @@ import { AthleteAvatar } from './AthleteAvatar'
 type PersistInfo = {
   mode: 'blob' | 'disk' | 'tmp'
   lasting: boolean
+  homeGym?: boolean
 }
 
 type Props = {
@@ -43,6 +45,7 @@ export function GymRecords({ athletes }: Props) {
     void pushThisDeviceToGym().catch(() => {})
   }, [athletes.length])
 
+  const localOnlyPhotos = localOnlyPhotoCount()
   const contacts = athletes.map((a) => ({
     athlete: a,
     ...athleteContact(a),
@@ -62,6 +65,10 @@ export function GymRecords({ athletes }: Props) {
       const result = await pushThisDeviceToGym()
       if (!result.ok) {
         flash(result.error || 'Could not send this device’s gym file.')
+        return
+      }
+      if (result.remainingPhotos && result.remainingPhotos > 0) {
+        flash(result.error || `${result.remainingPhotos} picture(s) still only on this device. Stay on this URL and tap Send again.`)
         return
       }
       flash(
@@ -96,11 +103,20 @@ export function GymRecords({ athletes }: Props) {
           then go blank after a cold start.
         </p>
       )}
-      {persist?.lasting && (
+      {persist?.lasting && localOnlyPhotos === 0 && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
-          Blob is already on. Do not make another store. The iPad still has
-          pictures the gym file is missing — send them from this page, then
-          hard-refresh the phone and laptop on this same URL.
+          {persist.homeGym
+            ? 'This computer is the gym file. Pictures load from this PC — hard-refresh the phone on this same home URL if a face is still missing.'
+            : 'Gym file is connected. Pictures on this device have a shared URL — hard-refresh the phone on this same link if a face is still missing.'}
+        </p>
+      )}
+      {localOnlyPhotos > 0 && (
+        <p className="mt-3 rounded-lg border border-[var(--warn)]/40 bg-[#2a2410] px-3 py-2 text-sm text-[var(--warn)]">
+          {localOnlyPhotos} profile picture{localOnlyPhotos === 1 ? '' : 's'}{' '}
+          still live only on this iPad. The phone cannot see those faces until
+          you tap <strong className="text-[var(--text)]">Send everything on this device</strong>,
+          then hard-refresh the phone on this same URL. Do that before you
+          switch to a home-computer link — a new URL is a blank photo drawer.
         </p>
       )}
 

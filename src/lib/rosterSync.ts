@@ -302,6 +302,24 @@ export function rememberLocalPhoto(id: string, url: string) {
   localPhotoHold.set(id, { url, until: Date.now() + PHOTO_HOLD_MS })
 }
 
+export function localOnlyPhotoCount(): number {
+  return loadAthletes().filter((a) => a.photoDataUrl?.startsWith('data:')).length
+}
+
+/** Upload every data-URL picture still stuck on this device. */
+export async function flushLocalPhotos(): Promise<number> {
+  if (!serverPushEnabled) return 0
+  let sent = 0
+  for (const row of loadAthletes()) {
+    if (!row.photoDataUrl?.startsWith('data:')) continue
+    const url = await pushOnePhoto(row.id, row.photoDataUrl)
+    if (!url) continue
+    sent += 1
+    saveAthletes(attachPhotos(loadAthletes(), { [row.id]: url }, true))
+  }
+  return sent
+}
+
 function holdingLocalPhoto(id: string, local: string | undefined): boolean {
   const held = localPhotoHold.get(id)
   if (!held || !local) return false
@@ -543,27 +561,25 @@ export async function pushThisDeviceToGym(): Promise<{
   ok: boolean
   profiles: number
   photos: number
+  remainingPhotos?: number
   error: string | null
 }> {
   enableServerRosterPush()
   const local = localRosterSnapshot()
   const ok = await pushServerRoster(local)
-  const remaining = loadAthletes().filter((a) => a.photoDataUrl?.startsWith('data:'))
-  let photos = local.athletes.filter((a) => a.photoDataUrl).length - remaining.length
-  if (remaining.length > 0) {
-    for (const row of remaining) {
-      if (!row.photoDataUrl) continue
-      const url = await pushOnePhoto(row.id, row.photoDataUrl)
-      if (url) {
-        photos += 1
-        saveAthletes(attachPhotos(loadAthletes(), { [row.id]: url }, true))
-      }
-    }
-  }
+  const extra = await flushLocalPhotos()
+  const remaining = localOnlyPhotoCount()
+  const photos =
+    local.athletes.filter((a) => a.photoDataUrl).length - remaining + extra
   return {
     ok,
     profiles: local.athletes.length,
     photos,
-    error: ok ? null : 'Could not reach the gym file from this device.',
+    remainingPhotos: remaining,
+    error: ok
+      ? remaining > 0
+        ? `${remaining} picture${remaining === 1 ? '' : 's'} still only on this device — stay on this URL and tap Send again.`
+        : null
+      : 'Could not reach the gym file from this device.',
   }
 }

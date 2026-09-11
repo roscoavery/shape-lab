@@ -1,6 +1,7 @@
 import type { ServerResponse } from 'node:http'
 import {
   isDirectHttpUrl,
+  persistMode,
   readBin,
   readJson,
   readText,
@@ -169,12 +170,15 @@ function clientPhotoMap(data: DiskRosterPhotos): Record<string, PhotoRef> {
   const photos: Record<string, PhotoRef> = {}
   const at = data.exportedAt || new Date().toISOString()
   const ids = new Set([...(data.ids ?? []), ...Object.keys(data.photos)])
+  const serveLocal = persistMode() !== 'blob'
   for (const id of ids) {
     const sid = safePhotoId(id)
     if (!sid) continue
     const ref = asRef(data.photos[sid], at)
     if (ref) {
-      photos[sid] = ref
+      photos[sid] = serveLocal
+        ? { ...ref, url: photoFileUrl(sid, ref.updatedAt || at) }
+        : ref
       continue
     }
     photos[sid] = {
@@ -266,7 +270,7 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
   if (!sid) return false
   const data = await loadIndex()
   const ref = asRef(data.photos[sid], data.exportedAt)
-  if (ref?.url && isDirectHttpUrl(ref.url)) {
+  if (ref?.url && isDirectHttpUrl(ref.url) && persistMode() === 'blob') {
     sendPublicRedirect(res, ref.url)
     return true
   }

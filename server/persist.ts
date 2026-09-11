@@ -32,7 +32,18 @@ function canWrite(dir: string): boolean {
   }
 }
 
+function homeGymDisk(): boolean {
+  const flag = (process.env.GYM_HOME || '').trim().toLowerCase()
+  return flag === '1' || flag === 'true' || flag === 'yes'
+}
+
+/** Home PC with GYM_HOME=1 — phones hit this computer, not Blob. */
+export function isHomeGym(): boolean {
+  return homeGymDisk()
+}
+
 function useBlob(): boolean {
+  if (homeGymDisk()) return false
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)
 }
 

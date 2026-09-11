@@ -85,7 +85,7 @@ Dashboard (once)
        CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
 
 Gym computer every session
-  Terminal 1:  npm run dev
+  Terminal 1:  npm run gym
   Terminal 2:  npm run share
 
 Start the tunnel on Windows boot (admin PowerShell, cloudflared installed):
@@ -132,7 +132,7 @@ function runCloudflared(extraArgs, { printUrl = false, hostname = '' } = {}) {
   if (hostname) console.log(`Gym URL: ${hostname}`)
   if (!originUp()) {
     console.warn(
-      `Warning: nothing answered at ${ORIGIN}. Start Shape Lab first with npm run dev.`,
+      `Warning: nothing answered at ${ORIGIN}. Start Shape Lab first with npm run gym (home PC) or npm run dev.`,
     )
   }
 

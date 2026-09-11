@@ -74,7 +74,7 @@ import {
 import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
-import { persistMode, readRevision } from './persist.ts'
+import { isHomeGym, persistMode, readRevision } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
@@ -203,6 +203,7 @@ export async function handleShapeLabApi(
     sendJson(res, 200, {
       mode,
       lasting: mode === 'blob' || mode === 'disk',
+      homeGym: isHomeGym(),
       revision: await readRevision(),
     })
     return true

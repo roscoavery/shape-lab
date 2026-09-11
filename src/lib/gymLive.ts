@@ -10,6 +10,7 @@ import { listFeedPosts } from './feedPosts'
 import { loadNotices } from './notify'
 import {
   attachPhotosToLocal,
+  flushLocalPhotos,
   pullServerRoster,
   pullServerRosterPhotos,
   applyRosterSnapshot,
@@ -105,6 +106,7 @@ export async function syncGymIfChanged(
     if (!prev || prev.chalkboards !== rev.chalkboards) jobs.push(hydrateChalkboards())
     if (!prev || prev.notices !== rev.notices) jobs.push(loadNotices())
     await Promise.allSettled(jobs)
+    void flushLocalPhotos()
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('shape-lab-gym-pulled'))
     }

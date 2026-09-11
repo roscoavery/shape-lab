@@ -101,11 +101,11 @@ Phones share gym data (profiles, stills, library, feed) through Blob + `/api/rev
 - **On-Demand Concurrent Builds** — Settings → Build and Deployment. Leave it off. Extra parallel builds are what Vercel bills as “on-demand.” One Production build at a time is enough.
 - **Preview deployments** — same page, Ignored Build Step → **Only build production**. Agent branches should not mint billed preview URLs.
 
-**Leave this ON (this is how every device updates):**
+**Leave this ON until the home computer is the gym:**
 
-- The existing Production project (`temporary-racing-sulfur-78x9doy.vercel.app`) — do not **Pause project**
-- **Blob** + `BLOB_READ_WRITE_TOKEN`
-- Automatic Production deploys from **`main`** (GitHub connected). A `git push` to `main` is how hold-challenge / reel fixes reach the iPad. If you turned that off, click **Redeploy → Production** on this project after each push.
+- The existing Production project (`temporary-racing-sulfur-78x9doy.vercel.app`) — do not **Pause project** until phones use the home URL (see **Move the gym onto the home computer** below)
+- **Blob** + `BLOB_READ_WRITE_TOKEN` — needed to copy the gym onto the PC. Do not delete the Blob store.
+- Automatic Production deploys from **`main`** (GitHub connected) while you are still on Vercel. A `git push` to `main` is how hold-challenge / reel fixes reach the iPad. If you turned that off, click **Redeploy → Production** on this project after each push.
 
 **The “on-demand budget” switch is not a billing off switch.** That is Spend Management (a cap / pause). Turning it **off** removes the brake — Vercel keeps charging Pro overages. Turning **On-Demand Concurrent Builds** off only stops extra parallel *builds*. It does not stop **Fluid Active CPU** or **Fast Data Transfer**.
 
@@ -160,7 +160,7 @@ On the **same Production URL**, with Blob connected, every device shares:
 
 Edits land through a cheap `/api/revision` check every few seconds. Only the store that changed is pulled — add, edit, or delete on the iPad and the phone should show it without a full reload.
 
-**Do not create a second Blob store.** The gym already has one. Missing pictures (Addy, Tina, anyone else) are still sitting in the iPad browser. After a Production redeploy, unlock Ryan on the iPad → **More → Profiles** → **Send everything on this device**. Then hard-refresh the phone and laptop on the same Production URL.
+**Do not create a second Blob store.** The gym already has one. Profile pictures taken on the iPad live in that Safari tab until they are uploaded. Unlock Ryan on the iPad → **More → Profiles** → **Send everything on this device**. Then hard-refresh the phone and laptop on the **same** Production URL. A new hostname (Preview, tunnel, home PC) is a blank photo drawer until those faces have a shared URL.
 
 After a class ends, **Class recaps** can change which class it was and who was there. Adding someone who was not marked present still writes Class nights and copies holds / skills already logged in that class.
 
@@ -170,11 +170,41 @@ Shape-library crop sizes ship in the app (the framings set on Aug 28). Later cro
 
 Athlete names, parent phones, and class photos stay **in the app** on **More → Profiles**. You do not need a spreadsheet.
 
-### Gym computer (local Cloudflare tunnel)
+### Move the gym onto the home computer (then pause Vercel)
 
-`*.trycloudflare.com` hostnames are one-shot. A **named** tunnel is only needed if you want phones to hit the gym PC instead of Vercel. The gym PC must stay on.
+The iPad and phone only share faces that have been **sent off that Safari tab**. A picture sitting in the iPad browser is not on Vercel yet, so the phone cannot show it. Do this **before** you change URLs or pause Production.
 
-This Cursor cloud VM is **not** 24/7.
+This Cursor cloud VM is **not** 24/7. Run these commands on the computer that stays on at home.
+
+1. **While Production is still up**, on the iPad, open the current gym URL (`temporary-racing-sulfur-78x9doy.vercel.app`). Unlock Ryan → **More → Profiles** → **Send everything on this device**. Wait until it says the pictures left this device. Hard-refresh the phone on that **same** URL and confirm faces.
+2. On the home PC, clone this repo (or `git pull` on `v2-rebuild`). Copy `.env.example` to `.env`. Paste `BLOB_READ_WRITE_TOKEN` from Vercel → the gym project → **Storage → Blob** (the existing store — do not make a second one).
+3. Pull a copy of the live gym onto disk:
+
+   ```bash
+   npm install
+   npm run gym:pull
+   ```
+
+   That writes Blob `data/` (roster, photos, feed, classes, clips) into this computer’s `data/` folder. Keep the Blob store. Do not delete it.
+4. Start the gym on disk only (this strips the Blob token so the PC does not keep writing paid storage):
+
+   ```bash
+   npm run gym
+   ```
+
+5. In a second terminal, publish HTTPS:
+   - **Try it tonight** (new hostname every time you restart): `npm run share:quick`
+   - **Keep the same name** (needs a domain on Cloudflare — setup below): `npm run share`
+6. Open **that home URL** on the iPad and the phone. Confirm profiles and pictures. The old Vercel tab is a different origin — bookmark the new link.
+7. **Then** pause the Vercel project (Project Settings → pause). Do not delete the project or the Blob store. Pausing stops function billing. The copy on disk is now the gym.
+
+If you pause Vercel before step 1, pictures that never left the iPad stay stuck in that Safari tab and will not appear on the home URL.
+
+Leave the PC awake (plugged in, sleep off). `npm run gym` and the share tunnel must stay running.
+
+### Gym computer — named Cloudflare tunnel (stable URL)
+
+`*.trycloudflare.com` hostnames die when the process dies. A **named** tunnel keeps `gym.yourdomain.com` as long as the PC is on.
 
 ### What you need once
 
@@ -187,7 +217,7 @@ This Cursor cloud VM is **not** 24/7.
 2. **Create a tunnel** named `shape-lab`. Copy the install **token**.
 3. Add a **published application**:
    - Hostname: `gym.yourdomain.com` (any subdomain on that domain)
-   - Service URL: `http://localhost:43127`
+   - Service URL: `http://127.0.0.1:43127`
 4. In this repo:
 
 ```bash
@@ -197,6 +227,7 @@ cp .env.example .env
 Paste into `.env`:
 
 ```bash
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_…   # only for npm run gym:pull
 CLOUDFLARE_TUNNEL_TOKEN=eyJ...
 CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
 ```
@@ -206,7 +237,7 @@ CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.yourdomain.com
 ### Gym computer (every session, or on boot)
 
 ```bash
-npm run dev      # terminal 1 — leave it running
+npm run gym      # terminal 1 — disk gym, leave it running
 npm run share    # terminal 2 — keeps the HTTPS name alive
 ```
 
@@ -218,7 +249,7 @@ To start the tunnel when Windows boots (admin PowerShell, after `.env` has the t
 npm run share -- --install-service
 ```
 
-That installs Cloudflare’s Windows service so you do not need a second terminal after reboot. `npm run dev` still has to be running (or started on login) for phones to load the app.
+That installs Cloudflare’s Windows service so you do not need a second terminal after reboot. `npm run gym` still has to be running (or started on login) for phones to load the app.
 
 ### Temporary link only
 
@@ -228,7 +259,7 @@ If you just need a throwaway HTTPS URL right now (new name every time):
 npm run share -- --quick
 ```
 
-Or `npm run share:quick`. Do not text that URL to the gym as the permanent address.
+Or `npm run share:quick`. Do not text that URL to the gym as the permanent address. Do not pause Vercel if this is the only public link — when the process stops, phones have nowhere to go.
 
 ## Athlete Tasks pathway
 
