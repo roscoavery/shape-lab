@@ -12,8 +12,11 @@ import {
 } from './rosterMerge.ts'
 import { readDiskJson, readJson, writeJson } from './persist.ts'
 import {
+  attachRosterPhotos,
   photosFromAthletes,
+  readRosterPhotosFile,
   stripRosterPhotos,
+  urlsFromPhotoIndex,
   writeRosterPhotosFile,
 } from './rosterPhotoStore.ts'
 
@@ -161,9 +164,27 @@ async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
   return next
 }
 
+async function withPhotoUrls(roster: DiskRoster): Promise<DiskRoster> {
+  try {
+    const index = await readRosterPhotosFile()
+    const urls = urlsFromPhotoIndex(index)
+    if (Object.keys(urls).length === 0) return roster
+    return {
+      ...roster,
+      athletes: attachRosterPhotos(
+        roster.athletes as { id: string; photoDataUrl?: string }[],
+        urls,
+      ),
+    }
+  } catch {
+    return roster
+  }
+}
+
 export async function readRosterFile(): Promise<DiskRoster> {
-  // GET must stay read-only. Migrating pictures here crashed Production
-  // with “Dynamic require of node:buffer” and the phone never got a roster.
+  // GET stays read-only (no photo migration / Blob writes). Attaching the
+  // existing URL index is required — without it the phone applies a roster
+  // that has names and no faces, then never keeps the later photo pull.
   try {
     const onDisk = await readRawRoster()
     const slimDisk: DiskRoster = {
@@ -175,16 +196,16 @@ export async function readRosterFile(): Promise<DiskRoster> {
       rosterListsFromUnknown(slimDisk),
       await profileHints(),
     )
-    return {
+    return await withPhotoUrls({
       ...listsToDisk(merged, slimDisk.exportedAt),
       athletes: stripRosterPhotos(merged.athletes),
-    }
+    })
   } catch {
     const bundled = normalizeRoster(readDiskJson<DiskRoster>(FILE, { ...EMPTY }))
-    return {
+    return await withPhotoUrls({
       ...bundled,
       athletes: stripRosterPhotos(bundled.athletes as { photoDataUrl?: string }[]),
-    }
+    })
   }
 }
 

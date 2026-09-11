@@ -170,7 +170,11 @@ function trySave(write: () => void) {
 }
 
 function persistLists(lists: RosterLists): Athlete[] {
-  const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord))
+  const prior = new Map(loadAthletes().map((a) => [a.id, a.photoDataUrl]))
+  const athletes = ensureRyanInAthletes(lists.athletes.filter(isAthleteRecord)).map((a) => {
+    const incoming = a.photoDataUrl || prior.get(a.id)
+    return keepAthletePhoto({ ...a, photoDataUrl: incoming })
+  })
   saveAthletes(athletes)
   const livingIds = new Set(athletes.map((a) => a.id))
   trySave(() =>
@@ -296,10 +300,30 @@ function photosFromSnapshot(athletes: Athlete[]): Record<string, string> {
 /** Crops just saved on this device — gym pulls must not swap them for the old URL. */
 const localPhotoHold = new Map<string, { url: string; until: number }>()
 const PHOTO_HOLD_MS = 12 * 60_000
+/** Hosted picture URLs that must survive a roster JSON with no photos. */
+const lastHostedPhotos = new Map<string, string>()
+
+function rememberHostedPhoto(id: string, url: string) {
+  if (!id || !isPhotoUrl(url)) return
+  lastHostedPhotos.set(id, url)
+}
+
+function keepAthletePhoto(athlete: Athlete): Athlete {
+  const local = athlete.photoDataUrl
+  if (local?.startsWith('data:')) return athlete
+  if (local && isPhotoUrl(local)) {
+    rememberHostedPhoto(athlete.id, local)
+    return athlete
+  }
+  const cached = lastHostedPhotos.get(athlete.id)
+  if (cached) return { ...athlete, photoDataUrl: cached }
+  return athlete
+}
 
 export function rememberLocalPhoto(id: string, url: string) {
   if (!id || !url) return
   localPhotoHold.set(id, { url, until: Date.now() + PHOTO_HOLD_MS })
+  if (isPhotoUrl(url)) rememberHostedPhoto(id, url)
 }
 
 export function localOnlyPhotoCount(): number {
@@ -340,7 +364,10 @@ function attachPhotos(
     const incoming = photos[a.id]
     if (!incoming) return a
     const local = a.photoDataUrl
-    if (!local) return { ...a, photoDataUrl: incoming }
+    if (!local) {
+      rememberHostedPhoto(a.id, incoming)
+      return { ...a, photoDataUrl: incoming }
+    }
     // A fresh crop is a data URL. Gym photo pulls used to replace it with the
     // previous hosted pic, so zoom/save looked like it never stuck.
     if (local.startsWith('data:') && !fromUpload) {
@@ -349,11 +376,15 @@ function attachPhotos(
     }
     if (fromUpload) {
       rememberLocalPhoto(a.id, incoming)
+      rememberHostedPhoto(a.id, incoming)
       return { ...a, photoDataUrl: incoming }
     }
     if (local === incoming) return a
     if (holdingLocalPhoto(a.id, local)) return a
-    if (isPhotoUrl(incoming)) return { ...a, photoDataUrl: incoming }
+    if (isPhotoUrl(incoming)) {
+      rememberHostedPhoto(a.id, incoming)
+      return { ...a, photoDataUrl: incoming }
+    }
     if (incoming.length > local.length) return { ...a, photoDataUrl: incoming }
     return a
   })
@@ -402,24 +433,30 @@ export async function pullServerRosterPhotos(): Promise<Record<string, string>> 
   }
 }
 
+async function putPhotoIndex(id: string, photo: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        kind: 'shape-lab-roster-photos',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        photos: { [id]: photo },
+      }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   if (isPhotoUrl(photo)) {
-    try {
-      await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          kind: 'shape-lab-roster-photos',
-          version: 2,
-          exportedAt: new Date().toISOString(),
-          photos: { [id]: photo },
-        }),
-      })
-    } catch {
-      /* index already has this URL on another device */
-    }
+    if (!(await putPhotoIndex(id, photo))) return null
+    rememberHostedPhoto(id, photo)
     return photo
   }
   if (!photo.startsWith('data:')) return null
@@ -427,22 +464,8 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   if (!blob) return null
   const uploaded = await uploadGymMedia(photoBlobPath(id), blob, 'image/jpeg')
   if ('url' in uploaded) {
-    try {
-      await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          kind: 'shape-lab-roster-photos',
-          version: 2,
-          exportedAt: new Date().toISOString(),
-          photos: { [id]: uploaded.url },
-        }),
-      })
-    } catch {
-      /* URL is already on Blob; index write can retry next push */
-    }
+    if (!(await putPhotoIndex(id, uploaded.url))) return null
+    rememberHostedPhoto(id, uploaded.url)
     return uploaded.url
   }
   try {
@@ -455,7 +478,9 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
     })
     if (!res.ok) return null
     const row = (await res.json()) as { url?: string }
-    return typeof row.url === 'string' ? row.url : `/api/roster-photo-file?id=${encodeURIComponent(id)}`
+    const url = typeof row.url === 'string' ? row.url : `/api/roster-photo-file?id=${encodeURIComponent(id)}`
+    rememberHostedPhoto(id, url)
+    return url
   } catch {
     return null
   }
@@ -484,14 +509,10 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
       }
       lastServerAthleteCount = Math.max(lastServerAthleteCount, slim.athletes.length)
       if (Object.keys(photos).length > 0) {
-        const uploaded = await Promise.all(
-          Object.entries(photos).map(async ([id, photo]) => {
-            const url = await pushOnePhoto(id, photo)
-            return [id, url] as const
-          }),
-        )
         const nextUrls: Record<string, string> = {}
-        for (const [id, url] of uploaded) {
+        // One at a time — iPad Safari dies if fifteen crops upload together.
+        for (const [id, photo] of Object.entries(photos)) {
+          const url = await pushOnePhoto(id, photo)
           if (url) nextUrls[id] = url
         }
         if (Object.keys(nextUrls).length > 0) {
@@ -540,10 +561,10 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
     applied.athletes.length,
     server.athletes.length,
   )
-  void pullServerRosterPhotos().then((photos) => {
-    if (Object.keys(photos).length === 0) return
+  const photos = await pullServerRosterPhotos()
+  if (Object.keys(photos).length > 0) {
     attachPhotosToLocal(photos)
-  })
+  }
   const local = localRosterSnapshot()
   const serverIds = new Set((server.athletes ?? []).map((a) => a.id))
   const hasUnsaved =
@@ -553,7 +574,12 @@ export async function syncRosterWithServer(): Promise<RosterSyncResult> {
   if (hasUnsaved) {
     void pushServerRoster(local)
   }
-  return { ...applied, fromServer: true, error: null }
+  return {
+    athletes: loadAthletes(),
+    activeAthleteId: applied.activeAthleteId,
+    fromServer: true,
+    error: null,
+  }
 }
 
 /** iPad is the full gym — send names + every local picture to this URL. */
@@ -565,9 +591,10 @@ export async function pushThisDeviceToGym(): Promise<{
   error: string | null
 }> {
   enableServerRosterPush()
+  const extraFirst = await flushLocalPhotos()
   const local = localRosterSnapshot()
   const ok = await pushServerRoster(local)
-  const extra = await flushLocalPhotos()
+  const extra = extraFirst + (await flushLocalPhotos())
   const remaining = localOnlyPhotoCount()
   const photos =
     local.athletes.filter((a) => a.photoDataUrl).length - remaining + extra

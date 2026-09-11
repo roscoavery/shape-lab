@@ -27,6 +27,7 @@ export function GymRecords({ athletes }: Props) {
   const [persist, setPersist] = useState<PersistInfo | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [gymPhotoCount, setGymPhotoCount] = useState<number | null>(null)
 
   useEffect(() => {
     void fetch('/api/persist')
@@ -36,6 +37,20 @@ export function GymRecords({ athletes }: Props) {
       })
       .catch(() => {})
   }, [athletes.length])
+
+  useEffect(() => {
+    void fetch('/api/roster-photos', { cache: 'no-store', credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { ids?: string[]; photos?: Record<string, unknown> } | null) => {
+        const n = Array.isArray(data?.ids)
+          ? data.ids.length
+          : data?.photos
+            ? Object.keys(data.photos).length
+            : 0
+        setGymPhotoCount(n)
+      })
+      .catch(() => {})
+  }, [athletes.length, status])
 
   useEffect(() => {
     if (athletes.length === 0) return
@@ -103,11 +118,20 @@ export function GymRecords({ athletes }: Props) {
           then go blank after a cold start.
         </p>
       )}
-      {persist?.lasting && localOnlyPhotos === 0 && (
+      {gymPhotoCount != null && (
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          Gym file has {gymPhotoCount} shared picture{gymPhotoCount === 1 ? '' : 's'}
+          {athletes.length > gymPhotoCount
+            ? ` · ${athletes.length - gymPhotoCount} profile${athletes.length - gymPhotoCount === 1 ? '' : 's'} still have no shared face`
+            : ''}
+          .
+        </p>
+      )}
+      {persist?.lasting && localOnlyPhotos === 0 && (gymPhotoCount ?? 0) > 0 && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
           {persist.homeGym
             ? 'This computer is the gym file. Pictures load from this PC — hard-refresh the phone on this same home URL if a face is still missing.'
-            : 'Gym file is connected. Pictures on this device have a shared URL — hard-refresh the phone on this same link if a face is still missing.'}
+            : 'Those shared pictures should show on the phone after a hard-refresh on this same URL. If a face is still missing, that crop never left this iPad — tap Send again.'}
         </p>
       )}
       {localOnlyPhotos > 0 && (

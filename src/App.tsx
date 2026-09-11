@@ -364,7 +364,12 @@ export default function App() {
       const next = await withRyanPasscode(raw)
       if (cancelled) return next
       rosterReadyRef.current = synced.fromServer && isServerRosterPushEnabled()
-      setAthletes(next)
+      setAthletes((prev) =>
+        next.map((a) => ({
+          ...a,
+          photoDataUrl: a.photoDataUrl || prev.find((p) => p.id === a.id)?.photoDataUrl,
+        })),
+      )
       const remembered = unlockedProfileId() || loadActiveAthleteId()
       if (remembered && next.some((a) => a.id === remembered)) {
         markProfileUnlocked(remembered)

@@ -17,6 +17,7 @@ import {
   enableServerRosterPush,
 } from './rosterSync'
 import { ensureRyanInAthletes } from './ryanProfile'
+import { loadAthletes } from './storage'
 import type { Athlete } from '../types'
 
 export type GymRevisionStores = {
@@ -86,17 +87,13 @@ export async function syncGymIfChanged(
           if (!prev || prev.roster !== rev.roster) {
             const server = await pullServerRoster()
             if (server) {
-              const applied = applyRosterSnapshot(server)
+              applyRosterSnapshot(server)
               enableServerRosterPush()
-              onRoster(ensureRyanInAthletes(applied.athletes))
             }
           }
-          if (!prev || prev.photos !== rev.photos) {
-            const photos = await pullServerRosterPhotos()
-            if (Object.keys(photos).length > 0) {
-              onRoster(ensureRyanInAthletes(attachPhotosToLocal(photos)))
-            }
-          }
+          const photos = await pullServerRosterPhotos()
+          if (Object.keys(photos).length > 0) attachPhotosToLocal(photos)
+          onRoster(ensureRyanInAthletes(loadAthletes()))
         })(),
       )
     }

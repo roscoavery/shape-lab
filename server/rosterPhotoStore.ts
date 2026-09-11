@@ -203,6 +203,21 @@ export async function readRosterPhotosFile(): Promise<DiskRosterPhotos> {
   }
 }
 
+/** Tiny URL map for GET /api/roster — read-only, no Blob writes. */
+export function urlsFromPhotoIndex(data: DiskRosterPhotos): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [id, raw] of Object.entries(data.photos ?? {})) {
+    if (typeof raw === 'string' && isHttpUrl(raw)) {
+      out[id] = raw
+      continue
+    }
+    if (raw && typeof raw === 'object' && typeof raw.url === 'string' && isHttpUrl(raw.url)) {
+      out[id] = raw.url
+    }
+  }
+  return out
+}
+
 export async function writeRosterPhotosFile(raw: unknown): Promise<DiskRosterPhotos> {
   const body = raw && typeof raw === 'object' ? (raw as DiskRosterPhotos) : EMPTY
   const incoming = body.photos && typeof body.photos === 'object' ? body.photos : {}

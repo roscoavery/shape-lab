@@ -17,11 +17,23 @@ export function photoDisplayKey(src: string): string {
   return `data:${src.length}:${src.slice(32, 56)}:${src.slice(-32)}`
 }
 
-export async function compressProfilePhoto(src: string): Promise<Blob | null> {
-  if (!src || isPhotoUrl(src)) return null
-  if (!src.startsWith('data:')) return null
+function dataUrlToBlob(src: string): Blob | null {
+  const m = src.match(/^data:([^;]+);base64,(.+)$/s)
+  if (!m) return null
+  try {
+    const bin = atob(m[2])
+    if (bin.length > 4_500_000) return null
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+    return new Blob([bytes], { type: m[1] || 'image/jpeg' })
+  } catch {
+    return null
+  }
+}
+
+async function compressViaCanvas(src: string, maxEdge: number, quality: number): Promise<Blob | null> {
   const img = await loadImage(src)
-  const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height))
+  const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
   const width = Math.max(1, Math.round(img.width * scale))
   const height = Math.max(1, Math.round(img.height * scale))
   const canvas = document.createElement('canvas')
@@ -31,9 +43,27 @@ export async function compressProfilePhoto(src: string): Promise<Blob | null> {
   if (!ctx) return null
   ctx.drawImage(img, 0, 0, width, height)
   const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((next) => resolve(next), 'image/jpeg', QUALITY)
+    canvas.toBlob((next) => resolve(next), 'image/jpeg', quality)
   })
   return blob && blob.size > 0 ? blob : null
+}
+
+export async function compressProfilePhoto(src: string): Promise<Blob | null> {
+  if (!src || isPhotoUrl(src)) return null
+  if (!src.startsWith('data:')) return null
+  try {
+    const blob = await compressViaCanvas(src, MAX_EDGE, QUALITY)
+    if (blob) return blob
+  } catch {
+    /* iPad canvas can fail on a huge crop — try a smaller pass */
+  }
+  try {
+    const blob = await compressViaCanvas(src, 480, 0.72)
+    if (blob) return blob
+  } catch {
+    /* fall through to the raw JPEG if it is small enough */
+  }
+  return dataUrlToBlob(src)
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
