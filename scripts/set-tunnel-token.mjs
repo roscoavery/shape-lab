@@ -9,8 +9,10 @@
  *   npm run gym:token -- 'cloudflared tunnel run --token eyJ…'
  */
 import { execFileSync } from "node:child_process";
+import { createInterface } from "node:readline";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { stdin as stdinStream, stdout as stdoutStream } from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -71,54 +73,77 @@ if (process.argv.includes("--self-test")) {
   process.exit(0);
 }
 
-const token = argvToken() || extractToken(clipboard());
-if (!token) {
-  console.error(`Clipboard does not have the Cloudflare token yet.
-
-On Zero Trust → Tunnels → shape-lab → Configure:
-  1. Choose macOS (do not run brew / sudo).
-  2. Copy the icon on box 3 only
-     (the line that starts cloudflared tunnel run --token eyJ…).
-  3. Do not paste that line into Terminal — cloudflared is not a command on this Mac.
-  4. Then:
-
-     cd ~/shape-lab
-     git pull
-     npm run gym:token
-
-If copy still fails, paste the token after --token:
-
-     npm run gym:token -- --token eyJ…theRestFromBox3`);
-  process.exit(1);
+function promptPaste() {
+  if (!stdinStream.isTTY) {
+    return new Promise((resolve) => {
+      const chunks = [];
+      stdinStream.setEncoding("utf8");
+      stdinStream.on("data", (chunk) => chunks.push(chunk));
+      stdinStream.on("end", () => resolve(chunks.join("")));
+      stdinStream.on("error", () => resolve(""));
+    });
+  }
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: stdinStream, output: stdoutStream });
+    console.log("");
+    console.log("Paste the box-3 line below, then press Return.");
+    console.log("It can be the whole cloudflared … --token eyJ… line, or just the eyJ… part.");
+    rl.question("> ", (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
 }
 
-let body = "";
-if (existsSync(envPath)) body = readFileSync(envPath, "utf8");
-else if (existsSync(examplePath)) body = readFileSync(examplePath, "utf8");
+function saveToken(token) {
+  let body = "";
+  if (existsSync(envPath)) body = readFileSync(envPath, "utf8");
+  else if (existsSync(examplePath)) body = readFileSync(examplePath, "utf8");
 
-const lines = body.split(/\r?\n/);
-let seenToken = false;
-let seenHost = false;
-const out = [];
-for (const line of lines) {
-  if (/^\s*CLOUDFLARE_TUNNEL_TOKEN=/.test(line)) {
-    out.push(`CLOUDFLARE_TUNNEL_TOKEN=${token}`);
-    seenToken = true;
-    continue;
+  const lines = body.split(/\r?\n/);
+  let seenToken = false;
+  let seenHost = false;
+  const out = [];
+  for (const line of lines) {
+    if (/^\s*CLOUDFLARE_TUNNEL_TOKEN=/.test(line)) {
+      out.push(`CLOUDFLARE_TUNNEL_TOKEN=${token}`);
+      seenToken = true;
+      continue;
+    }
+    if (/^\s*CLOUDFLARE_TUNNEL_HOSTNAME=/.test(line)) {
+      out.push("CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win");
+      seenHost = true;
+      continue;
+    }
+    out.push(line);
   }
-  if (/^\s*CLOUDFLARE_TUNNEL_HOSTNAME=/.test(line)) {
-    out.push("CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win");
-    seenHost = true;
-    continue;
-  }
-  out.push(line);
+  if (!seenToken) out.push(`CLOUDFLARE_TUNNEL_TOKEN=${token}`);
+  if (!seenHost) out.push("CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win");
+  while (out.length && out[out.length - 1] === "") out.pop();
+  out.push("");
+  writeFileSync(envPath, out.join("\n"));
+  console.log(`Saved tunnel token (${token.length} characters) to .env`);
+  console.log("Next: npm run gym:mac");
+  console.log("Then on iPad / phone: https://gym.shapelab.win");
+  console.log("Leave the Terminal window open. Do not pause Vercel until names and faces show there.");
 }
-if (!seenToken) out.push(`CLOUDFLARE_TUNNEL_TOKEN=${token}`);
-if (!seenHost) out.push("CLOUDFLARE_TUNNEL_HOSTNAME=https://gym.shapelab.win");
-while (out.length && out[out.length - 1] === "") out.pop();
-out.push("");
-writeFileSync(envPath, out.join("\n"));
-console.log(`Saved tunnel token (${token.length} characters) to .env`);
-console.log("Next: npm run gym:mac");
-console.log("Then on iPad / phone: https://gym.shapelab.win");
-console.log("Leave the Terminal window open. Do not pause Vercel until names and faces show there.");
+
+async function main() {
+  let token = argvToken() || extractToken(clipboard());
+  if (!token) {
+    token = extractToken(await promptPaste());
+  }
+  if (!token) {
+    console.error(`That paste was not a Cloudflare token.
+
+Paste the box-3 line into this command (quotes matter), then press Return:
+
+  npm run gym:token -- --token 'cloudflared tunnel run --token eyJ…'
+
+Or run npm run gym:token again and paste when you see the > prompt.`);
+    process.exit(1);
+  }
+  saveToken(token);
+}
+
+await main();

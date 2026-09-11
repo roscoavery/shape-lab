@@ -224,7 +224,7 @@ git pull
 npm run gym:token
 ```
 
-You want `Saved tunnel token (N characters) to .env`. If it says the clipboard is empty, paste the token as an argument (one line, after `--`):
+You want `Saved tunnel token (N characters) to .env`. If the clipboard is empty, it will wait: paste the box-3 line at the `>` prompt and press Return.
 
 ```bash
 npm run gym:token -- --token eyJ…theRestFromBox3
