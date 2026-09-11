@@ -1,4 +1,6 @@
 import type { Athlete } from '../types'
+import { compressProfilePhoto } from './profilePhoto'
+import { saveImageToDevice } from './saveMedia'
 import { loadResearch, saveResearch, type ResearchFile } from './research'
 import {
   applyRosterSnapshot,
@@ -55,6 +57,36 @@ export async function applyGymBackup(backup: GymBackup): Promise<{ athletes: Ath
     await saveResearch(backup.research)
   }
   return { athletes }
+}
+
+function fileSafeName(name: string): string {
+  return name.trim().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'athlete'
+}
+
+/** Leftover Safari crops (Bea / Kate) — share sheet so they land in Files / Photos. */
+export function leftoverLocalPhotos(athletes: Athlete[]): Athlete[] {
+  return athletes.filter((a) => a.photoDataUrl?.startsWith('data:'))
+}
+
+export async function saveLeftoverProfilePhotos(athletes: Athlete[]): Promise<{
+  saved: string[]
+  failed: string[]
+}> {
+  const saved: string[] = []
+  const failed: string[] = []
+  for (const row of leftoverLocalPhotos(athletes)) {
+    const src = row.photoDataUrl
+    if (!src) continue
+    const blob = await compressProfilePhoto(src)
+    if (!blob) {
+      failed.push(row.name)
+      continue
+    }
+    const result = await saveImageToDevice(blob, `shape-lab-${fileSafeName(row.name)}.jpg`)
+    if (result === 'failed') failed.push(row.name)
+    else saved.push(row.name)
+  }
+  return { saved, failed }
 }
 
 export function downloadGymBackup(backup: GymBackup) {

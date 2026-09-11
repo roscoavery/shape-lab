@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../types'
-import { athleteContact } from '../lib/gymBackup'
 import {
   enableServerRosterPush,
   isServerRosterPushEnabled,
@@ -8,7 +7,13 @@ import {
   pushThisDeviceToGym,
 } from '../lib/rosterSync'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
-import { buildGymBackup, downloadGymBackup } from '../lib/gymBackup'
+import {
+  athleteContact,
+  buildGymBackup,
+  downloadGymBackup,
+  leftoverLocalPhotos,
+  saveLeftoverProfilePhotos,
+} from '../lib/gymBackup'
 import { roleLabel } from '../lib/profileRole'
 import { AthleteAvatar } from './AthleteAvatar'
 
@@ -60,7 +65,9 @@ export function GymRecords({ athletes }: Props) {
     void pushThisDeviceToGym().catch(() => {})
   }, [athletes.length])
 
-  const localOnlyPhotos = localOnlyPhotoCount()
+  const leftover = leftoverLocalPhotos(athletes)
+  const localOnlyPhotos = leftover.length || localOnlyPhotoCount()
+  const leftoverNames = leftover.map((a) => a.name.split(/\s+/)[0] || a.name)
   const contacts = athletes.map((a) => ({
     athlete: a,
     ...athleteContact(a),
@@ -136,11 +143,8 @@ export function GymRecords({ athletes }: Props) {
       )}
       {localOnlyPhotos > 0 && (
         <p className="mt-3 rounded-lg border border-[var(--warn)]/40 bg-[#2a2410] px-3 py-2 text-sm text-[var(--warn)]">
-          {localOnlyPhotos} profile picture{localOnlyPhotos === 1 ? '' : 's'}{' '}
-          still live only on this iPad. The phone cannot see those faces until
-          you tap <strong className="text-[var(--text)]">Send everything on this device</strong>,
-          then hard-refresh the phone on this same URL. Do that before you
-          switch to a home-computer link — a new URL is a blank photo drawer.
+          {leftoverNames.length > 0 ? leftoverNames.join(' and ') : `${localOnlyPhotos} picture${localOnlyPhotos === 1 ? '' : 's'}`}{' '}
+          still live only on this iPad. Tap <strong className="text-[var(--text)]">Save leftover pictures</strong> so they land in Files / Photos — then you can move on and put them back later. Do not clear this site’s Safari data.
         </p>
       )}
 
@@ -197,8 +201,13 @@ export function GymRecords({ athletes }: Props) {
           onClick={() => {
             void buildGymBackup().then((backup) => {
               downloadGymBackup(backup)
+              const names = leftoverLocalPhotos(backup.roster.athletes)
+                .map((a) => a.name.split(/\s+/)[0] || a.name)
+                .join(' and ')
               flash(
-                `Saved a gym file with ${backup.roster.athletes.length} profiles onto this iPad. Keep that file in Files / iCloud.`,
+                names
+                  ? `Saved a gym file with ${backup.roster.athletes.length} profiles, including ${names}’s pictures. Keep that file in Files / iCloud.`
+                  : `Saved a gym file with ${backup.roster.athletes.length} profiles onto this iPad. Keep that file in Files / iCloud.`,
               )
             })
           }}
@@ -206,6 +215,33 @@ export function GymRecords({ athletes }: Props) {
         >
           Download gym file
         </button>
+        {leftover.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void saveLeftoverProfilePhotos(athletes)
+                .then((result) => {
+                  if (result.saved.length > 0) {
+                    flash(
+                      `Share sheet for ${result.saved.join(' and ')} — tap Save Image or Save to Files. ${result.failed.length ? `${result.failed.join(' and ')} did not export.` : 'You can retake later if you need to.'}`,
+                    )
+                    return
+                  }
+                  flash(
+                    result.failed.length
+                      ? `Could not export ${result.failed.join(' and ')}. Keep this tab open — Download gym file still has those crops.`
+                      : 'No leftover pictures on this tab.',
+                  )
+                })
+                .finally(() => setBusy(false))
+            }}
+            className="rounded-lg border border-[var(--warn)]/50 px-3 py-2 text-sm font-semibold text-[var(--warn)]"
+          >
+            Save leftover pictures
+          </button>
+        )}
       </div>
       {status && <p className="mt-2 text-sm text-[var(--accent)]">{status}</p>}
     </section>
