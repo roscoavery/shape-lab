@@ -250,7 +250,14 @@ export async function writePublicBin(
   assertDurableWrite()
   mem.set(rel, buf)
   if (useBlob()) {
-    return await writePublicBlob(rel, buf, contentType)
+    try {
+      return await writePublicBlob(rel, buf, contentType)
+    } catch {
+      // This gym's Blob store is private — public CDN writes 500.
+      // Keep the bytes; phones load them through /api/…-file.
+      await writeBlob(rel, buf, contentType)
+      return null
+    }
   }
   const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
   fs.mkdirSync(path.dirname(dest), { recursive: true })

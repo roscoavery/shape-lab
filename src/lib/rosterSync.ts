@@ -462,12 +462,8 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   if (!photo.startsWith('data:')) return null
   const blob = await compressProfilePhoto(photo)
   if (!blob) return null
-  const uploaded = await uploadGymMedia(photoBlobPath(id), blob, 'image/jpeg')
-  if ('url' in uploaded) {
-    if (!(await putPhotoIndex(id, uploaded.url))) return null
-    rememberHostedPhoto(id, uploaded.url)
-    return uploaded.url
-  }
+  // Profile JPEGs are small. Client Blob uploads ask for public access and
+  // 500 on this private store — write the bytes through the gym file instead.
   try {
     const res = await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
