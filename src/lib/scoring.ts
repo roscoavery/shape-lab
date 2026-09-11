@@ -45,6 +45,7 @@ import {
   poseLooksRainbowBridge,
   poseLooksSidePlank,
 } from './homeworkPose'
+import { evaluateHandstandGeometry } from './handstandDetect'
 import { mergePair } from './skeleton'
 import type {
   CriterionDef,
@@ -320,6 +321,37 @@ export function scoreAgainstTarget(
   return { score: clamp(score, 0, 100), deltaLow, deltaHigh }
 }
 
+/** Use the camera-side shoulder→ankle so a ghost far-side foot cannot wreck the line. */
+function measureHandstandBodyLine(landmarks: Landmark[]): number | null {
+  const pairs: Array<[number, number]> = [
+    [LM.LEFT_SHOULDER, LM.LEFT_ANKLE],
+    [LM.RIGHT_SHOULDER, LM.RIGHT_ANKLE],
+    [LM.LEFT_SHOULDER, LM.LEFT_HEEL],
+    [LM.RIGHT_SHOULDER, LM.RIGHT_HEEL],
+  ]
+  let best: number | null = null
+  let bestVis = 0
+  for (const [a, b] of pairs) {
+    const A = landmarks[a]
+    const B = landmarks[b]
+    if (!A || !B) continue
+    const vis = Math.min(A.visibility ?? 1, B.visibility ?? 1)
+    if (vis < 0.2) continue
+    const ang = segmentAngleFromVertical(landmarks, a, b)
+    if (ang == null) continue
+    if (vis > bestVis) {
+      bestVis = vis
+      best = ang
+    }
+  }
+  return best
+}
+
+function poseIsHandstand(landmarks: Landmark[]): boolean {
+  const geo = evaluateHandstandGeometry(landmarks)
+  return Boolean(geo.handsDown && geo.feetOff && !geo.hardFail && geo.confidence >= 0.5)
+}
+
 function measureCriterion(
   landmarks: Landmark[],
   c: CriterionDef,
@@ -509,6 +541,16 @@ function scoreOnce(
       if (worstDef && worstMeasured !== null && worstMeasured !== undefined) {
         const { deltaLow, deltaHigh } = scoreAgainstTarget(worstMeasured, worstDef)
         feedback = feedbackFor(worstDef, worstMeasured, deltaLow, deltaHigh) ?? feedback
+      }
+    } else if (shape.id === 'handstand' && c.id === 'body_line') {
+      measured = measureHandstandBodyLine(landmarks)
+      if (measured === null) {
+        score = 0
+        feedback = coachCue(c.feedbackHigh ?? c.feedbackLow ?? '') || null
+      } else {
+        const graded = scoreAgainstTarget(measured, c)
+        score = graded.score
+        feedback = feedbackFor(c, measured, graded.deltaLow, graded.deltaHigh)
       }
     } else if (measured === null) {
       score = 0
@@ -750,6 +792,10 @@ export function scoreShape(
 ): ScoreResult {
   if (!landmarks || landmarks.length < 33) {
     return emptyResult(shape, 'Step into the camera frame')
+  }
+
+  if (shape.id === 'handstand' && !poseIsHandstand(landmarks)) {
+    return emptyResult(shape, 'Score starts when you are in a handstand.')
   }
 
   const detected = detectCameraView(landmarks)

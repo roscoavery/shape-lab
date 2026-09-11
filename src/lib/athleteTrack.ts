@@ -7,6 +7,7 @@
 import { LandmarkEuro } from './oneEuro'
 import { LM } from './landmarks'
 import type { Landmark } from '../types'
+import { evaluateHandstandGeometry } from './handstandDetect'
 import {
   BackgroundMotion,
   expandBox,
@@ -342,7 +343,8 @@ export class AthleteTracker {
         y: this.lastCenter.y + this.lastVel.y * dt,
       }
       const jump = dist(center, predicted)
-      if (jump > 0.42) {
+      const stayInv = Boolean(this.lastStable && looksInverted(this.lastStable) && looksInverted(lm))
+      if (jump > (stayInv ? 0.55 : 0.42)) {
         return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'torso jump' }
       }
       continuity = Math.max(0, 1 - jump / 0.28)
@@ -366,12 +368,14 @@ export class AthleteTracker {
     }
 
     const locked = this.state === 'locked' || this.state === 'uncertain'
+    const hs = looksInverted(lm) ? evaluateHandstandGeometry(lm).confidence : 0
     const score =
-      (locked ? 0.42 : 0.18) * continuity +
-      0.28 * anatomy +
-      0.16 * Math.min(1, complete / 10) +
-      0.14 * heat +
-      0.12 * Math.min(1, meanVis(lm) / 0.6)
+      (locked ? 0.38 : 0.16) * continuity +
+      0.24 * anatomy +
+      0.14 * Math.min(1, complete / 10) +
+      0.12 * heat +
+      0.1 * Math.min(1, meanVis(lm) / 0.6) +
+      0.24 * hs
     return { lm, flags: cleaned.flags, score, anatomy, motion: heat, continuity, reason: null }
   }
 
@@ -411,7 +415,8 @@ export class AthleteTracker {
       const prev = this.lastStable?.[i]
       if (!prev || !vis(prev, 0.15) || !vis(p, 0.15)) return p
       const jump = dist(p, prev)
-      if (jump > OUTLIER && (p.visibility ?? 1) < 0.93) {
+      const cap = this.lastStable && looksInverted(this.lastStable) ? 0.16 : OUTLIER
+      if (jump > cap && (p.visibility ?? 1) < 0.93) {
         flags[i] = 'outlier'
         return {
           x: prev.x,
