@@ -22,7 +22,7 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
             Pulling the name list from the Mac. This should take a few seconds.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            If this sits here, the Mac gym is not running the latest code — in
+            If this sits here, the Mac gym is still starting — in
             Terminal: git pull, then npm run gym:mac. Then refresh.
           </p>
         </>

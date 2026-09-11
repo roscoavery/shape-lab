@@ -34,7 +34,7 @@ import {
   postedByFromUrl,
   socialPlatform,
 } from '../src/lib/socialUrls.ts'
-import { lookupIgPublicUrl, storeIgPublicMedia } from './igMediaStore.ts'
+import { cachedIgFile, lookupIgPublicUrl, storeIgDiskMedia, storeIgPublicMedia } from './igMediaStore.ts'
 import { persistMode, sendPublicRedirect } from './persist.ts'
 
 const UA =
@@ -950,6 +950,16 @@ export async function proxyInstagramMedia(
     return
   }
 
+  const disk = await cachedIgFile(src)
+  if (disk) {
+    res.statusCode = 200
+    res.setHeader('Content-Type', disk.type)
+    res.setHeader('Content-Length', String(disk.buf.length))
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    res.end(disk.buf)
+    return
+  }
+
   const file = await fetchIgFile(src)
   if (!file) {
     res.statusCode = 502
@@ -964,6 +974,8 @@ export async function proxyInstagramMedia(
       sendPublicRedirect(res, publicUrl)
       return
     }
+  } else {
+    void storeIgDiskMedia(src, file.buf, file.type)
   }
 
   res.statusCode = 200

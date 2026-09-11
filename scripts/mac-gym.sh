@@ -26,8 +26,19 @@ fi
 
 npm install
 echo
-echo "Copying the live gym onto this Mac (Vercel stays up)…"
-npm run gym:pull
+
+PHOTO_DIR="$ROOT/data/roster-photos"
+PHOTO_COUNT=0
+if [ -d "$PHOTO_DIR" ]; then
+  PHOTO_COUNT="$(find "$PHOTO_DIR" -name '*.bin' 2>/dev/null | wc -l | tr -d ' ')"
+fi
+if [ ! -f "$ROOT/data/roster.json" ] || [ "${PHOTO_COUNT:-0}" -eq 0 ]; then
+  echo "Copying the live gym onto this Mac (Vercel stays up)…"
+  npm run gym:pull
+else
+  echo "Using the gym copy already on this Mac ($PHOTO_COUNT profile pictures)."
+  echo "Run npm run gym:pull only if Production has newer names or faces you do not have here."
+fi
 
 echo
 echo "Starting the gym. Keep this window open and the Mac plugged in."

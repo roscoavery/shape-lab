@@ -93,7 +93,8 @@ export async function syncGymIfChanged(
           }
           const photos = await pullServerRosterPhotos()
           if (Object.keys(photos).length > 0) attachPhotosToLocal(photos)
-          onRoster(ensureRyanInAthletes(loadAthletes()))
+          const next = ensureRyanInAthletes(loadAthletes())
+          onRoster(next)
         })(),
       )
     }

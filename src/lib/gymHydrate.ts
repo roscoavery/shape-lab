@@ -87,7 +87,7 @@ export async function hydrateGymAtBoot(): Promise<GymHydrateResult> {
       pullPersist(),
       syncRosterWithServer({ attempts: 2, timeoutMs: 6000 }),
     ])
-    prefetchGymPanels()
+    setTimeout(() => prefetchGymPanels(), 2_500)
     return {
       ...roster,
       persist,

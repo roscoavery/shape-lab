@@ -159,7 +159,34 @@ async function readRawRoster(): Promise<DiskRoster> {
   return listsToDisk(merged, stored.exportedAt || bundled.exportedAt)
 }
 
+function listsEqual(a: RosterLists, b: RosterLists): boolean {
+  const slim = (lists: RosterLists) =>
+    JSON.stringify({
+      athletes: lists.athletes.map((row) => {
+        const { photoDataUrl: _photo, ...rest } = row as { photoDataUrl?: string }
+        return rest
+      }),
+      activeAthleteId: lists.activeAthleteId,
+      homework: lists.homework,
+      homeworkLogs: lists.homeworkLogs.slice(-1000),
+      taskProgress: lists.taskProgress,
+      flowProgress: lists.flowProgress,
+      attempts: lists.attempts.slice(-2000),
+      compareLibraries: lists.compareLibraries,
+      removedAthleteIds: lists.removedAthleteIds,
+      dismissedHomeworkKeys: lists.dismissedHomeworkKeys,
+      removedHomeworkLogIds: lists.removedHomeworkLogIds,
+      removedHomeworkIds: lists.removedHomeworkIds,
+      injuryLogs: lists.injuryLogs.slice(-400),
+      painJournals: lists.painJournals.slice(-400),
+      coachExercises: lists.coachExercises.slice(-200),
+    })
+  return slim(a) === slim(b)
+}
+
 async function persistMerged(lists: RosterLists): Promise<DiskRoster> {
+  const stored = await readRawRoster()
+  if (listsEqual(rosterListsFromUnknown(stored), lists)) return stored
   const next = listsToDisk(lists)
   await writeJson(FILE, next)
   return next

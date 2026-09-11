@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { handstandContest } from '../lib/intakeQuestions'
-import { photoDisplayKey } from '../lib/profilePhoto'
+import { photoDisplayKey, photoIdentity } from '../lib/profilePhoto'
 
 type AvatarAthlete = {
+  id?: string
   name: string
   photoDataUrl?: string
   handstandFloor?: string
@@ -36,12 +38,32 @@ export function AthleteAvatar({
 }) {
   const box = SIZE[size]
   const name = athlete?.name?.trim() || '?'
-  if (athlete?.photoDataUrl) {
+  const who = athlete?.id || name
+  const incoming = athlete?.photoDataUrl
+  const [held, setHeld] = useState<{ who: string; src: string } | null>(null)
+  useEffect(() => {
+    if (incoming) {
+      setHeld((prev) => {
+        if (prev && prev.who === who && photoIdentity(prev.src) === photoIdentity(incoming)) {
+          return prev
+        }
+        return { who, src: incoming }
+      })
+      return
+    }
+    setHeld((prev) => (prev?.who === who ? prev : null))
+  }, [incoming, who])
+  const shown =
+    incoming && held && held.who === who && photoIdentity(held.src) === photoIdentity(incoming)
+      ? held.src
+      : incoming || (held?.who === who ? held.src : undefined)
+  if (shown) {
     return (
       <img
-        key={photoDisplayKey(athlete.photoDataUrl)}
-        src={athlete.photoDataUrl}
+        key={photoDisplayKey(shown)}
+        src={shown}
         alt=""
+        decoding="async"
         className={`${box} shrink-0 rounded-full object-cover ${className}`}
       />
     )

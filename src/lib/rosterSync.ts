@@ -59,7 +59,7 @@ import {
   saveInjuryLogs,
   savePainJournal,
 } from './careStore'
-import { compressProfilePhoto, isPhotoUrl } from './profilePhoto'
+import { compressProfilePhoto, isPhotoUrl, photoIdentity } from './profilePhoto'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -295,9 +295,9 @@ export async function pullServerRoster(opts?: {
 function photosFromSnapshot(athletes: Athlete[]): Record<string, string> {
   const photos: Record<string, string> = {}
   for (const a of athletes) {
-    if (a.photoDataUrl && (a.photoDataUrl.startsWith('data:') || isPhotoUrl(a.photoDataUrl))) {
-      photos[a.id] = a.photoDataUrl
-    }
+    // Only new crops. Echoing hosted /api/ URLs restamped every face and
+    // made pictures vanish / reload on the phones.
+    if (a.photoDataUrl?.startsWith('data:')) photos[a.id] = a.photoDataUrl
   }
   return photos
 }
@@ -386,6 +386,10 @@ function attachPhotos(
     }
     if (local === incoming) return a
     if (holdingLocalPhoto(a.id, local)) return a
+    if (isPhotoUrl(local) && isPhotoUrl(incoming) && photoIdentity(local) === photoIdentity(incoming)) {
+      rememberHostedPhoto(a.id, local)
+      return a
+    }
     if (isPhotoUrl(incoming)) {
       rememberHostedPhoto(a.id, incoming)
       return { ...a, photoDataUrl: incoming }
@@ -438,29 +442,8 @@ export async function pullServerRosterPhotos(): Promise<Record<string, string>> 
   }
 }
 
-async function putPhotoIndex(id: string, photo: string): Promise<boolean> {
-  try {
-    const res = await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        kind: 'shape-lab-roster-photos',
-        version: 2,
-        exportedAt: new Date().toISOString(),
-        photos: { [id]: photo },
-      }),
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
 async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   if (isPhotoUrl(photo)) {
-    if (!(await putPhotoIndex(id, photo))) return null
     rememberHostedPhoto(id, photo)
     return photo
   }

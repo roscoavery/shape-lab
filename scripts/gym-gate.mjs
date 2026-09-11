@@ -1,22 +1,46 @@
 #!/usr/bin/env node
 /**
- * Public home-gym port. /api is answered here (disk), everything else
- * is proxied to the Vite process on 127.0.0.1 so LAN phones do not hang
- * in Vite middleware.
+ * Public home-gym port. /api is answered here (disk). Pages come from the
+ * production `dist/` build (few hashed files, like Vercel) unless GYM_DEV=1,
+ * in which case they are proxied to Vite on 127.0.0.1.
  */
 
 import http from 'node:http'
 import net from 'node:net'
-import { dirname, resolve } from 'node:path'
+import { createReadStream, existsSync, statSync } from 'node:fs'
+import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
+const STATIC = process.env.GYM_STATIC === '1' && existsSync(join(DIST, 'index.html'))
 
 const { handleShapeLabApi } = await import(
   pathToFileURL(resolve(ROOT, 'server/apiHandler.ts')).href
 )
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.wasm': 'application/wasm',
+  '.task': 'application/octet-stream',
+  '.map': 'application/json',
+  '.txt': 'text/plain; charset=utf-8',
+}
 
 function rewriteHeaders(headers) {
   const next = { ...headers }
@@ -59,13 +83,72 @@ function proxyVite(req, res) {
   req.pipe(p)
 }
 
+function sendFile(res, file) {
+  let st
+  try {
+    st = statSync(file)
+  } catch {
+    return false
+  }
+  if (!st.isFile()) return false
+  const ext = extname(file).toLowerCase()
+  const hashedAsset = file.includes(`${sep}assets${sep}`)
+  const headers = {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Content-Length': st.size,
+    'Cache-Control': hashedAsset
+      ? 'public, max-age=31536000, immutable'
+      : ext === '.html'
+        ? 'no-cache'
+        : 'public, max-age=3600',
+  }
+  res.writeHead(200, headers)
+  createReadStream(file).on('error', () => res.destroy()).pipe(res)
+  return true
+}
+
+function safeDistFile(pathname) {
+  const rel = pathname.replace(/^\/+/, '')
+  const file = resolve(DIST, rel)
+  const root = DIST.endsWith(sep) ? DIST : DIST + sep
+  if (file !== DIST && !file.startsWith(root)) return null
+  return file
+}
+
+function serveStatic(req, res) {
+  const raw = (req.url || '/').split('?')[0]
+  let pathname = '/'
+  try {
+    pathname = decodeURIComponent(raw)
+  } catch {
+    pathname = raw
+  }
+  if (pathname.includes('\0') || pathname.includes('..')) {
+    res.statusCode = 400
+    res.end()
+    return
+  }
+  if (pathname === '/') pathname = '/index.html'
+  const file = safeDistFile(normalize(pathname))
+  if (file && sendFile(res, file)) return
+  const hasExt = /\.[a-zA-Z0-9]+$/.test(pathname)
+  if (hasExt) {
+    res.statusCode = 404
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.end('Not found')
+    return
+  }
+  sendFile(res, join(DIST, 'index.html'))
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url || '/'
   if (url.startsWith('/api/') || url === '/api') {
     void handleShapeLabApi(req, res)
       .then((hit) => {
         if (hit || res.headersSent) return
-        proxyVite(req, res)
+        if (STATIC) serveStatic(req, res)
+        else proxyVite(req, res)
       })
       .catch((err) => {
         if (res.headersSent) return
@@ -75,6 +158,10 @@ const server = http.createServer((req, res) => {
       })
     return
   }
+  if (STATIC) {
+    serveStatic(req, res)
+    return
+  }
   proxyVite(req, res)
 })
 
@@ -82,6 +169,10 @@ server.on('upgrade', (req, socket, head) => {
   socket.on('error', () => {
     /* ignore */
   })
+  if (STATIC) {
+    socket.destroy()
+    return
+  }
   const p = net.connect(VITE_PORT, '127.0.0.1', () => {
     let preamble = `${req.method} ${req.url} HTTP/1.1\r\n`
     const headers = rewriteHeaders(req.headers)
@@ -113,5 +204,9 @@ server.on('error', (err) => {
 })
 
 server.listen(PUBLIC_PORT, '0.0.0.0', () => {
-  console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})`)
+  if (STATIC) {
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API + production build)`)
+  } else {
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})`)
+  }
 })

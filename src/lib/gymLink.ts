@@ -20,6 +20,7 @@ export function isHomeNetworkOrigin(
   }
   if (host.endsWith('.local')) return true
   if (host.endsWith('.trycloudflare.com')) return true
+  if (host === 'gym.shapelab.win' || host.endsWith('.shapelab.win')) return true
   if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true
   if (/^192\.168\.\d+\.\d+$/.test(host)) return true
   if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true

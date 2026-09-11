@@ -6,7 +6,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { readJson, writeBin, writePublicBin } from './persist.ts'
+import { readBin, readJson, writeBin, writePublicBin } from './persist.ts'
 import { socialVideoKey } from '../src/lib/socialUrls.ts'
 
 const INDEX = 'data/ig-media-index.json'
@@ -92,4 +92,29 @@ export async function storeIgPublicMedia(
   }
   void saveIndex(index)
   return publicUrl
+}
+
+function igDiskRel(src: string, contentType = 'video/mp4'): string {
+  return `data/ig-media/${hashSrc(src)}.${contentType.startsWith('image/') ? 'jpg' : 'mp4'}`
+}
+
+/** Home gym: serve a copy from disk so the tunnel does not refetch Instagram. */
+export async function cachedIgFile(src: string): Promise<{ buf: Buffer; type: string } | null> {
+  for (const [ext, type] of [
+    ['mp4', 'video/mp4'],
+    ['jpg', 'image/jpeg'],
+  ] as const) {
+    const buf = await readBin(`data/ig-media/${hashSrc(src)}.${ext}`)
+    if (buf && buf.length > 800) return { buf, type }
+  }
+  return null
+}
+
+export async function storeIgDiskMedia(
+  src: string,
+  buf: Buffer,
+  contentType: string,
+): Promise<void> {
+  if (buf.length < 800 || buf.length > MAX_BYTES) return
+  await writeBin(igDiskRel(src, contentType), buf, contentType)
 }

@@ -190,9 +190,9 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
    npm run gym:mac
    ```
 
-   That installs deps, copies Production onto this Mac (`data/`), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off.
+   That installs deps, copies Production onto this Mac (`data/`) if this Mac has no gym copy yet, builds a production bundle (phones load a few hashed files instead of hundreds of Vite source files through the tunnel), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off. The first start after a `git pull` spends a minute building — that is expected. After that, **https://gym.shapelab.win** should feel closer to Vercel.
 4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari to confirm names and faces. The camera will **not** start on that http link — phones need HTTPS. A `https://….trycloudflare.com` line is optional and often 502s — skip it. `zsh: command not found: cloudflared` is expected; do not brew-install it.
-5. Save the named-tunnel token (`npm run gym:token`, below), then `npm run gym:mac` again. On iPad / phone open **https://gym.shapelab.win**. Confirm names, faces, **and** that the camera starts. Bookmark that HTTPS link. **Then** pause the Vercel project. Do not delete the project or the Blob store.
+5. Save the named-tunnel token (`npm run gym:token`, below), then `npm run gym:mac` again. On iPad / phone open **https://gym.shapelab.win**. Confirm names, faces stay put (they should not flash to initials and reload), **and** that the camera starts. Bookmark that HTTPS link. **Then** pause the Vercel project. Do not delete the project or the Blob store. Stay on Vercel until this URL is actually fast enough for class.
 
 A Cursor / trycloudflare link from this cloud VM will not resolve on your phone. Use the Mac’s Wi-Fi address.
 

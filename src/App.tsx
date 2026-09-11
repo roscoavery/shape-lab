@@ -438,7 +438,12 @@ export default function App() {
     const pull = () => {
       void syncGymIfChanged((next) => {
         if (next.length === 0) return
-        setAthletes(ensureRyanInAthletes(next))
+        setAthletes((prev) =>
+          ensureRyanInAthletes(next).map((a) => ({
+            ...a,
+            photoDataUrl: a.photoDataUrl || prev.find((p) => p.id === a.id)?.photoDataUrl,
+          })),
+        )
       })
     }
     window.addEventListener('focus', pull)

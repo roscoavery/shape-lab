@@ -123,7 +123,38 @@ async function loadIndex(): Promise<DiskRosterPhotos> {
   }
 }
 
+function photoIdentity(url: string): string {
+  if (!url) return ''
+  try {
+    const u = url.startsWith('/') ? new URL(url, 'https://gym.local') : new URL(url)
+    const id = u.searchParams.get('id')
+    if (id) return `${u.pathname}?id=${id}`
+    u.searchParams.delete('v')
+    return `${u.pathname}${u.search}`
+  } catch {
+    return url.replace(/[?&]v=[^&]*/g, '').replace(/[?&]$/, '')
+  }
+}
+
+function indexSignature(photos: Record<string, PhotoRef>): string {
+  return Object.keys(photos)
+    .sort()
+    .map((id) => `${id}:${photoIdentity(photos[id]?.url || '')}`)
+    .join('|')
+}
+
 async function persistIndex(photos: Record<string, PhotoRef>): Promise<DiskRosterPhotos> {
+  const current = await loadIndex()
+  const currentMap = clientPhotoMap(current)
+  if (indexSignature(currentMap) === indexSignature(photos)) {
+    return {
+      kind: 'shape-lab-roster-photos',
+      version: 2,
+      exportedAt: current.exportedAt,
+      photos: currentMap,
+      ids: Object.keys(currentMap),
+    }
+  }
   const next: DiskRosterPhotos = {
     kind: 'shape-lab-roster-photos',
     version: 2,
@@ -248,6 +279,8 @@ export async function writeRosterPhotosFile(raw: unknown): Promise<DiskRosterPho
       continue
     }
     if (typeof value === 'string' && isHttpUrl(value)) {
+      const prev = current[sid]
+      if (prev && photoIdentity(prev.url) === photoIdentity(value)) continue
       current[sid] = { url: value, mime: 'image/jpeg', updatedAt: new Date().toISOString() }
       continue
     }
@@ -256,6 +289,8 @@ export async function writeRosterPhotosFile(raw: unknown): Promise<DiskRosterPho
         const migrated = await migrateDataUrl(sid, value.url)
         if (migrated) current[sid] = migrated
       } else if (isHttpUrl(value.url)) {
+        const prev = current[sid]
+        if (prev && photoIdentity(prev.url) === photoIdentity(value.url)) continue
         current[sid] = {
           url: value.url,
           mime: value.mime || 'image/jpeg',
@@ -320,17 +355,19 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
     }
   }
   if (!buf) return false
-  try {
-    const publicUrl = await writePublicBin(photoBinRel(sid), buf, mime)
-    if (publicUrl) {
-      const current = clientPhotoMap(data)
-      current[sid] = { url: publicUrl, mime, updatedAt: new Date().toISOString() }
-      await persistIndex(current)
-      sendPublicRedirect(res, publicUrl)
-      return true
+  if (persistMode() === 'blob') {
+    try {
+      const publicUrl = await writePublicBin(photoBinRel(sid), buf, mime)
+      if (publicUrl) {
+        const current = clientPhotoMap(data)
+        current[sid] = { url: publicUrl, mime, updatedAt: new Date().toISOString() }
+        await persistIndex(current)
+        sendPublicRedirect(res, publicUrl)
+        return true
+      }
+    } catch {
+      /* stream the bytes this once */
     }
-  } catch {
-    /* stream the bytes this once */
   }
   res.statusCode = 200
   res.setHeader('Content-Type', mime)

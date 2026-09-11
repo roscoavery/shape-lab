@@ -12,6 +12,7 @@
     "share": "node scripts/share.mjs",
     "share:quick": "node scripts/share.mjs --quick",
     "gym": "node scripts/gym-home.mjs",
+    "gym:dev": "GYM_DEV=1 node scripts/gym-home.mjs",
     "gym:pull": "node scripts/pull-from-blob.mjs",
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",

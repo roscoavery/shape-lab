@@ -11,10 +11,27 @@ export function isPhotoUrl(value: string | undefined): boolean {
   return value.startsWith('https://') || value.startsWith('http://') || value.startsWith('/api/')
 }
 
+/** Same face file, ignoring cache-busting `v=` so avatars do not remount. */
+export function photoIdentity(src: string): string {
+  if (!src) return ''
+  if (src.startsWith('data:')) {
+    return `data:${src.length}:${src.slice(32, 56)}:${src.slice(-32)}`
+  }
+  try {
+    const u = src.startsWith('/') ? new URL(src, 'https://gym.local') : new URL(src)
+    const id = u.searchParams.get('id')
+    if (id) return `${u.pathname}?id=${id}`
+    u.searchParams.delete('v')
+    return `${u.pathname}${u.search}`
+  } catch {
+    return src.replace(/[?&]v=[^&]*/g, '').replace(/[?&]$/, '')
+  }
+}
+
 /** Every JPEG data URL starts the same, so slice(0, 80) never remounts a new crop. */
 export function photoDisplayKey(src: string): string {
-  if (!src.startsWith('data:')) return src
-  return `data:${src.length}:${src.slice(32, 56)}:${src.slice(-32)}`
+  if (!src.startsWith('data:')) return photoIdentity(src) || src
+  return photoIdentity(src)
 }
 
 function dataUrlToBlob(src: string): Blob | null {
