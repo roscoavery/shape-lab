@@ -21,7 +21,7 @@ const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
 const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
-const HOLD_BUILD = 'lime'
+const HOLD_BUILD = 'orange'
 
 function gitSha() {
   try {
@@ -139,7 +139,7 @@ function sendFile(res, file) {
     'Cache-Control': hashedAsset
       ? 'public, max-age=31536000, immutable'
       : ext === '.html'
-        ? 'no-cache'
+        ? 'no-store'
         : 'public, max-age=3600',
   }
   res.writeHead(200, headers)
@@ -161,7 +161,7 @@ function serveBoot(res) {
     'Cache-Control': 'no-store',
   })
   res.end(
-    '<!doctype html><meta charset="utf-8"><title>Shape Lab</title><body style="font-family:system-ui;background:#111;color:#eee;padding:2rem"><p>Shape Lab is starting on the Mac. Refresh in a few seconds.</p>',
+    '<!doctype html><meta charset="utf-8"><title>Shape Lab</title><body style="font-family:system-ui;background:#111;color:#eee;padding:2rem"><div style="background:#ff6a00;color:#1a0a00;font-weight:900;padding:12px 16px;border-radius:12px;text-align:center">ORANGE BUILD — gym is still starting. Refresh in a few seconds.</div>',
   )
 }
 

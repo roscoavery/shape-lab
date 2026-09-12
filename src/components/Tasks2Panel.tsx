@@ -1961,15 +1961,11 @@ export function Tasks2Panel({
           >
             Class flows
           </p>
-          {seq.mode === 'hs-hold' && (
-            <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
-          )}
+          <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
         </div>
-        {seq.mode === 'hs-hold' && (
-          <div className={`${HOLD_BUILD_BANNER} mt-2`}>
-            Lime build — this neon green bar means the gym rebuilt
-          </div>
-        )}
+        <div className={`${HOLD_BUILD_BANNER} mt-2`}>
+          Orange build — this bright orange bar means the gym rebuilt
+        </div>
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
         <div className="mt-2">
           <ShapeStillStrip

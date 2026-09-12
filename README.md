@@ -192,7 +192,7 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
 
    That installs deps, copies Production onto this Mac (`data/`) if this Mac has no gym copy yet, builds a production bundle (phones load a few hashed files instead of hundreds of Vite source files through the tunnel), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off. The first start after a `git pull` spends a minute building — that is expected. After that, **https://gym.shapelab.win** should feel closer to Vercel.
 
-   An iPad refresh does **not** pull GitHub. Safari keeps the last Class flow selected, so landing on Handstand Hold again is not proof the new code loaded. After each push: stop the gym window, `git pull`, then `npm run gym:mac` again. The current hold stamp is **Lime build** — a neon green bar at the top of Class flows that says “Lime build”. If that bar is missing, the Mac is still serving an old `dist/` bundle. `/api/health` should include `"holdBuild":"lime"` and the latest `sha`.
+   An iPad refresh does **not** pull GitHub. Safari keeps the last Class flow selected, so landing on Handstand Hold again is not proof the new code loaded. After each push: stop the gym window, then `npm run gym:mac` again. That script now parks gym data files, resets this folder to GitHub `v2-rebuild`, and rebuilds the phone bundle. Dirty `data/` files will not block the update. The current stamp is **Orange build** — a bright orange bar on the loading screen, next to the Shape Lab title, and on Hold challenge. If you still see green, violet, or no bar, this Mac did not pick up the new files. `/api/health` should include `"holdBuild":"orange"` and the latest `sha`.
 4. On the iPad and phone, join the **same Wi-Fi as the Mac**. Open the `http://192.168…` (or `http://….local`) link in Safari to confirm names and faces. The camera will **not** start on that http link — phones need HTTPS. A `https://….trycloudflare.com` line is optional, **new every start**, and often 502s — skip it if it dies. Yesterday’s trycloudflare bookmark will not work. `zsh: command not found: cloudflared` is expected; do not brew-install it.
 
 If the https tunnel says **Unable to reach the origin service** or the link “isn’t working anymore”:
@@ -200,7 +200,7 @@ If the https tunnel says **Unable to reach the origin service** or the link “i
 1. Leave the `gym:mac` Terminal window open (closing it kills the gym and the link).
 2. Use the **Wi-Fi** `http://192.168…:43127/` line printed in that window — same network as the Mac.
 3. For camera / hold challenge, stay on the **Vercel** gym URL until `https://gym.shapelab.win` works.
-4. Ctrl+C that window, `git pull`, then `npm run gym:mac` again. Use only the https line from the **new** window.
+4. Ctrl+C that window, then `npm run gym:mac` again. Use only the https line from the **new** window.
 5. Save the named-tunnel token (`npm run gym:token`, below), then `npm run gym:mac` again. On iPad / phone open **https://gym.shapelab.win**. Confirm names, faces stay put (they should not flash to initials and reload), **and** that the camera starts. Bookmark that HTTPS link. **Then** pause the Vercel project. Do not delete the project or the Blob store. Stay on Vercel until this URL is actually fast enough for class.
 
 A Cursor / trycloudflare link from this cloud VM will not resolve on your phone. Use the Mac’s Wi-Fi address.

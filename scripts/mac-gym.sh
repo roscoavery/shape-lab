@@ -18,19 +18,45 @@ echo "Folder: $ROOT"
 echo
 
 if [ -d .git ]; then
-  git fetch origin v2-rebuild 2>/dev/null || true
-  git checkout v2-rebuild 2>/dev/null || true
-  if ! git pull --ff-only origin v2-rebuild; then
-    echo
-    echo "WARNING: git pull --ff-only failed. This Mac may still be on old code."
-    echo "The iPad refresh will not pick up GitHub until this folder updates."
-    echo "If this branch diverged:  git pull --rebase origin v2-rebuild"
-    echo "If dirty gym files are blocking pull, stash them, then pull again."
-    echo
+  echo "Updating this Mac to GitHub v2-rebuild. Gym names and clips stay on this computer."
+  git fetch origin v2-rebuild 2>/dev/null || git fetch origin v2-rebuild || true
+
+  STASHED=0
+  if [ -n "$(git status --porcelain -- data training 2>/dev/null || true)" ]; then
+    echo "Parking gym data files so they cannot block the update…"
+    if git stash push -u -m "gym-mac-data" -- data training; then
+      STASHED=1
+    fi
   fi
-  echo "Code: $(git rev-parse --short HEAD)  $(git log -1 --pretty=%s)"
-  echo "Hold stamp on this start: Lime build — neon green bar on Class flows."
-  echo "If the iPad has no neon green bar, this gym did not rebuild the new files."
+
+  git checkout v2-rebuild 2>/dev/null || true
+  if git rev-parse --verify origin/v2-rebuild >/dev/null 2>&1; then
+    BEFORE="$(git rev-parse --short HEAD)"
+    git reset --hard origin/v2-rebuild
+    AFTER="$(git rev-parse --short HEAD)"
+    echo "This Mac now matches GitHub: $AFTER"
+    if [ "$BEFORE" != "$AFTER" ]; then
+      rm -f dist/index.html
+      echo "Forcing a new phone bundle ($BEFORE → $AFTER) so Safari cannot keep yesterday's files."
+    fi
+  else
+    echo "WARNING: could not see origin/v2-rebuild. Staying on $(git rev-parse --short HEAD)."
+  fi
+
+  if [ "$STASHED" = 1 ]; then
+    if ! git stash pop; then
+      echo "Your gym data is still in the latest git stash. Keep the copies in data/ if git reports a conflict."
+    fi
+  fi
+
+  echo
+  echo "============================================================"
+  echo "  ORANGE BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a bright ORANGE bar that says Orange build."
+  echo "  Green, violet, or no bar means this window is still old —"
+  echo "  Ctrl+C, then run npm run gym:mac again."
+  echo "============================================================"
+  echo
 fi
 
 npm install

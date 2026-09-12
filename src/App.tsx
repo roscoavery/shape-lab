@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { GymBootScreen } from './components/GymBootScreen'
+import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
 import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
@@ -743,6 +744,9 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Shape Lab
           </h1>
+          <p className="mt-1">
+            <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
+          </p>
         </div>
         <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
         <div className="ml-auto shrink-0">

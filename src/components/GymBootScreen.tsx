@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { gymUrlForHumans } from '../lib/gymLink'
 import type { PersistInfo } from '../lib/gymHydrate'
+import { HOLD_BUILD_BANNER, HOLD_BUILD_LABEL } from '../lib/holdBuild'
 
 type Props = {
   phase: 'loading' | 'error'
@@ -10,8 +12,27 @@ type Props = {
 }
 
 export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal }: Props) {
+  const [health, setHealth] = useState<{ holdBuild?: string; sha?: string } | null>(null)
+
+  useEffect(() => {
+    let dead = false
+    fetch('/api/health', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!dead && json && typeof json === 'object') setHealth(json)
+      })
+      .catch(() => {})
+    return () => {
+      dead = true
+    }
+  }, [])
+
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-5 py-10">
+      <div className={`${HOLD_BUILD_BANNER} mb-4`}>
+        {HOLD_BUILD_LABEL}
+        {health?.sha ? ` · ${health.sha}` : ''}
+      </div>
       <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Shape Lab</p>
       <h1 className="mt-2 text-2xl font-semibold text-[var(--text)]">
         {phase === 'loading' ? 'Loading this gym' : 'This phone cannot see the gym yet'}
