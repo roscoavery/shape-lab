@@ -48,7 +48,13 @@ import {
   serializePoseTrack,
 } from '../lib/poseTrack'
 import { getPoseCandidates } from '../lib/poseCandidates'
-import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL, HOLD_PINK_BTN, HOLD_PINK_TEXT } from '../lib/holdBuild'
+import {
+  HOLD_BUILD_BANNER,
+  HOLD_BUILD_CHIP,
+  HOLD_BUILD_LABEL,
+  HOLD_PINK_BTN,
+  HOLD_PINK_TEXT,
+} from '../lib/holdBuild'
 import { unlockHoldTones } from '../lib/sounds'
 import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
@@ -282,6 +288,8 @@ export function Tasks2Panel({
   const flushedHoldRef = useRef<Promise<Blob | null> | null>(null)
   const holdPersistRef = useRef<{ reportId: string; logId: string | null } | null>(null)
   const [holdLogged, setHoldLogged] = useState(true)
+  const [holdClipPending, setHoldClipPending] = useState(false)
+  const holdWallSecRef = useRef(0)
   const pendingStillsRef = useRef<
     { id: string; blob: Blob; shapeId: string; shapeName: string; seqId: string }[]
   >([])
@@ -640,19 +648,9 @@ export function Tasks2Panel({
     async (seqRun: FlowSequence, rawIn: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
       onHoldClockRef.current?.(null)
       setHoldTick(null)
+      const wallSec = holdWallSecRef.current || delay.capturedSec()
       let rolled = delay.peekRollingBlob()
-      if (!rolled || rolled.size < 800) {
-        try {
-          rolled = await (flushedHoldRef.current ?? delay.flushRollingBlob())
-        } catch {
-          rolled = null
-        }
-      }
-      flushedHoldRef.current = null
-      if (!rolled || rolled.size < 800) {
-        rolled = delay.peekRollingBlob()
-      }
-      const raw = await attachHoldClips(rawIn, rolled, { trim: true })
+      const raw = await attachHoldClips(rawIn, rolled && rolled.size > 800 ? rolled : null, { trim: true })
 
       revokeClipUrls()
       if (replayUrlRef.current) URL.revokeObjectURL(replayUrlRef.current)
@@ -690,6 +688,7 @@ export function Tasks2Panel({
         setSnaps([])
         snapsRef.current = []
         onExitFullscreen?.()
+        setHoldClipPending(false)
         setPhase('review')
         setCue('No timed handstands this run. Kick up, hold, then tap Done.')
         return
@@ -705,17 +704,16 @@ export function Tasks2Panel({
       for (let i = 0; i < raw.length; i++) {
         const a = raw[i]!
         const highlighted = i === longestIdx
-        let clipId: string | null = null
+        const clipId = createId('clip')
+        if (a.poseTrack.length) {
+          rememberPoseTrack(clipId, a.poseTrack)
+          void savePoseTrackJson(clipId, serializePoseTrack(a.poseTrack)).catch(() => {
+            /* pose track is still in memory for this session */
+          })
+        }
         if (a.clipBlob && a.clipBlob.size > 800) {
-          clipId = createId('clip')
           rememberCaptureBlob(clipId, a.clipBlob)
           clipUrlsRef.current.set(clipId, URL.createObjectURL(a.clipBlob))
-          if (a.poseTrack.length) {
-            rememberPoseTrack(clipId, a.poseTrack)
-            void savePoseTrackJson(clipId, serializePoseTrack(a.poseTrack)).catch(() => {
-              /* pose track is still in memory for this session */
-            })
-          }
         }
 
         const live =
@@ -805,6 +803,7 @@ export function Tasks2Panel({
         steps,
         holdAttempts: holds,
         bestHoldSeconds: bestHold.holdSeconds,
+        recordedWallSec: wallSec,
         summary: summaryFor(seqRun, steps),
         instagramHandle: athlete?.instagramHandle,
         chosenReps: holds.length || 1,
@@ -837,11 +836,57 @@ export function Tasks2Panel({
       setReport(built)
       setSnaps(collected)
       snapsRef.current = collected
+      setHoldClipPending(!replayUrl)
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
         `Longest hold ${formatSeconds(bestHold.holdSeconds)} is highlighted. Tap a clip at the bottom to watch it.`,
       )
+
+      if (!replayUrl) {
+        try {
+          rolled = await (flushedHoldRef.current ?? delay.flushRollingBlob())
+        } catch {
+          rolled = null
+        }
+        flushedHoldRef.current = null
+        if (rolled && rolled.size > 800) {
+          const filled = await attachHoldClips(rawIn, rolled, { trim: true })
+          for (let i = 0; i < holds.length; i++) {
+            const id = holds[i]!.clipId
+            const blob = filled[i]?.clipBlob
+            if (!id || !blob || blob.size < 800) continue
+            rememberCaptureBlob(id, blob)
+            const prev = clipUrlsRef.current.get(id)
+            if (prev) URL.revokeObjectURL(prev)
+            const url = URL.createObjectURL(blob)
+            clipUrlsRef.current.set(id, url)
+          }
+          const nextUrl =
+            (replayCaptureId && clipUrlsRef.current.get(replayCaptureId)) ||
+            [...clipUrlsRef.current.values()][0] ||
+            null
+          replayUrlRef.current = nextUrl
+          setReplayUrl(nextUrl)
+          setActiveClipId(replayCaptureId)
+          const bestBlob = replayCaptureId ? getRememberedBlob(replayCaptureId) : null
+          if (bestBlob && replayCaptureId) {
+            const filename = videoFileName(built, bestBlob.type)
+            setDeviceSave({ blob: bestBlob, filename, label: 'this hold' })
+            setHitsAsk({
+              id: replayCaptureId,
+              blob: bestBlob,
+              filename,
+              seconds: bestHold.holdSeconds,
+              seqId: seqRun.id,
+              nickname: seqRun.nickname,
+            })
+          }
+        }
+        setHoldClipPending(false)
+      } else {
+        flushedHoldRef.current = null
+      }
     },
     [athlete?.instagramHandle, athleteId, delay, onExitFullscreen, revokeClipUrls, takeSnapshot],
   )
@@ -864,6 +909,8 @@ export function Tasks2Panel({
       const alive = () => gen === runGen.current
       holdDoneRef.current = false
       flushedHoldRef.current = null
+      setHoldClipPending(false)
+      holdWallSecRef.current = 0
       setHoldTick(null)
       onHoldClockRef.current?.(null)
       setActiveClipId(null)
@@ -1414,6 +1461,7 @@ export function Tasks2Panel({
         track: clipId ? getRememberedPoseTrack(clipId) : null,
         holdSeconds: hold?.holdSeconds ?? hitsAsk?.seconds ?? report?.bestHoldSeconds ?? 0,
         clockOffsetSec: hold?.clockOffsetSec ?? 0,
+        recordedWallSec: report?.recordedWallSec,
         filename: clip.filename,
         clipId,
       })
@@ -1546,6 +1594,7 @@ export function Tasks2Panel({
     setPhase('finishing')
     setCue('Opening your holds…')
     setFlash('Opening your holds…')
+    holdWallSecRef.current = delay.capturedSec()
     if (!flushedHoldRef.current) {
       flushedHoldRef.current = delay.flushRollingBlob().catch(() => null)
     }
@@ -1632,6 +1681,7 @@ export function Tasks2Panel({
           track: getRememberedPoseTrack(clipId),
           holdSeconds: hold?.holdSeconds ?? report.bestHoldSeconds ?? 0,
           clockOffsetSec: hold?.clockOffsetSec ?? 0,
+          recordedWallSec: report.recordedWallSec,
           filename: videoFileName(report, file.type || 'video/mp4', index),
           clipId,
         })
@@ -1786,7 +1836,7 @@ export function Tasks2Panel({
           {phase === 'finishing' ? (
             <div className="mt-2 flex items-center gap-3">
               <span
-                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#e879f9]"
+                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#a3e635]"
                 aria-hidden
               />
               <div>
@@ -1890,7 +1940,7 @@ export function Tasks2Panel({
             aria-live="polite"
           >
             <span
-              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#e879f9]"
+              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#a3e635]"
               aria-hidden
             />
             <p className="mt-4 text-xl font-black">Getting your clips…</p>
@@ -1915,6 +1965,11 @@ export function Tasks2Panel({
             <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
           )}
         </div>
+        {seq.mode === 'hs-hold' && (
+          <div className={`${HOLD_BUILD_BANNER} mt-2`}>
+            Lime build — this neon green bar means the gym rebuilt
+          </div>
+        )}
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
         <div className="mt-2">
           <ShapeStillStrip
@@ -2030,7 +2085,7 @@ export function Tasks2Panel({
       </div>
 
       {phase === 'idle' && report?.holdAttempts && report.holdAttempts.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-[#e879f9]/40 bg-[#1a0f1c] p-3">
+        <div className="mb-3 rounded-2xl border border-[#a3e635]/40 bg-[#10240f] p-3">
           <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${HOLD_PINK_TEXT}`}>
             Your holds
           </p>
@@ -2048,7 +2103,7 @@ export function Tasks2Panel({
               <li
                 key={h.index}
                 className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 ${
-                  h.highlighted ? 'border-[#e879f9] bg-black/40' : 'border-white/10 bg-black/25'
+                  h.highlighted ? 'border-[#a3e635] bg-black/40' : 'border-white/10 bg-black/25'
                 }`}
               >
                 <div className="min-w-0">
@@ -2117,7 +2172,7 @@ export function Tasks2Panel({
                 className={`w-full overflow-hidden rounded-2xl border text-left disabled:opacity-50 ${
                   selected
                     ? s.mode === 'hs-hold'
-                      ? 'border-[#e879f9] bg-[#1a0f1c] ring-1 ring-[#e879f9]'
+                      ? 'border-[#a3e635] bg-[#10240f] ring-1 ring-[#a3e635]'
                       : 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
                     : 'border-white/10 bg-[#121820] hover:border-white/25'
                 }`}
@@ -2159,7 +2214,7 @@ export function Tasks2Panel({
           <div
             className={`mt-3 rounded-lg px-3 py-2 ${
               phase === 'holding' || phase === 'finishing'
-                ? 'border border-[#e879f9]/40 bg-[#1a0f1c]'
+                ? 'border border-[#a3e635]/40 bg-[#10240f]'
                 : 'border border-[var(--accent)]/40 bg-[#102820]'
             }`}
           >
@@ -2264,6 +2319,7 @@ export function Tasks2Panel({
                     clockOffsetSec={
                       report.holdAttempts?.find((h) => h.clipId === activeClipId)?.clockOffsetSec ?? 0
                     }
+                    recordedWallSec={report.recordedWallSec}
                     playheadSec={
                       report.holdAttempts?.find((h) => h.clipId === activeClipId)?.playheadSec
                     }
@@ -2277,6 +2333,10 @@ export function Tasks2Panel({
                     )}
                     athleteId={athleteId}
                   />
+                ) : holdClipPending ? (
+                  <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#a3e635]">
+                    Opening the clip…
+                  </p>
                 ) : (
                   <p className="flex h-full items-center justify-center px-6 text-center text-sm text-white/70">
                     No video this time — keep the camera on for the whole hold.
@@ -2308,7 +2368,7 @@ export function Tasks2Panel({
                         onClick={() => playHoldClip(h.clipId, h.playheadSec)}
                         className={`w-[5.5rem] shrink-0 overflow-hidden rounded-xl border text-left ${
                           h.highlighted
-                            ? 'border-[#e879f9] ring-2 ring-[#e879f9]'
+                            ? 'border-[#a3e635] ring-2 ring-[#a3e635]'
                             : active
                               ? 'border-white/80'
                               : 'border-white/15'

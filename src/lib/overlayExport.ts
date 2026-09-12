@@ -21,7 +21,6 @@ import {
 import {
   drawGradeHud,
   drawPoseOverlay,
-  overlayLineColor,
   type JointDrawMode,
 } from './skeleton'
 import { scoreShape } from './scoring'
@@ -65,14 +64,10 @@ function loadVideo(blob: Blob): Promise<{ video: HTMLVideoElement; url: string }
   })
 }
 
-function waitUntil(
-  video: HTMLVideoElement,
-  endSec: number,
-  cancelled?: () => boolean,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const hit = () => video.ended || video.currentTime >= endSec - 0.04
-    if (hit()) {
+function seekVideo(video: HTMLVideoElement, t: number): Promise<void> {
+  return new Promise((resolve) => {
+    const target = Math.min(Math.max(0, t), Math.max(0, (Number.isFinite(video.duration) ? video.duration : t) - 0.001))
+    if (Math.abs(video.currentTime - target) < 0.02) {
       resolve()
       return
     }
@@ -80,27 +75,24 @@ function waitUntil(
       cleanup()
       resolve()
     }
-    const fail = () => {
-      cleanup()
-      reject(new Error('Clip playback failed while saving'))
-    }
-    const tick = () => {
-      if (cancelled?.() || hit()) {
-        cleanup()
-        resolve()
-        return
-      }
-      timer = window.setTimeout(tick, 40)
-    }
-    let timer = window.setTimeout(tick, 40)
     const cleanup = () => {
+      video.removeEventListener('seeked', done)
       window.clearTimeout(timer)
-      video.removeEventListener('ended', done)
-      video.removeEventListener('error', fail)
     }
-    video.addEventListener('ended', done)
-    video.addEventListener('error', fail)
+    const timer = window.setTimeout(done, 280)
+    video.addEventListener('seeked', done)
+    video.currentTime = target
   })
+}
+
+async function readDuration(video: HTMLVideoElement, fallback: number): Promise<number> {
+  if (Number.isFinite(video.duration) && video.duration > 0 && video.duration < 1e6) {
+    return video.duration
+  }
+  await seekVideo(video, 1e7)
+  return Number.isFinite(video.duration) && video.duration > 0 && video.duration < 1e6
+    ? video.duration
+    : fallback
 }
 
 export function paintHoldOverlay(
@@ -117,6 +109,7 @@ export function paintHoldOverlay(
     clockOffsetSec: number
     showSkeleton?: boolean
     showAngles?: boolean
+    recordedWallSec?: number
   },
 ) {
   if (opts.mirror) {
@@ -129,9 +122,28 @@ export function paintHoldOverlay(
     ctx.drawImage(video, 0, 0, width, height)
   }
   const shape = getShape('handstand')
-  const mediaDur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : opts.holdSeconds
-  const trackT = mediaTimeToTrackTime(mediaT, mediaDur, opts.track, opts.clockOffsetSec, opts.holdSeconds)
-  const rawLm = landmarksAtMedia(opts.track, mediaT, mediaDur, opts.clockOffsetSec, opts.holdSeconds)
+  const mediaDur =
+    Number.isFinite(video.duration) && video.duration > 0 && video.duration < 1e6
+      ? video.duration
+      : opts.recordedWallSec && opts.recordedWallSec > 0.8
+        ? opts.recordedWallSec
+        : opts.holdSeconds
+  const trackT = mediaTimeToTrackTime(
+    mediaT,
+    mediaDur,
+    opts.track,
+    opts.clockOffsetSec,
+    opts.holdSeconds,
+    opts.recordedWallSec,
+  )
+  const rawLm = landmarksAtMedia(
+    opts.track,
+    mediaT,
+    mediaDur,
+    opts.clockOffsetSec,
+    opts.holdSeconds,
+    opts.recordedWallSec,
+  )
   const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
   const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
   if (opts.showSkeleton !== false) {
@@ -141,11 +153,11 @@ export function paintHoldOverlay(
       mirror: opts.mirror,
       mode: opts.mode,
       showAngles: opts.showAngles !== false,
-      lineColor: overlayLineColor(score),
+      lineColor: HOLD_PINK,
     })
   }
   const clock = Math.max(0, Math.min(opts.holdSeconds, trackT - opts.clockOffsetSec))
-  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Handstand', clock, HOLD_PINK)
+  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Lime', clock, HOLD_PINK)
 }
 
 export type BurnOverlayOpts = {
@@ -159,54 +171,54 @@ export type BurnOverlayOpts = {
   showAngles?: boolean
   cancelled?: () => boolean
   onProgress?: (p: number) => void
+  recordedWallSec?: number
   /** Prefer the on-screen review canvas — Safari often drops offscreen draws. */
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
 }
 
 export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
-  const owned = !opts.video
-  const loaded = opts.video ? { video: opts.video, url: '' } : await loadVideo(opts.source)
+  const loaded = await loadVideo(opts.source)
   const { video, url } = loaded
-  const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : opts.holdSeconds
-  const srcW = video.videoWidth || opts.canvas?.width || 1280
-  const srcH = video.videoHeight || opts.canvas?.height || 720
+  const duration = await readDuration(
+    video,
+    opts.recordedWallSec && opts.recordedWallSec > 0.8 ? opts.recordedWallSec : opts.holdSeconds,
+  )
+  const srcW = video.videoWidth || 1280
+  const srcH = video.videoHeight || 720
   const scale = srcW > 1600 ? 1600 / srcW : 1
   const width = Math.max(16, Math.round(srcW * scale))
   const height = Math.max(16, Math.round(srcH * scale))
 
-  let canvas = opts.canvas ?? null
-  let created = false
-  if (!canvas) {
-    canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    canvas.style.cssText =
-      'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.03;pointer-events:none;z-index:1'
-    document.body.appendChild(canvas)
-    created = true
-  } else if (canvas.width < 16 || canvas.height < 16) {
-    canvas.width = width
-    canvas.height = height
-  }
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  canvas.style.cssText =
+    'position:fixed;left:8px;bottom:8px;width:72px;height:72px;opacity:0.2;pointer-events:none;z-index:9'
+  document.body.appendChild(canvas)
   const ctx = canvas.getContext('2d')
   if (!ctx) {
-    if (created) canvas.remove()
-    if (owned) URL.revokeObjectURL(url)
+    canvas.remove()
+    URL.revokeObjectURL(url)
     throw new Error('Could not draw the overlay')
   }
 
-  const stretch = mediaStretch(duration, opts.track, opts.clockOffsetSec, opts.holdSeconds)
+  const stretch = mediaStretch(
+    duration,
+    opts.track,
+    opts.clockOffsetSec,
+    opts.holdSeconds,
+    opts.recordedWallSec,
+  )
   const win = holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration, stretch)
-  const playStart = win.start
-  const playEnd = win.end
-  const prevRate = video.playbackRate
-  const prevTime = video.currentTime
+  const realDur = Math.max(0.4, (win.end - win.start) / Math.max(stretch, 1))
+  const fps = 24
+  const frames = Math.max(10, Math.round(realDur * fps))
+  const dwell = 1000 / fps
 
-  video.playbackRate = stretch > 1.02 ? stretch : 1
   video.muted = true
-  video.currentTime = playStart
-  const captured = canvas.captureStream(30)
+  video.playbackRate = 1
+  const captured = canvas.captureStream(fps)
   hintMotion(captured)
   const rec = createRecorder(captured)
   const chunks: Blob[] = []
@@ -221,41 +233,21 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
   })
   startRecorder(rec, 200)
 
-  let raf = 0
-  const draw = () => {
-    const mediaT = video.currentTime || playStart
-    paintHoldOverlay(ctx, video, canvas!.width, canvas!.height, mediaT, opts)
-    const span = Math.max(0.001, playEnd - playStart)
-    opts.onProgress?.(Math.min(1, (mediaT - playStart) / span))
-    if (!video.ended && !video.paused && mediaT < playEnd) {
-      raf = requestAnimationFrame(draw)
-    }
-  }
-
   try {
-    try {
-      await video.play()
-    } catch {
-      await new Promise((r) => window.setTimeout(r, 40))
-      await video.play()
+    for (let i = 0; i < frames; i++) {
+      if (opts.cancelled?.()) break
+      const mediaT = win.start + (i / fps) * stretch
+      await seekVideo(video, mediaT)
+      paintHoldOverlay(ctx, video, width, height, mediaT, opts)
+      opts.onProgress?.(Math.min(1, (i + 1) / frames))
+      await new Promise<void>((r) => window.setTimeout(r, dwell))
     }
-    draw()
-    await waitUntil(video, playEnd, opts.cancelled)
-    video.pause()
-    paintHoldOverlay(ctx, video, canvas.width, canvas.height, Math.min(video.currentTime || playEnd, playEnd), opts)
-    opts.onProgress?.(1)
   } finally {
-    cancelAnimationFrame(raf)
     if (rec.state !== 'inactive') rec.stop()
-    if (created) canvas.remove()
-    if (owned) {
-      URL.revokeObjectURL(url)
-      video.pause()
-      video.src = ''
-    } else {
-      video.playbackRate = prevRate
-      video.currentTime = prevTime
-    }
+    canvas.remove()
+    URL.revokeObjectURL(url)
+    video.pause()
+    video.src = ''
   }
 
   const blob = await stopped
@@ -274,6 +266,7 @@ export async function saveHoldClipWithOverlay(opts: {
   mirror?: boolean
   mode?: JointDrawMode
   clipId?: string | null
+  recordedWallSec?: number
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
   onProgress?: (p: number) => void
@@ -290,8 +283,7 @@ export async function saveHoldClipWithOverlay(opts: {
       mirror,
       holdSeconds: opts.holdSeconds,
       clockOffsetSec: opts.clockOffsetSec,
-      video: opts.video,
-      canvas: opts.canvas,
+      recordedWallSec: opts.recordedWallSec,
       onProgress: opts.onProgress,
     })
     rememberBurnedOverlay(key, out)

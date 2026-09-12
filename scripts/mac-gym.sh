@@ -29,8 +29,8 @@ if [ -d .git ]; then
     echo
   fi
   echo "Code: $(git rev-parse --short HEAD)  $(git log -1 --pretty=%s)"
-  echo "Hold stamp on this start: Violet build — magenta Start hold / Done."
-  echo "If the iPad still shows gold or teal buttons, this gym did not rebuild the new files."
+  echo "Hold stamp on this start: Lime build — neon green bar on Class flows."
+  echo "If the iPad has no neon green bar, this gym did not rebuild the new files."
 fi
 
 npm install

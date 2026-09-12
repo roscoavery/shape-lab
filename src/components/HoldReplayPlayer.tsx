@@ -18,6 +18,7 @@ type Props = {
   track: PoseTrack | null
   holdSeconds: number
   clockOffsetSec?: number
+  recordedWallSec?: number
   playheadSec?: number
   mirror?: boolean
   filename: string
@@ -35,6 +36,7 @@ export function HoldReplayPlayer({
   track,
   holdSeconds,
   clockOffsetSec = 0,
+  recordedWallSec,
   playheadSec,
   mirror = true,
   filename,
@@ -52,7 +54,6 @@ export function HoldReplayPlayer({
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [viewStart, setViewStart] = useState(0)
-  const [rate, setRate] = useState(1)
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
@@ -98,7 +99,7 @@ export function HoldReplayPlayer({
     let raf = 0
 
     const windowFor = (mediaDur: number) => {
-      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds)
+      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds, recordedWallSec)
       return holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur, stretch)
     }
 
@@ -126,6 +127,7 @@ export function HoldReplayPlayer({
             mirror,
             holdSeconds,
             clockOffsetSec,
+            recordedWallSec,
             showSkeleton: showOverlay,
             showAngles,
           })
@@ -136,13 +138,17 @@ export function HoldReplayPlayer({
     }
 
     const onMeta = () => {
-      const mediaDur = video.duration || holdSeconds
-      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds)
-      video.playbackRate = stretch > 1.02 ? stretch : 1
+      const mediaDur =
+        Number.isFinite(video.duration) && video.duration > 0 && video.duration < 1e6
+          ? video.duration
+          : recordedWallSec && recordedWallSec > 0.8
+            ? recordedWallSec
+            : holdSeconds
+      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds, recordedWallSec)
+      video.playbackRate = 1
       const view = windowFor(mediaDur)
-      setRate(stretch > 1.02 ? stretch : 1)
       setViewStart(view.start)
-      setDuration(Math.max(0.1, (view.end - view.start) / Math.max(stretch, 1)))
+      setDuration(Math.max(0.1, view.end - view.start))
       if (playheadSec != null && Number.isFinite(playheadSec)) {
         video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec * stretch))
       } else if (video.currentTime < view.start || video.currentTime > view.end) {
@@ -170,6 +176,7 @@ export function HoldReplayPlayer({
     mirror,
     holdSeconds,
     clockOffsetSec,
+    recordedWallSec,
     playheadSec,
     showOverlay,
     showAngles,
@@ -190,12 +197,11 @@ export function HoldReplayPlayer({
         track,
         holdSeconds,
         clockOffsetSec,
+        recordedWallSec,
         filename,
         mirror,
         mode,
         clipId,
-        video: videoRef.current,
-        canvas: canvasRef.current,
         onProgress: (p) => {
           setFlash(`Adding score, clock, and body line… ${Math.round(p * 100)}%`)
         },
@@ -237,7 +243,7 @@ export function HoldReplayPlayer({
               const v = videoRef.current
               if (!v) return
               if (v.paused) {
-                if (v.currentTime >= viewStart + duration * rate - 0.05) v.currentTime = viewStart
+                if (v.currentTime >= viewStart + duration - 0.05) v.currentTime = viewStart
                 void v.play()
               } else v.pause()
             }}
@@ -249,10 +255,10 @@ export function HoldReplayPlayer({
             min={0}
             max={Math.max(0.1, duration)}
             step={0.05}
-            value={Math.min(duration, Math.max(0, (time - viewStart) / Math.max(rate, 1)))}
+            value={Math.min(duration, Math.max(0, time - viewStart))}
             onChange={(e) => {
               const v = videoRef.current
-              const t = viewStart + Number(e.target.value) * rate
+              const t = viewStart + Number(e.target.value)
               if (v) v.currentTime = t
               setTime(t)
             }}
@@ -260,8 +266,7 @@ export function HoldReplayPlayer({
             aria-label="Hold replay playhead"
           />
           <span className="tabular-nums text-[11px] text-white/80">
-            {formatSeconds(Math.max(0, (time - viewStart) / Math.max(rate, 1)))} /{' '}
-            {formatSeconds(duration || holdSeconds)}
+            {formatSeconds(Math.max(0, time - viewStart))} / {formatSeconds(duration || holdSeconds)}
           </span>
         </div>
       </div>

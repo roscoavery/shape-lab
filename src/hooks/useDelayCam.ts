@@ -150,25 +150,27 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
           if (waiter) waiter(blob && blob.size > 500 ? blob : null)
         }
         try {
-          rec.start(200)
-          if (pipeline?.managed) {
-            rollingPumpRef.current = window.setInterval(() => {
-              if (rec.state === 'recording') {
-                try {
-                  rec.requestData()
-                } catch {
-                  /* iOS timeslice fallback */
-                }
-              }
-            }, 350)
+          try {
+            rec.start(200)
+          } catch {
+            rec.start()
           }
+          rollingPumpRef.current = window.setInterval(() => {
+            if (rec.state === 'recording') {
+              try {
+                rec.requestData()
+              } catch {
+                /* iOS timeslice fallback */
+              }
+            }
+          }, 400)
         } catch (err) {
           rollingRecorderRef.current = null
           setError(err instanceof Error ? err.message : 'Could not start delay-cam recording')
           done(false)
           return
         }
-        window.setTimeout(() => done(rec.state === 'recording' || rollingChunksRef.current.length > 0), 800)
+        window.setTimeout(() => done(rec.state === 'recording' || rollingChunksRef.current.length > 0), 200)
       })
     },
     [pumpDelayQueue],
@@ -250,7 +252,7 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         return
       }
       rollingRecorderRef.current = null
-      window.setTimeout(() => done(blobFromParts()), 1200)
+      window.setTimeout(() => done(blobFromParts()), 700)
     })
   }, [blobFromParts])
 

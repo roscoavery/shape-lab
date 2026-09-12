@@ -574,7 +574,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         : 'That kick did not stick. Kick up again when you are ready, or tap Done.',
     )
 
-    await wait(opts.doneRequested() ? 80 : POST_FOOT_MS)
+    if (!opts.doneRequested()) await wait(POST_FOOT_MS)
     let clipBlob: Blob | null = null
     if (rec.session) {
       try {

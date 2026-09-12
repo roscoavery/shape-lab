@@ -80,26 +80,24 @@ function lerpLandmarks(a: Landmark[], b: Landmark[], u: number): Landmark[] {
 }
 
 /**
- * MediaRecorder often writes a file a bit longer than the real hold.
- * playbackRate should be this factor so the body plays at real speed.
+ * MediaRecorder often writes a file longer than the real session.
+ * Compare the file duration to the wall-clock recording, not one hold.
+ * Recap should play at 1× and look up poses with mediaT / stretch.
  */
 export function mediaStretch(
   mediaDuration: number,
   track: PoseTrack | null | undefined,
   clockOffsetSec = 0,
   holdSeconds = 0,
+  recordedWallSec?: number,
 ): number {
-  if (!Number.isFinite(mediaDuration) || mediaDuration <= 0.8) return 1
+  if (!Number.isFinite(mediaDuration) || mediaDuration <= 0.8 || mediaDuration > 1e6) return 1
   const last = track && track.length ? track[track.length - 1]!.t : 0
-  const first = track && track.length ? track[0]!.t : 0
-  const sessionEnd = Math.max(last, clockOffsetSec + holdSeconds + 1)
-  if (sessionEnd > 0.8 && mediaDuration > sessionEnd * 1.08) {
-    return mediaDuration / sessionEnd
-  }
-  const span = Math.max(0.001, last - first)
-  if (first <= 0.35 && mediaDuration > span + 0.45) {
-    return mediaDuration / span
-  }
+  const wall =
+    recordedWallSec && recordedWallSec > 0.8
+      ? recordedWallSec
+      : Math.max(last, clockOffsetSec + holdSeconds + 1)
+  if (wall > 0.8 && mediaDuration > wall * 1.03) return mediaDuration / wall
   return 1
 }
 
@@ -112,8 +110,9 @@ export function mediaTimeToTrackTime(
   track: PoseTrack | null | undefined,
   clockOffsetSec = 0,
   holdSeconds = 0,
+  recordedWallSec?: number,
 ): number {
-  const stretch = mediaStretch(mediaDuration, track, clockOffsetSec, holdSeconds)
+  const stretch = mediaStretch(mediaDuration, track, clockOffsetSec, holdSeconds, recordedWallSec)
   if (stretch > 1.02) return mediaT / stretch
   return mediaT
 }
@@ -124,8 +123,12 @@ export function landmarksAtMedia(
   mediaDuration: number,
   clockOffsetSec = 0,
   holdSeconds = 0,
+  recordedWallSec?: number,
 ): Landmark[] | null {
-  return landmarksAt(track, mediaTimeToTrackTime(mediaT, mediaDuration, track, clockOffsetSec, holdSeconds))
+  return landmarksAt(
+    track,
+    mediaTimeToTrackTime(mediaT, mediaDuration, track, clockOffsetSec, holdSeconds, recordedWallSec),
+  )
 }
 
 export function landmarksAt(track: PoseTrack | null | undefined, t: number): Landmark[] | null {

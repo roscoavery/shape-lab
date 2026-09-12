@@ -447,6 +447,8 @@ export type FlowRunReport = {
   /** Timed holds for the one-person handstand hold challenge. */
   holdAttempts?: FlowHoldAttempt[]
   bestHoldSeconds?: number
+  /** Wall-clock seconds of the rolling camera file (for overlay stretch). */
+  recordedWallSec?: number
   /** When the athlete marked this run to send to Ryan. */
   sharedWithCoachAt?: string | null
   /** Handle used on the Story caption for this run. */
