@@ -2281,7 +2281,7 @@ export function Tasks2Panel({
                     </span>
                   </p>
                   <p className="mt-0.5 text-[12px] text-white/60">
-                    Watch here. Save puts the scored clip in Photos — clock, score, and body line, regular speed.
+                    Watch here. Save writes a new clip at the speed you pick, with score, line, and stopwatch on or off.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">

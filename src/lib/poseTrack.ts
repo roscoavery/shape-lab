@@ -93,10 +93,15 @@ export function mediaStretch(
 ): number {
   if (!Number.isFinite(mediaDuration) || mediaDuration <= 0.8 || mediaDuration > 1e6) return 1
   const last = track && track.length ? track[track.length - 1]!.t : 0
-  const wall =
+  const sessionWall =
     recordedWallSec && recordedWallSec > 0.8
       ? recordedWallSec
       : Math.max(last, clockOffsetSec + holdSeconds + 1)
+  // One hold clip is ~hold + 2s pre + 1s post. Do not compare that file
+  // to the whole session wall or a slow MediaRecorder file looks "1×".
+  const holdWall = holdSeconds > 0.8 ? holdSeconds + 3 : 0
+  const wall =
+    holdWall > 0.8 && mediaDuration <= holdWall * 2.6 ? holdWall : sessionWall
   if (wall > 0.8 && mediaDuration > wall * 1.03) return mediaDuration / wall
   return 1
 }

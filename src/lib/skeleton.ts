@@ -339,28 +339,40 @@ export function drawGradeHud(
   label: string,
   holdSeconds?: number | null,
   clockColor = '#f0b429',
+  parts: { score?: boolean; clock?: boolean } = {},
 ) {
+  const showScore = parts.score !== false
+  const clockText =
+    parts.clock !== false && holdSeconds != null ? formatHoldClock(holdSeconds) : null
+  if (!showScore && !clockText) return
   const cx = width / 2
   const y = height * 0.025
   const scoreText = String(overall)
-  const scorePx = Math.max(40, Math.round(width * 0.072))
-  const labelPx = Math.max(13, Math.round(width * 0.022))
+  const scorePx = showScore ? Math.max(40, Math.round(width * 0.072)) : 0
+  const labelPx = showScore ? Math.max(13, Math.round(width * 0.022)) : 0
   const clockPx = Math.max(18, Math.round(width * 0.038))
-  const clockText = holdSeconds != null ? formatHoldClock(holdSeconds) : null
   ctx.save()
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
-  const scoreW = ctx.measureText(scoreText).width
-  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
-  const labelW = ctx.measureText(label).width
+  let scoreW = 0
+  let labelW = 0
+  if (showScore) {
+    ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
+    scoreW = ctx.measureText(scoreText).width
+    ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
+    labelW = ctx.measureText(label).width
+  }
   let clockW = 0
   if (clockText) {
     ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
     clockW = ctx.measureText(clockText).width
   }
   const boxW = Math.max(scoreW, labelW, clockW) + width * 0.05
-  const boxH = scorePx + labelPx + (clockText ? clockPx + height * 0.012 : 0) + height * 0.035
+  const boxH =
+    scorePx +
+    labelPx +
+    (clockText ? clockPx + height * 0.012 : 0) +
+    height * 0.035
   const x0 = cx - boxW / 2
   ctx.fillStyle = 'rgba(0, 0, 0, 0.58)'
   if (typeof ctx.roundRect === 'function') {
@@ -370,16 +382,21 @@ export function drawGradeHud(
   } else {
     ctx.fillRect(x0, y, boxW, boxH)
   }
-  ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
-  ctx.fillStyle = scoreFill(overall)
-  ctx.fillText(scoreText, cx, y + height * 0.008)
-  ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
-  ctx.fillStyle = 'rgba(255,255,255,0.88)'
-  ctx.fillText(label, cx, y + scorePx + height * 0.01)
+  let yCursor = y + height * 0.008
+  if (showScore) {
+    ctx.font = `800 ${scorePx}px ui-sans-serif, system-ui, sans-serif`
+    ctx.fillStyle = scoreFill(overall)
+    ctx.fillText(scoreText, cx, yCursor)
+    yCursor += scorePx + height * 0.01
+    ctx.font = `600 ${labelPx}px ui-sans-serif, system-ui, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'
+    ctx.fillText(label, cx, yCursor)
+    yCursor += labelPx + height * 0.008
+  }
   if (clockText) {
     ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
     ctx.fillStyle = clockColor
-    ctx.fillText(clockText, cx, y + scorePx + labelPx + height * 0.018)
+    ctx.fillText(clockText, cx, yCursor)
   }
   ctx.restore()
 }

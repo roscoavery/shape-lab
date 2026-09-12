@@ -1,11 +1,17 @@
 /**
  * Hold-challenge analysis player.
- * Save burns the live score, stopwatch, and body line onto the clip at 1×.
+ * Recap plays in real time. Save writes a new clip at the chosen speed
+ * with whichever overlays the athlete left on.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { formatSeconds, holdMediaWindow } from '../lib/handstandHold'
-import { paintHoldOverlay, saveHoldClipWithOverlay } from '../lib/overlayExport'
+import {
+  clampSaveSpeed,
+  paintHoldOverlay,
+  saveHoldClipWithOverlay,
+  saveSpeedLabel,
+} from '../lib/overlayExport'
 import { mediaStretch, type PoseTrack } from '../lib/poseTrack'
 import { saveResultMessage, type SaveVideoResult } from '../lib/saveMedia'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
@@ -30,6 +36,12 @@ type Props = {
   fill?: boolean
 }
 
+function layerChip(on: boolean): string {
+  return on
+    ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+    : 'border border-[var(--panel-border)] text-[var(--muted)]'
+}
+
 export function HoldReplayPlayer({
   src,
   blob,
@@ -48,8 +60,12 @@ export function HoldReplayPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [mode, setMode] = useState<JointDrawMode>('auto')
-  const [showOverlay, setShowOverlay] = useState(true)
+  const [showSkeleton, setShowSkeleton] = useState(true)
   const [showAngles, setShowAngles] = useState(true)
+  const [showScore, setShowScore] = useState(true)
+  const [showClock, setShowClock] = useState(true)
+  const [saveSpeed, setSaveSpeed] = useState(1)
+  const [stretch, setStretch] = useState(1)
   const [videoReady, setVideoReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
@@ -99,8 +115,8 @@ export function HoldReplayPlayer({
     let raf = 0
 
     const windowFor = (mediaDur: number) => {
-      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds, recordedWallSec)
-      return holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur, stretch)
+      const nextStretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds, recordedWallSec)
+      return { view: holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur, nextStretch), nextStretch }
     }
 
     const paint = () => {
@@ -116,7 +132,7 @@ export function HoldReplayPlayer({
         if (ctx) {
           const mediaDur = video.duration || holdSeconds
           const t = video.currentTime
-          const view = windowFor(mediaDur)
+          const { view } = windowFor(mediaDur)
           if (t >= view.end && !video.paused) {
             video.pause()
             video.currentTime = view.end
@@ -128,8 +144,10 @@ export function HoldReplayPlayer({
             holdSeconds,
             clockOffsetSec,
             recordedWallSec,
-            showSkeleton: showOverlay,
+            showSkeleton,
             showAngles,
+            showScore,
+            showClock,
           })
         }
       }
@@ -144,13 +162,13 @@ export function HoldReplayPlayer({
           : recordedWallSec && recordedWallSec > 0.8
             ? recordedWallSec
             : holdSeconds
-      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds, recordedWallSec)
-      video.playbackRate = 1
-      const view = windowFor(mediaDur)
+      const { view, nextStretch } = windowFor(mediaDur)
+      setStretch(nextStretch)
+      video.playbackRate = nextStretch
       setViewStart(view.start)
-      setDuration(Math.max(0.1, view.end - view.start))
+      setDuration(Math.max(0.1, (view.end - view.start) / nextStretch))
       if (playheadSec != null && Number.isFinite(playheadSec)) {
-        video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec * stretch))
+        video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec * nextStretch))
       } else if (video.currentTime < view.start || video.currentTime > view.end) {
         video.currentTime = view.start
       }
@@ -178,8 +196,10 @@ export function HoldReplayPlayer({
     clockOffsetSec,
     recordedWallSec,
     playheadSec,
-    showOverlay,
+    showSkeleton,
     showAngles,
+    showScore,
+    showClock,
     videoReady,
   ])
 
@@ -190,7 +210,7 @@ export function HoldReplayPlayer({
       return
     }
     setSaving(true)
-    setFlash('Adding score, clock, and body line…')
+    setFlash('Writing the clip…')
     try {
       const result: SaveVideoResult = await saveHoldClipWithOverlay({
         source: blob,
@@ -202,8 +222,13 @@ export function HoldReplayPlayer({
         mirror,
         mode,
         clipId,
+        showSkeleton,
+        showAngles,
+        showScore,
+        showClock,
+        saveSpeed,
         onProgress: (p) => {
-          setFlash(`Adding score, clock, and body line… ${Math.round(p * 100)}%`)
+          setFlash(`Writing the clip… ${Math.round(p * 100)}%`)
         },
       })
       setFlash(saveResultMessage(result))
@@ -216,6 +241,7 @@ export function HoldReplayPlayer({
   }
 
   const frameH = fill ? 'min-h-0 flex-1' : compact ? 'max-h-56' : 'max-h-[70vh]'
+  const wallT = Math.min(duration, Math.max(0, (time - viewStart) / Math.max(stretch, 0.05)))
 
   return (
     <div className={fill ? 'flex h-full min-h-0 flex-col' : ''}>
@@ -243,7 +269,7 @@ export function HoldReplayPlayer({
               const v = videoRef.current
               if (!v) return
               if (v.paused) {
-                if (v.currentTime >= viewStart + duration - 0.05) v.currentTime = viewStart
+                if (v.currentTime >= viewStart + duration * stretch - 0.05) v.currentTime = viewStart
                 void v.play()
               } else v.pause()
             }}
@@ -255,66 +281,117 @@ export function HoldReplayPlayer({
             min={0}
             max={Math.max(0.1, duration)}
             step={0.05}
-            value={Math.min(duration, Math.max(0, time - viewStart))}
+            value={wallT}
             onChange={(e) => {
               const v = videoRef.current
-              const t = viewStart + Number(e.target.value)
-              if (v) v.currentTime = t
-              setTime(t)
+              const next = viewStart + Number(e.target.value) * stretch
+              if (v) v.currentTime = next
+              setTime(next)
             }}
             className="min-w-0 flex-1"
             aria-label="Hold replay playhead"
           />
           <span className="tabular-nums text-[11px] text-white/80">
-            {formatSeconds(Math.max(0, time - viewStart))} / {formatSeconds(duration || holdSeconds)}
+            {formatSeconds(wallT)} / {formatSeconds(duration || holdSeconds)}
           </span>
         </div>
       </div>
 
-      <div className={`mt-2 flex flex-wrap items-center gap-2 ${fill ? 'px-1' : ''}`}>
-        <button
-          type="button"
-          disabled={!blob || saving}
-          onClick={() => void save()}
-          className={`rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${HOLD_PINK_BTN}`}
-        >
-          {saving ? 'Saving with score…' : 'Save to Photos'}
-        </button>
-        {athleteId && (
+      <div className={`mt-2 space-y-2 ${fill ? 'px-1' : ''}`}>
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold text-[var(--text)]">Saved speed</p>
+            <p className="text-[11px] font-bold tabular-nums text-[var(--text)]">{saveSpeedLabel(saveSpeed)}</p>
+          </div>
+          <input
+            type="range"
+            min={0.5}
+            max={2}
+            step={0.25}
+            value={saveSpeed}
+            onChange={(e) => setSaveSpeed(clampSaveSpeed(Number(e.target.value)))}
+            className="mt-1 w-full"
+            aria-label="Saved video speed"
+          />
+          <div className="flex justify-between text-[10px] text-[var(--muted)]">
+            <span>Slower</span>
+            <span>Regular</span>
+            <span>Faster</span>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--text)]">On the saved clip</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowScore((on) => !on)}
+              className={`rounded-full px-3 py-1 text-[12px] ${layerChip(showScore)}`}
+            >
+              Score {showScore ? 'on' : 'off'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSkeleton((on) => !on)}
+              className={`rounded-full px-3 py-1 text-[12px] ${layerChip(showSkeleton)}`}
+            >
+              Line {showSkeleton ? 'on' : 'off'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowClock((on) => !on)}
+              className={`rounded-full px-3 py-1 text-[12px] ${layerChip(showClock)}`}
+            >
+              Stopwatch {showClock ? 'on' : 'off'}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled={!blob}
-            onClick={() => {
-              if (!blob || !athleteId) return
-              void uploadAthleteVideo({
-                athleteId,
-                blob,
-                name: filename.replace(/\.(webm|mp4)$/i, ''),
-                source: 'hold',
-                durationSec: holdSeconds,
-              })
-                .then(() => {
-                  setFlash('Saved into this profile’s video library.')
-                  window.setTimeout(() => setFlash(null), 4000)
-                })
-                .catch(() => {
-                  setFlash('Could not save into the video library.')
-                  window.setTimeout(() => setFlash(null), 4000)
-                })
-            }}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+            disabled={!blob || saving}
+            onClick={() => void save()}
+            className={`rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${HOLD_PINK_BTN}`}
           >
-            Video library
+            {saving ? 'Writing clip…' : 'Save to Photos'}
           </button>
-        )}
+          {athleteId && (
+            <button
+              type="button"
+              disabled={!blob}
+              onClick={() => {
+                if (!blob || !athleteId) return
+                void uploadAthleteVideo({
+                  athleteId,
+                  blob,
+                  name: filename.replace(/\.(webm|mp4)$/i, ''),
+                  source: 'hold',
+                  durationSec: holdSeconds,
+                })
+                  .then(() => {
+                    setFlash('Saved into this profile’s video library.')
+                    window.setTimeout(() => setFlash(null), 4000)
+                  })
+                  .catch(() => {
+                    setFlash('Could not save into the video library.')
+                    window.setTimeout(() => setFlash(null), 4000)
+                  })
+              }}
+              className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+            >
+              Video library
+            </button>
+          )}
+        </div>
         <p className="text-[11px] leading-snug text-[var(--muted)]">
-          Saves the clip at regular speed with the live score, stopwatch, and body line.
+          Recap stays instant. Save writes a new clip at the speed above, with only the overlays you left on.
         </p>
       </div>
 
       <details className={`mt-1 ${fill ? 'px-1' : ''}`}>
         <summary className="cursor-pointer text-[11px] font-semibold text-[var(--muted)]">
-          Lines on this clip
+          Line style
         </summary>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <button
@@ -352,21 +429,10 @@ export function HoldReplayPlayer({
           </button>
           <button
             type="button"
-            onClick={() => setShowOverlay((on) => !on)}
-            className={`rounded-full px-3 py-1 text-[12px] ${
-              showOverlay
-                ? 'border border-[var(--panel-border)] text-[var(--muted)]'
-                : 'bg-[var(--accent)] font-semibold text-[#06281f]'
-            }`}
-          >
-            {showOverlay ? 'Hide skeleton' : 'Show skeleton'}
-          </button>
-          <button
-            type="button"
             onClick={() => setShowAngles((on) => !on)}
-            disabled={!showOverlay}
+            disabled={!showSkeleton}
             className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${
-              showOverlay && showAngles
+              showSkeleton && showAngles
                 ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
                 : 'border border-[var(--panel-border)] text-[var(--muted)]'
             }`}

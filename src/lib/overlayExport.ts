@@ -1,7 +1,8 @@
 /**
  * Burn live score, stopwatch, and the body line onto a hold clip.
- * Plays the source at a rate that unsretches a slow MediaRecorder file
- * into canvas.captureStream so Photos gets regular-speed video with HUD.
+ * Plays the source at stretch × save-speed into canvas.captureStream so
+ * Photos gets a real-time (or slower/faster) file. Recap does not wait
+ * on this — Save starts the write when the athlete taps it.
  */
 
 import { getShape } from '../config/shapes'
@@ -27,15 +28,52 @@ import { scoreShape } from './scoring'
 
 const burnedCache = new Map<string, Blob>()
 
+export type HoldSaveLayers = {
+  showScore: boolean
+  showSkeleton: boolean
+  showClock: boolean
+  showAngles: boolean
+}
+
+export const DEFAULT_HOLD_SAVE_LAYERS: HoldSaveLayers = {
+  showScore: true,
+  showSkeleton: true,
+  showClock: true,
+  showAngles: true,
+}
+
+/** 0.5 = half speed, 1 = real time, 2 = double. */
+export function clampSaveSpeed(speed: number): number {
+  if (!Number.isFinite(speed)) return 1
+  return Math.min(2, Math.max(0.5, Math.round(speed * 4) / 4))
+}
+
+export function saveSpeedLabel(speed: number): string {
+  const n = clampSaveSpeed(speed)
+  if (n === 1) return 'Regular · 1×'
+  if (n < 1) return `Slower · ${n}×`
+  return `Faster · ${n}×`
+}
+
 export function burnedOverlayKey(
   clipId: string | null | undefined,
   mode: JointDrawMode,
   mirror: boolean,
-  showSkeleton = true,
-  showAngles = true,
+  layers: HoldSaveLayers = DEFAULT_HOLD_SAVE_LAYERS,
+  saveSpeed = 1,
 ): string | null {
   if (!clipId) return null
-  return `${clipId}:${mode}:${mirror ? 'm' : 'c'}:sk${showSkeleton ? 1 : 0}:ang${showAngles ? 1 : 0}`
+  const speed = clampSaveSpeed(saveSpeed)
+  return [
+    clipId,
+    mode,
+    mirror ? 'm' : 'c',
+    layers.showSkeleton ? 'sk1' : 'sk0',
+    layers.showAngles ? 'ang1' : 'ang0',
+    layers.showScore ? 'sc1' : 'sc0',
+    layers.showClock ? 'cl1' : 'cl0',
+    `spd${speed}`,
+  ].join(':')
 }
 
 export function getBurnedOverlay(key: string | null): Blob | null {
@@ -95,6 +133,40 @@ async function readDuration(video: HTMLVideoElement, fallback: number): Promise<
     : fallback
 }
 
+type VideoWithFrameCb = HTMLVideoElement & {
+  requestVideoFrameCallback?: (cb: () => void) => number
+  cancelVideoFrameCallback?: (id: number) => void
+}
+
+function hookVideoFrames(video: HTMLVideoElement, onFrame: () => boolean): () => void {
+  const v = video as VideoWithFrameCb
+  let stopped = false
+  if (typeof v.requestVideoFrameCallback === 'function') {
+    let id = 0
+    const wrap = () => {
+      if (stopped) return
+      if (onFrame()) return
+      id = v.requestVideoFrameCallback!(wrap)
+    }
+    id = v.requestVideoFrameCallback(wrap)
+    return () => {
+      stopped = true
+      v.cancelVideoFrameCallback?.(id)
+    }
+  }
+  let raf = 0
+  const tick = () => {
+    if (stopped) return
+    if (onFrame()) return
+    raf = requestAnimationFrame(tick)
+  }
+  raf = requestAnimationFrame(tick)
+  return () => {
+    stopped = true
+    cancelAnimationFrame(raf)
+  }
+}
+
 export function paintHoldOverlay(
   ctx: CanvasRenderingContext2D,
   video: HTMLVideoElement,
@@ -109,6 +181,8 @@ export function paintHoldOverlay(
     clockOffsetSec: number
     showSkeleton?: boolean
     showAngles?: boolean
+    showScore?: boolean
+    showClock?: boolean
     recordedWallSec?: number
   },
 ) {
@@ -157,7 +231,16 @@ export function paintHoldOverlay(
     })
   }
   const clock = Math.max(0, Math.min(opts.holdSeconds, trackT - opts.clockOffsetSec))
-  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), HOLD_BUILD, clock, HOLD_PINK)
+  drawGradeHud(
+    ctx,
+    width,
+    height,
+    Math.round(score?.overall ?? 0),
+    HOLD_BUILD,
+    clock,
+    HOLD_PINK,
+    { score: opts.showScore !== false, clock: opts.showClock !== false },
+  )
 }
 
 export type BurnOverlayOpts = {
@@ -169,10 +252,12 @@ export type BurnOverlayOpts = {
   clockOffsetSec: number
   showSkeleton?: boolean
   showAngles?: boolean
+  showScore?: boolean
+  showClock?: boolean
+  saveSpeed?: number
   cancelled?: () => boolean
   onProgress?: (p: number) => void
   recordedWallSec?: number
-  /** Prefer the on-screen review canvas — Safari often drops offscreen draws. */
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
 }
@@ -196,9 +281,13 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
   canvas.style.cssText =
     'position:fixed;left:8px;bottom:8px;width:72px;height:72px;opacity:0.2;pointer-events:none;z-index:9'
   document.body.appendChild(canvas)
+  video.style.cssText =
+    'position:fixed;left:8px;bottom:8px;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:8'
+  document.body.appendChild(video)
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     canvas.remove()
+    video.remove()
     URL.revokeObjectURL(url)
     throw new Error('Could not draw the overlay')
   }
@@ -210,15 +299,15 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
     opts.holdSeconds,
     opts.recordedWallSec,
   )
+  const saveSpeed = clampSaveSpeed(opts.saveSpeed ?? 1)
   const win = holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration, stretch)
-  const realDur = Math.max(0.4, (win.end - win.start) / Math.max(stretch, 1))
-  const fps = 24
-  const frames = Math.max(10, Math.round(realDur * fps))
-  const dwell = 1000 / fps
-
+  const wantedRate = stretch * saveSpeed
   video.muted = true
-  video.playbackRate = 1
-  const captured = canvas.captureStream(fps)
+  video.playsInline = true
+  video.playbackRate = wantedRate
+  const playRate = video.playbackRate > 0.05 ? video.playbackRate : wantedRate
+
+  const captured = canvas.captureStream(30)
   hintMotion(captured)
   const rec = createRecorder(captured)
   const chunks: Blob[] = []
@@ -231,25 +320,57 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
       resolve(new Blob(chunks, { type: rec.mimeType || 'video/mp4' }))
     }
   })
-  startRecorder(rec, 200)
+  const paint = () => {
+    paintHoldOverlay(ctx, video, width, height, video.currentTime, opts)
+    const span = Math.max(0.2, win.end - win.start)
+    opts.onProgress?.(Math.min(1, (video.currentTime - win.start) / span))
+  }
 
+  let started = false
   try {
-    for (let i = 0; i < frames; i++) {
-      if (opts.cancelled?.()) break
-      const mediaT = win.start + (i / fps) * stretch
-      await seekVideo(video, mediaT)
-      paintHoldOverlay(ctx, video, width, height, mediaT, opts)
-      opts.onProgress?.(Math.min(1, (i + 1) / frames))
-      await new Promise<void>((r) => window.setTimeout(r, dwell))
-    }
+    await seekVideo(video, win.start)
+    paint()
+    startRecorder(rec, 200)
+    started = true
+    const wallBudget = ((win.end - win.start) / playRate) * 1000 + 1800
+    await new Promise<void>((resolve) => {
+      let settled = false
+      const finish = () => {
+        if (settled) return
+        settled = true
+        unhook()
+        window.clearTimeout(timer)
+        resolve()
+      }
+      const onFrame = () => {
+        if (opts.cancelled?.()) {
+          finish()
+          return true
+        }
+        paint()
+        if (video.ended || video.currentTime >= win.end - 0.03) {
+          finish()
+          return true
+        }
+        return false
+      }
+      const unhook = hookVideoFrames(video, onFrame)
+      const timer = window.setTimeout(finish, wallBudget)
+      video.addEventListener('ended', finish, { once: true })
+      void video.play().catch(() => {
+        finish()
+      })
+    })
   } finally {
-    if (rec.state !== 'inactive') rec.stop()
-    canvas.remove()
-    URL.revokeObjectURL(url)
     video.pause()
+    if (started && rec.state !== 'inactive') rec.stop()
+    canvas.remove()
+    video.remove()
+    URL.revokeObjectURL(url)
     video.src = ''
   }
 
+  if (!started) throw new Error('Could not start the clip write')
   const blob = await stopped
   if (opts.cancelled?.() || blob.size < 800) {
     throw new Error(opts.cancelled?.() ? 'cancelled' : 'Overlay export was empty')
@@ -270,10 +391,44 @@ export async function saveHoldClipWithOverlay(opts: {
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
   onProgress?: (p: number) => void
+  showSkeleton?: boolean
+  showAngles?: boolean
+  showScore?: boolean
+  showClock?: boolean
+  saveSpeed?: number
 }): Promise<SaveVideoResult> {
   const mode = opts.mode ?? 'auto'
   const mirror = opts.mirror !== false
-  const key = burnedOverlayKey(opts.clipId, mode, mirror, true, true)
+  const layers: HoldSaveLayers = {
+    showScore: opts.showScore !== false,
+    showSkeleton: opts.showSkeleton !== false,
+    showClock: opts.showClock !== false,
+    showAngles: opts.showAngles !== false,
+  }
+  const saveSpeed = clampSaveSpeed(opts.saveSpeed ?? 1)
+  const anyOverlay = layers.showScore || layers.showSkeleton || layers.showClock
+  if (!anyOverlay && saveSpeed === 1) {
+    const probe = await loadVideo(opts.source)
+    const duration = await readDuration(
+      probe.video,
+      opts.recordedWallSec && opts.recordedWallSec > 0.8 ? opts.recordedWallSec : opts.holdSeconds,
+    )
+    URL.revokeObjectURL(probe.url)
+    probe.video.src = ''
+    const stretch = mediaStretch(
+      duration,
+      opts.track,
+      opts.clockOffsetSec,
+      opts.holdSeconds,
+      opts.recordedWallSec,
+    )
+    if (stretch <= 1.02) {
+      const ext = extForVideoType(opts.source.type || opts.filename)
+      const name = opts.filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
+      return saveVideoToDevice(opts.source, name)
+    }
+  }
+  const key = burnedOverlayKey(opts.clipId, mode, mirror, layers, saveSpeed)
   let out = getBurnedOverlay(key)
   if (!out) {
     out = await burnOverlayVideo({
@@ -284,6 +439,11 @@ export async function saveHoldClipWithOverlay(opts: {
       holdSeconds: opts.holdSeconds,
       clockOffsetSec: opts.clockOffsetSec,
       recordedWallSec: opts.recordedWallSec,
+      showSkeleton: layers.showSkeleton,
+      showAngles: layers.showAngles,
+      showScore: layers.showScore,
+      showClock: layers.showClock,
+      saveSpeed,
       onProgress: opts.onProgress,
     })
     rememberBurnedOverlay(key, out)
