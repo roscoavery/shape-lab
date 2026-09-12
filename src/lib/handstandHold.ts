@@ -44,9 +44,11 @@ export function holdMediaWindow(
   clockOffsetSec: number,
   holdSeconds: number,
   mediaDuration = Number.POSITIVE_INFINITY,
+  stretch = 1,
 ): { start: number; end: number } {
-  const start = Math.max(0, clockOffsetSec - PRE_ROLL_SEC)
-  const rawEnd = clockOffsetSec + holdSeconds + POST_ROLL_SEC
+  const rate = Number.isFinite(stretch) && stretch > 0 ? stretch : 1
+  const start = Math.max(0, (clockOffsetSec - PRE_ROLL_SEC) * rate)
+  const rawEnd = (clockOffsetSec + holdSeconds + POST_ROLL_SEC) * rate
   const end = Number.isFinite(mediaDuration) && mediaDuration > 0 ? Math.min(rawEnd, mediaDuration) : rawEnd
   return { start, end: Math.max(start + 0.2, end) }
 }
@@ -280,7 +282,7 @@ export async function attachHoldClips(
 ): Promise<RawHoldAttempt[]> {
   if (!attempts.length) return attempts
   const trim = opts?.trim !== false
-  const durable = fullBlob && fullBlob.size > 800 ? await durableBlob(fullBlob) : null
+  const durable = fullBlob && fullBlob.size > 800 ? fullBlob : null
   const out: RawHoldAttempt[] = []
   for (const a of attempts) {
     const source =

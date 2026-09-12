@@ -4,31 +4,12 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { getShape } from '../config/shapes'
 import { formatSeconds, holdMediaWindow } from '../lib/handstandHold'
-import {
-  burnOverlayVideo,
-  burnedOverlayKey,
-  getBurnedOverlay,
-  rememberBurnedOverlay,
-} from '../lib/overlayExport'
-import { looksLikeBackgroundProp } from '../lib/poseSubject'
-import { landmarksAtMedia, mediaTimeToTrackTime, type PoseTrack } from '../lib/poseTrack'
-import {
-  extForVideoType,
-  saveResultMessage,
-  saveVideoToDevice,
-  type SaveVideoResult,
-} from '../lib/saveMedia'
+import { paintHoldOverlay, saveHoldClipWithOverlay } from '../lib/overlayExport'
+import { mediaStretch, type PoseTrack } from '../lib/poseTrack'
+import { saveResultMessage, type SaveVideoResult } from '../lib/saveMedia'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
-import { scoreShape } from '../lib/scoring'
-import {
-  drawGradeHud,
-  drawPoseOverlay,
-  overlayLineColor,
-  saveJointDrawMode,
-  type JointDrawMode,
-} from '../lib/skeleton'
+import { saveJointDrawMode, type JointDrawMode } from '../lib/skeleton'
 
 type Props = {
   src: string
@@ -70,6 +51,7 @@ export function HoldReplayPlayer({
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [viewStart, setViewStart] = useState(0)
+  const [rate, setRate] = useState(1)
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
@@ -113,17 +95,10 @@ export function HoldReplayPlayer({
     const canvas = canvasRef.current
     if (!video || !canvas) return
     let raf = 0
-    const shape = getShape('handstand')
 
     const windowFor = (mediaDur: number) => {
-      const win = holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur)
-      const localTrack = Boolean(track && track.length && track[0]!.t <= 0.35)
-      const span = track && track.length ? track[track.length - 1]!.t - track[0]!.t : 0
-      const stretched = localTrack && mediaDur > span + 0.45
-      return {
-        start: stretched ? 0 : win.start,
-        end: stretched ? mediaDur : win.end,
-      }
+      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds)
+      return holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur, stretch)
     }
 
     const paint = () => {
@@ -137,15 +112,6 @@ export function HoldReplayPlayer({
         }
         const ctx = canvas.getContext('2d')
         if (ctx) {
-          if (mirror) {
-            ctx.save()
-            ctx.translate(w, 0)
-            ctx.scale(-1, 1)
-            ctx.drawImage(video, 0, 0, w, h)
-            ctx.restore()
-          } else {
-            ctx.drawImage(video, 0, 0, w, h)
-          }
           const mediaDur = video.duration || holdSeconds
           const t = video.currentTime
           const view = windowFor(mediaDur)
@@ -153,22 +119,15 @@ export function HoldReplayPlayer({
             video.pause()
             video.currentTime = view.end
           }
-          const trackT = mediaTimeToTrackTime(t, mediaDur, track)
-          const clock = Math.max(0, Math.min(holdSeconds, trackT - clockOffsetSec))
-          const rawLm = landmarksAtMedia(track, t, mediaDur)
-          const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
-          const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
-          if (showOverlay) {
-            drawPoseOverlay(ctx, lm, {
-              width: w,
-              height: h,
-              mirror,
-              mode,
-              showAngles,
-              lineColor: overlayLineColor(score),
-            })
-          }
-          drawGradeHud(ctx, w, h, Math.round(score?.overall ?? 0), 'Handstand', clock)
+          paintHoldOverlay(ctx, video, w, h, t, {
+            track,
+            mode,
+            mirror,
+            holdSeconds,
+            clockOffsetSec,
+            showSkeleton: showOverlay,
+            showAngles,
+          })
         }
       }
       setTime(video.currentTime)
@@ -177,11 +136,14 @@ export function HoldReplayPlayer({
 
     const onMeta = () => {
       const mediaDur = video.duration || holdSeconds
+      const stretch = mediaStretch(mediaDur, track, clockOffsetSec, holdSeconds)
+      video.playbackRate = stretch > 1.02 ? stretch : 1
       const view = windowFor(mediaDur)
+      setRate(stretch > 1.02 ? stretch : 1)
       setViewStart(view.start)
-      setDuration(Math.max(0.1, view.end - view.start))
+      setDuration(Math.max(0.1, (view.end - view.start) / Math.max(stretch, 1)))
       if (playheadSec != null && Number.isFinite(playheadSec)) {
-        video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec))
+        video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec * stretch))
       } else if (video.currentTime < view.start || video.currentTime > view.end) {
         video.currentTime = view.start
       }
@@ -222,27 +184,21 @@ export function HoldReplayPlayer({
     setSaving(true)
     setFlash('Adding score, clock, and body line…')
     try {
-      const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
-      let out = getBurnedOverlay(key)
-      if (!out) {
-        out = await burnOverlayVideo({
-          source: blob,
-          track,
-          mode,
-          mirror,
-          holdSeconds,
-          clockOffsetSec,
-          showSkeleton: showOverlay,
-          showAngles,
-          onProgress: (p) => {
-            setFlash(`Adding score, clock, and body line… ${Math.round(p * 100)}%`)
-          },
-        })
-        rememberBurnedOverlay(key, out)
-      }
-      const ext = extForVideoType(out.type || blob.type || filename)
-      const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-      const result: SaveVideoResult = await saveVideoToDevice(out, name)
+      const result: SaveVideoResult = await saveHoldClipWithOverlay({
+        source: blob,
+        track,
+        holdSeconds,
+        clockOffsetSec,
+        filename,
+        mirror,
+        mode,
+        clipId,
+        video: videoRef.current,
+        canvas: canvasRef.current,
+        onProgress: (p) => {
+          setFlash(`Adding score, clock, and body line… ${Math.round(p * 100)}%`)
+        },
+      })
       setFlash(saveResultMessage(result))
     } catch {
       setFlash('Could not save that hold clip.')
@@ -280,7 +236,7 @@ export function HoldReplayPlayer({
               const v = videoRef.current
               if (!v) return
               if (v.paused) {
-                if (v.currentTime >= viewStart + duration - 0.05) v.currentTime = viewStart
+                if (v.currentTime >= viewStart + duration * rate - 0.05) v.currentTime = viewStart
                 void v.play()
               } else v.pause()
             }}
@@ -292,10 +248,10 @@ export function HoldReplayPlayer({
             min={0}
             max={Math.max(0.1, duration)}
             step={0.05}
-            value={Math.min(duration, Math.max(0, time - viewStart))}
+            value={Math.min(duration, Math.max(0, (time - viewStart) / Math.max(rate, 1)))}
             onChange={(e) => {
               const v = videoRef.current
-              const t = viewStart + Number(e.target.value)
+              const t = viewStart + Number(e.target.value) * rate
               if (v) v.currentTime = t
               setTime(t)
             }}
@@ -303,7 +259,8 @@ export function HoldReplayPlayer({
             aria-label="Hold replay playhead"
           />
           <span className="tabular-nums text-[11px] text-white/80">
-            {formatSeconds(Math.max(0, time - viewStart))} / {formatSeconds(duration || holdSeconds)}
+            {formatSeconds(Math.max(0, (time - viewStart) / Math.max(rate, 1)))} /{' '}
+            {formatSeconds(duration || holdSeconds)}
           </span>
         </div>
       </div>

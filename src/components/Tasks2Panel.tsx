@@ -32,6 +32,7 @@ import {
   runHandstandHoldSession,
   type HoldTick,
 } from '../lib/handstandHold'
+import { saveHoldClipWithOverlay } from '../lib/overlayExport'
 import {
   forgetCaptureBlob,
   getRememberedBlob,
@@ -638,22 +639,17 @@ export function Tasks2Panel({
     async (seqRun: FlowSequence, rawIn: Awaited<ReturnType<typeof runHandstandHoldSession>>) => {
       onHoldClockRef.current?.(null)
       setHoldTick(null)
-      let rolled: Blob | null = null
-      try {
-        rolled = await (flushedHoldRef.current ?? delay.flushRollingBlob())
-      } catch {
-        rolled = null
+      let rolled = delay.peekRollingBlob()
+      if (!rolled || rolled.size < 800) {
+        try {
+          rolled = await (flushedHoldRef.current ?? delay.flushRollingBlob())
+        } catch {
+          rolled = null
+        }
       }
       flushedHoldRef.current = null
       if (!rolled || rolled.size < 800) {
         rolled = delay.peekRollingBlob()
-      }
-      if (!rolled || rolled.size < 800) {
-        try {
-          rolled = await delay.flushRollingBlob()
-        } catch {
-          rolled = rolled && rolled.size > 800 ? rolled : null
-        }
       }
       const raw = await attachHoldClips(rawIn, rolled, { trim: true })
 
@@ -746,23 +742,6 @@ export function Tasks2Panel({
             clipId,
             marker: 'playhead',
           })
-        } else if (live) {
-          const stillView = await takeSnapshot(
-            'handstand',
-            a.playheadSec,
-            live,
-            a.snapshotBlob,
-            i + 1,
-          )
-          if (stillView) {
-            stillView.overall = livePeak || live?.overall || 0
-            stillView.cues = cues
-            stillView.marker = 'playhead'
-            stillView.holdSeconds = a.holdSeconds
-            stillView.clipId = clipId
-            snapshotId = stillView.captureId ?? null
-            collected.push(stillView)
-          }
         }
 
         holds.push({
@@ -1427,7 +1406,16 @@ export function Tasks2Panel({
   const keepToPhotos = async () => {
     const clip = hitsAsk?.blob && hitsAsk.blob.type.startsWith('video') ? hitsAsk : deviceSave
     if (clip && 'filename' in clip) {
-      const result = await saveVideoToDevice(clip.blob, clip.filename)
+      const clipId = hitsAsk?.id ?? report?.replayCaptureId
+      const hold = report?.holdAttempts?.find((h) => h.clipId === clipId)
+      const result = await saveHoldClipWithOverlay({
+        source: clip.blob,
+        track: clipId ? getRememberedPoseTrack(clipId) : null,
+        holdSeconds: hold?.holdSeconds ?? hitsAsk?.seconds ?? report?.bestHoldSeconds ?? 0,
+        clockOffsetSec: hold?.clockOffsetSec ?? 0,
+        filename: clip.filename,
+        clipId,
+      })
       setFlash(saveResultMessage(result))
     }
     for (const extra of extraHoldBlobs()) {
@@ -1555,17 +1543,10 @@ export function Tasks2Panel({
     holdDoneRef.current = true
     resetSpeech()
     setPhase('finishing')
-    setCue('Loading your hold clips…')
-    setFlash('Loading your hold clips…')
+    setCue('Opening your holds…')
+    setFlash('Opening your holds…')
     if (!flushedHoldRef.current) {
-      flushedHoldRef.current = new Promise((resolve) => {
-        window.setTimeout(() => {
-          void delay
-            .flushRollingBlob()
-            .then(resolve)
-            .catch(() => resolve(null))
-        }, 180)
-      })
+      flushedHoldRef.current = delay.flushRollingBlob().catch(() => null)
     }
   }, [delay, resetSpeech])
 
@@ -1643,11 +1624,16 @@ export function Tasks2Panel({
         window.setTimeout(() => setFlash(null), 3500)
         return
       }
+      const hold = report.holdAttempts?.find((h) => h.clipId === clipId)
       try {
-        const result = await saveVideoToDevice(
-          file,
-          videoFileName(report, file.type || 'video/mp4', index),
-        )
+        const result = await saveHoldClipWithOverlay({
+          source: file,
+          track: getRememberedPoseTrack(clipId),
+          holdSeconds: hold?.holdSeconds ?? report.bestHoldSeconds ?? 0,
+          clockOffsetSec: hold?.clockOffsetSec ?? 0,
+          filename: videoFileName(report, file.type || 'video/mp4', index),
+          clipId,
+        })
         setFlash(saveResultMessage(result))
       } catch {
         setFlash('Could not save that hold clip.')

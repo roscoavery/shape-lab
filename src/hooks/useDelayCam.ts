@@ -243,21 +243,14 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
       } catch {
         /* stop still flushes */
       }
-      window.setTimeout(() => {
-        try {
-          rec.requestData()
-        } catch {
-          /* ignore */
-        }
-        try {
-          rec.stop()
-        } catch {
-          done(blobFromParts())
-          return
-        }
-        rollingRecorderRef.current = null
-      }, 160)
-      window.setTimeout(() => done(blobFromParts()), 2800)
+      try {
+        rec.stop()
+      } catch {
+        done(blobFromParts())
+        return
+      }
+      rollingRecorderRef.current = null
+      window.setTimeout(() => done(blobFromParts()), 1200)
     })
   }, [blobFromParts])
 
