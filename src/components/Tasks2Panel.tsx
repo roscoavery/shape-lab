@@ -69,6 +69,7 @@ import {
   saveFlowProgress,
 } from '../lib/storage'
 import { chosenFlowCounts, logHomeworkSequenceRun } from '../lib/homeworkFlow'
+import { recordHoldSession, sessionHoldTotal, todayHoldSeconds } from '../lib/holdDay'
 import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
@@ -289,6 +290,7 @@ export function Tasks2Panel({
   const holdPersistRef = useRef<{ reportId: string; logId: string | null } | null>(null)
   const [holdLogged, setHoldLogged] = useState(true)
   const [holdClipPending, setHoldClipPending] = useState(false)
+  const [holdDay, setHoldDay] = useState<{ session: number; today: number } | null>(null)
   const holdWallSecRef = useRef(0)
   const pendingStillsRef = useRef<
     { id: string; blob: Blob; shapeId: string; shapeName: string; seqId: string }[]
@@ -427,6 +429,13 @@ export function Tasks2Panel({
     if (!athleteId) return
     setHistory(flowHistoryForSequence(athleteId, seqId))
   }, [athleteId, seqId, report])
+
+  useEffect(() => {
+    setHoldDay((prev) => ({
+      session: prev?.session ?? 0,
+      today: todayHoldSeconds(athleteId),
+    }))
+  }, [athleteId])
 
   useEffect(() => {
     onPreviewItems?.(seq.previewShapes)
@@ -803,6 +812,7 @@ export function Tasks2Panel({
         steps,
         holdAttempts: holds,
         bestHoldSeconds: bestHold.holdSeconds,
+        sessionHoldSeconds: sessionHoldTotal(holds),
         recordedWallSec: wallSec,
         summary: summaryFor(seqRun, steps),
         instagramHandle: athlete?.instagramHandle,
@@ -810,6 +820,8 @@ export function Tasks2Panel({
       }
       holdPersistRef.current = null
       setHoldLogged(Boolean(athleteId))
+      const day = recordHoldSession(athleteId, built.id, sessionHoldTotal(holds))
+      setHoldDay(day)
       if (athleteId) {
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
@@ -840,7 +852,7 @@ export function Tasks2Panel({
       onExitFullscreen?.()
       setPhase('replay')
       setCue(
-        `Longest hold ${formatSeconds(bestHold.holdSeconds)} is highlighted. Tap a clip at the bottom to watch it.`,
+        `Longest hold ${formatSeconds(bestHold.holdSeconds)}. This session ${formatSeconds(day.session)}. Today ${formatSeconds(day.today)}.`,
       )
 
       if (!replayUrl) {
@@ -1836,7 +1848,7 @@ export function Tasks2Panel({
           {phase === 'finishing' ? (
             <div className="mt-2 flex items-center gap-3">
               <span
-                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#00e5ff]"
+                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#ff4d9a]"
                 aria-hidden
               />
               <div>
@@ -1940,7 +1952,7 @@ export function Tasks2Panel({
             aria-live="polite"
           >
             <span
-              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#00e5ff]"
+              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#ff4d9a]"
               aria-hidden
             />
             <p className="mt-4 text-xl font-black">Getting your clips…</p>
@@ -1967,6 +1979,12 @@ export function Tasks2Panel({
             {HOLD_BUILD_LABEL} — this bar means the gym rebuilt
         </div>
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
+        {seq.mode === 'hs-hold' && holdDay && holdDay.today > 0 && (
+          <p className={`mt-1 text-[13px] font-semibold ${HOLD_PINK_TEXT}`}>
+            Today {formatSeconds(holdDay.today)} in a handstand
+            {holdDay.session > 0 ? ` · this session ${formatSeconds(holdDay.session)}` : ''}
+          </p>
+        )}
         <div className="mt-2">
           <ShapeStillStrip
             items={seq.previewShapes}
@@ -2081,7 +2099,7 @@ export function Tasks2Panel({
       </div>
 
       {phase === 'idle' && report?.holdAttempts && report.holdAttempts.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-[#00e5ff]/40 bg-[#10240f] p-3">
+        <div className="mb-3 rounded-2xl border border-[#ff4d9a]/40 bg-[#2a1018] p-3">
           <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${HOLD_PINK_TEXT}`}>
             Your holds
           </p>
@@ -2094,12 +2112,16 @@ export function Tasks2Panel({
               {report.holdAttempts.length} clip{report.holdAttempts.length === 1 ? '' : 's'}
             </span>
           </p>
+          <p className="mt-1 text-[13px] font-semibold text-white/85">
+            This session {formatSeconds(report.sessionHoldSeconds ?? sessionHoldTotal(report.holdAttempts))}
+            {holdDay && holdDay.today > 0 ? ` · Today ${formatSeconds(holdDay.today)}` : ''}
+          </p>
           <ul className="mt-2 space-y-2">
             {report.holdAttempts.map((h) => (
               <li
                 key={h.index}
                 className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 ${
-                  h.highlighted ? 'border-[#00e5ff] bg-black/40' : 'border-white/10 bg-black/25'
+                  h.highlighted ? 'border-[#ff4d9a] bg-black/40' : 'border-white/10 bg-black/25'
                 }`}
               >
                 <div className="min-w-0">
@@ -2116,7 +2138,7 @@ export function Tasks2Panel({
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => playHoldClip(h.clipId, h.playheadSec)}
+                    onClick={() => playHoldClip(h.clipId)}
                     className="rounded-lg border border-white/20 px-2.5 py-1.5 text-[12px] font-semibold text-white"
                   >
                     Watch
@@ -2168,7 +2190,7 @@ export function Tasks2Panel({
                 className={`w-full overflow-hidden rounded-2xl border text-left disabled:opacity-50 ${
                   selected
                     ? s.mode === 'hs-hold'
-                      ? 'border-[#00e5ff] bg-[#10240f] ring-1 ring-[#00e5ff]'
+                      ? 'border-[#ff4d9a] bg-[#2a1018] ring-1 ring-[#ff4d9a]'
                       : 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
                     : 'border-white/10 bg-[#121820] hover:border-white/25'
                 }`}
@@ -2210,7 +2232,7 @@ export function Tasks2Panel({
           <div
             className={`mt-3 rounded-lg px-3 py-2 ${
               phase === 'holding' || phase === 'finishing'
-                ? 'border border-[#00e5ff]/40 bg-[#10240f]'
+                ? 'border border-[#ff4d9a]/40 bg-[#2a1018]'
                 : 'border border-[var(--accent)]/40 bg-[#102820]'
             }`}
           >
@@ -2280,8 +2302,13 @@ export function Tasks2Panel({
                       )}
                     </span>
                   </p>
+                  <p className="mt-0.5 text-[12px] text-white/80">
+                    This session{' '}
+                    {formatSeconds(report.sessionHoldSeconds ?? sessionHoldTotal(report.holdAttempts))}
+                    {holdDay && holdDay.today > 0 ? ` · Today ${formatSeconds(holdDay.today)}` : ''}
+                  </p>
                   <p className="mt-0.5 text-[12px] text-white/60">
-                    Watch here. Save writes a new clip at the speed you pick, with score, line, and stopwatch on or off.
+                    Recap starts at the beginning. Save options are under the clip.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -2316,9 +2343,7 @@ export function Tasks2Panel({
                       report.holdAttempts?.find((h) => h.clipId === activeClipId)?.clockOffsetSec ?? 0
                     }
                     recordedWallSec={report.recordedWallSec}
-                    playheadSec={
-                      report.holdAttempts?.find((h) => h.clipId === activeClipId)?.playheadSec
-                    }
+                    startAtBeginning
                     mirror={mirror}
                     clipId={activeClipId}
                     fill
@@ -2330,7 +2355,7 @@ export function Tasks2Panel({
                     athleteId={athleteId}
                   />
                 ) : holdClipPending ? (
-                  <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#00e5ff]">
+                  <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#ff4d9a]">
                     Opening the clip…
                   </p>
                 ) : (
@@ -2361,10 +2386,10 @@ export function Tasks2Panel({
                       <button
                         key={h.index}
                         type="button"
-                        onClick={() => playHoldClip(h.clipId, h.playheadSec)}
+                        onClick={() => playHoldClip(h.clipId)}
                         className={`w-[5.5rem] shrink-0 overflow-hidden rounded-xl border text-left ${
                           h.highlighted
-                            ? 'border-[#00e5ff] ring-2 ring-[#00e5ff]'
+                            ? 'border-[#ff4d9a] ring-2 ring-[#ff4d9a]'
                             : active
                               ? 'border-white/80'
                               : 'border-white/15'

@@ -26,6 +26,8 @@ type Props = {
   clockOffsetSec?: number
   recordedWallSec?: number
   playheadSec?: number
+  /** Hold challenge: start at the clip start, not the mid-hold snapshot. */
+  startAtBeginning?: boolean
   mirror?: boolean
   filename: string
   clipId?: string | null
@@ -48,6 +50,7 @@ export function HoldReplayPlayer({
   clockOffsetSec = 0,
   recordedWallSec,
   playheadSec,
+  startAtBeginning = false,
   mirror = true,
   filename,
   clipId = null,
@@ -164,9 +167,9 @@ export function HoldReplayPlayer({
       const view = windowFor(mediaDur)
       setViewStart(view.start)
       setDuration(Math.max(0.1, view.end - view.start))
-      if (playheadSec != null && Number.isFinite(playheadSec)) {
+      if (!startAtBeginning && playheadSec != null && Number.isFinite(playheadSec)) {
         video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec * stretch))
-      } else if (video.currentTime < view.start || video.currentTime > view.end) {
+      } else {
         video.currentTime = view.start
       }
     }
@@ -193,6 +196,7 @@ export function HoldReplayPlayer({
     clockOffsetSec,
     recordedWallSec,
     playheadSec,
+    startAtBeginning,
     showSkeleton,
     showAngles,
     showScore,

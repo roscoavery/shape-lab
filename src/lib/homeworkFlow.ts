@@ -16,6 +16,7 @@ import {
   sequenceHomeworkShapeId,
 } from './homeworkLabel'
 import { addHomeworkItem, addHomeworkLog, createId, loadAllHomework } from './storage'
+import { sessionHoldTotal } from './holdDay'
 
 export { flowIdForHomeworkItem } from './homeworkLabel'
 
@@ -98,7 +99,7 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
     kind: 'sequence',
     reps,
     ...(sets ? { sets } : {}),
-    totalHoldSeconds: report.bestHoldSeconds ?? 0,
+    totalHoldSeconds: sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0,
     score: overallFlowScore(report),
     sourceLabel: sets ? `${report.nickname} · ${sets}×${reps}` : `${report.nickname} · ${reps} run${reps === 1 ? '' : 's'}`,
   }

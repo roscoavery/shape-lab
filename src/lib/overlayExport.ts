@@ -6,8 +6,8 @@
  */
 
 import { getShape } from '../config/shapes'
-import { HOLD_BUILD, HOLD_PINK } from './holdBuild'
-import { holdMediaWindow } from './handstandHold'
+import { HOLD_HUD_LABEL, HOLD_PINK } from './holdBuild'
+import { holdMediaWindow, recapHoldClock } from './handstandHold'
 import { looksLikeBackgroundProp } from './poseSubject'
 import {
   landmarksAtMedia,
@@ -236,13 +236,13 @@ export function paintHoldOverlay(
       lineColor: HOLD_PINK,
     })
   }
-  const clock = Math.max(0, Math.min(opts.holdSeconds, trackT - opts.clockOffsetSec))
+  const clock = recapHoldClock(trackT, opts.clockOffsetSec, opts.holdSeconds)
   drawGradeHud(
     ctx,
     width,
     height,
     Math.round(score?.overall ?? 0),
-    HOLD_BUILD,
+    HOLD_HUD_LABEL,
     clock,
     HOLD_PINK,
     { score: opts.showScore !== false, clock: opts.showClock !== false },

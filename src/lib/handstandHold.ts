@@ -39,6 +39,13 @@ export const SALVAGE_HOLD_SEC = 2.4
 export const PRE_ROLL_SEC = 2
 export const POST_ROLL_SEC = 1
 export const POST_FOOT_MS = POST_ROLL_SEC * 1000
+/** Recap / saved HUD only. Come-down detection and clip end stay the same. */
+export const RECAP_CLOCK_END_EARLY_SEC = 1.5
+
+export function recapHoldClock(trackT: number, clockOffsetSec: number, holdSeconds: number): number {
+  const shown = Math.max(0, holdSeconds - RECAP_CLOCK_END_EARLY_SEC)
+  return Math.max(0, Math.min(shown, trackT - clockOffsetSec))
+}
 
 export function holdMediaWindow(
   clockOffsetSec: number,

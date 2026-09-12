@@ -21,7 +21,7 @@ const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
 const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
-const HOLD_BUILD = 'aqua'
+const HOLD_BUILD = 'pink'
 
 function gitSha() {
   try {
@@ -161,7 +161,7 @@ function serveBoot(res) {
     'Cache-Control': 'no-store',
   })
   res.end(
-    '<!doctype html><meta charset="utf-8"><title>Shape Lab</title><body style="font-family:system-ui;background:#111;color:#eee;padding:2rem"><div style="background:#00e5ff;color:#042f36;font-weight:900;padding:12px 16px;border-radius:12px;text-align:center">AQUA BUILD — gym is still starting. Refresh in a few seconds.</div>',
+    '<!doctype html><meta charset="utf-8"><title>Shape Lab</title><body style="font-family:system-ui;background:#111;color:#eee;padding:2rem"><div style="background:#ff4d9a;color:#3b071c;font-weight:900;padding:12px 16px;border-radius:12px;text-align:center">PINK BUILD — gym is still starting. Refresh in a few seconds.</div>',
   )
 }
 
