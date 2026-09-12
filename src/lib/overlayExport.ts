@@ -18,8 +18,9 @@ import {
   overlayLineColor,
   type JointDrawMode,
 } from './skeleton'
+import { holdMediaWindow } from './handstandHold'
 import { looksLikeBackgroundProp } from './poseSubject'
-import { landmarksAt, type PoseTrack } from './poseTrack'
+import { landmarksAtMedia, mediaTimeToTrackTime, type PoseTrack } from './poseTrack'
 
 const burnedCache = new Map<string, Blob>()
 
@@ -60,9 +61,14 @@ function loadVideo(blob: Blob): Promise<{ video: HTMLVideoElement; url: string }
   })
 }
 
-function waitEnded(video: HTMLVideoElement, cancelled?: () => boolean): Promise<void> {
+function waitUntil(
+  video: HTMLVideoElement,
+  endSec: number,
+  cancelled?: () => boolean,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (video.ended) {
+    const hit = () => video.ended || video.currentTime >= endSec - 0.02
+    if (hit()) {
       resolve()
       return
     }
@@ -75,14 +81,14 @@ function waitEnded(video: HTMLVideoElement, cancelled?: () => boolean): Promise<
       reject(new Error('Clip playback failed while saving'))
     }
     const tick = () => {
-      if (cancelled?.()) {
+      if (cancelled?.() || hit()) {
         cleanup()
         resolve()
         return
       }
-      timer = window.setTimeout(tick, 120)
+      timer = window.setTimeout(tick, 40)
     }
-    let timer = window.setTimeout(tick, 120)
+    let timer = window.setTimeout(tick, 40)
     const cleanup = () => {
       window.clearTimeout(timer)
       video.removeEventListener('ended', done)
@@ -111,7 +117,9 @@ function paintFrame(
     ctx.drawImage(video, 0, 0, width, height)
   }
   const shape = getShape('handstand')
-  const rawLm = landmarksAt(opts.track, t)
+  const mediaDur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : opts.holdSeconds
+  const trackT = mediaTimeToTrackTime(t, mediaDur, opts.track)
+  const rawLm = landmarksAtMedia(opts.track, t, mediaDur)
   const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
   const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
   if (opts.showSkeleton !== false) {
@@ -124,7 +132,7 @@ function paintFrame(
       lineColor: overlayLineColor(score),
     })
   }
-  const clock = Math.max(0, Math.min(opts.holdSeconds, t - opts.clockOffsetSec))
+  const clock = Math.max(0, Math.min(opts.holdSeconds, trackT - opts.clockOffsetSec))
   drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Handstand', clock)
 }
 
@@ -166,8 +174,16 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
     throw new Error('Could not draw the overlay')
   }
 
+  const win = holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration)
+  const track = opts.track
+  const localTrack = Boolean(track && track.length && track[0]!.t <= 0.35)
+  const trackSpan = track && track.length ? track[track.length - 1]!.t - track[0]!.t : 0
+  const stretched = localTrack && duration > trackSpan + 0.45
+  const playStart = stretched ? 0 : win.start
+  const playEnd = stretched ? duration : win.end
+
   video.playbackRate = 1
-  video.currentTime = 0
+  video.currentTime = playStart
   const captured = canvas.captureStream(30)
   hintMotion(captured)
   const rec = createRecorder(captured)
@@ -184,11 +200,20 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
   startRecorder(rec, 200)
 
   let raf = 0
-  const draw = () => {
-    paintFrame(ctx, video, width, height, video.currentTime || 0, opts)
-    opts.onProgress?.(Math.min(1, (video.currentTime || 0) / Math.max(0.001, duration)))
-    if (!video.ended && !video.paused) {
-      raf = requestAnimationFrame(draw)
+  let vfc = 0
+  const draw = (_now?: number, meta?: { mediaTime?: number }) => {
+    const mediaT = meta?.mediaTime ?? video.currentTime ?? playStart
+    paintFrame(ctx, video, width, height, mediaT, opts)
+    const span = Math.max(0.001, playEnd - playStart)
+    opts.onProgress?.(Math.min(1, (mediaT - playStart) / span))
+    if (!video.ended && !video.paused && mediaT < playEnd) {
+      const rvfc = (
+        video as HTMLVideoElement & {
+          requestVideoFrameCallback?: (cb: typeof draw) => number
+        }
+      ).requestVideoFrameCallback
+      if (rvfc) vfc = rvfc.call(video, draw)
+      else raf = requestAnimationFrame(() => draw())
     }
   }
 
@@ -200,11 +225,16 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
       await video.play()
     }
     draw()
-    await waitEnded(video, opts.cancelled)
-    paintFrame(ctx, video, width, height, video.currentTime || duration, opts)
+    await waitUntil(video, playEnd, opts.cancelled)
+    video.pause()
+    paintFrame(ctx, video, width, height, Math.min(video.currentTime || playEnd, playEnd), opts)
     opts.onProgress?.(1)
   } finally {
     cancelAnimationFrame(raf)
+    const cvfc = (
+      video as HTMLVideoElement & { cancelVideoFrameCallback?: (id: number) => void }
+    ).cancelVideoFrameCallback
+    if (vfc && cvfc) cvfc.call(video, vfc)
     if (rec.state !== 'inactive') rec.stop()
     canvas.remove()
     URL.revokeObjectURL(url)

@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getShape } from '../config/shapes'
-import { formatSeconds } from '../lib/handstandHold'
+import { formatSeconds, holdMediaWindow } from '../lib/handstandHold'
 import {
   burnOverlayVideo,
   burnedOverlayKey,
@@ -13,7 +13,7 @@ import {
   rememberBurnedOverlay,
 } from '../lib/overlayExport'
 import { looksLikeBackgroundProp } from '../lib/poseSubject'
-import { landmarksAt, type PoseTrack } from '../lib/poseTrack'
+import { landmarksAtMedia, mediaTimeToTrackTime, type PoseTrack } from '../lib/poseTrack'
 import {
   extForVideoType,
   saveResultMessage,
@@ -69,6 +69,7 @@ export function HoldReplayPlayer({
   const [videoReady, setVideoReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
+  const [viewStart, setViewStart] = useState(0)
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
@@ -114,6 +115,17 @@ export function HoldReplayPlayer({
     let raf = 0
     const shape = getShape('handstand')
 
+    const windowFor = (mediaDur: number) => {
+      const win = holdMediaWindow(clockOffsetSec, holdSeconds, mediaDur)
+      const localTrack = Boolean(track && track.length && track[0]!.t <= 0.35)
+      const span = track && track.length ? track[track.length - 1]!.t - track[0]!.t : 0
+      const stretched = localTrack && mediaDur > span + 0.45
+      return {
+        start: stretched ? 0 : win.start,
+        end: stretched ? mediaDur : win.end,
+      }
+    }
+
     const paint = () => {
       const w = video.videoWidth
       const h = video.videoHeight
@@ -134,9 +146,16 @@ export function HoldReplayPlayer({
           } else {
             ctx.drawImage(video, 0, 0, w, h)
           }
+          const mediaDur = video.duration || holdSeconds
           const t = video.currentTime
-          const clock = Math.max(0, Math.min(holdSeconds, t - clockOffsetSec))
-          const rawLm = landmarksAt(track, t)
+          const view = windowFor(mediaDur)
+          if (t >= view.end && !video.paused) {
+            video.pause()
+            video.currentTime = view.end
+          }
+          const trackT = mediaTimeToTrackTime(t, mediaDur, track)
+          const clock = Math.max(0, Math.min(holdSeconds, trackT - clockOffsetSec))
+          const rawLm = landmarksAtMedia(track, t, mediaDur)
           const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
           const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
           if (showOverlay) {
@@ -157,9 +176,14 @@ export function HoldReplayPlayer({
     }
 
     const onMeta = () => {
-      setDuration(video.duration || holdSeconds)
+      const mediaDur = video.duration || holdSeconds
+      const view = windowFor(mediaDur)
+      setViewStart(view.start)
+      setDuration(Math.max(0.1, view.end - view.start))
       if (playheadSec != null && Number.isFinite(playheadSec)) {
-        video.currentTime = Math.max(0, playheadSec)
+        video.currentTime = Math.min(view.end, Math.max(view.start, playheadSec))
+      } else if (video.currentTime < view.start || video.currentTime > view.end) {
+        video.currentTime = view.start
       }
     }
     const onPlay = () => setPlaying(true)
@@ -255,8 +279,10 @@ export function HoldReplayPlayer({
             onClick={() => {
               const v = videoRef.current
               if (!v) return
-              if (v.paused) void v.play()
-              else v.pause()
+              if (v.paused) {
+                if (v.currentTime >= viewStart + duration - 0.05) v.currentTime = viewStart
+                void v.play()
+              } else v.pause()
             }}
           >
             {playing ? 'Pause' : 'Play'}
@@ -266,10 +292,10 @@ export function HoldReplayPlayer({
             min={0}
             max={Math.max(0.1, duration)}
             step={0.05}
-            value={Math.min(time, duration || time)}
+            value={Math.min(duration, Math.max(0, time - viewStart))}
             onChange={(e) => {
               const v = videoRef.current
-              const t = Number(e.target.value)
+              const t = viewStart + Number(e.target.value)
               if (v) v.currentTime = t
               setTime(t)
             }}
@@ -277,7 +303,7 @@ export function HoldReplayPlayer({
             aria-label="Hold replay playhead"
           />
           <span className="tabular-nums text-[11px] text-white/80">
-            {formatSeconds(time)} / {formatSeconds(duration || holdSeconds)}
+            {formatSeconds(Math.max(0, time - viewStart))} / {formatSeconds(duration || holdSeconds)}
           </span>
         </div>
       </div>

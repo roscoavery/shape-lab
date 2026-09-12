@@ -22,7 +22,6 @@ import { isIosDevice } from './delayCameraPipeline'
 import { createRecorder, durableBlob, hintMotion, startRecorder } from './saveMedia'
 import { playHoldEnterBeep, playHoldExitBeep } from './sounds'
 import { handstandPeakScore } from './scoring'
-import { extractVideoRange } from './trimVideo'
 
 export function formatSeconds(s: number): string {
   const m = Math.floor(s / 60)
@@ -40,6 +39,17 @@ export const SALVAGE_HOLD_SEC = 2.4
 export const PRE_ROLL_SEC = 2
 export const POST_ROLL_SEC = 1
 export const POST_FOOT_MS = POST_ROLL_SEC * 1000
+
+export function holdMediaWindow(
+  clockOffsetSec: number,
+  holdSeconds: number,
+  mediaDuration = Number.POSITIVE_INFINITY,
+): { start: number; end: number } {
+  const start = Math.max(0, clockOffsetSec - PRE_ROLL_SEC)
+  const rawEnd = clockOffsetSec + holdSeconds + POST_ROLL_SEC
+  const end = Number.isFinite(mediaDuration) && mediaDuration > 0 ? Math.min(rawEnd, mediaDuration) : rawEnd
+  return { start, end: Math.max(start + 0.2, end) }
+}
 export const MAX_HOLD_SEC = 90
 export const PEAK_SAMPLE_MS = 90
 
@@ -251,21 +261,14 @@ async function trimHoldClip(
   playheadSec: number
   poseTrack: PoseTrack
 }> {
-  const start = Math.max(0, clockOffsetSec - PRE_ROLL_SEC)
-  const end = clockOffsetSec + holdSeconds + POST_ROLL_SEC
-  let next = blob
-  try {
-    next = await extractVideoRange(blob, start, end)
-  } catch {
-    next = blob
-  }
+  // Keep the rolling camera file as-is. Re-encoding with seek+paint made
+  // Done wait a long time and stretched the file so the skeleton ran ahead.
+  void holdSeconds
   return {
-    clipBlob: next,
-    clockOffsetSec: Math.max(0, clockOffsetSec - start),
-    playheadSec: Math.max(0, playheadSec - start),
-    poseTrack: poseTrack
-      .filter((p) => p.t >= start - 0.08 && p.t <= end + 0.08)
-      .map((p) => ({ t: Math.max(0, p.t - start), lm: p.lm })),
+    clipBlob: blob,
+    clockOffsetSec,
+    playheadSec,
+    poseTrack,
   }
 }
 

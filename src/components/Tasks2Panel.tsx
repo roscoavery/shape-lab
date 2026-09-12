@@ -1767,7 +1767,7 @@ export function Tasks2Panel({
               aria-busy={phase === 'finishing'}
               className="h-14 min-w-[12rem] flex-1 rounded-2xl bg-[var(--accent)] px-4 text-base font-bold text-[#06281f] disabled:opacity-80"
             >
-              {phase === 'finishing' ? 'Loading clips…' : 'Done — see my holds'}
+              {phase === 'finishing' ? 'Opening…' : 'Done — see my holds'}
             </button>
           )}
           <button
@@ -1787,7 +1787,7 @@ export function Tasks2Panel({
         <div className="pointer-events-auto fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[220] mx-auto w-[min(96vw,34rem)] rounded-2xl border border-white/25 bg-black/85 p-3 text-white shadow-2xl backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
             {phase === 'finishing'
-              ? 'Packing your holds'
+              ? 'Opening your holds'
               : phase === 'holding'
               ? 'Handstand hold challenge'
               : busy
@@ -1801,7 +1801,7 @@ export function Tasks2Panel({
                 aria-hidden
               />
               <div>
-                <p className="text-base font-bold leading-snug">Getting your clips…</p>
+                <p className="text-base font-bold leading-snug">Opening your holds…</p>
                 <p className="mt-0.5 text-[12px] text-white/70">Watch, save, or go again in a moment.</p>
               </div>
             </div>

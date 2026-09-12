@@ -79,6 +79,35 @@ function lerpLandmarks(a: Landmark[], b: Landmark[], u: number): Landmark[] {
   return out
 }
 
+/**
+ * Seek-and-paint exports used wall-clock MediaRecorder timestamps, so the
+ * file is longer than the pose track. Map playback time back onto the track
+ * so the skeleton lands with the body instead of coming down first.
+ */
+export function mediaTimeToTrackTime(
+  mediaT: number,
+  mediaDuration: number,
+  track: PoseTrack | null | undefined,
+): number {
+  if (!track || track.length === 0) return mediaT
+  const first = track[0]!.t
+  const last = track[track.length - 1]!.t
+  const span = Math.max(0.001, last - first)
+  if (first <= 0.35 && Number.isFinite(mediaDuration) && mediaDuration > span + 0.45) {
+    const u = Math.max(0, Math.min(1, mediaT / Math.max(0.001, mediaDuration)))
+    return first + u * span
+  }
+  return mediaT
+}
+
+export function landmarksAtMedia(
+  track: PoseTrack | null | undefined,
+  mediaT: number,
+  mediaDuration: number,
+): Landmark[] | null {
+  return landmarksAt(track, mediaTimeToTrackTime(mediaT, mediaDuration, track))
+}
+
 export function landmarksAt(track: PoseTrack | null | undefined, t: number): Landmark[] | null {
   if (!track || track.length === 0) return null
   if (t <= track[0]!.t) return usableLm(track[0]!.lm)
