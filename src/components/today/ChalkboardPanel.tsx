@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
@@ -42,6 +42,8 @@ import { CroppedStill } from '../CroppedStill'
 import { PortraitVideoPlayer } from '../PortraitVideoPlayer'
 import { CollageStage } from '../classes/CollageStage'
 import { useGymLibrary } from '../../lib/gymLibrary'
+import { CHALKBOARD_MARKS, isChalkboardMark, type ChalkboardMarkId } from '../../lib/chalkboardMarks'
+import { ChalkboardMark } from './ChalkboardMark'
 
 type Size = 'compact' | 'more' | 'full'
 
@@ -263,6 +265,10 @@ function ChalkboardBody({
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
+  const [reelId, setReelId] = useState<string | null>(null)
+  const clipItems = items
+    .map((row) => row.item)
+    .filter((item) => (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url))
 
   return (
     <div className={compact ? 'mt-3 space-y-3' : 'mt-4 space-y-4'}>
@@ -471,6 +477,8 @@ function ChalkboardBody({
                 coach={coach}
                 compact={compact}
                 boardSize={size}
+                hidePlayer={Boolean(reelId)}
+                onOpenReel={() => setReelId(item.id)}
                 sourceLabel={
                   source === 'type'
                     ? `Every ${offering?.name ?? 'class'} time`
@@ -485,11 +493,17 @@ function ChalkboardBody({
       {compact && allCount > items.length && (
         <p className="text-xs text-[var(--muted)]">{allCount - items.length} more on the board</p>
       )}
+      {reelId && clipItems.length > 0 && (
+        <ReelTheater
+          items={clipItems}
+          startId={reelId}
+          coach={coach}
+          onClose={() => setReelId(null)}
+        />
+      )}
     </div>
   )
 }
-
-const STICKERS = ['⭐', '✓', '🔥', '💪', '👀', '👏', '🎯', '✨']
 
 function ChalkboardCard({
   item,
@@ -497,18 +511,21 @@ function ChalkboardCard({
   compact,
   boardSize,
   sourceLabel,
+  hidePlayer = false,
+  onOpenReel,
 }: {
   item: ChalkboardItem
   coach: boolean
   compact: boolean
   boardSize: Size
   sourceLabel?: string
+  hidePlayer?: boolean
+  onOpenReel?: () => void
 }) {
   const { nameForUrl, clipForUrl } = useGymLibrary()
   const gymClip = item.url ? clipForUrl(item.url) : undefined
   const [collage, setCollage] = useState<Awaited<ReturnType<typeof listCollages>>[number] | null>(null)
   const [full, setFull] = useState(false)
-  const [clipFull, setClipFull] = useState(false)
   const [commentDraft, setCommentDraft] = useState(item.comment ?? '')
   const [textDraft, setTextDraft] = useState('')
   const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
@@ -575,6 +592,7 @@ function ChalkboardCard({
       fit="contain"
       smartFit={false}
       quiet
+      markupSwipeSafe
     />
   ) : null
 
@@ -616,10 +634,10 @@ function ChalkboardCard({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap justify-end gap-2">
-          {isClip && (
+          {isClip && onOpenReel && (
             <button
               type="button"
-              onClick={() => setClipFull(true)}
+              onClick={onOpenReel}
               className="text-[11px] font-semibold text-[var(--accent)]"
             >
               Full screen
@@ -646,7 +664,10 @@ function ChalkboardCard({
         </div>
       </div>
       {isClip && commentAbove && commentBlock}
-      {isClip && !clipFull && media}
+      {isClip && !hidePlayer && media}
+      {isClip && hidePlayer && (
+        <p className="px-3 py-6 text-center text-xs text-[var(--muted)]">Playing in fullscreen</p>
+      )}
       {isClip && !commentAbove && commentBlock}
       {!isClip && commentBlock}
       {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
@@ -731,20 +752,11 @@ function ChalkboardCard({
             </button>
           </div>
           <p className="text-[10px] text-[var(--muted)]">
-            Tap the reel, then add a sticker or text. Your profile pic stays on the mark.
+            Tap the reel, then open Marks or add text. Your profile pic stays on the mark.
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {STICKERS.map((sticker) => (
-              <button
-                key={sticker}
-                type="button"
-                onClick={() => addOverlay({ kind: 'sticker', label: sticker })}
-                className="rounded-lg bg-white/10 px-2 py-1 text-lg"
-              >
-                {sticker}
-              </button>
-            ))}
-          </div>
+          <MarksTool
+            onPick={(id) => addOverlay({ kind: 'sticker', label: id })}
+          />
           <div className="flex flex-wrap gap-2">
             <input
               value={textDraft}
@@ -784,55 +796,264 @@ function ChalkboardCard({
           )}
         </div>
       )}
-      {clipFull &&
-        item.url &&
-        createPortal(
-          <div className="fixed inset-0 z-[90] flex h-[100vh] max-h-[100vh] flex-col bg-[#07110e] text-white">
-            <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-              <p className="min-w-0 truncate text-sm font-semibold">{item.title}</p>
+    </article>
+  )
+}
+
+function MarksTool({ onPick }: { onPick: (id: ChalkboardMarkId) => void }) {
+  return (
+    <details className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+      <summary className="cursor-pointer text-[11px] font-semibold text-[var(--text)]">
+        Marks
+      </summary>
+      <p className="mt-1 text-[10px] text-[var(--muted)]">
+        Arrows, circle, target. Hidden until you need them. Tap the reel first.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {CHALKBOARD_MARKS.map((mark) => (
+          <button
+            key={mark.id}
+            type="button"
+            title={mark.name}
+            onClick={() => onPick(mark.id)}
+            className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10"
+          >
+            <ChalkboardMark id={mark.id} className="h-8 w-8" />
+          </button>
+        ))}
+      </div>
+    </details>
+  )
+}
+
+function ReelTheater({
+  items,
+  startId,
+  coach,
+  onClose,
+}: {
+  items: ChalkboardItem[]
+  startId: string
+  coach: boolean
+  onClose: () => void
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const startIndex = Math.max(0, items.findIndex((item) => item.id === startId))
+  const [index, setIndex] = useState(startIndex)
+
+  useEffect(() => {
+    const node = scrollerRef.current?.querySelector(`[data-reel="${items[index]?.id ?? startId}"]`)
+    node?.scrollIntoView({ block: 'start' })
+  }, [index, items, startId])
+
+  const go = (next: number) => {
+    setIndex(Math.max(0, Math.min(items.length - 1, next)))
+  }
+
+  return createPortal(
+    <div className="sl-overlay-screen flex flex-col bg-[#07110e] text-white">
+      <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <p className="min-w-0 truncate text-sm font-semibold">
+          {items[index]?.title ?? 'Reel'} · {index + 1}/{items.length}
+        </p>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            disabled={index <= 0}
+            onClick={() => go(index - 1)}
+            className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold disabled:opacity-30"
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            disabled={index >= items.length - 1}
+            onClick={() => go(index + 1)}
+            className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold disabled:opacity-30"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
+          >
+            Close
+          </button>
+        </div>
+      </header>
+      <div
+        ref={scrollerRef}
+        className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain"
+        onScroll={(e) => {
+          const root = e.currentTarget
+          const kids = Array.from(root.querySelectorAll<HTMLElement>('[data-reel]'))
+          let best = 0
+          let bestDist = Infinity
+          kids.forEach((kid, i) => {
+            const dist = Math.abs(kid.offsetTop - root.scrollTop)
+            if (dist < bestDist) {
+              bestDist = dist
+              best = i
+            }
+          })
+          if (best !== index) setIndex(best)
+        }}
+      >
+        {items.map((item, i) => (
+          <ReelSlide
+            key={item.id}
+            item={item}
+            coach={coach}
+            active={i === index}
+          />
+        ))}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function ReelSlide({
+  item,
+  coach,
+  active,
+}: {
+  item: ChalkboardItem
+  coach: boolean
+  active: boolean
+}) {
+  const { clipForUrl } = useGymLibrary()
+  const gymClip = item.url ? clipForUrl(item.url) : undefined
+  const overlays = item.overlays ?? []
+  const comment = item.comment?.trim() || ''
+  const commentAbove = item.commentPlacement === 'above'
+  const [commentDraft, setCommentDraft] = useState(item.comment ?? '')
+  const [textDraft, setTextDraft] = useState('')
+  const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
+  const [place, setPlace] = useState({ x: 72, y: 18 })
+  const coachProfile = useMemo(
+    () => loadAthletes().find((a) => a.id === item.createdById) ?? null,
+    [item.createdById],
+  )
+
+  useEffect(() => {
+    setCommentDraft(item.comment ?? '')
+  }, [item.comment])
+
+  const addOverlay = (overlay: Omit<ChalkboardOverlay, 'id' | 'x' | 'y'> & { x?: number; y?: number }) => {
+    updateChalkboardItem(item.id, {
+      overlays: [
+        ...overlays,
+        {
+          id: createId('ov'),
+          x: overlay.x ?? place.x,
+          y: overlay.y ?? place.y,
+          kind: overlay.kind,
+          label: overlay.label,
+          style: overlay.style,
+          color: overlay.color,
+        },
+      ],
+    })
+    setPlace((p) => ({ x: Math.min(88, p.x + 6), y: Math.min(80, p.y + 10) }))
+  }
+
+  const commentBlock = comment ? (
+    <CoachComment text={comment} coach={coachProfile} coachName={item.createdByName} />
+  ) : null
+
+  return (
+    <section
+      data-reel={item.id}
+      className="flex min-h-full snap-start flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+    >
+      {commentAbove && commentBlock}
+      {active && item.url ? (
+        <div
+          className="relative mx-auto h-[min(52vh,30rem)] w-full max-w-3xl bg-black"
+          onClick={(e) => {
+            if (!coach) return
+            const rect = e.currentTarget.getBoundingClientRect()
+            setPlace({
+              x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
+              y: Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100),
+            })
+          }}
+        >
+          <GymClipPlayer
+            url={item.url}
+            itemId={gymClip?.id}
+            persistUrl={item.url}
+            loopA={item.loopA}
+            loopB={item.loopB}
+            fill
+            fit="contain"
+            smartFit={false}
+            quiet
+            markupSwipeSafe
+          />
+          <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+        </div>
+      ) : (
+        <div className="mx-auto flex h-[min(52vh,30rem)] w-full max-w-3xl items-center justify-center bg-black text-sm text-white/50">
+          {item.title}
+        </div>
+      )}
+      {!commentAbove && commentBlock}
+      <div className="space-y-2 px-4 pt-3">
+        <p className="text-sm font-semibold">{item.title}</p>
+        <p className="text-xs text-white/55">
+          Swipe or use Next for the next reel. Coach notes and text sit with this clip.
+        </p>
+        {coach && (
+          <>
+            <textarea
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              onBlur={() =>
+                updateChalkboardItem(item.id, {
+                  comment: commentDraft,
+                  commentPlacement: item.commentPlacement ?? 'below',
+                })
+              }
+              rows={2}
+              placeholder="Write a note athletes can read with this reel"
+              className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm"
+            />
+            <MarksTool onPick={(id) => addOverlay({ kind: 'sticker', label: id })} />
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={textDraft}
+                onChange={(e) => setTextDraft(e.target.value)}
+                placeholder="Artistic text"
+                className="min-w-[10rem] flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm"
+              />
+              <select
+                value={textStyle}
+                onChange={(e) => setTextStyle(e.target.value as ChalkboardOverlay['style'])}
+                className="rounded-lg border border-white/15 bg-black/40 px-2 py-2 text-xs"
+              >
+                <option value="script">Script</option>
+                <option value="banner">Banner</option>
+                <option value="plain">Plain</option>
+              </select>
               <button
                 type="button"
-                onClick={() => setClipFull(false)}
-                className="shrink-0 rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
-              >
-                Close
-              </button>
-            </header>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
-              {commentAbove && commentBlock}
-              <div
-                className="relative mx-auto h-[min(50vh,28rem)] w-full max-w-3xl bg-black"
-                onClick={(e) => {
-                  if (!coach) return
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  setPlace({
-                    x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
-                    y: Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100),
-                  })
+                disabled={!textDraft.trim()}
+                onClick={() => {
+                  addOverlay({ kind: 'text', label: textDraft.trim(), style: textStyle, color: '#f5c542' })
+                  setTextDraft('')
                 }}
+                className="rounded-lg bg-[#2dd4a8] px-3 py-2 text-xs font-bold text-[#06281f] disabled:opacity-40"
               >
-                <GymClipPlayer
-                  url={item.url}
-                  itemId={gymClip?.id}
-                  persistUrl={item.url}
-                  loopA={item.loopA}
-                  loopB={item.loopB}
-                  fill
-                  fit="contain"
-                  smartFit={false}
-                  quiet
-                />
-                <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
-              </div>
-              {!commentAbove && commentBlock}
-              <p className="px-4 pt-3 text-xs text-white/55">
-                Scroll for the coach note and marks. The reel stays at the top.
-              </p>
+                Add text
+              </button>
             </div>
-          </div>,
-          document.body,
+          </>
         )}
-    </article>
+      </div>
+    </section>
   )
 }
 
@@ -876,20 +1097,24 @@ function OverlayLayer({
           className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
           style={{ left: `${overlay.x}%`, top: `${overlay.y}%` }}
         >
-          <span
-            className={
-              overlay.kind === 'sticker'
-                ? 'text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
-                : overlay.style === 'script'
-                  ? 'font-[cursive] text-2xl font-semibold text-[#f5c542] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
-                  : overlay.style === 'banner'
-                    ? 'rounded-md bg-[#f5c542] px-2 py-0.5 text-xs font-black uppercase tracking-wide text-[#3b2203]'
-                    : 'text-sm font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
-            }
-            style={overlay.kind === 'text' && overlay.style === 'plain' && overlay.color ? { color: overlay.color } : undefined}
-          >
-            {overlay.label}
-          </span>
+          {overlay.kind === 'sticker' && isChalkboardMark(overlay.label) ? (
+            <ChalkboardMark id={overlay.label} className="h-11 w-11 drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]" />
+          ) : (
+            <span
+              className={
+                overlay.kind === 'sticker'
+                  ? 'text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
+                  : overlay.style === 'script'
+                    ? 'font-[cursive] text-2xl font-semibold text-[#f5c542] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+                    : overlay.style === 'banner'
+                      ? 'rounded-md bg-[#f5c542] px-2 py-0.5 text-xs font-black uppercase tracking-wide text-[#3b2203]'
+                      : 'text-sm font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+              }
+              style={overlay.kind === 'text' && overlay.style === 'plain' && overlay.color ? { color: overlay.color } : undefined}
+            >
+              {overlay.label}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5">
             <AthleteAvatar athlete={coach ?? { name: coachName }} size="xs" />
             <span className="text-[9px] font-semibold text-white/90">{coachName || 'Coach'}</span>

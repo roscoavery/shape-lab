@@ -28,80 +28,70 @@ const TOOLS: {
     eyebrow: 'Learn',
     title: 'Shape library',
     hint: 'Every still and the written standard.',
-    className:
-      'from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]',
+    className: 'sl-tile sl-tile-mint shadow-[0_16px_40px_rgba(45,212,168,0.28)]',
   },
   {
     id: 'quiz',
     eyebrow: 'Learn',
     title: 'Shape test',
     hint: 'Pictures or descriptions. Ask who is taking it first.',
-    className:
-      'from-[#6ee7f0] via-[#22b8c9] to-[#0d4f5c] text-[#04262c] shadow-[0_16px_40px_rgba(34,184,201,0.24)]',
+    className: 'sl-tile sl-tile-cyan shadow-[0_16px_40px_rgba(34,184,201,0.24)]',
   },
   {
     id: 'replay',
     eyebrow: 'Videos',
     title: 'Replay with reference',
     hint: 'Delay cam and a coach still on the same screen.',
-    className:
-      'from-[#f0d56e] via-[#e0b422] to-[#6a4e0d] text-[#241a05] shadow-[0_16px_40px_rgba(224,180,34,0.22)]',
+    className: 'sl-tile sl-tile-gold shadow-[0_16px_40px_rgba(224,180,34,0.22)]',
   },
   {
     id: 'scroll',
     eyebrow: 'Videos',
     title: 'Reference scroll',
     hint: 'Swipe stills the way you swipe a story. Also under Videos.',
-    className:
-      'from-[#c4b5fd] via-[#8b5cf6] to-[#4c1d95] text-[#14082a] shadow-[0_16px_40px_rgba(139,92,246,0.22)]',
+    className: 'sl-tile sl-tile-violet shadow-[0_16px_40px_rgba(139,92,246,0.22)]',
   },
   {
     id: 'feed',
     eyebrow: 'Gym',
     title: 'Feed',
     hint: 'What the gym posted — collages and hits.',
-    className:
-      'from-[#fda4af] via-[#fb7185] to-[#9f1239] text-[#2a0b12] shadow-[0_16px_40px_rgba(251,113,133,0.22)]',
+    className: 'sl-tile sl-tile-rose shadow-[0_16px_40px_rgba(251,113,133,0.22)]',
   },
   {
     id: 'wins',
     eyebrow: 'Gym',
     title: 'Wins',
     hint: 'Spam the little hits. Big ones can jump to the main feed.',
-    className:
-      'from-[#fde68a] via-[#f59e0b] to-[#92400e] text-[#2a1703] shadow-[0_16px_40px_rgba(245,158,11,0.22)]',
+    className: 'sl-tile sl-tile-amber shadow-[0_16px_40px_rgba(245,158,11,0.22)]',
   },
   {
     id: 'profile',
     eyebrow: 'You',
     title: 'My profile',
     hint: 'Photo, cartwheel, twist, hand, skate stance.',
-    className:
-      'from-[#ffe08a] via-[#f5c542] to-[#d4a017] text-[#3b2203] shadow-[0_0_28px_rgba(245,197,66,0.55)]',
+    className: 'sl-tile sl-tile-gold shadow-[0_0_28px_rgba(245,197,66,0.55)]',
   },
   {
     id: 'clock',
     eyebrow: 'Floor',
     title: 'Class clock',
     hint: 'Time a hold and log it for everyone here.',
-    className:
-      'from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.22)]',
+    className: 'sl-tile sl-tile-mint shadow-[0_16px_40px_rgba(45,212,168,0.22)]',
   },
   {
     id: 'collages',
     eyebrow: 'Class',
     title: 'Collages',
     hint: 'Drill boards of gym clips — play them from Today.',
-    className:
-      'from-[#fbcfe8] via-[#f472b6] to-[#9d174d] text-[#2a0a18] shadow-[0_16px_40px_rgba(244,114,182,0.22)]',
+    className: 'sl-tile sl-tile-pink shadow-[0_16px_40px_rgba(244,114,182,0.22)]',
   },
   {
     id: 'homework',
     eyebrow: 'Practice',
     title: 'Homework',
     hint: 'Train now, pick a drill, or add an exercise.',
-    className:
-      'from-[#86efac] via-[#22c55e] to-[#14532d] text-[#052e16] shadow-[0_16px_40px_rgba(34,197,94,0.22)]',
+    className: 'sl-tile sl-tile-green shadow-[0_16px_40px_rgba(34,197,94,0.22)]',
   },
 ]
 
@@ -118,7 +108,7 @@ export function TodayShortcuts({ onGo, showStation = true }: Props) {
         <button
           type="button"
           onClick={() => onGo('station')}
-          className="flex w-full flex-col items-start rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#3ae0c0] to-[#0e5c4c] px-5 py-6 text-left text-[#06281f] shadow-[0_18px_44px_rgba(45,212,168,0.32)]"
+          className="sl-btn-mint rounded-2xl px-5 py-6 shadow-[0_18px_44px_rgba(45,212,168,0.32)]"
         >
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
             Class station
@@ -139,7 +129,7 @@ export function TodayShortcuts({ onGo, showStation = true }: Props) {
             key={tool.id}
             type="button"
             onClick={() => onGo(tool.id)}
-            className={`flex min-h-[8.5rem] flex-col items-start justify-end rounded-2xl bg-gradient-to-br px-4 py-4 text-left ${tool.className}`}
+            className={tool.className}
           >
             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-70">
               {tool.eyebrow}

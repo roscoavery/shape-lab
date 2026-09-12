@@ -90,10 +90,10 @@ export function CarePanel({
         <button
           type="button"
           onClick={() => onFlagInjury(!athlete?.injuryActive)}
-          className={`mt-3 rounded-lg px-3 py-2 text-sm font-semibold ${
+          className={`mt-3 rounded-lg px-4 py-3 text-sm font-bold ${
             athlete?.injuryActive
-              ? 'bg-[var(--warn)] text-[#241a05]'
-              : 'bg-[var(--accent)] text-[#06281f]'
+              ? 'sl-btn-care sl-btn-inline'
+              : 'sl-btn-watch sl-btn-inline'
           }`}
         >
           {athlete?.injuryActive ? 'I am feeling better — clear the flag' : "I'm dealing with an injury"}
@@ -256,7 +256,7 @@ export function CarePanel({
             setWhat('')
             setWhere('')
           }}
-          className="self-start rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+          className="sl-btn-watch sl-btn-inline self-start rounded-xl px-5 py-3 text-sm font-bold"
         >
           Save check-in
         </button>
@@ -349,7 +349,7 @@ export function CarePanel({
                 setJNotes('')
                 setOfferSession(true)
               }}
-              className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="sl-btn-watch sl-btn-inline mt-2 rounded-xl px-5 py-3 text-sm font-bold"
             >
               Save journal
             </button>
@@ -357,7 +357,7 @@ export function CarePanel({
               <button
                 type="button"
                 onClick={onStartSession}
-                className="mt-2 w-full rounded-xl bg-gradient-to-br from-[#5cf0c8] to-[#147a62] px-4 py-3 text-sm font-bold text-[#06281f]"
+                className="sl-btn-mint mt-2 rounded-xl px-4 py-3 text-sm font-bold"
               >
                 Start a session — go to homework
               </button>

@@ -37,6 +37,9 @@ import { PanelErrorBoundary } from './PanelErrorBoundary'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
 import { AnatomyQuiz } from './learn/AnatomyQuiz'
 import { ProgressionQuiz } from './learn/ProgressionQuiz'
+import { MovementsQuiz } from './learn/MovementsQuiz'
+import { ShapeBodyQuiz } from './learn/ShapeBodyQuiz'
+import type { AnatomyTrack, PhysicsTrack, ProgressionTrack } from '../lib/studyQuiz'
 import { ANATOMY_LESSONS } from '../config/coachAnatomy'
 import { PROGRESSION_LESSONS } from '../config/tumblingProgression'
 import { ATHLETE_PROGRESSION_LESSONS } from '../config/athleteProgression'
@@ -59,9 +62,11 @@ type EduView =
   | { kind: 'pathways' }
   | { kind: 'task'; taskId: string }
   | { kind: 'quiz'; pool?: 'pathway' | 'arm-positions' }
-  | { kind: 'physicsQuiz' }
-  | { kind: 'anatomyQuiz' }
-  | { kind: 'progressionQuiz' }
+  | { kind: 'shapeBody' }
+  | { kind: 'movementsQuiz' }
+  | { kind: 'physicsQuiz'; track?: PhysicsTrack }
+  | { kind: 'anatomyQuiz'; track?: AnatomyTrack }
+  | { kind: 'progressionQuiz'; track?: ProgressionTrack }
   | { kind: 'hits' }
   | { kind: 'glossary' }
   | { kind: 'ig' }
@@ -194,17 +199,23 @@ export function EducationPanel({
           </p>
         </header>
       ) : (
-        <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
-          <div className="flex flex-wrap items-end justify-between gap-2">
+        <header className="learn-masthead">
+          <div className="relative z-[1] flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Learn</h2>
-              <p className="mt-0.5 text-sm text-[var(--muted)]">
-                Shapes to study. Tests to check. A quiet shelf for extra notes.
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#4cc9f0]">
+                Shape Lab
+              </p>
+              <h2 className="learn-serif mt-1 text-4xl font-semibold tracking-tight text-[var(--text)] sm:text-5xl">
+                Learn
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+                Pictures first. Names after. Study the body the way a gym sees it.
               </p>
             </div>
             <NavChip active={view.kind === 'home'} onClick={goHome} label="Home" />
           </div>
-          <div className="mt-4 space-y-3">
+          {view.kind !== 'home' && (
+          <div className="relative z-[1] mt-5 space-y-3">
             <ChipRow label="Shapes">
               <NavChip
                 active={view.kind === 'shapes' || view.kind === 'shape'}
@@ -217,6 +228,11 @@ export function EducationPanel({
                 active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
                 onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
                 label="Shape test"
+              />
+              <NavChip
+                active={view.kind === 'shapeBody'}
+                onClick={() => setView({ kind: 'shapeBody' })}
+                label="Shape test 2"
               />
             </ChipRow>
             <ChipRow label="Watch">
@@ -241,16 +257,17 @@ export function EducationPanel({
                     view.kind === 'progression' ||
                     view.kind === 'physicsQuiz' ||
                     view.kind === 'anatomyQuiz' ||
-                    view.kind === 'progressionQuiz'
+                    view.kind === 'progressionQuiz' ||
+                    view.kind === 'movementsQuiz'
                   }
                   onClick={() => setView({ kind: 'coachStudy' })}
                   label="Coach study"
                 />
               </ChipRow>
             )}
-            <details className="rounded-xl bg-[#0d1218] px-3 py-2">
+            <details className="rounded-xl bg-[#0d1218]/80 px-3 py-2">
               <summary className="cursor-pointer text-xs font-semibold text-[var(--muted)]">
-                Extra (pathways, glossary)
+                Extra (pathways, glossary, movements)
               </summary>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <NavChip
@@ -268,9 +285,15 @@ export function EducationPanel({
                   onClick={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
                   label="Arm positions"
                 />
+                <NavChip
+                  active={view.kind === 'movementsQuiz'}
+                  onClick={() => setView({ kind: 'movementsQuiz' })}
+                  label="Movements"
+                />
               </div>
             </details>
           </div>
+          )}
         </header>
       )}
 
@@ -279,6 +302,8 @@ export function EducationPanel({
           shapeCount={catalog.length}
           onShapes={goShapes}
           onQuiz={() => setView({ kind: 'quiz', pool: 'pathway' })}
+          onShapeBody={() => setView({ kind: 'shapeBody' })}
+          onMovements={() => setView({ kind: 'movementsQuiz' })}
           onHits={() => setView({ kind: 'hits' })}
           onIg={() => setView({ kind: 'ig' })}
           onScroll={() => setView({ kind: 'scroll' })}
@@ -287,7 +312,6 @@ export function EducationPanel({
           onPathways={goPathways}
           onGlossary={() => setView({ kind: 'glossary' })}
           onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
-          onOverview={() => setView({ kind: 'home' })}
           igCount={listIgStills(referencePhotos).length}
           referencePhotos={referencePhotos}
           shapes={catalog}
@@ -340,9 +364,10 @@ export function EducationPanel({
             onPhysics={() => setView({ kind: 'physics' })}
             onAnatomy={() => setView({ kind: 'anatomy' })}
             onProgression={() => setView({ kind: 'progression' })}
-            onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
-            onAnatomyQuiz={() => setView({ kind: 'anatomyQuiz' })}
-            onProgressionQuiz={() => setView({ kind: 'progressionQuiz' })}
+            onPhysicsQuiz={(track) => setView({ kind: 'physicsQuiz', track })}
+            onAnatomyQuiz={(track) => setView({ kind: 'anatomyQuiz', track })}
+            onProgressionQuiz={(track) => setView({ kind: 'progressionQuiz', track })}
+            onMovements={() => setView({ kind: 'movementsQuiz' })}
           />
         </PanelErrorBoundary>
       )}
@@ -429,21 +454,33 @@ export function EducationPanel({
         />
       )}
 
+      {view.kind === 'shapeBody' && (
+        <PanelErrorBoundary label="Shape test 2">
+          <ShapeBodyQuiz onExit={goHome} />
+        </PanelErrorBoundary>
+      )}
+
+      {view.kind === 'movementsQuiz' && (
+        <PanelErrorBoundary label="Movements">
+          <MovementsQuiz onExit={coach ? () => setView({ kind: 'coachStudy' }) : goHome} />
+        </PanelErrorBoundary>
+      )}
+
       {view.kind === 'physicsQuiz' && (
         <PanelErrorBoundary label="Physics test">
-          <PhysicsQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+          <PhysicsQuiz track={view.track} onExit={() => setView({ kind: 'coachStudy' })} />
         </PanelErrorBoundary>
       )}
 
       {view.kind === 'anatomyQuiz' && (
         <PanelErrorBoundary label="Anatomy test">
-          <AnatomyQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+          <AnatomyQuiz track={view.track} onExit={() => setView({ kind: 'coachStudy' })} />
         </PanelErrorBoundary>
       )}
 
       {view.kind === 'progressionQuiz' && (
         <PanelErrorBoundary label="Progressions test">
-          <ProgressionQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+          <ProgressionQuiz track={view.track} onExit={() => setView({ kind: 'coachStudy' })} />
         </PanelErrorBoundary>
       )}
 
@@ -519,30 +556,33 @@ function CoachStudyRoom({
   onPhysicsQuiz,
   onAnatomyQuiz,
   onProgressionQuiz,
+  onMovements,
 }: {
   onPhysics: () => void
   onAnatomy: () => void
   onProgression: () => void
-  onPhysicsQuiz: () => void
-  onAnatomyQuiz: () => void
-  onProgressionQuiz: () => void
+  onPhysicsQuiz: (track?: PhysicsTrack) => void
+  onAnatomyQuiz: (track?: AnatomyTrack) => void
+  onProgressionQuiz: (track?: ProgressionTrack) => void
+  onMovements: () => void
 }) {
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+    <div className="space-y-5">
+      <section className="learn-coach px-5 py-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f5c542]">
           Coach study
         </p>
-        <h3 className="mt-1 text-xl font-semibold">A room for coaches</h3>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+        <h3 className="learn-serif mt-2 text-3xl font-semibold tracking-tight">A room for coaches</h3>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#e8d9a8]/80">
           Physics, anatomy, and progressions live here so the athlete Learn tab stays
-          about shapes. Spotting notes will join this room later.
+          about shapes. Each test draws a new mix — joints, tissues, or deeper cases —
+          so the same Q&A does not come back every time.
         </p>
       </section>
       <div className="grid gap-3 sm:grid-cols-3">
         <StudyCard
           title="Tumbling physics"
-          body="Inertia, angular momentum, moment of inertia, the block, surfaces, and twist. Keep the main points. Read it like a chapter."
+          body="Inertia, angular momentum, moment of inertia, the block, surfaces, and twist. Read it like a chapter."
           action="Open physics"
           onClick={onPhysics}
         />
@@ -559,16 +599,32 @@ function CoachStudyRoom({
           onClick={onProgression}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StudyCard title="Physics test" body="The ideas from the physics chapter, in gym language." action="Take test" onClick={onPhysicsQuiz} />
-        <StudyCard title="Anatomy test" body="Name the joint, the tissue, and the gym decision." action="Take test" onClick={onAnatomyQuiz} />
-        <StudyCard title="Progressions test" body="Name the level and the kind of stuck." action="Take test" onClick={onProgressionQuiz} />
-      </div>
+      <section className="rounded-2xl border border-[var(--panel-border)] bg-[#121820] p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">
+          Exam hall
+        </p>
+        <h3 className="learn-serif mt-1 text-2xl font-semibold">Harder mixes</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Pick a section. Questions shuffle. Wrist extension is also wrist dorsiflexion.
+          Pointing toes is plantarflexion.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <StudyCard title="Movements" body="Joint actions: wrists, ankles, hips, and the words that get mixed on the floor." action="Take test" onClick={onMovements} />
+          <StudyCard title="Physics · mix" body="The whole chapter, a new set each time." action="Take test" onClick={() => onPhysicsQuiz('all')} />
+          <StudyCard title="Physics · core" body="Inertia, angular momentum, moment of inertia only." action="Take test" onClick={() => onPhysicsQuiz('core')} />
+          <StudyCard title="Anatomy · joints" body="Flexion, extension, and the joint you can see." action="Take test" onClick={() => onAnatomyQuiz('joints')} />
+          <StudyCard title="Anatomy · tissues" body="Muscle, ligament, tendon, and the grade." action="Take test" onClick={() => onAnatomyQuiz('tissues')} />
+          <StudyCard title="Anatomy · prevention" body="What you load, and what you do not stretch for line." action="Take test" onClick={() => onAnatomyQuiz('prevention')} />
+          <StudyCard title="Progressions · levels" body="Introduction through mastery." action="Take test" onClick={() => onProgressionQuiz('levels')} />
+          <StudyCard title="Progressions · blocks" body="Fear, mental, physical, emotional." action="Take test" onClick={() => onProgressionQuiz('blocks')} />
+          <StudyCard title="Progressions · deeper" body="Harder cases that are not the same four questions." action="Take test" onClick={() => onProgressionQuiz('deep')} />
+        </div>
+      </section>
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] bg-[#121820] p-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
           Coming next
         </p>
-        <h3 className="mt-1 text-lg font-semibold">Spotting</h3>
+        <h3 className="learn-serif mt-1 text-2xl font-semibold">Spotting</h3>
         <p className="mt-2 text-sm text-[var(--muted)]">
           A spotting study path will sit here with the other coach chapters. Not on the
           athlete Learn tab.
@@ -593,11 +649,11 @@ function StudyCard({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left transition hover:border-[var(--accent-dim)]"
+      className="learn-tile p-4 transition hover:border-[#4cc9f0]/40"
     >
-      <h3 className="text-base font-semibold text-[var(--text)]">{title}</h3>
+      <h3 className="learn-serif text-xl font-semibold text-[var(--text)]">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{body}</p>
-      <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">{action} →</span>
+      <span className="mt-3 inline-block text-sm font-medium text-[#4cc9f0]">{action} →</span>
     </button>
   )
 }
@@ -638,6 +694,8 @@ function HomeView({
   shapeCount,
   onShapes,
   onQuiz,
+  onShapeBody,
+  onMovements,
   onHits,
   onIg,
   onScroll,
@@ -654,6 +712,8 @@ function HomeView({
   shapeCount: number
   onShapes: () => void
   onQuiz: () => void
+  onShapeBody: () => void
+  onMovements: () => void
   onHits: () => void
   onIg: () => void
   onScroll: () => void
@@ -662,45 +722,118 @@ function HomeView({
   onPathways: () => void
   onGlossary: () => void
   onArmQuiz: () => void
-  onOverview: () => void
   igCount: number
   referencePhotos: ReferencePhoto[]
   shapes: ShapeDef[]
   coach: boolean
 }) {
+  const mosaic = shapes.slice(0, 6)
+  const igPreview = listIgStills(referencePhotos).slice(0, 4)
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <button type="button" onClick={onShapes} className="learn-hero">
+        <div className="learn-hero-grid">
+          {mosaic.map((shape) => (
+            <div key={shape.id} className="min-h-full overflow-hidden bg-[#0d1218]">
+              <ReferenceStill
+                shapeId={shape.id}
+                photos={referencePhotos}
+                alt=""
+                className="h-full min-h-[21rem] w-full object-cover sm:min-h-[26rem]"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="learn-hero-veil" />
+        <div className="relative z-[1] flex min-h-[21rem] flex-col justify-end px-5 pb-6 pt-16 sm:min-h-[26rem] sm:px-8">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#4cc9f0]">
+            Shape library
+          </p>
+          <h3 className="learn-serif mt-2 text-4xl font-semibold leading-[0.95] tracking-tight text-white sm:text-5xl">
+            Study the body
+          </h3>
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-white/75">
+            {shapeCount} positions with coach stills. Hollow, lunge, and the
+            shapes that look alike until you know where the hips sit.
+          </p>
+          <span className="mt-5 inline-flex w-fit rounded-full bg-[#2dd4a8] px-4 py-2 text-sm font-bold text-[#06281f]">
+            Open the library
+          </span>
+        </div>
+      </button>
+
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+          Tests
+        </p>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <button type="button" onClick={onQuiz} className="learn-exam-mint">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">Pictures</p>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test</h3>
+            <p className="mt-2 text-sm font-medium opacity-80">
+              Name the still. Starting lunge, landing lunge, and mountain climber sit together.
+            </p>
+          </button>
+          <button type="button" onClick={onShapeBody} className="learn-exam-sky">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">Body</p>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 2</h3>
+            <p className="mt-2 text-sm font-medium opacity-80">
+              More specific. Where the hips, knees, and hands actually are.
+            </p>
+          </button>
+          <button type="button" onClick={onMovements} className="learn-exam-ink">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">Joints</p>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">Movements</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Wrist extension is also dorsiflexion. Pointing toes is plantarflexion.
+            </p>
+          </button>
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={onShapes}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">Shape library</h3>
-          <div className="mt-3 grid grid-cols-3 gap-1">
-            {shapes.slice(0, 6).map((shape) => (
-              <div key={shape.id} className="aspect-square overflow-hidden rounded-md bg-[#0d1218]">
-                <ReferenceStill
-                  shapeId={shape.id}
-                  photos={referencePhotos}
-                  alt={shape.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
+        <button type="button" onClick={onScroll} className="learn-tile">
+          <div className="h-28 overflow-hidden bg-[#0d1218]">
+            {mosaic[0] ? (
+              <ReferenceStill
+                shapeId={mosaic[0].id}
+                photos={referencePhotos}
+                alt=""
+                className="h-full w-full object-cover opacity-80"
+              />
+            ) : null}
           </div>
-          <p className="mt-2 text-sm text-[var(--muted)]">{shapeCount} positions with coach stills.</p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Browse shapes →</span>
+          <div className="p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">Watch</p>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">Reference scroll</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              The gym Instagram library. Also under Videos.
+            </p>
+          </div>
         </button>
-        <button
-          type="button"
-          onClick={onIg}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes</h3>
-          {igCount > 0 && (
-            <div className="mt-3 grid grid-cols-3 gap-1">
-              {listIgStills(referencePhotos).slice(0, 6).map((still) => (
+        <button type="button" onClick={onAthleteProgress} className="learn-tile">
+          <div className="flex h-28 items-end bg-[#102820] px-4 pb-3">
+            <p className="learn-serif text-3xl font-semibold text-[#2dd4a8]">I · II · III · IV</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2dd4a8]">Athlete</p>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">How skills grow</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.
+            </p>
+          </div>
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button type="button" onClick={onIg} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            From Compare
+          </p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">IG shapes</h3>
+          {igPreview.length > 0 && (
+            <div className="mt-3 grid grid-cols-4 gap-1">
+              {igPreview.map((still) => (
                 <div key={still.id} className="aspect-square overflow-hidden rounded-md bg-[#0d1218]">
                   <CroppedStill
                     src={still.dataUrl}
@@ -712,74 +845,31 @@ function HomeView({
               ))}
             </div>
           )}
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Crops from Compare. {igCount} saved.
-          </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open IG shapes →</span>
+          <p className="mt-2 text-sm text-[var(--muted)]">{igCount} crops saved from the gym feed.</p>
         </button>
-        <button
-          type="button"
-          onClick={onHits}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">My shapes</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Your own hit photos and clips, filed by shape.
+        <button type="button" onClick={onHits} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            Your folder
           </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open folder →</span>
-        </button>
-        <button
-          type="button"
-          onClick={onQuiz}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Pictures or descriptions. Starting lunge, landing lunge, and mountain climber sit together so you have to know the difference.
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">My shapes</h3>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            Hit photos and clips, filed by shape — the ones you actually made.
           </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Take the test →</span>
-        </button>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={onScroll}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">Reference scroll</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            The gym Instagram library. Also under Videos.
-          </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open scroll →</span>
-        </button>
-        <button
-          type="button"
-          onClick={onAthleteProgress}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-        >
-          <h3 className="text-lg font-semibold text-[var(--text)]">How skills grow</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Four stages of a skill, written for the person on the floor. Nerves, stuck skills, and a heavy room.
-          </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Read the rundown →</span>
         </button>
       </div>
 
       {coach && onCoachStudy && (
-        <button
-          type="button"
-          onClick={onCoachStudy}
-          className="w-full rounded-2xl border border-[#f5c542]/40 bg-[#2a220e] p-5 text-left"
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f5c542]">
+        <button type="button" onClick={onCoachStudy} className="learn-coach px-5 py-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f5c542]">
             Coaches only
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Coach study</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Physics, anatomy, progressions, and their tests. Spotting will land here later.
+          <h3 className="learn-serif mt-2 text-3xl font-semibold tracking-tight">Coach study</h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#e8d9a8]/80">
+            Physics, anatomy, progressions, and harder sectioned tests. Spotting lands here later.
           </p>
-          <span className="mt-3 inline-block text-sm font-medium text-[#f5c542]">Open the study room →</span>
+          <span className="mt-4 inline-flex rounded-full bg-[#f5c542] px-4 py-2 text-sm font-bold text-[#3b2203]">
+            Open the study room
+          </span>
         </button>
       )}
 
@@ -906,7 +996,7 @@ function ShapeLibrary({
                 </div>
                 <div className="min-w-0 px-2.5 py-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[var(--text)]">{shape.name}</span>
+                    <span className="learn-serif text-lg font-semibold text-[var(--text)]">{shape.name}</span>
                     {shape.id.startsWith('gym_') && (
                       <span className="rounded bg-[#2c3a52] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text)]">
                         Gym

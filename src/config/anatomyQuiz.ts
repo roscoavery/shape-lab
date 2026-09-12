@@ -111,7 +111,34 @@ export const ANATOMY_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'The handstand and tumbling block live in wrist extension. Prepare the wrists and the shoulders so the force is not dumped into a short arm.',
+      'The handstand and tumbling block live in wrist extension, also called wrist dorsiflexion. Prepare the wrists and the shoulders so the force is not dumped into a short arm.',
+  },
+  {
+    id: 'wrist-also-dorsi',
+    lessonId: 'movement-names',
+    prompt: 'Wrist extension on a block can also be named:',
+    choices: [
+      { id: 'a', label: 'Wrist dorsiflexion' },
+      { id: 'b', label: 'Ankle plantarflexion' },
+      { id: 'c', label: 'Hip abduction' },
+      { id: 'd', label: 'Shoulder extension' },
+    ],
+    answerId: 'a',
+    explain:
+      'Same action, two names: wrist extension and wrist dorsiflexion. Pointing the toes is plantarflexion, a different joint.',
+  },
+  {
+    id: 'point-toes',
+    lessonId: 'movement-names',
+    prompt: 'Pointing the toes is:',
+    choices: [
+      { id: 'a', label: 'Ankle dorsiflexion' },
+      { id: 'b', label: 'Ankle plantarflexion' },
+      { id: 'c', label: 'Wrist flexion' },
+      { id: 'd', label: 'Knee extension past straight' },
+    ],
+    answerId: 'b',
+    explain: 'Plantarflexion points the foot. Dorsiflexion pulls the toes toward the shin.',
   },
   {
     id: 'ice-rice',

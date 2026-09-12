@@ -51,9 +51,9 @@ if [ -d .git ]; then
 
   echo
   echo "============================================================"
-  echo "  GOLD BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a bright GOLD bar that says Gold build."
-  echo "  Pink, aqua, orange, or no bar means this window is still old —"
+  echo "  SKY BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a bright SKY bar that says Sky build."
+  echo "  Gold, pink, aqua, or no bar means this window is still old —"
   echo "  Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo

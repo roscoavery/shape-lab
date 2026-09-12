@@ -331,7 +331,7 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="mt-3 rounded-full bg-gradient-to-r from-[#ffe08a] via-[#f5c542] to-[#d4a017] px-4 py-2 text-sm font-black text-[#3b2203] shadow-[0_0_22px_rgba(245,197,66,0.55)]"
+              className="sl-btn-gold sl-btn-inline mt-3 rounded-full px-4 py-2 text-sm"
             >
               My profile
             </button>
@@ -453,7 +453,7 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="rounded-full bg-gradient-to-r from-[#ffe08a] via-[#f5c542] to-[#d4a017] px-4 py-2 text-sm font-black text-[#3b2203] shadow-[0_0_22px_rgba(245,197,66,0.55)]"
+              className="sl-btn-gold sl-btn-inline rounded-full px-4 py-2 text-sm"
             >
               My profile
             </button>
@@ -552,7 +552,7 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={onStartClass}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
+              className="sl-btn-mint rounded-2xl px-4 py-4 shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
             >
               <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
                 Floor
@@ -573,7 +573,7 @@ export function HomeDashboard({
               }
               onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)
             }}
-            className="w-full rounded-2xl bg-gradient-to-br from-[#7ad4ff] via-[#3aa8e8] to-[#156a96] px-4 py-4 text-left text-[#042433] shadow-[0_16px_40px_rgba(58,168,232,0.28)]"
+            className="sl-btn-lesson rounded-2xl px-4 py-4 shadow-[0_16px_40px_rgba(58,168,232,0.28)]"
           >
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
               Lesson

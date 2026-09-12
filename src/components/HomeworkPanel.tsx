@@ -570,7 +570,7 @@ function HwOverlay({
   wide?: boolean
 }) {
   return createPortal(
-    <div className="fixed inset-0 z-[240] flex h-[100dvh] w-screen flex-col bg-[#0b0f14]">
+    <div className="sl-overlay-screen flex w-screen flex-col bg-[#0b0f14]">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 pb-2 pt-[max(0.7rem,env(safe-area-inset-top))]">
         <button
           type="button"
@@ -1335,7 +1335,7 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('train')}
-          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
+          className="sl-btn-mint sl-center rounded-2xl px-5 py-6 shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
         >
           <span className="text-3xl font-black tracking-tight text-[#06281f] sm:text-4xl">
             Train now
@@ -1344,7 +1344,7 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('pick')}
-          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#6ee7f0] via-[#22b8c9] to-[#0d4f5c] px-5 py-6 text-center shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
+          className="sl-tile sl-tile-cyan sl-center min-h-0 items-center justify-center rounded-2xl px-5 py-6 shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
         >
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#04262c]/70">
             Homework · Library
@@ -1359,7 +1359,7 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('watch')}
-          className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] px-5 py-5 text-center shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
+          className="sl-btn-watch sl-center rounded-2xl px-5 py-5 shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
         >
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
             No camera
@@ -1387,17 +1387,17 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('care')}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-4 text-center"
+          className="sl-btn-care sl-center rounded-2xl px-5 py-4"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--warn)]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#241a05]/70">
             Care
           </span>
-          <span className="mt-1 block text-lg font-bold text-[var(--text)]">
+          <span className="mt-1 block text-lg font-bold">
             {athlete?.injuryActive || athlete?.hasBackPain
               ? 'Injury and back care'
               : "I'm dealing with an injury"}
           </span>
-          <span className="mt-1 block text-sm text-[var(--muted)]">
+          <span className="mt-1 block text-sm text-[#241a05]/80">
             Log pain, remember what the doctor said, and train what you can handle today.
           </span>
         </button>
@@ -1574,7 +1574,7 @@ export function HomeworkPanel({
             <button
               type="button"
               onClick={startWatch}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="sl-btn-watch sl-btn-inline rounded-xl px-6 py-3 text-base font-black"
             >
               Start
             </button>
@@ -1582,7 +1582,7 @@ export function HomeworkPanel({
             <button
               type="button"
               onClick={stopWatch}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="sl-btn-watch sl-btn-inline rounded-xl px-6 py-3 text-base font-black"
             >
               Stop
             </button>
@@ -1590,7 +1590,7 @@ export function HomeworkPanel({
           <button
             type="button"
             onClick={resetWatch}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+            className="rounded-xl border border-[var(--panel-border)] bg-[#1a222c] px-5 py-3 text-base font-semibold"
           >
             Reset
           </button>
