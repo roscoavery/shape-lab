@@ -646,7 +646,7 @@ function ChalkboardCard({
         </div>
       </div>
       {isClip && commentAbove && commentBlock}
-      {isClip && media}
+      {isClip && !clipFull && media}
       {isClip && !commentAbove && commentBlock}
       {!isClip && commentBlock}
       {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (

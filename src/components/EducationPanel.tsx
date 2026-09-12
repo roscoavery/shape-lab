@@ -33,6 +33,7 @@ import { StillCropEditor } from './StillCropEditor'
 import { CroppedStill } from './CroppedStill'
 import { MediaLightbox } from './MediaLightbox'
 import { PhysicsLessons } from './learn/PhysicsLessons'
+import { PanelErrorBoundary } from './PanelErrorBoundary'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
 import { AnatomyQuiz } from './learn/AnatomyQuiz'
 import { ProgressionQuiz } from './learn/ProgressionQuiz'
@@ -334,43 +335,53 @@ export function EducationPanel({
       )}
 
       {view.kind === 'coachStudy' && (
-        <CoachStudyRoom
-          onPhysics={() => setView({ kind: 'physics' })}
-          onAnatomy={() => setView({ kind: 'anatomy' })}
-          onProgression={() => setView({ kind: 'progression' })}
-          onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
-          onAnatomyQuiz={() => setView({ kind: 'anatomyQuiz' })}
-          onProgressionQuiz={() => setView({ kind: 'progressionQuiz' })}
-        />
+        <PanelErrorBoundary label="Coach study">
+          <CoachStudyRoom
+            onPhysics={() => setView({ kind: 'physics' })}
+            onAnatomy={() => setView({ kind: 'anatomy' })}
+            onProgression={() => setView({ kind: 'progression' })}
+            onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
+            onAnatomyQuiz={() => setView({ kind: 'anatomyQuiz' })}
+            onProgressionQuiz={() => setView({ kind: 'progressionQuiz' })}
+          />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'athleteProgress' && (
-        <PhysicsLessons
-          lessons={ATHLETE_PROGRESSION_LESSONS}
-          heading="How skills grow"
-        />
+        <PanelErrorBoundary label="How skills grow">
+          <PhysicsLessons
+            lessons={ATHLETE_PROGRESSION_LESSONS}
+            heading="How skills grow"
+          />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'physics' && (
-        <PhysicsLessons onTakeTest={() => setView({ kind: 'physicsQuiz' })} />
+        <PanelErrorBoundary label="Tumbling physics">
+          <PhysicsLessons onTakeTest={() => setView({ kind: 'physicsQuiz' })} />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'anatomy' && (
-        <PhysicsLessons
-          lessons={ANATOMY_LESSONS}
-          heading="Anatomy for coaches"
-          onTakeTest={() => setView({ kind: 'anatomyQuiz' })}
-          testLabel="Anatomy test →"
-        />
+        <PanelErrorBoundary label="Anatomy">
+          <PhysicsLessons
+            lessons={ANATOMY_LESSONS}
+            heading="Anatomy for coaches"
+            onTakeTest={() => setView({ kind: 'anatomyQuiz' })}
+            testLabel="Anatomy test →"
+          />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'progression' && (
-        <PhysicsLessons
-          lessons={PROGRESSION_LESSONS}
-          heading="Progression and blocks"
-          onTakeTest={() => setView({ kind: 'progressionQuiz' })}
-          testLabel="Progressions test →"
-        />
+        <PanelErrorBoundary label="Progression">
+          <PhysicsLessons
+            lessons={PROGRESSION_LESSONS}
+            heading="Progression and blocks"
+            onTakeTest={() => setView({ kind: 'progressionQuiz' })}
+            testLabel="Progressions test →"
+          />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'task' && (
@@ -419,15 +430,21 @@ export function EducationPanel({
       )}
 
       {view.kind === 'physicsQuiz' && (
-        <PhysicsQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        <PanelErrorBoundary label="Physics test">
+          <PhysicsQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'anatomyQuiz' && (
-        <AnatomyQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        <PanelErrorBoundary label="Anatomy test">
+          <AnatomyQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'progressionQuiz' && (
-        <ProgressionQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        <PanelErrorBoundary label="Progressions test">
+          <ProgressionQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+        </PanelErrorBoundary>
       )}
 
       {view.kind === 'ig' && (
