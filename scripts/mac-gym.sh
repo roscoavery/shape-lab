@@ -51,9 +51,9 @@ if [ -d .git ]; then
 
   echo
   echo "============================================================"
-  echo "  FERN BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a mint FERN bar that says Fern build."
-  echo "  Gold, pink, aqua, or no bar means this window is still old —"
+  echo "  EMBER BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show an ember EMBER bar that says Ember build."
+  echo "  Fern, gold, pink, aqua, or no bar means this window is still old —"
   echo "  Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo

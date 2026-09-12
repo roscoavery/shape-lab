@@ -21,7 +21,7 @@ const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
 const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
-const HOLD_BUILD = 'fern'
+const HOLD_BUILD = 'ember'
 
 function gitSha() {
   try {

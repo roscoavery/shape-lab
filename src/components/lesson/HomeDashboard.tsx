@@ -553,16 +553,12 @@ export function HomeDashboard({
         )}
         <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
           {onStartClass && !liveClass && (
-            <button
-              type="button"
-              onClick={onStartClass}
-              className="sl-btn-mint rounded-2xl px-4 py-4 shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
+            <button type="button" onClick={onStartClass} className="sl-card sl-left px-4 py-4">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
                 Floor
               </span>
-              <span className="mt-1 block text-2xl font-bold">Start class</span>
-              <span className="mt-1 block text-sm font-medium opacity-80">
+              <span className="mt-1 block text-xl font-bold text-[var(--text)]">Start class</span>
+              <span className="mt-1 block text-sm text-[var(--muted)]">
                 Pick tonight’s class. Homework goes to that roster.
               </span>
             </button>
@@ -577,13 +573,13 @@ export function HomeDashboard({
               }
               onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)
             }}
-            className="sl-btn-lesson rounded-2xl px-4 py-4 shadow-[0_16px_40px_rgba(58,168,232,0.28)]"
+            className="sl-card sl-left px-4 py-4"
           >
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Lesson
             </span>
-            <span className="mt-1 block text-2xl font-bold">Start lesson</span>
-            <span className="mt-1 block text-sm font-medium opacity-80">
+            <span className="mt-1 block text-xl font-bold text-[var(--text)]">Start lesson</span>
+            <span className="mt-1 block text-sm text-[var(--muted)]">
               {withAthletes.length
                 ? `${lessonWithLabel}${plans[0] ? ` · ${plans[0].title}` : ''}`
                 : 'Tap everyone in this lesson, then go'}

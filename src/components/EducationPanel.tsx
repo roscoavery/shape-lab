@@ -202,7 +202,7 @@ export function EducationPanel({
         <header className="learn-masthead">
           <div className="relative z-[1] flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#4cc9f0]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
                 Shape Lab
               </p>
               <h2 className="learn-serif mt-1 text-4xl font-semibold tracking-tight text-[var(--text)] sm:text-5xl">
@@ -600,7 +600,7 @@ function CoachStudyRoom({
         />
       </div>
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[#121820] p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
           Exam hall
         </p>
         <h3 className="learn-serif mt-1 text-2xl font-semibold">Harder mixes</h3>
@@ -649,11 +649,11 @@ function StudyCard({
     <button
       type="button"
       onClick={onClick}
-      className="learn-tile p-4 transition hover:border-[#4cc9f0]/40"
+      className="learn-tile p-4 transition hover:border-[var(--accent)]/40"
     >
       <h3 className="learn-serif text-xl font-semibold text-[var(--text)]">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{body}</p>
-      <span className="mt-3 inline-block text-sm font-medium text-[#4cc9f0]">{action} →</span>
+      <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">{action} →</span>
     </button>
   )
 }
@@ -727,36 +727,37 @@ function HomeView({
   shapes: ShapeDef[]
   coach: boolean
 }) {
-  const mosaic = shapes.slice(0, 6)
-  const igPreview = listIgStills(referencePhotos).slice(0, 4)
+  const mosaic = shapes.slice(0, 4)
+  const igPreview = listIgStills(referencePhotos)
+    .filter((still) => Boolean(still.dataUrl))
+    .slice(0, 4)
   return (
     <div className="space-y-5">
       <button type="button" onClick={onShapes} className="learn-hero">
-        <div className="learn-hero-grid">
+        <div className="learn-hero-strip" aria-hidden>
           {mosaic.map((shape) => (
-            <div key={shape.id} className="min-h-full overflow-hidden bg-[#0d1218]">
+            <div key={shape.id} className="overflow-hidden bg-[#0c0e11]">
               <ReferenceStill
                 shapeId={shape.id}
                 photos={referencePhotos}
                 alt=""
-                className="h-full min-h-[21rem] w-full object-cover sm:min-h-[26rem]"
+                className="h-full w-full object-contain"
               />
             </div>
           ))}
         </div>
-        <div className="learn-hero-veil" />
-        <div className="relative z-[1] flex min-h-[21rem] flex-col justify-end px-5 pb-6 pt-16 sm:min-h-[26rem] sm:px-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#4cc9f0]">
+        <div className="px-5 py-5 sm:px-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
             Shape library
           </p>
-          <h3 className="learn-serif mt-2 text-4xl font-semibold leading-[0.95] tracking-tight text-white sm:text-5xl">
+          <h3 className="learn-serif mt-2 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--text)] sm:text-5xl">
             Study the body
           </h3>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-white/75">
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
             {shapeCount} positions with coach stills. Hollow, lunge, and the
             shapes that look alike until you know where the hips sit.
           </p>
-          <span className="mt-5 inline-flex w-fit rounded-full bg-[#2dd4a8] px-4 py-2 text-sm font-bold text-[#06281f]">
+          <span className="mt-4 inline-flex w-fit rounded-full bg-[#e08a4a] px-4 py-2 text-sm font-bold text-[#2a1408]">
             Open the library
           </span>
         </div>
@@ -767,22 +768,22 @@ function HomeView({
           Tests
         </p>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <button type="button" onClick={onQuiz} className="learn-exam-mint">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">Pictures</p>
+          <button type="button" onClick={onQuiz} className="learn-exam-ink">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Pictures</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test</h3>
-            <p className="mt-2 text-sm font-medium opacity-80">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Name the still. Starting lunge, landing lunge, and mountain climber sit together.
             </p>
           </button>
-          <button type="button" onClick={onShapeBody} className="learn-exam-sky">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-70">Body</p>
+          <button type="button" onClick={onShapeBody} className="learn-exam-ink">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Body</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 2</h3>
-            <p className="mt-2 text-sm font-medium opacity-80">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               More specific. Where the hips, knees, and hands actually are.
             </p>
           </button>
           <button type="button" onClick={onMovements} className="learn-exam-ink">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">Joints</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Joints</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Movements</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Wrist extension is also dorsiflexion. Pointing toes is plantarflexion.
@@ -792,36 +793,20 @@ function HomeView({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <button type="button" onClick={onScroll} className="learn-tile">
-          <div className="h-28 overflow-hidden bg-[#0d1218]">
-            {mosaic[0] ? (
-              <ReferenceStill
-                shapeId={mosaic[0].id}
-                photos={referencePhotos}
-                alt=""
-                className="h-full w-full object-cover opacity-80"
-              />
-            ) : null}
-          </div>
-          <div className="p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4cc9f0]">Watch</p>
-            <h3 className="learn-serif mt-1 text-2xl font-semibold">Reference scroll</h3>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              The gym Instagram library. Also under Videos.
-            </p>
-          </div>
+        <button type="button" onClick={onScroll} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Reference scroll</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            The gym Instagram library. Also under Videos.
+          </p>
         </button>
-        <button type="button" onClick={onAthleteProgress} className="learn-tile">
-          <div className="flex h-28 items-end bg-[#102820] px-4 pb-3">
-            <p className="learn-serif text-3xl font-semibold text-[#2dd4a8]">I · II · III · IV</p>
-          </div>
-          <div className="p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2dd4a8]">Athlete</p>
-            <h3 className="learn-serif mt-1 text-2xl font-semibold">How skills grow</h3>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.
-            </p>
-          </div>
+        <button type="button" onClick={onAthleteProgress} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Athlete</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">How skills grow</h3>
+          <p className="mt-2 font-serif text-2xl text-[var(--accent)]">I · II · III · IV</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.
+          </p>
         </button>
       </div>
 
@@ -834,12 +819,12 @@ function HomeView({
           {igPreview.length > 0 && (
             <div className="mt-3 grid grid-cols-4 gap-1">
               {igPreview.map((still) => (
-                <div key={still.id} className="aspect-square overflow-hidden rounded-md bg-[#0d1218]">
+                <div key={still.id} className="aspect-square overflow-hidden rounded-md bg-[#0c0e11]">
                   <CroppedStill
                     src={still.dataUrl}
                     stillId={still.id}
                     alt={still.label ?? 'IG shape'}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </div>
               ))}

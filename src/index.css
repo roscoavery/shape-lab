@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0f1419;
-  --panel: #1a222c;
-  --panel-border: #2a3544;
-  --text: #e8eef4;
-  --muted: #8b9aab;
-  --accent: #2dd4a8;
-  --accent-dim: #1a8f72;
-  --warn: #f0b429;
-  --bad: #f07178;
-  --good: #2dd4a8;
+  --bg: #0c0e11;
+  --panel: #161a20;
+  --panel-border: #2c333c;
+  --text: #f0ebe4;
+  --muted: #9a9388;
+  --accent: #e08a4a;
+  --accent-dim: #9a5424;
+  --warn: #d4a017;
+  --bad: #e06b6b;
+  --good: #e08a4a;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -51,8 +51,8 @@ html.android select {
 
 body {
   background:
-    radial-gradient(ellipse at top left, #1a2a32 0%, transparent 50%),
-    radial-gradient(ellipse at bottom right, #1a2430 0%, transparent 45%),
+    radial-gradient(ellipse at top left, #241810 0%, transparent 46%),
+    radial-gradient(ellipse at bottom right, #141820 0%, transparent 42%),
     var(--bg);
 }
 
@@ -119,47 +119,67 @@ button {
 }
 
 /*
- * iPad Air 2 / old Safari: Tailwind gradients can compile to oklch() and
- * vanish. These buttons always have a hex fill first.
+ * iPad Air 2 / old Safari: no oklch(). Cards stay dark. Small actions
+ * use a solid ember hex so they never vanish.
  */
+.sl-card,
 .sl-btn-mint,
 .sl-btn-lesson,
 .sl-btn-profile,
 .sl-btn-care,
 .sl-btn-watch,
-.sl-btn-gold,
-.sl-tile {
+.sl-btn-gold {
   display: block;
   width: 100%;
-  border: 0;
   text-align: left;
   -webkit-appearance: none;
   appearance: none;
 }
-.sl-btn-mint {
-  color: #06281f;
-  background: #2dd4a8;
-  background-image: linear-gradient(165deg, #5cf0c8 0%, #2dd4a8 50%, #147a62 100%);
+.sl-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #2c333c;
+  border-radius: 1.1rem;
+  background: #161a20;
+  color: #f0ebe4;
+  padding: 1rem 1.1rem 1rem 1.2rem;
 }
+.sl-card::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #e08a4a;
+}
+.sl-card-warn::before {
+  background: #d4a017;
+}
+.sl-card-lg {
+  padding: 1.15rem 1.2rem 1.2rem 1.3rem;
+}
+.sl-btn-mint,
+.sl-btn-watch,
 .sl-btn-lesson {
-  color: #042433;
-  background: #3aa8e8;
-  background-image: linear-gradient(165deg, #7ad4ff 0%, #3aa8e8 50%, #156a96 100%);
+  border: 0;
+  color: #2a1408;
+  background: #e08a4a;
+  font-weight: 800;
 }
 .sl-btn-profile,
 .sl-btn-gold {
-  color: #3b2203;
-  background: #f5c542;
-  background-image: linear-gradient(165deg, #ffe08a 0%, #f5c542 50%, #d4a017 100%);
+  border: 0;
+  color: #2a1408;
+  background: #e08a4a;
   font-weight: 800;
 }
-.sl-btn-watch {
-  color: #06281f;
-  background: #2dd4a8;
-}
 .sl-btn-care {
-  color: #241a05;
-  background: #f0b429;
+  border: 0;
+  color: #2a1408;
+  background: #d4a017;
+  font-weight: 800;
 }
 .sl-btn-inline {
   display: inline-block;
@@ -168,54 +188,8 @@ button {
 .sl-center {
   text-align: center;
 }
-.sl-tile {
-  display: flex;
-  min-height: 8.5rem;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  border-radius: 1rem;
-  padding: 1rem;
-}
-.sl-tile-mint {
-  color: #06281f;
-  background: #2dd4a8;
-  background-image: linear-gradient(165deg, #5cf0c8 0%, #2dd4a8 52%, #147a62 100%);
-}
-.sl-tile-cyan {
-  color: #04262c;
-  background: #22b8c9;
-  background-image: linear-gradient(165deg, #6ee7f0 0%, #22b8c9 52%, #0d4f5c 100%);
-}
-.sl-tile-gold {
-  color: #241a05;
-  background: #e0b422;
-  background-image: linear-gradient(165deg, #f0d56e 0%, #e0b422 52%, #6a4e0d 100%);
-}
-.sl-tile-violet {
-  color: #14082a;
-  background: #8b5cf6;
-  background-image: linear-gradient(165deg, #c4b5fd 0%, #8b5cf6 52%, #4c1d95 100%);
-}
-.sl-tile-rose {
-  color: #2a0b12;
-  background: #fb7185;
-  background-image: linear-gradient(165deg, #fda4af 0%, #fb7185 52%, #9f1239 100%);
-}
-.sl-tile-amber {
-  color: #2a1703;
-  background: #f59e0b;
-  background-image: linear-gradient(165deg, #fde68a 0%, #f59e0b 52%, #92400e 100%);
-}
-.sl-tile-pink {
-  color: #2a0a18;
-  background: #f472b6;
-  background-image: linear-gradient(165deg, #fbcfe8 0%, #f472b6 52%, #9d174d 100%);
-}
-.sl-tile-green {
-  color: #052e16;
-  background: #22c55e;
-  background-image: linear-gradient(165deg, #86efac 0%, #22c55e 52%, #14532d 100%);
+.sl-left {
+  text-align: left;
 }
 
 .learn-serif {
@@ -235,83 +209,48 @@ button {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 8% -10%, rgba(76, 201, 240, 0.2), transparent 48%),
-    radial-gradient(ellipse at 96% 120%, rgba(45, 212, 168, 0.16), transparent 44%);
+    radial-gradient(ellipse at 8% -10%, rgba(224, 138, 74, 0.18), transparent 48%),
+    radial-gradient(ellipse at 96% 120%, rgba(212, 160, 23, 0.1), transparent 44%);
 }
 .learn-hero {
   position: relative;
   overflow: hidden;
-  min-height: 21rem;
   width: 100%;
-  border: 1px solid #1e2a28;
-  border-radius: 1.75rem;
-  background: #08110f;
+  border: 1px solid #2c333c;
+  border-radius: 1.35rem;
+  background: #161a20;
   text-align: left;
   -webkit-appearance: none;
   appearance: none;
 }
-.learn-hero-grid {
-  position: absolute;
-  inset: 0;
+.learn-hero-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  height: 7.5rem;
+  background: #0c0e11;
+  padding: 6px;
 }
-.learn-hero-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(8, 17, 15, 0.12) 0%, rgba(8, 17, 15, 0.28) 38%, rgba(8, 17, 15, 0.94) 100%);
-}
+.learn-exam-ink,
 .learn-exam-mint,
 .learn-exam-sky,
-.learn-exam-ink {
-  width: 100%;
-  border: 0;
-  border-radius: 1.35rem;
-  padding: 1.25rem 1.15rem 1.15rem;
-  text-align: left;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.learn-exam-mint {
-  color: #06281f;
-  background: #2dd4a8;
-  background-image: linear-gradient(160deg, #7af0d0 0%, #2dd4a8 48%, #147a62 100%);
-}
-.learn-exam-sky {
-  color: #042433;
-  background: #4cc9f0;
-  background-image: linear-gradient(160deg, #9ee4f8 0%, #4cc9f0 48%, #1a6d8a 100%);
-}
-.learn-exam-ink {
-  color: #e8eef4;
-  background: #151d26;
-  border: 1px solid #2a3544;
-}
-.learn-tile {
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid #2a3544;
-  border-radius: 1.35rem;
-  background: #151d26;
-  text-align: left;
-  -webkit-appearance: none;
-  appearance: none;
-}
+.learn-tile,
 .learn-coach {
   width: 100%;
   overflow: hidden;
-  border: 1px solid #c9a227;
-  border-radius: 1.5rem;
-  background: #2a220e;
+  border: 1px solid #2c333c;
+  border-radius: 1.2rem;
+  background: #161a20;
+  color: #f0ebe4;
   text-align: left;
   -webkit-appearance: none;
   appearance: none;
 }
-@media (min-width: 640px) {
-  .learn-hero {
-    min-height: 26rem;
-  }
+.learn-exam-ink {
+  padding: 1.15rem 1.1rem;
+}
+.learn-coach {
+  border-color: #6b4a1e;
 }
 
 .sl-overlay-screen {

@@ -1335,51 +1335,51 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('train')}
-          className="sl-btn-mint sl-center rounded-2xl px-5 py-6 shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
+          className="sl-card sl-card-lg sl-left"
         >
-          <span className="text-3xl font-black tracking-tight text-[#06281f] sm:text-4xl">
-            Train now
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Live
+          </span>
+          <span className="mt-1 block text-2xl font-bold tracking-tight">Train now</span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
+            Camera on. Start a hold or a drill from here.
           </span>
         </button>
         <button
           type="button"
           onClick={() => setHwPage('pick')}
-          className="sl-tile sl-tile-cyan sl-center min-h-0 items-center justify-center rounded-2xl px-5 py-6 shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
+          className="sl-card sl-left"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#04262c]/70">
-            Homework · Library
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Homework · library
           </span>
-          <span className="mt-1 text-2xl font-bold tracking-tight text-[#04262c] sm:text-3xl">
-            Pick a drill
-          </span>
-          <span className="mt-2 max-w-lg text-sm font-medium text-[#04262c]/80">
+          <span className="mt-1 block text-xl font-bold tracking-tight">Pick a drill</span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
             {visibleItems.length} drill{visibleItems.length === 1 ? '' : 's'} — tap one to train full screen.
           </span>
         </button>
         <button
           type="button"
           onClick={() => setHwPage('watch')}
-          className="sl-btn-watch sl-center rounded-2xl px-5 py-5 shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
+          className="sl-card sl-left"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
             No camera
           </span>
-          <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
-            Stopwatch
-          </span>
-          <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+          <span className="mt-1 block text-xl font-bold tracking-tight">Stopwatch</span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
             Time a hold or log reps and sets. Pick the exercise, or Other.
           </span>
         </button>
         <button
           type="button"
           onClick={() => setHwPage('add')}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-4 text-center"
+          className="sl-card sl-left"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             Your library
           </span>
-          <span className="mt-1 block text-lg font-bold text-[var(--text)]">Add homework</span>
+          <span className="mt-1 block text-xl font-bold tracking-tight">Add homework</span>
           <span className="mt-1 block text-sm text-[var(--muted)]">
             Shape, class flow, rep exercise, or a skill you type.
           </span>
@@ -1387,17 +1387,17 @@ export function HomeworkPanel({
         <button
           type="button"
           onClick={() => setHwPage('care')}
-          className="sl-btn-care sl-center rounded-2xl px-5 py-4"
+          className="sl-card sl-card-warn sl-left"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#241a05]/70">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#d4a017]">
             Care
           </span>
-          <span className="mt-1 block text-lg font-bold">
+          <span className="mt-1 block text-xl font-bold tracking-tight">
             {athlete?.injuryActive || athlete?.hasBackPain
               ? 'Injury and back care'
               : "I'm dealing with an injury"}
           </span>
-          <span className="mt-1 block text-sm text-[#241a05]/80">
+          <span className="mt-1 block text-sm text-[var(--muted)]">
             Log pain, remember what the doctor said, and train what you can handle today.
           </span>
         </button>
