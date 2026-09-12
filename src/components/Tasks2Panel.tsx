@@ -2220,7 +2220,7 @@ export function Tasks2Panel({
                     </span>
                   </p>
                   <p className="mt-0.5 text-[12px] text-white/60">
-                    Watch here. Save puts the camera clip in Photos at regular speed.
+                    Watch here. Save puts the scored clip in Photos — clock, score, and body line, regular speed.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">

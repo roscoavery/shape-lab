@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/check-pose-subject.mjs
  */
 import { bodyCenterOfMass } from '../src/lib/skeleton.ts'
+import { swapUpperLower } from '../src/lib/handstandDetect.ts'
 import {
   SubjectLock,
   SUBJECT_DROP_MS,
@@ -107,6 +108,14 @@ for (let i = 0; i <= 10; i++) sideNoFace[i] = pt(0.42, 0.78, 0.04)
 assert(
   'side HS with hidden face is still inverted, not a pole',
   looksInverted(sideNoFace) && !looksLikePole(sideNoFace) && poseLooksHuman(sideNoFace),
+)
+assert(
+  'opposite-profile labels still look inverted',
+  looksInverted(swapUpperLower(hsAt(0.7))),
+)
+assert(
+  'opposite-profile handstand is not a background prop',
+  !looksLikeBackgroundProp(swapUpperLower(hsAt(0.7))),
 )
 const loneSide = new SubjectLock().select([sideNoFace], 150)
 assert(

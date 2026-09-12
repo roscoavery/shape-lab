@@ -7,7 +7,7 @@
 import { LandmarkEuro } from './oneEuro'
 import { LM } from './landmarks'
 import type { Landmark } from '../types'
-import { evaluateHandstandGeometry } from './handstandDetect'
+import { evaluateHandstandGeometry, orientInvertedBody } from './handstandDetect'
 import {
   BackgroundMotion,
   expandBox,
@@ -297,12 +297,14 @@ export class AthleteTracker {
     now: number,
     motion: BackgroundMotion | null,
   ): { lm: Landmark[]; flags: JointFlag[]; score: number; anatomy: number; motion: number; continuity: number; reason: string | null } {
-    const cleaned = clipImpossibleBones(sanitizePose(raw, this.lastStable))
+    const oriented = orientInvertedBody(raw) ?? raw
+    const cleaned = clipImpossibleBones(sanitizePose(oriented, this.lastStable))
     const lm = cleaned.lm
     const anatomy = anatomyScore(lm)
     const box = poseBox(lm, 0.2)
     const heat = motion?.scoreBox(box) ?? 0
-    const human = poseLooksHuman(lm) || looksInverted(lm)
+    const inverted = looksInverted(lm)
+    const human = poseLooksHuman(lm) || inverted
     const complete = completeCount(lm, 0.32)
 
     if (looksLikeBackgroundProp(lm)) {
@@ -326,10 +328,15 @@ export class AthleteTracker {
 
     const center = torsoCenter(lm)
     const scale = torsoScale(lm)
+    const nearLast = !this.lastCenter || !center || dist(center, this.lastCenter) < 0.26
     const comingDown =
       Boolean(this.lastStable && looksInverted(this.lastStable)) &&
       !looksInverted(lm) &&
-      (poseLooksHuman(lm) || complete >= 8)
+      (poseLooksHuman(lm) || complete >= 8) &&
+      nearLast
+    if (this.lastStable && looksInverted(this.lastStable) && !inverted && !nearLast) {
+      return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'far standing steal' }
+    }
     let continuity = 0.35
     if (comingDown) {
       continuity = 0.62
@@ -340,14 +347,20 @@ export class AthleteTracker {
         y: this.lastCenter.y + this.lastVel.y * dt,
       }
       const jump = dist(center, predicted)
-      const stayInv = Boolean(this.lastStable && looksInverted(this.lastStable) && looksInverted(lm))
-      if (jump > (stayInv ? 0.5 : 0.42)) {
-        return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'torso jump' }
+      const stayInv = Boolean(this.lastStable && looksInverted(this.lastStable) && inverted)
+      if (jump > (stayInv ? 0.55 : 0.48)) {
+        if (inverted) {
+          continuity = 0.18
+        } else {
+          return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'torso jump' }
+        }
+      } else {
+        continuity = Math.max(0, 1 - jump / 0.28)
       }
-      continuity = Math.max(0, 1 - jump / 0.28)
       const roi = this.roi()
       if (
         roi &&
+        !inverted &&
         (this.state === 'locked' || this.state === 'uncertain' || this.state === 'reacquiring') &&
         (center.x < roi.x - 0.04 ||
           center.y < roi.y - 0.04 ||
@@ -408,6 +421,12 @@ export class AthleteTracker {
   }
 
   private stabilize(lm: Landmark[], now: number, flags: JointFlag[]): Landmark[] {
+    const kickOrLand =
+      Boolean(this.lastStable) && looksInverted(this.lastStable!) !== looksInverted(lm)
+    if (kickOrLand) {
+      this.euro.reset()
+      return clipImpossibleBones(lm).lm
+    }
     const gated = lm.map((p, i) => {
       const prev = this.lastStable?.[i]
       if (!prev || !vis(prev, 0.15) || !vis(p, 0.15)) return p
@@ -467,10 +486,10 @@ export class AthleteTracker {
     }
 
     // Keep a visible inverted body even if scoring was picky (side view,
-    // hidden face). Do not grab a lamp across the room.
+    // hidden face, opposite profile). Do not grab a lamp across the room.
     if (!best) {
       for (const raw of candidates) {
-        const fallback = clipImpossibleBones(sanitizePose(raw, this.lastStable))
+        const fallback = clipImpossibleBones(sanitizePose(orientInvertedBody(raw) ?? raw, this.lastStable))
         if (!looksInverted(fallback.lm) || looksLikeBackgroundProp(fallback.lm) || fallback.broken >= 5) {
           continue
         }
@@ -498,24 +517,25 @@ export class AthleteTracker {
       Boolean(this.lastStable) && looksLikeBackgroundProp(this.lastStable!)
     const lastInv = Boolean(this.lastStable && looksInverted(this.lastStable))
     const invertedStill = candidates.some((raw) => {
-      const cleaned = clipImpossibleBones(sanitizePose(raw, this.lastStable))
+      const cleaned = clipImpossibleBones(sanitizePose(orientInvertedBody(raw) ?? raw, this.lastStable))
       return looksInverted(cleaned.lm) && !looksLikeBackgroundProp(cleaned.lm)
     })
-    // A clear handstand in frame always beats a standing / furniture steal.
-    if (lastInv && invertedStill) {
+    // A clear handstand in frame always beats a standing / furniture steal,
+    // including the first lock and the opposite facing.
+    if (invertedStill) {
       let invBest: ReturnType<AthleteTracker['scoreCandidate']> | null = null
       for (const raw of candidates) {
         const scored = this.scoreCandidate(raw, now, motion)
-        if (scored.reason && !looksInverted(scored.lm)) continue
         if (!looksInverted(scored.lm) || looksLikeBackgroundProp(scored.lm)) continue
-        if (!invBest || scored.score > invBest.score) invBest = { ...scored, reason: null, score: Math.max(scored.score, 0.5) }
+        if (scored.reason === 'pole / stand' || scored.reason === 'impossible skeleton') continue
+        if (!invBest || scored.score > invBest.score) invBest = { ...scored, reason: null, score: Math.max(scored.score, 0.55) }
       }
       if (invBest) best = invBest
     }
     if (lockIsProp || (lastInv && !invertedStill)) {
       let steal: ReturnType<AthleteTracker['scoreCandidate']> | null = null
       for (const raw of candidates) {
-        const cleaned = clipImpossibleBones(sanitizePose(raw, null))
+        const cleaned = clipImpossibleBones(sanitizePose(orientInvertedBody(raw) ?? raw, null))
         if (looksLikeBackgroundProp(cleaned.lm)) continue
         const standing =
           poseLooksHuman(cleaned.lm) && !looksInverted(cleaned.lm)

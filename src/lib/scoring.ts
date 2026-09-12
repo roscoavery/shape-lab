@@ -45,7 +45,7 @@ import {
   poseLooksRainbowBridge,
   poseLooksSidePlank,
 } from './homeworkPose'
-import { evaluateHandstandGeometry } from './handstandDetect'
+import { evaluateHandstandGeometry, orientInvertedBody } from './handstandDetect'
 import { mergePair } from './skeleton'
 import type {
   CriterionDef,
@@ -348,7 +348,7 @@ function measureHandstandBodyLine(landmarks: Landmark[]): number | null {
 }
 
 function poseIsHandstand(landmarks: Landmark[]): boolean {
-  const geo = evaluateHandstandGeometry(landmarks)
+  const geo = evaluateHandstandGeometry(orientInvertedBody(landmarks) ?? landmarks)
   return Boolean(geo.handsDown && geo.feetOff && !geo.hardFail && geo.confidence >= 0.5)
 }
 

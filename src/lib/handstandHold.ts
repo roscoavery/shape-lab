@@ -11,6 +11,7 @@ import { snapshotCanvas } from './captureStore'
 import {
   HoldDetector,
   isHoldDebugEnabled,
+  orientInvertedBody,
   poseLooksLikeHandstand,
   type HoldDetectDebug,
 } from './handstandDetect'
@@ -427,14 +428,15 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     const samplePose = (lm: Landmark[] | null) => {
       if (!lm || lm.length < 33) return
       if (!rec.session && !opts.timelineSec) return
-      if (looksLikeBackgroundProp(lm)) return
+      const oriented = orientInvertedBody(lm) ?? lm
+      if (looksLikeBackgroundProp(oriented)) return
       const dbg = getLastTrackDebug()
       if (dbg?.predicted) return
-      if (!looksInverted(lm) && !poseLooksHuman(lm) && (dbg?.poseConf ?? 0) < 0.34) return
+      if (!looksInverted(oriented) && !poseLooksHuman(oriented) && (dbg?.poseConf ?? 0) < 0.34) return
       const t = clockNow()
       const lastSample = poseTrack[poseTrack.length - 1]
       if (lastSample && t - lastSample.t < 0.05) return
-      poseTrack.push({ t, lm: cloneLandmarks(lm) })
+      poseTrack.push({ t, lm: cloneLandmarks(oriented) })
     }
 
     // Record while we wait so the clip can start ~2s before the kick-up.

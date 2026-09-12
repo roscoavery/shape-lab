@@ -3,7 +3,8 @@
  * Run: npx tsx scripts/check-athlete-track.mjs
  */
 import { AthleteTracker, clipImpossibleBones } from '../src/lib/athleteTrack.ts'
-import { looksLikePole } from '../src/lib/poseSubject.ts'
+import { swapUpperLower } from '../src/lib/handstandDetect.ts'
+import { looksInverted, looksLikePole } from '../src/lib/poseSubject.ts'
 
 function pt(x, y, vis = 0.85) {
   return { x, y, z: 0, visibility: vis }
@@ -161,6 +162,33 @@ assert(
   'does not steal a standing pose across the room mid-hold',
   farStand.stabilized == null || Math.abs((farX ?? 0.82) - 0.82) > 0.2,
   farStand.debug,
+)
+
+const otherWay = new AthleteTracker()
+otherWay.push([standAt(0.68)], 8_000)
+otherWay.push([standAt(0.68)], 8_200)
+const flippedHs = swapUpperLower(hsAt(0.7))
+const otherKick = otherWay.push([flippedHs, pianoStand], 8_360)
+const otherX = otherKick.stabilized
+  ? (otherKick.stabilized[11].x + otherKick.stabilized[12].x) / 2
+  : null
+assert(
+  'opposite-facing kick-up stays on the athlete, not the stand',
+  Boolean(otherKick.stabilized) &&
+    looksInverted(otherKick.stabilized) &&
+    Math.abs((otherX ?? 0) - 0.7) < 0.14,
+  otherKick.debug,
+)
+
+const lampFirst = new AthleteTracker()
+const hsThenLamp = lampFirst.push([pianoStand, hsAt(0.3)], 9_000)
+const hsThenX = hsThenLamp.stabilized
+  ? (hsThenLamp.stabilized[11].x + hsThenLamp.stabilized[12].x) / 2
+  : null
+assert(
+  'inverted athlete wins on the first frame when a stand is also proposed',
+  Boolean(hsThenLamp.stabilized) && Math.abs((hsThenX ?? 0) - 0.3) < 0.12,
+  hsThenLamp.debug,
 )
 
 if (failed) {

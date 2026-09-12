@@ -8,7 +8,9 @@ import {
   HOLD_COME_DOWN_MS,
   HOLD_ENTER_MS,
   HOLD_EXIT_MS,
+  orientInvertedBody,
   poseLooksLikeHandstand,
+  swapUpperLower,
 } from '../src/lib/handstandDetect.ts'
 
 function pt(x, y, vis = 0.85) {
@@ -115,6 +117,33 @@ failed += assert(
   Math.abs(evaluateHandstandGeometry(hs).confidence - evaluateHandstandGeometry(mirrored).confidence) < 0.02,
 )
 failed += assert('slight camera angle still counts', poseLooksLikeHandstand(angled))
+
+const flippedLeft = swapUpperLower(stacked({ 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 }, 0.28))
+const flippedRight = swapUpperLower(stacked({ 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 }, 0.72))
+const fixedLeft = orientInvertedBody(flippedLeft)
+const fixedRight = orientInvertedBody(flippedRight)
+failed += assert(
+  'MediaPipe standing-labels on the left profile still count as a handstand',
+  poseLooksLikeHandstand(flippedLeft) && evaluateHandstandGeometry(fixedLeft).confidence >= 0.7,
+  evaluateHandstandGeometry(fixedLeft),
+)
+failed += assert(
+  'MediaPipe standing-labels on the right profile still count as a handstand',
+  poseLooksLikeHandstand(flippedRight) && evaluateHandstandGeometry(fixedRight).confidence >= 0.7,
+  evaluateHandstandGeometry(fixedRight),
+)
+failed += assert(
+  'standing is not remapped into a handstand',
+  orientInvertedBody(stand) === stand && !poseLooksLikeHandstand(stand),
+)
+failed += assert(
+  'arms-up standing is not remapped into a handstand',
+  orientInvertedBody(armsUp) === armsUp && !poseLooksLikeHandstand(armsUp),
+)
+failed += assert(
+  'flipped-label hold still starts on both facings',
+  holdAfter(flippedLeft, HOLD_ENTER_MS + 40).holding && holdAfter(flippedRight, HOLD_ENTER_MS + 40).holding,
+)
 
 const ghostAnkle = stacked({ 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
 ghostAnkle[27] = pt(0.48, 0.93, 0.95)

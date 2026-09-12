@@ -287,20 +287,91 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
   }
 }
 
-/** Single-frame “this looks like a handstand” — homework / salvage, not the timer. */
-export function poseLooksLikeHandstand(lm: Landmark[] | null | undefined): boolean {
-  return evaluateHandstandGeometry(lm).confidence >= 0.62
+/**
+ * MediaPipe often labels one profile as a standing person: ankles on the
+ * floor (the hands) and wrists in the air (the feet). Swap upper/lower
+ * so the clock, score, and body line see a real handstand.
+ */
+export function swapUpperLower(lm: Landmark[]): Landmark[] {
+  const out = lm.map((p) => ({ ...p }))
+  const swap = (a: number, b: number) => {
+    const tmp = out[a]
+    out[a] = out[b]!
+    out[b] = tmp!
+  }
+  swap(LM.LEFT_SHOULDER, LM.LEFT_HIP)
+  swap(LM.RIGHT_SHOULDER, LM.RIGHT_HIP)
+  swap(LM.LEFT_ELBOW, LM.LEFT_KNEE)
+  swap(LM.RIGHT_ELBOW, LM.RIGHT_KNEE)
+  swap(LM.LEFT_WRIST, LM.LEFT_ANKLE)
+  swap(LM.RIGHT_WRIST, LM.RIGHT_ANKLE)
+  swap(LM.LEFT_PINKY, LM.LEFT_FOOT_INDEX)
+  swap(LM.RIGHT_PINKY, LM.RIGHT_FOOT_INDEX)
+  swap(LM.LEFT_INDEX, LM.LEFT_HEEL)
+  swap(LM.RIGHT_INDEX, LM.RIGHT_HEEL)
+  if (out[LM.LEFT_THUMB]) out[LM.LEFT_THUMB]!.visibility = 0
+  if (out[LM.RIGHT_THUMB]) out[LM.RIGHT_THUMB]!.visibility = 0
+  for (let i = 0; i <= 10; i++) {
+    if (out[i]) out[i]!.visibility = 0
+  }
+  return out
 }
 
-/** Hips still stacked above the hands — the body is inverted even if feet flicker. */
-export function poseTorsoInverted(lm: Landmark[] | null | undefined): boolean {
-  if (!lm || lm.length < 33) return false
+function visPt(p: Landmark | undefined, min = VIS): p is Landmark {
+  return Boolean(p) && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
+}
+
+function faceNearShoulders(lm: Landmark[]): boolean {
+  const nose = lm[LM.NOSE]
+  const sh = pair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER])
+  if (!visPt(nose, 0.22) || !sh) return false
+  return Math.abs(nose.y - sh.y) < 0.14
+}
+
+/**
+ * Same reference if labels already match an inverted stack.
+ * New array if the other profile was labeled as standing.
+ */
+export function orientInvertedBody(lm: Landmark[] | null | undefined): Landmark[] | null {
+  if (!lm || lm.length < 33) return lm ?? null
+  const a = evaluateHandstandGeometry(lm)
+  if (a.confidence >= 0.55 && a.handsDown && a.feetOff && !a.hardFail) return lm
+  const flipped = swapUpperLower(lm)
+  const b = evaluateHandstandGeometry(flipped)
+  if (
+    b.confidence >= 0.68 &&
+    b.confidence > a.confidence + 0.12 &&
+    b.handsDown &&
+    b.feetOff &&
+    !b.hardFail &&
+    !faceNearShoulders(lm)
+  ) {
+    return flipped
+  }
+  return lm
+}
+
+/** Single-frame “this looks like a handstand” — homework / salvage, not the timer. */
+export function poseLooksLikeHandstand(lm: Landmark[] | null | undefined): boolean {
+  return evaluateHandstandGeometry(orientInvertedBody(lm)).confidence >= 0.62
+}
+
+function labeledTorsoInverted(lm: Landmark[]): boolean {
   const wrist = pair(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST])
   const hip = pair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP])
   const shoulder = pair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER])
   if (wrist && hip && hip.y < wrist.y - 0.12) return true
   if (wrist && shoulder && shoulder.y < wrist.y - 0.04 && hip && hip.y < wrist.y - 0.08) return true
-  return evaluateHandstandGeometry(lm).confidence >= 0.5
+  return false
+}
+
+/** Hips still stacked above the hands — the body is inverted even if feet flicker. */
+export function poseTorsoInverted(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  if (labeledTorsoInverted(lm)) return true
+  const oriented = orientInvertedBody(lm)
+  if (oriented && oriented !== lm && labeledTorsoInverted(oriented)) return true
+  return evaluateHandstandGeometry(oriented ?? lm).confidence >= 0.5
 }
 
 /** True if any MediaPipe body in this frame is still a handstand. */
@@ -344,10 +415,22 @@ export class HoldDetector {
       )
     }
 
-    this.smoothed = smoothLandmarks(this.smoothed, raw)
+    const oriented = orientInvertedBody(raw) ?? raw
+    const prevWrist = this.smoothed?.[LM.LEFT_WRIST] ?? this.smoothed?.[LM.RIGHT_WRIST]
+    const nextWrist = oriented[LM.LEFT_WRIST] ?? oriented[LM.RIGHT_WRIST]
+    if (
+      this.smoothed &&
+      prevWrist &&
+      nextWrist &&
+      Math.abs((prevWrist.y ?? 0) - (nextWrist.y ?? 0)) > 0.3
+    ) {
+      this.smoothed = null
+    }
+    this.smoothed = smoothLandmarks(this.smoothed, oriented)
+    const orientedOthers = others.map((p) => orientInvertedBody(p) ?? p)
     const geo = evaluateHandstandGeometry(this.smoothed)
-    const rawGeo = evaluateHandstandGeometry(raw)
-    const stillInverted = anyPoseInverted([raw, ...others])
+    const rawGeo = evaluateHandstandGeometry(oriented)
+    const stillInverted = anyPoseInverted([oriented, ...orientedOthers])
     // Need the hips down on both raw and smoothed so one ghost ankle
     // cannot stop the clock. A body still inverted in the frame is not a land.
     const feetPlanted = rawGeo.feetPlanted && geo.feetPlanted && !stillInverted

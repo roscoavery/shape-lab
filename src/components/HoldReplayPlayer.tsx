@@ -1,13 +1,17 @@
 /**
  * Hold-challenge analysis player.
- * Overlay (skeleton, score, clock) is on this screen only.
- * Save shares the original camera file immediately — real time, full
- * quality — so Photos / Files opens on the first tap.
+ * Save burns the live score, stopwatch, and body line onto the clip at 1×.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { getShape } from '../config/shapes'
 import { formatSeconds } from '../lib/handstandHold'
+import {
+  burnOverlayVideo,
+  burnedOverlayKey,
+  getBurnedOverlay,
+  rememberBurnedOverlay,
+} from '../lib/overlayExport'
 import { looksLikeBackgroundProp } from '../lib/poseSubject'
 import { landmarksAt, type PoseTrack } from '../lib/poseTrack'
 import {
@@ -52,6 +56,7 @@ export function HoldReplayPlayer({
   playheadSec,
   mirror = true,
   filename,
+  clipId = null,
   compact = false,
   athleteId = null,
   fill = false,
@@ -191,11 +196,29 @@ export function HoldReplayPlayer({
       return
     }
     setSaving(true)
-    setFlash(null)
+    setFlash('Adding score, clock, and body line…')
     try {
-      const ext = extForVideoType(blob.type || filename)
+      const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
+      let out = getBurnedOverlay(key)
+      if (!out) {
+        out = await burnOverlayVideo({
+          source: blob,
+          track,
+          mode,
+          mirror,
+          holdSeconds,
+          clockOffsetSec,
+          showSkeleton: showOverlay,
+          showAngles,
+          onProgress: (p) => {
+            setFlash(`Adding score, clock, and body line… ${Math.round(p * 100)}%`)
+          },
+        })
+        rememberBurnedOverlay(key, out)
+      }
+      const ext = extForVideoType(out.type || blob.type || filename)
       const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-      const result: SaveVideoResult = await saveVideoToDevice(blob, name)
+      const result: SaveVideoResult = await saveVideoToDevice(out, name)
       setFlash(saveResultMessage(result))
     } catch {
       setFlash('Could not save that hold clip.')
@@ -266,7 +289,7 @@ export function HoldReplayPlayer({
           onClick={() => void save()}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
         >
-          {saving ? 'Opening Photos…' : 'Save to Photos'}
+          {saving ? 'Saving with score…' : 'Save to Photos'}
         </button>
         {athleteId && (
           <button
@@ -296,7 +319,7 @@ export function HoldReplayPlayer({
           </button>
         )}
         <p className="text-[11px] leading-snug text-[var(--muted)]">
-          Saves the camera clip at regular speed. Lines stay on this screen.
+          Saves the clip at regular speed with the live score, stopwatch, and body line.
         </p>
       </div>
 

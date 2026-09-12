@@ -7,7 +7,7 @@
  * keep their own logic.
  */
 
-import { evaluateHandstandGeometry } from './handstandDetect'
+import { evaluateHandstandGeometry, orientInvertedBody } from './handstandDetect'
 import { LM } from './landmarks'
 import { landmarksLookPresent } from './pose'
 import type { Landmark } from '../types'
@@ -269,9 +269,11 @@ export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): La
     const b = out[j]
     if (!a || !b) continue
     const gap = Math.hypot(a.x - b.x, a.y - b.y)
-    if (gap <= 0.18) continue
+    if (gap <= 0.22) continue
     const va = a.visibility ?? 1
     const vb = b.visibility ?? 1
+    // 3/4 view keeps both sides. Only drop a far ghost.
+    if (Math.min(va, vb) >= 0.4 && gap < 0.45) continue
     if (va >= vb) b.visibility = 0
     else a.visibility = 0
   }
@@ -293,7 +295,8 @@ export function sanitizePose(lm: Landmark[], prev: Landmark[] | null = null): La
   const prevTorso = prev && prev.length >= 33 ? torsoCenter(prev) : null
   const nextTorso = torsoCenter(out)
   const sameBody = Boolean(prevTorso && nextTorso && dist(prevTorso, nextTorso) < 0.22)
-  if (sameBody && prev) {
+  const samePhase = !prev || labeledInverted(prev) === labeledInverted(out)
+  if (sameBody && prev && samePhase) {
     for (let i = 0; i < 33; i++) {
       const a = out[i]
       const q = prev[i]
@@ -322,8 +325,7 @@ export function hasHead(lm: Landmark[]): boolean {
   return false
 }
 
-/** Wrists on the floor, hips/feet up — a real handstand, not furniture. */
-export function looksInverted(lm: Landmark[]): boolean {
+function labeledInverted(lm: Landmark[]): boolean {
   const wrist = mid(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST], 0.12)
   const hip = mid(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.12)
   const ankle =
@@ -332,6 +334,13 @@ export function looksInverted(lm: Landmark[]): boolean {
   if (wrist && hip && hip.y < wrist.y - 0.04) return true
   if (wrist && ankle && ankle.y < wrist.y - 0.08) return true
   return false
+}
+
+/** Wrists on the floor, hips/feet up — including the profile MediaPipe labels as standing. */
+export function looksInverted(lm: Landmark[]): boolean {
+  if (labeledInverted(lm)) return true
+  const oriented = orientInvertedBody(lm)
+  return Boolean(oriented && oriented !== lm && labeledInverted(oriented))
 }
 
 /** Coat rack / lamp / stand: joints stacked on one thin column. */
@@ -413,14 +422,21 @@ export function looksLikeFurniture(lm: Landmark[]): boolean {
 
 /** Furniture that can fake an inverted stick-figure after a handstand. */
 export function looksLikeBackgroundProp(lm: Landmark[]): boolean {
-  if (looksLikePole(lm) || looksLikeFurniture(lm)) return true
-  // Standing coat rack / lamp. A real side-view handstand is also thin,
-  // so an inverted stack with handstand geometry is the athlete.
-  if (looksLikeThinColumn(lm) && !hasHead(lm)) {
-    if (looksInverted(lm) && evaluateHandstandGeometry(lm).confidence >= 0.5) return false
+  const oriented = orientInvertedBody(lm) ?? lm
+  if (looksLikePole(oriented) || looksLikeFurniture(oriented)) return true
+  const inverted = looksInverted(oriented)
+  const hs = inverted ? evaluateHandstandGeometry(oriented).confidence : 0
+  const box = poseBox(oriented, 0.2)
+  const scale = torsoScale(oriented)
+  // Lamp / stand: one thin column. A real side handstand has torso length + height.
+  if (looksLikeThinColumn(oriented) && !hasHead(oriented)) {
+    if (inverted && hs >= 0.62 && scale != null && scale > 0.12 && box && box.h > 0.35 && box.w >= 0.045) {
+      return false
+    }
     return true
   }
-  if (hasHead(lm)) return false
+  if (inverted && hs >= 0.5) return false
+  if (hasHead(oriented)) return false
   const idx = [
     LM.LEFT_SHOULDER,
     LM.RIGHT_SHOULDER,
@@ -435,17 +451,17 @@ export function looksLikeBackgroundProp(lm: Landmark[]): boolean {
     LM.LEFT_ANKLE,
     LM.RIGHT_ANKLE,
   ]
-  const pts = idx.map((i) => lm[i]).filter((p): p is Landmark => visOk(p, 0.2))
+  const pts = idx.map((i) => oriented[i]).filter((p): p is Landmark => visOk(p, 0.2))
   if (pts.length < 6) return false
   const xs = pts.map((p) => p.x)
   const spanX = Math.max(...xs) - Math.min(...xs)
   const shW =
-    visOk(lm[LM.LEFT_SHOULDER], 0.2) && visOk(lm[LM.RIGHT_SHOULDER], 0.2)
-      ? Math.abs(lm[LM.LEFT_SHOULDER]!.x - lm[LM.RIGHT_SHOULDER]!.x)
+    visOk(oriented[LM.LEFT_SHOULDER], 0.2) && visOk(oriented[LM.RIGHT_SHOULDER], 0.2)
+      ? Math.abs(oriented[LM.LEFT_SHOULDER]!.x - oriented[LM.RIGHT_SHOULDER]!.x)
       : spanX
   const hpW =
-    visOk(lm[LM.LEFT_HIP], 0.2) && visOk(lm[LM.RIGHT_HIP], 0.2)
-      ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
+    visOk(oriented[LM.LEFT_HIP], 0.2) && visOk(oriented[LM.RIGHT_HIP], 0.2)
+      ? Math.abs(oriented[LM.LEFT_HIP]!.x - oriented[LM.RIGHT_HIP]!.x)
       : spanX
   if (spanX < 0.07 && shW < 0.06 && hpW < 0.055) return true
   return false
