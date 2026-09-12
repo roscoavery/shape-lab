@@ -80,9 +80,13 @@ function lerpLandmarks(a: Landmark[], b: Landmark[], u: number): Landmark[] {
 }
 
 /**
- * MediaRecorder often writes a file longer than the real session.
- * Compare the file duration to the wall-clock recording, not one hold.
- * Recap should play at 1× and look up poses with mediaT / stretch.
+ * LOCK: overlay sync.
+ * Pose samples are wall / delay-cam seconds. Recap plays the file at 1×
+ * and looks up poses with mediaT / stretch. Never guess stretch from the
+ * hold length — a rolling clip is longer than one hold, and that guess
+ * puts the skeleton on a different clock than the body.
+ * Save may play faster (stretch × saveSpeed) so Photos is real-time;
+ * it still paints with mediaTimeToTrackTime(video.currentTime).
  */
 export function mediaStretch(
   mediaDuration: number,
@@ -93,17 +97,24 @@ export function mediaStretch(
 ): number {
   if (!Number.isFinite(mediaDuration) || mediaDuration <= 0.8 || mediaDuration > 1e6) return 1
   const last = track && track.length ? track[track.length - 1]!.t : 0
-  const sessionWall =
+  const wall =
     recordedWallSec && recordedWallSec > 0.8
       ? recordedWallSec
       : Math.max(last, clockOffsetSec + holdSeconds + 1)
-  // One hold clip is ~hold + 2s pre + 1s post. Do not compare that file
-  // to the whole session wall or a slow MediaRecorder file looks "1×".
-  const holdWall = holdSeconds > 0.8 ? holdSeconds + 3 : 0
-  const wall =
-    holdWall > 0.8 && mediaDuration <= holdWall * 2.6 ? holdWall : sessionWall
   if (wall > 0.8 && mediaDuration > wall * 1.03) return mediaDuration / wall
   return 1
+}
+
+/** Recap file rate. Overlay stays glued because currentTime is the time base. */
+export function recapPlaybackRate(): number {
+  return 1
+}
+
+/** Burn rate: unstretch a slow file, then apply the athlete's save speed. */
+export function savePlaybackRate(stretch: number, saveSpeed: number): number {
+  const s = Number.isFinite(stretch) && stretch > 0 ? stretch : 1
+  const speed = Number.isFinite(saveSpeed) && saveSpeed > 0 ? saveSpeed : 1
+  return Math.min(16, Math.max(0.25, s * speed))
 }
 
 /**

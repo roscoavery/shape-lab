@@ -51,9 +51,9 @@ if [ -d .git ]; then
 
   echo
   echo "============================================================"
-  echo "  ORANGE BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a bright ORANGE bar that says Orange build."
-  echo "  Green, violet, or no bar means this window is still old —"
+  echo "  AQUA BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a bright AQUA bar that says Aqua build."
+  echo "  Orange, green, or no bar means this window is still old —"
   echo "  Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo

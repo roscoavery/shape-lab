@@ -1836,7 +1836,7 @@ export function Tasks2Panel({
           {phase === 'finishing' ? (
             <div className="mt-2 flex items-center gap-3">
               <span
-                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#a3e635]"
+                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#00e5ff]"
                 aria-hidden
               />
               <div>
@@ -1940,7 +1940,7 @@ export function Tasks2Panel({
             aria-live="polite"
           >
             <span
-              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#a3e635]"
+              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#00e5ff]"
               aria-hidden
             />
             <p className="mt-4 text-xl font-black">Getting your clips…</p>
@@ -1964,7 +1964,7 @@ export function Tasks2Panel({
           <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
         </div>
         <div className={`${HOLD_BUILD_BANNER} mt-2`}>
-          Orange build — this bright orange bar means the gym rebuilt
+            {HOLD_BUILD_LABEL} — this bar means the gym rebuilt
         </div>
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
         <div className="mt-2">
@@ -2081,7 +2081,7 @@ export function Tasks2Panel({
       </div>
 
       {phase === 'idle' && report?.holdAttempts && report.holdAttempts.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-[#a3e635]/40 bg-[#10240f] p-3">
+        <div className="mb-3 rounded-2xl border border-[#00e5ff]/40 bg-[#10240f] p-3">
           <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${HOLD_PINK_TEXT}`}>
             Your holds
           </p>
@@ -2099,7 +2099,7 @@ export function Tasks2Panel({
               <li
                 key={h.index}
                 className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 ${
-                  h.highlighted ? 'border-[#a3e635] bg-black/40' : 'border-white/10 bg-black/25'
+                  h.highlighted ? 'border-[#00e5ff] bg-black/40' : 'border-white/10 bg-black/25'
                 }`}
               >
                 <div className="min-w-0">
@@ -2168,7 +2168,7 @@ export function Tasks2Panel({
                 className={`w-full overflow-hidden rounded-2xl border text-left disabled:opacity-50 ${
                   selected
                     ? s.mode === 'hs-hold'
-                      ? 'border-[#a3e635] bg-[#10240f] ring-1 ring-[#a3e635]'
+                      ? 'border-[#00e5ff] bg-[#10240f] ring-1 ring-[#00e5ff]'
                       : 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
                     : 'border-white/10 bg-[#121820] hover:border-white/25'
                 }`}
@@ -2210,7 +2210,7 @@ export function Tasks2Panel({
           <div
             className={`mt-3 rounded-lg px-3 py-2 ${
               phase === 'holding' || phase === 'finishing'
-                ? 'border border-[#a3e635]/40 bg-[#10240f]'
+                ? 'border border-[#00e5ff]/40 bg-[#10240f]'
                 : 'border border-[var(--accent)]/40 bg-[#102820]'
             }`}
           >
@@ -2330,7 +2330,7 @@ export function Tasks2Panel({
                     athleteId={athleteId}
                   />
                 ) : holdClipPending ? (
-                  <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#a3e635]">
+                  <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#00e5ff]">
                     Opening the clip…
                   </p>
                 ) : (
@@ -2364,7 +2364,7 @@ export function Tasks2Panel({
                         onClick={() => playHoldClip(h.clipId, h.playheadSec)}
                         className={`w-[5.5rem] shrink-0 overflow-hidden rounded-xl border text-left ${
                           h.highlighted
-                            ? 'border-[#a3e635] ring-2 ring-[#a3e635]'
+                            ? 'border-[#00e5ff] ring-2 ring-[#00e5ff]'
                             : active
                               ? 'border-white/80'
                               : 'border-white/15'

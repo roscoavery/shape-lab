@@ -9,7 +9,13 @@ import { getShape } from '../config/shapes'
 import { HOLD_BUILD, HOLD_PINK } from './holdBuild'
 import { holdMediaWindow } from './handstandHold'
 import { looksLikeBackgroundProp } from './poseSubject'
-import { landmarksAtMedia, mediaStretch, mediaTimeToTrackTime, type PoseTrack } from './poseTrack'
+import {
+  landmarksAtMedia,
+  mediaStretch,
+  mediaTimeToTrackTime,
+  savePlaybackRate,
+  type PoseTrack,
+} from './poseTrack'
 import {
   createRecorder,
   durableBlob,
@@ -301,7 +307,8 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
   )
   const saveSpeed = clampSaveSpeed(opts.saveSpeed ?? 1)
   const win = holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration, stretch)
-  const wantedRate = stretch * saveSpeed
+  // Overlay still uses currentTime → track time. Only the file play rate changes.
+  const wantedRate = savePlaybackRate(stretch, saveSpeed)
   video.muted = true
   video.playsInline = true
   video.playbackRate = wantedRate
