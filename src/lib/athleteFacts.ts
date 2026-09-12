@@ -19,36 +19,35 @@ export function gymsLine(athlete: Athlete): string | null {
 
 export function cartwheelLine(athlete: Athlete): string | null {
   if (!athlete.cartwheelLeg) return null
-  const side = athlete.cartwheelLeg === 'left' ? 'Left' : 'Right'
-  return `${side} leg forward on a cartwheel / round-off`
+  return athlete.cartwheelLeg === 'left' ? 'L' : 'R'
 }
 
 export function twistLine(athlete: Athlete): string | null {
   if (!athlete.twistDirection) return null
-  if (athlete.twistDirection === 'not_yet') return 'Not twisting yet'
+  if (athlete.twistDirection === 'not_yet') return '—'
   if (athlete.twistDirection === 'both') {
     const better =
-      athlete.twistBetterSide === 'left'
-        ? 'left is better'
-        : athlete.twistBetterSide === 'right'
-          ? 'right is better'
-          : null
-    return better ? `Twists both ways · ${better}` : 'Twists both ways'
+      athlete.twistBetterSide === 'left' ? 'L' : athlete.twistBetterSide === 'right' ? 'R' : null
+    return better ? `Both · ${better}` : 'Both'
   }
-  return athlete.twistDirection === 'left' ? 'Twists left' : 'Twists right'
+  return athlete.twistDirection === 'left' ? 'L' : 'R'
+}
+
+export function twistBetterSide(athlete: Athlete): 'left' | 'right' | null {
+  if (athlete.twistDirection === 'left' || athlete.twistBetterSide === 'left') return 'left'
+  if (athlete.twistDirection === 'right' || athlete.twistBetterSide === 'right') return 'right'
+  return null
 }
 
 export function handLine(athlete: Athlete): string | null {
   if (!athlete.dominantHand) return null
-  if (athlete.dominantHand === 'ambidextrous') return 'Ambidextrous'
-  return athlete.dominantHand === 'left' ? 'Left-hand dominant' : 'Right-hand dominant'
+  if (athlete.dominantHand === 'ambidextrous') return 'Both'
+  return athlete.dominantHand === 'left' ? 'L' : 'R'
 }
 
 export function skateLine(athlete: Athlete): string | null {
   if (!athlete.skateStance) return null
-  return athlete.skateStance === 'regular'
-    ? 'Skate regular (left foot forward)'
-    : 'Skate goofy (right foot forward)'
+  return athlete.skateStance === 'regular' ? 'Reg' : 'Goofy'
 }
 
 export function harderShapeLine(athlete: Athlete): string | null {
@@ -58,19 +57,25 @@ export function harderShapeLine(athlete: Athlete): string | null {
     : 'Superman feels harder than hollow'
 }
 
-export function profileFactLines(athlete: Athlete): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = []
+export type ProfileFact = { label: string; value: string; hot?: boolean }
+
+export function profileFactLines(athlete: Athlete): ProfileFact[] {
+  const rows: ProfileFact[] = []
   const gyms = gymsLine(athlete)
-  if (gyms) rows.push({ label: 'Gyms', value: gyms })
+  if (gyms) rows.push({ label: 'Gym', value: gyms })
   const cart = cartwheelLine(athlete)
-  if (cart) rows.push({ label: 'Round-off', value: cart })
+  if (cart) rows.push({ label: 'RO', value: cart })
   const twist = twistLine(athlete)
-  if (twist) rows.push({ label: 'Twist', value: twist })
+  if (twist) {
+    rows.push({
+      label: 'Twist',
+      value: twist,
+      hot: Boolean(twistBetterSide(athlete) || athlete.twistDirection === 'left' || athlete.twistDirection === 'right'),
+    })
+  }
   const hand = handLine(athlete)
   if (hand) rows.push({ label: 'Hand', value: hand })
   const skate = skateLine(athlete)
   if (skate) rows.push({ label: 'Skate', value: skate })
-  const harder = harderShapeLine(athlete)
-  if (harder) rows.push({ label: 'Harder hold', value: harder })
   return rows
 }

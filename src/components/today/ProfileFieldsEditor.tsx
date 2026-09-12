@@ -1,4 +1,5 @@
-import type { Athlete } from '../../types'
+import type { Athlete, FavoriteColor } from '../../types'
+import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { StationSnapshot } from './StationSnapshot'
 import { CoachPicker } from '../CoachPicker'
 import { profileRole } from '../../lib/profileRole'
@@ -195,9 +196,9 @@ export function ProfileFieldsEditor({
         <div className="grid gap-2">
           {(
             [
-              ['right', 'Right'],
-              ['left', 'Left'],
-              ['ambidextrous', 'Ambidextrous'],
+              ['right', 'R'],
+              ['left', 'L'],
+              ['ambidextrous', 'Both'],
             ] as const
           ).map(([id, label]) => (
             <Choice
@@ -217,7 +218,7 @@ export function ProfileFieldsEditor({
           <Choice
             value="regular"
             current={athlete.skateStance}
-            label="Regular"
+            label="Reg"
             hint="Left foot forward"
             onPick={(skateStance: SkateStance) => patch({ skateStance })}
           />
@@ -228,6 +229,27 @@ export function ProfileFieldsEditor({
             hint="Right foot forward"
             onPick={(skateStance: SkateStance) => patch({ skateStance })}
           />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold">Favorite color</h3>
+        <p className="text-xs text-[var(--muted)]">
+          The app revolves around this unless you pick another theme in More.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {FAVORITE_COLORS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              title={c.label}
+              onClick={() => patch({ favoriteColor: c.id as FavoriteColor })}
+              className={`h-9 w-9 rounded-full border-2 ${
+                athlete.favoriteColor === c.id ? 'border-white' : 'border-transparent'
+              }`}
+              style={{ background: c.swatch }}
+            />
+          ))}
         </div>
       </section>
     </div>

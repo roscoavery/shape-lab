@@ -58,6 +58,7 @@ import {
 } from '../../lib/trainingEvents'
 import { GymBadge, gymHint } from '../today/GymBadge'
 import { TodayGymScope } from '../today/TodayGymScope'
+import { QuickGroupEnroll } from '../today/QuickGroupEnroll'
 
 function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
   const seen = new Set<string>()
@@ -108,7 +109,8 @@ export function HomeDashboard({
   const [unlockGym, setUnlockGym] = useState<string | 'all'>('all')
   const [lessonQuery, setLessonQuery] = useState('')
   const [gymScope, setGymScope] = useState<GymScope>({ kind: 'desk' })
-  const [campPickId, setCampPickId] = useState<string | null>(null)
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null)
+  const [addGroupFor, setAddGroupFor] = useState<string | null>(null)
   const [pickHint, setPickHint] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -201,9 +203,11 @@ export function HomeDashboard({
         athletes.map((a) => (a.id === athleteId ? withEventMembership(a, eventId, true) : a)),
       )
     }
-    setCampPickId(null)
+    setAddGroupFor(null)
+    setRowMenuId(null)
     setRefresh((n) => n + 1)
   }
+  const activeGroup = gymScope.kind === 'event' ? getTrainingEvent(gymScope.eventId) : null
   const lessonFirstNames = withAthletes.map((a) => a.name.split(' ')[0] || a.name)
   const lessonWithLabel =
     lessonFirstNames.length === 0
@@ -618,6 +622,15 @@ export function HomeDashboard({
               )
             }}
           />
+        {activeGroup && signedIn && onAthletesChange && (
+          <QuickGroupEnroll
+            event={activeGroup}
+            coach={signedIn}
+            athletes={athletes}
+            onAthletesChange={onAthletesChange}
+            onAdded={() => setRefresh((n) => n + 1)}
+          />
+        )}
         {roster.length === 0 && gymScope.kind !== 'event' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             {gymScope.kind === 'all'
@@ -630,7 +643,7 @@ export function HomeDashboard({
               className="mt-3 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 text-sm"
               placeholder={
                 gymScope.kind === 'event'
-                  ? 'Search this camp, or type a name to add from any gym'
+                  ? 'Search this group, or type a name to add from any gym'
                   : gymScope.kind === 'all'
                     ? 'Search every profile'
                     : 'Search this gym'
@@ -657,7 +670,7 @@ export function HomeDashboard({
                     <span className="block text-xs text-[var(--muted)]">{roleLabel(a)}</span>
                     <GymBadge athlete={a} viewerGym={viewerGym} className="mt-1" />
                   </button>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     {gymScope.kind === 'event' && (
                       <button
                         type="button"
@@ -667,37 +680,56 @@ export function HomeDashboard({
                         Remove
                       </button>
                     )}
-                    {!trainsAtGym(a, viewerGym) && onAthletesChange && (
-                      <button
-                        type="button"
-                        className="text-[11px] font-semibold text-[var(--accent)]"
-                        onClick={() => addToThisGym(a)}
-                      >
-                        Add to this gym
-                      </button>
-                    )}
-                    {events.length > 0 && gymScope.kind !== 'event' && (
-                      <button
-                        type="button"
-                        className="text-[11px] font-semibold text-[var(--accent)]"
-                        onClick={() =>
-                          events.length === 1 ? addToCamp(a.id, events[0]!.id) : setCampPickId(a.id)
-                        }
-                      >
-                        Add to camp
-                      </button>
-                    )}
-                    {onViewProfile && (
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-[var(--accent)]"
-                        onClick={() => onViewProfile(a.id)}
-                      >
-                        View
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 text-xs font-bold text-[var(--muted)]"
+                      aria-label="More"
+                      onClick={() => setRowMenuId((id) => (id === a.id ? null : a.id))}
+                    >
+                      ···
+                    </button>
                   </div>
-                  {campPickId === a.id && events.length > 1 && (
+                  {rowMenuId === a.id && (
+                    <div className="flex w-full flex-wrap gap-2 border-t border-white/5 pt-2">
+                      {onViewProfile && (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-[var(--accent)]"
+                          onClick={() => {
+                            onViewProfile(a.id)
+                            setRowMenuId(null)
+                          }}
+                        >
+                          View
+                        </button>
+                      )}
+                      {!trainsAtGym(a, viewerGym) && onAthletesChange && (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-[var(--accent)]"
+                          onClick={() => {
+                            addToThisGym(a)
+                            setRowMenuId(null)
+                          }}
+                        >
+                          Add to this gym
+                        </button>
+                      )}
+                      {events.length > 0 && gymScope.kind !== 'event' && (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-[var(--accent)]"
+                          onClick={() => {
+                            if (events.length === 1) addToCamp(a.id, events[0]!.id)
+                            else setAddGroupFor(a.id)
+                          }}
+                        >
+                          Add to a group
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {addGroupFor === a.id && events.length > 1 && (
                     <div className="flex w-full flex-wrap gap-1 pt-1">
                       {events.map((event) => (
                         <button
@@ -733,7 +765,7 @@ export function HomeDashboard({
                       className="shrink-0 text-xs font-semibold text-[var(--accent)]"
                       onClick={() => toggleCampAthlete(a.id)}
                     >
-                      Add to camp
+                      Add to group
                     </button>
                   </div>
                 ))}
@@ -744,7 +776,7 @@ export function HomeDashboard({
                 {gymScope.kind === 'event'
                   ? lessonQuery.trim()
                     ? 'No network names match that search. Create their profile under More → Profiles or New athlete / shape test, then add them here.'
-                    : 'No one on this camp yet. Names from this gym are listed below so you can add them. Search any gym to add a visiting profile.'
+                    : 'No one on this group yet. Add a fast profile above, or pick a name from this gym below.'
                   : 'No names match that search. Try Search all if they train at another gym.'}
               </p>
             )}

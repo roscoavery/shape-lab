@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete, AthleteCoachNote, ProfileGesture } from '../types'
 import { AthleteAvatar } from './AthleteAvatar'
-import { profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
+import { harderShapeLine, profileFactLines, shoulderFirstPost } from '../lib/athleteFacts'
 import {
   canEditCoachNote,
   canWriteCoachNotes,
@@ -27,6 +27,7 @@ import {
   profilePasses,
   profilePosts,
   publishFeedPostResult,
+  publishTextPostResult,
   toggleFeedRepost,
   removeFeedPost,
   winOwnerId,
@@ -153,6 +154,37 @@ export function AthleteProfileCard({
   const reloadStories = () => {
     void loadStories().then(setStoriesFile)
   }
+
+  useEffect(() => {
+    const line = harderShapeLine(athlete)
+    if (!line || !onAthleteChange) return
+    if (athlete.intakeAnswers?.some((row) => row.questionId === 'harder-shape-post')) return
+    let cancelled = false
+    void publishTextPostResult({
+      authorId: athlete.id,
+      caption: line,
+      taggedIds: [],
+      channels: ['gym'],
+    }).then((got) => {
+      if (cancelled || !got.post) return
+      onAthleteChange({
+        ...athlete,
+        intakeAnswers: [
+          ...(athlete.intakeAnswers ?? []),
+          {
+            questionId: 'harder-shape-post',
+            prompt: 'Harder hold',
+            answer: line,
+            askedAt: new Date().toISOString(),
+          },
+        ],
+      })
+      reloadFeed()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [athlete.id, athlete.harderShape])
 
   useEffect(() => {
     reloadFeed()
@@ -295,9 +327,13 @@ export function AthleteProfileCard({
           {facts.slice(0, 6).map((row) => (
             <span
               key={row.label}
-              className="rounded-full bg-black/30 px-2.5 py-1 text-[11px] text-[var(--muted)]"
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                row.hot
+                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  : 'bg-black/30 text-white/85'
+              }`}
             >
-              <span className="text-white/70">{row.label}</span> {row.value}
+              {row.label} {row.value}
             </span>
           ))}
         </div>
@@ -325,7 +361,7 @@ export function AthleteProfileCard({
         </p>
       )}
 
-      {own && (
+      {viewer && (
         <div className="grid grid-cols-3 gap-2">
           <ShareBtn label="Story" hint="24 hours" onClick={() => setCompose('story')} />
           <ShareBtn label="Post" hint="Feed + page" onClick={() => setCompose('post')} />
@@ -534,16 +570,30 @@ export function AthleteProfileCard({
         />
       )}
 
-      <CoachAthleteActivity
-        athlete={athlete}
-        viewer={viewer}
-        athletes={athletes}
-        compact={variant === 'embed'}
-      />
+      <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+        <summary className="cursor-pointer text-sm font-semibold">
+          ◇ Training
+          <span className="ml-2 text-xs font-medium text-[var(--muted)]">homework · class · lessons</span>
+        </summary>
+        <div className="mt-3">
+          <CoachAthleteActivity
+            athlete={athlete}
+            viewer={viewer}
+            athletes={athletes}
+            compact
+          />
+        </div>
+      </details>
 
       {viewer && (privateOk || notes.length > 0) && (coach || notes.length > 0) && (
-        <section>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
+            ✎ Notes
+            <span className="ml-2 text-xs font-medium text-[var(--muted)]">
+              {notes.length === 0 ? 'none yet' : `${notes.length}`}
+            </span>
+          </summary>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             {coach ? 'Notes' : 'Notes from your coach'}
           </p>
           {classLive && coach && (
@@ -576,13 +626,8 @@ export function AthleteProfileCard({
               ))}
             </div>
           )}
-        </section>
-      )}
-
-      {write && (
-        <section className="flex flex-col gap-2">
           {writeNotes && onAddNote && (
-            <div className="flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2">
               <NoteAudiencePicker value={noteAudience} onChange={setNoteAudience} />
               <textarea
                 value={note}
@@ -604,34 +649,41 @@ export function AthleteProfileCard({
               </button>
             </div>
           )}
-          {onAddWin && (
-            <div className="flex flex-col gap-2">
-              <input
-                value={win}
-                onChange={(e) => setWin(e.target.value)}
-                placeholder="A win to log…"
-                className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={big} onChange={(e) => setBig(e.target.checked)} />
-                Big win — also the gym feed
-              </label>
-              {winError && <p className="text-sm text-[var(--bad)]">{winError}</p>}
-              <button
-                type="button"
-                disabled={!win.trim()}
-                onClick={() => {
-                  setWinError(null)
-                  onAddWin(win.trim(), big)
-                  setWin('')
-                }}
-                className="h-11 rounded-xl bg-white/10 text-sm font-semibold disabled:opacity-40"
-              >
-                Post win
-              </button>
-            </div>
-          )}
-        </section>
+        </details>
+      )}
+
+      {write && onAddWin && (
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
+            ★ Wins
+            <span className="ml-2 text-xs font-medium text-[var(--muted)]">log a hit</span>
+          </summary>
+          <div className="mt-3 flex flex-col gap-2">
+            <input
+              value={win}
+              onChange={(e) => setWin(e.target.value)}
+              placeholder="A win to log…"
+              className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={big} onChange={(e) => setBig(e.target.checked)} />
+              Big win — also the gym feed
+            </label>
+            {winError && <p className="text-sm text-[var(--bad)]">{winError}</p>}
+            <button
+              type="button"
+              disabled={!win.trim()}
+              onClick={() => {
+                setWinError(null)
+                onAddWin(win.trim(), big)
+                setWin('')
+              }}
+              className="h-11 rounded-xl bg-white/10 text-sm font-semibold disabled:opacity-40"
+            >
+              Post win
+            </button>
+          </div>
+        </details>
       )}
 
       {watchStories && (

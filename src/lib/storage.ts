@@ -158,6 +158,7 @@ export function loadSettings(): AppSettings {
     showAngles: false,
     voiceEnabled: true,
     notificationsEnabled: true,
+    themeColor: 'auto',
   }
   const raw = readJson<Partial<AppSettings> & { voiceCoaching?: boolean }>(SETTINGS_KEY, {})
   // Migrate older voiceCoaching key if present
@@ -169,6 +170,7 @@ export function loadSettings(): AppSettings {
     showAngles: raw.showAngles ?? false,
     voiceEnabled,
     notificationsEnabled: raw.notificationsEnabled ?? true,
+    themeColor: raw.themeColor ?? 'auto',
   }
 }
 

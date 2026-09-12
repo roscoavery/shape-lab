@@ -4,11 +4,25 @@
  */
 
 import { createId } from './storage'
-import { TUMBLE_SMART } from '../config/gyms'
+
+export type TrainingEventKind = 'school' | 'camp' | 'clinic' | 'other'
+
+export const TRAINING_EVENT_KINDS: { id: TrainingEventKind; label: string }[] = [
+  { id: 'school', label: 'School' },
+  { id: 'camp', label: 'Camp' },
+  { id: 'clinic', label: 'Clinic' },
+  { id: 'other', label: 'Other' },
+]
+
+export function eventKindLabel(kind?: TrainingEventKind | string): string {
+  return TRAINING_EVENT_KINDS.find((k) => k.id === kind)?.label ?? 'Group'
+}
 
 export type TrainingEvent = {
   id: string
   name: string
+  /** school / camp / clinic / other — stays off the gym desk. */
+  kind?: TrainingEventKind
   hostGym?: string
   athleteIds: string[]
   coachIds: string[]
@@ -89,14 +103,17 @@ export function saveTrainingEvent(row: TrainingEvent): TrainingEvent {
 export function createTrainingEvent(opts: {
   name: string
   coachId: string
+  kind?: TrainingEventKind
   hostGym?: string
   athleteIds?: string[]
 }): TrainingEvent {
   const now = new Date().toISOString()
+  const name = opts.name.trim()
   return saveTrainingEvent({
     id: createId('evt'),
-    name: opts.name.trim(),
-    hostGym: opts.hostGym?.trim() || TUMBLE_SMART,
+    name,
+    kind: opts.kind ?? 'other',
+    hostGym: opts.hostGym?.trim() || name,
     athleteIds: [...new Set(opts.athleteIds ?? [])],
     coachIds: [opts.coachId],
     createdAt: now,

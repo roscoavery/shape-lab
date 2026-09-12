@@ -14,6 +14,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
+import { applyAppTheme, FAVORITE_COLORS } from './lib/profileTheme'
 import { AppNav } from './components/AppNav'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
@@ -480,6 +481,16 @@ export default function App() {
     saveSettings(settings)
   }, [settings])
 
+  const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
+
+  useEffect(() => {
+    const pick =
+      !settings.themeColor || settings.themeColor === 'auto'
+        ? activeProfile?.favoriteColor
+        : settings.themeColor
+    applyAppTheme(pick)
+  }, [settings.themeColor, activeProfile?.favoriteColor])
+
   useEffect(() => {
     saveTab(tab)
     if (tab === 'compare') setCompareOpened(true)
@@ -704,7 +715,6 @@ export default function App() {
   const ryanEdit = isRyanAthlete(
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
-  const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
   const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
@@ -1437,6 +1447,38 @@ export default function App() {
               tab and <strong className="text-[var(--text)]">Coach</strong> stay hidden unless
               Ryan is unlocked.
             </p>
+          </section>
+          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Theme</h2>
+            <p className="mb-3">
+              Default is your favorite color. Pick another build here if you want
+              the whole app in a different wash.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSettings((s) => ({ ...s, themeColor: 'auto' }))}
+                className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+                  !settings.themeColor || settings.themeColor === 'auto'
+                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    : 'border border-[var(--panel-border)]'
+                }`}
+              >
+                Favorite color
+              </button>
+              {FAVORITE_COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  title={c.label}
+                  onClick={() => setSettings((s) => ({ ...s, themeColor: c.id }))}
+                  className={`h-9 w-9 rounded-full border-2 ${
+                    settings.themeColor === c.id ? 'border-white' : 'border-transparent'
+                  }`}
+                  style={{ background: c.swatch }}
+                />
+              ))}
+            </div>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Reminders</h2>

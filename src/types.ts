@@ -375,6 +375,8 @@ export type AppSettings = {
   voiceEnabled: boolean
   /** In-app + browser reminders (homework, likes, follows, wins). */
   notificationsEnabled: boolean
+  /** App chrome color. auto = signed-in favorite color. */
+  themeColor?: FavoriteColor | 'auto'
 }
 
 /**

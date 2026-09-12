@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { TUMBLE_SMART, sameGym } from '../../config/gyms'
 import type { GymScope } from '../../lib/gymScope'
 import {
+  TRAINING_EVENT_KINDS,
   createTrainingEvent,
   deleteTrainingEvent,
+  eventKindLabel,
   type TrainingEvent,
+  type TrainingEventKind,
 } from '../../lib/trainingEvents'
 
 type Props = {
@@ -38,20 +41,24 @@ export function TodayGymScope({
 }: Props) {
   const [making, setMaking] = useState(false)
   const [name, setName] = useState('')
-  const [hostGym, setHostGym] = useState(viewerGym || TUMBLE_SMART)
+  const [kind, setKind] = useState<TrainingEventKind>('school')
+  const [hostGym, setHostGym] = useState('')
 
   const activeEvent = scope.kind === 'event' ? events.find((e) => e.id === scope.eventId) : null
+  const otherGyms = gyms.filter((gym) => !sameGym(gym, viewerGym) && !sameGym(gym, TUMBLE_SMART))
 
   const makeEvent = () => {
     const trimmed = name.trim()
     if (!trimmed) return
     const event = createTrainingEvent({
       name: trimmed,
+      kind,
       coachId,
-      hostGym: hostGym.trim() || viewerGym,
+      hostGym: hostGym.trim() || trimmed,
       athleteIds: seedAthleteIds,
     })
     setName('')
+    setHostGym('')
     setMaking(false)
     onEventsChange()
     onCreated?.(event)
@@ -60,16 +67,6 @@ export function TodayGymScope({
 
   return (
     <div className="mt-3 space-y-2">
-      <details className="rounded-lg bg-[#0d1218] px-3 py-2">
-        <summary className="cursor-pointer text-xs font-semibold text-[var(--text)]">
-          Who shows here
-        </summary>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
-          This gym is the desk in front of you. Search all is the whole network.
-          A camp list stays separate from the main desk. Add someone to a camp
-          without taking them off their home gym.
-        </p>
-      </details>
       <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
@@ -85,53 +82,76 @@ export function TodayGymScope({
         >
           Search all
         </button>
-        {gyms.map((gym) => (
+        {activeEvent && (
           <button
-            key={gym}
             type="button"
-            className={chipClass(scope.kind === 'gym' && sameGym(scope.gym, gym))}
-            onClick={() => onScope({ kind: 'gym', gym })}
+            className={chipClass(true)}
+            onClick={() => onScope({ kind: 'event', eventId: activeEvent.id })}
           >
-            {gym}
+            {activeEvent.name}
           </button>
-        ))}
-        {events.map((event) => (
-          <button
-            key={event.id}
-            type="button"
-            className={chipClass(scope.kind === 'event' && scope.eventId === event.id)}
-            onClick={() => onScope({ kind: 'event', eventId: event.id })}
-          >
-            {event.name}
-          </button>
-        ))}
+        )}
         <button
           type="button"
           className={chipClass(making)}
           onClick={() => setMaking((v) => !v)}
         >
-          + Camp / clinic
+          + Add group
         </button>
       </div>
-      {scope.kind === 'desk' && making && (
-        <p className="text-[11px] text-[var(--muted)]">
-          {viewerGym} athletes plus class and private-lesson names.
-        </p>
+
+      {otherGyms.length > 0 && (
+        <details className="rounded-lg bg-[#0d1218] px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold text-[var(--muted)]">
+            Other gyms ({otherGyms.length})
+          </summary>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {otherGyms.map((gym) => (
+              <button
+                key={gym}
+                type="button"
+                className={chipClass(scope.kind === 'gym' && sameGym(scope.gym, gym))}
+                onClick={() => onScope({ kind: 'gym', gym })}
+              >
+                {gym}
+              </button>
+            ))}
+          </div>
+        </details>
       )}
-      {scope.kind === 'all' && (
-        <p className="text-[11px] text-[var(--muted)]">Whole network. Other gyms stay labeled.</p>
+
+      {events.length > 0 && (
+        <details className="rounded-lg bg-[#0d1218] px-3 py-2" open={scope.kind === 'event'}>
+          <summary className="cursor-pointer text-xs font-semibold text-[var(--muted)]">
+            School / camp / clinic ({events.length})
+          </summary>
+          <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted)]">
+            These lists stay off the gym desk. Open one only when you are with that group.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {events.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                className={chipClass(scope.kind === 'event' && scope.eventId === event.id)}
+                onClick={() => onScope({ kind: 'event', eventId: event.id })}
+              >
+                {eventKindLabel(event.kind)} · {event.name}
+              </button>
+            ))}
+          </div>
+        </details>
       )}
-      {scope.kind === 'gym' && (
-        <p className="text-[11px] text-[var(--muted)]">Home gym or class gym is {scope.gym}.</p>
-      )}
+
       {activeEvent && (
         <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2">
-          <p className="text-sm font-semibold">{activeEvent.name}</p>
+          <p className="text-sm font-semibold">
+            {eventKindLabel(activeEvent.kind)} · {activeEvent.name}
+          </p>
           <p className="text-[11px] text-[var(--muted)]">
-            {activeEvent.hostGym ? `${activeEvent.hostGym} · ` : ''}
             {activeEvent.athleteIds.length}{' '}
-            {activeEvent.athleteIds.length === 1 ? 'athlete' : 'athletes'}. Home
-            gym stays put. Add them to this gym if they take class here.
+            {activeEvent.athleteIds.length === 1 ? 'athlete' : 'athletes'}. They
+            do not show on This gym unless they also take class there.
           </p>
           <button
             type="button"
@@ -142,20 +162,35 @@ export function TodayGymScope({
               onScope({ kind: 'desk' })
             }}
           >
-            Delete this camp
+            Delete this group
           </button>
         </div>
       )}
+
       {making && (
         <div className="grid gap-2 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
-          <p className="text-sm font-semibold">New camp or travel group</p>
+          <p className="text-sm font-semibold">New group</p>
           <p className="text-[11px] text-[var(--muted)]">
-            Anyone already tapped for a lesson is added. Tumble Smart athletes
-            can sit on this camp and still stay on this gym.
+            School, camp, clinic, or other. Athletes you add stay on this list
+            and off the main gym view.
           </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TRAINING_EVENT_KINDS.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                className={chipClass(kind === row.id)}
+                onClick={() => setKind(row.id)}
+              >
+                {row.label}
+              </button>
+            ))}
+          </div>
           <input
             className="h-10 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
-            placeholder="Camp or clinic name"
+            placeholder={
+              kind === 'school' ? 'School name' : kind === 'camp' ? 'Camp name' : 'Group name'
+            }
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -164,7 +199,7 @@ export function TodayGymScope({
           />
           <input
             className="h-10 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
-            placeholder="Host gym"
+            placeholder="Place (optional)"
             value={hostGym}
             onChange={(e) => setHostGym(e.target.value)}
           />
@@ -174,7 +209,7 @@ export function TodayGymScope({
             onClick={makeEvent}
             className="h-10 rounded-lg bg-[var(--accent)] text-sm font-semibold text-[#06281f] disabled:opacity-40"
           >
-            Create group
+            Create {kind}
           </button>
         </div>
       )}
