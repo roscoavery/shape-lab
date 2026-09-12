@@ -1,4 +1,18 @@
 import type { Landmark } from '../types'
+import { looksLikeBackgroundProp, torsoCenter } from './poseSubject'
+
+function torsoJump(a: Landmark[], b: Landmark[]): number {
+  const ca = torsoCenter(a)
+  const cb = torsoCenter(b)
+  if (!ca || !cb) return 0
+  return Math.hypot(ca.x - cb.x, ca.y - cb.y)
+}
+
+function usableLm(lm: Landmark[] | null | undefined): Landmark[] | null {
+  if (!lm || lm.length < 33) return null
+  if (looksLikeBackgroundProp(lm)) return null
+  return lm
+}
 
 export type PoseSample = {
   /** Seconds from the start of the recorded clip. */
@@ -67,11 +81,11 @@ function lerpLandmarks(a: Landmark[], b: Landmark[], u: number): Landmark[] {
 
 export function landmarksAt(track: PoseTrack | null | undefined, t: number): Landmark[] | null {
   if (!track || track.length === 0) return null
-  if (t <= track[0]!.t) return track[0]!.lm
+  if (t <= track[0]!.t) return usableLm(track[0]!.lm)
   const last = track[track.length - 1]!
   // Do not freeze the last pose onto furniture after the hold ends.
-  if (t > last.t + 0.12) return null
-  if (t >= last.t) return last.lm
+  if (t > last.t + 0.08) return null
+  if (t >= last.t) return usableLm(last.lm)
   let lo = 0
   let hi = track.length - 1
   while (lo < hi - 1) {
@@ -82,8 +96,13 @@ export function landmarksAt(track: PoseTrack | null | undefined, t: number): Lan
   const a = track[lo]!
   const b = track[hi]!
   const span = b.t - a.t
-  if (span <= 0.0001) return a.lm
-  return lerpLandmarks(a.lm, b.lm, (t - a.t) / span)
+  if (span <= 0.0001) return usableLm(a.lm)
+  // A steal onto a lamp / stand looks like a teleport. Do not draw that line.
+  if (torsoJump(a.lm, b.lm) > 0.16) {
+    const nearer = t - a.t <= b.t - t ? a.lm : b.lm
+    return usableLm(nearer)
+  }
+  return usableLm(lerpLandmarks(a.lm, b.lm, (t - a.t) / span))
 }
 
 export function serializePoseTrack(track: PoseTrack): string {

@@ -1,21 +1,14 @@
 /**
  * Hold-challenge analysis player.
- * Watch the camera clip with a live overlay you can switch before saving:
- *   Side view · one line  (hands–shoulders–hips–knees–ankles–toes)
- *   Front · left & right
- * Save burns that overlay into a real video file and opens Photos / Files.
+ * Overlay (skeleton, score, clock) is on this screen only.
+ * Save shares the original camera file immediately — real time, full
+ * quality — so Photos / Files opens on the first tap.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getShape } from '../config/shapes'
 import { formatSeconds } from '../lib/handstandHold'
 import { looksLikeBackgroundProp } from '../lib/poseSubject'
-import {
-  burnOverlayVideo,
-  burnedOverlayKey,
-  getBurnedOverlay,
-  rememberBurnedOverlay,
-} from '../lib/overlayExport'
 import { landmarksAt, type PoseTrack } from '../lib/poseTrack'
 import {
   extForVideoType,
@@ -42,10 +35,9 @@ type Props = {
   playheadSec?: number
   mirror?: boolean
   filename: string
+  /** Kept so older call sites still type-check. */
   clipId?: string | null
   compact?: boolean
-  /** When false, overlay file is encoded only after you tap Prepare save. */
-  encodeOnReady?: boolean
   athleteId?: string | null
   /** Fill the parent (fullscreen hold review). */
   fill?: boolean
@@ -60,9 +52,7 @@ export function HoldReplayPlayer({
   playheadSec,
   mirror = true,
   filename,
-  clipId = null,
   compact = false,
-  encodeOnReady = false,
   athleteId = null,
   fill = false,
 }: Props) {
@@ -75,12 +65,8 @@ export function HoldReplayPlayer({
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [prepared, setPrepared] = useState<Blob | null>(null)
-  const [prep, setPrep] = useState(0)
-  const [busy, setBusy] = useState(false)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
-  const genRef = useRef(0)
 
   useEffect(() => {
     saveJointDrawMode(mode)
@@ -146,8 +132,7 @@ export function HoldReplayPlayer({
           const t = video.currentTime
           const clock = Math.max(0, Math.min(holdSeconds, t - clockOffsetSec))
           const rawLm = landmarksAt(track, t)
-          const lm =
-            rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
+          const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
           const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
           if (showOverlay) {
             drawPoseOverlay(ctx, lm, {
@@ -185,142 +170,50 @@ export function HoldReplayPlayer({
       video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
     }
-  }, [src, blob, track, mode, mirror, holdSeconds, clockOffsetSec, playheadSec, showOverlay, showAngles, videoReady])
-
-  const runEncode = useCallback(async () => {
-    if (!blob) {
-      setFlash('Clip is still loading — wait a moment, then tap Prepare save.')
-      return
-    }
-    const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
-    const cached = getBurnedOverlay(key)
-    if (cached) {
-      setPrepared(cached)
-      setBusy(false)
-      setPrep(1)
-      return
-    }
-    const gen = ++genRef.current
-    setPrepared(null)
-    setPrep(0)
-    setBusy(true)
-    setFlash(null)
-    try {
-      const out = await burnOverlayVideo({
-        source: blob,
-        track,
-        mode,
-        mirror,
-        holdSeconds,
-        clockOffsetSec,
-        showSkeleton: showOverlay,
-        showAngles,
-        cancelled: () => gen !== genRef.current,
-        onProgress: (p) => {
-          if (gen === genRef.current) setPrep(p)
-        },
-      })
-      if (gen !== genRef.current) return
-      rememberBurnedOverlay(key, out)
-      setPrepared(out)
-      setPrep(1)
-    } catch (err) {
-      if (gen !== genRef.current) return
-      const msg = err instanceof Error ? err.message : ''
-      if (msg === 'cancelled') return
-      setPrepared(blob)
-      setFlash('Could not burn the overlay — Save still puts the camera clip in Photos.')
-      window.setTimeout(() => setFlash(null), 4000)
-    } finally {
-      if (gen === genRef.current) setBusy(false)
-    }
-  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, showOverlay, showAngles])
-
-  useEffect(() => {
-    const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
-    const cached = getBurnedOverlay(key)
-    if (cached) {
-      setPrepared(cached)
-      setBusy(false)
-      setPrep(1)
-      return
-    }
-    setPrepared(null)
-    if (!encodeOnReady || !blob) return
-    void runEncode()
-    return () => {
-      genRef.current += 1
-    }
-  }, [blob, track, mode, mirror, holdSeconds, clockOffsetSec, clipId, encodeOnReady, runEncode, showOverlay, showAngles])
+  }, [
+    src,
+    blob,
+    track,
+    mode,
+    mirror,
+    holdSeconds,
+    clockOffsetSec,
+    playheadSec,
+    showOverlay,
+    showAngles,
+    videoReady,
+  ])
 
   const save = async () => {
+    if (!blob) {
+      setFlash('Clip is still loading — wait a moment, then tap Save again.')
+      window.setTimeout(() => setFlash(null), 4000)
+      return
+    }
     setSaving(true)
     setFlash(null)
     try {
-      let fileBlob = prepared
-      if (!fileBlob) {
-        if (!blob) {
-          setFlash('Clip is still loading — wait a moment, then tap Save again.')
-          return
-        }
-        const key = burnedOverlayKey(clipId, mode, mirror, showOverlay, showAngles)
-        const cached = getBurnedOverlay(key)
-        if (cached) {
-          fileBlob = cached
-          setPrepared(cached)
-        } else {
-          setBusy(true)
-          const out = await burnOverlayVideo({
-            source: blob,
-            track,
-            mode,
-            mirror,
-            holdSeconds,
-            clockOffsetSec,
-            showSkeleton: showOverlay,
-            showAngles,
-            cancelled: () => false,
-            onProgress: (p) => setPrep(p),
-          })
-          rememberBurnedOverlay(key, out)
-          setPrepared(out)
-          setPrep(1)
-          fileBlob = out
-        }
-      }
-      const ext = extForVideoType(fileBlob.type || filename)
+      const ext = extForVideoType(blob.type || filename)
       const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-      const result: SaveVideoResult = await saveVideoToDevice(fileBlob, name)
+      const result: SaveVideoResult = await saveVideoToDevice(blob, name)
       setFlash(saveResultMessage(result))
-    } catch (err) {
-      const raw = blob
-      if (raw) {
-        const ext = extForVideoType(raw.type || filename)
-        const name = filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-        const result: SaveVideoResult = await saveVideoToDevice(raw, name)
-        setFlash(
-          saveResultMessage(result) ||
-            (err instanceof Error ? err.message : 'Saved the camera clip without overlay.'),
-        )
-      } else {
-        setFlash('Could not save that hold clip.')
-      }
+    } catch {
+      setFlash('Could not save that hold clip.')
     } finally {
-      setBusy(false)
       setSaving(false)
       window.setTimeout(() => setFlash(null), 5000)
     }
   }
 
-  const frameH = fill
-    ? 'min-h-0 flex-1'
-    : compact
-      ? 'max-h-56'
-      : 'max-h-[70vh]'
+  const frameH = fill ? 'min-h-0 flex-1' : compact ? 'max-h-56' : 'max-h-[70vh]'
 
   return (
     <div className={fill ? 'flex h-full min-h-0 flex-col' : ''}>
-      <div className={`overflow-hidden bg-black ${fill ? 'flex min-h-0 flex-1 flex-col rounded-none' : 'rounded-md'}`}>
+      <div
+        className={`overflow-hidden bg-black ${
+          fill ? 'flex min-h-0 flex-1 flex-col rounded-none' : 'rounded-md'
+        }`}
+      >
         <video
           ref={videoRef}
           className={videoReady ? 'hidden' : `block w-full bg-black object-contain ${frameH}`}
@@ -365,91 +258,20 @@ export function HoldReplayPlayer({
           </span>
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Joint overlay
-        </span>
+
+      <div className={`mt-2 flex flex-wrap items-center gap-2 ${fill ? 'px-1' : ''}`}>
         <button
           type="button"
-          onClick={() => setMode('auto')}
-          className={`rounded-full px-3 py-1 text-[12px] ${
-            mode === 'auto'
-              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
-              : 'border border-[var(--panel-border)] text-[var(--muted)]'
-          }`}
-        >
-          Auto · both legs
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('merged')}
-          className={`rounded-full px-3 py-1 text-[12px] ${
-            mode === 'merged'
-              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
-              : 'border border-[var(--panel-border)] text-[var(--muted)]'
-          }`}
-        >
-          Side view · one line
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('split')}
-          className={`rounded-full px-3 py-1 text-[12px] ${
-            mode === 'split'
-              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
-              : 'border border-[var(--panel-border)] text-[var(--muted)]'
-          }`}
-        >
-          Front · left & right
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowOverlay((on) => !on)}
-          className={`rounded-full px-3 py-1 text-[12px] ${
-            showOverlay
-              ? 'border border-[var(--panel-border)] text-[var(--muted)]'
-              : 'bg-[var(--accent)] font-semibold text-[#06281f]'
-          }`}
-        >
-          {showOverlay ? 'Hide skeleton' : 'Show skeleton'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAngles((on) => !on)}
-          disabled={!showOverlay}
-          className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${
-            showOverlay && showAngles
-              ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
-              : 'border border-[var(--panel-border)] text-[var(--muted)]'
-          }`}
-        >
-          {showAngles ? 'Angles on' : 'Show angles'}
-        </button>
-      </div>
-      <p className="mt-1 text-[11px] leading-snug text-[var(--muted)]">
-        {mode === 'auto'
-          ? 'Left and right while you kick up. One line when you are stacked sideways — both legs stay if they are apart. Score and stopwatch stay on the clip.'
-          : mode === 'merged'
-            ? 'One line: hands, elbows, shoulders, hips, knees, ankles, toes. Score and stopwatch stay on the clip.'
-            : 'Left and right drawn separately — shoulders, elbows, hips, and ankles. Score and stopwatch stay on the clip.'}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={!blob || busy || saving}
+          disabled={!blob || saving}
           onClick={() => void save()}
           className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
         >
-          {saving
-            ? 'Opening share…'
-            : busy
-              ? `Preparing video file… ${Math.round(prep * 100)}%`
-              : 'Save video to Photos'}
+          {saving ? 'Opening Photos…' : 'Save to Photos'}
         </button>
         {athleteId && (
           <button
             type="button"
-            disabled={!blob || busy}
+            disabled={!blob}
             onClick={() => {
               if (!blob || !athleteId) return
               void uploadAthleteVideo({
@@ -470,16 +292,78 @@ export function HoldReplayPlayer({
             }}
             className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
           >
-            Save to video library
+            Video library
           </button>
         )}
-        {busy && (
-          <span className="text-[11px] text-[var(--muted)]">
-            Burning the one-line overlay, stopwatch, and live score into the file.
-          </span>
-        )}
+        <p className="text-[11px] leading-snug text-[var(--muted)]">
+          Saves the camera clip at regular speed. Lines stay on this screen.
+        </p>
       </div>
-      {flash && <p className="mt-1 text-[11px] text-[var(--accent)]">{flash}</p>}
+
+      <details className={`mt-1 ${fill ? 'px-1' : ''}`}>
+        <summary className="cursor-pointer text-[11px] font-semibold text-[var(--muted)]">
+          Lines on this clip
+        </summary>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMode('auto')}
+            className={`rounded-full px-3 py-1 text-[12px] ${
+              mode === 'auto'
+                ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Auto
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('merged')}
+            className={`rounded-full px-3 py-1 text-[12px] ${
+              mode === 'merged'
+                ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Side · one line
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('split')}
+            className={`rounded-full px-3 py-1 text-[12px] ${
+              mode === 'split'
+                ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Front · both sides
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowOverlay((on) => !on)}
+            className={`rounded-full px-3 py-1 text-[12px] ${
+              showOverlay
+                ? 'border border-[var(--panel-border)] text-[var(--muted)]'
+                : 'bg-[var(--accent)] font-semibold text-[#06281f]'
+            }`}
+          >
+            {showOverlay ? 'Hide skeleton' : 'Show skeleton'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAngles((on) => !on)}
+            disabled={!showOverlay}
+            className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${
+              showOverlay && showAngles
+                ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            {showAngles ? 'Angles on' : 'Show angles'}
+          </button>
+        </div>
+      </details>
+      {flash && <p className={`mt-1 text-[11px] text-[var(--accent)] ${fill ? 'px-1' : ''}`}>{flash}</p>}
     </div>
   )
 }

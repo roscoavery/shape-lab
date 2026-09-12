@@ -261,7 +261,6 @@ export function Tasks2Panel({
   const [overlayStream, setOverlayStream] = useState<MediaStream | null>(null)
   const [holdTick, setHoldTick] = useState<HoldTick | null>(null)
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
-  const [holdClipUrls, setHoldClipUrls] = useState<Record<string, string>>({})
   const [deviceSave, setDeviceSave] = useState<{
     blob: Blob
     filename: string
@@ -632,7 +631,6 @@ export function Tasks2Panel({
   const revokeClipUrls = useCallback(() => {
     for (const url of clipUrlsRef.current.values()) URL.revokeObjectURL(url)
     clipUrlsRef.current.clear()
-    setHoldClipUrls({})
   }, [])
 
   const finishHoldRun = useCallback(
@@ -788,7 +786,6 @@ export function Tasks2Panel({
       replayUrlRef.current = replayUrl
       setReplayUrl(replayUrl)
       setActiveClipId(replayCaptureId)
-      setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
 
       const steps: FlowStepSnap[] =
         collected.length > 0
@@ -1343,7 +1340,6 @@ export function Tasks2Panel({
     replayUrlRef.current = url
     setReplayUrl(url)
     setActiveClipId(mainId)
-    setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
     setReport(r)
     setSeekTo(null)
     const views: SnapView[] = []
@@ -1370,7 +1366,6 @@ export function Tasks2Panel({
     if (!blob) return null
     const url = URL.createObjectURL(blob)
     clipUrlsRef.current.set(clipId, url)
-    setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
     return url
   }, [])
 
@@ -1627,8 +1622,41 @@ export function Tasks2Panel({
     onRegisterHoldDone?.(requestHoldDone)
   }, [onRegisterHoldDone, requestHoldDone])
 
+  const closeHoldWatch = useCallback(() => {
+    setPhase('idle')
+    setCue('')
+    onExitFullscreen?.()
+  }, [onExitFullscreen])
+
+  const saveHoldToPhotos = useCallback(
+    async (clipId: string | null | undefined, index?: number) => {
+      if (!clipId || !report) {
+        setFlash('That clip is not ready yet.')
+        window.setTimeout(() => setFlash(null), 3500)
+        return
+      }
+      const file = getRememberedBlob(clipId)
+      if (!file) {
+        setFlash('Clip is still loading — wait a moment, then tap Save again.')
+        window.setTimeout(() => setFlash(null), 3500)
+        return
+      }
+      try {
+        const result = await saveVideoToDevice(
+          file,
+          videoFileName(report, file.type || 'video/mp4', index),
+        )
+        setFlash(saveResultMessage(result))
+      } catch {
+        setFlash('Could not save that hold clip.')
+      }
+      window.setTimeout(() => setFlash(null), 5000)
+    },
+    [report],
+  )
+
   useEffect(() => {
-    if (phase !== 'replay' && phase !== 'review') return
+    if (phase !== 'replay' && phase !== 'review' && phase !== 'idle') return
     if (!report?.holdAttempts?.length) return
     let changed = false
     for (const h of report.holdAttempts) {
@@ -1638,15 +1666,18 @@ export function Tasks2Panel({
       clipUrlsRef.current.set(h.clipId, URL.createObjectURL(remembered))
       changed = true
     }
-    if (changed) setHoldClipUrls(Object.fromEntries(clipUrlsRef.current))
+    if (changed) setReplayUrl((cur) => cur ?? [...clipUrlsRef.current.values()][0] ?? null)
   }, [phase, report])
 
   useEffect(() => {
     if (phase !== 'replay' && phase !== 'review') return
     const onPop = () => {
       if (phase === 'replay') {
-        setPhase('review')
-        setCue('')
+        if (seq.mode === 'hs-hold' || report?.holdAttempts?.length) closeHoldWatch()
+        else {
+          setPhase('review')
+          setCue('')
+        }
         try {
           window.history.pushState({ shapeLab: 'hold-review' }, '')
         } catch {
@@ -1656,7 +1687,7 @@ export function Tasks2Panel({
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
-  }, [phase])
+  }, [phase, closeHoldWatch, seq.mode, report])
 
   useEffect(() => {
     if (seekTo == null) return
@@ -1768,10 +1799,8 @@ export function Tasks2Panel({
                 aria-hidden
               />
               <div>
-                <p className="text-base font-bold leading-snug">Loading your hold clips…</p>
-                <p className="mt-0.5 text-[12px] text-white/70">
-                  Score, stopwatch, and cues for each kick-up.
-                </p>
+                <p className="text-base font-bold leading-snug">Getting your clips…</p>
+                <p className="mt-0.5 text-[12px] text-white/70">Watch, save, or go again in a moment.</p>
               </div>
             </div>
           ) : phase === 'holding' ? (
@@ -1873,10 +1902,9 @@ export function Tasks2Panel({
               className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#f0b429]"
               aria-hidden
             />
-            <p className="mt-4 text-xl font-black">Loading your hold clips…</p>
+            <p className="mt-4 text-xl font-black">Getting your clips…</p>
             <p className="mt-2 max-w-sm text-sm leading-snug text-white/75">
-              Packing what you just did — each kick-up with the live score, stopwatch, and written
-              cues.
+              Almost there — then watch, save, or go again.
             </p>
           </div>,
           document.body,
@@ -2001,6 +2029,80 @@ export function Tasks2Panel({
         </p>
       </div>
 
+      {phase === 'idle' && report?.holdAttempts && report.holdAttempts.length > 0 && (
+        <div className="mb-3 rounded-2xl border border-[#f0b429]/40 bg-[#16120a] p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f0b429]">
+            Your holds
+          </p>
+          <p className="mt-0.5 text-lg font-black text-white">
+            Best{' '}
+            <span className="tabular-nums text-[#f0b429]">
+              {formatSeconds(report.bestHoldSeconds ?? 0)}
+            </span>
+            <span className="ml-2 text-sm font-semibold text-white/60">
+              {report.holdAttempts.length} clip{report.holdAttempts.length === 1 ? '' : 's'}
+            </span>
+          </p>
+          <ul className="mt-2 space-y-2">
+            {report.holdAttempts.map((h) => (
+              <li
+                key={h.index}
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 ${
+                  h.highlighted ? 'border-[#f0b429] bg-black/40' : 'border-white/10 bg-black/25'
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white">
+                    {h.highlighted ? 'Longest' : `Hold ${h.index}`}
+                    <span className="ml-2 tabular-nums text-[#f0b429]">
+                      {formatSeconds(h.holdSeconds)}
+                    </span>
+                  </p>
+                  {h.cues[0] && (
+                    <p className="mt-0.5 text-[11px] leading-snug text-white/65">{h.cues[0]}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => playHoldClip(h.clipId, h.playheadSec)}
+                    className="rounded-lg border border-white/20 px-2.5 py-1.5 text-[12px] font-semibold text-white"
+                  >
+                    Watch
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!h.clipId}
+                    onClick={() => void saveHoldToPhotos(h.clipId, h.index)}
+                    className="rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-[12px] font-semibold text-[#06281f] disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dropHoldFromLog(h.index)}
+                    className="rounded-lg px-2 py-1.5 text-[11px] text-[var(--warn)]"
+                  >
+                    Drop
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {holdLogged ? (
+            <button
+              type="button"
+              onClick={dontLogHoldRun}
+              className="mt-2 text-[11px] text-[var(--warn)] underline"
+            >
+              Don’t log this run
+            </button>
+          ) : (
+            <p className="mt-2 text-[11px] text-white/50">This run is not in your homework log.</p>
+          )}
+        </div>
+      )}
+
       <ol ref={seqListRef} className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {FLOW_SEQUENCES.map((s) => {
           const count = progress?.completions[s.id] ?? 0
@@ -2116,19 +2218,16 @@ export function Tasks2Panel({
                     </span>
                   </p>
                   <p className="mt-0.5 text-[12px] text-white/60">
-                    Tap a clip below. Gold is your longest.
+                    Watch here. Save puts the camera clip in Photos at regular speed.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPhase('review')
-                      setCue('')
-                    }}
+                    onClick={closeHoldWatch}
                     className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
                   >
-                    Cues
+                    Done
                   </button>
                   <button
                     type="button"
@@ -2158,7 +2257,6 @@ export function Tasks2Panel({
                     }
                     mirror={mirror}
                     clipId={activeClipId}
-                    encodeOnReady={false}
                     fill
                     filename={videoFileName(
                       report,
@@ -2346,7 +2444,7 @@ export function Tasks2Panel({
         document.body,
       )}
 
-      {phase === 'review' && report && (
+      {phase === 'review' && report && !holdMode && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             {holdMode
@@ -2359,133 +2457,6 @@ export function Tasks2Panel({
           </p>
           <h3 className="text-sm font-semibold text-[var(--text)]">{report.sequenceName}</h3>
           <p className="mt-1 text-sm leading-snug text-[var(--text)]">{report.summary}</p>
-          {holdMode && holdLogged ? (
-            <button
-              type="button"
-              onClick={dontLogHoldRun}
-              className="mt-2 rounded-md border border-[var(--warn)]/50 px-2 py-1 text-xs text-[var(--warn)]"
-            >
-              Don’t log this run
-            </button>
-          ) : null}
-          {holdMode && !holdLogged ? (
-            <p className="mt-2 text-xs text-[var(--muted)]">This run is not in your homework log.</p>
-          ) : null}
-          {holdMode && report.holdAttempts && report.holdAttempts.length > 0 ? (
-            <ul className="mt-3 space-y-2">
-              {report.holdAttempts.map((h) => {
-                const still = snaps.find((s) => s.rep === h.index)
-                const clipUrl = h.clipId ? holdClipUrls[h.clipId] : null
-                return (
-                  <li
-                    key={h.index}
-                    className={`overflow-hidden rounded-md border bg-[#0d1218] ${
-                      h.highlighted
-                        ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]'
-                        : 'border-[var(--panel-border)]'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-2">
-                      <p className="text-sm font-semibold text-[var(--text)]">
-                        {h.highlighted ? `Longest · Hold ${h.index}` : `Hold ${h.index}`}
-                      </p>
-                      <p className="text-lg font-black tabular-nums text-[#f0b429]">
-                        {formatSeconds(h.holdSeconds)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 px-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => dropHoldFromLog(h.index)}
-                        className="rounded-md border border-[var(--warn)]/50 px-2 py-1 text-[11px] text-[var(--warn)]"
-                      >
-                        Drop — tracking missed me
-                      </button>
-                    </div>
-                    {h.clipId && (clipUrl || getRememberedBlob(h.clipId)) ? (
-                      <div className="mt-2 px-2">
-                        <HoldReplayPlayer
-                          src={clipUrl || ''}
-                          blob={getRememberedBlob(h.clipId)}
-                          track={getRememberedPoseTrack(h.clipId)}
-                          holdSeconds={h.holdSeconds}
-                          clockOffsetSec={h.clockOffsetSec ?? 0}
-                          playheadSec={h.playheadSec}
-                          mirror={mirror}
-                          clipId={h.clipId}
-                          compact={!h.highlighted}
-                          encodeOnReady={false}
-                          filename={videoFileName(
-                            report,
-                            getRememberedBlob(h.clipId)?.type || 'video/mp4',
-                            h.index,
-                          )}
-                          athleteId={athleteId}
-                        />
-                      </div>
-                    ) : still?.url ? (
-                      <button
-                        type="button"
-                        onClick={() => playHoldClip(h.clipId, h.playheadSec)}
-                        className="mt-2 block w-full"
-                      >
-                        <img
-                          src={still.url}
-                          alt={`Hold ${h.index}`}
-                          className="max-h-32 w-full bg-black object-contain"
-                        />
-                      </button>
-                    ) : null}
-                    <div className="flex flex-wrap gap-2 p-2">
-                      {h.clipId && (
-                        <button
-                          type="button"
-                          onClick={() => playHoldClip(h.clipId, h.playheadSec)}
-                          className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px]"
-                        >
-                          Watch fullscreen
-                        </button>
-                      )}
-                    </div>
-                    <div className="border-t border-[var(--panel-border)] px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                          {h.highlighted
-                            ? 'Best frame · longest hold · verbal cues'
-                            : `Best frame · hold ${h.index} · ${h.livePeak}/100`}
-                        </p>
-                        {still?.url && (
-                          <img
-                            src={still.url}
-                            alt={`Hold ${h.index} best frame`}
-                            className="mt-2 max-h-48 w-full rounded-md bg-black object-contain"
-                          />
-                        )}
-                        <p className="mt-1 text-sm font-bold tabular-nums" style={{ color: scoreColor(h.livePeak) }}>
-                          Handstand {h.livePeak}/100
-                        </p>
-                        {h.cues.length > 0 ? (
-                          <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[12px] leading-snug text-[var(--text)]">
-                            {h.cues.map((c) => (
-                              <li key={c}>{c}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-1 text-[12px] text-[var(--good)]">
-                            Push tall through the ground, ears covered, ribs in, butt in, legs
-                            together, pointed toes. That line held.
-                          </p>
-                        )}
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          Watch the clip with joint tracking, then Save video to Photos if you want it
-                          on this device. It is not saved to My shapes unless you choose that.
-                        </p>
-                      </div>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-          <>
           {replayUrl && (
             <video
               src={replayUrl}
@@ -2547,8 +2518,6 @@ export function Tasks2Panel({
               </li>
             ))}
           </ol>
-          </>
-          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

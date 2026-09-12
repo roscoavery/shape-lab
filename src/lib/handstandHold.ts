@@ -425,7 +425,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     const samplePose = (lm: Landmark[] | null) => {
       if (!lm || lm.length < 33) return
       if (!rec.session && !opts.timelineSec) return
-      if (looksLikeBackgroundProp(lm) && !looksInverted(lm)) return
+      if (looksLikeBackgroundProp(lm)) return
       const dbg = getLastTrackDebug()
       if (dbg?.predicted) return
       if (!looksInverted(lm) && !poseLooksHuman(lm) && (dbg?.poseConf ?? 0) < 0.34) return

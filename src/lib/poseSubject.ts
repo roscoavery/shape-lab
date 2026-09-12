@@ -333,9 +333,8 @@ export function looksInverted(lm: Landmark[]): boolean {
   return false
 }
 
-/** Keyboard stands / coat racks — not a side-view athlete (those have a head). */
-export function looksLikePole(lm: Landmark[]): boolean {
-  if (hasHead(lm) || looksInverted(lm)) return false
+/** Coat rack / lamp / stand: joints stacked on one thin column. */
+export function looksLikeThinColumn(lm: Landmark[]): boolean {
   const idx = [
     LM.LEFT_SHOULDER,
     LM.RIGHT_SHOULDER,
@@ -365,6 +364,12 @@ export function looksLikePole(lm: Landmark[]): boolean {
       ? Math.abs(lm[LM.LEFT_HIP]!.x - lm[LM.RIGHT_HIP]!.x)
       : spanX
   return spanY > 0.18 && spanX < 0.08 && shW < 0.07 && hpW < 0.06
+}
+
+/** Keyboard stands / coat racks — not a side-view athlete (those have a head). */
+export function looksLikePole(lm: Landmark[]): boolean {
+  if (hasHead(lm) || looksInverted(lm)) return false
+  return looksLikeThinColumn(lm)
 }
 
 /** Keyboard on a stick: one column plus a thin horizontal bar. */
@@ -408,6 +413,9 @@ export function looksLikeFurniture(lm: Landmark[]): boolean {
 /** Furniture that can fake an inverted stick-figure after a handstand. */
 export function looksLikeBackgroundProp(lm: Landmark[]): boolean {
   if (looksLikePole(lm) || looksLikeFurniture(lm)) return true
+  // After come-down, MediaPipe often maps a lamp / stand as an inverted
+  // stick. A real side-view handstand is wider than this column.
+  if (looksLikeThinColumn(lm) && !hasHead(lm)) return true
   if (hasHead(lm)) return false
   const idx = [
     LM.LEFT_SHOULDER,

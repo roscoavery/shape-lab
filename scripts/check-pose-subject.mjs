@@ -9,6 +9,8 @@ import {
   SUBJECT_HOLD_MS,
   looksInverted,
   looksLikePole,
+  looksLikeThinColumn,
+  looksLikeBackgroundProp,
   poseLooksHuman,
   sanitizePose,
   torsoCenter,
@@ -81,6 +83,20 @@ assert('standing looks human', poseLooksHuman(standAt(0.4)))
 assert('handstand looks human', poseLooksHuman(hsAt(0.4)))
 assert('tiny furniture cluster is not a person', !poseLooksHuman(chair))
 assert('keyboard stand is a pole, not a person', looksLikePole(pianoStand) && !poseLooksHuman(pianoStand))
+assert('thin column helper matches the stand', looksLikeThinColumn(pianoStand))
+const invertStand = Array.from({ length: 33 }, (_, i) => {
+  const y = 0.12 + (i % 12) * 0.06
+  return pt(0.82, y, i === 0 ? 0.05 : 0.85)
+})
+invertStand[15] = pt(0.82, 0.9, 0.85)
+invertStand[16] = pt(0.82, 0.9, 0.85)
+invertStand[23] = pt(0.82, 0.4, 0.85)
+invertStand[24] = pt(0.82, 0.4, 0.85)
+assert(
+  'inverted lamp is a background prop',
+  looksLikeBackgroundProp(invertStand),
+  invertStand[0],
+)
 const sideHs = stacked(0.42, { 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
 sideHs[12] = pt(0.43, 0.72, 0.2)
 sideHs[14] = pt(0.43, 0.8, 0.15)

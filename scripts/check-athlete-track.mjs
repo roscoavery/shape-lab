@@ -118,6 +118,29 @@ assert(
 const torsoX = after.stabilized ? (after.stabilized[11].x + after.stabilized[12].x) / 2 : 0
 assert('come-down torso stays on the athlete', Math.abs(torsoX - 0.36) < 0.12, torsoX)
 
+const invertPole = Array.from({ length: 33 }, (_, i) => {
+  const y = 0.12 + (i % 12) * 0.06
+  return pt(0.82, y, i === 0 ? 0.05 : 0.85)
+})
+invertPole[15] = pt(0.82, 0.9, 0.85)
+invertPole[16] = pt(0.82, 0.9, 0.85)
+invertPole[23] = pt(0.82, 0.4, 0.85)
+invertPole[24] = pt(0.82, 0.4, 0.85)
+invertPole[27] = pt(0.82, 0.16, 0.85)
+invertPole[28] = pt(0.82, 0.16, 0.85)
+const stuck = new AthleteTracker()
+stuck.push([hsAt(0.34)], 6_000)
+stuck.push([hsAt(0.34)], 6_200)
+const jumped = stuck.push([invertPole], 6_360)
+const jumpedX = jumped.stabilized
+  ? (jumped.stabilized[11].x + jumped.stabilized[12].x) / 2
+  : null
+assert(
+  'after a hold, an inverted stand across the room is not drawn',
+  jumped.stabilized == null || Math.abs((jumpedX ?? 0.82) - 0.82) > 0.2,
+  jumped.debug,
+)
+
 if (failed) {
   console.error(`${failed} athlete track checks failed`)
   process.exit(1)

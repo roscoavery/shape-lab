@@ -305,11 +305,8 @@ export class AthleteTracker {
     const human = poseLooksHuman(lm) || looksInverted(lm)
     const complete = completeCount(lm, 0.32)
 
-    if (looksLikeBackgroundProp(lm) && !looksInverted(lm)) {
+    if (looksLikeBackgroundProp(lm)) {
       return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'pole / stand' }
-    }
-    if (looksLikeBackgroundProp(lm) && looksInverted(lm) && heat < 0.12 && complete < 9) {
-      return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'background stick' }
     }
     if (cleaned.broken >= 5 && complete < 8) {
       return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'impossible skeleton' }
@@ -344,7 +341,7 @@ export class AthleteTracker {
       }
       const jump = dist(center, predicted)
       const stayInv = Boolean(this.lastStable && looksInverted(this.lastStable) && looksInverted(lm))
-      if (jump > (stayInv ? 0.55 : 0.42)) {
+      if (jump > (stayInv ? 0.32 : 0.42)) {
         return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'torso jump' }
       }
       continuity = Math.max(0, 1 - jump / 0.28)
@@ -469,8 +466,9 @@ export class AthleteTracker {
       if (!best || scored.score > best.score) best = scored
     }
 
-    // Sole inverted athlete with a hidden face still counts.
-    if (!best && candidates.length === 1) {
+    // Sole inverted athlete with a hidden face still counts — not a
+    // distant lamp after we already had someone elsewhere in frame.
+    if (!best && candidates.length === 1 && !this.lastStable) {
       const fallback = clipImpossibleBones(sanitizePose(candidates[0]!, this.lastStable))
       if (looksInverted(fallback.lm) && !looksLikeBackgroundProp(fallback.lm) && fallback.broken < 5) {
         best = {
@@ -529,6 +527,31 @@ export class AthleteTracker {
       if (this.state === 'acquiring' && now - this.acquireSince >= ACQUIRE_MS) this.state = 'locked'
       if (this.state === 'uncertain' || this.state === 'reacquiring') this.state = 'locked'
       const stable = this.stabilize(best.lm, now, best.flags)
+      if (looksLikeBackgroundProp(stable)) {
+        this.lastStable = this.lastStable && !looksLikeBackgroundProp(this.lastStable) ? this.lastStable : null
+        this.state = this.lastStable ? 'uncertain' : 'searching'
+        const debug = emptyDebug({
+          state: this.state,
+          quality: this.quality,
+          model: this.model,
+          candidates: candidates.length,
+          fps: this.fps,
+          inferMs: this.inferMs,
+          poseConf: best.score,
+          continuity: best.continuity,
+          anatomy: best.anatomy,
+          motion: best.motion,
+          holdReady: false,
+          pickReason: 'dropped background stick',
+          rejected,
+          box: this.lastBox,
+          roi: this.roi(),
+          flags: [],
+          predicted: false,
+        })
+        lastDebug = debug
+        return { raw: null, stabilized: null, state: this.state, debug }
+      }
       this.lastStable = stable
       this.flags = best.flags
       const debug = emptyDebug({
@@ -576,7 +599,7 @@ export class AthleteTracker {
         continuity: best?.continuity ?? 0,
         anatomy: best?.anatomy ?? 0,
         motion: 0,
-        holdReady: this.state === 'locked' || this.state === 'uncertain',
+        holdReady: this.state === 'uncertain',
         pickReason: 'holding last subject',
         rejected,
         box: this.lastBox,
