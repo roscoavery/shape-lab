@@ -7,6 +7,7 @@
  * keep their own logic.
  */
 
+import { evaluateHandstandGeometry } from './handstandDetect'
 import { LM } from './landmarks'
 import { landmarksLookPresent } from './pose'
 import type { Landmark } from '../types'
@@ -413,9 +414,12 @@ export function looksLikeFurniture(lm: Landmark[]): boolean {
 /** Furniture that can fake an inverted stick-figure after a handstand. */
 export function looksLikeBackgroundProp(lm: Landmark[]): boolean {
   if (looksLikePole(lm) || looksLikeFurniture(lm)) return true
-  // After come-down, MediaPipe often maps a lamp / stand as an inverted
-  // stick. A real side-view handstand is wider than this column.
-  if (looksLikeThinColumn(lm) && !hasHead(lm)) return true
+  // Standing coat rack / lamp. A real side-view handstand is also thin,
+  // so an inverted stack with handstand geometry is the athlete.
+  if (looksLikeThinColumn(lm) && !hasHead(lm)) {
+    if (looksInverted(lm) && evaluateHandstandGeometry(lm).confidence >= 0.5) return false
+    return true
+  }
   if (hasHead(lm)) return false
   const idx = [
     LM.LEFT_SHOULDER,

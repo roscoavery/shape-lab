@@ -93,8 +93,8 @@ invertStand[16] = pt(0.82, 0.9, 0.85)
 invertStand[23] = pt(0.82, 0.4, 0.85)
 invertStand[24] = pt(0.82, 0.4, 0.85)
 assert(
-  'inverted lamp is a background prop',
-  looksLikeBackgroundProp(invertStand),
+  'inverted lamp is still a thin column (tracker, not geometry, keeps it off the athlete)',
+  looksLikeThinColumn(invertStand),
   invertStand[0],
 )
 const sideHs = stacked(0.42, { 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })

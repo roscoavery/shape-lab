@@ -141,6 +141,28 @@ assert(
   jumped.debug,
 )
 
+const keep = new AthleteTracker()
+keep.push([hsAt(0.34)], 7_000)
+keep.push([hsAt(0.34)], 7_200)
+const withStand = keep.push([hsAt(0.34), standAt(0.82)], 7_360)
+const keepX = withStand.stabilized
+  ? (withStand.stabilized[11].x + withStand.stabilized[12].x) / 2
+  : 0
+assert(
+  'keeps the inverted body when a standing ghost is also proposed',
+  Boolean(withStand.stabilized) && Math.abs(keepX - 0.34) < 0.12,
+  withStand.debug,
+)
+const farStand = keep.push([standAt(0.82)], 7_440)
+const farX = farStand.stabilized
+  ? (farStand.stabilized[11].x + farStand.stabilized[12].x) / 2
+  : null
+assert(
+  'does not steal a standing pose across the room mid-hold',
+  farStand.stabilized == null || Math.abs((farX ?? 0.82) - 0.82) > 0.2,
+  farStand.debug,
+)
+
 if (failed) {
   console.error(`${failed} athlete track checks failed`)
   process.exit(1)

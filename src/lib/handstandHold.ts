@@ -562,15 +562,8 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       let clockOffsetSec = rec.session
         ? Math.max(0, (holdStart - recStart) / 1000)
         : Math.max(0, holdStartSec)
-      const span = longestInvertedSpan(poseTrack, clockNow())
-      if (span.found) {
-        const spanSec = span.end - span.start
-        if (spanSec >= MIN_HOLD_SEC && holdSeconds > spanSec + 2) {
-          holdSeconds = spanSec
-          clockOffsetSec = span.start
-          playheadSec = (span.start + span.end) / 2
-        }
-      }
+      // Detector wall-clock is the hold. A lost skeleton is not a come-down —
+      // do not shorten the clip to the last inverted pose-track span.
       last = holdSeconds
       best = best == null ? holdSeconds : Math.max(best, holdSeconds)
       const trimmed =

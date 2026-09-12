@@ -288,8 +288,8 @@ export class AthleteTracker {
   private roi(): NormBox | null {
     if (!this.lastBox) return null
     const speed = Math.hypot(this.lastVel.x, this.lastVel.y)
-    const kick = this.lastStable && looksInverted(this.lastStable) ? 0.12 : 0
-    return expandBox(this.lastBox, 0.18 + Math.min(0.22, speed * 0.8) + kick, 0.26 + Math.min(0.3, speed) + kick)
+    const kick = this.lastStable && looksInverted(this.lastStable) ? 0.28 : 0
+    return expandBox(this.lastBox, 0.22 + Math.min(0.28, speed * 0.8) + kick, 0.32 + Math.min(0.36, speed) + kick)
   }
 
   private scoreCandidate(
@@ -341,7 +341,7 @@ export class AthleteTracker {
       }
       const jump = dist(center, predicted)
       const stayInv = Boolean(this.lastStable && looksInverted(this.lastStable) && looksInverted(lm))
-      if (jump > (stayInv ? 0.32 : 0.42)) {
+      if (jump > (stayInv ? 0.5 : 0.42)) {
         return { lm, flags: cleaned.flags, score: 0, anatomy, motion: heat, continuity: 0, reason: 'torso jump' }
       }
       continuity = Math.max(0, 1 - jump / 0.28)
@@ -412,7 +412,7 @@ export class AthleteTracker {
       const prev = this.lastStable?.[i]
       if (!prev || !vis(prev, 0.15) || !vis(p, 0.15)) return p
       const jump = dist(p, prev)
-      const cap = this.lastStable && looksInverted(this.lastStable) ? 0.16 : OUTLIER
+      const cap = this.lastStable && looksInverted(this.lastStable) ? 0.24 : OUTLIER
       if (jump > cap && (p.visibility ?? 1) < 0.93) {
         flags[i] = 'outlier'
         return {
@@ -466,11 +466,21 @@ export class AthleteTracker {
       if (!best || scored.score > best.score) best = scored
     }
 
-    // Sole inverted athlete with a hidden face still counts — not a
-    // distant lamp after we already had someone elsewhere in frame.
-    if (!best && candidates.length === 1 && !this.lastStable) {
-      const fallback = clipImpossibleBones(sanitizePose(candidates[0]!, this.lastStable))
-      if (looksInverted(fallback.lm) && !looksLikeBackgroundProp(fallback.lm) && fallback.broken < 5) {
+    // Keep a visible inverted body even if scoring was picky (side view,
+    // hidden face). Do not grab a lamp across the room.
+    if (!best) {
+      for (const raw of candidates) {
+        const fallback = clipImpossibleBones(sanitizePose(raw, this.lastStable))
+        if (!looksInverted(fallback.lm) || looksLikeBackgroundProp(fallback.lm) || fallback.broken >= 5) {
+          continue
+        }
+        const center = torsoCenter(fallback.lm)
+        const near =
+          !this.lastCenter ||
+          !center ||
+          dist(center, this.lastCenter) < 0.38 ||
+          Boolean(this.lastStable && looksInverted(this.lastStable))
+        if (!near) continue
         best = {
           lm: fallback.lm,
           flags: fallback.flags,
@@ -480,20 +490,34 @@ export class AthleteTracker {
           continuity: 0.4,
           reason: null,
         }
+        break
       }
     }
 
     const lockIsProp =
       Boolean(this.lastStable) && looksLikeBackgroundProp(this.lastStable!)
-    if (lockIsProp || (this.lastStable && looksInverted(this.lastStable))) {
+    const lastInv = Boolean(this.lastStable && looksInverted(this.lastStable))
+    const invertedStill = candidates.some((raw) => {
+      const cleaned = clipImpossibleBones(sanitizePose(raw, this.lastStable))
+      return looksInverted(cleaned.lm) && !looksLikeBackgroundProp(cleaned.lm)
+    })
+    if (lockIsProp || (lastInv && !invertedStill)) {
       let steal: ReturnType<AthleteTracker['scoreCandidate']> | null = null
       for (const raw of candidates) {
         const cleaned = clipImpossibleBones(sanitizePose(raw, null))
         if (looksLikeBackgroundProp(cleaned.lm)) continue
         const standing =
           poseLooksHuman(cleaned.lm) && !looksInverted(cleaned.lm)
-        const athlete = standing || looksInverted(cleaned.lm)
-        if (!athlete) continue
+        if (!standing && !looksInverted(cleaned.lm)) continue
+        const center = torsoCenter(cleaned.lm)
+        if (
+          standing &&
+          this.lastCenter &&
+          center &&
+          dist(center, this.lastCenter) > 0.22
+        ) {
+          continue
+        }
         const heat = motion?.scoreBox(poseBox(cleaned.lm)) ?? 0
         const scored = {
           lm: cleaned.lm,
@@ -577,14 +601,11 @@ export class AthleteTracker {
       return { raw: best.lm, stabilized: stable, state: this.state, debug }
     }
 
-    const lastInv = Boolean(this.lastStable && looksInverted(this.lastStable))
-    const stillInv = candidates.some((c) => looksInverted(c))
     const lastProp = Boolean(this.lastStable && looksLikeBackgroundProp(this.lastStable))
     if (
       this.lastStable &&
-      lostMs < UNCERTAIN_MS &&
-      !lastProp &&
-      !(lastInv && !stillInv && lostMs > 80)
+      lostMs < (lastInv ? 800 : UNCERTAIN_MS) &&
+      !lastProp
     ) {
       const predicted = this.predict(now)
       this.state = this.state === 'locked' ? 'uncertain' : this.state

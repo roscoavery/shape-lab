@@ -116,6 +116,30 @@ failed += assert(
 )
 failed += assert('slight camera angle still counts', poseLooksLikeHandstand(angled))
 
+const ghostAnkle = stacked({ 0: 0.78, sh: 0.72, el: 0.8, wr: 0.9, hp: 0.46, kn: 0.3, an: 0.14 })
+ghostAnkle[27] = pt(0.48, 0.93, 0.95)
+failed += assert(
+  'ghost ankle on the floor does not count as planted while hips are up',
+  !evaluateHandstandGeometry(ghostAnkle).feetPlanted,
+  evaluateHandstandGeometry(ghostAnkle),
+)
+failed += assert(
+  'ghost ankle does not end a live hold',
+  holdAfter(hs, HOLD_ENTER_MS + 40).holding &&
+    (() => {
+      const det = new HoldDetector()
+      let t = 4_000
+      det.push(hs, t)
+      t += HOLD_ENTER_MS + 40
+      det.push(hs, t)
+      for (let i = 0; i < 6; i += 1) {
+        t += 40
+        det.push(ghostAnkle, t)
+      }
+      return det.push(hs, t + 40).holding
+    })(),
+)
+
 const first = new HoldDetector().push(hs, 1_000)
 failed += assert('first frame is only a candidate', !first.holding && first.candidate)
 

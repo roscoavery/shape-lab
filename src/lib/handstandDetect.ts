@@ -11,7 +11,8 @@ import type { Landmark } from '../types'
 
 export const HOLD_ENTER_MS = 320
 export const HOLD_EXIT_MS = 480
-export const HOLD_COME_DOWN_MS = 200
+/** Feet must stay down this long. A 200ms ankle flicker used to end a real hold. */
+export const HOLD_COME_DOWN_MS = 520
 export const HOLD_ENTER_CONF = 0.7
 export const HOLD_EXIT_CONF = 0.52
 const EMA = 0.38
@@ -198,10 +199,27 @@ export function evaluateHandstandGeometry(lm: Landmark[] | null | undefined): {
 
   // Planted hands: wrists below shoulders, and not still reaching above the feet.
   const handsDown = wrist.y > shoulder.y + 0.03 && (ankle == null || !(ankle.y > wrist.y + 0.07))
-  const feetOff = ankle == null ? hip.y < wrist.y - 0.06 : ankle.y < wrist.y - 0.1
-  // Planted = feet have come back down toward the hands / floor. Walking
-  // on the hands keeps ankles above the wrists, so the clock stays up.
-  const feetPlanted = Boolean(ankle && ankle.y > wrist.y - 0.06)
+  const hipsStillInverted = hip.y < wrist.y - 0.14 && hip.y < shoulder.y - 0.02
+  const leftFoot =
+    [lm[LM.LEFT_ANKLE], lm[LM.LEFT_HEEL], lm[LM.LEFT_FOOT_INDEX]].find((p) => visOk(p, 0.18)) ?? null
+  const rightFoot =
+    [lm[LM.RIGHT_ANKLE], lm[LM.RIGHT_HEEL], lm[LM.RIGHT_FOOT_INDEX]].find((p) => visOk(p, 0.18)) ??
+    null
+  const airY = [leftFoot, rightFoot]
+    .filter((p): p is Landmark => Boolean(p))
+    .reduce<number | null>((best, p) => (best == null || p.y < best ? p.y : best), null)
+  const floorY = [leftFoot, rightFoot]
+    .filter((p): p is Landmark => Boolean(p))
+    .reduce<number | null>((best, p) => (best == null || p.y > best ? p.y : best), null)
+  // Feet off: use the airborne foot. A ghost ankle on the floor must not
+  // look like a come-down while the hips are still stacked.
+  const feetOff =
+    airY != null ? airY < wrist.y - 0.1 : hip.y < wrist.y - 0.06
+  // Clock stops only when the body has come down and a foot is on the floor.
+  // Hips still inverted = still in the handstand, even if one ankle flickers.
+  const feetPlanted = Boolean(
+    !hipsStillInverted && floorY != null && floorY > wrist.y - 0.05,
+  )
 
   let hardFail: string | null = null
   if (wrist.y < shoulder.y) hardFail = 'hands above shoulders'
@@ -317,8 +335,9 @@ export class HoldDetector {
     this.smoothed = smoothLandmarks(this.smoothed, raw)
     const geo = evaluateHandstandGeometry(this.smoothed)
     const rawGeo = evaluateHandstandGeometry(raw)
-    // Raw feet-down / hands-up wins so EMA cannot hide a real come-down.
-    const feetPlanted = rawGeo.feetPlanted || geo.feetPlanted
+    // Need the hips down on both raw and smoothed so one ghost ankle
+    // cannot stop the clock. A real land shows up on both quickly.
+    const feetPlanted = rawGeo.feetPlanted && geo.feetPlanted
     const comeDown = feetPlanted
     return this.finishSample(geo, { comeDown, lostPose: false, enterAt, exitAt, now, feetPlanted })
   }
