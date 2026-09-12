@@ -42,11 +42,26 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+/** Shapes that look alike on a still. Always sit together as answer options. */
+const LOOKALIKE_IDS: Record<string, string[]> = {
+  mountain_climber: ['lunge_start', 'lunge_land'],
+  lunge_start: ['mountain_climber', 'lunge_land'],
+  lunge_land: ['mountain_climber', 'lunge_start'],
+}
+
 function distractors(correct: ShapeDef, pool: ShapeDef[], n: number): ShapeDef[] {
   const aliases = new Set(samePositionGroup(correct.id))
-  const others = pool.filter((s) => !aliases.has(s.id) && s.category === correct.category)
-  const rest = pool.filter((s) => !aliases.has(s.id) && s.category !== correct.category)
-  return shuffle([...others, ...rest]).slice(0, n)
+  const used = new Set<string>(aliases)
+  const forced: ShapeDef[] = []
+  for (const id of LOOKALIKE_IDS[correct.id] ?? []) {
+    const shape = pool.find((s) => s.id === id) ?? getShape(id)
+    if (!shape || used.has(shape.id)) continue
+    used.add(shape.id)
+    forced.push(shape)
+  }
+  const others = pool.filter((s) => !used.has(s.id) && s.category === correct.category)
+  const rest = pool.filter((s) => !used.has(s.id) && s.category !== correct.category)
+  return [...forced, ...shuffle([...others, ...rest])].slice(0, n)
 }
 
 function quizLabel(shape: ShapeDef): string {

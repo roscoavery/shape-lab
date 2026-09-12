@@ -15,13 +15,16 @@ export const APP_SECTIONS: { id: AppSection; label: string }[] = [
 export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]> = {
   today: [{ id: 'today', label: 'Home' }],
   practice: [
+    { id: 'tasks2', label: 'Class flows' },
     { id: 'homework', label: 'Homework' },
     { id: 'warmup', label: 'Warm-up' },
-    { id: 'tasks2', label: 'Class flows' },
     { id: 'tasks', label: 'Hold & body work' },
     { id: 'coach', label: 'Live scoring' },
   ],
-  videos: [{ id: 'compare', label: 'Compare' }],
+  videos: [
+    { id: 'compare', label: 'Compare' },
+    { id: 'scroll', label: 'Reference scroll' },
+  ],
   learn: [
     { id: 'learn', label: 'Shapes & skills' },
     { id: 'coachlib', label: 'Coach library' },
@@ -51,6 +54,7 @@ export function sectionForTab(tab: AppTab): AppSection {
     case 'coach':
       return 'practice'
     case 'compare':
+    case 'scroll':
       return 'videos'
     case 'learn':
     case 'coachlib':

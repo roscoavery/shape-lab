@@ -23,7 +23,10 @@ export function AppNav({ tab, ryan, onGo }: Props) {
             key={item.id}
             type="button"
             aria-current={section === item.id ? 'page' : undefined}
-            onClick={() => onGo(defaultTabForSection(item.id, ryan))}
+            onClick={() => {
+              if (section === item.id) return
+              onGo(defaultTabForSection(item.id, ryan))
+            }}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm transition ${
               section === item.id
                 ? 'bg-[var(--accent-dim)] font-semibold text-white'

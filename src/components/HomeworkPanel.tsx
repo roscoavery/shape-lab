@@ -1268,10 +1268,14 @@ export function HomeworkPanel({
 
   if (!athleteId) {
     return (
-      <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
-        Select or create an athlete to see their homework — every athlete
-        automatically gets the 4 core drills (hollow, superman, side plank,
-        wall handstand).
+      <div className="min-h-[12rem] rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+        <p className="text-sm font-semibold text-[var(--text)]">Homework needs a profile</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Unlock or create an athlete to see their homework. Every athlete
+          automatically gets the four core drills (hollow, superman, side plank,
+          wall handstand). Class flows are next to Homework in Practice if this
+          page looks empty.
+        </p>
       </div>
     )
   }

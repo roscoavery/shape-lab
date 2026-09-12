@@ -60,9 +60,16 @@ export function TodayGymScope({
 
   return (
     <div className="mt-3 space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-        Who shows here
-      </p>
+      <details className="rounded-lg bg-[#0d1218] px-3 py-2">
+        <summary className="cursor-pointer text-xs font-semibold text-[var(--text)]">
+          Who shows here
+        </summary>
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
+          This gym is the desk in front of you. Search all is the whole network.
+          A camp list stays separate from the main desk. Add someone to a camp
+          without taking them off their home gym.
+        </p>
+      </details>
       <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
@@ -106,23 +113,16 @@ export function TodayGymScope({
           + Camp / clinic
         </button>
       </div>
-      {scope.kind === 'desk' && (
+      {scope.kind === 'desk' && making && (
         <p className="text-[11px] text-[var(--muted)]">
-          {viewerGym} athletes, plus class and private-lesson names. Add a camp
-          athlete here if they should show on this gym. Add someone from this
-          list onto a camp without taking them off.
+          {viewerGym} athletes plus class and private-lesson names.
         </p>
       )}
       {scope.kind === 'all' && (
-        <p className="text-[11px] text-[var(--muted)]">
-          Whole network. Names from another gym are labeled so you can still
-          open them for a camp or a travel day.
-        </p>
+        <p className="text-[11px] text-[var(--muted)]">Whole network. Other gyms stay labeled.</p>
       )}
       {scope.kind === 'gym' && (
-        <p className="text-[11px] text-[var(--muted)]">
-          Everyone whose home gym or class gym is {scope.gym}.
-        </p>
+        <p className="text-[11px] text-[var(--muted)]">Home gym or class gym is {scope.gym}.</p>
       )}
       {activeEvent && (
         <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2">

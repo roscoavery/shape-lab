@@ -49,9 +49,9 @@ const TOOLS: {
   },
   {
     id: 'scroll',
-    eyebrow: 'Learn',
+    eyebrow: 'Videos',
     title: 'Reference scroll',
-    hint: 'Swipe stills the way you swipe a story.',
+    hint: 'Swipe stills the way you swipe a story. Also under Videos.',
     className:
       'from-[#c4b5fd] via-[#8b5cf6] to-[#4c1d95] text-[#14082a] shadow-[0_16px_40px_rgba(139,92,246,0.22)]',
   },
@@ -77,7 +77,7 @@ const TOOLS: {
     title: 'My profile',
     hint: 'Photo, cartwheel, twist, hand, skate stance.',
     className:
-      'from-[#e9d5ff] via-[#c084fc] to-[#6b21a8] text-[#2e1065] shadow-[0_16px_40px_rgba(192,132,252,0.22)]',
+      'from-[#ffe08a] via-[#f5c542] to-[#d4a017] text-[#3b2203] shadow-[0_0_28px_rgba(245,197,66,0.55)]',
   },
   {
     id: 'clock',

@@ -27,6 +27,22 @@ export type ChalkboardItemKind =
   | 'drill-list'
   | 'collage'
 
+export type ChalkboardOverlayKind = 'sticker' | 'text'
+
+export type ChalkboardOverlayStyle = 'plain' | 'script' | 'banner'
+
+export type ChalkboardOverlay = {
+  id: string
+  kind: ChalkboardOverlayKind
+  label: string
+  x: number
+  y: number
+  style?: ChalkboardOverlayStyle
+  color?: string
+}
+
+export type ChalkboardCommentPlacement = 'above' | 'below'
+
 export type ChalkboardItem = {
   id: string
   offeringId: string
@@ -44,6 +60,9 @@ export type ChalkboardItem = {
   drillId?: string
   drillIds?: string[]
   collageId?: string
+  comment?: string
+  commentPlacement?: ChalkboardCommentPlacement
+  overlays?: ChalkboardOverlay[]
   pinned: boolean
   createdById: string
   createdByName: string
@@ -140,6 +159,25 @@ function normalizeItem(raw: Partial<ChalkboardItem>): ChalkboardItem | null {
     drillId: raw.drillId,
     drillIds: Array.isArray(raw.drillIds) ? raw.drillIds.filter((id) => typeof id === 'string') : undefined,
     collageId: raw.collageId,
+    comment: typeof raw.comment === 'string' ? raw.comment : undefined,
+    commentPlacement: raw.commentPlacement === 'above' ? 'above' : raw.commentPlacement === 'below' ? 'below' : undefined,
+    overlays: Array.isArray(raw.overlays)
+      ? raw.overlays
+          .filter((row): row is ChalkboardOverlay => {
+            if (!row || typeof row !== 'object') return false
+            const o = row as ChalkboardOverlay
+            return typeof o.id === 'string' && typeof o.label === 'string' && typeof o.x === 'number' && typeof o.y === 'number'
+          })
+          .map((o) => ({
+            id: o.id,
+            kind: o.kind === 'text' ? 'text' : 'sticker',
+            label: o.label,
+            x: Math.min(100, Math.max(0, o.x)),
+            y: Math.min(100, Math.max(0, o.y)),
+            style: o.style === 'script' || o.style === 'banner' ? o.style : 'plain',
+            color: typeof o.color === 'string' ? o.color : undefined,
+          }))
+      : undefined,
     pinned: Boolean(raw.pinned),
     createdById: raw.createdById || '',
     createdByName: raw.createdByName || '',
@@ -439,6 +477,36 @@ export function postToChalkboard(input: {
     ),
   })
   return item
+}
+
+export function updateChalkboardItem(
+  itemId: string,
+  patch: Partial<
+    Pick<ChalkboardItem, 'comment' | 'commentPlacement' | 'overlays' | 'title'>
+  >,
+): ChalkboardItem | null {
+  const file = read()
+  let found: ChalkboardItem | null = null
+  write({
+    ...file,
+    boards: file.boards.map((b) => ({
+      ...b,
+      items: b.items.map((i) => {
+        if (i.id !== itemId) return i
+        found = {
+          ...i,
+          ...patch,
+          comment: patch.comment !== undefined ? patch.comment : i.comment,
+          commentPlacement: patch.commentPlacement ?? i.commentPlacement,
+          overlays: patch.overlays !== undefined ? patch.overlays : i.overlays,
+          title: patch.title !== undefined ? patch.title : i.title,
+        }
+        return found
+      }),
+      updatedAt: found && b.items.some((i) => i.id === itemId) ? new Date().toISOString() : b.updatedAt,
+    })),
+  })
+  return found
 }
 
 export function pinChalkboardItem(itemId: string, pinned: boolean): ChalkboardItem | null {

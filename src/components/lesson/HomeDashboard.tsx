@@ -331,7 +331,7 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="mt-3 rounded-lg bg-[var(--accent-dim)] px-4 py-2 text-sm font-semibold text-white"
+              className="mt-3 rounded-full bg-gradient-to-r from-[#ffe08a] via-[#f5c542] to-[#d4a017] px-4 py-2 text-sm font-black text-[#3b2203] shadow-[0_0_22px_rgba(245,197,66,0.55)]"
             >
               My profile
             </button>
@@ -453,18 +453,23 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm font-semibold"
+              className="rounded-full bg-gradient-to-r from-[#ffe08a] via-[#f5c542] to-[#d4a017] px-4 py-2 text-sm font-black text-[#3b2203] shadow-[0_0_22px_rgba(245,197,66,0.55)]"
             >
               My profile
             </button>
           )}
         </div>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Start lesson is who you are with — one athlete or several. Start class is the hour you are teaching
-          — Connections, Elevate, or Reps w/ Logan — so shape-test names and
-          homework land on that roster. The chalkboard for that class opens on
-          this page without taking it over.
-        </p>
+        <details className="mt-3 rounded-xl bg-[#121820] px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">
+            How lesson and class work
+          </summary>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            Start lesson is who you are with, one athlete or several. Start class is
+            the hour you are teaching, so shape-test names and homework land on that
+            roster. The chalkboard for that class opens on this page without taking
+            it over.
+          </p>
+        </details>
         {onStartClass && liveClass && liveOffering && (
           <div className="mt-3 rounded-2xl border border-[var(--accent)] bg-[#102820] px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
@@ -593,9 +598,7 @@ export function HomeDashboard({
           <p className="mt-1 text-sm text-[var(--muted)]">
             {pickHint && withAthletes.length === 0
               ? 'Tap every athlete in this lesson, then Start lesson.'
-              : gymScope.kind === 'event'
-                ? 'This camp list is separate from Tumble Smart’s main desk. Search to add someone from any gym.'
-                : 'Tap one or more athletes. Class roster is separate.'}
+              : 'Tap names. Search if the list is long.'}
           </p>
           <TodayGymScope
             scope={gymScope}

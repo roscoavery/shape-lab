@@ -17,11 +17,15 @@ import {
   renameBoard,
   setActiveBoard,
   subscribeChalkboards,
+  updateChalkboardItem,
   type ChalkboardBoard,
   type ChalkboardItem,
+  type ChalkboardOverlay,
   type ChalkboardScope,
   typeOfferingId,
 } from '../../lib/chalkboard'
+import { createId, loadAthletes } from '../../lib/storage'
+import { AthleteAvatar } from '../AthleteAvatar'
 import {
   classLabel,
   classTypeKey,
@@ -485,6 +489,8 @@ function ChalkboardBody({
   )
 }
 
+const STICKERS = ['⭐', '✓', '🔥', '💪', '👀', '👏', '🎯', '✨']
+
 function ChalkboardCard({
   item,
   coach,
@@ -503,19 +509,59 @@ function ChalkboardCard({
   const [collage, setCollage] = useState<Awaited<ReturnType<typeof listCollages>>[number] | null>(null)
   const [full, setFull] = useState(false)
   const [clipFull, setClipFull] = useState(false)
+  const [commentDraft, setCommentDraft] = useState(item.comment ?? '')
+  const [textDraft, setTextDraft] = useState('')
+  const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
+  const [place, setPlace] = useState({ x: 72, y: 18 })
   const drills = item.kind === 'drill-list' || item.kind === 'drill' ? listDrills() : []
   const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
+  const overlays = item.overlays ?? []
+  const coachProfile = useMemo(
+    () => loadAthletes().find((a) => a.id === item.createdById) ?? null,
+    [item.createdById],
+  )
   const playerH =
     boardSize === 'full'
-      ? 'h-[min(58dvh,34rem)] max-sm:h-[min(52dvh,24rem)]'
+      ? 'h-[min(50vh,28rem)]'
       : compact
         ? 'h-40 max-sm:h-36'
-        : 'h-[min(20rem,48dvh)] max-sm:h-[min(16.5rem,42dvh)]'
+        : 'h-[min(20rem,42vh)] max-sm:h-[min(16.5rem,38vh)]'
+  const comment = item.comment?.trim() || ''
+  const commentAbove = item.commentPlacement === 'above'
+
+  useEffect(() => {
+    setCommentDraft(item.comment ?? '')
+  }, [item.comment])
 
   useEffect(() => {
     if (item.kind !== 'collage' || !item.collageId) return
     void listCollages().then((list) => setCollage(list.find((c) => c.id === item.collageId) ?? null))
   }, [item.kind, item.collageId])
+
+  const saveComment = () => {
+    updateChalkboardItem(item.id, {
+      comment: commentDraft,
+      commentPlacement: item.commentPlacement ?? 'below',
+    })
+  }
+
+  const addOverlay = (overlay: Omit<ChalkboardOverlay, 'id' | 'x' | 'y'> & { x?: number; y?: number }) => {
+    updateChalkboardItem(item.id, {
+      overlays: [
+        ...overlays,
+        {
+          id: createId('ov'),
+          x: overlay.x ?? place.x,
+          y: overlay.y ?? place.y,
+          kind: overlay.kind,
+          label: overlay.label,
+          style: overlay.style,
+          color: overlay.color,
+        },
+      ],
+    })
+    setPlace((p) => ({ x: Math.min(88, p.x + 6), y: Math.min(80, p.y + 10) }))
+  }
 
   const clipPlayer = item.url ? (
     <GymClipPlayer
@@ -532,6 +578,31 @@ function ChalkboardCard({
     />
   ) : null
 
+  const media = (
+    <div
+      className={`relative w-full touch-pan-y overflow-hidden bg-black ${playerH}`}
+      onClick={(e) => {
+        if (!coach) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        setPlace({
+          x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
+          y: Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100),
+        })
+      }}
+    >
+      {clipPlayer}
+      <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+    </div>
+  )
+
+  const commentBlock = comment ? (
+    <CoachComment
+      text={comment}
+      coach={coachProfile}
+      coachName={item.createdByName}
+    />
+  ) : null
+
   return (
     <article className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]">
       <div className="flex flex-wrap items-start justify-between gap-2 px-3 py-2">
@@ -544,54 +615,49 @@ function ChalkboardCard({
             {item.createdByName ? ` · ${item.createdByName}` : ''}
           </p>
         </div>
-        {coach && (
-          <div className="flex shrink-0 flex-wrap justify-end gap-2">
-            {isClip && (
-              <button
-                type="button"
-                onClick={() => setClipFull(true)}
-                className="text-[11px] font-semibold text-[var(--accent)]"
-              >
-                Full screen
-              </button>
-            )}
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {isClip && (
             <button
               type="button"
-              onClick={() => pinChalkboardItem(item.id, !item.pinned)}
+              onClick={() => setClipFull(true)}
               className="text-[11px] font-semibold text-[var(--accent)]"
             >
-              {item.pinned ? 'Unpin' : 'Pin'}
+              Full screen
             </button>
-            <button
-              type="button"
-              onClick={() => eraseChalkboardItem(item.id)}
-              className="text-[11px] font-semibold text-[var(--bad)]"
-            >
-              Erase
-            </button>
-          </div>
-        )}
-        {!coach && isClip && (
-          <button
-            type="button"
-            onClick={() => setClipFull(true)}
-            className="shrink-0 text-[11px] font-semibold text-[var(--accent)]"
-          >
-            Full screen
-          </button>
-        )}
+          )}
+          {coach && (
+            <>
+              <button
+                type="button"
+                onClick={() => pinChalkboardItem(item.id, !item.pinned)}
+                className="text-[11px] font-semibold text-[var(--accent)]"
+              >
+                {item.pinned ? 'Unpin' : 'Pin'}
+              </button>
+              <button
+                type="button"
+                onClick={() => eraseChalkboardItem(item.id)}
+                className="text-[11px] font-semibold text-[var(--bad)]"
+              >
+                Erase
+              </button>
+            </>
+          )}
+        </div>
       </div>
-      {isClip && (
-        <div className={`relative w-full touch-pan-y bg-black ${playerH}`}>{clipPlayer}</div>
-      )}
+      {isClip && commentAbove && commentBlock}
+      {isClip && media}
+      {isClip && !commentAbove && commentBlock}
+      {!isClip && commentBlock}
       {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
-        <div className="flex max-h-72 items-center justify-center bg-black">
+        <div className="relative flex max-h-72 items-center justify-center bg-black">
           <CroppedStill
             src={item.photoSrc}
             stillId={item.stillId}
             alt={item.title}
             className="max-h-72 w-full object-contain"
           />
+          <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
         </div>
       )}
       {item.kind === 'drill' && item.drillId && (
@@ -621,11 +687,108 @@ function ChalkboardCard({
           />
         </div>
       )}
+      {coach && !compact && (
+        <div className="space-y-2 border-t border-white/5 px-3 py-3">
+          <label className="block">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Coach comment
+            </span>
+            <textarea
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              onBlur={saveComment}
+              rows={2}
+              placeholder="Write a note athletes can read above or below this reel"
+              className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                updateChalkboardItem(item.id, { comment: commentDraft, commentPlacement: 'above' })
+              }}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                item.commentPlacement === 'above'
+                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  : 'border border-[var(--panel-border)]'
+              }`}
+            >
+              Show above
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateChalkboardItem(item.id, { comment: commentDraft, commentPlacement: 'below' })
+              }}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                item.commentPlacement !== 'above'
+                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  : 'border border-[var(--panel-border)]'
+              }`}
+            >
+              Show below
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--muted)]">
+            Tap the reel, then add a sticker or text. Your profile pic stays on the mark.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {STICKERS.map((sticker) => (
+              <button
+                key={sticker}
+                type="button"
+                onClick={() => addOverlay({ kind: 'sticker', label: sticker })}
+                className="rounded-lg bg-white/10 px-2 py-1 text-lg"
+              >
+                {sticker}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={textDraft}
+              onChange={(e) => setTextDraft(e.target.value)}
+              placeholder="Artistic text"
+              className="min-w-[10rem] flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+            />
+            <select
+              value={textStyle}
+              onChange={(e) => setTextStyle(e.target.value as ChalkboardOverlay['style'])}
+              className="rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 py-2 text-xs"
+            >
+              <option value="script">Script</option>
+              <option value="banner">Banner</option>
+              <option value="plain">Plain</option>
+            </select>
+            <button
+              type="button"
+              disabled={!textDraft.trim()}
+              onClick={() => {
+                addOverlay({ kind: 'text', label: textDraft.trim(), style: textStyle, color: '#f5c542' })
+                setTextDraft('')
+              }}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-bold text-[#06281f] disabled:opacity-40"
+            >
+              Add text
+            </button>
+          </div>
+          {overlays.length > 0 && (
+            <button
+              type="button"
+              onClick={() => updateChalkboardItem(item.id, { overlays: overlays.slice(0, -1) })}
+              className="text-[11px] font-semibold text-[var(--bad)]"
+            >
+              Remove last mark
+            </button>
+          )}
+        </div>
+      )}
       {clipFull &&
         item.url &&
         createPortal(
-          <div className="fixed inset-0 z-[90] flex h-[100dvh] max-h-[100dvh] flex-col bg-black">
-            <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
+          <div className="fixed inset-0 z-[90] flex h-[100vh] max-h-[100vh] flex-col bg-[#07110e] text-white">
+            <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <p className="min-w-0 truncate text-sm font-semibold">{item.title}</p>
               <button
                 type="button"
@@ -635,23 +798,105 @@ function ChalkboardCard({
                 Close
               </button>
             </header>
-            <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
-              <GymClipPlayer
-                url={item.url}
-                itemId={gymClip?.id}
-                persistUrl={item.url}
-                loopA={item.loopA}
-                loopB={item.loopB}
-                fill
-                fit="contain"
-                smartFit={false}
-                quiet
-              />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
+              {commentAbove && commentBlock}
+              <div
+                className="relative mx-auto h-[min(50vh,28rem)] w-full max-w-3xl bg-black"
+                onClick={(e) => {
+                  if (!coach) return
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  setPlace({
+                    x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
+                    y: Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100),
+                  })
+                }}
+              >
+                <GymClipPlayer
+                  url={item.url}
+                  itemId={gymClip?.id}
+                  persistUrl={item.url}
+                  loopA={item.loopA}
+                  loopB={item.loopB}
+                  fill
+                  fit="contain"
+                  smartFit={false}
+                  quiet
+                />
+                <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+              </div>
+              {!commentAbove && commentBlock}
+              <p className="px-4 pt-3 text-xs text-white/55">
+                Scroll for the coach note and marks. The reel stays at the top.
+              </p>
             </div>
           </div>,
           document.body,
         )}
     </article>
+  )
+}
+
+function CoachComment({
+  text,
+  coach,
+  coachName,
+}: {
+  text: string
+  coach: ReturnType<typeof loadAthletes>[number] | null
+  coachName: string
+}) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2">
+      <AthleteAvatar athlete={coach ?? { name: coachName }} size="xs" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+          {coachName || 'Coach'}
+        </p>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{text}</p>
+      </div>
+    </div>
+  )
+}
+
+function OverlayLayer({
+  overlays,
+  coach,
+  coachName,
+}: {
+  overlays: ChalkboardOverlay[]
+  coach: ReturnType<typeof loadAthletes>[number] | null
+  coachName: string
+}) {
+  if (overlays.length === 0) return null
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {overlays.map((overlay) => (
+        <div
+          key={overlay.id}
+          className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+          style={{ left: `${overlay.x}%`, top: `${overlay.y}%` }}
+        >
+          <span
+            className={
+              overlay.kind === 'sticker'
+                ? 'text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
+                : overlay.style === 'script'
+                  ? 'font-[cursive] text-2xl font-semibold text-[#f5c542] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+                  : overlay.style === 'banner'
+                    ? 'rounded-md bg-[#f5c542] px-2 py-0.5 text-xs font-black uppercase tracking-wide text-[#3b2203]'
+                    : 'text-sm font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+            }
+            style={overlay.kind === 'text' && overlay.style === 'plain' && overlay.color ? { color: overlay.color } : undefined}
+          >
+            {overlay.label}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5">
+            <AthleteAvatar athlete={coach ?? { name: coachName }} size="xs" />
+            <span className="text-[9px] font-semibold text-white/90">{coachName || 'Coach'}</span>
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 

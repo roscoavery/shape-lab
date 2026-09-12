@@ -19,6 +19,7 @@ import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
 import { CoachShapeLibrary } from './components/coach/CoachShapeLibrary'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
+import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
@@ -833,8 +834,7 @@ export default function App() {
                   } else if (id === 'replay') {
                     openCompareWithReference()
                   } else if (id === 'scroll') {
-                    setLearnIntent('scroll')
-                    goTab('learn')
+                    goTab('scroll')
                   } else if (id === 'feed') {
                     goTab('feed')
                   } else if (id === 'wins') {
@@ -899,7 +899,7 @@ export default function App() {
             onFullscreenChange={setCamFullscreen}
           />
 
-          <div className="panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto">
+          <div className="panel-scroll flex max-h-[calc(100vh-6.5rem)] flex-col gap-3 overflow-y-auto">
             <AthletePanel
               athletes={athletes}
               activeId={activeAthleteId}
@@ -943,7 +943,8 @@ export default function App() {
       )}
 
       {tab === 'tasks2' && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
+        <PanelErrorBoundary label="Practice">
+        <div className="grid min-h-[16rem] gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.95fr)]">
           <div className="order-2 min-w-0 xl:order-1">
           <TasksWorkspace
             shape={shape}
@@ -980,7 +981,7 @@ export default function App() {
           />
           </div>
 
-          <div className="order-1 panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto xl:order-2">
+          <div className="order-1 panel-scroll flex max-h-[calc(100vh-6.5rem)] min-h-[12rem] flex-col gap-3 overflow-y-auto xl:order-2">
             <Tasks2Panel
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
@@ -1030,10 +1031,12 @@ export default function App() {
             />
           </div>
         </div>
+        </PanelErrorBoundary>
       )}
 
       {tab === 'homework' && (
-        <div className="flex flex-col gap-3">
+        <PanelErrorBoundary label="Homework">
+        <div className="flex min-h-[16rem] flex-col gap-3">
           {!hwStudio && activeAthleteId ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
               {activeProfile && profileRole(activeProfile) === 'parent' ? (
@@ -1152,6 +1155,7 @@ export default function App() {
             }
           />
         </div>
+        </PanelErrorBoundary>
       )}
 
       {tab === 'warmup' && <WarmupPanel signedIn={activeProfile} />}
@@ -1167,6 +1171,7 @@ export default function App() {
           athletes={athletes}
           intent={learnIntent}
           onIntentConsumed={() => setLearnIntent(null)}
+          surface="learn"
           presetQuizTaker={quizPreset}
           preferredQuizIds={[
             ...new Set([
@@ -1207,6 +1212,20 @@ export default function App() {
             goTab('today')
             setStationOpen(true)
           }}
+        />
+      )}
+
+      {tab === 'scroll' && (
+        <EducationPanel
+          referencePhotos={referencePhotos}
+          athleteId={activeAthleteId}
+          athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
+          persistIgToApp={ryanEdit}
+          onReferencesChange={setReferencePhotos}
+          signedIn={activeProfile}
+          athletes={athletes}
+          intent="scroll"
+          surface="videos"
         />
       )}
 
@@ -1332,7 +1351,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="panel-scroll flex max-h-[calc(var(--sl-vh)-6rem)] flex-col gap-3 overflow-y-auto">
+          <div className="panel-scroll flex max-h-[calc(100vh-6.5rem)] flex-col gap-3 overflow-y-auto">
             <ShapeSelector selectedId={shape.id} onSelect={onSelectShape} />
             <ScorePanel
               shape={shape}

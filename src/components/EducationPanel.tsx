@@ -3,7 +3,7 @@
  * For gymnasts and parents studying body positions before Tasks practice.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CURRICULUM_TASKS, getTask } from '../config/curriculum'
 import { getShape } from '../config/shapes'
 import {
@@ -34,8 +34,11 @@ import { CroppedStill } from './CroppedStill'
 import { MediaLightbox } from './MediaLightbox'
 import { PhysicsLessons } from './learn/PhysicsLessons'
 import { PhysicsQuiz } from './learn/PhysicsQuiz'
+import { AnatomyQuiz } from './learn/AnatomyQuiz'
+import { ProgressionQuiz } from './learn/ProgressionQuiz'
 import { ANATOMY_LESSONS } from '../config/coachAnatomy'
 import { PROGRESSION_LESSONS } from '../config/tumblingProgression'
+import { ATHLETE_PROGRESSION_LESSONS } from '../config/athleteProgression'
 import { drillsForShape, subscribeCoachContent } from '../lib/coachContentStore'
 import { isCoachProfile } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
@@ -56,6 +59,8 @@ type EduView =
   | { kind: 'task'; taskId: string }
   | { kind: 'quiz'; pool?: 'pathway' | 'arm-positions' }
   | { kind: 'physicsQuiz' }
+  | { kind: 'anatomyQuiz' }
+  | { kind: 'progressionQuiz' }
   | { kind: 'hits' }
   | { kind: 'glossary' }
   | { kind: 'ig' }
@@ -63,6 +68,8 @@ type EduView =
   | { kind: 'physics' }
   | { kind: 'anatomy' }
   | { kind: 'progression' }
+  | { kind: 'athleteProgress' }
+  | { kind: 'coachStudy' }
 
 export type LearnIntent = 'shapes' | 'quiz' | 'scroll'
 
@@ -82,6 +89,8 @@ type Props = {
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
   onParkQuiz?: () => void
+  /** Videos tab only needs the reference scroll. */
+  surface?: 'learn' | 'videos'
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -102,8 +111,9 @@ export function EducationPanel({
   onRecordQuiz,
   onAthleteChange,
   onParkQuiz,
+  surface = 'learn',
 }: Props) {
-  const [view, setView] = useState<EduView>({ kind: 'shapes' })
+  const [view, setView] = useState<EduView>({ kind: surface === 'videos' ? 'scroll' : 'home' })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ShapeFilter>('all')
   const [hits, setHits] = useState<TaskCapture[]>([])
@@ -111,6 +121,7 @@ export function EducationPanel({
   const [exploreId, setExploreId] = useState<string | null>(null)
   const { copyFor } = useShapeCopy()
   const canAddGymShape = Boolean(signedIn && isCoachProfile(signedIn))
+  const coach = Boolean(signedIn && isCoachProfile(signedIn))
 
   useEffect(() => subscribeCoachContent(() => setCatalogTick((n) => n + 1)), [])
 
@@ -171,97 +182,115 @@ export function EducationPanel({
 
   return (
     <div className={`mx-auto space-y-4 ${view.kind === 'scroll' ? 'max-w-xl' : 'max-w-4xl'}`}>
-      <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Learn</h2>
-        <div className="mt-3 flex flex-wrap gap-1 rounded-xl bg-[#0d1218] p-1">
-          <NavChip
-            active={view.kind === 'home'}
-            onClick={goHome}
-            label="Overview"
-          />
-          <NavChip
-            active={view.kind === 'shapes' || view.kind === 'shape'}
-            onClick={goShapes}
-            label="Shape library"
-          />
-          <NavChip
-            active={view.kind === 'pathways' || view.kind === 'task'}
-            onClick={goPathways}
-            label="Task pathways"
-          />
-          <NavChip
-            active={view.kind === 'physics'}
-            onClick={() => setView({ kind: 'physics' })}
-            label="Tumbling physics"
-          />
-          <NavChip
-            active={view.kind === 'anatomy'}
-            onClick={() => setView({ kind: 'anatomy' })}
-            label="Anatomy"
-          />
-          <NavChip
-            active={view.kind === 'progression'}
-            onClick={() => setView({ kind: 'progression' })}
-            label="Progression"
-          />
-          <NavChip
-            active={view.kind === 'glossary'}
-            onClick={() => setView({ kind: 'glossary' })}
-            label="Glossary"
-          />
-          <NavChip
-            active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
-            onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
-            label="Shape test"
-          />
-          <NavChip
-            active={view.kind === 'quiz' && view.pool === 'arm-positions'}
-            onClick={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
-            label="Arm positions"
-          />
-          <NavChip
-            active={view.kind === 'physicsQuiz'}
-            onClick={() => setView({ kind: 'physicsQuiz' })}
-            label="Physics test"
-          />
-          <NavChip
-            active={view.kind === 'scroll'}
-            onClick={() => setView({ kind: 'scroll' })}
-            label="Reference scroll"
-          />
-          <NavChip
-            active={view.kind === 'ig'}
-            onClick={() => setView({ kind: 'ig' })}
-            label="IG shapes"
-          />
-          <NavChip
-            active={view.kind === 'hits'}
-            onClick={() => setView({ kind: 'hits' })}
-            label="My shapes"
-          />
-        </div>
-      </header>
+      {surface === 'videos' ? (
+        <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Videos
+          </p>
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Reference scroll</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Same gym Instagram library as Compare. Also lives under Learn.
+          </p>
+        </header>
+      ) : (
+        <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Learn</h2>
+              <p className="mt-0.5 text-sm text-[var(--muted)]">
+                Shapes to study. Tests to check. A quiet shelf for extra notes.
+              </p>
+            </div>
+            <NavChip active={view.kind === 'home'} onClick={goHome} label="Home" />
+          </div>
+          <div className="mt-4 space-y-3">
+            <ChipRow label="Shapes">
+              <NavChip
+                active={view.kind === 'shapes' || view.kind === 'shape'}
+                onClick={goShapes}
+                label="Shape library"
+              />
+              <NavChip active={view.kind === 'ig'} onClick={() => setView({ kind: 'ig' })} label="IG shapes" />
+              <NavChip active={view.kind === 'hits'} onClick={() => setView({ kind: 'hits' })} label="My shapes" />
+              <NavChip
+                active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
+                onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
+                label="Shape test"
+              />
+            </ChipRow>
+            <ChipRow label="Watch">
+              <NavChip
+                active={view.kind === 'scroll'}
+                onClick={() => setView({ kind: 'scroll' })}
+                label="Reference scroll"
+              />
+              <NavChip
+                active={view.kind === 'athleteProgress'}
+                onClick={() => setView({ kind: 'athleteProgress' })}
+                label="How skills grow"
+              />
+            </ChipRow>
+            {coach && (
+              <ChipRow label="Coaches">
+                <NavChip
+                  active={
+                    view.kind === 'coachStudy' ||
+                    view.kind === 'physics' ||
+                    view.kind === 'anatomy' ||
+                    view.kind === 'progression' ||
+                    view.kind === 'physicsQuiz' ||
+                    view.kind === 'anatomyQuiz' ||
+                    view.kind === 'progressionQuiz'
+                  }
+                  onClick={() => setView({ kind: 'coachStudy' })}
+                  label="Coach study"
+                />
+              </ChipRow>
+            )}
+            <details className="rounded-xl bg-[#0d1218] px-3 py-2">
+              <summary className="cursor-pointer text-xs font-semibold text-[var(--muted)]">
+                Extra (pathways, glossary)
+              </summary>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <NavChip
+                  active={view.kind === 'pathways' || view.kind === 'task'}
+                  onClick={goPathways}
+                  label="Task pathways"
+                />
+                <NavChip
+                  active={view.kind === 'glossary'}
+                  onClick={() => setView({ kind: 'glossary' })}
+                  label="Glossary"
+                />
+                <NavChip
+                  active={view.kind === 'quiz' && view.pool === 'arm-positions'}
+                  onClick={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
+                  label="Arm positions"
+                />
+              </div>
+            </details>
+          </div>
+        </header>
+      )}
 
-      {view.kind === 'home' && (
+      {view.kind === 'home' && surface === 'learn' && (
         <HomeView
-          pathwayCount={pathwayIds.size}
           shapeCount={catalog.length}
-          taskCount={CURRICULUM_TASKS.length}
           onShapes={goShapes}
-          onPathways={goPathways}
           onQuiz={() => setView({ kind: 'quiz', pool: 'pathway' })}
-          onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
           onHits={() => setView({ kind: 'hits' })}
-          onGlossary={() => setView({ kind: 'glossary' })}
           onIg={() => setView({ kind: 'ig' })}
           onScroll={() => setView({ kind: 'scroll' })}
-          onPhysics={() => setView({ kind: 'physics' })}
-          onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
-          onAnatomy={() => setView({ kind: 'anatomy' })}
-          onProgression={() => setView({ kind: 'progression' })}
+          onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
+          onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
+          onPathways={goPathways}
+          onGlossary={() => setView({ kind: 'glossary' })}
+          onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
+          onOverview={() => setView({ kind: 'home' })}
           igCount={listIgStills(referencePhotos).length}
           referencePhotos={referencePhotos}
           shapes={catalog}
+          coach={coach}
         />
       )}
 
@@ -304,16 +333,44 @@ export function EducationPanel({
         <PathwayList onOpen={openTask} onOpenShape={openShape} />
       )}
 
+      {view.kind === 'coachStudy' && (
+        <CoachStudyRoom
+          onPhysics={() => setView({ kind: 'physics' })}
+          onAnatomy={() => setView({ kind: 'anatomy' })}
+          onProgression={() => setView({ kind: 'progression' })}
+          onPhysicsQuiz={() => setView({ kind: 'physicsQuiz' })}
+          onAnatomyQuiz={() => setView({ kind: 'anatomyQuiz' })}
+          onProgressionQuiz={() => setView({ kind: 'progressionQuiz' })}
+        />
+      )}
+
+      {view.kind === 'athleteProgress' && (
+        <PhysicsLessons
+          lessons={ATHLETE_PROGRESSION_LESSONS}
+          heading="How skills grow"
+        />
+      )}
+
       {view.kind === 'physics' && (
         <PhysicsLessons onTakeTest={() => setView({ kind: 'physicsQuiz' })} />
       )}
 
       {view.kind === 'anatomy' && (
-        <PhysicsLessons lessons={ANATOMY_LESSONS} heading="Anatomy for coaches" />
+        <PhysicsLessons
+          lessons={ANATOMY_LESSONS}
+          heading="Anatomy for coaches"
+          onTakeTest={() => setView({ kind: 'anatomyQuiz' })}
+          testLabel="Anatomy test →"
+        />
       )}
 
       {view.kind === 'progression' && (
-        <PhysicsLessons lessons={PROGRESSION_LESSONS} heading="Progression and blocks" />
+        <PhysicsLessons
+          lessons={PROGRESSION_LESSONS}
+          heading="Progression and blocks"
+          onTakeTest={() => setView({ kind: 'progressionQuiz' })}
+          testLabel="Progressions test →"
+        />
       )}
 
       {view.kind === 'task' && (
@@ -361,7 +418,17 @@ export function EducationPanel({
         />
       )}
 
-      {view.kind === 'physicsQuiz' && <PhysicsQuiz onExit={goHome} />}
+      {view.kind === 'physicsQuiz' && (
+        <PhysicsQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+      )}
+
+      {view.kind === 'anatomyQuiz' && (
+        <AnatomyQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+      )}
+
+      {view.kind === 'progressionQuiz' && (
+        <ProgressionQuiz onExit={() => setView({ kind: 'coachStudy' })} />
+      )}
 
       {view.kind === 'ig' && (
         <IgShapesLibrary
@@ -406,13 +473,114 @@ function NavChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm transition ${
+      className={`rounded-full px-3 py-1.5 text-sm transition ${
         active
-          ? 'bg-[var(--panel)] font-semibold text-[var(--text)]'
-          : 'text-[var(--muted)] hover:text-[var(--text)]'
+          ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+          : 'bg-[#121820] text-[var(--muted)] hover:text-[var(--text)]'
       }`}
     >
       {label}
+    </button>
+  )
+}
+
+function ChipRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  )
+}
+
+function CoachStudyRoom({
+  onPhysics,
+  onAnatomy,
+  onProgression,
+  onPhysicsQuiz,
+  onAnatomyQuiz,
+  onProgressionQuiz,
+}: {
+  onPhysics: () => void
+  onAnatomy: () => void
+  onProgression: () => void
+  onPhysicsQuiz: () => void
+  onAnatomyQuiz: () => void
+  onProgressionQuiz: () => void
+}) {
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+          Coach study
+        </p>
+        <h3 className="mt-1 text-xl font-semibold">A room for coaches</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+          Physics, anatomy, and progressions live here so the athlete Learn tab stays
+          about shapes. Spotting notes will join this room later.
+        </p>
+      </section>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StudyCard
+          title="Tumbling physics"
+          body="Inertia, angular momentum, moment of inertia, the block, surfaces, and twist. Keep the main points. Read it like a chapter."
+          action="Open physics"
+          onClick={onPhysics}
+        />
+        <StudyCard
+          title="Anatomy"
+          body="Joint actions, extra range you can see, muscle versus ligament versus tendon, and gym prevention."
+          action="Open anatomy"
+          onClick={onAnatomy}
+        />
+        <StudyCard
+          title="Progression"
+          body="Introduction, approximation, acquisition, mastery. Normal fear and the three kinds of stuck."
+          action="Open progression"
+          onClick={onProgression}
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StudyCard title="Physics test" body="The ideas from the physics chapter, in gym language." action="Take test" onClick={onPhysicsQuiz} />
+        <StudyCard title="Anatomy test" body="Name the joint, the tissue, and the gym decision." action="Take test" onClick={onAnatomyQuiz} />
+        <StudyCard title="Progressions test" body="Name the level and the kind of stuck." action="Take test" onClick={onProgressionQuiz} />
+      </div>
+      <section className="rounded-2xl border border-dashed border-[var(--panel-border)] bg-[#121820] p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          Coming next
+        </p>
+        <h3 className="mt-1 text-lg font-semibold">Spotting</h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          A spotting study path will sit here with the other coach chapters. Not on the
+          athlete Learn tab.
+        </p>
+      </section>
+    </div>
+  )
+}
+
+function StudyCard({
+  title,
+  body,
+  action,
+  onClick,
+}: {
+  title: string
+  body: string
+  action: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left transition hover:border-[var(--accent-dim)]"
+    >
+      <h3 className="text-base font-semibold text-[var(--text)]">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{body}</p>
+      <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">{action} →</span>
     </button>
   )
 }
@@ -450,262 +618,173 @@ function ShapeSideArrow({
 }
 
 function HomeView({
-  pathwayCount,
   shapeCount,
-  taskCount,
   onShapes,
-  onPathways,
   onQuiz,
-  onArmQuiz,
   onHits,
-  onGlossary,
   onIg,
   onScroll,
-  onPhysics,
-  onPhysicsQuiz,
-  onAnatomy,
-  onProgression,
+  onAthleteProgress,
+  onCoachStudy,
+  onPathways,
+  onGlossary,
+  onArmQuiz,
   igCount,
   referencePhotos,
   shapes,
+  coach,
 }: {
-  pathwayCount: number
   shapeCount: number
-  taskCount: number
   onShapes: () => void
-  onPathways: () => void
   onQuiz: () => void
-  onArmQuiz: () => void
   onHits: () => void
-  onGlossary: () => void
   onIg: () => void
   onScroll: () => void
-  onPhysics: () => void
-  onPhysicsQuiz: () => void
-  onAnatomy: () => void
-  onProgression: () => void
+  onAthleteProgress: () => void
+  onCoachStudy?: () => void
+  onPathways: () => void
+  onGlossary: () => void
+  onArmQuiz: () => void
+  onOverview: () => void
   igCount: number
   referencePhotos: ReferencePhoto[]
   shapes: ShapeDef[]
+  coach: boolean
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={onShapes}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Shape library</h3>
-        <div className="mt-3 grid grid-cols-3 gap-1">
-          {shapes.slice(0, 6).map((shape) => (
-            <div
-              key={shape.id}
-              className="aspect-square overflow-hidden rounded-md bg-[#0d1218]"
-            >
-              <ReferenceStill
-                shapeId={shape.id}
-                photos={referencePhotos}
-                alt={shape.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Browse {shapeCount} positions with the coach stills you shared, plus
-          homework. {pathwayCount} are on the athlete pathway. Arm drills live in
-          the Arm positions test, not as empty library cards.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Browse shapes →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onPathways}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Task pathways</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Walk the {taskCount}-task curriculum in order. See hold times (5s on
-          standalone first hits, 3s in sequences), pass-through notes, and what unlocks next.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          View pathway →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onPhysics}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Tumbling physics</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Inertia, angular momentum, moment of inertia, the block and Newton’s
-          third law on dead / spring / rod / Tumble Trak / tramp, and how
-          twisting actually works — contact, late, tilt, and cat twist.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open physics →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onPhysicsQuiz}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Physics in tumbling test</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Sixteen questions from the physics notes: inertia, angular momentum,
-          moment of inertia, the block and surfaces, twisting, the round-off
-          arm drop, and why layouts expose a weak set. When you finish, you see
-          the score and every miss with the right answer and why.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Take the physics test →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onAnatomy}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Anatomy for coaches</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Joint actions and the cues that match them, hypermobility you can
-          see, strain vs sprain vs tendon, grades, and gym prevention — wrists,
-          ankles, backs, short landings, and why we stopped treating ice as the
-          whole plan.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open anatomy →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onProgression}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Progression and blocks</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Introduction, approximation, acquisition, mastery — and how normal
-          fear, mental blocks, physical blocks, and emotional blocks sit on
-          those levels. Progress is not linear.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open progression →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onGlossary}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Shape glossary</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          One coach photo per practiced shape, plus an Extra folder for positions you
-          want athletes to learn but will not score with the camera. Add notes when you
-          upload.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open glossary →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onQuiz}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Pick pictures (name what you see), descriptions (name what is being
-          described), or both together. Written notes do not say the shape’s name.
-          Landing lunge and Lunge · open shoulders are the same position — the test
-          treats them as one. When you finish, you see your score and every miss
-          with the correct name.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Take the test →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onArmQuiz}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Arm positions test</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Low V, front middle, open shoulders, T, and high V — standing and on a
-          landing lunge. Finish the hands as if they just pushed through an object
-          (wide fingers, thumbs slightly down, pinkies slightly up). These are not a
-          Tasks gate right now; study them here. Score and misses show when you
-          finish, same as the shape test.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Test arm positions →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onScroll}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">Reference scroll</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Doom-scroll the gym Instagram library from Compare. Set A/B loop points on
-          each clip — Classes and Compare keep those same points.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open scroll →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onIg}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
-        {listIgStills(referencePhotos).length > 0 && (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onShapes}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">Shape library</h3>
           <div className="mt-3 grid grid-cols-3 gap-1">
-            {listIgStills(referencePhotos).slice(0, 6).map((still) => (
-              <div
-                key={still.id}
-                className="aspect-square overflow-hidden rounded-md bg-[#0d1218]"
-              >
-                <CroppedStill
-                  src={still.dataUrl}
-                  stillId={still.id}
-                  alt={still.label ?? 'IG shape'}
+            {shapes.slice(0, 6).map((shape) => (
+              <div key={shape.id} className="aspect-square overflow-hidden rounded-md bg-[#0d1218]">
+                <ReferenceStill
+                  shapeId={shape.id}
+                  photos={referencePhotos}
+                  alt={shape.name}
                   className="h-full w-full object-cover"
                 />
               </div>
             ))}
           </div>
-        )}
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Crops from Compare. Screenshot a looping Instagram clip or replay — press one
-          corner, drag to the opposite corner — and the still lands here. Select Ryan
-          before you save if you want it in the app on every link. {igCount} saved.
+          <p className="mt-2 text-sm text-[var(--muted)]">{shapeCount} positions with coach stills.</p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Browse shapes →</span>
+        </button>
+        <button
+          type="button"
+          onClick={onIg}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes</h3>
+          {igCount > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-1">
+              {listIgStills(referencePhotos).slice(0, 6).map((still) => (
+                <div key={still.id} className="aspect-square overflow-hidden rounded-md bg-[#0d1218]">
+                  <CroppedStill
+                    src={still.dataUrl}
+                    stillId={still.id}
+                    alt={still.label ?? 'IG shape'}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Crops from Compare. {igCount} saved.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open IG shapes →</span>
+        </button>
+        <button
+          type="button"
+          onClick={onHits}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">My shapes</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Your own hit photos and clips, filed by shape.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open folder →</span>
+        </button>
+        <button
+          type="button"
+          onClick={onQuiz}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">Shape test</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Pictures or descriptions. Starting lunge, landing lunge, and mountain climber sit together so you have to know the difference.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Take the test →</span>
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onScroll}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">Reference scroll</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            The gym Instagram library. Also under Videos.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Open scroll →</span>
+        </button>
+        <button
+          type="button"
+          onClick={onAthleteProgress}
+          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
+        >
+          <h3 className="text-lg font-semibold text-[var(--text)]">How skills grow</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Four stages of a skill, written for the person on the floor. Nerves, stuck skills, and a heavy room.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">Read the rundown →</span>
+        </button>
+      </div>
+
+      {coach && onCoachStudy && (
+        <button
+          type="button"
+          onClick={onCoachStudy}
+          className="w-full rounded-2xl border border-[#f5c542]/40 bg-[#2a220e] p-5 text-left"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f5c542]">
+            Coaches only
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Coach study</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Physics, anatomy, progressions, and their tests. Spotting will land here later.
+          </p>
+          <span className="mt-3 inline-block text-sm font-medium text-[#f5c542]">Open the study room →</span>
+        </button>
+      )}
+
+      <details className="rounded-2xl border border-[var(--panel-border)] bg-[#121820] px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">
+          More notes
+        </summary>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+          Extra tools that are useful and easy to confuse with the main library.
         </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open IG shapes →
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onHits}
-        className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-left transition hover:border-[var(--accent-dim)]"
-      >
-        <h3 className="text-lg font-semibold text-[var(--text)]">My shapes</h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          The athlete&apos;s own hit photos and clips, filed by shape. Most Tasks
-          hits land here automatically. A long Home core video asks first —
-          Save to My shapes, or I don&apos;t want the video.
-        </p>
-        <span className="mt-3 inline-block text-sm font-medium text-[var(--accent)]">
-          Open folder →
-        </span>
-      </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={onArmQuiz} className="rounded-full bg-[#0d1218] px-3 py-1.5 text-xs font-semibold text-[var(--text)]">
+            Arm positions test
+          </button>
+          <button type="button" onClick={onGlossary} className="rounded-full bg-[#0d1218] px-3 py-1.5 text-xs font-semibold text-[var(--text)]">
+            Glossary
+          </button>
+          <button type="button" onClick={onPathways} className="rounded-full bg-[#0d1218] px-3 py-1.5 text-xs font-semibold text-[var(--text)]">
+            Task pathways
+          </button>
+        </div>
+      </details>
     </div>
   )
 }
