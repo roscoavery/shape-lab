@@ -46,6 +46,7 @@ import {
   rememberPoseTrack,
   serializePoseTrack,
 } from '../lib/poseTrack'
+import { getPoseCandidates } from '../lib/poseCandidates'
 import { unlockHoldTones } from '../lib/sounds'
 import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
@@ -983,6 +984,7 @@ export function Tasks2Panel({
             cancelled: () => !alive(),
             doneRequested: () => holdDoneRef.current || !alive(),
             landmarks: () => landmarksRef.current,
+            candidates: () => getPoseCandidates(),
             score: () => scoreRef.current,
             stream: () => (rolling ? null : streamRef.current),
             timelineSec: rolling ? () => delay.capturedSec() : undefined,

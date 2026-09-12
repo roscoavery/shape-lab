@@ -11,8 +11,8 @@ import type { Landmark } from '../types'
 
 export const HOLD_ENTER_MS = 320
 export const HOLD_EXIT_MS = 480
-/** Feet must stay down this long. A 200ms ankle flicker used to end a real hold. */
-export const HOLD_COME_DOWN_MS = 520
+/** Real land only. A jumped skeleton used to end a 20s hold in half a second. */
+export const HOLD_COME_DOWN_MS = 900
 export const HOLD_ENTER_CONF = 0.7
 export const HOLD_EXIT_CONF = 0.52
 const EMA = 0.38
@@ -292,8 +292,20 @@ export function poseLooksLikeHandstand(lm: Landmark[] | null | undefined): boole
   return evaluateHandstandGeometry(lm).confidence >= 0.62
 }
 
-function isComeDownFail(fail: string | null): boolean {
-  return fail === 'feet still down' || fail === 'hands above shoulders'
+/** Hips still stacked above the hands — the body is inverted even if feet flicker. */
+export function poseTorsoInverted(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const wrist = pair(lm[LM.LEFT_WRIST], lm[LM.RIGHT_WRIST])
+  const hip = pair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP])
+  const shoulder = pair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER])
+  if (wrist && hip && hip.y < wrist.y - 0.12) return true
+  if (wrist && shoulder && shoulder.y < wrist.y - 0.04 && hip && hip.y < wrist.y - 0.08) return true
+  return evaluateHandstandGeometry(lm).confidence >= 0.5
+}
+
+/** True if any MediaPipe body in this frame is still a handstand. */
+export function anyPoseInverted(poses: Array<Landmark[] | null | undefined>): boolean {
+  return poses.some((lm) => poseTorsoInverted(lm))
 }
 
 export class HoldDetector {
@@ -314,7 +326,7 @@ export class HoldDetector {
     this.invalidFrames = 0
   }
 
-  push(raw: Landmark[] | null, now: number): HoldDetectSample {
+  push(raw: Landmark[] | null, now: number, others: Landmark[][] = []): HoldDetectSample {
     const enterAt = HOLD_ENTER_CONF
     const exitAt = HOLD_EXIT_CONF
 
@@ -335,9 +347,10 @@ export class HoldDetector {
     this.smoothed = smoothLandmarks(this.smoothed, raw)
     const geo = evaluateHandstandGeometry(this.smoothed)
     const rawGeo = evaluateHandstandGeometry(raw)
+    const stillInverted = anyPoseInverted([raw, ...others])
     // Need the hips down on both raw and smoothed so one ghost ankle
-    // cannot stop the clock. A real land shows up on both quickly.
-    const feetPlanted = rawGeo.feetPlanted && geo.feetPlanted
+    // cannot stop the clock. A body still inverted in the frame is not a land.
+    const feetPlanted = rawGeo.feetPlanted && geo.feetPlanted && !stillInverted
     const comeDown = feetPlanted
     return this.finishSample(geo, { comeDown, lostPose: false, enterAt, exitAt, now, feetPlanted })
   }

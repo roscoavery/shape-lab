@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { hintMotion } from '../lib/saveMedia'
 import { cameraPermissionMessage, isAndroid, requestUserCamera } from '../lib/delayCameraPipeline'
 import { AthleteTracker, loadPoseQuality } from '../lib/athleteTrack'
+import { rememberPoseCandidates } from '../lib/poseCandidates'
 import { BackgroundMotion } from '../lib/poseSubject'
 import type { Landmark } from '../types'
 
@@ -106,11 +107,9 @@ export function usePoseCamera(): PoseCameraState {
           if (!motionRef.current) motionRef.current = new BackgroundMotion()
           trackerRef.current.setMeta(quality, activePoseModelLabel(), inferMs)
           motionRef.current.sample(video, now)
-          const frame = trackerRef.current.push(
-            resultToMultipleLandmarks(result),
-            now,
-            motionRef.current,
-          )
+          const poses = resultToMultipleLandmarks(result)
+          rememberPoseCandidates(poses)
+          const frame = trackerRef.current.push(poses, now, motionRef.current)
           publish(frame.stabilized, now)
         }
 

@@ -169,13 +169,27 @@ for (let i = 0; i < Math.ceil(HOLD_COME_DOWN_MS / 40) + 2; i += 1) {
 }
 failed += assert('coming down should end the hold', !comeDown.push(stand, t + 40).holding)
 
+const steal = new HoldDetector()
+t = 8_000
+steal.push(hs, t)
+t += HOLD_ENTER_MS + 40
+failed += assert('hold is up before the jumped skeleton', steal.push(hs, t).holding)
+for (let i = 0; i < Math.ceil(HOLD_COME_DOWN_MS / 40) + 4; i += 1) {
+  t += 40
+  steal.push(stand, t, [hs])
+}
+failed += assert(
+  'standing lock must not end the hold while a handstand is still in frame',
+  steal.push(stand, t + 40, [hs]).holding,
+)
+
 const softExit = new HoldDetector()
 t = 3_000
 softExit.push(hs, t)
 t += HOLD_ENTER_MS + 40
 softExit.push(hs, t)
 // Arms-up standing is a hard fail; use a near-vertical reach that is not inverted.
-for (let i = 0; i < Math.ceil(HOLD_EXIT_MS / 40) + 2; i += 1) {
+for (let i = 0; i < Math.ceil(HOLD_COME_DOWN_MS / 40) + 2; i += 1) {
   t += 40
   softExit.push(armsUp, t)
 }

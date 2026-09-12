@@ -69,6 +69,8 @@ export type HoldSessionOpts = {
   cancelled: () => boolean
   doneRequested: () => boolean
   landmarks: () => Landmark[] | null
+  /** Every MediaPipe body this frame — clock stays up if any is inverted. */
+  candidates?: () => Landmark[][]
   score: () => ScoreResult
   stream: () => MediaStream | null
   canvas: () => HTMLCanvasElement | null
@@ -442,7 +444,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
 
     while (!opts.cancelled() && !opts.doneRequested()) {
       const lm = opts.landmarks()
-      const sample = detector.push(lm, performance.now())
+      const sample = detector.push(lm, performance.now(), opts.candidates?.() ?? [])
       samplePose(lm)
       if (sample.holding || sample.candidate) startRec()
       tick({
@@ -495,7 +497,8 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
       const now = performance.now()
       holdSeconds = (now - holdStart) / 1000
       const lm = opts.landmarks()
-      const sample = detector.push(lm, now)
+      const extras = opts.candidates?.() ?? []
+      const sample = detector.push(lm, now, extras)
       samplePose(lm)
 
       if (now - lastPeakSample >= PEAK_SAMPLE_MS) {
@@ -520,7 +523,34 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         detect: debugOn ? sample.debug : undefined,
       })
 
-      if (opts.doneRequested() || !sample.holding || holdSeconds >= MAX_HOLD_SEC) break
+      if (opts.doneRequested() || holdSeconds >= MAX_HOLD_SEC) break
+      if (!sample.holding) {
+        let resumed = false
+        const graceUntil = performance.now() + 450
+        while (
+          performance.now() < graceUntil &&
+          !opts.cancelled() &&
+          !opts.doneRequested()
+        ) {
+          await wait(33)
+          holdSeconds = (performance.now() - holdStart) / 1000
+          const again = detector.push(opts.landmarks(), performance.now(), opts.candidates?.() ?? [])
+          samplePose(opts.landmarks())
+          tick({
+            seconds: holdSeconds,
+            running: true,
+            inverted: again.holding,
+            handsDown: again.handsDown,
+            feetOff: again.feetOff,
+            detect: debugOn ? again.debug : undefined,
+          })
+          if (again.holding) {
+            resumed = true
+            break
+          }
+        }
+        if (!resumed) break
+      }
       await wait(33)
     }
 
@@ -556,35 +586,54 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
           peakBlob = peakBlob ?? snapshotCanvas(opts.canvas())
         }
       }
-      let playheadSec = rec.session
-        ? Math.max(0, (peakAt - recStart) / 1000)
-        : Math.max(0, peakSec)
-      let clockOffsetSec = rec.session
+      const clockOffsetSec = rec.session
         ? Math.max(0, (holdStart - recStart) / 1000)
         : Math.max(0, holdStartSec)
-      // Detector wall-clock is the hold. A lost skeleton is not a come-down —
-      // do not shorten the clip to the last inverted pose-track span.
-      last = holdSeconds
-      best = best == null ? holdSeconds : Math.max(best, holdSeconds)
-      const trimmed =
-        clipBlob && !opts.doneRequested()
-          ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
-          : {
-              clipBlob,
-              clockOffsetSec,
-              playheadSec,
-              poseTrack,
-            }
-      attempts.push({
-        holdSeconds,
-        livePeak: peakFrozen,
-        snapshotBlob: peakBlob,
-        clipBlob: trimmed.clipBlob,
-        playheadSec: trimmed.playheadSec,
-        clockOffsetSec: trimmed.clockOffsetSec,
-        poseTrack: trimmed.poseTrack,
-      })
-      tick({ seconds: holdSeconds, running: false, inverted: false })
+      const playheadSec = rec.session
+        ? Math.max(0, (peakAt - recStart) / 1000)
+        : Math.max(0, peakSec)
+      const prev = attempts[attempts.length - 1]
+      const prevEnd = prev ? prev.clockOffsetSec + prev.holdSeconds : null
+      const gap = prevEnd == null ? Number.POSITIVE_INFINITY : clockOffsetSec - prevEnd
+      // One kick-up is one clip. A false come-down mid-hold must not
+      // start a second video — stitch it back onto the same attempt.
+      if (prev && gap < 1.6) {
+        prev.holdSeconds = clockOffsetSec + holdSeconds - prev.clockOffsetSec
+        prev.clipBlob = null
+        prev.poseTrack = prev.poseTrack.concat(poseTrack)
+        if (
+          peakFrozen &&
+          (!prev.livePeak || handstandPeakScore(peakFrozen) >= handstandPeakScore(prev.livePeak))
+        ) {
+          prev.livePeak = peakFrozen
+          prev.snapshotBlob = peakBlob ?? prev.snapshotBlob
+        }
+        last = prev.holdSeconds
+        best = best == null ? prev.holdSeconds : Math.max(best, prev.holdSeconds)
+        tick({ seconds: prev.holdSeconds, running: false, inverted: false })
+      } else {
+        last = holdSeconds
+        best = best == null ? holdSeconds : Math.max(best, holdSeconds)
+        const trimmed =
+          clipBlob && !opts.timelineSec && !opts.doneRequested()
+            ? await trimHoldClip(clipBlob, clockOffsetSec, holdSeconds, playheadSec, poseTrack)
+            : {
+                clipBlob: opts.timelineSec ? null : clipBlob,
+                clockOffsetSec,
+                playheadSec,
+                poseTrack,
+              }
+        attempts.push({
+          holdSeconds,
+          livePeak: peakFrozen,
+          snapshotBlob: peakBlob,
+          clipBlob: trimmed.clipBlob,
+          playheadSec: trimmed.playheadSec,
+          clockOffsetSec: trimmed.clockOffsetSec,
+          poseTrack: trimmed.poseTrack,
+        })
+        tick({ seconds: holdSeconds, running: false, inverted: false })
+      }
     }
 
     if (opts.doneRequested()) break

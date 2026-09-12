@@ -501,6 +501,17 @@ export class AthleteTracker {
       const cleaned = clipImpossibleBones(sanitizePose(raw, this.lastStable))
       return looksInverted(cleaned.lm) && !looksLikeBackgroundProp(cleaned.lm)
     })
+    // A clear handstand in frame always beats a standing / furniture steal.
+    if (lastInv && invertedStill) {
+      let invBest: ReturnType<AthleteTracker['scoreCandidate']> | null = null
+      for (const raw of candidates) {
+        const scored = this.scoreCandidate(raw, now, motion)
+        if (scored.reason && !looksInverted(scored.lm)) continue
+        if (!looksInverted(scored.lm) || looksLikeBackgroundProp(scored.lm)) continue
+        if (!invBest || scored.score > invBest.score) invBest = { ...scored, reason: null, score: Math.max(scored.score, 0.5) }
+      }
+      if (invBest) best = invBest
+    }
     if (lockIsProp || (lastInv && !invertedStill)) {
       let steal: ReturnType<AthleteTracker['scoreCandidate']> | null = null
       for (const raw of candidates) {
