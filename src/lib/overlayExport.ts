@@ -5,6 +5,7 @@
  */
 
 import { getShape } from '../config/shapes'
+import { HOLD_PINK } from './holdBuild'
 import { holdMediaWindow } from './handstandHold'
 import { looksLikeBackgroundProp } from './poseSubject'
 import { landmarksAtMedia, mediaStretch, mediaTimeToTrackTime, type PoseTrack } from './poseTrack'
@@ -144,7 +145,7 @@ export function paintHoldOverlay(
     })
   }
   const clock = Math.max(0, Math.min(opts.holdSeconds, trackT - opts.clockOffsetSec))
-  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Handstand', clock)
+  drawGradeHud(ctx, width, height, Math.round(score?.overall ?? 0), 'Handstand', clock, HOLD_PINK)
 }
 
 export type BurnOverlayOpts = {

@@ -20,8 +20,17 @@ echo
 if [ -d .git ]; then
   git fetch origin v2-rebuild 2>/dev/null || true
   git checkout v2-rebuild 2>/dev/null || true
-  git pull --ff-only origin v2-rebuild 2>/dev/null || git pull --ff-only 2>/dev/null || true
+  if ! git pull --ff-only origin v2-rebuild; then
+    echo
+    echo "WARNING: git pull --ff-only failed. This Mac may still be on old code."
+    echo "The iPad refresh will not pick up GitHub until this folder updates."
+    echo "If this branch diverged:  git pull --rebase origin v2-rebuild"
+    echo "If dirty gym files are blocking pull, stash them, then pull again."
+    echo
+  fi
   echo "Code: $(git rev-parse --short HEAD)  $(git log -1 --pretty=%s)"
+  echo "Hold stamp on this start: Violet build — magenta Start hold / Done."
+  echo "If the iPad still shows gold or teal buttons, this gym did not rebuild the new files."
 fi
 
 npm install

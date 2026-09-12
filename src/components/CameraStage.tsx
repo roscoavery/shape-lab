@@ -12,6 +12,7 @@ import {
   isTrackDebugEnabled,
   jointDrawColor,
 } from '../lib/athleteTrack'
+import { HOLD_PINK } from '../lib/holdBuild'
 import { syncCanvasToVideo } from '../lib/poseCoords'
 import { isPoseDebugEnabled } from '../lib/poseSubject'
 import {
@@ -318,6 +319,7 @@ export function CameraStage({
           holdScoreGate && clock == null ? 0 : score.overall,
           shape?.name ?? 'Live score',
           clock,
+          holdScoreGate ? HOLD_PINK : '#f0b429',
         )
       }
       raf = requestAnimationFrame(draw)

@@ -8,6 +8,7 @@
  * (https://gym.shapelab.win/…). A plain Node HTTP/1 server RSTs those.
  */
 
+import { execSync } from 'node:child_process'
 import http from 'node:http'
 import http2 from 'node:http2'
 import net from 'node:net'
@@ -20,6 +21,17 @@ const DIST = join(ROOT, 'dist')
 const PUBLIC_PORT = Number(process.env.SHAPE_LAB_PORT || 43127)
 const VITE_PORT = Number(process.env.SHAPE_LAB_VITE_PORT || 43128)
 const WANT_VITE = /^(1|true|yes)$/i.test(String(process.env.GYM_DEV || ''))
+const HOLD_BUILD = 'violet'
+
+function gitSha() {
+  try {
+    return execSync('git rev-parse --short HEAD', { cwd: ROOT, encoding: 'utf8' }).trim()
+  } catch {
+    return null
+  }
+}
+
+const GIT_SHA = gitSha()
 
 function distReady() {
   return existsSync(join(DIST, 'index.html'))
@@ -206,7 +218,15 @@ function onRequest(req, res) {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
       })
-      res.end(JSON.stringify({ ok: true, static: distReady(), port: PUBLIC_PORT }))
+      res.end(
+        JSON.stringify({
+          ok: true,
+          static: distReady(),
+          port: PUBLIC_PORT,
+          sha: GIT_SHA,
+          holdBuild: HOLD_BUILD,
+        }),
+      )
       return
     }
     if (url.startsWith('/api/') || url === '/api') {
@@ -319,11 +339,12 @@ server.on('error', (err) => {
 })
 
 server.listen(PUBLIC_PORT, '0.0.0.0', () => {
+  const stamp = `holdBuild=${HOLD_BUILD} sha=${GIT_SHA ?? '?'}`
   if (distReady()) {
-    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API + production build)`)
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API + production build)  ${stamp}`)
   } else if (WANT_VITE) {
-    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})`)
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API here, pages via Vite :${VITE_PORT})  ${stamp}`)
   } else {
-    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API up; app build still running)`)
+    console.log(`Gym gate on http://127.0.0.1:${PUBLIC_PORT}  (API up; app build still running)  ${stamp}`)
   }
 })

@@ -338,6 +338,7 @@ export function drawGradeHud(
   overall: number,
   label: string,
   holdSeconds?: number | null,
+  clockColor = '#f0b429',
 ) {
   const cx = width / 2
   const y = height * 0.025
@@ -377,7 +378,7 @@ export function drawGradeHud(
   ctx.fillText(label, cx, y + scorePx + height * 0.01)
   if (clockText) {
     ctx.font = `800 ${clockPx}px ui-sans-serif, system-ui, sans-serif`
-    ctx.fillStyle = '#f0b429'
+    ctx.fillStyle = clockColor
     ctx.fillText(clockText, cx, y + scorePx + labelPx + height * 0.018)
   }
   ctx.restore()

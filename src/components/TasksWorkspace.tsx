@@ -15,6 +15,7 @@ import { StillOverlayPicker } from './StillOverlayPicker'
 import { TaskDelayCam } from './TaskDelayCam'
 import { CornerChip } from './CornerChip'
 import { useOverlayStill } from './OverlayStillContext'
+import { HOLD_BUILD_LABEL, HOLD_PINK_BTN } from '../lib/holdBuild'
 import { unlockHoldTones } from '../lib/sounds'
 
 export type TaskLiveKind = 'looking' | 'close' | 'holding' | 'gotit'
@@ -456,9 +457,11 @@ export function TasksWorkspace({
                           unlockHoldTones()
                         }}
                         onClick={onStartFlow}
-                        className="rounded-3xl bg-[var(--accent)] px-10 py-5 text-2xl font-black uppercase tracking-wide text-[#06281f] shadow-2xl sm:px-14 sm:py-6 sm:text-3xl"
+                        className={`rounded-3xl px-10 py-5 text-2xl font-black uppercase tracking-wide shadow-2xl sm:px-14 sm:py-6 sm:text-3xl ${
+                          holdScoreGate ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[#06281f]'
+                        }`}
                       >
-                        Start
+                        {holdScoreGate ? 'Start hold' : 'Start'}
                       </button>
                     </div>
                   )}
@@ -470,9 +473,9 @@ export function TasksWorkspace({
                         onClick={onDoneHold}
                         disabled={holdDoneBusy}
                         aria-busy={holdDoneBusy}
-                        className="h-14 min-w-[16rem] rounded-2xl bg-[var(--accent)] px-6 text-lg font-black text-[#06281f] shadow-2xl disabled:opacity-80"
+                        className={`h-14 min-w-[16rem] rounded-2xl px-6 text-lg font-black shadow-2xl disabled:opacity-80 ${HOLD_PINK_BTN}`}
                       >
-                        {holdDoneBusy ? 'Loading clips…' : 'Done — see my holds'}
+                        {holdDoneBusy ? 'Opening…' : `Done — ${HOLD_BUILD_LABEL}`}
                       </button>
                     </div>
                   )}

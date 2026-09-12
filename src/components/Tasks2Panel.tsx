@@ -48,6 +48,7 @@ import {
   serializePoseTrack,
 } from '../lib/poseTrack'
 import { getPoseCandidates } from '../lib/poseCandidates'
+import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL, HOLD_PINK_BTN, HOLD_PINK_TEXT } from '../lib/holdBuild'
 import { unlockHoldTones } from '../lib/sounds'
 import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
@@ -1723,7 +1724,9 @@ export function Tasks2Panel({
             void onEnsureCamera?.()
           }}
           onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+          className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+            seq.mode === 'hs-hold' ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[#06281f]'
+          }`}
         >
           {seq.mode === 'hs-hold'
             ? report
@@ -1751,7 +1754,7 @@ export function Tasks2Panel({
               onClick={requestHoldDone}
               disabled={phase === 'finishing'}
               aria-busy={phase === 'finishing'}
-              className="h-14 min-w-[12rem] flex-1 rounded-2xl bg-[var(--accent)] px-4 text-base font-bold text-[#06281f] disabled:opacity-80"
+              className={`h-14 min-w-[12rem] flex-1 rounded-2xl px-4 text-base font-bold disabled:opacity-80 ${HOLD_PINK_BTN}`}
             >
               {phase === 'finishing' ? 'Opening…' : 'Done — see my holds'}
             </button>
@@ -1783,7 +1786,7 @@ export function Tasks2Panel({
           {phase === 'finishing' ? (
             <div className="mt-2 flex items-center gap-3">
               <span
-                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#f0b429]"
+                className="h-7 w-7 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-[#e879f9]"
                 aria-hidden
               />
               <div>
@@ -1793,7 +1796,7 @@ export function Tasks2Panel({
             </div>
           ) : phase === 'holding' ? (
             <>
-              <p className="mt-1 text-3xl font-black tabular-nums text-[#f0b429]">
+              <p className={`mt-1 text-3xl font-black tabular-nums ${HOLD_PINK_TEXT}`}>
                 {holdTick?.running && holdTick.seconds != null
                   ? formatSeconds(holdTick.seconds)
                   : holdTick?.last != null
@@ -1887,7 +1890,7 @@ export function Tasks2Panel({
             aria-live="polite"
           >
             <span
-              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#f0b429]"
+              className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#e879f9]"
               aria-hidden
             />
             <p className="mt-4 text-xl font-black">Getting your clips…</p>
@@ -1900,9 +1903,18 @@ export function Tasks2Panel({
 
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
       <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-2xl border border-white/10 bg-[#121820] p-3 shadow-lg">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-          Class flows
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+              seq.mode === 'hs-hold' ? HOLD_PINK_TEXT : 'text-[var(--accent)]'
+            }`}
+          >
+            Class flows
+          </p>
+          {seq.mode === 'hs-hold' && (
+            <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
+          )}
+        </div>
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
         <div className="mt-2">
           <ShapeStillStrip
@@ -2018,13 +2030,13 @@ export function Tasks2Panel({
       </div>
 
       {phase === 'idle' && report?.holdAttempts && report.holdAttempts.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-[#f0b429]/40 bg-[#16120a] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f0b429]">
+        <div className="mb-3 rounded-2xl border border-[#e879f9]/40 bg-[#1a0f1c] p-3">
+          <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${HOLD_PINK_TEXT}`}>
             Your holds
           </p>
           <p className="mt-0.5 text-lg font-black text-white">
             Best{' '}
-            <span className="tabular-nums text-[#f0b429]">
+            <span className={`tabular-nums ${HOLD_PINK_TEXT}`}>
               {formatSeconds(report.bestHoldSeconds ?? 0)}
             </span>
             <span className="ml-2 text-sm font-semibold text-white/60">
@@ -2036,13 +2048,13 @@ export function Tasks2Panel({
               <li
                 key={h.index}
                 className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 ${
-                  h.highlighted ? 'border-[#f0b429] bg-black/40' : 'border-white/10 bg-black/25'
+                  h.highlighted ? 'border-[#e879f9] bg-black/40' : 'border-white/10 bg-black/25'
                 }`}
               >
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white">
                     {h.highlighted ? 'Longest' : `Hold ${h.index}`}
-                    <span className="ml-2 tabular-nums text-[#f0b429]">
+                    <span className={`ml-2 tabular-nums ${HOLD_PINK_TEXT}`}>
                       {formatSeconds(h.holdSeconds)}
                     </span>
                   </p>
@@ -2062,7 +2074,7 @@ export function Tasks2Panel({
                     type="button"
                     disabled={!h.clipId}
                     onClick={() => void saveHoldToPhotos(h.clipId, h.index)}
-                    className="rounded-lg bg-[var(--accent)] px-2.5 py-1.5 text-[12px] font-semibold text-[#06281f] disabled:opacity-50"
+                    className={`rounded-lg px-2.5 py-1.5 text-[12px] disabled:opacity-50 ${HOLD_PINK_BTN}`}
                   >
                     Save
                   </button>
@@ -2104,7 +2116,9 @@ export function Tasks2Panel({
                 onClick={() => selectSeq(s.id)}
                 className={`w-full overflow-hidden rounded-2xl border text-left disabled:opacity-50 ${
                   selected
-                    ? 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
+                    ? s.mode === 'hs-hold'
+                      ? 'border-[#e879f9] bg-[#1a0f1c] ring-1 ring-[#e879f9]'
+                      : 'border-[var(--accent)] bg-[#102820] ring-1 ring-[var(--accent)]'
                     : 'border-white/10 bg-[#121820] hover:border-white/25'
                 }`}
               >
@@ -2142,8 +2156,18 @@ export function Tasks2Panel({
         )}
 
         {busy && (
-          <div className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 ${
+              phase === 'holding' || phase === 'finishing'
+                ? 'border border-[#e879f9]/40 bg-[#1a0f1c]'
+                : 'border border-[var(--accent)]/40 bg-[#102820]'
+            }`}
+          >
+            <p
+              className={`text-[10px] font-semibold uppercase tracking-wider ${
+                phase === 'holding' || phase === 'finishing' ? HOLD_PINK_TEXT : 'text-[var(--accent)]'
+              }`}
+            >
               {phase === 'preview'
                 ? 'Get set — then the sequence starts'
                 : phase === 'finishing'
@@ -2154,7 +2178,7 @@ export function Tasks2Panel({
             </p>
             <p className="text-sm font-semibold leading-snug text-[var(--text)]">{cue}</p>
             {phase === 'holding' && holdTick && (
-              <p className="mt-1 text-2xl font-black tabular-nums text-[var(--accent)]">
+              <p className={`mt-1 text-2xl font-black tabular-nums ${HOLD_PINK_TEXT}`}>
                 {holdTick.running && holdTick.seconds != null
                   ? formatSeconds(holdTick.seconds)
                   : holdTick.last != null
@@ -2189,15 +2213,15 @@ export function Tasks2Panel({
             <>
               <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#f0b429]">
-                    Hold challenge
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${HOLD_PINK_TEXT}`}>
+                    Hold challenge · {HOLD_BUILD_LABEL}
                   </p>
                   <p className="mt-0.5 text-lg font-black leading-tight">
                     {report.holdAttempts?.find((h) => h.clipId === activeClipId || (!activeClipId && h.highlighted))
                       ?.highlighted
                       ? 'Longest hold'
                       : `Hold ${report.holdAttempts?.find((h) => h.clipId === activeClipId)?.index ?? ''}`}
-                    <span className="ml-2 tabular-nums text-[#f0b429]">
+                    <span className={`ml-2 tabular-nums ${HOLD_PINK_TEXT}`}>
                       {formatSeconds(
                         report.holdAttempts?.find((h) => h.clipId === activeClipId)?.holdSeconds ??
                           report.bestHoldSeconds ??
@@ -2213,7 +2237,7 @@ export function Tasks2Panel({
                   <button
                     type="button"
                     onClick={closeHoldWatch}
-                    className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${HOLD_PINK_BTN}`}
                   >
                     Done
                   </button>
@@ -2284,7 +2308,7 @@ export function Tasks2Panel({
                         onClick={() => playHoldClip(h.clipId, h.playheadSec)}
                         className={`w-[5.5rem] shrink-0 overflow-hidden rounded-xl border text-left ${
                           h.highlighted
-                            ? 'border-[#f0b429] ring-2 ring-[#f0b429]'
+                            ? 'border-[#e879f9] ring-2 ring-[#e879f9]'
                             : active
                               ? 'border-white/80'
                               : 'border-white/15'
@@ -2305,7 +2329,7 @@ export function Tasks2Panel({
                           <p className="text-[10px] font-bold text-white">
                             {h.highlighted ? 'Longest' : `Hold ${h.index}`}
                           </p>
-                          <p className="text-[11px] font-black tabular-nums text-[#f0b429]">
+                          <p className={`text-[11px] font-black tabular-nums ${HOLD_PINK_TEXT}`}>
                             {formatSeconds(h.holdSeconds)}
                           </p>
                         </div>
@@ -2642,7 +2666,7 @@ export function Tasks2Panel({
                         : ''}
                     </span>
                     {holdBest != null ? (
-                      <span className="font-semibold tabular-nums text-[#f0b429]">
+                      <span className={`font-semibold tabular-nums ${HOLD_PINK_TEXT}`}>
                         {formatSeconds(holdBest)}
                       </span>
                     ) : (

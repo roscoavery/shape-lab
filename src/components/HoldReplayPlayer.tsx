@@ -9,6 +9,7 @@ import { paintHoldOverlay, saveHoldClipWithOverlay } from '../lib/overlayExport'
 import { mediaStretch, type PoseTrack } from '../lib/poseTrack'
 import { saveResultMessage, type SaveVideoResult } from '../lib/saveMedia'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
+import { HOLD_PINK_BTN } from '../lib/holdBuild'
 import { saveJointDrawMode, type JointDrawMode } from '../lib/skeleton'
 
 type Props = {
@@ -270,7 +271,7 @@ export function HoldReplayPlayer({
           type="button"
           disabled={!blob || saving}
           onClick={() => void save()}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+          className={`rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${HOLD_PINK_BTN}`}
         >
           {saving ? 'Saving with score…' : 'Save to Photos'}
         </button>
