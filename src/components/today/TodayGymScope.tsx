@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TUMBLE_SMART, sameGym } from '../../config/gyms'
 import type { GymScope } from '../../lib/gymScope'
 import {
@@ -20,6 +20,9 @@ type Props = {
   seedAthleteIds?: string[]
   onEventsChange: () => void
   onCreated?: (event: TrainingEvent) => void
+  /** Open the create form with this kind already selected. */
+  startKind?: TrainingEventKind | null
+  onStartKindConsumed?: () => void
 }
 
 function chipClass(on: boolean) {
@@ -38,11 +41,20 @@ export function TodayGymScope({
   seedAthleteIds = [],
   onEventsChange,
   onCreated,
+  startKind = null,
+  onStartKindConsumed,
 }: Props) {
   const [making, setMaking] = useState(false)
   const [name, setName] = useState('')
   const [kind, setKind] = useState<TrainingEventKind>('school')
   const [hostGym, setHostGym] = useState('')
+
+  useEffect(() => {
+    if (!startKind) return
+    setKind(startKind)
+    setMaking(true)
+    onStartKindConsumed?.()
+  }, [startKind, onStartKindConsumed])
 
   const activeEvent = scope.kind === 'event' ? events.find((e) => e.id === scope.eventId) : null
   const otherGyms = gyms.filter((gym) => !sameGym(gym, viewerGym) && !sameGym(gym, TUMBLE_SMART))

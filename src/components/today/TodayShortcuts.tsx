@@ -1,6 +1,7 @@
 export type TodayShortcutId =
   | 'library'
   | 'quiz'
+  | 'names'
   | 'replay'
   | 'scroll'
   | 'feed'
@@ -14,6 +15,7 @@ export type TodayShortcutId =
 type Props = {
   onGo: (id: TodayShortcutId) => void
   showStation?: boolean
+  showNames?: boolean
 }
 
 const TOOLS: {
@@ -84,7 +86,7 @@ const TOOLS: {
   },
 ]
 
-export function TodayShortcuts({ onGo, showStation = true }: Props) {
+export function TodayShortcuts({ onGo, showStation = true, showNames = false }: Props) {
   return (
     <section className="flex flex-col gap-3">
       <div>
@@ -93,6 +95,19 @@ export function TodayShortcuts({ onGo, showStation = true }: Props) {
         </p>
         <h3 className="mt-1 text-xl font-semibold text-[var(--text)]">Jump in</h3>
       </div>
+      {showNames && (
+        <button type="button" onClick={() => onGo('names')} className="sl-names-glow sl-left px-4 py-4">
+          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6ec8d6]">
+            Coach tool · glow
+          </span>
+          <span className="mt-1 block text-xl font-black tracking-tight sm:text-2xl">
+            Names test
+          </span>
+          <span className="mt-1.5 block max-w-lg text-sm text-[var(--muted)]">
+            Every face on a class, camp, or school. Keeps going until you get them all right — and leads with the names you miss most.
+          </span>
+        </button>
+      )}
       {showStation && (
         <button type="button" onClick={() => onGo('station')} className="sl-card sl-card-lg">
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">

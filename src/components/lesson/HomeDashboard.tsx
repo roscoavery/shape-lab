@@ -50,15 +50,19 @@ import {
   type GymScope,
 } from '../../lib/gymScope'
 import {
+  eventKindLabel,
   getTrainingEvent,
   listTrainingEvents,
   setEventAthletes,
   subscribeTrainingEvents,
   toggleEventAthlete,
+  type TrainingEventKind,
 } from '../../lib/trainingEvents'
 import { GymBadge, gymHint } from '../today/GymBadge'
 import { TodayGymScope } from '../today/TodayGymScope'
 import { QuickGroupEnroll } from '../today/QuickGroupEnroll'
+import { NamesTestGlow } from '../coach/NamesTestGlow'
+import { namesReadyCount } from '../../lib/namesQuiz'
 
 function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
   const seen = new Set<string>()
@@ -85,6 +89,7 @@ type Props = {
   onAthletesChange?: (next: Athlete[]) => void
   onParentHomework?: (athleteId: string) => void
   classSessionOpen?: boolean
+  onOpenNamesTest?: (groupId?: string) => void
 }
 
 export function HomeDashboard({
@@ -100,6 +105,7 @@ export function HomeDashboard({
   onAthletesChange,
   onParentHomework,
   classSessionOpen = false,
+  onOpenNamesTest,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withIds, setWithIds] = useState<string[]>([])
@@ -113,6 +119,7 @@ export function HomeDashboard({
   const [addGroupFor, setAddGroupFor] = useState<string | null>(null)
   const [pickHint, setPickHint] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
+  const [startKind, setStartKind] = useState<TrainingEventKind | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
@@ -210,6 +217,20 @@ export function HomeDashboard({
     setRefresh((n) => n + 1)
   }
   const activeGroup = gymScope.kind === 'event' ? getTrainingEvent(gymScope.eventId) : null
+  const activeGroupReady = activeGroup
+    ? namesReadyCount(athletes.filter((a) => activeGroup.athleteIds.includes(a.id)))
+    : null
+  const startTrainingKind = (kind: 'school' | 'camp') => {
+    const matches = events.filter((e) => e.kind === kind)
+    if (matches[0]) {
+      setGymScope({ kind: 'event', eventId: matches[0].id })
+      setStartKind(null)
+    } else {
+      setStartKind(kind)
+    }
+    setPickHint(true)
+    pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
   const lessonFirstNames = withAthletes.map((a) => a.name.split(' ')[0] || a.name)
   const lessonWithLabel =
     lessonFirstNames.length === 0
@@ -453,7 +474,7 @@ export function HomeDashboard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
-            <h2 className="text-xl font-semibold">Start a lesson or a class</h2>
+            <h2 className="text-xl font-semibold">Start a lesson, class, school, or camp</h2>
           </div>
           {onOpenProfile && (
             <button
@@ -472,7 +493,8 @@ export function HomeDashboard({
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Start lesson is who you are with, one athlete or several. Start class is
             the hour you are teaching, so shape-test names and homework land on that
-            roster. The chalkboard for that class opens on this page without taking
+            roster. Start school and Start camp open those lists — kids stay off the
+            gym desk. The chalkboard for a class opens on this page without taking
             it over.
           </p>
         </details>
@@ -588,6 +610,79 @@ export function HomeDashboard({
             </span>
           </button>
         </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => startTrainingKind('school')}
+            className="rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Group
+            </span>
+            <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start school</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => startTrainingKind('camp')}
+            className="rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Group
+            </span>
+            <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start camp</span>
+          </button>
+        </div>
+        {onOpenNamesTest && (
+          <div className="mt-3">
+            <NamesTestGlow
+              onClick={() =>
+                onOpenNamesTest(
+                  activeGroup
+                    ? `event:${activeGroup.id}`
+                    : liveClass
+                      ? 'live'
+                      : undefined,
+                )
+              }
+              hint="Every athlete on that list. The test keeps going until you get them all right, and leads with the names you miss most."
+              meta={
+                activeGroupReady
+                  ? `${activeGroupReady.faces} faces on ${activeGroup?.name}`
+                  : 'Class, camp, school, or your desk'
+              }
+            />
+          </div>
+        )}
+        {activeGroup && (
+          <div className="mt-3 rounded-2xl border border-[#6ec8d6]/50 bg-[#102028] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6ec8d6]">
+              {eventKindLabel(activeGroup.kind)} is open
+            </p>
+            <p className="mt-1 text-lg font-bold">{activeGroup.name}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {activeGroup.athleteIds.length} athlete
+              {activeGroup.athleteIds.length === 1 ? '' : 's'}
+              {activeGroupReady
+                ? ` · ${activeGroupReady.faces} face${activeGroupReady.faces === 1 ? '' : 's'} ready for names`
+                : ''}
+              . They stay off the gym desk.
+            </p>
+            {onOpenNamesTest && (
+              <div className="mt-2">
+                <NamesTestGlow
+                  compact
+                  onClick={() => onOpenNamesTest(`event:${activeGroup.id}`)}
+                  title="Learn these names"
+                  meta={
+                    activeGroupReady
+                      ? `${activeGroupReady.faces} ready · ${activeGroupReady.missing} need a snapshot`
+                      : undefined
+                  }
+                />
+              </div>
+            )}
+          </div>
+        )}
         <div
           ref={pickerRef}
           className={`mt-5 rounded-xl p-1 transition-shadow ${
@@ -619,6 +714,8 @@ export function HomeDashboard({
                 ),
               )
             }}
+            startKind={startKind}
+            onStartKindConsumed={() => setStartKind(null)}
           />
         {activeGroup && signedIn && onAthletesChange && (
           <QuickGroupEnroll
@@ -918,7 +1015,9 @@ export function HomeDashboard({
         </TodayDock>
       )}
 
-      {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
+      {onShortcut && (
+        <TodayShortcuts onGo={onShortcut} showStation showNames={Boolean(onOpenNamesTest)} />
+      )}
 
       <ClassRecapList
         athletes={athletes}

@@ -39,6 +39,7 @@ import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
+import { NamesQuiz } from './components/coach/NamesQuiz'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { GestureBurstHost } from './components/GestureBurst'
@@ -181,6 +182,8 @@ export default function App() {
   const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
+  const [namesQuizOpen, setNamesQuizOpen] = useState(false)
+  const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [viewingAthleteId, setViewingAthleteId] = useState<string | null>(null)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
@@ -846,6 +849,10 @@ export default function App() {
                   setLessonTick((n) => n + 1)
                 }}
                 onStartClass={() => setClassSessionOpen(true)}
+                onOpenNamesTest={(groupId) => {
+                  setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile?.id) ? 'live' : null))
+                  setNamesQuizOpen(true)
+                }}
                 classSessionOpen={classSessionOpen}
                 onViewProfile={setViewingAthleteId}
                 onAthletesChange={setAthleteRoster}
@@ -864,6 +871,9 @@ export default function App() {
                   } else if (id === 'quiz') {
                     setLearnIntent('quiz')
                     goTab('learn')
+                  } else if (id === 'names') {
+                    setNamesQuizGroupId(getActiveMeeting(activeProfile?.id) ? 'live' : null)
+                    setNamesQuizOpen(true)
                   } else if (id === 'replay') {
                     openCompareWithReference()
                   } else if (id === 'scroll') {
@@ -1204,6 +1214,14 @@ export default function App() {
           athletes={athletes}
           intent={learnIntent}
           onIntentConsumed={() => setLearnIntent(null)}
+          onOpenNamesTest={
+            activeProfile && isCoachProfile(activeProfile)
+              ? (groupId) => {
+                  setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile.id) ? 'live' : null))
+                  setNamesQuizOpen(true)
+                }
+              : undefined
+          }
           surface="learn"
           presetQuizTaker={quizPreset}
           preferredQuizIds={[
@@ -1782,6 +1800,22 @@ export default function App() {
           setLearnIntent('quiz')
           goTab('learn')
         }}
+        onOpenNamesTest={() => {
+          setNamesQuizGroupId('live')
+          setNamesQuizOpen(true)
+        }}
+      />
+    )}
+    {namesQuizOpen && (
+      <NamesQuiz
+        athletes={athletes}
+        signedIn={activeProfile}
+        preferredGroupId={namesQuizGroupId}
+        onClose={() => {
+          setNamesQuizOpen(false)
+          setNamesQuizGroupId(null)
+        }}
+        onAthletesChange={setAthleteRoster}
       />
     )}
     {athleteGate && (

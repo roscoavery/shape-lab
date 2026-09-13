@@ -51,6 +51,7 @@ type Props = {
   athletes: Athlete[]
   onOpenStation: () => void
   onOpenShapeTest: () => void
+  onOpenNamesTest?: () => void
   onClose: () => void
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
@@ -63,6 +64,7 @@ export function ClassSession({
   athletes,
   onOpenStation,
   onOpenShapeTest,
+  onOpenNamesTest,
   onClose,
   onAthletesChange,
   onViewProfile,
@@ -228,6 +230,7 @@ export function ClassSession({
             coach={coach}
             onStation={onOpenStation}
             onShapeTest={onOpenShapeTest}
+            onNamesTest={onOpenNamesTest}
             onOpenRoll={() => setScreen('roll')}
             onChanged={refresh}
             onAthletesChange={onAthletesChange}
@@ -430,6 +433,7 @@ function LiveClass({
   coach,
   onStation,
   onShapeTest,
+  onNamesTest,
   onOpenRoll,
   onChanged,
   onAthletesChange,
@@ -442,6 +446,7 @@ function LiveClass({
   coach: Athlete
   onStation: () => void
   onShapeTest: () => void
+  onNamesTest?: () => void
   onOpenRoll: () => void
   onChanged: () => void
   onAthletesChange: (next: Athlete[]) => void
@@ -486,6 +491,18 @@ function LiveClass({
           Leave iPad for roll call
         </button>
       </div>
+
+      {onNamesTest && (
+        <button type="button" onClick={onNamesTest} className="sl-names-glow sl-left px-4 py-4">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6ec8d6]">
+            Coach tool · glow
+          </span>
+          <span className="mt-1 block text-xl font-black">Names test</span>
+          <span className="mt-1 block text-sm font-medium text-white/65">
+            Every kid in this hour. Goes until you get them all right — hardest names first.
+          </span>
+        </button>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2">
         <button

@@ -208,7 +208,7 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'sleet' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'gleam' })
     return true
   }
   if (path === '/api/persist') {

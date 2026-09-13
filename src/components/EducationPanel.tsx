@@ -77,7 +77,7 @@ type EduView =
   | { kind: 'athleteProgress' }
   | { kind: 'coachStudy' }
 
-export type LearnIntent = 'shapes' | 'quiz' | 'scroll'
+export type LearnIntent = 'shapes' | 'quiz' | 'scroll' | 'names'
 
 type Props = {
   referencePhotos: ReferencePhoto[]
@@ -95,6 +95,7 @@ type Props = {
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
   onParkQuiz?: () => void
+  onOpenNamesTest?: (groupId?: string) => void
   /** Videos tab only needs the reference scroll. */
   surface?: 'learn' | 'videos'
 }
@@ -117,6 +118,7 @@ export function EducationPanel({
   onRecordQuiz,
   onAthleteChange,
   onParkQuiz,
+  onOpenNamesTest,
   surface = 'learn',
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: surface === 'videos' ? 'scroll' : 'home' })
@@ -136,8 +138,9 @@ export function EducationPanel({
     if (intent === 'shapes') setView({ kind: 'shapes' })
     if (intent === 'quiz') setView({ kind: 'quiz', pool: 'pathway' })
     if (intent === 'scroll') setView({ kind: 'scroll' })
+    if (intent === 'names') onOpenNamesTest?.()
     onIntentConsumed?.()
-  }, [intent, onIntentConsumed])
+  }, [intent, onIntentConsumed, onOpenNamesTest])
 
   useEffect(() => {
     if (!athleteId) {
@@ -263,6 +266,13 @@ export function EducationPanel({
                   onClick={() => setView({ kind: 'coachStudy' })}
                   label="Coach study"
                 />
+                {onOpenNamesTest && (
+                  <NavChip
+                    active={false}
+                    onClick={() => onOpenNamesTest()}
+                    label="Names test"
+                  />
+                )}
               </ChipRow>
             )}
             <details className="rounded-xl bg-[#0d1218]/80 px-3 py-2">
@@ -309,6 +319,7 @@ export function EducationPanel({
           onScroll={() => setView({ kind: 'scroll' })}
           onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
           onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
+          onNamesTest={onOpenNamesTest}
           onPathways={goPathways}
           onGlossary={() => setView({ kind: 'glossary' })}
           onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
@@ -701,6 +712,7 @@ function HomeView({
   onScroll,
   onAthleteProgress,
   onCoachStudy,
+  onNamesTest,
   onPathways,
   onGlossary,
   onArmQuiz,
@@ -719,6 +731,7 @@ function HomeView({
   onScroll: () => void
   onAthleteProgress: () => void
   onCoachStudy?: () => void
+  onNamesTest?: (groupId?: string) => void
   onPathways: () => void
   onGlossary: () => void
   onArmQuiz: () => void
@@ -733,6 +746,21 @@ function HomeView({
     .slice(0, 4)
   return (
     <div className="space-y-5">
+      {coach && onNamesTest && (
+        <button type="button" onClick={() => onNamesTest()} className="sl-names-glow sl-left px-5 py-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#6ec8d6]">
+            Coach tool · glow
+          </p>
+          <h3 className="mt-2 text-3xl font-black tracking-tight text-[var(--text)]">Names test</h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+            Every face on a class, camp, or school. Keeps going until you get
+            them all right, and puts the names you miss most at the front.
+          </p>
+          <span className="mt-4 inline-flex rounded-full bg-[#6ec8d6] px-4 py-2 text-sm font-black text-[#061418]">
+            Memorize names
+          </span>
+        </button>
+      )}
       <button type="button" onClick={onShapes} className="learn-hero">
         <div className="learn-hero-strip" aria-hidden>
           {mosaic.map((shape) => (
