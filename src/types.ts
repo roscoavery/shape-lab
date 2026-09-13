@@ -214,6 +214,12 @@ export type Athlete = {
   /** Coach signed in when this profile was created. */
   createdByCoachId?: string
   /**
+   * When true, anyone at the gym can open this profile. Missing or false =
+   * private: only the athlete, their parents, and coaches who work with them
+   * in a lesson, class, camp, clinic, or school.
+   */
+  profilePublic?: boolean
+  /**
    * When true or missing, the profile shows who they work with.
    * False keeps that list off the public page. Listed coaches still
    * see homework.

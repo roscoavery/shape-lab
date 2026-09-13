@@ -60,6 +60,25 @@ export function ProfileFieldsEditor({
 
   return (
     <div className="flex flex-col gap-6">
+      {profileRole(athlete) === 'athlete' && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Who can open this profile</h3>
+          <p className="text-xs text-[var(--muted)]">
+            Private by default. Coaches who have this athlete in a lesson, class,
+            camp, clinic, or school can still open it. Everyone else only sees
+            the name when they add them to a group.
+          </p>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={athlete.profilePublic === true}
+              onChange={(e) => patch({ profilePublic: e.target.checked })}
+              className="mt-1"
+            />
+            <span>Public — anyone at the gym can open this page</span>
+          </label>
+        </section>
+      )}
       {profileRole(athlete) === 'athlete' && athletes.length > 0 && (
         <CoachPicker
           athletes={athletes}

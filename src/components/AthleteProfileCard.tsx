@@ -56,6 +56,7 @@ import { noteAudienceLabel, type NoteAudience } from '../lib/noteAudience'
 import { CoachAthleteActivity } from './CoachAthleteActivity'
 import {
   canSeePrivateCoaching,
+  canViewAthleteProfile,
   coachesLabel,
   coachesOf,
   showsCoachesOnProfile,
@@ -755,6 +756,18 @@ export function AthleteProfileCard({
   )
 
   const shellStyle = profileThemeStyle(athlete.favoriteColor)
+  const allowed = canViewAthleteProfile(viewer, athlete)
+  const locked = (
+    <div className="rounded-2xl border border-white/15 bg-black/30 p-5">
+      <h3 className="text-xl font-semibold">Private profile</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+        {givenName(athlete)}’s page is private. Only they, their parents, and
+        coaches who work with them in a lesson, class, camp, clinic, or school
+        can open it. You can still add them to a group by name.
+      </p>
+    </div>
+  )
+  const page = allowed ? body : locked
 
   if (variant === 'overlay') {
     return (
@@ -777,7 +790,7 @@ export function AthleteProfileCard({
           className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] [touch-action:pan-y]"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {body}
+          {page}
         </div>
       </div>
     )
@@ -792,7 +805,7 @@ export function AthleteProfileCard({
       }
       style={shellStyle}
     >
-      {body}
+      {page}
     </section>
   )
 }

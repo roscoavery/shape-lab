@@ -34,6 +34,8 @@ type Props = {
   compact?: boolean
   athleteId?: string | null
   fill?: boolean
+  /** Lunge / lever recap uses this shape. Handstand stays default. */
+  holdShapeId?: string
 }
 
 function layerChip(on: boolean): string {
@@ -57,6 +59,7 @@ export function HoldReplayPlayer({
   compact = false,
   athleteId = null,
   fill = false,
+  holdShapeId,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -150,6 +153,7 @@ export function HoldReplayPlayer({
             showScore,
             showClock,
             skeletonWhenOneLine,
+            shapeId: holdShapeId,
           })
         }
       }
@@ -232,6 +236,7 @@ export function HoldReplayPlayer({
         showScore,
         showClock,
         saveSpeed,
+        shapeId: holdShapeId,
         onProgress: (p) => {
           setFlash(`Writing the clip… ${Math.round(p * 100)}%`)
         },

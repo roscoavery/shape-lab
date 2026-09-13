@@ -21,6 +21,7 @@ export type CoachStillsFile = {
   updatedAt: string
   main: Record<string, string>
   extras: CoachStillExtra[]
+  removedCoachStillIds?: string[]
 }
 
 export type PersistStillResult = {
@@ -37,6 +38,44 @@ const EMPTY: CoachStillsFile = {
   updatedAt: '',
   main: {},
   extras: [],
+  removedCoachStillIds: [],
+}
+
+const REMOVED_KEY = 'shape-lab.removedCoachStills.v1'
+
+function loadRemovedCoachStillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(REMOVED_KEY)
+    if (!raw) return []
+    const data = JSON.parse(raw) as unknown
+    if (!Array.isArray(data)) return []
+    return data.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  } catch {
+    return []
+  }
+}
+
+function saveRemovedCoachStillIds(ids: string[]) {
+  try {
+    localStorage.setItem(REMOVED_KEY, JSON.stringify([...new Set(ids)].slice(-2000)))
+  } catch {
+    /* quota */
+  }
+}
+
+function noteRemovedCoachStill(id: string) {
+  if (!id) return
+  saveRemovedCoachStillIds([...loadRemovedCoachStillIds(), id])
+}
+
+function forgetRemovedCoachStill(id: string) {
+  if (!id) return
+  saveRemovedCoachStillIds(loadRemovedCoachStillIds().filter((row) => row !== id))
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
 }
 
 const listeners = new Set<(extras: CoachStillExtra[]) => void>()
@@ -66,12 +105,17 @@ function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
 }
 
 function rememberCoachExtrasLocally(extras: CoachStillExtra[]) {
-  const incoming = extrasAsPhotos(extras)
-  if (incoming.length === 0) return
+  const gone = new Set(loadRemovedCoachStillIds())
+  const incoming = extrasAsPhotos(extras).filter((p) => !gone.has(p.id))
   try {
     const all = loadReferencePhotos()
     const ids = new Set(incoming.map((p) => p.id))
-    saveReferencePhotos(capReferencePhotos([...incoming, ...all.filter((p) => !ids.has(p.id))]))
+    saveReferencePhotos(
+      capReferencePhotos([
+        ...incoming,
+        ...all.filter((p) => !ids.has(p.id) && !gone.has(p.id)),
+      ]),
+    )
   } catch {
     /* quota — in-memory merge still works this session */
   }
@@ -83,11 +127,19 @@ export async function pullCoachStills(): Promise<CoachStillsFile> {
     if (!res.ok) return { ...EMPTY }
     const data = (await res.json()) as CoachStillsFile
     if (!data || data.kind !== 'shape-lab-coach-stills') return { ...EMPTY }
+    const removed = [
+      ...new Set([...loadRemovedCoachStillIds(), ...asIdList(data.removedCoachStillIds)]),
+    ]
+    saveRemovedCoachStillIds(removed)
+    const gone = new Set(removed)
     return {
       ...EMPTY,
       ...data,
       main: data.main && typeof data.main === 'object' ? data.main : {},
-      extras: Array.isArray(data.extras) ? data.extras.slice(0, MAX_EXTRAS) : [],
+      extras: (Array.isArray(data.extras) ? data.extras : [])
+        .filter((row) => row?.id && !gone.has(row.id))
+        .slice(0, MAX_EXTRAS),
+      removedCoachStillIds: removed,
     }
   } catch {
     return { ...EMPTY }
@@ -119,10 +171,13 @@ export function mergeCoachExtras(
   photos: ReferencePhoto[],
   extras: CoachStillExtra[],
 ): ReferencePhoto[] {
-  const incoming = extrasAsPhotos(extras)
-  if (incoming.length === 0) return photos
+  const gone = new Set(loadRemovedCoachStillIds())
+  const incoming = extrasAsPhotos(extras).filter((p) => !gone.has(p.id))
   const ids = new Set(incoming.map((p) => p.id))
-  return [...incoming, ...photos.filter((p) => !ids.has(p.id))]
+  return [
+    ...incoming,
+    ...photos.filter((p) => !(p.library === 'coach' && gone.has(p.id)) && !ids.has(p.id)),
+  ]
 }
 
 export async function hydrateCoachStills(
@@ -139,6 +194,7 @@ export async function hydrateCoachStills(
 
 export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<PersistStillResult> {
   if (photo.library === 'ig') return { ok: true, photo }
+  forgetRemovedCoachStill(photo.id)
   try {
     const res = await fetch('/api/coach-stills', {
       method: 'POST',
@@ -189,6 +245,13 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<Per
 }
 
 export async function removeCoachStillExtra(id: string): Promise<PersistStillResult> {
+  noteRemovedCoachStill(id)
+  try {
+    saveReferencePhotos(loadReferencePhotos().filter((p) => p.id !== id))
+  } catch {
+    /* quota */
+  }
+  emitCoachStills([])
   try {
     const res = await fetch(`/api/coach-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     if (!res.ok) {
@@ -211,11 +274,15 @@ export async function removeCoachStillExtra(id: string): Promise<PersistStillRes
 export async function persistMainCoachStill(shapeId: string, stillId: string): Promise<void> {
   const next = setMainCoachStill(shapeId, stillId)
   const file = await pullCoachStills()
+  if (!file.updatedAt && file.extras.length === 0) {
+    return
+  }
   await pushCoachStills({
     kind: 'shape-lab-coach-stills',
     version: 1,
     updatedAt: new Date().toISOString(),
     main: { ...file.main, ...next },
     extras: file.extras,
+    removedCoachStillIds: file.removedCoachStillIds,
   })
 }

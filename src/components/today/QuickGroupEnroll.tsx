@@ -82,6 +82,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
           lastName,
           parentPhone: phone,
           role: 'athlete',
+          profilePublic: false,
           gymName: event.hostGym || event.name,
           eventIds: [event.id],
           worksWithCoachIds: [coach.id],

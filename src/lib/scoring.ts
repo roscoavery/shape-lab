@@ -202,6 +202,43 @@ function leverPicture(landmarks: Landmark[]): {
   }
 }
 
+/** Both feet on the floor, one knee bent, one long — not standing and not a lever. */
+function lungePicture(landmarks: Landmark[]): { looksLikeLunge: boolean; reason: string | null } {
+  const la = landmarks[LM.LEFT_ANKLE]
+  const ra = landmarks[LM.RIGHT_ANKLE]
+  const lk = landmarks[LM.LEFT_KNEE]
+  const rk = landmarks[LM.RIGHT_KNEE]
+  const lh = landmarks[LM.LEFT_HIP]
+  const rh = landmarks[LM.RIGHT_HIP]
+  if (!la || !ra || !lk || !rk || !lh || !rh) {
+    return { looksLikeLunge: false, reason: 'Get both legs in the frame, side-on.' }
+  }
+  const bothFeetDown = la.y > 0.52 && ra.y > 0.52
+  if (!bothFeetDown) {
+    return { looksLikeLunge: false, reason: 'Both feet stay on the floor for a lunge.' }
+  }
+  const stance = Math.hypot(la.x - ra.x, la.y - ra.y)
+  if (stance < 0.1) {
+    return { looksLikeLunge: false, reason: 'Step the feet apart — that is still standing.' }
+  }
+  const leftKnee = jointAngle(landmarks, LM.LEFT_HIP, LM.LEFT_KNEE, LM.LEFT_ANKLE)
+  const rightKnee = jointAngle(landmarks, LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE)
+  if (leftKnee == null || rightKnee == null) {
+    return { looksLikeLunge: false, reason: 'Get both legs in the frame, side-on.' }
+  }
+  const frontBent = leftKnee < 135 || rightKnee < 135
+  const backLong = leftKnee > 145 || rightKnee > 145
+  if (!frontBent || !backLong) {
+    return { looksLikeLunge: false, reason: 'Bend the front knee and keep the back leg long.' }
+  }
+  return { looksLikeLunge: true, reason: null }
+}
+
+export function isFloorQualityShape(shapeId: string | undefined): boolean {
+  if (!shapeId) return false
+  return shapeId === 'lever' || shapeId.includes('lunge')
+}
+
 export function leverLooksRight(score: ScoreResult): boolean {
   if (score.overall < 60) return false
   const byId = Object.fromEntries(score.criteria.map((c) => [c.id, c.score]))
@@ -601,6 +638,19 @@ function scoreOnce(
 
   let overall = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0
   let pictureMiss: string | null = null
+
+  if (shape.id === 'lunge_start' || shape.id === 'lunge_land') {
+    const pic = lungePicture(landmarks)
+    if (!pic.looksLikeLunge) {
+      overall = Math.min(overall, 48)
+      pictureMiss = pic.reason ?? 'That is not a lunge picture yet.'
+      const knee = results.find((c) => c.id === 'front_knee')
+      if (knee) {
+        knee.score = Math.min(knee.score, 36)
+        knee.feedback = pictureMiss
+      }
+    }
+  }
 
   if (shape.id === 'lever') {
     const pic = leverPicture(landmarks)

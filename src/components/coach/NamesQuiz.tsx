@@ -58,7 +58,7 @@ export function NamesQuiz({
     [athletes, signedIn],
   )
   const [groupId, setGroupId] = useState(
-    () => preferredGroupId || groups[0]?.id || 'desk',
+    () => preferredGroupId || 'desk',
   )
   const [mode, setMode] = useState<NamesQuizMode>('mix')
   const [screen, setScreen] = useState<Screen>('pick')

@@ -183,6 +183,7 @@ export function AthletePanel({
               ]),
             ],
             showCoachesOnProfile: newShowCoaches,
+            profilePublic: false,
           }
         : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),

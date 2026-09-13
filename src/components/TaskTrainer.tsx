@@ -40,6 +40,7 @@ import {
   saveTaskAnalysis,
   saveTaskProgress,
 } from '../lib/storage'
+import { persistCoachStillExtra } from '../lib/coachStillStore'
 import { buildTaskReport, type LiveStepSample } from '../lib/taskAnalysis'
 import { isCountdownHold, isLungeShoulderWindow, isOpenShoulderCue, isSoftShoulderShape, openShoulderScore } from '../lib/scoring'
 import type {
@@ -832,6 +833,7 @@ export function TaskTrainer({
         library: 'coach',
       }
       await saveReferencePhoto(photo)
+      await persistCoachStillExtra(photo)
       onReferencesChange([
         photo,
         ...referencePhotos.filter(

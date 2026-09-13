@@ -139,6 +139,7 @@ import {
 import { hydrateCoachStills, mergeCoachExtras, subscribeCoachStills } from './lib/coachStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
+import { canViewAthleteProfile } from './lib/coachLink'
 import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
 import { childAthletes } from './lib/parentLink'
 import { coachShareLabel } from './lib/coachShare'
@@ -250,9 +251,7 @@ export default function App() {
     const unsub = subscribeCoachStills((extras) => {
       setReferencePhotos((prev) => mergeCoachExtras(prev, extras))
     })
-    void hydrateCoachStills(loadReferencePhotos()).then((next) => {
-      setReferencePhotos(next)
-    })
+    void hydrateCoachStills(loadReferencePhotos())
     return unsub
   }, [])
 
@@ -732,6 +731,11 @@ export default function App() {
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
   const libraryEdit = ryanEdit || isCoachProfile(activeProfile)
+  const openProfile = (id: string) => {
+    const row = athletes.find((a) => a.id === id)
+    if (row && !canViewAthleteProfile(activeProfile, row)) return
+    setViewingAthleteId(id)
+  }
   const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
@@ -764,7 +768,7 @@ export default function App() {
     <ClipEditProvider viewer={activeProfile} athletes={athletes}>
     <ClipLoopsProvider>
     <FavoritesProvider>
-    <ProfilePeekProvider onView={setViewingAthleteId}>
+    <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
     <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -854,12 +858,12 @@ export default function App() {
                 }}
                 onStartClass={() => setClassSessionOpen(true)}
                 onOpenNamesTest={(groupId) => {
-                  setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile?.id) ? 'live' : null))
+                    setNamesQuizGroupId(groupId ?? 'desk')
                   setNamesQuizOpen(true)
                 }}
                 onOpenSkillPaths={() => setSkillPathsOpen(true)}
                 classSessionOpen={classSessionOpen}
-                onViewProfile={setViewingAthleteId}
+                onViewProfile={openProfile}
                 onAthletesChange={setAthleteRoster}
                 onParentHomework={(id) => {
                   setParentFocusId(id)
@@ -877,7 +881,7 @@ export default function App() {
                     setLearnIntent('quiz')
                     goTab('learn')
                   } else if (id === 'names') {
-                    setNamesQuizGroupId(getActiveMeeting(activeProfile?.id) ? 'live' : null)
+                    setNamesQuizGroupId('desk')
                     setNamesQuizOpen(true)
                   } else if (id === 'skillpaths') {
                     setSkillPathsOpen(true)
@@ -1224,7 +1228,7 @@ export default function App() {
           onOpenNamesTest={
             activeProfile && isCoachProfile(activeProfile)
               ? (groupId) => {
-                  setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile.id) ? 'live' : null))
+                  setNamesQuizGroupId(groupId ?? 'desk')
                   setNamesQuizOpen(true)
                 }
               : undefined
@@ -1365,7 +1369,7 @@ export default function App() {
         <NetworkPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
-          onViewProfile={setViewingAthleteId}
+          onViewProfile={openProfile}
         />
       )}
 
@@ -1452,7 +1456,7 @@ export default function App() {
             onSelect={requestSelectAthlete}
             allowDelete={ryanEdit}
             canSeeAllProfiles={ryanEdit}
-            onViewProfile={setViewingAthleteId}
+            onViewProfile={openProfile}
             viewer={activeProfile}
           />
           <ProgressHistory attempts={attempts} athleteId={activeAthleteId} />
@@ -1801,7 +1805,7 @@ export default function App() {
         coach={activeProfile}
         athletes={athletes}
         onAthletesChange={setAthleteRoster}
-        onViewProfile={setViewingAthleteId}
+        onViewProfile={openProfile}
         onClose={() => setClassSessionOpen(false)}
         onOpenStation={() => {
           setClassSessionOpen(false)

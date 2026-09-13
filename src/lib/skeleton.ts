@@ -331,8 +331,11 @@ export function drawPoseOverlay(
     }
   }
   if (opts.mode === 'auto') {
+    const la = landmarks[27]
+    const ra = landmarks[28]
+    const bothFeetDown = Boolean(la && ra && la.y > 0.55 && ra.y > 0.55)
     const geo = evaluateHandstandGeometry(landmarks)
-    const stacked = geo.confidence >= 0.62 && !geo.hardFail
+    const stacked = !bothFeetDown && geo.confidence >= 0.62 && !geo.hardFail
     if (stacked && !legsAreApart(landmarks)) {
       const merged = mergeSideJoints(landmarks)
       if (merged) {

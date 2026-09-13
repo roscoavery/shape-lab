@@ -293,6 +293,7 @@ export type GymRevisionStores = {
   chalkboards: string
   notices: string
   stills: string
+  igStills: string
 }
 
 export type GymRevision = {
@@ -312,6 +313,7 @@ const FILE_TO_STORE: Record<string, keyof GymRevisionStores> = {
   'data/chalkboards.json': 'chalkboards',
   'data/notices.json': 'notices',
   'data/coach-stills.json': 'stills',
+  'data/ig-stills.json': 'igStills',
 }
 
 function emptyRevision(): GymRevision {
@@ -327,6 +329,7 @@ function emptyRevision(): GymRevision {
       chalkboards: '',
       notices: '',
       stills: '',
+      igStills: '',
     },
   }
 }

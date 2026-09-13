@@ -37,8 +37,7 @@ function freezeScore(live: ScoreResult): ScoreResult {
 }
 
 function qualityReady(score: ScoreResult): boolean {
-  if (score.holdReady) return true
-  return score.overall >= 68 && score.criteria.length > 0
+  return Boolean(score.holdReady)
 }
 
 export async function runQualityHoldSession(opts: HoldSessionOpts): Promise<RawHoldAttempt[]> {

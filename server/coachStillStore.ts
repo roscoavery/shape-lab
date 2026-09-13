@@ -4,7 +4,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
+import { readBin, readDiskJson, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
 const FILE = 'data/coach-stills.json'
 const blobRel = (name: string) => `data/coach-blobs/${name}`
@@ -26,6 +26,7 @@ export type CoachStillsFile = {
   updatedAt: string
   main: Record<string, string>
   extras: CoachStillExtra[]
+  removedCoachStillIds?: string[]
 }
 
 const EMPTY: CoachStillsFile = {
@@ -34,6 +35,12 @@ const EMPTY: CoachStillsFile = {
   updatedAt: '',
   main: {},
   extras: [],
+  removedCoachStillIds: [],
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
 }
 
 function safeId(id: string): string | null {
@@ -120,6 +127,8 @@ function asFile(data: CoachStillsFile): CoachStillsFile {
       }
     }
   }
+  const removedCoachStillIds = asIdList(data.removedCoachStillIds)
+  const gone = new Set(removedCoachStillIds)
   return {
     ...EMPTY,
     ...data,
@@ -127,16 +136,36 @@ function asFile(data: CoachStillsFile): CoachStillsFile {
     extras: Array.isArray(data.extras)
       ? data.extras
           .map(cleanExtra)
-          .filter((row): row is CoachStillExtra => Boolean(row))
+          .filter((row): row is CoachStillExtra => Boolean(row) && !gone.has(row.id))
           .slice(0, MAX_EXTRAS)
       : [],
+    removedCoachStillIds,
   }
 }
 
 export async function readCoachStillsFile(): Promise<CoachStillsFile> {
-  const data = await readJson<CoachStillsFile>(FILE, { ...EMPTY })
-  if (!data || data.kind !== 'shape-lab-coach-stills') return { ...EMPTY }
-  return asFile(data)
+  const remote = await readJson<CoachStillsFile>(FILE, { ...EMPTY })
+  const disk = readDiskJson<CoachStillsFile>(FILE, { ...EMPTY })
+  const a = remote && remote.kind === 'shape-lab-coach-stills' ? asFile(remote) : { ...EMPTY }
+  const b = disk && disk.kind === 'shape-lab-coach-stills' ? asFile(disk) : { ...EMPTY }
+  const removedCoachStillIds = [...new Set([...asIdList(a.removedCoachStillIds), ...asIdList(b.removedCoachStillIds)])]
+  const gone = new Set(removedCoachStillIds)
+  const byId = new Map<string, CoachStillExtra>()
+  for (const row of [...a.extras, ...b.extras]) {
+    if (!row.id || gone.has(row.id)) continue
+    const keep = byId.get(row.id)
+    if (!keep || (row.createdAt || '').localeCompare(keep.createdAt || '') >= 0) {
+      byId.set(row.id, row)
+    }
+  }
+  return {
+    kind: 'shape-lab-coach-stills',
+    version: 1,
+    updatedAt: a.updatedAt || b.updatedAt || '',
+    main: { ...b.main, ...a.main },
+    extras: [...byId.values()].slice(0, MAX_EXTRAS),
+    removedCoachStillIds,
+  }
 }
 
 export async function extrasForClient(file?: CoachStillsFile) {
@@ -153,22 +182,35 @@ export async function extrasForClient(file?: CoachStillsFile) {
 export async function writeCoachStillsFile(data: unknown): Promise<CoachStillsFile> {
   const parsed = asFile({ ...EMPTY, ...(data as Partial<CoachStillsFile>) })
   const current = await readCoachStillsFile()
+  const removedCoachStillIds = [
+    ...new Set([...asIdList(current.removedCoachStillIds), ...asIdList(parsed.removedCoachStillIds)]),
+  ]
+  const gone = new Set(removedCoachStillIds)
   const prevById = new Map(current.extras.map((row) => [row.id, row]))
   const extras: CoachStillExtra[] = []
-  for (const row of parsed.extras) {
+  const incoming = parsed.extras.length > 0 ? parsed.extras : current.extras
+  for (const row of incoming) {
+    if (gone.has(row.id)) continue
     if (!row.file && !row.dataUrl?.startsWith('data:image')) {
       const prev = prevById.get(row.id)
-      if (prev) extras.push(prev)
+      if (prev && !gone.has(prev.id)) extras.push(prev)
       continue
     }
     extras.push(await persistPixels(row))
+  }
+  if (parsed.extras.length > 0) {
+    for (const prev of current.extras) {
+      if (gone.has(prev.id) || extras.some((row) => row.id === prev.id)) continue
+      extras.push(prev)
+    }
   }
   const next: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',
     version: 1,
     updatedAt: new Date().toISOString(),
-    main: parsed.main,
-    extras,
+    main: { ...current.main, ...parsed.main },
+    extras: extras.slice(0, MAX_EXTRAS),
+    removedCoachStillIds,
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -199,6 +241,7 @@ export async function addCoachStillFromBody(body: unknown): Promise<CoachStillsF
     updatedAt: new Date().toISOString(),
     main: file.main,
     extras,
+    removedCoachStillIds: asIdList(file.removedCoachStillIds).filter((gone) => gone !== id),
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -221,6 +264,7 @@ export async function deleteCoachStill(idRaw: string): Promise<CoachStillsFile |
     updatedAt: new Date().toISOString(),
     main,
     extras: file.extras.filter((s) => s.id !== id),
+    removedCoachStillIds: [...new Set([...asIdList(file.removedCoachStillIds), id])],
   }
   await writeJson(FILE, next)
   return extrasForClient(next)

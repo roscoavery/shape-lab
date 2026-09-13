@@ -2477,6 +2477,7 @@ export function Tasks2Panel({
                       report.holdAttempts?.find((h) => h.clipId === activeClipId)?.clockOffsetSec ?? 0
                     }
                     recordedWallSec={report.recordedWallSec}
+                    holdShapeId={report.steps?.[0]?.shapeId}
                     startAtBeginning
                     mirror={mirror}
                     clipId={activeClipId}

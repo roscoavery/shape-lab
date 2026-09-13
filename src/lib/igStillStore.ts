@@ -99,11 +99,17 @@ export function mergeIgStills(
   photos: ReferencePhoto[],
   ig: ReferencePhoto[],
 ): ReferencePhoto[] {
-  const igIds = new Set(ig.map((p) => p.id))
+  const gone = new Set(loadRemovedIgStillIds())
+  const liveIg = ig.filter((p) => SHIPPED_IG_IDS.has(p.id) || !gone.has(p.id))
+  const igIds = new Set(liveIg.map((p) => p.id))
   const rest = photos.filter((p) => p.library !== 'ig' || !igIds.has(p.id))
-  const leftoverIg = rest.filter((p) => p.library === 'ig' || (!p.library && p.id.startsWith('ig_')))
+  const leftoverIg = rest.filter(
+    (p) =>
+      (p.library === 'ig' || (!p.library && p.id.startsWith('ig_'))) &&
+      !gone.has(p.id),
+  )
   const coach = rest.filter((p) => p.library && p.library !== 'ig')
-  return [...ig, ...leftoverIg.map((p) => ({ ...p, library: 'ig' as const })), ...coach]
+  return [...liveIg, ...leftoverIg.map((p) => ({ ...p, library: 'ig' as const })), ...coach]
 }
 
 function unionIgLists(local: ReferencePhoto[], remote: ReferencePhoto[]): ReferencePhoto[] {
@@ -168,21 +174,23 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
   }
   const remote = await pullServerIgStills()
   if (remote.removedStillIds.length) {
-    const localIds = new Set(local.map((p) => p.id))
-    const keepLocal = remote.removedStillIds.filter(
-      (id) => !localIds.has(id) && !SHIPPED_IG_IDS.has(id),
-    )
-    if (keepLocal.length) saveRemovedIgStillIds([...loadRemovedIgStillIds(), ...keepLocal])
+    saveRemovedIgStillIds([
+      ...loadRemovedIgStillIds(),
+      ...remote.removedStillIds.filter((id) => !SHIPPED_IG_IDS.has(id)),
+    ])
   }
   const remoteIds = new Set(remote.stills.map((p) => p.id))
   memory = dropRemovedIgStills(unionIgLists([...SHIPPED_IG_STILLS, ...local], remote.stills))
   emit()
   // Re-upload any still this device still has as pixels if the gym file is
   // missing that id — recovers crops after an empty Blob overwrite.
+  const gone = new Set(loadRemovedIgStillIds())
   const unsaved = memory.filter(
     (p) =>
       typeof p.dataUrl === 'string' &&
       p.dataUrl.startsWith('data:image') &&
+      !gone.has(p.id) &&
+      !SHIPPED_IG_IDS.has(p.id) &&
       (!p.persistedToApp || !remoteIds.has(p.id)),
   )
   for (const photo of unsaved) {
@@ -301,11 +309,9 @@ export async function removeIgStill(
   } catch {
     /* IndexedDB down — memory already dropped it */
   }
-  if (opts?.fromApp) {
-    try {
-      await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-    } catch {
-      /* server down */
-    }
+  try {
+    await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  } catch {
+    /* server down — local tombstone already recorded */
   }
 }

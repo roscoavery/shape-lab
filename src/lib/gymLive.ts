@@ -7,6 +7,7 @@ import { hydrateChalkboards } from './chalkboard'
 import { hydrateCoachClasses } from './coachClasses'
 import { hydrateCoachContent } from './coachContentStore'
 import { hydrateCoachStills } from './coachStillStore'
+import { hydrateIgStills } from './igStillStore'
 import { listFeedPosts } from './feedPosts'
 import { loadNotices } from './notify'
 import {
@@ -30,6 +31,7 @@ export type GymRevisionStores = {
   chalkboards: string
   notices: string
   stills: string
+  igStills: string
 }
 
 let last: GymRevisionStores | null = null
@@ -53,7 +55,8 @@ function sameStamp(a: GymRevisionStores, b: GymRevisionStores): boolean {
     a.content === b.content &&
     a.chalkboards === b.chalkboards &&
     a.notices === b.notices &&
-    (a.stills ?? '') === (b.stills ?? '')
+    (a.stills ?? '') === (b.stills ?? '') &&
+    (a.igStills ?? '') === (b.igStills ?? '')
   )
 }
 
@@ -108,6 +111,9 @@ export async function syncGymIfChanged(
     if (!prev || prev.notices !== rev.notices) jobs.push(loadNotices())
     if (!prev || (prev.stills ?? '') !== (rev.stills ?? '')) {
       jobs.push(hydrateCoachStills(loadReferencePhotos()))
+    }
+    if (!prev || (prev.igStills ?? '') !== (rev.igStills ?? '')) {
+      jobs.push(hydrateIgStills())
     }
     await Promise.allSettled(jobs)
     void flushLocalPhotos()

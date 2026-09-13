@@ -196,6 +196,8 @@ export function paintHoldOverlay(
     showClock?: boolean
     skeletonWhenOneLine?: boolean
     recordedWallSec?: number
+    /** Quality-hold recap grades this shape. Handstand recap stays default. */
+    shapeId?: string
   },
 ) {
   if (opts.mirror) {
@@ -207,7 +209,7 @@ export function paintHoldOverlay(
   } else {
     ctx.drawImage(video, 0, 0, width, height)
   }
-  const shape = getShape('handstand')
+  const shape = getShape(opts.shapeId && opts.shapeId !== 'handstand' ? opts.shapeId : 'handstand')
   const mediaDur =
     Number.isFinite(video.duration) && video.duration > 0 && video.duration < 1e6
       ? video.duration
@@ -239,7 +241,10 @@ export function paintHoldOverlay(
       width,
       height,
       mirror: opts.mirror,
-      mode: opts.mode,
+      mode:
+        opts.shapeId && (opts.shapeId === 'lever' || opts.shapeId.includes('lunge'))
+          ? 'split'
+          : opts.mode,
       showAngles: opts.showAngles !== false,
       lineColor: HOLD_PINK,
     })
@@ -275,6 +280,7 @@ export type BurnOverlayOpts = {
   recordedWallSec?: number
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
+  shapeId?: string
 }
 
 export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
@@ -413,6 +419,7 @@ export async function saveHoldClipWithOverlay(opts: {
   showClock?: boolean
   skeletonWhenOneLine?: boolean
   saveSpeed?: number
+  shapeId?: string
 }): Promise<SaveVideoResult> {
   const mode = opts.mode ?? 'auto'
   const mirror = opts.mirror !== false
@@ -464,6 +471,7 @@ export async function saveHoldClipWithOverlay(opts: {
       skeletonWhenOneLine: layers.skeletonWhenOneLine,
       saveSpeed,
       onProgress: opts.onProgress,
+      shapeId: opts.shapeId,
     })
     rememberBurnedOverlay(key, out)
   }

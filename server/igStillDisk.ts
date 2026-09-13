@@ -181,10 +181,6 @@ export async function stillsForClient(): Promise<{
   const stills: Array<Record<string, unknown>> = []
   for (const s of meta.stills) {
     const shipped = shippedIds.has(s.id)
-    if (!shipped) {
-      const buf = await readBin(blobRel(s.file || `${s.id}.jpg`))
-      if (!buf) continue
-    }
     stills.push({
       id: s.id,
       shapeId: s.shapeId,

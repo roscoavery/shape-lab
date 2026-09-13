@@ -9,6 +9,7 @@ import { parentSeesAthlete } from './parentLink'
 import { attendeeCountsOnProfile, classLabel, loadMeetings, loadOfferings } from './coachClasses'
 import { namesMatch } from './classStation'
 import { lessonAthleteIds, sessionsForAthlete, sessionsForCoach } from './lessonStore'
+import { listTrainingEvents } from './trainingEvents'
 import { homeworkTitle } from './homeworkLabel'
 import { loadAllHomework, loadAthletes, loadHomeworkLogs, saveAthletes } from './storage'
 import { pushNotice } from './notify'
@@ -69,10 +70,19 @@ export function coachWorkedWithAthlete(coachId: string, athlete: Athlete): boole
   if (sessionsForCoach(coachId).some((session) => lessonAthleteIds(session).includes(athlete.id))) {
     return true
   }
-  return attendedCoachClass(athlete.id, coachId)
+  if (
+    listTrainingEvents().some(
+      (event) =>
+        event.coachIds.includes(coachId) &&
+        (event.athleteIds.includes(athlete.id) || (athlete.eventIds ?? []).includes(event.id)),
+    )
+  ) {
+    return true
+  }
+  return attendedCoachClass(athlete, coachId)
 }
 
-function attendedCoachClass(athleteId: string, coachId: string): boolean {
+function attendedCoachClass(athlete: Athlete, coachId: string): boolean {
   const meetings = loadMeetings()
   const offerings = loadOfferings()
   return meetings.some((meeting) => {
@@ -82,8 +92,33 @@ function attendedCoachClass(athleteId: string, coachId: string): boolean {
       ...(offering ? [offering.coachId, ...(offering.coachIds ?? [])] : []),
     ])
     if (!coaches.has(coachId)) return false
-    return meeting.attendees.some((row) => row.athleteId === athleteId)
+    return meeting.attendees.some((row) => {
+      if (row.athleteId && row.athleteId === athlete.id) return true
+      return (
+        namesMatch(row, athlete.firstName ?? '', athlete.lastName ?? '') ||
+        namesMatch(athlete, row.firstName, row.lastName)
+      )
+    })
   })
+}
+
+/** Missing or false = private. Only the athlete, parents, and coaches who work with them can open it. */
+export function isProfilePublic(athlete: Athlete | null | undefined): boolean {
+  return athlete?.profilePublic === true
+}
+
+export function canViewAthleteProfile(
+  viewer: Athlete | null | undefined,
+  athlete: Athlete | null | undefined,
+): boolean {
+  if (!athlete) return false
+  if (isProfilePublic(athlete)) return true
+  if (!viewer) return false
+  if (viewer.id === athlete.id) return true
+  if (isGymAdmin(viewer)) return true
+  if (parentSeesAthlete(viewer, athlete.id)) return true
+  if (isCoachProfile(viewer) && coachWorkedWithAthlete(viewer.id, athlete)) return true
+  return false
 }
 
 /** Owner, parent of, listed coach, or gym admin. */
@@ -95,7 +130,7 @@ export function canSeePrivateCoaching(
   if (viewer.id === athlete.id) return true
   if (isGymAdmin(viewer)) return true
   if (parentSeesAthlete(viewer, athlete.id)) return true
-  if (isCoachProfile(viewer) && worksWithCoachIds(athlete).includes(viewer.id)) return true
+  if (isCoachProfile(viewer) && coachWorkedWithAthlete(viewer.id, athlete)) return true
   return false
 }
 

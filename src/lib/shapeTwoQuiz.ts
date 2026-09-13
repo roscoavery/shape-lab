@@ -56,19 +56,19 @@ const DETAILS: DetailAsk[] = [
   },
   {
     shapeId: 'mountain_climber',
-    prompt: 'What makes this still a mountain climber, not a lunge?',
+    prompt: 'What lower-body picture matches this still?',
     choices: [
       { id: 'a', label: 'A long open line and a straight back leg' },
-      { id: 'b', label: 'Both knees bent and a tumbling C' },
-      { id: 'c', label: 'A flat back heel and open shoulders' },
-      { id: 'd', label: 'A passé on the front leg' },
+      { id: 'b', label: 'Both knees bent and a rounded C' },
+      { id: 'c', label: 'A flat back heel and a long back line' },
+      { id: 'd', label: 'One knee pulled up, stance leg straight' },
     ],
     answerId: 'b',
     explain: 'Mountain climber is pass-through only: two bent knees and a C. Never a finish.',
   },
   {
     shapeId: 'hollow_arms_down',
-    prompt: 'In this hollow, the arms are:',
+    prompt: 'Where are the arms relative to the trunk in this still?',
     choices: [
       { id: 'a', label: 'By the sides' },
       { id: 'b', label: 'Covering the ears' },
@@ -80,7 +80,7 @@ const DETAILS: DetailAsk[] = [
   },
   {
     shapeId: 'hollow_arms_up',
-    prompt: 'This hollow is the same trunk as arms-down. The arms here are:',
+    prompt: 'Same trunk as the other floor hold. Where are the arms?',
     choices: [
       { id: 'a', label: 'By the sides' },
       { id: 'b', label: 'Glued by the ears' },
@@ -97,14 +97,14 @@ const DETAILS: DetailAsk[] = [
       { id: 'a', label: 'Belly down (prone), long hips, arms by the ears' },
       { id: 'b', label: 'On the back in a hollow' },
       { id: 'c', label: 'A standing C' },
-      { id: 'd', label: 'A landing lunge' },
+      { id: 'd', label: 'A short split stance, one heel flat' },
     ],
     answerId: 'a',
     explain: 'Superman is prone. A tumbling arch is a different shape and a different relationship to the floor.',
   },
   {
     shapeId: 'lunge_start',
-    prompt: 'Compared with a landing lunge, this stance should be:',
+    prompt: 'Compared with a short finish stance, this stance should be:',
     choices: [
       { id: 'a', label: 'Shorter, heels closer' },
       { id: 'b', label: 'Longer' },
@@ -116,9 +116,9 @@ const DETAILS: DetailAsk[] = [
   },
   {
     shapeId: 'lunge_land',
-    prompt: 'On this lunge the back leg should be:',
+    prompt: 'On this split stance the back leg should be:',
     choices: [
-      { id: 'a', label: 'Bent like a mountain climber' },
+      { id: 'a', label: 'Bent with a rounded C' },
       { id: 'b', label: 'Straight' },
       { id: 'c', label: 'In passé' },
       { id: 'd', label: 'In a pike' },
@@ -128,7 +128,7 @@ const DETAILS: DetailAsk[] = [
   },
   {
     shapeId: 'candlestick',
-    prompt: 'This still is a candlestick when the legs are:',
+    prompt: 'How are the legs organized in this still?',
     choices: [
       { id: 'a', label: 'Straight, hips stacked over the shoulders' },
       { id: 'b', label: 'Tucked, knees to the chest' },
@@ -176,12 +176,12 @@ const DETAILS: DetailAsk[] = [
   },
   {
     shapeId: 'handstand',
-    prompt: 'This freestanding handstand should look:',
+    prompt: 'What line should this inverted still show?',
     choices: [
       { id: 'a', label: 'Stacked: ribs in, butt in, ears covered, toes pointed' },
-      { id: 'b', label: 'Stomach to the wall, banana back' },
-      { id: 'c', label: 'A tucked candle' },
-      { id: 'd', label: 'A mountain climber C' },
+      { id: 'b', label: 'Stomach toward a wall, banana back' },
+      { id: 'c', label: 'Shoulders stacked, knees pulled in' },
+      { id: 'd', label: 'Two bent knees and a rounded C' },
     ],
     answerId: 'a',
     explain: 'The still is a stacked handstand, not a wall banana.',
@@ -210,7 +210,26 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function labelFor(id: string): string {
-  return samePositionDisplayName(id)
+  const cues: Record<string, string> = {
+    lunge_start: 'Longer stance · back heel up · back leg long',
+    lunge_land: 'Shorter stance · back heel flat · back leg long',
+    mountain_climber: 'Two bent knees · rounded C · not a finish',
+    hollow_arms_down: 'On the back · ribs in · arms by the sides',
+    hollow_arms_up: 'On the back · ribs in · arms by the ears',
+    candlestick: 'Shoulders stacked · legs long toward the ceiling',
+    tucked_candle: 'Shoulders stacked · knees pulled in',
+    seated_pike: 'Seated · legs together and long · arms covering the ears',
+    pike_open_shoulders: 'Seated · legs long · chest open toward the toes',
+    handstand: 'Inverted · stacked line · no wall',
+    wall_handstand: 'Inverted · wall nearby · banana is common',
+    arch: 'Belly down · hips lifting · a C in the back',
+    superman: 'Belly down · hips long · arms by the ears',
+    zombie: 'Standing · shrugged shoulders · arms covering the ears',
+    stand_clean: 'Standing · arms pinned to the sides',
+    tuck: 'Knees in · rounded · arms covering the ears',
+    tuck_open_shoulders: 'Knees in · chest open',
+  }
+  return cues[id] ?? samePositionDisplayName(id)
 }
 
 function photoFor(photos: ReferencePhoto[], shapeId: string): ReferencePhoto | null {
@@ -234,12 +253,12 @@ function lookalikeQuestion(
   return {
     id: `s2_id_${pick.id}_${index}`,
     lessonId: pick.id,
-    prompt: 'These look alike. Which position is this still?',
+    prompt: 'Same picture family. Which body picture matches this still?',
     photoUrl: pick.photo.dataUrl,
     stillId: pick.photo.id,
     choices: shuffle(options).map((id) => ({ id, label: labelFor(id) })),
     answerId: pick.id,
-    explain: `${labelFor(pick.id)} — look at heel, knees, and whether the back is a C or a long line.`,
+    explain: `${labelFor(pick.id)}. Check heel, knees, and whether the back is a C or a long line.`,
   }
 }
 

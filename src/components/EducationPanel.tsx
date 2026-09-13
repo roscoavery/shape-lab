@@ -517,6 +517,7 @@ export function EducationPanel({
           referencePhotos={referencePhotos}
           onReferencesChange={onReferencesChange}
           persistIgToApp={persistIgToApp}
+          canDeleteIg={persistIgToApp || coach}
           signedIn={signedIn}
         />
       )}
@@ -1711,11 +1712,13 @@ function IgShapesLibrary({
   referencePhotos,
   onReferencesChange,
   persistIgToApp,
+  canDeleteIg = false,
   signedIn = null,
 }: {
   referencePhotos: ReferencePhoto[]
   onReferencesChange: (photos: ReferencePhoto[]) => void
   persistIgToApp: boolean
+  canDeleteIg?: boolean
   signedIn?: Athlete | null
 }) {
   const groups = groupIgStillsByShape(referencePhotos)
@@ -1733,10 +1736,15 @@ function IgShapesLibrary({
   const [viewStill, setViewStill] = useState<ReferencePhoto | null>(null)
 
   const remove = async (still: ReferencePhoto) => {
-    if (still.persistedToApp && !persistIgToApp) return
-    await removeIgStill(still.id, {
-      fromApp: persistIgToApp && Boolean(still.persistedToApp),
-    })
+    if (!canDeleteIg && still.persistedToApp && !persistIgToApp) return
+    if (
+      !window.confirm(
+        `Delete this IG shape? It will leave the library on every device on this gym.`,
+      )
+    ) {
+      return
+    }
+    await removeIgStill(still.id, { fromApp: true })
     await deleteReferencePhoto(still.id)
     onReferencesChange(referencePhotos.filter((p) => p.id !== still.id))
   }
@@ -1848,11 +1856,11 @@ function IgShapesLibrary({
                   <button
                     type="button"
                     onClick={() => void remove(still)}
-                    disabled={Boolean(still.persistedToApp && !persistIgToApp)}
+                    disabled={!canDeleteIg && Boolean(still.persistedToApp && !persistIgToApp)}
                     className="shrink-0 text-[11px] text-[var(--bad)] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
                     title={
-                      still.persistedToApp && !persistIgToApp
-                        ? 'Select Ryan to remove an app still from every link'
+                      !canDeleteIg && still.persistedToApp && !persistIgToApp
+                        ? 'Sign in as a coach to delete gym IG shapes'
                         : 'Delete'
                     }
                   >

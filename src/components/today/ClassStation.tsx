@@ -192,6 +192,7 @@ export function ClassStation({
       harderShape: from.harderShape ?? existing?.harderShape,
       openShoulderHardness: from.openShoulderHardness ?? existing?.openShoulderHardness,
       role: existing?.role ?? 'athlete',
+      profilePublic: existing?.profilePublic ?? false,
       photoDataUrl: from.photoDataUrl || existing?.photoDataUrl,
       skillGoals: from.skillGoals?.length ? from.skillGoals : existing?.skillGoals,
       twistDirection: from.twistDirection || existing?.twistDirection,

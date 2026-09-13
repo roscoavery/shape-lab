@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { canViewAthleteProfile } from '../../lib/coachLink'
 import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
 import {
   attachPlanToLiveLesson,
@@ -313,7 +314,7 @@ export function HomeDashboard({
                     </span>
                   ) : null}
                 </button>
-                {onViewProfile && (
+                {onViewProfile && canViewAthleteProfile(signedIn, a) && (
                   <button
                     type="button"
                     className="shrink-0 text-xs font-semibold text-[var(--accent)]"
@@ -796,7 +797,7 @@ export function HomeDashboard({
                   </div>
                   {rowMenuId === a.id && (
                     <div className="flex w-full flex-wrap gap-2 border-t border-white/5 pt-2">
-                      {onViewProfile && (
+                      {onViewProfile && canViewAthleteProfile(signedIn, a) && (
                         <button
                           type="button"
                           className="text-xs font-semibold text-[var(--accent)]"
@@ -907,7 +908,7 @@ export function HomeDashboard({
               </span>
             ))}
           </h3>
-          {onViewProfile && withAthletes.length === 1 && (
+          {onViewProfile && withAthletes.length === 1 && canViewAthleteProfile(signedIn, withAthlete) && (
             <button
               type="button"
               className="mt-1 text-xs font-semibold text-[var(--accent)] underline"

@@ -126,6 +126,17 @@ export function listNamesGroups(opts: {
   const live = opts.liveMeeting ?? getActiveMeeting(coach.id)
   const groups: NamesGroup[] = []
 
+  const desk = opts.athletes.filter(
+    (a) => isNamesKid(a) && coachWorkedWithAthlete(coach.id, a),
+  )
+  groups.push({
+    id: 'desk',
+    kind: 'desk',
+    eyebrow: 'Desk',
+    label: 'My athletes',
+    athleteIds: desk.map((a) => a.id),
+  })
+
   if (live) {
     const offering = offerings.find((o) => o.id === live.offeringId)
     const here = resolveAttendeeAthletes(live, opts.athletes).map((a) => a.id)
@@ -172,17 +183,6 @@ export function listNamesGroups(opts: {
       athleteIds: ids,
     })
   }
-
-  const desk = opts.athletes.filter(
-    (a) => isNamesKid(a) && coachWorkedWithAthlete(coach.id, a),
-  )
-  groups.push({
-    id: 'desk',
-    kind: 'desk',
-    eyebrow: 'Desk',
-    label: 'My athletes',
-    athleteIds: desk.map((a) => a.id),
-  })
 
   return groups
 }
