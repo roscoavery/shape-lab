@@ -99,6 +99,8 @@ export function ChalkboardPanel({
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
   const [size, setSize] = useState<Size>('more')
+  const [coachEdit, setCoachEdit] = useState(false)
+  const showCoachChrome = coach && (size !== 'full' || coachEdit)
   const [offerings, setOfferings] = useState(() =>
     viewer?.id ? loadOfferingsForCoach(viewer.id) : loadOfferings(),
   )
@@ -178,6 +180,7 @@ export function ChalkboardPanel({
       onPickAthlete={onPickAthlete}
       selectedAthleteId={athleteId}
       lessonId={lessonId}
+      showCoachChrome={showCoachChrome}
     />
   )
 
@@ -192,15 +195,37 @@ export function ChalkboardPanel({
             <p className="truncate text-lg font-bold">
               {athleteMode ? athleteName || 'Athlete board' : offering ? classLabel(offering) : 'Class'}
             </p>
-            <p className="text-xs text-white/55">Scroll the board. Every clip shows the full frame.</p>
+            <p className="text-xs text-white/55">
+              {coach
+                ? coachEdit
+                  ? 'Coach edit is on. Open a reel to add notes or text, then save and close.'
+                  : 'Athlete view. Scroll only — tap Coach edit if you need to add notes or text.'
+                : 'Scroll the board. Every clip shows the full frame.'}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setSize('more')}
-            className="shrink-0 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
-          >
-            Show less
-          </button>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            {coach && (
+              <button
+                type="button"
+                onClick={() => setCoachEdit((on) => !on)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                  coachEdit ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
+                }`}
+              >
+                {coachEdit ? 'Athlete view' : 'Coach edit'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setCoachEdit(false)
+                setSize('more')
+              }}
+              className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
+            >
+              Show less
+            </button>
+          </div>
         </header>
         <div className="panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-4">
           {body}
@@ -221,7 +246,10 @@ export function ChalkboardPanel({
       </button>
       <button
         type="button"
-        onClick={() => setSize('full')}
+        onClick={() => {
+          setCoachEdit(false)
+          setSize('full')
+        }}
         className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
       >
         Full screen
@@ -300,6 +328,7 @@ function ChalkboardBody({
   onPickAthlete,
   selectedAthleteId,
   lessonId,
+  showCoachChrome,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -330,6 +359,7 @@ function ChalkboardBody({
   onPickAthlete?: (id: string) => void
   selectedAthleteId?: string | null
   lessonId?: string | null
+  showCoachChrome: boolean
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -340,7 +370,7 @@ function ChalkboardBody({
 
   return (
     <div className={compact ? 'mt-3 space-y-3' : 'mt-4 space-y-4'}>
-      {coach && !hideOfferingSelect && offerings.length > 0 && (
+      {showCoachChrome && !hideOfferingSelect && offerings.length > 0 && (
         <select
           value={pickOffering}
           onChange={(e) => onPickOffering(e.target.value)}
@@ -354,7 +384,7 @@ function ChalkboardBody({
         </select>
       )}
 
-      {coach && athleteMode && lessonAthletes.length > 1 && onPickAthlete && (
+      {showCoachChrome && athleteMode && lessonAthletes.length > 1 && onPickAthlete && (
         <div className="flex flex-wrap gap-2">
           {lessonAthletes.map((person) => (
             <button
@@ -373,7 +403,7 @@ function ChalkboardBody({
         </div>
       )}
 
-      {coach && offering && !athleteMode && (
+      {showCoachChrome && offering && !athleteMode && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -400,7 +430,7 @@ function ChalkboardBody({
         </div>
       )}
 
-      {coach && (offering || athleteMode) && viewer && size !== 'compact' && (
+      {showCoachChrome && (offering || athleteMode) && viewer && size !== 'compact' && (
         <div className="space-y-2 rounded-xl bg-[#0d1218] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             {athleteMode
@@ -578,7 +608,7 @@ function ChalkboardBody({
             <li key={item.id}>
               <ChalkboardCard
                 item={item}
-                coach={coach}
+                allowTools={showCoachChrome}
                 compact={compact}
                 boardSize={size}
                 hidePlayer={Boolean(reelId)}
@@ -611,7 +641,7 @@ function ChalkboardBody({
 
 function ChalkboardCard({
   item,
-  coach,
+  allowTools,
   compact,
   boardSize,
   sourceLabel,
@@ -619,7 +649,7 @@ function ChalkboardCard({
   onOpenReel,
 }: {
   item: ChalkboardItem
-  coach: boolean
+  allowTools: boolean
   compact: boolean
   boardSize: Size
   sourceLabel?: string
@@ -656,6 +686,10 @@ function ChalkboardCard({
   useEffect(() => {
     setCommentDraft(item.comment ?? '')
   }, [item.comment])
+
+  useEffect(() => {
+    if (!allowTools) setEditing(false)
+  }, [allowTools])
 
   useEffect(() => {
     if (item.kind !== 'collage' || !item.collageId) return
@@ -716,7 +750,7 @@ function ChalkboardCard({
       ref={frameRef}
       className={`relative w-full touch-pan-y overflow-hidden bg-black ${playerH}`}
       onClick={(e) => {
-        if (!coach || !editing) return
+        if (!allowTools || !editing) return
         const rect = e.currentTarget.getBoundingClientRect()
         setPlace({
           x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
@@ -729,7 +763,7 @@ function ChalkboardCard({
         overlays={overlays}
         coach={coachProfile}
         coachName={item.createdByName}
-        canDrag={coach && editing}
+        canDrag={allowTools && editing}
         onMove={moveOverlay}
       />
     </div>
@@ -765,7 +799,7 @@ function ChalkboardCard({
               Full screen
             </button>
           )}
-          {coach && (
+          {allowTools && (
             <>
               <button
                 type="button"
@@ -804,7 +838,7 @@ function ChalkboardCard({
             overlays={overlays}
             coach={coachProfile}
             coachName={item.createdByName}
-            canDrag={coach && editing}
+            canDrag={allowTools && editing}
             onMove={moveOverlay}
           />
         </div>
@@ -836,7 +870,7 @@ function ChalkboardCard({
           />
         </div>
       )}
-      {coach && !compact && !editing && (
+      {allowTools && !compact && !editing && (
         <div className="border-t border-white/5 px-3 py-2">
           <button
             type="button"
@@ -847,7 +881,7 @@ function ChalkboardCard({
           </button>
         </div>
       )}
-      {coach && !compact && editing && (
+      {allowTools && !compact && editing && (
         <div className="space-y-2 border-t border-white/5 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
