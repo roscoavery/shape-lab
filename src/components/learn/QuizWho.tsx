@@ -77,7 +77,7 @@ export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }
           type="button"
           onClick={() => setMode('pick')}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-            mode === 'pick' ? 'bg-[var(--accent)] text-[#06281f]' : 'border border-[var(--panel-border)]'
+            mode === 'pick' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'border border-[var(--panel-border)]'
           }`}
         >
           Pick a name
@@ -86,7 +86,7 @@ export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }
           type="button"
           onClick={() => setMode('type')}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-            mode === 'type' ? 'bg-[var(--accent)] text-[#06281f]' : 'border border-[var(--panel-border)]'
+            mode === 'type' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'border border-[var(--panel-border)]'
           }`}
         >
           Type a name
@@ -180,7 +180,7 @@ export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }
             type="button"
             disabled={!first.trim() || !last.trim()}
             onClick={() => choose(first.trim(), last.trim())}
-            className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+            className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
           >
             That’s me
           </button>

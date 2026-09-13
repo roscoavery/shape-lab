@@ -78,7 +78,7 @@ export function StoryRail({ athlete, athletes }: Props) {
             >
               <span className="relative block">
                 <AthleteAvatar athlete={athlete} size="lg" />
-                <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-[#06281f]">
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-[var(--on-accent)]">
                   +
                 </span>
               </span>

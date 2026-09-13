@@ -208,7 +208,7 @@ export function TaskDelayCam({
           type="button"
           disabled={!cameraOn || building}
           onClick={() => void openReplay()}
-          className="rounded-lg bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-40"
         >
           {building ? 'Opening…' : `Replay last ${delaySec}s`}
         </button>

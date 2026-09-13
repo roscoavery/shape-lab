@@ -212,7 +212,7 @@ export function AddHomeworkForm({
                 </span>
                 <span className="mt-0.5 block text-xs text-[var(--muted)]">{row.hint}</span>
               </span>
-              <span className="shrink-0 self-center rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]">
+              <span className="shrink-0 self-center rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]">
                 Add
               </span>
             </button>
@@ -364,7 +364,7 @@ export function AddHomeworkForm({
             <button
               type="button"
               onClick={onSaveExercise}
-              className="rounded-xl bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[#06281f]"
+              className="rounded-xl bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)]"
             >
               Save exercise
             </button>

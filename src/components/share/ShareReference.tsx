@@ -285,7 +285,7 @@ export function ShareReference({
                         type="button"
                         disabled={busy}
                         onClick={() => void postFeed()}
-                        className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-50"
+                        className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)] disabled:opacity-50"
                       >
                         {busy ? 'Posting…' : 'Share to feed'}
                       </button>
@@ -303,7 +303,7 @@ export function ShareReference({
                         type="button"
                         disabled={busy || !url || isInternalShareUrl(url)}
                         onClick={() => void postStory()}
-                        className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-50"
+                        className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)] disabled:opacity-50"
                       >
                         {busy ? 'Posting…' : 'Post to your story'}
                       </button>

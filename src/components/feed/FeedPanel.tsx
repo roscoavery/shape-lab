@@ -393,7 +393,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
             >
               {busy ? 'Posting…' : wins ? 'Post to Wins' : 'Post to feed'}
             </button>
@@ -606,7 +606,7 @@ function CollageFeedCard({
             type="button"
             disabled={saving}
             onClick={onSave}
-            className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-50"
+            className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save to my class library'}
           </button>
@@ -644,7 +644,7 @@ function markOn(list: string[] | undefined, id: string, on: boolean): string[] {
 
 function reactClass(on: boolean): string {
   return on
-    ? 'rounded-full bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] transition-none'
+    ? 'rounded-full bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] transition-none'
     : 'rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] transition-none'
 }
 

@@ -177,7 +177,7 @@ export function WinComposer({
       <button
         type="submit"
         disabled={busy}
-        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
       >
         {busy ? 'Posting…' : submitLabel}
       </button>

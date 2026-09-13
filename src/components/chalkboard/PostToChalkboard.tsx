@@ -171,7 +171,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
                   }}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     scope === 'type'
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)] text-[var(--muted)]'
                   }`}
                 >
@@ -185,7 +185,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
                   }}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     scope === 'time'
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)] text-[var(--muted)]'
                   }`}
                 >
@@ -235,7 +235,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
               <button
                 type="button"
                 onClick={post}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
               >
                 Put on chalkboard
               </button>

@@ -129,7 +129,7 @@ export function ClipTrimmer({ src, defaultName, defaultNotes = '', onSave, onCan
         <button
           type="button"
           disabled={busy || !name.trim()}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
           onClick={() => {
             if (!name.trim()) {
               setErr('Name the skill so it can be found in Compare.')

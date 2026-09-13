@@ -62,7 +62,7 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
     ...data,
     main,
     extras: Array.isArray(data.extras)
-      ? data.extras.map(cleanExtra).filter((row): row is CoachStillExtra => Boolean(row)).slice(0, 80)
+      ? data.extras.map(cleanExtra).filter((row): row is CoachStillExtra => Boolean(row)).slice(0, 2000)
       : [],
   }
 }
@@ -77,7 +77,7 @@ export async function writeCoachStillsFile(data: unknown): Promise<CoachStillsFi
     }
   }
   const extras = Array.isArray(parsed.extras)
-    ? parsed.extras.map(cleanExtra).filter((row): row is CoachStillExtra => Boolean(row)).slice(0, 80)
+    ? parsed.extras.map(cleanExtra).filter((row): row is CoachStillExtra => Boolean(row)).slice(0, 2000)
     : []
   const next: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',

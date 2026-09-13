@@ -287,7 +287,7 @@ export function AthleteProfileCard({
             <span className="relative block rounded-full bg-black p-[2px]">
               <AthleteAvatar athlete={athlete} size="xl" />
               {own && (
-                <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-[#06281f]">
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]">
                   +
                 </span>
               )}
@@ -329,7 +329,7 @@ export function AthleteProfileCard({
               key={row.label}
               className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                 row.hot
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'bg-black/30 text-white/85'
               }`}
             >
@@ -643,7 +643,7 @@ export function AthleteProfileCard({
                   onAddNote(note.trim(), noteAudience)
                   setNote('')
                 }}
-                className="h-11 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f] disabled:opacity-40"
+                className="h-11 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Save note
               </button>
@@ -817,7 +817,7 @@ function ProfileNoteRow({
                 onAthleteChange(updateCoachNote(athlete, note.id, text, viewer))
                 setEditing(false)
               }}
-              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-40"
+              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-40"
             >
               Save
             </button>
@@ -1118,7 +1118,7 @@ function StoriesGrid({
           <button
             type="button"
             onClick={onAdd}
-            className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f]"
+            className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)]"
           >
             Add a story
           </button>
@@ -1237,7 +1237,7 @@ function PassComposer({
                 setError(err instanceof Error ? err.message : 'Could not record.')
               })
           }}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f] disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
         >
           {busy === 'Recording…' ? 'Recording 15s…' : 'Record 15s'}
         </button>

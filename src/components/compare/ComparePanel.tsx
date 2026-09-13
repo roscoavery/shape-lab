@@ -208,13 +208,13 @@ export function ComparePanel({
                 onClick={() => enterReplay('tb', 'split')}
                 className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
               >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--on-accent)]/70">
                   Videos · Compare
                 </span>
-                <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+                <span className="mt-1 text-2xl font-bold tracking-tight text-[var(--on-accent)] sm:text-3xl">
                   Replay with reference cam
                 </span>
-                <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+                <span className="mt-2 max-w-lg text-sm font-medium text-[var(--on-accent)]/80">
                   Looping reference and delay cam, full screen.
                 </span>
               </button>
@@ -223,13 +223,13 @@ export function ComparePanel({
                 onClick={() => enterReplay('tb', 'cam')}
                 className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#3ae0c0] via-[#1fb896] to-[#0e5c4c] px-5 py-5 text-center shadow-[0_10px_28px_rgba(45,212,168,0.22)] sm:py-6"
               >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#06281f]/70">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--on-accent)]/70">
                   Delay cam only
                 </span>
-                <span className="mt-1 text-2xl font-bold tracking-tight text-[#06281f] sm:text-3xl">
+                <span className="mt-1 text-2xl font-bold tracking-tight text-[var(--on-accent)] sm:text-3xl">
                   Athlete camera
                 </span>
-                <span className="mt-2 max-w-lg text-sm font-medium text-[#06281f]/80">
+                <span className="mt-2 max-w-lg text-sm font-medium text-[var(--on-accent)]/80">
                   Full-screen delay cam — no reference pane in the way.
                 </span>
               </button>

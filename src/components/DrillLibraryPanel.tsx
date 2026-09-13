@@ -74,7 +74,7 @@ export function DrillLibraryPanel({ signedIn }: Props) {
         </div>
         <button
           type="button"
-          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
           onClick={() => {
             setErr(null)
             setScreen({ kind: 'edit', draft: emptyDrill() })
@@ -191,7 +191,7 @@ function DrillWatch({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             Add a 9:16 video
           </button>
@@ -321,7 +321,7 @@ function DrillEditor({
           <button
             type="button"
             disabled={!draft.title.trim() || busy}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
             onClick={() => {
               saveDrill({ ...draft, title: draft.title.trim() })
               onSaved()

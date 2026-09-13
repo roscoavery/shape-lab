@@ -456,7 +456,7 @@ function VideoWorkbenchInner({
   const abOn = (on: boolean) =>
     on
       ? fill || overlay
-        ? 'rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-sm font-semibold text-[#06281f]'
+        ? 'rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-sm font-semibold text-[var(--on-accent)]'
         : 'rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-sm font-semibold text-white'
       : btn
 
@@ -587,7 +587,7 @@ function VideoWorkbenchInner({
                 className={`inline-flex items-center overflow-hidden rounded-md ${
                   activeLoopId === p.id
                     ? fill
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'bg-[var(--accent-dim)] text-white'
                     : fill
                       ? 'border border-white/30 text-white/80'
@@ -600,7 +600,7 @@ function VideoWorkbenchInner({
                     fill={fill && activeLoopId !== p.id}
                     on={favorites.isLoopFavorite(persistUrl, p.id)}
                     onClick={() => favorites.toggleLoopFavorite(persistUrl, p.id)}
-                    className={activeLoopId === p.id ? 'text-[#06281f]' : ''}
+                    className={activeLoopId === p.id ? 'text-[var(--on-accent)]' : ''}
                     label={
                       favorites.isLoopFavorite(persistUrl, p.id)
                         ? `Unfavorite loop ${p.name}`

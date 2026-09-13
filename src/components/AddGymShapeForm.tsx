@@ -54,7 +54,7 @@ export function AddGymShapeForm({ signedIn, onSaved }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
       >
         Add a shape to the library
       </button>
@@ -124,7 +124,7 @@ export function AddGymShapeForm({ signedIn, onSaved }: Props) {
           <button
             type="button"
             onClick={save}
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
           >
             Save to library
           </button>

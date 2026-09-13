@@ -65,7 +65,7 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
               <button
                 type="button"
                 onClick={onRetry}
-                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
               >
                 Try again
               </button>

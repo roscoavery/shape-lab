@@ -325,7 +325,7 @@ function PeoplePage({
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                     following
                       ? 'border border-[var(--panel-border)]'
-                      : 'bg-[var(--accent)] text-[#06281f]'
+                      : 'bg-[var(--accent)] text-[var(--on-accent)]'
                   }`}
                 >
                   {following ? 'Following' : 'Follow'}

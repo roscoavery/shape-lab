@@ -287,7 +287,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
           type="button"
           disabled={saving}
           onClick={save}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
         >
           {saving ? 'Logged' : 'Save set'}
         </button>

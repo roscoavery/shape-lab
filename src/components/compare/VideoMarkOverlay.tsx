@@ -724,7 +724,7 @@ export function VideoMarkOverlay({
       onClick={() => pickTool(id)}
       className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
         tool === id
-          ? 'bg-[var(--accent)] text-[#06281f]'
+          ? 'bg-[var(--accent)] text-[var(--on-accent)]'
           : 'border border-white/30 bg-black/55 text-white'
       }`}
     >
@@ -868,7 +868,7 @@ export function VideoMarkOverlay({
                     }}
                     className={`max-w-[9rem] shrink-0 snap-start truncate rounded-md px-2 py-1.5 text-left text-[11px] font-semibold ${
                       on
-                        ? 'bg-[var(--accent)] text-[#06281f]'
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                         : 'border border-white/25 bg-black/50 text-white'
                     }`}
                   >
@@ -904,7 +904,7 @@ export function VideoMarkOverlay({
             <button
               type="button"
               onClick={savePending}
-              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-[#06281f]"
+              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--on-accent)]"
             >
               Save to IG library
             </button>

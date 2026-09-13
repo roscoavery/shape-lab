@@ -227,7 +227,7 @@ export function HighlightFromStories({
                 <span
                   aria-hidden
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    on ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]' : 'border-white/40'
+                    on ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]' : 'border-white/40'
                   }`}
                 >
                   {on ? '✓' : ''}
@@ -244,7 +244,7 @@ export function HighlightFromStories({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
           >
             {busy ? 'Saving…' : 'Save to profile'}
           </button>

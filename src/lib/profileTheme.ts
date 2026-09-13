@@ -132,9 +132,21 @@ export function isFavoriteColor(value: string | undefined): value is FavoriteCol
   return FAVORITE_COLORS.some((c) => c.id === value)
 }
 
+/** Gym default when nobody picked a favorite color. */
+const GYM_THEME: Theme = {
+  accent: '#6ec8d6',
+  accentSoft: 'rgba(110,200,214,0.2)',
+  accentDim: '#2c6f7a',
+  bg: '#080d11',
+  ink: '#e8eef2',
+  panel: 'linear-gradient(165deg,#0c1418 0%,#122028 55%,#080d11 100%)',
+  wash: 'radial-gradient(120% 80% at 100% 0%,rgba(110,200,214,0.2),transparent 55%)',
+  glow: '0 18px 40px rgba(110,200,214,0.12)',
+}
+
 export function profileTheme(color?: string | null): Theme {
   if (color && isFavoriteColor(color)) return THEMES[color]
-  return THEMES.teal
+  return GYM_THEME
 }
 
 export function profileThemeStyle(color?: string | null): CSSProperties {
@@ -156,5 +168,6 @@ export function applyAppTheme(color?: string | null) {
   root.style.setProperty('--accent-dim', t.accentDim)
   root.style.setProperty('--good', t.accent)
   root.style.setProperty('--bg', t.bg)
-  root.dataset.theme = color && isFavoriteColor(color) ? color : 'teal'
+  root.style.setProperty('--on-accent', '#061418')
+  root.dataset.theme = color && isFavoriteColor(color) ? color : 'frost'
 }

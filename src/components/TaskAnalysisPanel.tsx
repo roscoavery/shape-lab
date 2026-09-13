@@ -74,7 +74,7 @@ export function TaskAnalysisPanel({
           <button
             type="button"
             onClick={onContinue}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             {continueLabel}
           </button>

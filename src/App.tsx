@@ -132,7 +132,7 @@ import {
   mergeIgStills,
   subscribeIgStills,
 } from './lib/igStillStore'
-import { hydrateCoachStills } from './lib/coachStillStore'
+import { hydrateCoachStills, mergeCoachExtras, subscribeCoachStills } from './lib/coachStillStore'
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
@@ -239,9 +239,13 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const unsub = subscribeCoachStills((extras) => {
+      setReferencePhotos((prev) => mergeCoachExtras(prev, extras))
+    })
     void hydrateCoachStills(loadReferencePhotos()).then((next) => {
       setReferencePhotos(next)
     })
+    return unsub
   }, [])
 
   const qualityThreshold =
@@ -640,7 +644,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => void camera.start()}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--on-accent)]"
         >
           Start camera
         </button>
@@ -1464,7 +1468,7 @@ export default function App() {
                 onClick={() => setSettings((s) => ({ ...s, themeColor: 'auto' }))}
                 className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
                   !settings.themeColor || settings.themeColor === 'auto'
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)]'
                 }`}
               >

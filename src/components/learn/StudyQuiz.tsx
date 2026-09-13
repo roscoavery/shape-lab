@@ -154,7 +154,7 @@ export function StudyQuiz({
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
               onClick={() => {
                 if (index + 1 >= total) {
                   setDone(true)

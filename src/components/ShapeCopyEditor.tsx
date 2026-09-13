@@ -80,7 +80,7 @@ export function ShapeCopyEditor({ shapeId, shapeName }: Props) {
           type="button"
           onClick={() => void save()}
           disabled={busy}
-          className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f] disabled:opacity-50"
+          className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-50"
         >
           {busy ? 'Saving…' : 'Save both'}
         </button>

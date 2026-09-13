@@ -360,7 +360,7 @@ export function ReplayLastOverlay({
                   type="button"
                   disabled={libraryBusy}
                   onClick={onUseAsReference}
-                  className="rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[#06281f] disabled:opacity-40"
+                  className="rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] disabled:opacity-40"
                 >
                   Use as reference
                 </button>

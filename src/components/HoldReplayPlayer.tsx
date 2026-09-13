@@ -38,7 +38,7 @@ type Props = {
 
 function layerChip(on: boolean): string {
   return on
-    ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+    ? 'bg-[var(--accent)] font-semibold text-[var(--on-accent)]'
     : 'border border-[var(--panel-border)] text-[var(--muted)]'
 }
 
@@ -62,6 +62,7 @@ export function HoldReplayPlayer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [mode, setMode] = useState<JointDrawMode>('auto')
   const [showSkeleton, setShowSkeleton] = useState(true)
+  const [skeletonWhenOneLine, setSkeletonWhenOneLine] = useState(false)
   const [showAngles, setShowAngles] = useState(true)
   const [showScore, setShowScore] = useState(true)
   const [showClock, setShowClock] = useState(true)
@@ -148,6 +149,7 @@ export function HoldReplayPlayer({
             showAngles,
             showScore,
             showClock,
+            skeletonWhenOneLine,
           })
         }
       }
@@ -198,6 +200,7 @@ export function HoldReplayPlayer({
     playheadSec,
     startAtBeginning,
     showSkeleton,
+    skeletonWhenOneLine,
     showAngles,
     showScore,
     showClock,
@@ -224,6 +227,7 @@ export function HoldReplayPlayer({
         mode,
         clipId,
         showSkeleton,
+        skeletonWhenOneLine,
         showAngles,
         showScore,
         showClock,
@@ -371,10 +375,25 @@ export function HoldReplayPlayer({
             </button>
             <button
               type="button"
-              onClick={() => setShowSkeleton((on) => !on)}
+              onClick={() => {
+                setShowSkeleton((on) => {
+                  if (on) setSkeletonWhenOneLine(false)
+                  return !on
+                })
+              }}
               className={`rounded-full px-3 py-1 text-[12px] ${layerChip(showSkeleton)}`}
             >
               Line {showSkeleton ? 'on' : 'off'}
+            </button>
+            <button
+              type="button"
+              disabled={!showSkeleton}
+              onClick={() => setSkeletonWhenOneLine((on) => !on)}
+              className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${layerChip(
+                showSkeleton && skeletonWhenOneLine,
+              )}`}
+            >
+              {skeletonWhenOneLine ? 'Only when one line' : 'Line when stacked'}
             </button>
             <button
               type="button"
@@ -390,7 +409,7 @@ export function HoldReplayPlayer({
               onClick={() => setMode('auto')}
               className={`rounded-full px-3 py-1 text-[12px] ${
                 mode === 'auto'
-                  ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                  ? 'bg-[var(--accent)] font-semibold text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)] text-[var(--muted)]'
               }`}
             >
@@ -401,7 +420,7 @@ export function HoldReplayPlayer({
               onClick={() => setMode('merged')}
               className={`rounded-full px-3 py-1 text-[12px] ${
                 mode === 'merged'
-                  ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                  ? 'bg-[var(--accent)] font-semibold text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)] text-[var(--muted)]'
               }`}
             >
@@ -412,7 +431,7 @@ export function HoldReplayPlayer({
               onClick={() => setMode('split')}
               className={`rounded-full px-3 py-1 text-[12px] ${
                 mode === 'split'
-                  ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                  ? 'bg-[var(--accent)] font-semibold text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)] text-[var(--muted)]'
               }`}
             >
@@ -424,7 +443,7 @@ export function HoldReplayPlayer({
               disabled={!showSkeleton}
               className={`rounded-full px-3 py-1 text-[12px] disabled:opacity-40 ${
                 showSkeleton && showAngles
-                  ? 'bg-[var(--accent)] font-semibold text-[#06281f]'
+                  ? 'bg-[var(--accent)] font-semibold text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)] text-[var(--muted)]'
               }`}
             >

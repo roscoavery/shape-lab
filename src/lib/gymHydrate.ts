@@ -10,6 +10,7 @@ import { listCollages } from './collages'
 import { listFeedPosts } from './feedPosts'
 import { gymUrlForHumans, isLastingGymOrigin } from './gymLink'
 import { rememberGymRevision, type GymRevisionStores } from './gymLive'
+import { hydrateCoachStills } from './coachStillStore'
 import { hydrateIgStills } from './igStillStore'
 import { hydrateLessons } from './lessonStore'
 import { pullServerLibrary } from './libraryBackup'
@@ -21,7 +22,7 @@ import {
   type RosterSyncResult,
 } from './rosterSync'
 import { ensureRyanInAthletes } from './ryanProfile'
-import { loadActiveAthleteId, loadAthletes } from './storage'
+import { loadActiveAthleteId, loadAthletes, loadReferencePhotos } from './storage'
 import { loadSocial } from './social'
 import { loadStories } from './stories'
 import { hydrateTrainingEvents } from './trainingEvents'
@@ -70,6 +71,7 @@ function prefetchGymPanels(): void {
     hydrateChalkboards(),
     hydrateCoachContent(),
     hydrateIgStills(),
+    hydrateCoachStills(loadReferencePhotos()),
     listFeedPosts(),
     loadStories(),
     loadSocial(),

@@ -757,7 +757,7 @@ function HomeView({
             {shapeCount} positions with coach stills. Hollow, lunge, and the
             shapes that look alike until you know where the hips sit.
           </p>
-          <span className="mt-4 inline-flex w-fit rounded-full bg-[#e08a4a] px-4 py-2 text-sm font-bold text-[#2a1408]">
+          <span className="mt-4 inline-flex w-fit rounded-full bg-[#6ec8d6] px-4 py-2 text-sm font-bold text-[#061418]">
             Open the library
           </span>
         </div>

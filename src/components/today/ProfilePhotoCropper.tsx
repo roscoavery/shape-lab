@@ -335,7 +335,7 @@ export function ProfilePhotoCropper({ src, athleteId, onSave, onCancel }: Props)
           type="button"
           onClick={() => void save()}
           disabled={busy}
-          className="h-12 flex-1 rounded-2xl bg-[var(--accent)] text-sm font-semibold text-[#06281f] disabled:opacity-40"
+          className="h-12 flex-1 rounded-2xl bg-[var(--accent)] text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
         >
           {busy ? 'Saving…' : 'Save photo'}
         </button>

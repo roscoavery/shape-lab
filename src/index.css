@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0c0e11;
-  --panel: #161a20;
-  --panel-border: #2c333c;
-  --text: #f0ebe4;
-  --muted: #9a9388;
-  --accent: #e08a4a;
-  --accent-dim: #9a5424;
-  --warn: #d4a017;
+  --bg: #080d11;
+  --panel: #11181e;
+  --panel-border: #2a3640;
+  --text: #e8eef2;
+  --muted: #8b99a3;
+  --accent: #6ec8d6;
+  --accent-dim: #2c6f7a;
+  --on-accent: #061418;
+  --warn: #d4a84a;
   --bad: #e06b6b;
-  --good: #e08a4a;
+  --good: #6ec8d6;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -51,8 +52,8 @@ html.android select {
 
 body {
   background:
-    radial-gradient(ellipse at top left, #241810 0%, transparent 46%),
-    radial-gradient(ellipse at bottom right, #141820 0%, transparent 42%),
+    radial-gradient(ellipse at top left, #0e2430 0%, transparent 46%),
+    radial-gradient(ellipse at bottom right, #101820 0%, transparent 42%),
     var(--bg);
 }
 
@@ -120,7 +121,7 @@ button {
 
 /*
  * iPad Air 2 / old Safari: no oklch(). Cards stay dark. Small actions
- * use a solid ember hex so they never vanish.
+ * use a solid frost hex so they never vanish.
  */
 .sl-card,
 .sl-btn-mint,
@@ -138,10 +139,10 @@ button {
 .sl-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid #2c333c;
+  border: 1px solid #2a3640;
   border-radius: 1.1rem;
-  background: #161a20;
-  color: #f0ebe4;
+  background: #11181e;
+  color: #e8eef2;
   padding: 1rem 1.1rem 1rem 1.2rem;
 }
 .sl-card::before {
@@ -152,10 +153,10 @@ button {
   left: 0;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #e08a4a;
+  background: #6ec8d6;
 }
 .sl-card-warn::before {
-  background: #d4a017;
+  background: #d4a84a;
 }
 .sl-card-lg {
   padding: 1.15rem 1.2rem 1.2rem 1.3rem;
@@ -164,21 +165,21 @@ button {
 .sl-btn-watch,
 .sl-btn-lesson {
   border: 0;
-  color: #2a1408;
-  background: #e08a4a;
+  color: #061418;
+  background: #6ec8d6;
   font-weight: 800;
 }
 .sl-btn-profile,
 .sl-btn-gold {
   border: 0;
-  color: #2a1408;
-  background: #e08a4a;
+  color: #061418;
+  background: #6ec8d6;
   font-weight: 800;
 }
 .sl-btn-care {
   border: 0;
-  color: #2a1408;
-  background: #d4a017;
+  color: #061418;
+  background: #d4a84a;
   font-weight: 800;
 }
 .sl-btn-inline {
@@ -199,8 +200,8 @@ button {
   position: relative;
   overflow: hidden;
   border-radius: 1.75rem;
-  border: 1px solid #2a3544;
-  background: #101820;
+  border: 1px solid #2a3640;
+  background: #0e161c;
   padding: 1.6rem 1.25rem 1.25rem;
 }
 .learn-masthead::before {
@@ -209,16 +210,16 @@ button {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 8% -10%, rgba(224, 138, 74, 0.18), transparent 48%),
-    radial-gradient(ellipse at 96% 120%, rgba(212, 160, 23, 0.1), transparent 44%);
+    radial-gradient(ellipse at 8% -10%, rgba(110, 200, 214, 0.2), transparent 48%),
+    radial-gradient(ellipse at 96% 120%, rgba(212, 168, 74, 0.08), transparent 44%);
 }
 .learn-hero {
   position: relative;
   overflow: hidden;
   width: 100%;
-  border: 1px solid #2c333c;
+  border: 1px solid #2a3640;
   border-radius: 1.35rem;
-  background: #161a20;
+  background: #11181e;
   text-align: left;
   -webkit-appearance: none;
   appearance: none;
@@ -228,7 +229,7 @@ button {
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   height: 7.5rem;
-  background: #0c0e11;
+  background: #080d11;
   padding: 6px;
 }
 .learn-exam-ink,
@@ -238,10 +239,10 @@ button {
 .learn-coach {
   width: 100%;
   overflow: hidden;
-  border: 1px solid #2c333c;
+  border: 1px solid #2a3640;
   border-radius: 1.2rem;
-  background: #161a20;
-  color: #f0ebe4;
+  background: #11181e;
+  color: #e8eef2;
   text-align: left;
   -webkit-appearance: none;
   appearance: none;

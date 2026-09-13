@@ -180,7 +180,7 @@ export function StillCropEditor({
                 setDraft(saved)
                 setEditing(true)
               }}
-              className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-semibold text-[#06281f]"
+              className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-semibold text-[var(--on-accent)]"
             >
               Crop display
             </button>
@@ -190,7 +190,7 @@ export function StillCropEditor({
                 type="button"
                 onClick={() => void save(draft ?? saved)}
                 disabled={busy || !draft}
-                className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-semibold text-[#06281f] disabled:opacity-50"
+                className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-semibold text-[var(--on-accent)] disabled:opacity-50"
               >
                 {busy ? 'Saving…' : 'Save crop'}
               </button>

@@ -79,7 +79,7 @@ export function HomeworkLogList({
               onClick={() => setScope(id)}
               className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 scope === id
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'text-[var(--muted)]'
               }`}
             >

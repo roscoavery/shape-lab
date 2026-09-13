@@ -218,7 +218,7 @@ export function GymRecords({ athletes, onAthletes }: Props) {
           type="button"
           disabled={busy}
           onClick={() => void saveToLink()}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
         >
           Send everything on this device
         </button>

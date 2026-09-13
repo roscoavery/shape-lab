@@ -318,7 +318,7 @@ export function ClassStation({
                 type="button"
                 onClick={() => setWhoMode('pick')}
                 className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-                  whoMode === 'pick' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/10'
+                  whoMode === 'pick' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/10'
                 }`}
               >
                 Pick a name
@@ -327,7 +327,7 @@ export function ClassStation({
                 type="button"
                 onClick={() => setWhoMode('type')}
                 className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-                  whoMode === 'type' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/10'
+                  whoMode === 'type' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/10'
                 }`}
               >
                 New name
@@ -498,7 +498,7 @@ export function ClassStation({
                       takesClassHere,
                     })
                   }
-                  className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+                  className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -545,7 +545,7 @@ export function ClassStation({
               type="button"
               disabled={!draft.parentPhone?.trim()}
               onClick={() => go('cartwheel')}
-              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
             >
               Next
             </button>
@@ -569,7 +569,7 @@ export function ClassStation({
                   key={id}
                   type="button"
                   onClick={() => go('harder', { cartwheelLeg: id })}
-                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {label}
                 </button>
@@ -595,7 +595,7 @@ export function ClassStation({
                   key={id}
                   type="button"
                   onClick={() => go('shoulder', { harderShape: id as HarderShape })}
-                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {label}
                 </button>
@@ -616,7 +616,7 @@ export function ClassStation({
                   key={n}
                   type="button"
                   onClick={() => go('twist', { openShoulderHardness: n as OpenShoulderHardness })}
-                  className="h-20 rounded-2xl bg-white/8 text-2xl font-bold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-20 rounded-2xl bg-white/8 text-2xl font-bold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {n}
                 </button>
@@ -648,7 +648,7 @@ export function ClassStation({
                       ? go('twistBetter', { twistDirection: id })
                       : go('hand', { twistDirection: id as TwistDirection, twistBetterSide: undefined })
                   }
-                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {label}
                 </button>
@@ -674,7 +674,7 @@ export function ClassStation({
                   key={id}
                   type="button"
                   onClick={() => go('hand', { twistBetterSide: id })}
-                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-20 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {label}
                 </button>
@@ -701,7 +701,7 @@ export function ClassStation({
                   key={id}
                   type="button"
                   onClick={() => go('skate', { dominantHand: id as DominantHand })}
-                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {label}
                 </button>
@@ -720,7 +720,7 @@ export function ClassStation({
               <button
                 type="button"
                 onClick={() => go('photo', { skateStance: 'regular' as SkateStance })}
-                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               >
                 Regular
                 <span className="mt-1 block text-sm font-medium opacity-70">Left foot forward</span>
@@ -728,7 +728,7 @@ export function ClassStation({
               <button
                 type="button"
                 onClick={() => go('photo', { skateStance: 'goofy' as SkateStance })}
-                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                className="h-20 rounded-2xl bg-white/8 text-left px-4 text-xl font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               >
                 Goofy
                 <span className="mt-1 block text-sm font-medium opacity-70">Right foot forward</span>
@@ -754,7 +754,7 @@ export function ClassStation({
             <button
               type="button"
               onClick={() => goNext('photo')}
-              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
+              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
             >
               {draft.photoDataUrl ? 'Use this photo' : 'Skip'}
             </button>
@@ -773,7 +773,7 @@ export function ClassStation({
                   key={c.id}
                   type="button"
                   onClick={() => goNext('favoriteColor', { favoriteColor: c.id })}
-                  className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   <span className="h-5 w-5 rounded-full" style={{ background: c.swatch }} />
                   {c.label}
@@ -795,7 +795,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('handstandFloor', { handstandFloor: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -816,7 +816,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('handstandWall', { handstandWall: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -837,7 +837,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('hollowHold', { hollowHold: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -858,7 +858,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('supermanHold', { supermanHold: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -879,7 +879,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('vUps', { vUps: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -900,7 +900,7 @@ export function ClassStation({
                   key={opt.value}
                   type="button"
                   onClick={() => goNext('weekEnergy', { weekEnergy: opt.value })}
-                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[#06281f]"
+                  className="h-16 rounded-2xl bg-white/8 px-4 text-left text-lg font-semibold hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                 >
                   {opt.label}
                 </button>
@@ -930,7 +930,7 @@ export function ClassStation({
                 setDrafts(removeStationDraft(draft.id))
                 onStartShapeTest(parked)
               }}
-              className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
+              className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
             >
               Start shape test
             </button>

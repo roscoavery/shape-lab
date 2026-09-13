@@ -39,7 +39,7 @@ export function CompareSplitBar({ where }: { where: Where }) {
       <button
         type="button"
         onClick={enterFull}
-        className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
+        className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)]"
       >
         Replay with reference cam
       </button>

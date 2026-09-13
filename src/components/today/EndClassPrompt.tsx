@@ -23,7 +23,7 @@ export function EndClassPrompt({ count, onLog, onSkip, onStay }: Props) {
             type="button"
             disabled={count === 0}
             onClick={onLog}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f] disabled:opacity-40"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
           >
             Log class for everyone here
           </button>

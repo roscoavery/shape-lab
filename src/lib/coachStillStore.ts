@@ -4,6 +4,7 @@
  */
 
 import { loadMainCoachStills, setMainCoachStill } from './coachStillPrefs'
+import { capReferencePhotos, loadReferencePhotos, saveReferencePhotos } from './storage'
 import type { ReferencePhoto } from '../types'
 
 export type CoachStillExtra = {
@@ -22,12 +23,27 @@ export type CoachStillsFile = {
   extras: CoachStillExtra[]
 }
 
+export type PersistStillResult = { ok: boolean; error?: string }
+
+const MAX_EXTRAS = 2000
+
 const EMPTY: CoachStillsFile = {
   kind: 'shape-lab-coach-stills',
   version: 1,
   updatedAt: '',
   main: {},
   extras: [],
+}
+
+const listeners = new Set<(extras: CoachStillExtra[]) => void>()
+
+export function subscribeCoachStills(fn: (extras: CoachStillExtra[]) => void): () => void {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+function emitCoachStills(extras: CoachStillExtra[]) {
+  for (const fn of listeners) fn(extras)
 }
 
 function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
@@ -45,6 +61,18 @@ function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
     }))
 }
 
+function rememberCoachExtrasLocally(extras: CoachStillExtra[]) {
+  const incoming = extrasAsPhotos(extras)
+  if (incoming.length === 0) return
+  try {
+    const all = loadReferencePhotos()
+    const ids = new Set(incoming.map((p) => p.id))
+    saveReferencePhotos(capReferencePhotos([...incoming, ...all.filter((p) => !ids.has(p.id))]))
+  } catch {
+    /* quota — in-memory merge still works this session */
+  }
+}
+
 export async function pullCoachStills(): Promise<CoachStillsFile> {
   try {
     const res = await fetch('/api/coach-stills')
@@ -55,7 +83,7 @@ export async function pullCoachStills(): Promise<CoachStillsFile> {
       ...EMPTY,
       ...data,
       main: data.main && typeof data.main === 'object' ? data.main : {},
-      extras: Array.isArray(data.extras) ? data.extras : [],
+      extras: Array.isArray(data.extras) ? data.extras.slice(0, MAX_EXTRAS) : [],
     }
   } catch {
     return { ...EMPTY }
@@ -93,11 +121,15 @@ export async function hydrateCoachStills(
   for (const [shapeId, stillId] of Object.entries(file.main)) {
     if (shapeId && stillId) setMainCoachStill(shapeId, stillId)
   }
+  rememberCoachExtrasLocally(file.extras)
+  emitCoachStills(file.extras)
   return mergeCoachExtras(photos, file.extras)
 }
 
-export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<void> {
-  if (photo.library === 'ig' || !photo.dataUrl.startsWith('data:image')) return
+export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<PersistStillResult> {
+  if (photo.library === 'ig' || !photo.dataUrl.startsWith('data:image')) {
+    return { ok: true }
+  }
   const file = await pullCoachStills()
   const extra: CoachStillExtra = {
     id: photo.id,
@@ -106,14 +138,23 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<voi
     label: photo.label,
     createdAt: photo.createdAt,
   }
-  const extras = [extra, ...file.extras.filter((row) => row.id !== photo.id)].slice(0, 80)
-  await pushCoachStills({
+  const extras = [extra, ...file.extras.filter((row) => row.id !== photo.id)].slice(0, MAX_EXTRAS)
+  const saved = await pushCoachStills({
     kind: 'shape-lab-coach-stills',
     version: 1,
     updatedAt: new Date().toISOString(),
     main: { ...loadMainCoachStills(), ...file.main },
     extras,
   })
+  if (!saved) {
+    return {
+      ok: false,
+      error: 'This device kept the still, but the gym file did not. Leave gym:mac running, then try again.',
+    }
+  }
+  rememberCoachExtrasLocally(saved.extras)
+  emitCoachStills(saved.extras)
+  return { ok: true }
 }
 
 export async function persistMainCoachStill(shapeId: string, stillId: string): Promise<void> {

@@ -355,7 +355,7 @@ export function ClassStopwatch({
             }}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
-                ? 'bg-[var(--accent)] text-[#06281f]'
+                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                 : 'bg-white/8 text-white/80'
             }`}
           >
@@ -377,7 +377,7 @@ export function ClassStopwatch({
                 }}
                 className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
                   mode === id
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'bg-white/8 text-white/80'
                 }`}
               >
@@ -414,7 +414,7 @@ export function ClassStopwatch({
                           s === 'right' ? 'border-l border-white/15' : ''
                         } ${
                           on
-                            ? 'bg-[var(--accent)] text-[#06281f]'
+                            ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                             : 'text-white/90'
                         }`}
                       >
@@ -433,7 +433,7 @@ export function ClassStopwatch({
                   }}
                   className={`rounded-xl px-3 py-2 text-sm font-semibold ${
                     !extraHoldId && holdId === d.id
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'bg-white/8'
                   }`}
                 >
@@ -459,7 +459,7 @@ export function ClassStopwatch({
                         setMode('hold')
                       }}
                       className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                        on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
                       }`}
                     >
                       {ex.label}
@@ -488,7 +488,7 @@ export function ClassStopwatch({
           <button
             type="button"
             onClick={logHold}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
             Log {extraHoldId ? activeExtra(extraHoldId)?.label ?? 'hold' : 'hold'} for selected
           </button>
@@ -537,7 +537,7 @@ export function ClassStopwatch({
             <button
               type="button"
               onClick={() => logExtraReps(extra)}
-              className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+              className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
             >
               Log {extra.label} for selected
             </button>
@@ -562,7 +562,7 @@ export function ClassStopwatch({
               type="button"
               onClick={() => setOtherKind('hold')}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                otherKind === 'hold' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+                otherKind === 'hold' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
               }`}
             >
               Hold time
@@ -571,7 +571,7 @@ export function ClassStopwatch({
               type="button"
               onClick={() => setOtherKind('reps')}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                otherKind === 'reps' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+                otherKind === 'reps' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
               }`}
             >
               Reps / sets
@@ -626,7 +626,7 @@ export function ClassStopwatch({
           <button
             type="button"
             onClick={logOther}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
             Log {otherName.trim() || 'other'} for selected
           </button>
@@ -672,7 +672,7 @@ export function ClassStopwatch({
           <button
             type="button"
             onClick={logVups}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
             Log V-ups for selected
           </button>
@@ -693,7 +693,7 @@ export function ClassStopwatch({
                 onClick={() => setSkillAthleteId(a.id)}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${
                   skillAthleteId === a.id
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'bg-white/8'
                 }`}
               >
@@ -741,7 +741,7 @@ export function ClassStopwatch({
           <button
             type="button"
             onClick={() => void logSkill()}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
             Log skill
           </button>
@@ -832,7 +832,7 @@ function HoldClock({
           <button
             type="button"
             onClick={onStart}
-            className="rounded-xl bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[#06281f]"
+            className="rounded-xl bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[var(--on-accent)]"
           >
             Start
           </button>

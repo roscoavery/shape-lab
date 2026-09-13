@@ -218,7 +218,7 @@ export function PhysicsLessons({
                     type="button"
                     disabled={busy}
                     onClick={() => void save()}
-                    className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+                    className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
                   >
                     {busy ? 'Saving…' : 'Save'}
                   </button>

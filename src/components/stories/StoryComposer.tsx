@@ -88,7 +88,7 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
                   setError(err instanceof Error ? err.message : 'Could not record.')
                 })
             }}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
           >
             {busy === 'Recording…' ? 'Recording 30s…' : 'Record 30s'}
           </button>

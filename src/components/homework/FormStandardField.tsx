@@ -66,7 +66,7 @@ export function FormStandardField({ value, onCommit }: Props) {
         type="button"
         disabled={!valid || !dirty}
         onClick={() => commit(parsed)}
-        className="h-11 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+        className="h-11 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
       >
         Set standard
       </button>

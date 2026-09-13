@@ -28,6 +28,7 @@ import {
 import {
   drawGradeHud,
   drawPoseOverlay,
+  wouldDrawOneLine,
   type JointDrawMode,
 } from './skeleton'
 import { scoreShape } from './scoring'
@@ -39,6 +40,8 @@ export type HoldSaveLayers = {
   showSkeleton: boolean
   showClock: boolean
   showAngles: boolean
+  /** Recap save only — hide the body line until Auto paints one merged line. */
+  skeletonWhenOneLine?: boolean
 }
 
 export const DEFAULT_HOLD_SAVE_LAYERS: HoldSaveLayers = {
@@ -46,6 +49,7 @@ export const DEFAULT_HOLD_SAVE_LAYERS: HoldSaveLayers = {
   showSkeleton: true,
   showClock: true,
   showAngles: true,
+  skeletonWhenOneLine: false,
 }
 
 /** 0.5 = half speed, 1 = real time, 2 = double. */
@@ -78,6 +82,7 @@ export function burnedOverlayKey(
     layers.showAngles ? 'ang1' : 'ang0',
     layers.showScore ? 'sc1' : 'sc0',
     layers.showClock ? 'cl1' : 'cl0',
+    layers.skeletonWhenOneLine ? '1ln1' : '1ln0',
     `spd${speed}`,
   ].join(':')
 }
@@ -189,6 +194,7 @@ export function paintHoldOverlay(
     showAngles?: boolean
     showScore?: boolean
     showClock?: boolean
+    skeletonWhenOneLine?: boolean
     recordedWallSec?: number
   },
 ) {
@@ -226,7 +232,9 @@ export function paintHoldOverlay(
   )
   const lm = rawLm && !looksLikeBackgroundProp(rawLm) ? rawLm : null
   const score = shape && lm ? scoreShape(lm, shape, null, { profileOk: true }) : null
-  if (opts.showSkeleton !== false) {
+  const wantSkeleton = opts.showSkeleton !== false
+  const oneLineOnly = opts.skeletonWhenOneLine === true
+  if (wantSkeleton && (!oneLineOnly || wouldDrawOneLine(lm, opts.mode))) {
     drawPoseOverlay(ctx, lm, {
       width,
       height,
@@ -260,6 +268,7 @@ export type BurnOverlayOpts = {
   showAngles?: boolean
   showScore?: boolean
   showClock?: boolean
+  skeletonWhenOneLine?: boolean
   saveSpeed?: number
   cancelled?: () => boolean
   onProgress?: (p: number) => void
@@ -402,6 +411,7 @@ export async function saveHoldClipWithOverlay(opts: {
   showAngles?: boolean
   showScore?: boolean
   showClock?: boolean
+  skeletonWhenOneLine?: boolean
   saveSpeed?: number
 }): Promise<SaveVideoResult> {
   const mode = opts.mode ?? 'auto'
@@ -411,6 +421,7 @@ export async function saveHoldClipWithOverlay(opts: {
     showSkeleton: opts.showSkeleton !== false,
     showClock: opts.showClock !== false,
     showAngles: opts.showAngles !== false,
+    skeletonWhenOneLine: opts.skeletonWhenOneLine === true,
   }
   const saveSpeed = clampSaveSpeed(opts.saveSpeed ?? 1)
   const anyOverlay = layers.showScore || layers.showSkeleton || layers.showClock
@@ -450,6 +461,7 @@ export async function saveHoldClipWithOverlay(opts: {
       showAngles: layers.showAngles,
       showScore: layers.showScore,
       showClock: layers.showClock,
+      skeletonWhenOneLine: layers.skeletonWhenOneLine,
       saveSpeed,
       onProgress: opts.onProgress,
     })

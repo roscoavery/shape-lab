@@ -85,7 +85,7 @@ export function TodayDock({
         <span
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-lg font-semibold transition ${
             open
-              ? 'border-[var(--accent)]/50 bg-[var(--accent)] text-[#06281f]'
+              ? 'border-[var(--accent)]/50 bg-[var(--accent)] text-[var(--on-accent)]'
               : 'border-white/15 bg-white/5 text-white'
           }`}
           aria-hidden

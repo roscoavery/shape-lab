@@ -77,7 +77,7 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
         <button
           type="button"
           onClick={onOpenLibrary}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
         >
           Open collages
         </button>

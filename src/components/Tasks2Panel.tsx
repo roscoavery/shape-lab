@@ -1811,7 +1811,7 @@ export function Tasks2Panel({
           }}
           onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
           className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-            seq.mode === 'hs-hold' ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[#06281f]'
+            seq.mode === 'hs-hold' ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[var(--on-accent)]'
           }`}
         >
           {seq.mode === 'hs-hold'
@@ -2057,7 +2057,7 @@ export function Tasks2Panel({
                 onClick={() => setPhaMode('learn')}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   phaMode === 'learn'
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-white/15 text-[var(--muted)]'
                 }`}
               >
@@ -2073,7 +2073,7 @@ export function Tasks2Panel({
                   }}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                     phaMode === 'reps' && phaReps === n
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-white/15 text-[var(--muted)]'
                   }`}
                 >
@@ -2099,7 +2099,7 @@ export function Tasks2Panel({
                 onClick={() => setLemonPlan('default')}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   lemonPlan === 'default'
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-white/15 text-[var(--muted)]'
                 }`}
               >
@@ -2115,7 +2115,7 @@ export function Tasks2Panel({
                   }}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                     lemonPlan === 'custom' && lemonSets === n
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-white/15 text-[var(--muted)]'
                   }`}
                 >
@@ -2529,7 +2529,7 @@ export function Tasks2Panel({
                   setPhase('review')
                   setCue('')
                 }}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
               >
                 Continue to grades
               </button>
@@ -2677,7 +2677,7 @@ export function Tasks2Panel({
             <button
               type="button"
               onClick={() => void startSequence(resolveFlowRun(seq.id, flowConfig()) ?? seq)}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
               Go again
             </button>
@@ -2727,7 +2727,7 @@ export function Tasks2Panel({
                 <button
                   type="button"
                   onClick={() => void keepToPhotos()}
-                  className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+                  className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
                 >
                   Save to Photos
                 </button>

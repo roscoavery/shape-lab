@@ -136,7 +136,7 @@ export function ProfileFieldsEditor({
               onClick={() => patch({ openShoulderHardness: n })}
               className={`h-12 rounded-2xl text-lg font-bold ${
                 athlete.openShoulderHardness === n
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'bg-white/8'
               }`}
             >

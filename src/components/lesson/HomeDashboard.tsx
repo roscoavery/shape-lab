@@ -239,7 +239,7 @@ export function HomeDashboard({
                 type="button"
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                   unlockGym === 'all'
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)] bg-[#121820]'
                 }`}
                 onClick={() => setUnlockGym('all')}
@@ -252,7 +252,7 @@ export function HomeDashboard({
                   type="button"
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                     unlockGym === gym
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)] bg-[#121820]'
                   }`}
                   onClick={() => setUnlockGym(gym)}
@@ -492,7 +492,7 @@ export function HomeDashboard({
               <button
                 type="button"
                 onClick={onStartClass}
-                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
               >
                 Open running class
               </button>
@@ -813,7 +813,7 @@ export function HomeDashboard({
             <button
               type="button"
               onClick={() => onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
               Start lesson
             </button>

@@ -123,7 +123,7 @@ export function SkillPicker({
                           s === 'right' ? 'border-l border-[var(--panel-border)]' : ''
                         } ${
                           on
-                            ? 'bg-[var(--accent)] text-[#06281f]'
+                            ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                             : 'text-[var(--text)]'
                         }`}
                       >
@@ -142,7 +142,7 @@ export function SkillPicker({
                 onClick={() => onChange({ kind: 'shape', id: q.id, label: q.label, scoreShapeId: q.id })}
                 className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${
                   on
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
                 }`}
               >
@@ -174,7 +174,7 @@ export function SkillPicker({
                     }
                     className={`rounded-lg px-3 py-2 text-sm font-semibold ${
                       on
-                        ? 'bg-[var(--accent)] text-[#06281f]'
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                         : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
                     }`}
                   >

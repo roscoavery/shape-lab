@@ -133,7 +133,7 @@ export function VideoLibraryPanel({
                 onClick={() => setClassId(null)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   !classId
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)]'
                 }`}
               >
@@ -146,7 +146,7 @@ export function VideoLibraryPanel({
                   onClick={() => setClassId(o.id)}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     classId === o.id
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)]'
                   }`}
                 >

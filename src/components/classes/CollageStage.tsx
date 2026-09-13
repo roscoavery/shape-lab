@@ -220,7 +220,7 @@ export function CollageStage({
                 onClick={onSaveBoard}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
                   boardDirty
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'bg-white text-black'
                 }`}
               >
@@ -284,7 +284,7 @@ export function CollageStage({
             <button
               type="button"
               onClick={() => void runExport()}
-              className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[#06281f]"
+              className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[var(--on-accent)]"
             >
               Save to Photos
             </button>

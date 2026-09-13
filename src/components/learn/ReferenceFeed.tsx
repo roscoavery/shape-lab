@@ -158,7 +158,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           onClick={() => setOnlyFavorites(true)}
           className={
             onlyFavorites
-              ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+              ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]'
               : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]'
           }
         >

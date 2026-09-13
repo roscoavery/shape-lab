@@ -24,7 +24,7 @@ type Props = {
 
 function chipClass(on: boolean) {
   return `rounded-full px-3 py-1.5 text-xs font-semibold ${
-    on ? 'bg-[var(--accent)] text-[#06281f]' : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
+    on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'border border-[var(--panel-border)] bg-[#121820] text-[var(--text)]'
   }`
 }
 
@@ -207,7 +207,7 @@ export function TodayGymScope({
             type="button"
             disabled={!name.trim()}
             onClick={makeEvent}
-            className="h-10 rounded-lg bg-[var(--accent)] text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="h-10 rounded-lg bg-[var(--accent)] text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
           >
             Create {kind}
           </button>

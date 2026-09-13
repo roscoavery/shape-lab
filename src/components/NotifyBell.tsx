@@ -163,7 +163,7 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
       >
         Alerts
         {unread > 0 && (
-          <span className="ml-1 rounded-full bg-[var(--accent)] px-1.5 text-[10px] font-bold text-[#06281f]">
+          <span className="ml-1 rounded-full bg-[var(--accent)] px-1.5 text-[10px] font-bold text-[var(--on-accent)]">
             {unread}
           </span>
         )}

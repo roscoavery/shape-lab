@@ -125,7 +125,7 @@ export function SequencePanel({ currentShapeId, overallScore, onJumpToShape }: P
           <button
             type="button"
             onClick={start}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             Start sequence
           </button>

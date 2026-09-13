@@ -1815,7 +1815,7 @@ export function HomeworkPanel({
             <button
               type="button"
               onClick={logSession}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
               Log session
             </button>

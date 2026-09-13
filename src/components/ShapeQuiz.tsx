@@ -249,7 +249,7 @@ export function ShapeQuiz({
               key={opt.id}
               type="button"
               onClick={() => begin(opt.id)}
-              className="rounded-2xl bg-[var(--accent)] px-5 py-6 text-left text-[#06281f] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
+              className="rounded-2xl bg-[var(--accent)] px-5 py-6 text-left text-[var(--on-accent)] shadow-[0_16px_40px_rgba(45,212,168,0.28)]"
             >
               <p className="text-2xl font-bold">{opt.title}</p>
               <p className="mt-1 text-sm font-medium opacity-80">{opt.blurb}</p>
@@ -414,7 +414,7 @@ export function ShapeQuiz({
           </p>
           <button
             type="button"
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
             onClick={() => {
               if (index + 1 >= total) {
                 const score = questions.reduce((n, question, i) => {

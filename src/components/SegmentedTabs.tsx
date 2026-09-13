@@ -42,7 +42,7 @@ export function SegmentedTabs<T extends string>({
             {badge === true ? (
               <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
             ) : badge ? (
-              <span className="ml-1.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-[#06281f]">
+              <span className="ml-1.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-[var(--on-accent)]">
                 {badge}
               </span>
             ) : null}

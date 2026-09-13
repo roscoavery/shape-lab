@@ -580,7 +580,7 @@ export function AthletePanel({
                 onClick={() => setNewBackPain(true)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                   newBackPain === true
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)]'
                 }`}
               >
@@ -591,7 +591,7 @@ export function AthletePanel({
                 onClick={() => setNewBackPain(false)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                   newBackPain === false
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)]'
                 }`}
               >
@@ -750,7 +750,7 @@ export function AthletePanel({
                   }
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                     active.hasBackPain
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)]'
                   }`}
                 >
@@ -767,7 +767,7 @@ export function AthletePanel({
                   }
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                     active.hasBackPain === false
-                      ? 'bg-[var(--accent)] text-[#06281f]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-[var(--panel-border)]'
                   }`}
                 >
@@ -873,7 +873,7 @@ function ParentAthletePicker({
                     onChange(on ? selected.filter((id) => id !== a.id) : [...selected, a.id])
                   }
                   className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${
-                    on ? 'bg-[var(--accent)] text-[#06281f]' : 'text-[var(--muted)]'
+                    on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--muted)]'
                   }`}
                 >
                   <AthleteName athlete={a} />

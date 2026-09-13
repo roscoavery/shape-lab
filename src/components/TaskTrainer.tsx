@@ -885,7 +885,7 @@ export function TaskTrainer({
                 type="button"
                 onClick={start}
                 disabled={!isTaskUnlocked(task, completions, skipped)}
-                className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+                className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Start pathway — full screen
               </button>
@@ -1103,7 +1103,7 @@ export function TaskTrainer({
                 type="button"
                 onClick={start}
                 disabled={!isTaskUnlocked(task, completions, skipped)}
-                className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+                className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Start pathway — camera + voice
               </button>

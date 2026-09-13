@@ -1666,7 +1666,7 @@ export function ReferencePane({
               onClick={() => setOnlyFavorites((v) => !v)}
               className={
                 onlyFavorites
-                  ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+                  ? 'rounded-lg bg-[#f5d76e] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]'
                   : `${btnCls} text-[var(--muted)]`
               }
               title="Show starred URLs"
@@ -1826,7 +1826,7 @@ export function ReferencePane({
               className={`${inputCls} min-w-0 flex-1`}
               aria-label="Shape keywords for this URL"
             />
-            <button type="button" onClick={() => void addUrl()} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]">
+            <button type="button" onClick={() => void addUrl()} className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]">
               Add URL
             </button>
             <button
@@ -1864,7 +1864,7 @@ export function ReferencePane({
                 disabled={saveState === 'saving'}
                 className={
                   saveState === 'dirty'
-                    ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]'
+                    ? 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]'
                     : `${btnCls} border-[var(--accent-dim)] text-[var(--accent)]`
                 }
                 title="Write this URL list into the app so every phone link and browser sees it"

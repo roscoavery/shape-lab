@@ -30,7 +30,7 @@ export function MyProfile({ athlete, onClose, onSave }: Props) {
         <button
           type="button"
           onClick={() => onSave(draft)}
-          className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f]"
+          className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
         >
           Save profile
         </button>

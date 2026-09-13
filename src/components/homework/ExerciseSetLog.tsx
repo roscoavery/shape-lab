@@ -122,7 +122,7 @@ export function ExerciseSetLog({
           type="button"
           onClick={() => setKind('hold')}
           className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-            kind === 'hold' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+            kind === 'hold' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
           }`}
         >
           Hold time
@@ -131,7 +131,7 @@ export function ExerciseSetLog({
           type="button"
           onClick={() => setKind('reps')}
           className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-            kind === 'reps' ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-white/8'
+            kind === 'reps' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
           }`}
         >
           Reps / sets
@@ -226,7 +226,7 @@ export function ExerciseSetLog({
       <button
         type="button"
         onClick={save}
-        className="h-11 rounded-lg bg-[var(--accent)] text-sm font-semibold text-[#06281f]"
+        className="h-11 rounded-lg bg-[var(--accent)] text-sm font-semibold text-[var(--on-accent)]"
       >
         {other ? 'Add and log' : kind === 'hold' ? 'Log hold' : 'Log set'}
       </button>

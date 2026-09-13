@@ -85,7 +85,7 @@ export function PreTestIntake({
           <button
             type="button"
             onClick={() => onDone(athlete)}
-            className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[#06281f]"
+            className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-bold text-[var(--on-accent)]"
           >
             Start the pictures test
           </button>
@@ -183,7 +183,7 @@ export function PreTestIntake({
               type="button"
               disabled={!phone.trim()}
               onClick={() => void answer(phone.trim(), phone.trim())}
-              className="h-12 flex-1 rounded-xl bg-[var(--accent)] font-bold text-[#06281f] disabled:opacity-40"
+              className="h-12 flex-1 rounded-xl bg-[var(--accent)] font-bold text-[var(--on-accent)] disabled:opacity-40"
             >
               Save
             </button>
@@ -199,7 +199,7 @@ export function PreTestIntake({
       )}
       {q.kind === 'photo' && (
         <div className="mt-4 space-y-2">
-          <label className="block rounded-xl bg-[var(--accent)] px-4 py-3 text-center text-sm font-bold text-[#06281f]">
+          <label className="block rounded-xl bg-[var(--accent)] px-4 py-3 text-center text-sm font-bold text-[var(--on-accent)]">
             Take or pick a photo
             <input
               type="file"

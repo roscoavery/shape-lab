@@ -110,7 +110,7 @@ function DrillCard({
         <button
           type="button"
           onClick={onPick}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
         >
           {action}
         </button>

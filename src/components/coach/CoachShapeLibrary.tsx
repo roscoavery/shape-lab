@@ -78,7 +78,7 @@ export function CoachShapeLibrary({ signedIn }: Props) {
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
               onClick={() => {
                 setEditingRef(null)
                 setEditing(emptyCoachShape(signedIn.id, signedIn.name))
@@ -447,7 +447,7 @@ function SkillRefEditor({
           <button
             type="button"
             disabled={!draft.name.trim() || !draft.src || busy}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
             onClick={() => {
               saveCoachSkillRef({ ...draft, name: draft.name.trim() })
               onSaved()
@@ -627,7 +627,7 @@ function ShapeEditor({
             <button
               type="button"
               disabled={busy}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
               onClick={() => setSnapOpen(true)}
             >
               Snap a photo
@@ -698,7 +698,7 @@ function ShapeEditor({
           <button
             type="button"
             disabled={!draft.name.trim() || busy}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
             onClick={() => {
               saveCoachShape({ ...draft, name: draft.name.trim() })
               onSaved()

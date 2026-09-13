@@ -88,9 +88,20 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
       createdAt: new Date().toISOString(),
       library: 'coach',
     }
-    await saveReferencePhoto(photo)
+    try {
+      await saveReferencePhoto(photo)
+    } catch (err) {
+      setFlash(err instanceof Error ? err.message : 'Could not keep that still on this device.')
+      window.setTimeout(() => setFlash(null), 5000)
+      return
+    }
     onReferencesChange([photo, ...referencePhotos.filter((p) => p.id !== photo.id)])
-    void persistCoachStillExtra(photo)
+    const remote = await persistCoachStillExtra(photo)
+    if (!remote.ok) {
+      setFlash(remote.error ?? `Saved on this device only for ${shape?.name ?? shapeId}.`)
+      window.setTimeout(() => setFlash(null), 5000)
+      return
+    }
     setFlash(`Saved reference for ${shape?.name ?? shapeId}`)
     window.setTimeout(() => setFlash(null), 2500)
   }
@@ -496,7 +507,7 @@ function AddExtraForm({ onSaved }: { onSaved: () => void }) {
           placeholder="Extra info (cues, mistakes, when you teach it…)"
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
         />
-        <label className="inline-block cursor-pointer rounded-lg bg-[var(--accent)] px-3 py-2 text-center text-sm font-semibold text-[#06281f]">
+        <label className="inline-block cursor-pointer rounded-lg bg-[var(--accent)] px-3 py-2 text-center text-sm font-semibold text-[var(--on-accent)]">
           {busy ? 'Saving…' : 'Choose photo and save'}
           <input
             type="file"

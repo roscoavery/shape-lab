@@ -292,6 +292,21 @@ export function drawCenterOfMass(
   ctx.fill()
 }
 
+/** True when Auto / Side would paint the merged single line — not holdReady. */
+export function wouldDrawOneLine(
+  landmarks: Landmark[] | null | undefined,
+  mode: JointDrawMode,
+): boolean {
+  if (!landmarks || landmarks.length < 33) return false
+  if (mode === 'merged') return Boolean(mergeSideJoints(landmarks))
+  if (mode === 'auto') {
+    const geo = evaluateHandstandGeometry(landmarks)
+    const stacked = geo.confidence >= 0.62 && !geo.hardFail
+    return stacked && !legsAreApart(landmarks) && Boolean(mergeSideJoints(landmarks))
+  }
+  return false
+}
+
 export function drawPoseOverlay(
   ctx: CanvasRenderingContext2D,
   landmarks: Landmark[] | null,

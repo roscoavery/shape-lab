@@ -183,7 +183,7 @@ export function ScorePanel({
           type="button"
           onClick={onSave}
           disabled={!canSave}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           Save attempt
         </button>

@@ -44,7 +44,7 @@ export function CoachPicker({
                     onChange(on ? selected.filter((id) => id !== a.id) : [...selected, a.id])
                   }
                   className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${
-                    on ? 'bg-[var(--accent)] text-[#06281f]' : 'text-[var(--muted)]'
+                    on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--muted)]'
                   }`}
                 >
                   <AthleteName athlete={a} />

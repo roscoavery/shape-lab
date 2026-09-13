@@ -121,7 +121,7 @@ export function ClipWatchMeta({ url, viewer }: Props) {
         type="button"
         disabled={busy}
         onClick={() => void save()}
-        className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-50"
+        className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)] disabled:opacity-50"
       >
         {busy ? 'Saving…' : gymAdmin ? 'Save gym name' : 'Save my name / tags'}
       </button>

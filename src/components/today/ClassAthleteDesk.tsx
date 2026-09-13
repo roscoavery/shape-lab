@@ -110,7 +110,7 @@ export function ClassAthleteDesk({
               onClick={() => setPicked(a.id)}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
                 picked === a.id
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'bg-white/10 text-white/80'
               }`}
             >

@@ -22,7 +22,7 @@ export function DeleteProfileAsk({ athlete, onKeep, onDelete }: Props) {
           <button
             type="button"
             onClick={onKeep}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             Keep profile
           </button>

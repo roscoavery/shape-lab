@@ -142,7 +142,7 @@ export function PastHoldLogForm({ athlete, items, onLogged, coach }: Props) {
           <button
             type="button"
             onClick={save}
-            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[#06281f]"
+            className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
             Save that log
           </button>

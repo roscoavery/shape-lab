@@ -170,7 +170,7 @@ export function ClassSession({
                         startingRef.current = false
                       }, 800)
                     }}
-                    className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[#06281f]"
+                    className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[var(--on-accent)]"
                   >
                     <CoachPhotoStack offering={o} athletes={athletes} />
                     <span className="min-w-0 flex-1">
@@ -332,7 +332,7 @@ function ClassRollCall({
                   className={`flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-left ${
                     here
                       ? 'border border-[var(--accent)]/40 bg-[#102820] text-[var(--accent)]'
-                      : 'bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] text-[#06281f]'
+                      : 'bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] text-[var(--on-accent)]'
                   }`}
                 >
                   <AthleteAvatar athlete={a} size="md" />
@@ -394,7 +394,7 @@ function ClassRollCall({
         <button
           type="button"
           onClick={onStation}
-          className="rounded-2xl bg-[var(--accent)] px-4 py-4 text-left font-bold text-[#06281f]"
+          className="rounded-2xl bg-[var(--accent)] px-4 py-4 text-left font-bold text-[var(--on-accent)]"
         >
           New athlete · shape test
           <span className="mt-1 block text-sm font-medium opacity-80">
@@ -481,7 +481,7 @@ function LiveClass({
         <button
           type="button"
           onClick={onOpenRoll}
-          className="mt-3 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[#06281f]"
+          className="mt-3 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[var(--on-accent)]"
         >
           Leave iPad for roll call
         </button>
@@ -491,7 +491,7 @@ function LiveClass({
         <button
           type="button"
           onClick={onStation}
-          className="rounded-2xl bg-[var(--accent)] px-4 py-4 text-left font-bold text-[#06281f]"
+          className="rounded-2xl bg-[var(--accent)] px-4 py-4 text-left font-bold text-[var(--on-accent)]"
         >
           Class station
           <span className="mt-1 block text-sm font-medium opacity-80">
@@ -657,7 +657,7 @@ function LiveClass({
             setClassNote('')
             onChanged()
           }}
-          className="mt-2 h-11 rounded-xl bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+          className="mt-2 h-11 rounded-xl bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
         >
           Save class note
         </button>
@@ -750,7 +750,7 @@ function QuickAddClass({
           })
           onSaved()
         }}
-        className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+        className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
       >
         Save this class
       </button>
@@ -854,7 +854,7 @@ function CoachRolePicker({
                       onClick={() => setRole(a.id, value)}
                       className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
                         role === value
-                          ? 'bg-[var(--accent)] text-[#06281f]'
+                          ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                           : 'bg-white/10 text-white/70'
                       }`}
                     >
@@ -897,7 +897,7 @@ function RemoveClassAsk({
           <button
             type="button"
             onClick={onKeep}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             Keep class
           </button>
@@ -948,7 +948,7 @@ function RosterPicker({
                     onChange(on ? selected.filter((id) => id !== a.id) : [...selected, a.id])
                   }
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
-                    on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-black/30 text-white/80'
+                    on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-black/30 text-white/80'
                   }`}
                 >
                   <AthleteName athlete={a} />
@@ -1031,7 +1031,7 @@ function ScheduleEditor({
           setName('')
           onChanged()
         }}
-        className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[#06281f] disabled:opacity-40"
+        className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
       >
         Save class
       </button>

@@ -66,7 +66,7 @@ export function CollageBoardCard({ collage, nameForUrl, onPlay, children }: Prop
               {collage.slots.length} panel{collage.slots.length === 1 ? '' : 's'}
             </p>
           </div>
-          <span className="rounded-lg bg-[var(--accent)] px-2.5 py-1 text-[11px] font-bold text-[#06281f]">
+          <span className="rounded-lg bg-[var(--accent)] px-2.5 py-1 text-[11px] font-bold text-[var(--on-accent)]">
             Play
           </span>
         </div>

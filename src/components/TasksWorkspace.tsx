@@ -458,7 +458,7 @@ export function TasksWorkspace({
                         }}
                         onClick={onStartFlow}
                         className={`rounded-3xl px-10 py-5 text-2xl font-black uppercase tracking-wide shadow-2xl sm:px-14 sm:py-6 sm:text-3xl ${
-                          holdScoreGate ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[#06281f]'
+                          holdScoreGate ? HOLD_PINK_BTN : 'bg-[var(--accent)] text-[var(--on-accent)]'
                         }`}
                       >
                         {holdScoreGate ? 'Start hold' : 'Start'}

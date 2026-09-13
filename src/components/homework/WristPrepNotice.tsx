@@ -27,7 +27,7 @@ export function WristPrepNotice({ drillName, onContinue, onBack }: Props) {
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
         >
           Wrists are ready — continue
         </button>

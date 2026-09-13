@@ -431,7 +431,7 @@ export function LessonReviewList({
               setUndoId(null)
               onChanged?.()
             }}
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--on-accent)]"
           >
             Undo
           </button>

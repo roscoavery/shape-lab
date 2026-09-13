@@ -756,6 +756,21 @@ export function loadReferencePhotos(): ReferencePhoto[] {
   return readJson<ReferencePhoto[]>(REFS_KEY, [])
 }
 
+const MAX_IG_LOCAL = 2500
+const MAX_COACH_LOCAL = 2000
+const MAX_OTHER_LOCAL = 80
+
+export function capReferencePhotos(photos: ReferencePhoto[]): ReferencePhoto[] {
+  const ig = photos.filter((p) => p.library === 'ig')
+  const coach = photos.filter((p) => p.library === 'coach')
+  const other = photos.filter((p) => p.library !== 'ig' && p.library !== 'coach')
+  return [
+    ...ig.slice(0, MAX_IG_LOCAL),
+    ...coach.slice(0, MAX_COACH_LOCAL),
+    ...other.slice(0, MAX_OTHER_LOCAL),
+  ]
+}
+
 export function saveReferencePhotos(photos: ReferencePhoto[]) {
   try {
     writeJson(REFS_KEY, photos)
@@ -779,9 +794,7 @@ export async function saveReferencePhoto(photo: ReferencePhoto): Promise<void> {
       }),
     ]
   }
-  const ig = next.filter((p) => p.library === 'ig')
-  const other = next.filter((p) => p.library !== 'ig')
-  saveReferencePhotos([...ig.slice(0, 400), ...other.slice(0, 80)])
+  saveReferencePhotos(capReferencePhotos(next))
 }
 
 export async function deleteReferencePhoto(id: string): Promise<void> {

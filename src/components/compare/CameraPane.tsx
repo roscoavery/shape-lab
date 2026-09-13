@@ -932,7 +932,7 @@ export function CameraPane({
           className={
             rail
               ? 'rounded-lg bg-white px-2 py-1.5 text-[11px] font-semibold text-black'
-              : 'rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[#06281f]'
+              : 'rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--on-accent)]'
           }
         >
           Start camera
@@ -975,7 +975,7 @@ export function CameraPane({
         className={
           rail
             ? 'rounded-lg bg-white/15 px-2 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40'
-            : 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-40'
+            : 'rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40'
         }
       >
         {replayBuilding ? 'Opening replay…' : `Replay last ${delaySec}s`}

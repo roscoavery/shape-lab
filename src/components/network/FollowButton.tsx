@@ -81,7 +81,7 @@ export function FollowButton({
             ? `rounded-lg px-3 py-1.5 text-xs font-semibold ${
                 following
                   ? 'border border-white/20 text-white/80'
-                  : 'bg-[var(--accent)] text-[#06281f]'
+                  : 'bg-[var(--accent)] text-[var(--on-accent)]'
               } disabled:opacity-50`
             : `rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs disabled:opacity-50`
         }

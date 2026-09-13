@@ -187,7 +187,7 @@ export function LessonWorkspace({
           <button
             type="button"
             onClick={onGoCompare}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
           >
             Open Compare
           </button>
@@ -344,7 +344,7 @@ export function LessonWorkspace({
             <button
               type="button"
               onClick={startWatch}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f]"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
             >
               Start
             </button>

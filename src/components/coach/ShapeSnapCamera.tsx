@@ -158,7 +158,7 @@ export function ShapeSnapCamera({ onCapture, onClose }: Props) {
         <button
           type="button"
           disabled={!ready || busy}
-          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+          className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
           onClick={() => void snap()}
         >
           {busy ? 'Saving…' : 'Snap'}

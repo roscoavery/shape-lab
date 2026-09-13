@@ -16,7 +16,7 @@ export function AppNav({ tab, ryan, onGo }: Props) {
     <div className="flex min-w-0 flex-col gap-1.5">
       <nav
         aria-label="Main"
-        className="relative z-20 flex max-w-full shrink-0 gap-0.5 overflow-x-auto rounded-full bg-[#0d1218] p-1"
+        className="relative z-20 flex max-w-full shrink-0 gap-0.5 overflow-x-auto rounded-full bg-[#0a1014] p-1"
       >
         {APP_SECTIONS.map((item) => (
           <button

@@ -80,7 +80,7 @@ export function WarmupPanel({ signedIn }: Props) {
         {coach && (
           <button
             type="button"
-            className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
             onClick={() => setEditing(emptyWarmup(signedIn.id, signedIn.name))}
           >
             Write your warm-up
@@ -275,7 +275,7 @@ function WarmupPlayer({
         {!running ? (
           <button
             type="button"
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
             onClick={() => {
               startRef.current = performance.now()
               setRunning(true)
@@ -368,7 +368,7 @@ function WarmupAsk({
             type="button"
             disabled={busy}
             onClick={onKeep}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
           >
             {keepLabel}
           </button>
@@ -532,7 +532,7 @@ function WarmupEditor({
           <button
             type="button"
             disabled={!draft.title.trim() || draft.steps.length === 0 || busy || saving}
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
             onClick={() => setAskSave(true)}
           >
             Save warm-up

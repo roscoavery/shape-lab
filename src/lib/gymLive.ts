@@ -6,6 +6,7 @@
 import { hydrateChalkboards } from './chalkboard'
 import { hydrateCoachClasses } from './coachClasses'
 import { hydrateCoachContent } from './coachContentStore'
+import { hydrateCoachStills } from './coachStillStore'
 import { listFeedPosts } from './feedPosts'
 import { loadNotices } from './notify'
 import {
@@ -17,7 +18,7 @@ import {
   enableServerRosterPush,
 } from './rosterSync'
 import { ensureRyanInAthletes } from './ryanProfile'
-import { loadAthletes } from './storage'
+import { loadAthletes, loadReferencePhotos } from './storage'
 import type { Athlete } from '../types'
 
 export type GymRevisionStores = {
@@ -28,6 +29,7 @@ export type GymRevisionStores = {
   content: string
   chalkboards: string
   notices: string
+  stills: string
 }
 
 let last: GymRevisionStores | null = null
@@ -50,7 +52,8 @@ function sameStamp(a: GymRevisionStores, b: GymRevisionStores): boolean {
     a.classes === b.classes &&
     a.content === b.content &&
     a.chalkboards === b.chalkboards &&
-    a.notices === b.notices
+    a.notices === b.notices &&
+    (a.stills ?? '') === (b.stills ?? '')
   )
 }
 
@@ -103,6 +106,9 @@ export async function syncGymIfChanged(
     if (!prev || prev.content !== rev.content) jobs.push(hydrateCoachContent())
     if (!prev || prev.chalkboards !== rev.chalkboards) jobs.push(hydrateChalkboards())
     if (!prev || prev.notices !== rev.notices) jobs.push(loadNotices())
+    if (!prev || (prev.stills ?? '') !== (rev.stills ?? '')) {
+      jobs.push(hydrateCoachStills(loadReferencePhotos()))
+    }
     await Promise.allSettled(jobs)
     void flushLocalPhotos()
     if (typeof window !== 'undefined') {

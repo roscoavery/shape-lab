@@ -269,7 +269,7 @@ function ClassRecapCard({
                     setClassNote('')
                     setFlash('Saved a class note.')
                   }}
-                  className="h-10 self-start rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+                  className="h-10 self-start rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
                 >
                   Save class note
                 </button>
@@ -325,7 +325,7 @@ function ClassRecapCard({
                   type="button"
                   disabled={!addId}
                   onClick={() => addAthleteToRecap(addId)}
-                  className="h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+                  className="h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
                 >
                   Add + log class
                 </button>
@@ -506,7 +506,7 @@ function AthleteRecap({
                   )
                   setDraft('')
                 }}
-                className="h-10 self-start rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[#06281f] disabled:opacity-40"
+                className="h-10 self-start rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Save note
               </button>
@@ -615,7 +615,7 @@ function NoteRow({
                 onAthletesChange(applyCoachNoteUpdate(athletes, athlete.id, note.id, text, viewer))
                 setEditing(false)
               }}
-              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-40"
+              className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-40"
             >
               Save
             </button>

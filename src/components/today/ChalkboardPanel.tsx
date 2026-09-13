@@ -205,7 +205,7 @@ export function ChalkboardPanel({
       <button
         type="button"
         onClick={() => setSize('full')}
-        className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f]"
+        className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
       >
         Full screen
       </button>
@@ -346,7 +346,7 @@ function ChalkboardBody({
               onClick={() => onPickAthlete(person.id)}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                 selectedAthleteId === person.id
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)] text-[var(--muted)]'
               }`}
             >
@@ -363,7 +363,7 @@ function ChalkboardBody({
             onClick={() => onEditTarget('type')}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
               editTarget === 'type'
-                ? 'bg-[var(--accent)] text-[#06281f]'
+                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                 : 'border border-[var(--panel-border)] text-[var(--muted)]'
             }`}
           >
@@ -374,7 +374,7 @@ function ChalkboardBody({
             onClick={() => onEditTarget('time')}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
               editTarget === 'time'
-                ? 'bg-[var(--accent)] text-[#06281f]'
+                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                 : 'border border-[var(--panel-border)] text-[var(--muted)]'
             }`}
           >
@@ -400,7 +400,7 @@ function ChalkboardBody({
                 onClick={() => setActiveBoard(b.id)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   b.active
-                    ? 'bg-[var(--accent)] text-[#06281f]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                     : 'border border-[var(--panel-border)] text-[var(--muted)]'
                 }`}
               >
@@ -500,7 +500,7 @@ function ChalkboardBody({
                           onDrillPick(on ? drillPick.filter((id) => id !== d.id) : [...drillPick, d.id])
                         }
                         className={`w-full rounded-md px-2 py-1 text-left text-xs ${
-                          on ? 'bg-[var(--accent)] text-[#06281f]' : 'bg-[#121820] text-[var(--muted)]'
+                          on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[#121820] text-[var(--muted)]'
                         }`}
                       >
                         {d.title || 'Untitled drill'}
@@ -538,7 +538,7 @@ function ChalkboardBody({
                       : 'Pinned on this hour only.',
                   )
                 }}
-                className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[#06281f] disabled:opacity-40"
+                className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Pin selected drills
               </button>
@@ -818,7 +818,7 @@ function ChalkboardCard({
               }}
               className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 item.commentPlacement === 'above'
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)]'
               }`}
             >
@@ -831,7 +831,7 @@ function ChalkboardCard({
               }}
               className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 item.commentPlacement !== 'above'
-                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                   : 'border border-[var(--panel-border)]'
               }`}
             >
@@ -867,7 +867,7 @@ function ChalkboardCard({
                 addOverlay({ kind: 'text', label: textDraft.trim(), style: textStyle, color: '#f5c542' })
                 setTextDraft('')
               }}
-              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-bold text-[#06281f] disabled:opacity-40"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-bold text-[var(--on-accent)] disabled:opacity-40"
             >
               Add text
             </button>
@@ -1132,7 +1132,7 @@ function ReelSlide({
                   addOverlay({ kind: 'text', label: textDraft.trim(), style: textStyle, color: '#f5c542' })
                   setTextDraft('')
                 }}
-                className="rounded-lg bg-[#2dd4a8] px-3 py-2 text-xs font-bold text-[#06281f] disabled:opacity-40"
+                className="rounded-lg bg-[#2dd4a8] px-3 py-2 text-xs font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
                 Add text
               </button>

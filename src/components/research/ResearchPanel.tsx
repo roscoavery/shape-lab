@@ -490,7 +490,7 @@ function CollectForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
         >
           {busy ? 'Saving…' : existing ? 'Update log' : 'Save observation'}
         </button>
@@ -1082,7 +1082,7 @@ function IdeasPage({
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
             >
               {busy ? 'Saving…' : 'Add idea'}
             </button>

@@ -385,7 +385,7 @@ export function ClassesPanel({ athlete }: Props) {
           <button
             type="button"
             onClick={startNew}
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
           >
             New collage
           </button>
@@ -510,7 +510,7 @@ export function ClassesPanel({ athlete }: Props) {
               onClick={() => setOnlyFavorites(true)}
               className={
                 onlyFavorites
-                  ? 'rounded-md bg-[#f5d76e] px-2.5 py-1 text-xs font-semibold text-[#06281f]'
+                  ? 'rounded-md bg-[#f5d76e] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)]'
                   : 'rounded-md border border-[var(--panel-border)] px-2.5 py-1 text-xs text-[var(--muted)]'
               }
             >
@@ -631,7 +631,7 @@ export function ClassesPanel({ athlete }: Props) {
                     <button
                       type="button"
                       onClick={() => addClip(previewClip)}
-                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+                      className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
                     >
                       Add to collage
                     </button>
@@ -651,7 +651,7 @@ export function ClassesPanel({ athlete }: Props) {
                 type="button"
                 onClick={() => void persist()}
                 disabled={saving}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
               >
                 {saving
                   ? 'Saving…'
@@ -674,7 +674,7 @@ export function ClassesPanel({ athlete }: Props) {
               type="button"
               onClick={() => void persist()}
               disabled={saving}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f] disabled:opacity-50"
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
             >
               {saving
                 ? 'Saving…'
@@ -880,7 +880,7 @@ function CollageList({
                     type="button"
                     disabled={sharing}
                     onClick={() => onShare(c)}
-                    className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f] disabled:opacity-50"
+                    className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-50"
                   >
                     {sharing ? 'Posting…' : 'Post to feed'}
                   </button>

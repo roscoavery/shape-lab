@@ -31,8 +31,8 @@ export function ClassExtraPicker({ extras, onChange, tone = 'class' }: Props) {
       : 'rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3'
   const chipOn =
     tone === 'class'
-      ? 'bg-[var(--accent)] text-[#06281f]'
-      : 'bg-[var(--accent)] text-[#06281f]'
+      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+      : 'bg-[var(--accent)] text-[var(--on-accent)]'
   const chipOff =
     tone === 'class' ? 'bg-white/8 text-white/80' : 'bg-[#121820] text-[var(--text)]'
   const input =
@@ -207,7 +207,7 @@ export function ClassExtraPicker({ extras, onChange, tone = 'class' }: Props) {
               })
               setCustomName('')
             }}
-            className="rounded-xl bg-[var(--accent)] px-3 text-xs font-bold text-[#06281f] disabled:opacity-40"
+            className="rounded-xl bg-[var(--accent)] px-3 text-xs font-bold text-[var(--on-accent)] disabled:opacity-40"
           >
             Add
           </button>

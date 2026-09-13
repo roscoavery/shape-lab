@@ -100,6 +100,7 @@ export function CoachStillGallery({
   onPhotosChange?: (photos: ReferencePhoto[]) => void
 }) {
   const [mainTick, setMainTick] = useState(0)
+  const [flash, setFlash] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const stills = listCoachStills(photos, shapeId)
   const mainId = loadMainCoachStills()[shapeId] ?? stills[0]?.id ?? null
@@ -122,10 +123,21 @@ export function CoachStillGallery({
       createdAt: new Date().toISOString(),
       library: 'coach',
     }
-    await saveReferencePhoto(photo)
-    void persistCoachStillExtra(photo)
+    try {
+      await saveReferencePhoto(photo)
+    } catch (err) {
+      setFlash(err instanceof Error ? err.message : 'Could not keep that still on this device.')
+      return
+    }
     onPhotosChange([photo, ...photos.filter((p) => p.id !== photo.id)])
     if (stills.length === 0) setMain(photo.id)
+    const remote = await persistCoachStillExtra(photo)
+    if (!remote.ok) {
+      setFlash(remote.error ?? 'Gym did not keep that still.')
+      return
+    }
+    setFlash('Saved on this gym — other devices will pick it up.')
+    window.setTimeout(() => setFlash(null), 3500)
   }
 
   if (stills.length === 0 && !canEdit) {
@@ -173,7 +185,7 @@ export function CoachStillGallery({
                   <button
                     type="button"
                     onClick={() => setMain(p.id)}
-                    className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[#06281f]"
+                    className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[var(--on-accent)]"
                   >
                     Set as main
                   </button>
@@ -207,6 +219,7 @@ export function CoachStillGallery({
             Extra pictures for this body position. Pick which one is the main still used in class flows
             and Compare.
           </p>
+          {flash && <p className="mt-1 text-[11px] text-[var(--accent)]">{flash}</p>}
         </div>
       )}
     </div>
