@@ -62,6 +62,7 @@ import { GymBadge, gymHint } from '../today/GymBadge'
 import { TodayGymScope } from '../today/TodayGymScope'
 import { QuickGroupEnroll } from '../today/QuickGroupEnroll'
 import { NamesTestGlow } from '../coach/NamesTestGlow'
+import { GoalGroupBoard } from '../coach/GoalGroupBoard'
 import { namesReadyCount } from '../../lib/namesQuiz'
 
 function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
@@ -90,6 +91,7 @@ type Props = {
   onParentHomework?: (athleteId: string) => void
   classSessionOpen?: boolean
   onOpenNamesTest?: (groupId?: string) => void
+  onOpenSkillPaths?: () => void
 }
 
 export function HomeDashboard({
@@ -106,6 +108,7 @@ export function HomeDashboard({
   onParentHomework,
   classSessionOpen = false,
   onOpenNamesTest,
+  onOpenSkillPaths,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const [withIds, setWithIds] = useState<string[]>([])
@@ -724,6 +727,13 @@ export function HomeDashboard({
             athletes={athletes}
             onAthletesChange={onAthletesChange}
             onAdded={() => setRefresh((n) => n + 1)}
+          />
+        )}
+        {activeGroup && (
+          <GoalGroupBoard
+            athletes={athletes.filter((a) => activeGroup.athleteIds.includes(a.id))}
+            onViewProfile={onViewProfile}
+            onOpenBuilder={onOpenSkillPaths}
           />
         )}
         {roster.length === 0 && gymScope.kind !== 'event' ? (

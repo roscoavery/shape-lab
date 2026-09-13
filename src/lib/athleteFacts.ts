@@ -1,4 +1,5 @@
 import type { Athlete } from '../types'
+import { goalLine } from './skillPaths'
 
 /** The line that leads their public profile, from the open-shoulder question. */
 export function shoulderFirstPost(n?: Athlete['openShoulderHardness']): string | null {
@@ -77,5 +78,7 @@ export function profileFactLines(athlete: Athlete): ProfileFact[] {
   if (hand) rows.push({ label: 'Hand', value: hand })
   const skate = skateLine(athlete)
   if (skate) rows.push({ label: 'Skate', value: skate })
+  const hope = athlete.skillGoals?.[0]
+  if (hope?.label) rows.push({ label: 'Hope', value: goalLine(hope) })
   return rows
 }

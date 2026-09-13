@@ -24,6 +24,7 @@ export type StationStep =
   | 'hand'
   | 'skate'
   | 'photo'
+  | 'skillGoal'
   | 'favoriteColor'
   | 'handstandFloor'
   | 'handstandWall'
@@ -51,6 +52,7 @@ export type StationDraft = {
   dominantHand?: DominantHand
   skateStance?: SkateStance
   photoDataUrl?: string
+  skillGoals?: import('../types').AthleteSkillGoal[]
   favoriteColor?: string
   handstandFloor?: string
   handstandWall?: string
@@ -176,6 +178,7 @@ export const STATION_STEPS: StationStep[] = [
   'hand',
   'skate',
   'photo',
+  'skillGoal',
   'favoriteColor',
   'handstandFloor',
   'handstandWall',
@@ -199,6 +202,7 @@ export function stationStepFilled(
     parentPhone?: string
     phone?: string
     favoriteColor?: string
+    skillGoals?: { id: string }[]
     handstandFloor?: string
     handstandWall?: string
     hollowHold?: string
@@ -208,6 +212,7 @@ export function stationStepFilled(
   } | null,
 ): boolean {
   if (step === 'photo') return Boolean(draft.photoDataUrl || athlete?.photoDataUrl)
+  if (step === 'skillGoal') return Boolean(draft.skillGoals?.length || athlete?.skillGoals?.length)
   if (step === 'favoriteColor') return draftHas(draft.favoriteColor) || Boolean(athlete?.favoriteColor)
   if (step === 'handstandFloor') return draftHas(draft.handstandFloor) || Boolean(athlete?.handstandFloor)
   if (step === 'handstandWall') return draftHas(draft.handstandWall) || Boolean(athlete?.handstandWall)
@@ -233,6 +238,7 @@ export function nextStationStep(
     if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
     if (step === 'done') return 'done'
     const skipable =
+      step === 'skillGoal' ||
       step === 'favoriteColor' ||
       step === 'handstandFloor' ||
       step === 'handstandWall' ||
@@ -256,6 +262,7 @@ export function prevStationStep(
     const step = STATION_STEPS[i]!
     if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
     const skipable =
+      step === 'skillGoal' ||
       step === 'favoriteColor' ||
       step === 'handstandFloor' ||
       step === 'handstandWall' ||

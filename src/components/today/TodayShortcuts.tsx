@@ -11,6 +11,7 @@ export type TodayShortcutId =
   | 'profile'
   | 'clock'
   | 'collages'
+  | 'skillpaths'
 
 type Props = {
   onGo: (id: TodayShortcutId) => void
@@ -84,6 +85,12 @@ const TOOLS: {
     title: 'Homework',
     hint: 'Train now, pick a drill, or add an exercise.',
   },
+  {
+    id: 'skillpaths',
+    eyebrow: 'Coaches',
+    title: 'Skill paths',
+    hint: 'Prerequisites and body standards for bigger hopes. Build this over time.',
+  },
 ]
 
 export function TodayShortcuts({ onGo, showStation = true, showNames = false }: Props) {
@@ -122,7 +129,7 @@ export function TodayShortcuts({ onGo, showStation = true, showNames = false }: 
         </button>
       )}
       <div className="grid gap-2 sm:grid-cols-2">
-        {TOOLS.map((tool) => (
+        {TOOLS.filter((tool) => tool.id !== 'skillpaths' || showNames).map((tool) => (
           <button key={tool.id} type="button" onClick={() => onGo(tool.id)} className="sl-card">
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
               {tool.eyebrow}

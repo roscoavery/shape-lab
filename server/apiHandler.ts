@@ -85,6 +85,7 @@ import { isHomeGym, persistMode, readRevision } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
+import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
@@ -130,6 +131,7 @@ const API_PATHS = new Set([
   '/api/lessons',
   '/api/coach-classes',
   '/api/training-events',
+  '/api/skill-paths',
   '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-media',
@@ -208,7 +210,7 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'gleam' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'path' })
     return true
   }
   if (path === '/api/persist') {
@@ -949,6 +951,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeCoachClassesFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/skill-paths') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readSkillPathsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeSkillPathsFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

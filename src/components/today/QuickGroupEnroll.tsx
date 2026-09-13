@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Athlete, FavoriteColor } from '../../types'
+import type { Athlete, AthleteSkillGoal, FavoriteColor } from '../../types'
 import { createId } from '../../lib/storage'
 import { displayPersonName, namesMatch } from '../../lib/classStation'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
@@ -13,6 +13,7 @@ import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { hasAthleteFace } from '../../lib/namesQuiz'
 import { AthleteAvatar } from '../AthleteAvatar'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
+import { SkillGoalPicker } from '../coach/SkillGoalPicker'
 
 type Props = {
   event: TrainingEvent
@@ -22,7 +23,7 @@ type Props = {
   onAdded?: () => void
 }
 
-type Step = 'form' | 'face'
+type Step = 'form' | 'face' | 'goal'
 
 export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onAdded }: Props) {
   const [step, setStep] = useState<Step>('form')
@@ -34,6 +35,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
   const [pendingId, setPendingId] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [faceFor, setFaceFor] = useState<string | null>(null)
+  const [goals, setGoals] = useState<AthleteSkillGoal[]>([])
 
   const onList = athletes.filter((a) => event.athleteIds.includes(a.id))
   const needFace = onList.filter((a) => !hasAthleteFace(a))
@@ -63,12 +65,14 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
     const existing = athletes.find((a) => namesMatch(a, firstName, lastName))
     const now = new Date().toISOString()
     const nextPhoto = photoDataUrl || photo || existing?.photoDataUrl
+    const nextGoals = goals.length ? goals : existing?.skillGoals
     const athlete: Athlete = existing
       ? {
           ...existing,
           parentPhone: phone || existing.parentPhone,
           favoriteColor: color || existing.favoriteColor,
           photoDataUrl: nextPhoto || existing.photoDataUrl,
+          skillGoals: nextGoals,
           worksWithCoachIds: [...new Set([...(existing.worksWithCoachIds ?? []), coach.id])],
         }
       : {
@@ -83,6 +87,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
           worksWithCoachIds: [coach.id],
           favoriteColor: color || undefined,
           photoDataUrl: nextPhoto || undefined,
+          skillGoals: nextGoals,
           createdAt: now,
         }
     if (athlete.photoDataUrl) rememberLocalPhoto(athlete.id, athlete.photoDataUrl)
@@ -98,6 +103,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
     setColor('')
     setPhoto('')
     setPendingId('')
+    setGoals([])
     setStep('form')
     setFlash(
       nextPhoto
@@ -123,7 +129,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
         Quick add · {eventKindLabel(event.kind)}
       </p>
       <h4 className="mt-1 text-lg font-semibold">New profile for {event.name}</h4>
-      {step === 'form' ? (
+      {step === 'form' && (
         <>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Name, parent phone, then a snapshot. The picture is how coaches
@@ -189,7 +195,8 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
             Next · take a snapshot
           </button>
         </>
-      ) : (
+      )}
+      {step === 'face' && (
         <>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Snapshot {first.trim() || 'this athlete'} now so coaches can
@@ -206,17 +213,17 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
           <button
             type="button"
             disabled={!photo}
-            onClick={() => commit(photo)}
+            onClick={() => setStep('goal')}
             className="sl-btn-mint sl-center mt-3 rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-40"
           >
-            {photo ? `Add ${first.trim() || 'them'} with this face` : 'Take a snapshot first'}
+            {photo ? 'Next · what are they working towards' : 'Take a snapshot first'}
           </button>
           <button
             type="button"
-            onClick={() => commit()}
+            onClick={() => setStep('goal')}
             className="mt-2 w-full rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/70"
           >
-            Add without a photo
+            Skip photo · ask about skills
           </button>
           <button
             type="button"
@@ -224,6 +231,31 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
             className="mt-2 text-xs font-semibold text-[var(--muted)]"
           >
             Back to the name
+          </button>
+        </>
+      )}
+      {step === 'goal' && (
+        <>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            What skill are they hoping to get? Coaches use this to group
+            similar kids. It does not mean they will work that skill today.
+          </p>
+          <div className="mt-3">
+            <SkillGoalPicker value={goals} onChange={setGoals} />
+          </div>
+          <button
+            type="button"
+            onClick={() => commit(photo)}
+            className="sl-btn-mint sl-center mt-3 rounded-xl px-4 py-3 text-sm font-bold"
+          >
+            {goals.length ? `Add ${first.trim() || 'them'} to ${eventKindLabel(event.kind).toLowerCase()}` : 'Add without a skill hope'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep('face')}
+            className="mt-2 text-xs font-semibold text-[var(--muted)]"
+          >
+            Back to the snapshot
           </button>
         </>
       )}

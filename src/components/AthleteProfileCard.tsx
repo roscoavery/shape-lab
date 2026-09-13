@@ -49,6 +49,8 @@ import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
+import { SkillGoalPicker } from './coach/SkillGoalPicker'
+import { SkillPathPreview } from './coach/SkillPathPreview'
 import { NoteAudiencePicker } from './lesson/NoteAudiencePicker'
 import { noteAudienceLabel, type NoteAudience } from '../lib/noteAudience'
 import { CoachAthleteActivity } from './CoachAthleteActivity'
@@ -322,6 +324,30 @@ export function AthleteProfileCard({
 
       {first && (
         <p className="text-base font-medium italic leading-snug text-[var(--text)]">“{first}”</p>
+      )}
+      {(athlete.skillGoals?.length || (coach && onAthleteChange && isAthleteProfile(athlete))) && (
+        <section className="rounded-2xl border border-white/10 bg-black/20 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Working towards
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">
+            A long-term hope. Not a request for today.
+          </p>
+          {athlete.skillGoals && athlete.skillGoals.length > 0 && (
+            <div className="mt-2">
+              <SkillPathPreview goals={athlete.skillGoals} coachView={coach} />
+            </div>
+          )}
+          {coach && onAthleteChange && isAthleteProfile(athlete) && (
+            <div className="mt-3">
+              <SkillGoalPicker
+                athleteFacing={false}
+                value={athlete.skillGoals ?? []}
+                onChange={(skillGoals) => onAthleteChange({ ...athlete, skillGoals })}
+              />
+            </div>
+          )}
+        </section>
       )}
       {facts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

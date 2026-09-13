@@ -268,6 +268,27 @@ export type Athlete = {
    * next rotation can continue without losing pictures-test answers.
    */
   shapeTestPark?: import('./lib/shapeTestPark').ShapeTestPark
+  /**
+   * Skills they said they are working towards. A hope for grouping —
+   * not a promise the coach will train that skill today.
+   */
+  skillGoals?: AthleteSkillGoal[]
+}
+
+export type TrainingSurface =
+  | 'tramp'
+  | 'tumble_trak'
+  | 'rod_airfloor'
+  | 'spring_floor'
+  | 'dead_mat'
+
+export type AthleteSkillGoal = {
+  id: string
+  skillId?: string
+  label: string
+  surface?: TrainingSurface
+  setAt: string
+  source?: 'intake' | 'coach'
 }
 
 export type FavoriteColor =

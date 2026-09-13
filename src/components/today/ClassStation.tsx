@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import type { Athlete } from '../../types'
+import type { Athlete, AthleteSkillGoal } from '../../types'
 import { createId } from '../../lib/storage'
 import { mergeShapeTests, takeGuestGrades } from '../../lib/quizGrades'
 import { profileRole } from '../../lib/profileRole'
@@ -39,6 +39,7 @@ import { trainsAtGym, viewerHomeGym, withClassGym } from '../../lib/gymScope'
 import { GymBadge } from './GymBadge'
 import { StationSnapshot } from './StationSnapshot'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
+import { SkillGoalPicker } from '../coach/SkillGoalPicker'
 import {
   loadGuestParks,
   makeShapeTestPark,
@@ -192,6 +193,7 @@ export function ClassStation({
       openShoulderHardness: from.openShoulderHardness ?? existing?.openShoulderHardness,
       role: existing?.role ?? 'athlete',
       photoDataUrl: from.photoDataUrl || existing?.photoDataUrl,
+      skillGoals: from.skillGoals?.length ? from.skillGoals : existing?.skillGoals,
       twistDirection: from.twistDirection || existing?.twistDirection,
       twistBetterSide: from.twistBetterSide || existing?.twistBetterSide,
       dominantHand: from.dominantHand || existing?.dominantHand,
@@ -757,6 +759,26 @@ export function ClassStation({
               className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
             >
               {draft.photoDataUrl ? 'Use this photo' : 'Skip'}
+            </button>
+          </Question>
+        )}
+
+        {draft.step === 'skillGoal' && (
+          <Question
+            title="What skill are you hoping to get?"
+            hint="This helps the coach put you with people working similar pieces. It does not mean you will work that skill today."
+            onBack={() => goPrev('skillGoal')}
+          >
+            <SkillGoalPicker
+              value={draft.skillGoals ?? []}
+              onChange={(skillGoals: AthleteSkillGoal[]) => persist({ ...draft, skillGoals })}
+            />
+            <button
+              type="button"
+              onClick={() => goNext('skillGoal')}
+              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
+            >
+              {draft.skillGoals?.length ? 'Use this hope' : 'Skip for now'}
             </button>
           </Question>
         )}

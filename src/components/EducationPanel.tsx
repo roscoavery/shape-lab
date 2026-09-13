@@ -96,6 +96,7 @@ type Props = {
   onAthleteChange?: (next: Athlete) => void
   onParkQuiz?: () => void
   onOpenNamesTest?: (groupId?: string) => void
+  onOpenSkillPaths?: () => void
   /** Videos tab only needs the reference scroll. */
   surface?: 'learn' | 'videos'
 }
@@ -119,6 +120,7 @@ export function EducationPanel({
   onAthleteChange,
   onParkQuiz,
   onOpenNamesTest,
+  onOpenSkillPaths,
   surface = 'learn',
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: surface === 'videos' ? 'scroll' : 'home' })
@@ -273,6 +275,13 @@ export function EducationPanel({
                     label="Names test"
                   />
                 )}
+                {onOpenSkillPaths && (
+                  <NavChip
+                    active={false}
+                    onClick={() => onOpenSkillPaths()}
+                    label="Skill paths"
+                  />
+                )}
               </ChipRow>
             )}
             <details className="rounded-xl bg-[#0d1218]/80 px-3 py-2">
@@ -320,6 +329,7 @@ export function EducationPanel({
           onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
           onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
           onNamesTest={onOpenNamesTest}
+          onSkillPaths={onOpenSkillPaths}
           onPathways={goPathways}
           onGlossary={() => setView({ kind: 'glossary' })}
           onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
@@ -713,6 +723,7 @@ function HomeView({
   onAthleteProgress,
   onCoachStudy,
   onNamesTest,
+  onSkillPaths,
   onPathways,
   onGlossary,
   onArmQuiz,
@@ -732,6 +743,7 @@ function HomeView({
   onAthleteProgress: () => void
   onCoachStudy?: () => void
   onNamesTest?: (groupId?: string) => void
+  onSkillPaths?: () => void
   onPathways: () => void
   onGlossary: () => void
   onArmQuiz: () => void
@@ -871,6 +883,19 @@ function HomeView({
         </button>
       </div>
 
+      {coach && onSkillPaths && (
+        <button type="button" onClick={onSkillPaths} className="learn-tile p-5 text-left">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
+            Coaches
+          </p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Skill paths</h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+            Write what usually comes before a bigger hope — required pieces,
+            helpful ones, other orders, and body standards. Keep adding as you
+            learn what actually gets kids there.
+          </p>
+        </button>
+      )}
       {coach && onCoachStudy && (
         <button type="button" onClick={onCoachStudy} className="learn-coach px-5 py-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f5c542]">

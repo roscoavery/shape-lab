@@ -40,6 +40,7 @@ import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { NamesQuiz } from './components/coach/NamesQuiz'
+import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { GestureBurstHost } from './components/GestureBurst'
@@ -118,6 +119,7 @@ import {
 } from './lib/lessonStore'
 import { linkAthleteToCoach } from './lib/coachLink'
 import { hydrateCoachContent } from './lib/coachContentStore'
+import { hydrateSkillPaths } from './lib/skillPaths'
 import { hydrateChalkboards } from './lib/chalkboard'
 import {
   classLabel,
@@ -184,6 +186,7 @@ export default function App() {
   const [clockOpen, setClockOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
+  const [skillPathsOpen, setSkillPathsOpen] = useState(false)
   const [viewingAthleteId, setViewingAthleteId] = useState<string | null>(null)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
@@ -226,6 +229,7 @@ export default function App() {
     void hydrateCoachClasses().then(() => setLessonTick((n) => n + 1))
     void hydrateChalkboards()
     void hydrateCoachContent()
+    void hydrateSkillPaths()
     const unsubLessons = subscribeLessons(() => setLessonTick((n) => n + 1))
     const unsubClasses = subscribeCoachClasses(() => setLessonTick((n) => n + 1))
     return () => {
@@ -853,6 +857,7 @@ export default function App() {
                   setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile?.id) ? 'live' : null))
                   setNamesQuizOpen(true)
                 }}
+                onOpenSkillPaths={() => setSkillPathsOpen(true)}
                 classSessionOpen={classSessionOpen}
                 onViewProfile={setViewingAthleteId}
                 onAthletesChange={setAthleteRoster}
@@ -874,6 +879,8 @@ export default function App() {
                   } else if (id === 'names') {
                     setNamesQuizGroupId(getActiveMeeting(activeProfile?.id) ? 'live' : null)
                     setNamesQuizOpen(true)
+                  } else if (id === 'skillpaths') {
+                    setSkillPathsOpen(true)
                   } else if (id === 'replay') {
                     openCompareWithReference()
                   } else if (id === 'scroll') {
@@ -1220,6 +1227,11 @@ export default function App() {
                   setNamesQuizGroupId(groupId ?? (getActiveMeeting(activeProfile.id) ? 'live' : null))
                   setNamesQuizOpen(true)
                 }
+              : undefined
+          }
+          onOpenSkillPaths={
+            activeProfile && isCoachProfile(activeProfile)
+              ? () => setSkillPathsOpen(true)
               : undefined
           }
           surface="learn"
@@ -1804,6 +1816,12 @@ export default function App() {
           setNamesQuizGroupId('live')
           setNamesQuizOpen(true)
         }}
+      />
+    )}
+    {skillPathsOpen && (
+      <SkillPathBuilder
+        coachId={activeProfile?.id}
+        onClose={() => setSkillPathsOpen(false)}
       />
     )}
     {namesQuizOpen && (
