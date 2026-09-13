@@ -182,7 +182,7 @@ export async function stillsForClient(): Promise<{
   for (const s of meta.stills) {
     const shipped = shippedIds.has(s.id)
     if (!shipped) {
-      const buf = await readBin(blobRel(s.file))
+      const buf = await readBin(blobRel(s.file || `${s.id}.jpg`))
       if (!buf) continue
     }
     stills.push({
@@ -197,7 +197,7 @@ export async function stillsForClient(): Promise<{
       persistedToApp: true,
       showInShapeLibrary: Boolean(s.showInShapeLibrary),
       dataUrl: shipped
-        ? `/learn/ig-stills/${s.file}`
+        ? `/learn/ig-stills/${s.file || `${s.id}.jpg`}`
         : `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
     })
   }

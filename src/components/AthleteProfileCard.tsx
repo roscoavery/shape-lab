@@ -30,6 +30,7 @@ import {
   publishTextPostResult,
   toggleFeedRepost,
   removeFeedPost,
+  canRemoveFeedPost,
   winOwnerId,
   winSubjectIds,
   type FeedPost,
@@ -999,11 +1000,12 @@ function PostsGrid({
                   {reposted ? 'On your profile' : 'Repost to your profile'}
                 </button>
               )}
-              {viewer && (viewer.id === p.authorId || viewer.id === athlete.id) && (
+              {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
                 <button
                   type="button"
                   onClick={() => {
-                    void removeFeedPost(p.id, viewer.id, false).then((ok) => {
+                    if (!viewer) return
+                    void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
                       if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                     })
                   }}
@@ -1077,12 +1079,13 @@ function PassesGrid({
               {(p.reposts ?? []).includes(viewer.id) ? 'Yours' : '+'}
             </span>
           )}
-          {viewer && (viewer.id === p.authorId || viewer.id === athlete.id) && (
+          {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
             <span
               role="presentation"
               onClick={(e) => {
                 e.stopPropagation()
-                void removeFeedPost(p.id, viewer.id, false).then((ok) => {
+                if (!viewer) return
+                void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
                   if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                 })
               }}

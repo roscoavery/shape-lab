@@ -319,7 +319,10 @@ export async function deleteFeedPost(
   const meta = await readFeedFile()
   const found = meta.posts.find((p) => p.id === sid)
   if (!found) return false
-  if (!actorIsAdmin && actorId && found.authorId !== actorId) return false
+  const allowed =
+    Boolean(actorIsAdmin) ||
+    Boolean(actorId && (found.authorId === actorId || found.sharedById === actorId))
+  if (!allowed) return false
   if (found.file) await removeFile(blobRel(found.file))
   await writeMeta(
     meta.posts.filter((p) => p.id !== sid),

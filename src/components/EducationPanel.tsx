@@ -1695,7 +1695,7 @@ function IgShapesLibrary({
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {total === 0
-            ? 'None saved yet. Screenshot a clip (Shot on Compare, Learn scroll, or a reel) — it lands here and on every gym link.'
+            ? 'None saved on this gym yet. Screenshot a clip (Shot on Compare, Learn scroll, or a reel) — it lands here. If a gym file lost the pixels, Shot it again from Compare and it will stay.'
             : `${total} still${total === 1 ? '' : 's'} in ${groups.length} shape${groups.length === 1 ? '' : 's'}.`}
         </p>
         <div className="mt-3">
@@ -1895,6 +1895,7 @@ function IgShapesLibrary({
         <MediaLightbox
           src={viewStill.dataUrl}
           kind="image"
+          stillId={viewStill.id}
           alt={viewStill.label || viewStill.customName || 'IG shape'}
           onClose={() => setViewStill(null)}
         />

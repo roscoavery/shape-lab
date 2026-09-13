@@ -7,7 +7,7 @@
 import { createId } from './storage'
 import { classTypeKey, getActiveMeeting, loadOfferings, type CoachClassOffering } from './coachClasses'
 
-export type ChalkboardScope = 'type' | 'time' | 'athlete'
+export type ChalkboardScope = 'type' | 'time' | 'athlete' | 'library'
 
 export function typeOfferingId(nameOrKey: string): string {
   const key = nameOrKey.startsWith('type:') ? nameOrKey.slice(5) : classTypeKey(nameOrKey)
@@ -29,6 +29,10 @@ export function isAthleteOfferingId(id: string | null | undefined): boolean {
 export function athleteIdFromOffering(id: string | null | undefined): string | null {
   if (!id?.startsWith('athlete:')) return null
   return id.slice('athlete:'.length) || null
+}
+
+export function isLibraryOfferingId(id: string | null | undefined): boolean {
+  return Boolean(id === 'library' || id?.startsWith('library:'))
 }
 
 export type ChalkboardItemKind =
@@ -92,6 +96,8 @@ export type ChalkboardBoard = {
   classTypeKey?: string
   /** Set when this board belongs to one athlete. */
   athleteId?: string
+  /** Optional skill this library board is about. */
+  shapeId?: string
   /** The board that shows while this class type is in session. */
   active: boolean
   createdById: string
@@ -203,11 +209,13 @@ function normalizeItem(raw: Partial<ChalkboardItem>): ChalkboardItem | null {
 function normalizeBoard(raw: Partial<ChalkboardBoard>): ChalkboardBoard | null {
   if (!raw?.id || !raw.offeringId) return null
   const scope: ChalkboardScope =
-    raw.scope === 'athlete' || raw.offeringId.startsWith('athlete:')
-      ? 'athlete'
-      : raw.scope === 'type' || raw.offeringId.startsWith('type:')
-        ? 'type'
-        : 'time'
+    raw.scope === 'library' || isLibraryOfferingId(raw.offeringId)
+      ? 'library'
+      : raw.scope === 'athlete' || raw.offeringId.startsWith('athlete:')
+        ? 'athlete'
+        : raw.scope === 'type' || raw.offeringId.startsWith('type:')
+          ? 'type'
+          : 'time'
   const key =
     typeof raw.classTypeKey === 'string' && raw.classTypeKey
       ? classTypeKey(raw.classTypeKey)
@@ -226,6 +234,7 @@ function normalizeBoard(raw: Partial<ChalkboardBoard>): ChalkboardBoard | null {
     scope,
     classTypeKey: key,
     athleteId,
+    shapeId: typeof raw.shapeId === 'string' && raw.shapeId ? raw.shapeId : undefined,
     active: Boolean(raw.active),
     createdById: raw.createdById || '',
     createdAt: raw.createdAt || new Date().toISOString(),
@@ -341,38 +350,47 @@ export function createBoard(input: {
   scope?: ChalkboardScope
   classTypeKey?: string
   athleteId?: string
+  shapeId?: string
 }): ChalkboardBoard {
   const file = read()
+  const id = createId('chb')
   const scope: ChalkboardScope =
     input.scope ??
-    (isAthleteOfferingId(input.offeringId) || input.athleteId
-      ? 'athlete'
-      : isTypeOfferingId(input.offeringId)
-        ? 'type'
-        : 'time')
+    (isLibraryOfferingId(input.offeringId)
+      ? 'library'
+      : isAthleteOfferingId(input.offeringId) || input.athleteId
+        ? 'athlete'
+        : isTypeOfferingId(input.offeringId)
+          ? 'type'
+          : 'time')
   const typeKey = input.classTypeKey || (scope === 'type' ? classTypeKey(input.offeringId.replace(/^type:/, '')) : undefined)
   const athleteId = input.athleteId || athleteIdFromOffering(input.offeringId) || undefined
   const offeringId =
-    scope === 'athlete' && athleteId
-      ? athleteOfferingId(athleteId)
-      : scope === 'type'
-        ? typeOfferingId(typeKey || input.offeringId)
-        : input.offeringId
+    scope === 'library'
+      ? `library:${id}`
+      : scope === 'athlete' && athleteId
+        ? athleteOfferingId(athleteId)
+        : scope === 'type'
+          ? typeOfferingId(typeKey || input.offeringId)
+          : input.offeringId
   const existing =
-    scope === 'athlete'
-      ? boardsForAthlete(athleteId)
-      : scope === 'type'
-        ? boardsForClassType(typeKey || offeringId)
-        : boardsForOffering(offeringId)
+    scope === 'library'
+      ? []
+      : scope === 'athlete'
+        ? boardsForAthlete(athleteId)
+        : scope === 'type'
+          ? boardsForClassType(typeKey || offeringId)
+          : boardsForOffering(offeringId)
   const board: ChalkboardBoard = {
-    id: createId('chb'),
+    id,
     offeringId,
     name: input.name.trim() || 'Chalkboard',
     lessonId: input.lessonId,
     scope,
     classTypeKey: typeKey,
     athleteId,
-    active: input.makeActive || existing.length === 0,
+    shapeId: input.shapeId,
+    active: scope === 'library' ? true : input.makeActive || existing.length === 0,
     createdById: input.createdById,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -390,13 +408,16 @@ export function createBoard(input: {
 }
 
 function sameBoardGroup(a: ChalkboardBoard, b: Pick<ChalkboardBoard, 'scope' | 'offeringId' | 'classTypeKey' | 'athleteId'>): boolean {
+  if (b.scope === 'library' || isLibraryOfferingId(b.offeringId)) {
+    return a.offeringId === b.offeringId
+  }
   if (b.scope === 'athlete') {
     return a.scope === 'athlete' && (a.athleteId === b.athleteId || a.offeringId === b.offeringId)
   }
   if (b.scope === 'type') {
     return a.scope === 'type' && (a.classTypeKey === b.classTypeKey || a.offeringId === b.offeringId)
   }
-  return a.offeringId === b.offeringId && a.scope !== 'type' && a.scope !== 'athlete'
+  return a.offeringId === b.offeringId && a.scope !== 'type' && a.scope !== 'athlete' && a.scope !== 'library'
 }
 
 export function renameBoard(id: string, name: string): ChalkboardBoard | null {
@@ -476,6 +497,46 @@ export function ensureBoardForAthlete(
   })
 }
 
+export function listAllBoards(): ChalkboardBoard[] {
+  return read()
+    .boards.slice()
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+}
+
+export function boardsForLibrary(): ChalkboardBoard[] {
+  return listAllBoards().filter((b) => b.scope === 'library' || isLibraryOfferingId(b.offeringId))
+}
+
+export function createLibraryBoard(input: {
+  name: string
+  createdById: string
+  shapeId?: string
+}): ChalkboardBoard {
+  return createBoard({
+    offeringId: 'library',
+    name: input.name,
+    createdById: input.createdById,
+    scope: 'library',
+    shapeId: input.shapeId,
+    makeActive: true,
+  })
+}
+
+export function boardPickerLabel(board: ChalkboardBoard, offerings: CoachClassOffering[] = loadOfferings()): string {
+  if (board.scope === 'library' || isLibraryOfferingId(board.offeringId)) {
+    return `Skill · ${board.name}`
+  }
+  if (board.scope === 'athlete') {
+    return `Athlete · ${board.name}`
+  }
+  if (board.scope === 'type') {
+    const typeName = offerings.find((o) => classTypeKey(o.name) === board.classTypeKey)?.name
+    return `Every ${typeName || board.name} class`
+  }
+  const hour = offerings.find((o) => o.id === board.offeringId)
+  return hour ? `${hour.name} · ${hour.weekday} ${hour.time} · ${board.name}` : board.name
+}
+
 export function ensureBoardForClassType(name: string, createdById: string): ChalkboardBoard {
   const existing = activeBoardForClassType(name)
   if (existing) return existing
@@ -517,7 +578,11 @@ export function postToChalkboard(input: {
 }): ChalkboardItem | null {
   const board = input.boardId
     ? getBoard(input.boardId)
-    : isTypeOfferingId(input.offeringId)
+    : isLibraryOfferingId(input.offeringId)
+      ? null
+      : isAthleteOfferingId(input.offeringId)
+        ? ensureBoardForAthlete(athleteIdFromOffering(input.offeringId) ?? '', input.createdById)
+      : isTypeOfferingId(input.offeringId)
       ? ensureBoardForClassType(input.offeringId.replace(/^type:/, ''), input.createdById)
       : ensureBoardForOffering(input.offeringId, input.createdById)
   if (!board) return null

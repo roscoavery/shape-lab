@@ -444,6 +444,16 @@ export async function attachFeedVideoResult(
   }
 }
 
+export function canRemoveFeedPost(
+  post: Pick<FeedPost, 'authorId' | 'sharedById'>,
+  viewerId: string | undefined,
+  admin?: boolean,
+): boolean {
+  if (!viewerId) return false
+  if (admin) return true
+  return post.authorId === viewerId || post.sharedById === viewerId
+}
+
 export async function removeFeedPost(id: string, actorId: string, admin: boolean): Promise<boolean> {
   try {
     const qs = new URLSearchParams({
@@ -452,7 +462,9 @@ export async function removeFeedPost(id: string, actorId: string, admin: boolean
       admin: admin ? '1' : '0',
     })
     const res = await fetch(`/api/feed?${qs.toString()}`, { method: 'DELETE' })
-    return res.ok
+    if (!res.ok) return false
+    if (feedCache) feedCache = feedCache.filter((row) => row.id !== id)
+    return true
   } catch {
     return false
   }

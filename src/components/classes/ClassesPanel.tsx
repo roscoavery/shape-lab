@@ -31,6 +31,7 @@ import { GymClipPlayer } from '../GymClipPlayer'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { PhoneReelViewer } from '../PhoneReelViewer'
 import { ShareReference } from '../share/ShareReference'
+import { TodayChalkboards } from '../today/TodayChalkboards'
 import type { Athlete } from '../../types'
 
 type Props = {
@@ -376,6 +377,7 @@ export function ClassesPanel({ athlete }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
+      <TodayChalkboards viewer={athlete} />
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           Class drills

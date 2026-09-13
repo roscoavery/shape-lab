@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import type { StudyQuestion } from '../../lib/studyQuiz'
 import { QuizReview } from './QuizReview'
+import { CroppedStill } from '../CroppedStill'
 
 type Props = {
   title: string
@@ -105,7 +106,12 @@ export function StudyQuiz({
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{q.prompt}</p>
       {q.photoUrl && (
         <div className="mt-3 overflow-hidden rounded-lg bg-black">
-          <img src={q.photoUrl} alt="" className="mx-auto max-h-72 w-full object-contain" />
+          <CroppedStill
+            src={q.photoUrl}
+            stillId={q.stillId}
+            alt=""
+            className="mx-auto max-h-72 w-full object-contain"
+          />
         </div>
       )}
 

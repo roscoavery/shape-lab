@@ -56,6 +56,7 @@ import { TodayFloorCamera } from './components/today/TodayFloorCamera'
 import { TodayDock } from './components/today/TodayDock'
 import { ChalkboardPanel } from './components/today/ChalkboardPanel'
 import { TodayCollages } from './components/today/TodayCollages'
+import { TodayChalkboards } from './components/today/TodayChalkboards'
 import { WarmupPanel } from './components/warmup/WarmupPanel'
 import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
@@ -815,6 +816,19 @@ export default function App() {
                 hint="Play the board. Save it. Keep editing later."
               >
                 <TodayCollages
+                  viewer={activeProfile}
+                  onOpenLibrary={() => goTab('classes')}
+                  embed
+                />
+              </TodayDock>
+              <TodayDock
+                id="chalk-library"
+                icon="📋"
+                eyebrow="Class drills"
+                title="Chalkboards"
+                hint="Skill boards you can open in any class."
+              >
+                <TodayChalkboards
                   viewer={activeProfile}
                   onOpenLibrary={() => goTab('classes')}
                   embed

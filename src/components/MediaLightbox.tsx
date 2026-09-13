@@ -2,14 +2,17 @@
  * Full-screen still or clip viewer. Tap the dark area or Close to leave.
  */
 
+import { CroppedStill } from './CroppedStill'
+
 type Props = {
   src: string
   kind: 'image' | 'video'
   alt?: string
+  stillId?: string | null
   onClose: () => void
 }
 
-export function MediaLightbox({ src, kind, alt = '', onClose }: Props) {
+export function MediaLightbox({ src, kind, alt = '', stillId, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-[240] flex flex-col bg-black/94"
@@ -43,7 +46,12 @@ export function MediaLightbox({ src, kind, alt = '', onClose }: Props) {
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+          <CroppedStill
+            src={src}
+            stillId={stillId}
+            alt={alt}
+            className="max-h-full max-w-full object-contain"
+          />
         )}
       </button>
     </div>

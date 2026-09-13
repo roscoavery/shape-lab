@@ -19,6 +19,7 @@ import {
   type FeedChannel,
   type FeedPost,
   removeFeedPost,
+  canRemoveFeedPost,
 } from '../../lib/feedPosts'
 import { AttachWinClip } from './AttachWinClip'
 import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStore'
@@ -231,7 +232,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
 
   const drop = async (post: FeedPost) => {
     if (!athlete) return
-    if (!gymAdmin && post.authorId !== athlete.id) return
+    if (!canRemoveFeedPost(post, athlete.id, gymAdmin)) return
     if (!confirm(wins ? 'Remove this from Wins?' : 'Remove this post from the gym feed?')) return
     if (await removeFeedPost(post.id, athlete.id, gymAdmin)) {
       setPosts((prev) => prev.filter((p) => p.id !== post.id))
@@ -452,7 +453,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                       }}
                       onError={(message) => setError(message)}
                     />
-                    {(gymAdmin || post.authorId === athlete?.id) && (
+                    {canRemoveFeedPost(post, athlete?.id, gymAdmin) && (
                       <button
                         type="button"
                         onClick={() => void drop(post)}

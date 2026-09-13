@@ -2,18 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
 import {
-  boardsForClassType,
-  boardsForOffering,
-  ensureBoardForClassType,
-  ensureBoardForOffering,
+  boardPickerLabel,
+  createBoard,
+  createLibraryBoard,
+  listAllBoards,
   postToChalkboard,
   subscribeChalkboards,
+  type ChalkboardBoard,
   type ChalkboardDraft,
-  type ChalkboardScope,
   typeOfferingId,
 } from '../../lib/chalkboard'
 import {
-  classLabel,
   classTypeKey,
   getActiveMeeting,
   loadOfferings,
@@ -33,15 +32,22 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [open, setOpen] = useState(false)
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
+  const [tick, setTick] = useState(0)
+  const [boardId, setBoardId] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newWhere, setNewWhere] = useState<'library' | 'type' | 'time'>('library')
   const [typeKey, setTypeKey] = useState('')
   const [offeringId, setOfferingId] = useState('')
-  const [scope, setScope] = useState<ChalkboardScope>('type')
-  const [boardId, setBoardId] = useState('')
   const [pin, setPin] = useState(true)
   const [note, setNote] = useState<string | null>(null)
 
   useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
-  useEffect(() => subscribeChalkboards(() => setOfferings(loadOfferings())), [])
+  useEffect(() => subscribeChalkboards(() => setTick((n) => n + 1)), [])
+
+  const allBoards = useMemo(() => {
+    void tick
+    return listAllBoards()
+  }, [tick])
 
   const types = useMemo(() => {
     const seen = new Map<string, string>()
@@ -64,54 +70,71 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
     if (!first) return
     setTypeKey((key) => key || classTypeKey(first.name))
     setOfferingId((id) => id || first.id)
-    if (liveOffering) setScope('time')
-  }, [offerings])
+  }, [offerings, viewer?.id])
 
   if (!coach || !viewer) return null
 
   const selectedType = types.find((t) => t.key === typeKey)
-  const boards =
-    scope === 'type'
-      ? boardsForClassType(selectedType?.name)
-      : boardsForOffering(offeringId)
   const live = getActiveMeeting(viewer.id)
 
+  const resolveTarget = (): { board: ChalkboardBoard; offeringId: string } | null => {
+    if (boardId) {
+      const board = allBoards.find((b) => b.id === boardId)
+      return board ? { board, offeringId: board.offeringId } : null
+    }
+    const name = newName.trim()
+    if (name) {
+      if (newWhere === 'library') {
+        const board = createLibraryBoard({ name, createdById: viewer.id, shapeId: draft.shapeId })
+        return { board, offeringId: board.offeringId }
+      }
+      if (newWhere === 'type' && selectedType) {
+        const board = createBoard({
+          offeringId: typeOfferingId(selectedType.name),
+          name,
+          createdById: viewer.id,
+          scope: 'type',
+          classTypeKey: selectedType.key,
+          makeActive: false,
+        })
+        return { board, offeringId: board.offeringId }
+      }
+      if (newWhere === 'time' && offeringId) {
+        const board = createBoard({
+          offeringId,
+          name,
+          createdById: viewer.id,
+          scope: 'time',
+          makeActive: false,
+        })
+        return { board, offeringId: board.offeringId }
+      }
+    }
+    return null
+  }
+
   const post = () => {
-    if (!selectedType) {
-      setNote('Add a class type first — Start class → Edit classes.')
+    const target = resolveTarget()
+    if (!target) {
+      setNote('Pick a chalkboard, or type a name to make a new skill board.')
       return
     }
-    if (scope === 'time' && !offeringId) {
-      setNote('Pick which class time this belongs on.')
-      return
-    }
-    const targetId = scope === 'type' ? typeOfferingId(selectedType.name) : offeringId
-    const board = boardId
-      ? boards.find((b) => b.id === boardId)
-      : scope === 'type'
-        ? ensureBoardForClassType(selectedType.name, viewer.id)
-        : ensureBoardForOffering(offeringId, viewer.id)
     const item = postToChalkboard({
-      offeringId: targetId,
-      boardId: board?.id,
+      offeringId: target.offeringId,
+      boardId: target.board.id,
       createdById: viewer.id,
       createdByName: viewer.name,
       pinned: pin,
-      meetingId: live && scope === 'time' && live.offeringId === offeringId ? live.id : undefined,
+      meetingId: live && live.offeringId === target.offeringId ? live.id : undefined,
       draft,
     })
     if (!item) {
       setNote('Could not post that to the chalkboard.')
       return
     }
-    const hour = offerings.find((o) => o.id === offeringId)
-    setNote(
-      scope === 'type'
-        ? `On every ${selectedType.name} chalkboard${pin ? ' — ready before class' : ''}.`
-        : pin
-          ? `Pinned on ${hour ? classLabel(hour) : selectedType.name} only.`
-          : `Posted to ${hour ? classLabel(hour) : selectedType.name} only.`,
-    )
+    setNote(`On ${boardPickerLabel(target.board, offerings)}${pin ? ' — pinned' : ''}.`)
+    setNewName('')
+    setBoardId(target.board.id)
     setOpen(false)
   }
 
@@ -120,39 +143,92 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
   return (
     <div className={compact ? '' : 'space-y-1'}>
       {!embedded && (
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((v) => !v)
-          setNote(null)
-        }}
-        className={
-          compact
-            ? 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px] font-semibold text-[var(--accent)]'
-            : 'rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-1.5 text-xs font-semibold text-[var(--accent)]'
-        }
-      >
-        {open ? 'Cancel chalkboard' : 'Post to chalkboard'}
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen((v) => !v)
+            setNote(null)
+          }}
+          className={
+            compact
+              ? 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px] font-semibold text-[var(--accent)]'
+              : 'rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-1.5 text-xs font-semibold text-[var(--accent)]'
+          }
+        >
+          {open ? 'Cancel chalkboard' : 'Post to chalkboard'}
+        </button>
       )}
       {formOpen && (
         <div className="mt-2 space-y-2 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <p className="text-[11px] text-[var(--muted)]">
-            {draft.title} · every {selectedType?.name || 'class'} time, or one hour only.
+            {draft.title} · any existing chalkboard, or make a new skill board right here.
           </p>
-          {offerings.length === 0 ? (
-            <p className="text-xs text-[var(--bad)]">
-              No class types yet. Add Connections, Elevate, or Reps w/ Logan under Start class.
+          {allBoards.length > 0 && (
+            <label className="block">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Existing chalkboard
+              </span>
+              <select
+                value={boardId}
+                onChange={(e) => setBoardId(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+              >
+                <option value="">Choose a board…</option>
+                {allBoards.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {boardPickerLabel(b, offerings)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <div className="space-y-2 rounded-lg border border-white/10 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Or create a new chalkboard
             </p>
-          ) : (
-            <>
+            <input
+              value={newName}
+              onChange={(e) => {
+                setNewName(e.target.value)
+                if (e.target.value.trim()) setBoardId('')
+              }}
+              placeholder="Name — e.g. Valeri, whip, handstand hold"
+              className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+            />
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ['library', 'Skill library'],
+                  ['type', 'Every class time'],
+                  ['time', 'One class time'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setNewWhere(id)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    newWhere === id
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {newWhere !== 'library' && offerings.length === 0 && (
+              <p className="text-xs text-[var(--bad)]">
+                No class types yet. Add one under Start class, or keep this as a skill board.
+              </p>
+            )}
+            {newWhere !== 'library' && offerings.length > 0 && (
               <select
                 value={typeKey}
                 onChange={(e) => {
                   setTypeKey(e.target.value)
                   const nextTimes = offerings.filter((o) => classTypeKey(o.name) === e.target.value)
                   setOfferingId(nextTimes[0]?.id ?? '')
-                  setBoardId('')
                 }}
                 className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
               >
@@ -162,85 +238,33 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
                   </option>
                 ))}
               </select>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScope('type')
-                    setBoardId('')
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    scope === 'type'
-                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
-                  }`}
-                >
-                  All {selectedType?.name ?? 'class'} times
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScope('time')
-                    setBoardId('')
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    scope === 'time'
-                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
-                  }`}
-                >
-                  One class time
-                </button>
-              </div>
-              {scope === 'time' && (
-                <select
-                  value={offeringId}
-                  onChange={(e) => {
-                    setOfferingId(e.target.value)
-                    setBoardId('')
-                  }}
-                  className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                >
-                  {times.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.weekday} {o.time}
-                      {live?.offeringId === o.id ? ' · live now' : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {boards.length > 1 && (
-                <select
-                  value={boardId}
-                  onChange={(e) => setBoardId(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                >
-                  <option value="">Active chalkboard</option>
-                  {boards.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                      {b.active ? ' · showing in class' : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <label className="flex items-center gap-2 text-xs text-[var(--text)]">
-                <input
-                  type="checkbox"
-                  checked={pin}
-                  onChange={(e) => setPin(e.target.checked)}
-                />
-                Pin ahead of time — stays on the board even before class starts
-              </label>
-              <button
-                type="button"
-                onClick={post}
-                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
+            )}
+            {newWhere === 'time' && (
+              <select
+                value={offeringId}
+                onChange={(e) => setOfferingId(e.target.value)}
+                className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
               >
-                Put on chalkboard
-              </button>
-            </>
-          )}
+                {times.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.weekday} {o.time}
+                    {live?.offeringId === o.id ? ' · live now' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-[var(--text)]">
+            <input type="checkbox" checked={pin} onChange={(e) => setPin(e.target.checked)} />
+            Pin — stays on the board even before class starts
+          </label>
+          <button
+            type="button"
+            onClick={post}
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-bold text-[var(--on-accent)]"
+          >
+            Put on chalkboard
+          </button>
         </div>
       )}
       {note && <p className="mt-1 text-[11px] text-[var(--muted)]">{note}</p>}

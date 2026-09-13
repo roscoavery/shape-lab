@@ -3,6 +3,7 @@
  * Separate from shipped coach stills in src/assets/references/.
  */
 
+import { SHIPPED_IG_STILLS } from '../config/shippedIgStills'
 import { getShape } from '../config/shapes'
 import { learnLibraryShapes } from './educationCopy'
 import { isUsablePhotoSrc, makeShippedPhotos, pickCoachStill } from './shippedRefs'
@@ -48,13 +49,20 @@ export function igStillSrc(photo: ReferencePhoto): string | null {
 }
 
 export function listIgStills(photos: ReferencePhoto[]): ReferencePhoto[] {
-  return photos
+  const listed = photos
     .filter((p) => isIgStill(p))
     .map((p) => {
       const src = igStillSrc(p)
       return src && src !== p.dataUrl ? { ...p, dataUrl: src } : p
     })
     .filter((p) => isUsablePhotoSrc(p.dataUrl))
+  const have = new Set(listed.map((p) => p.id))
+  for (const shipped of SHIPPED_IG_STILLS) {
+    if (have.has(shipped.id) || !isUsablePhotoSrc(shipped.dataUrl)) continue
+    listed.push(shipped)
+    have.add(shipped.id)
+  }
+  return listed
 }
 
 export function igStillsForShape(

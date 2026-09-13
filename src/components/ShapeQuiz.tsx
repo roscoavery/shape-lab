@@ -9,6 +9,7 @@ import {
 import { useShapeCopy } from './ShapeCopyContext'
 import type { Athlete, ReferencePhoto } from '../types'
 import { QuizReview } from './learn/QuizReview'
+import { CroppedStill } from './CroppedStill'
 import { ReferenceStill } from './ReferenceStill'
 import { QuizWho, type QuizTaker } from './learn/QuizWho'
 import { PreTestIntake } from './learn/PreTestIntake'
@@ -363,7 +364,12 @@ export function ShapeQuiz({
       {q!.kind === 'picture' && (
         <div className="mb-3 overflow-hidden rounded-lg bg-[#0d1218]">
           {q!.photoUrl ? (
-            <img src={q!.photoUrl} alt="" className="max-h-64 w-full object-contain" />
+            <CroppedStill
+              src={q!.photoUrl}
+              stillId={q!.stillId}
+              alt=""
+              className="max-h-64 w-full object-contain"
+            />
           ) : (
             <ReferenceStill
               shapeId={q!.shapeId}

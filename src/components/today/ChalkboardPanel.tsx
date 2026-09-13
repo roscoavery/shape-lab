@@ -11,7 +11,10 @@ import {
   createBoard,
   activeBoardForAthlete,
   athleteOfferingId,
+  boardPickerLabel,
   eraseChalkboardItem,
+  getBoard,
+  listAllBoards,
   itemsForDisplay,
   itemsForOfferingHour,
   kindLabel,
@@ -83,6 +86,8 @@ type Props = {
   onToday?: boolean
   /** Body only — Today dock supplies the title. */
   embed?: boolean
+  /** Open this board (skill library or any class board). */
+  openBoardId?: string | null
 }
 
 export function ChalkboardPanel({
@@ -95,6 +100,7 @@ export function ChalkboardPanel({
   onPickAthlete,
   onToday = false,
   embed = false,
+  openBoardId = null,
 }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
@@ -110,6 +116,11 @@ export function ChalkboardPanel({
   const [drillPick, setDrillPick] = useState<string[]>([])
   const [notice, setNotice] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<ChalkboardScope>('time')
+  const [viewBoardId, setViewBoardId] = useState<string | null>(openBoardId)
+
+  useEffect(() => {
+    if (openBoardId) setViewBoardId(openBoardId)
+  }, [openBoardId])
 
   useEffect(() => subscribeChalkboards(() => setTick((n) => n + 1)), [])
   useEffect(
@@ -123,24 +134,33 @@ export function ChalkboardPanel({
   const athleteMode = Boolean(athleteId)
   const targetId = offeringId || pickOffering || live?.offeringId || offerings[0]?.id || ''
   const offering = offerings.find((o) => o.id === targetId) ?? liveOffering
-  const board = athleteMode
-    ? activeBoardForAthlete(athleteId)
-    : editTarget === 'type'
-      ? activeBoardForClassType(offering?.name)
-      : activeBoardForOffering(targetId)
-  const boards = athleteMode
-    ? boardsForAthlete(athleteId)
-    : editTarget === 'type'
-      ? boardsForClassType(offering?.name)
-      : boardsForOffering(targetId)
+  const viewed = viewBoardId ? getBoard(viewBoardId) : null
+  const board = viewed
+    ?? (athleteMode
+      ? activeBoardForAthlete(athleteId)
+      : editTarget === 'type'
+        ? activeBoardForClassType(offering?.name)
+        : activeBoardForOffering(targetId))
+  const boards = viewed
+    ? [viewed]
+    : athleteMode
+      ? boardsForAthlete(athleteId)
+      : editTarget === 'type'
+        ? boardsForClassType(offering?.name)
+        : boardsForOffering(targetId)
   const inSession = Boolean(live && live.offeringId === targetId)
-  const tagged = athleteMode
-    ? itemsForDisplay(board, true).map((item) => ({ item, source: 'athlete' as const }))
-    : itemsForOfferingHour(offering, inSession || !onToday)
+  const tagged = viewed
+    ? itemsForDisplay(viewed, true).map((item) => ({
+        item,
+        source: (viewed.scope ?? 'time') as ChalkboardScope,
+      }))
+    : athleteMode
+      ? itemsForDisplay(board, true).map((item) => ({ item, source: 'athlete' as const }))
+      : itemsForOfferingHour(offering, inSession || !onToday)
   const visible = size === 'compact' ? tagged.slice(0, 2) : tagged
 
-  if (!coach && !inSession && !athleteMode) return null
-  if (!athleteMode && !offering && offerings.length === 0) {
+  if (!coach && !inSession && !athleteMode && !viewed) return null
+  if (!athleteMode && !offering && offerings.length === 0 && !viewed) {
     if (!coach) return null
     return (
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
@@ -181,6 +201,9 @@ export function ChalkboardPanel({
       selectedAthleteId={athleteId}
       lessonId={lessonId}
       showCoachChrome={showCoachChrome}
+      viewBoardId={viewBoardId}
+      onViewBoard={setViewBoardId}
+      allBoards={listAllBoards()}
     />
   )
 
@@ -329,6 +352,9 @@ function ChalkboardBody({
   selectedAthleteId,
   lessonId,
   showCoachChrome,
+  viewBoardId,
+  onViewBoard,
+  allBoards,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -360,6 +386,9 @@ function ChalkboardBody({
   selectedAthleteId?: string | null
   lessonId?: string | null
   showCoachChrome: boolean
+  viewBoardId: string | null
+  onViewBoard: (id: string | null) => void
+  allBoards: ChalkboardBoard[]
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -370,6 +399,25 @@ function ChalkboardBody({
 
   return (
     <div className={compact ? 'mt-3 space-y-3' : 'mt-4 space-y-4'}>
+      {coach && allBoards.length > 0 && (
+        <label className="block">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            View any chalkboard
+          </span>
+          <select
+            value={viewBoardId ?? ''}
+            onChange={(e) => onViewBoard(e.target.value || null)}
+            className="mt-1 h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+          >
+            <option value="">This class / athlete board</option>
+            {allBoards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {boardPickerLabel(b, offerings)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {showCoachChrome && !hideOfferingSelect && offerings.length > 0 && (
         <select
           value={pickOffering}
