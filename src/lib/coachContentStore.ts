@@ -32,6 +32,8 @@ export type CoachContentFile = {
   drills?: DrillClip[]
   /** Stretch / warm-up ids dropped on any device — do not resurrect on merge. */
   removedWarmupIds?: string[]
+  /** Gym-library shape ids dropped on any device — do not resurrect on merge. */
+  removedGymShapeIds?: string[]
 }
 
 const listeners = new Set<() => void>()
@@ -46,15 +48,27 @@ function asIdList(raw: unknown): string[] {
   return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
 }
 
-function applyRemovedWarmups(file: CoachContentFile): CoachContentFile {
+function mergeIdLists(...lists: Array<string[] | undefined>): string[] {
+  return asIdList(lists.flatMap((list) => list ?? []))
+}
+
+function applyTombstones(file: CoachContentFile): CoachContentFile {
   const removedWarmupIds = asIdList(file.removedWarmupIds)
-  const removed = new Set(removedWarmupIds)
+  const removedGymShapeIds = asIdList(file.removedGymShapeIds)
+  const goneWarmups = new Set(removedWarmupIds)
+  const goneShapes = new Set(removedGymShapeIds)
   return {
     ...file,
-    warmups: file.warmups.filter((w) => w?.id && !removed.has(w.id)),
-    stars: file.stars.filter((s) => s?.warmupId && !removed.has(s.warmupId)),
+    warmups: file.warmups.filter((w) => w?.id && !goneWarmups.has(w.id)),
+    stars: file.stars.filter((s) => s?.warmupId && !goneWarmups.has(s.warmupId)),
+    gymLibrary: cleanGymLibrary(file.gymLibrary ?? []).filter((s) => s.id && !goneShapes.has(s.id)),
     removedWarmupIds,
+    removedGymShapeIds,
   }
+}
+
+export function isDeletableGymLibraryShape(id: string): boolean {
+  return Boolean(id) && id.startsWith('gym_')
 }
 
 export function subscribeCoachContent(cb: () => void): () => void {
@@ -67,7 +81,7 @@ function parseFile(raw: string | null): CoachContentFile {
   try {
     const data = JSON.parse(raw) as CoachContentFile
     if (data?.kind !== 'shape-lab-coach-content') return emptyFile()
-    return applyRemovedWarmups({
+    return applyTombstones({
       kind: 'shape-lab-coach-content',
       version: 1,
       exportedAt: data.exportedAt ?? '',
@@ -78,6 +92,7 @@ function parseFile(raw: string | null): CoachContentFile {
       gymLibrary: cleanGymLibrary(Array.isArray(data.gymLibrary) ? data.gymLibrary : []),
       drills: Array.isArray(data.drills) ? data.drills : [],
       removedWarmupIds: asIdList(data.removedWarmupIds),
+      removedGymShapeIds: asIdList(data.removedGymShapeIds),
     })
   } catch {
     return emptyFile()
@@ -95,17 +110,21 @@ function readStored(): CoachContentFile {
 function readFile(): CoachContentFile {
   const stored = readStored()
   if (memoryFile && memoryFile.warmups.length >= stored.warmups.length) {
-    const parsed = applyRemovedWarmups({
+    const parsed = applyTombstones({
       ...memoryFile,
-      removedWarmupIds: [
-        ...new Set([...(stored.removedWarmupIds ?? []), ...(memoryFile.removedWarmupIds ?? [])]),
-      ],
+      removedWarmupIds: mergeIdLists(stored.removedWarmupIds, memoryFile.removedWarmupIds),
+      removedGymShapeIds: mergeIdLists(stored.removedGymShapeIds, memoryFile.removedGymShapeIds),
     })
     syncGymCache(parsed)
     return parsed
   }
-  if (memoryFile && (memoryFile.warmups.length > 0 || (memoryFile.removedWarmupIds ?? []).length > 0)) {
-    const parsed = applyRemovedWarmups({
+  if (
+    memoryFile &&
+    (memoryFile.warmups.length > 0 ||
+      (memoryFile.removedWarmupIds ?? []).length > 0 ||
+      (memoryFile.removedGymShapeIds ?? []).length > 0)
+  ) {
+    const parsed = applyTombstones({
       kind: 'shape-lab-coach-content',
       version: 1,
       exportedAt: memoryFile.exportedAt || stored.exportedAt,
@@ -120,9 +139,8 @@ function readFile(): CoachContentFile {
           s.warmupId &&
           all.findIndex((x) => x.athleteId === s.athleteId && x.warmupId === s.warmupId) === i,
       ),
-      removedWarmupIds: [
-        ...new Set([...(stored.removedWarmupIds ?? []), ...(memoryFile.removedWarmupIds ?? [])]),
-      ],
+      removedWarmupIds: mergeIdLists(stored.removedWarmupIds, memoryFile.removedWarmupIds),
+      removedGymShapeIds: mergeIdLists(stored.removedGymShapeIds, memoryFile.removedGymShapeIds),
     })
     syncGymCache(parsed)
     return parsed
@@ -143,6 +161,7 @@ function emptyFile(): CoachContentFile {
     gymLibrary: [],
     drills: [],
     removedWarmupIds: [],
+    removedGymShapeIds: [],
   }
 }
 
@@ -176,7 +195,7 @@ function syncGymCache(file: CoachContentFile) {
 }
 
 function persist(next: CoachContentFile, sync = true) {
-  const file = applyRemovedWarmups({
+  const file = applyTombstones({
     ...next,
     kind: 'shape-lab-coach-content',
     version: 1,
@@ -188,6 +207,7 @@ function persist(next: CoachContentFile, sync = true) {
     gymLibrary: cleanGymLibrary(next.gymLibrary ?? []).slice(0, 200),
     drills: (next.drills ?? []).slice(0, 200),
     removedWarmupIds: asIdList(next.removedWarmupIds),
+    removedGymShapeIds: asIdList(next.removedGymShapeIds),
   })
   memoryFile = file
   try {
@@ -242,21 +262,28 @@ export async function hydrateCoachContent(): Promise<void> {
   try {
     const res = await fetch('/api/coach-content', { cache: 'no-store' })
     if (!res.ok) {
-      if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+      if (
+        local.warmups.length > 0 ||
+        (local.removedWarmupIds ?? []).length > 0 ||
+        (local.removedGymShapeIds ?? []).length > 0
+      ) {
         await pushContent()
       }
       return
     }
     const data = (await res.json()) as CoachContentFile
     if (data?.kind !== 'shape-lab-coach-content') {
-      if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+      if (
+        local.warmups.length > 0 ||
+        (local.removedWarmupIds ?? []).length > 0 ||
+        (local.removedGymShapeIds ?? []).length > 0
+      ) {
         await pushContent()
       }
       return
     }
-    const removedWarmupIds = [
-      ...new Set([...asIdList(local.removedWarmupIds), ...asIdList(data.removedWarmupIds)]),
-    ]
+    const removedWarmupIds = mergeIdLists(local.removedWarmupIds, data.removedWarmupIds)
+    const removedGymShapeIds = mergeIdLists(local.removedGymShapeIds, data.removedGymShapeIds)
     persist(
       {
         kind: 'shape-lab-coach-content',
@@ -274,12 +301,15 @@ export async function hydrateCoachContent(): Promise<void> {
             all.findIndex((x) => x.athleteId === s.athleteId && x.warmupId === s.warmupId) === i,
         ),
         removedWarmupIds,
+        removedGymShapeIds,
       },
       false,
     )
     const next = readFile()
     const remoteWarmups = Array.isArray(data.warmups) ? data.warmups : []
     const remoteRemoved = asIdList(data.removedWarmupIds)
+    const remoteGymRemoved = asIdList(data.removedGymShapeIds)
+    const remoteGym = Array.isArray(data.gymLibrary) ? data.gymLibrary : []
     const remoteById = new Map(
       remoteWarmups
         .filter((w): w is WarmupGuide => Boolean(w && typeof w === 'object' && w.id))
@@ -292,10 +322,18 @@ export async function hydrateCoachContent(): Promise<void> {
         return (w.updatedAt || '') > (remote.updatedAt || '')
       }) ||
       next.warmups.length !== remoteWarmups.filter((w) => w?.id && !removedWarmupIds.includes(w.id)).length ||
-      (next.removedWarmupIds ?? []).some((id) => !remoteRemoved.includes(id))
+      (next.removedWarmupIds ?? []).some((id) => !remoteRemoved.includes(id)) ||
+      (next.removedGymShapeIds ?? []).some((id) => !remoteGymRemoved.includes(id)) ||
+      (next.gymLibrary ?? []).length !==
+        remoteGym.filter((s) => s && typeof s === 'object' && s.id && !removedGymShapeIds.includes(s.id))
+          .length
     if (needPush) await pushContent()
   } catch {
-    if (local.warmups.length > 0 || (local.removedWarmupIds ?? []).length > 0) {
+    if (
+      local.warmups.length > 0 ||
+      (local.removedWarmupIds ?? []).length > 0 ||
+      (local.removedGymShapeIds ?? []).length > 0
+    ) {
       await pushContent()
     }
   }
@@ -343,6 +381,7 @@ export function saveGymLibraryShape(row: GymLibraryShape): GymLibraryShape {
   persist({
     ...file,
     gymLibrary: [next, ...(file.gymLibrary ?? []).filter((s) => s.id !== next.id)],
+    removedGymShapeIds: (file.removedGymShapeIds ?? []).filter((id) => id !== next.id),
   })
   return next
 }
@@ -418,10 +457,12 @@ export function emptyDrill(): DrillClip {
 }
 
 export function deleteGymLibraryShape(id: string) {
+  if (!id) return
   const file = readFile()
   persist({
     ...file,
     gymLibrary: (file.gymLibrary ?? []).filter((s) => s.id !== id),
+    removedGymShapeIds: mergeIdLists(file.removedGymShapeIds, [id]),
   })
 }
 

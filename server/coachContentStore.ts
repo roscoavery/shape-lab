@@ -13,6 +13,7 @@ export type DiskCoachContent = {
   gymLibrary?: unknown[]
   drills?: unknown[]
   removedWarmupIds?: string[]
+  removedGymShapeIds?: string[]
 }
 
 const EMPTY: DiskCoachContent = {
@@ -26,6 +27,7 @@ const EMPTY: DiskCoachContent = {
   gymLibrary: [],
   drills: [],
   removedWarmupIds: [],
+  removedGymShapeIds: [],
 }
 
 function asIdList(raw: unknown): string[] {
@@ -46,12 +48,15 @@ function normalize(data: DiskCoachContent | null | undefined): DiskCoachContent 
     gymLibrary: Array.isArray(data.gymLibrary) ? data.gymLibrary : [],
     drills: Array.isArray(data.drills) ? data.drills : [],
     removedWarmupIds: asIdList(data.removedWarmupIds),
+    removedGymShapeIds: asIdList(data.removedGymShapeIds),
   })
 }
 
 function applyRemoved(file: DiskCoachContent): DiskCoachContent {
   const removedWarmupIds = asIdList(file.removedWarmupIds)
+  const removedGymShapeIds = asIdList(file.removedGymShapeIds)
   const removed = new Set(removedWarmupIds)
+  const goneShapes = new Set(removedGymShapeIds)
   return {
     ...file,
     warmups: file.warmups.filter((raw) => {
@@ -64,7 +69,13 @@ function applyRemoved(file: DiskCoachContent): DiskCoachContent {
       const id = (raw as { warmupId?: unknown }).warmupId
       return typeof id === 'string' && id && !removed.has(id)
     }),
+    gymLibrary: (file.gymLibrary ?? []).filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const id = (raw as { id?: unknown }).id
+      return typeof id === 'string' && id && !goneShapes.has(id)
+    }),
     removedWarmupIds,
+    removedGymShapeIds,
   }
 }
 
@@ -80,6 +91,7 @@ function unionFiles(a: DiskCoachContent, b: DiskCoachContent): DiskCoachContent 
     gymLibrary: union(a.gymLibrary ?? [], b.gymLibrary ?? []),
     drills: union(a.drills ?? [], b.drills ?? []),
     removedWarmupIds: [...new Set([...asIdList(a.removedWarmupIds), ...asIdList(b.removedWarmupIds)])],
+    removedGymShapeIds: [...new Set([...asIdList(a.removedGymShapeIds), ...asIdList(b.removedGymShapeIds)])],
   })
 }
 

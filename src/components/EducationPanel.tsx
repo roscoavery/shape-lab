@@ -43,7 +43,12 @@ import type { AnatomyTrack, PhysicsTrack, ProgressionTrack } from '../lib/studyQ
 import { ANATOMY_LESSONS } from '../config/coachAnatomy'
 import { PROGRESSION_LESSONS } from '../config/tumblingProgression'
 import { ATHLETE_PROGRESSION_LESSONS } from '../config/athleteProgression'
-import { drillsForShape, subscribeCoachContent } from '../lib/coachContentStore'
+import {
+  deleteGymLibraryShape,
+  drillsForShape,
+  isDeletableGymLibraryShape,
+  subscribeCoachContent,
+} from '../lib/coachContentStore'
 import { isCoachProfile } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
 import { CollapsibleSection } from './CollapsibleSection'
@@ -356,6 +361,7 @@ export function EducationPanel({
             onExplore={(id) => setExploreId(id)}
             referencePhotos={referencePhotos}
             signedIn={signedIn}
+            canDeleteGym={canAddGymShape}
           />
         </>
       )}
@@ -372,6 +378,7 @@ export function EducationPanel({
           onOpenShape={openShape}
           onExplore={() => setExploreId(view.shapeId)}
           signedIn={signedIn}
+          canDeleteGym={canAddGymShape}
         />
       )}
 
@@ -945,6 +952,7 @@ function ShapeLibrary({
   onExplore,
   referencePhotos,
   signedIn = null,
+  canDeleteGym = false,
 }: {
   shapes: ShapeDef[]
   pathwayIds: Set<string>
@@ -956,6 +964,7 @@ function ShapeLibrary({
   onExplore: (id: string) => void
   referencePhotos: ReferencePhoto[]
   signedIn?: Athlete | null
+  canDeleteGym?: boolean
 }) {
   const { copyFor } = useShapeCopy()
   return (
@@ -1056,12 +1065,29 @@ function ShapeLibrary({
                   </p>
                 </div>
               </button>
-              <div className="px-2 pb-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pb-2">
                 <ShareReference
                   viewer={signedIn}
                   variant="compact"
                   draft={shapeStillDraft(shape.id, referencePhotos, shape.name)}
                 />
+                {canDeleteGym && isDeletableGymLibraryShape(shape.id) && (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-[var(--bad)] underline"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete ${shape.name} from the gym shape library? It will leave Learn for everyone on this gym.`,
+                        )
+                      ) {
+                        deleteGymLibraryShape(shape.id)
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
               </div>
             </li>
@@ -1161,6 +1187,7 @@ function ShapeDetail({
   onOpenShape,
   onExplore,
   signedIn = null,
+  canDeleteGym = false,
 }: {
   shapeId: string
   orderedShapeIds: string[]
@@ -1172,6 +1199,7 @@ function ShapeDetail({
   onOpenShape: (shapeId: string) => void
   onExplore: () => void
   signedIn?: Athlete | null
+  canDeleteGym?: boolean
 }) {
   const { copyFor, canEdit } = useShapeCopy()
   const shape = getShape(shapeId)
@@ -1232,6 +1260,24 @@ function ShapeDetail({
                 <span className="rounded bg-[var(--accent-dim)]/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--accent)]">
                   On athlete pathway
                 </span>
+              )}
+              {canDeleteGym && isDeletableGymLibraryShape(shape.id) && (
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-[var(--bad)] underline"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Delete ${shape.name} from the gym shape library? It will leave Learn for everyone on this gym.`,
+                      )
+                    ) {
+                      deleteGymLibraryShape(shape.id)
+                      onBack()
+                    }
+                  }}
+                >
+                  Delete gym shape
+                </button>
               )}
             </div>
             {otherSamePositionIds(shape.id).length > 0 && (

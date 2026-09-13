@@ -17,7 +17,8 @@
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
     "gym:token": "node scripts/set-tunnel-token.mjs",
-    "gym:photos": "node scripts/restore-photos-from-backup.mjs"
+    "gym:photos": "node scripts/restore-photos-from-backup.mjs",
+    "gym:shapes": "node scripts/delete-gym-shape.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

@@ -160,7 +160,11 @@ export function CoachShapeLibrary({ signedIn }: Props) {
                     type="button"
                     className="mt-2 text-xs text-[var(--bad)] underline"
                     onClick={() => {
-                      if (window.confirm(`Remove ${s.name} from the gym library?`)) {
+                      if (
+                        window.confirm(
+                          `Delete ${s.name} from the gym shape library? It will leave Learn for everyone on this gym.`,
+                        )
+                      ) {
                         deleteGymLibraryShape(s.id)
                       }
                     }}
