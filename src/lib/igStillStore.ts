@@ -9,7 +9,7 @@ import type { ReferencePhoto } from '../types'
 const DB_NAME = 'shape-lab-ig-stills'
 const DB_VERSION = 1
 const STORE = 'stills'
-const MAX_IG = 400
+const MAX_IG = 2500
 const REMOVED_KEY = 'shape-lab.removedIgStills.v1'
 
 function loadRemovedIgStillIds(): string[] {
@@ -166,7 +166,9 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
   }
   const remote = await pullServerIgStills()
   if (remote.removedStillIds.length) {
-    saveRemovedIgStillIds([...loadRemovedIgStillIds(), ...remote.removedStillIds])
+    const localIds = new Set(local.map((p) => p.id))
+    const keepLocal = remote.removedStillIds.filter((id) => !localIds.has(id))
+    if (keepLocal.length) saveRemovedIgStillIds([...loadRemovedIgStillIds(), ...keepLocal])
   }
   const remoteIds = new Set(remote.stills.map((p) => p.id))
   memory = dropRemovedIgStills(unionIgLists([...SHIPPED_IG_STILLS, ...local], remote.stills))

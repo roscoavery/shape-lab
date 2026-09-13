@@ -16,6 +16,7 @@ import { lessonBlockLabel } from '../../lib/lessonPlan'
 import { noteAudienceLabel } from '../../lib/noteAudience'
 import { LessonTimesFields } from './LessonTimesFields'
 import { TodayDock } from '../today/TodayDock'
+import { ChalkboardPanel } from '../today/ChalkboardPanel'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
@@ -163,7 +164,9 @@ export function LessonWorkspace({
   const people = lessonAthletes?.length ? lessonAthletes : athlete ? [athlete] : []
   const peopleIds = people.length ? people.map((a) => a.id) : lessonAthleteIds(session)
   const [videoAthleteId, setVideoAthleteId] = useState(peopleIds[0] ?? session.athleteId)
+  const [boardAthleteId, setBoardAthleteId] = useState(peopleIds[0] ?? session.athleteId)
   const videoAthlete = people.find((a) => a.id === videoAthleteId) ?? people[0] ?? athlete
+  const boardAthlete = people.find((a) => a.id === boardAthleteId) ?? people[0] ?? athlete
 
   return (
     <div className="flex flex-col gap-3">
@@ -575,6 +578,24 @@ export function LessonWorkspace({
             ))}
           </div>
         )}
+      </TodayDock>
+
+      <TodayDock
+        id="lesson-chalk"
+        icon="📋"
+        eyebrow="Lesson"
+        title="Athlete chalkboard"
+        hint="A board for this person. Switch athletes to pull up a different one."
+      >
+        <ChalkboardPanel
+          viewer={coach}
+          athleteId={boardAthlete?.id ?? boardAthleteId}
+          athleteName={boardAthlete?.name}
+          lessonId={session.id}
+          lessonAthletes={people}
+          onPickAthlete={setBoardAthleteId}
+          embed
+        />
       </TodayDock>
 
       <TodayDock

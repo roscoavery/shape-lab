@@ -100,7 +100,7 @@ export function QuickGroupEnroll({ event, coach, athletes, onAthletesChange, onA
       <label className="mt-3 block">
         <span className="text-sm font-semibold text-[var(--text)]">Mom or dad’s phone</span>
         <span className="mt-0.5 block text-xs leading-relaxed text-[var(--muted)]">
-          We ask so we can text when Shape Lab is ready to share — not to call
+          We ask so we can text when shapelab is ready to share — not to call
           during class.
         </span>
         <input

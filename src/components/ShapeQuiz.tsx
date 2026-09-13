@@ -76,8 +76,9 @@ export function ShapeQuiz({
             format,
           )
         : [],
+    // Photos hydrate after the test opens. Do not rebuild mid-quiz.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [referencePhotos, seed, pool, copyFor, format],
+    [seed, pool, format],
   )
   const [parkedQuestions, setParkedQuestions] = useState<QuizQuestion[] | null>(() =>
     parkedAtOpen?.phase === 'quiz' && parkedAtOpen.questions?.length
@@ -361,12 +362,17 @@ export function ShapeQuiz({
 
       {q!.kind === 'picture' && (
         <div className="mb-3 overflow-hidden rounded-lg bg-[#0d1218]">
-          <ReferenceStill
-            shapeId={q!.shapeId}
-            photos={referencePhotos}
-            alt=""
-            className="max-h-64 w-full object-contain"
-          />
+          {q!.photoUrl ? (
+            <img src={q!.photoUrl} alt="" className="max-h-64 w-full object-contain" />
+          ) : (
+            <ReferenceStill
+              shapeId={q!.shapeId}
+              photos={referencePhotos}
+              photo={q!.stillId ? referencePhotos.find((p) => p.id === q!.stillId) ?? null : null}
+              alt=""
+              className="max-h-64 w-full object-contain"
+            />
+          )}
         </div>
       )}
 

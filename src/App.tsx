@@ -114,6 +114,7 @@ import {
   lessonAthleteIds,
   lessonNameList,
 } from './lib/lessonStore'
+import { linkAthleteToCoach } from './lib/coachLink'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateChalkboards } from './lib/chalkboard'
 import {
@@ -554,6 +555,9 @@ export default function App() {
     const ids = athleteIds.filter(Boolean)
     if (ids.length === 0) return
     startLessonSession({ athleteIds: ids, coachId: coach.id, planId })
+    let roster = athletes
+    for (const id of ids) roster = linkAthleteToCoach(id, coach.id)
+    setAthleteRoster(roster)
     setLessonTick((n) => n + 1)
   }
 
@@ -753,7 +757,7 @@ export default function App() {
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Shape Lab
+            shapelab
           </h1>
           <p className="mt-1">
             <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
@@ -1417,7 +1421,7 @@ export default function App() {
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">What this is</h2>
             <p>
-              Shape Lab is a free gymnastics shape-coaching app. Profiles, phones, and
+              shapelab is a free gymnastics shape-coaching app. Profiles, phones, and
               homework stay in the app on this gym link. Add a Blob store on the claimed
               Vercel project so class sign-ups are still here tomorrow. Only the gym
               admin sees every profile&apos;s shared phones and photos. Your own
@@ -1633,7 +1637,19 @@ export default function App() {
         onClose={() => setStationOpen(false)}
         onSaveAthlete={(athlete, mode) => {
           if (mode === 'create') {
-            setAthleteRoster([...athletes, athlete])
+            const created =
+              activeProfile && isCoachProfile(activeProfile)
+                ? linkAthleteToCoach(athlete.id, activeProfile.id).find((a) => a.id === athlete.id) ?? {
+                    ...athlete,
+                    createdByCoachId: activeProfile.id,
+                    worksWithCoachIds: [...new Set([...(athlete.worksWithCoachIds ?? []), activeProfile.id])],
+                  }
+                : athlete
+            setAthleteRoster(
+              athletes.some((a) => a.id === created.id)
+                ? athletes.map((a) => (a.id === created.id ? created : a))
+                : [...athletes, created],
+            )
           } else {
             setAthleteRoster(athletes.map((a) => (a.id === athlete.id ? { ...a, ...athlete } : a)))
           }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
+import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
 import {
   attachPlanToLiveLesson,
   emptyPlan,
@@ -133,8 +133,10 @@ export function HomeDashboard({
     : ''
   const events = useMemo(() => {
     void refresh
-    return listTrainingEvents()
-  }, [refresh])
+    const all = listTrainingEvents()
+    if (!signedIn || isGymAdmin(signedIn)) return all
+    return all.filter((event) => event.coachIds.includes(signedIn.id))
+  }, [refresh, signedIn])
   const knownGyms = useMemo(() => listKnownGyms(athletes), [athletes])
   const viewerGym = viewerHomeGym(signedIn)
 
@@ -631,7 +633,7 @@ export function HomeDashboard({
           <p className="mt-3 text-sm text-[var(--muted)]">
             {gymScope.kind === 'all'
               ? 'No other profiles on the network yet. Add one under More → Profiles.'
-              : 'Nobody on this gym desk yet. Search all to find a visiting athlete, or add one under More → Profiles.'}
+              : 'Nobody you have worked with yet. Search all to find a profile, start a class, or add someone under More → Profiles.'}
           </p>
         ) : (
           <>

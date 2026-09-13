@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Athlete, AthleteCoachNote } from '../../types'
+import { isGymAdmin } from '../../lib/profileRole'
 import {
   addCoachNotesToAthletes,
   applyCoachNoteRemove,
@@ -20,6 +21,7 @@ import {
   getOffering,
   loadMeetings,
   loadOfferings,
+  loadOfferingsForCoach,
   markClassAttendance,
   removeClassAttendance,
   removeClassNote,
@@ -55,6 +57,10 @@ export function ClassRecapList({
   useEffect(() => subscribeCoachClasses(() => setTick((n) => n + 1)), [])
   const meetings = loadMeetings()
     .filter((m) => m.endedAt)
+    .filter((m) => {
+      if (!viewer || isGymAdmin(viewer)) return true
+      return loadOfferingsForCoach(viewer.id).some((o) => o.id === m.offeringId)
+    })
     .slice(0, 16)
   const coach = Boolean(viewer && canWriteCoachNotes(viewer))
   const canEdit = coach && Boolean(onAthletesChange)

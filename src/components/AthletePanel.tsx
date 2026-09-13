@@ -118,7 +118,7 @@ export function AthletePanel({
     setParentPhone(active?.parentPhone ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
-  }, [active?.id, active?.instagramHandle, active?.shapeLabHandle, active?.gymName, active?.classGyms, active?.linkedAthleteIds, active?.email, active?.phone, active?.parentPhone])
+  }, [active?.id])
 
   const flash = (msg: string, ms = 2800) => {
     setSaved(msg)
@@ -173,8 +173,17 @@ export function AthletePanel({
       createdAt: new Date().toISOString(),
       passcodeHash,
       role,
+      createdByCoachId: viewer && isCoachProfile(viewer) ? viewer.id : undefined,
       ...(role === 'athlete'
-        ? { worksWithCoachIds: newCoachIds, showCoachesOnProfile: newShowCoaches }
+        ? {
+            worksWithCoachIds: [
+              ...new Set([
+                ...newCoachIds,
+                ...(viewer && isCoachProfile(viewer) ? [viewer.id] : []),
+              ]),
+            ],
+            showCoachesOnProfile: newShowCoaches,
+          }
         : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
       shapeTests: takeGuestGrades(firstName, lastName),
@@ -513,7 +522,7 @@ export function AthletePanel({
         />
         <input
           className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          placeholder="Shape Lab @handle (optional — Instagram @ is used if blank)"
+          placeholder="shapelab @handle (optional — Instagram @ is used if blank)"
           value={newShapeHandle}
           onChange={(e) => setNewShapeHandle(e.target.value)}
           onKeyDown={(e) => {
@@ -778,7 +787,7 @@ export function AthletePanel({
           />
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            placeholder="Shape Lab @handle (optional — Instagram @ is used if blank)"
+            placeholder="shapelab @handle (optional — Instagram @ is used if blank)"
             value={shapeHandle}
             onChange={(e) => setShapeHandle(e.target.value)}
             onKeyDown={(e) => {

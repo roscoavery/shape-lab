@@ -1037,7 +1037,7 @@ function PassesGrid({
   if (items.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-[var(--muted)]">
-        No passes yet. A pass is a short vertical clip — Shape Lab’s take on a reel.
+        No passes yet. A pass is a short vertical clip — shapelab’s take on a reel.
       </p>
     )
   }
@@ -1213,7 +1213,7 @@ function PassComposer({
         </button>
       </div>
       <p className="text-sm text-[var(--muted)]">
-        A short vertical clip — Shape Lab’s version of a reel or Short. It lands
+        A short vertical clip — shapelab’s version of a reel or Short. It lands
         on this profile under Passes and on the gym feed.
       </p>
       <input

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { StudyQuestion } from '../../lib/studyQuiz'
 import { QuizReview } from './QuizReview'
 
@@ -24,7 +24,9 @@ export function StudyQuiz({
   onExit,
 }: Props) {
   const [seed, setSeed] = useState(0)
-  const questions = useMemo(() => build(), [build, seed])
+  const buildRef = useRef(build)
+  buildRef.current = build
+  const questions = useMemo(() => buildRef.current(), [seed])
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
   const [pickedIds, setPickedIds] = useState<(string | null)[]>(() => questions.map(() => null))

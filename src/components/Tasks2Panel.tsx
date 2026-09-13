@@ -32,6 +32,7 @@ import {
   runHandstandHoldSession,
   type HoldTick,
 } from '../lib/handstandHold'
+import { runQualityHoldSession } from '../lib/qualityHold'
 import { saveHoldClipWithOverlay } from '../lib/overlayExport'
 import {
   forgetCaptureBlob,
@@ -49,7 +50,6 @@ import {
 } from '../lib/poseTrack'
 import { getPoseCandidates } from '../lib/poseCandidates'
 import {
-  HOLD_BUILD_BANNER,
   HOLD_BUILD_CHIP,
   HOLD_BUILD_LABEL,
   HOLD_PINK_BTN,
@@ -157,7 +157,7 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   const graded = seq.reviewShapeIds
     ? steps.filter((s) => seq.reviewShapeIds!.includes(s.shapeId))
     : steps
-  if (seq.mode === 'hs-hold') {
+  if (seq.mode === 'hs-hold' || seq.mode === 'quality-hold') {
     const holds = steps.filter((s) => s.holdSeconds != null)
     if (holds.length === 0) {
       return `${seq.name}. No timed handstands this run. Hands on the floor, kick up so both feet leave, then tap Done. Not a gate.`
@@ -270,6 +270,9 @@ export function Tasks2Panel({
   const seqListRef = useRef<HTMLOListElement | null>(null)
   const [overlayStream, setOverlayStream] = useState<MediaStream | null>(null)
   const [holdTick, setHoldTick] = useState<HoldTick | null>(null)
+  const [holdWall, setHoldWall] = useState(false)
+  const holdWallRef = useRef(false)
+  holdWallRef.current = holdWall
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
   const [deviceSave, setDeviceSave] = useState<{
     blob: Blob
@@ -316,7 +319,11 @@ export function Tasks2Panel({
     holdAudio,
     supported: speechSupported,
   } = useSpeechCoach(true)
-  const holdChallenge = seq.mode === 'hs-hold' || runSeq?.mode === 'hs-hold'
+  const holdChallenge =
+    seq.mode === 'hs-hold' ||
+    seq.mode === 'quality-hold' ||
+    runSeq?.mode === 'hs-hold' ||
+    runSeq?.mode === 'quality-hold'
   // Canvas captureStream is empty / unplayable on iPad. Hold clips use the camera.
   const recordStream = holdChallenge ? stream : overlayStream ?? stream
   const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
@@ -707,6 +714,11 @@ export function Tasks2Panel({
         (best, a, i) => (a.holdSeconds > raw[best]!.holdSeconds ? i : best),
         0,
       )
+      const holdShapeId =
+        seqRun.mode === 'hs-hold' && holdWallRef.current
+          ? 'wall_handstand'
+          : seqRun.holdShapeId || 'handstand'
+      const holdShapeName = getShape(holdShapeId)?.name || holdShapeId
       const collected: SnapView[] = []
       const holds: FlowHoldAttempt[] = []
 
@@ -730,7 +742,7 @@ export function Tasks2Panel({
           (scoreRef.current.overall > 0 || scoreRef.current.criteria.length > 0
             ? scoreRef.current
             : null)
-        const cues = live ? writtenCues(live, 'handstand', 6) : []
+        const cues = live ? writtenCues(live, holdShapeId, 6) : []
         const livePeak = live ? Math.round(live.overall) : 0
         let snapshotId: string | null = null
         if (a.snapshotBlob) {
@@ -738,8 +750,8 @@ export function Tasks2Panel({
           snapshotId = captureId
           rememberCaptureBlob(captureId, a.snapshotBlob)
           collected.push({
-            shapeId: 'handstand',
-            shapeName: 'Handstand',
+            shapeId: holdShapeId,
+            shapeName: holdShapeName,
             overall: livePeak || live?.overall || 0,
             cues,
             captureId,
@@ -790,8 +802,8 @@ export function Tasks2Panel({
               holdSeconds: s.holdSeconds,
             }))
           : holds.map((h) => ({
-              shapeId: 'handstand',
-              shapeName: 'Handstand',
+              shapeId: holdShapeId,
+              shapeName: holdShapeName,
               overall: h.livePeak,
               cues: h.cues,
               captureId: h.snapshotId,
@@ -805,8 +817,8 @@ export function Tasks2Panel({
         id: createId('flow'),
         athleteId: athleteId ?? 'none',
         sequenceId: seqRun.id,
-        sequenceName: seqRun.name,
-        nickname: seqRun.nickname,
+        sequenceName: holdShapeId === 'wall_handstand' ? 'Wall handstand hold' : seqRun.name,
+        nickname: holdShapeId === 'wall_handstand' ? 'Wall hold' : seqRun.nickname,
         createdAt: new Date().toISOString(),
         replayCaptureId,
         steps,
@@ -1005,11 +1017,19 @@ export function Tasks2Panel({
           if (first) onRequestShape(first.shapeId)
         }
 
-        if (seqRun.mode === 'hs-hold') {
+        if (seqRun.mode === 'hs-hold' || seqRun.mode === 'quality-hold') {
           setPhase('holding')
-          onRequestShape('handstand', 'auto', { profileOk: true })
+          const holdShape =
+            seqRun.mode === 'hs-hold' && holdWallRef.current
+              ? 'wall_handstand'
+              : seqRun.holdShapeId || 'handstand'
+          onRequestShape(holdShape, 'auto', { profileOk: true })
           setCue(
-            'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
+            seqRun.mode === 'quality-hold'
+              ? 'Get into the shape when you are ready. Hold as long as you can. Tap Done when you are finished.'
+              : holdWallRef.current
+                ? 'Kick to a wall handstand when you are ready. Hold as long as you can. Tap Done when you are finished.'
+                : 'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
           )
           let rolling = false
           try {
@@ -1019,7 +1039,7 @@ export function Tasks2Panel({
           } catch {
             rolling = false
           }
-          const holdP = runHandstandHoldSession({
+          const holdOpts = {
             cancelled: () => !alive(),
             doneRequested: () => holdDoneRef.current || !alive(),
             landmarks: () => landmarksRef.current,
@@ -1028,14 +1048,18 @@ export function Tasks2Panel({
             stream: () => (rolling ? null : streamRef.current),
             timelineSec: rolling ? () => delay.capturedSec() : undefined,
             canvas: () => canvasRef.current,
-            onTick: (tick) => {
+            onTick: (tick: HoldTick) => {
               setHoldTick(tick)
               onHoldClockRef.current?.(tick.running ? tick.seconds : null)
             },
-            onCue: (line) => {
+            onCue: (line: string) => {
               if (alive()) setCue(line)
             },
-          })
+          }
+          const holdP =
+            seqRun.mode === 'quality-hold'
+              ? runQualityHoldSession(holdOpts)
+              : runHandstandHoldSession(holdOpts)
           void (async () => {
             await speakLine(seqRun.previewSpeak)
             if (!alive() || holdDoneRef.current) return
@@ -1975,10 +1999,38 @@ export function Tasks2Panel({
           </p>
           <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
         </div>
-        <div className={`${HOLD_BUILD_BANNER} mt-2`}>
-            {HOLD_BUILD_LABEL} — this bar means the gym rebuilt
-        </div>
         <h2 className="mt-0.5 text-lg font-semibold text-[var(--text)]">{seq.nickname}</h2>
+        {seq.mode === 'hs-hold' && phase === 'idle' && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setHoldWall(false)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                !holdWall
+                  ? `${HOLD_PINK_BTN}`
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Floor
+            </button>
+            <button
+              type="button"
+              onClick={() => setHoldWall(true)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                holdWall
+                  ? `${HOLD_PINK_BTN}`
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Wall
+            </button>
+            <p className="w-full text-[12px] text-[var(--muted)]">
+              {holdWall
+                ? 'Logs a wall handstand hold. Same clock — kick up against the wall.'
+                : 'Logs a freestanding handstand hold.'}
+            </p>
+          </div>
+        )}
         {seq.mode === 'hs-hold' && holdDay && holdDay.today > 0 && (
           <p className={`mt-1 text-[13px] font-semibold ${HOLD_PINK_TEXT}`}>
             Today {formatSeconds(holdDay.today)} in a handstand
@@ -2314,6 +2366,16 @@ export function Tasks2Panel({
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
                   <button
                     type="button"
+                    onClick={() => {
+                      setPhase('review')
+                      onExitFullscreen?.()
+                    }}
+                    className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold"
+                  >
+                    See scores
+                  </button>
+                  <button
+                    type="button"
                     onClick={closeHoldWatch}
                     className={`rounded-full px-3 py-1.5 text-xs font-bold ${HOLD_PINK_BTN}`}
                   >
@@ -2537,7 +2599,7 @@ export function Tasks2Panel({
         document.body,
       )}
 
-      {phase === 'review' && report && !holdMode && (
+      {phase === 'review' && report && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121f1a] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             {holdMode

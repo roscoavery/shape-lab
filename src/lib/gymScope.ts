@@ -7,7 +7,7 @@
 import { TUMBLE_SMART, normalizeGymName, sameGym, withDefaultGym } from '../config/gyms'
 import type { Athlete } from '../types'
 import { isCoachProfile, profileRole, roleLabel } from './profileRole'
-import { worksWithCoachIds } from './coachLink'
+import { coachWorkedWithAthlete } from './coachLink'
 import { loadOfferings } from './coachClasses'
 import { lessonAthleteIds, sessionsForCoach } from './lessonStore'
 import { listTrainingEvents, type TrainingEvent } from './trainingEvents'
@@ -55,17 +55,11 @@ export function hasLessonWithCoach(athleteId: string, coachId: string): boolean 
   return sessionsForCoach(coachId).some((session) => lessonAthleteIds(session).includes(athleteId))
 }
 
-/** Main Today list: this gym + privates / class roster / lessons. Not camp-only. */
+/** Main Today list: athletes this coach has worked with. Not the whole gym. */
 export function isOnTodayDesk(viewer: Athlete, athlete: Athlete): boolean {
   if (athlete.id === viewer.id) return false
   if (profileRole(athlete) === 'parent') return false
-  const gym = viewerHomeGym(viewer)
-  if (trainsAtGym(athlete, gym)) return true
-  if (isCoachProfile(athlete) && sameGym(athlete.gymName, gym)) return true
-  if (worksWithCoachIds(athlete).includes(viewer.id)) return true
-  if (onCoachClassRoster(athlete.id, viewer.id)) return true
-  if (hasLessonWithCoach(athlete.id, viewer.id)) return true
-  return false
+  return coachWorkedWithAthlete(viewer.id, athlete)
 }
 
 export type GymScope =

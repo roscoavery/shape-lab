@@ -33,7 +33,7 @@ export function GymBootScreen({ phase, error, persist, onRetry, onContinueLocal 
         {HOLD_BUILD_LABEL}
         {health?.sha ? ` · ${health.sha}` : ''}
       </div>
-      <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Shape Lab</p>
+      <p className="text-xs uppercase tracking-wider text-[var(--muted)]">shapelab</p>
       <h1 className="mt-2 text-2xl font-semibold text-[var(--text)]">
         {phase === 'loading' ? 'Loading this gym' : 'This phone cannot see the gym yet'}
       </h1>

@@ -211,6 +211,8 @@ export type Athlete = {
    * and stories.
    */
   worksWithCoachIds?: string[]
+  /** Coach signed in when this profile was created. */
+  createdByCoachId?: string
   /**
    * When true or missing, the profile shows who they work with.
    * False keeps that list off the public page. Listed coaches still

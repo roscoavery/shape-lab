@@ -8,9 +8,9 @@ import { isCoachProfile, isGymAdmin, profileRole } from './profileRole'
 import { parentSeesAthlete } from './parentLink'
 import { attendeeCountsOnProfile, classLabel, loadMeetings, loadOfferings } from './coachClasses'
 import { namesMatch } from './classStation'
-import { sessionsForAthlete } from './lessonStore'
+import { lessonAthleteIds, sessionsForAthlete, sessionsForCoach } from './lessonStore'
 import { homeworkTitle } from './homeworkLabel'
-import { loadAllHomework, loadAthletes, loadHomeworkLogs } from './storage'
+import { loadAllHomework, loadAthletes, loadHomeworkLogs, saveAthletes } from './storage'
 import { pushNotice } from './notify'
 import { givenName } from './classStation'
 
@@ -32,6 +32,58 @@ export function athletesOfCoach(coachId: string, athletes: Athlete[]): Athlete[]
 
 export function withWorksWithCoaches(athlete: Athlete, ids: string[]): Athlete {
   return { ...athlete, worksWithCoachIds: [...new Set(ids.filter(Boolean))] }
+}
+
+/** Mark that this coach works with the athlete. Persists the roster. */
+export function linkAthleteToCoach(athleteId: string, coachId: string): Athlete[] {
+  if (!athleteId || !coachId || athleteId === coachId) return loadAthletes()
+  const roster = loadAthletes()
+  let changed = false
+  const next = roster.map((a) => {
+    if (a.id !== athleteId) return a
+    const linked = worksWithCoachIds(a)
+    if (linked.includes(coachId) && a.createdByCoachId) return a
+    changed = true
+    return {
+      ...withWorksWithCoaches(a, [...linked, coachId]),
+      createdByCoachId: a.createdByCoachId || coachId,
+      updatedAt: new Date().toISOString(),
+    }
+  })
+  if (changed) saveAthletes(next)
+  return next
+}
+
+export function coachWorkedWithAthlete(coachId: string, athlete: Athlete): boolean {
+  if (!coachId || athlete.id === coachId) return false
+  if (athlete.createdByCoachId === coachId) return true
+  if (worksWithCoachIds(athlete).includes(coachId)) return true
+  if (
+    loadOfferings().some((offering) => {
+      const coaches = new Set([offering.coachId, ...(offering.coachIds ?? [])])
+      return coaches.has(coachId) && offering.rosterIds.includes(athlete.id)
+    })
+  ) {
+    return true
+  }
+  if (sessionsForCoach(coachId).some((session) => lessonAthleteIds(session).includes(athlete.id))) {
+    return true
+  }
+  return attendedCoachClass(athlete.id, coachId)
+}
+
+function attendedCoachClass(athleteId: string, coachId: string): boolean {
+  const meetings = loadMeetings()
+  const offerings = loadOfferings()
+  return meetings.some((meeting) => {
+    const offering = offerings.find((o) => o.id === meeting.offeringId)
+    const coaches = new Set([
+      meeting.coachId,
+      ...(offering ? [offering.coachId, ...(offering.coachIds ?? [])] : []),
+    ])
+    if (!coaches.has(coachId)) return false
+    return meeting.attendees.some((row) => row.athleteId === athleteId)
+  })
 }
 
 /** Owner, parent of, listed coach, or gym admin. */

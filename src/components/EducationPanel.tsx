@@ -203,7 +203,7 @@ export function EducationPanel({
           <div className="relative z-[1] flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
-                Shape Lab
+                shapelab
               </p>
               <h2 className="learn-serif mt-1 text-4xl font-semibold tracking-tight text-[var(--text)] sm:text-5xl">
                 Learn

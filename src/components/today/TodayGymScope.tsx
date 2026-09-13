@@ -73,7 +73,7 @@ export function TodayGymScope({
           className={chipClass(scope.kind === 'desk')}
           onClick={() => onScope({ kind: 'desk' })}
         >
-          This gym
+          My athletes
         </button>
         <button
           type="button"

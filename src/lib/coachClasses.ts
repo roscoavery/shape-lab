@@ -5,8 +5,9 @@
 
 import type { Athlete, ClassExtraExercise, LessonNote } from '../types'
 import { normalizeClassExtras } from './classExercises'
-import { createId } from './storage'
+import { createId, loadAthletes } from './storage'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
+import { isGymAdmin } from './profileRole'
 import { RYAN_PROFILE_ID } from './ryanProfile'
 
 export const DEFAULT_CLASS_TYPES: {
@@ -480,6 +481,15 @@ export function loadOfferings(_coachId?: string | null): CoachClassOffering[] {
     .offerings.filter((o) => !removed.has(o.id))
     .slice()
     .sort(compareOfferingsByWhen)
+}
+
+/** Classes this coach teaches. Gym admin still sees the whole gym list. */
+export function loadOfferingsForCoach(coachId: string | null | undefined): CoachClassOffering[] {
+  const all = loadOfferings()
+  if (!coachId) return all
+  const viewer = loadAthletes().find((a) => a.id === coachId) ?? null
+  if (isGymAdmin(viewer)) return all
+  return all.filter((o) => offeringCoachIds(o).includes(coachId))
 }
 
 export function getOffering(id: string | null | undefined): CoachClassOffering | null {

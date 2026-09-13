@@ -5,10 +5,14 @@ import { isCoachProfile } from '../../lib/profileRole'
 import {
   activeBoardForClassType,
   activeBoardForOffering,
+  boardsForAthlete,
   boardsForClassType,
   boardsForOffering,
   createBoard,
+  activeBoardForAthlete,
+  athleteOfferingId,
   eraseChalkboardItem,
+  itemsForDisplay,
   itemsForOfferingHour,
   kindLabel,
   pinChalkboardItem,
@@ -32,6 +36,7 @@ import {
   getActiveMeeting,
   getOffering,
   loadOfferings,
+  loadOfferingsForCoach,
   subscribeCoachClasses,
   type CoachClassOffering,
 } from '../../lib/coachClasses'
@@ -51,17 +56,35 @@ type Props = {
   viewer: Athlete | null
   /** When set, always edit this class type (class session). */
   offeringId?: string | null
+  /** Lesson / athlete board — one person’s pins. */
+  athleteId?: string | null
+  athleteName?: string
+  lessonId?: string | null
+  lessonAthletes?: Athlete[]
+  onPickAthlete?: (id: string) => void
   /** Compact strip on Today; coaches can still prepare boards when class is not live. */
   onToday?: boolean
   /** Body only — Today dock supplies the title. */
   embed?: boolean
 }
 
-export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, embed = false }: Props) {
+export function ChalkboardPanel({
+  viewer,
+  offeringId = null,
+  athleteId = null,
+  athleteName,
+  lessonId = null,
+  lessonAthletes = [],
+  onPickAthlete,
+  onToday = false,
+  embed = false,
+}: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
   const [size, setSize] = useState<Size>('more')
-  const [offerings, setOfferings] = useState(() => loadOfferings())
+  const [offerings, setOfferings] = useState(() =>
+    viewer?.id ? loadOfferingsForCoach(viewer.id) : loadOfferings(),
+  )
   const [pickOffering, setPickOffering] = useState(offeringId ?? '')
   const [newName, setNewName] = useState('')
   const [rename, setRename] = useState('')
@@ -70,27 +93,35 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
   const [editTarget, setEditTarget] = useState<ChalkboardScope>('time')
 
   useEffect(() => subscribeChalkboards(() => setTick((n) => n + 1)), [])
-  useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
+  useEffect(
+    () => subscribeCoachClasses(() => setOfferings(viewer?.id ? loadOfferingsForCoach(viewer.id) : loadOfferings())),
+    [viewer?.id],
+  )
   void tick
 
   const live = getActiveMeeting(viewer?.id)
   const liveOffering = live ? getOffering(live.offeringId) : null
+  const athleteMode = Boolean(athleteId)
   const targetId = offeringId || pickOffering || live?.offeringId || offerings[0]?.id || ''
   const offering = offerings.find((o) => o.id === targetId) ?? liveOffering
-  const board =
-    editTarget === 'type'
+  const board = athleteMode
+    ? activeBoardForAthlete(athleteId)
+    : editTarget === 'type'
       ? activeBoardForClassType(offering?.name)
       : activeBoardForOffering(targetId)
-  const boards =
-    editTarget === 'type'
+  const boards = athleteMode
+    ? boardsForAthlete(athleteId)
+    : editTarget === 'type'
       ? boardsForClassType(offering?.name)
       : boardsForOffering(targetId)
   const inSession = Boolean(live && live.offeringId === targetId)
-  const tagged = itemsForOfferingHour(offering, inSession || !onToday)
+  const tagged = athleteMode
+    ? itemsForDisplay(board, true).map((item) => ({ item, source: 'athlete' as const }))
+    : itemsForOfferingHour(offering, inSession || !onToday)
   const visible = size === 'compact' ? tagged.slice(0, 2) : tagged
 
-  if (!coach && !inSession) return null
-  if (!offering && offerings.length === 0) {
+  if (!coach && !inSession && !athleteMode) return null
+  if (!athleteMode && !offering && offerings.length === 0) {
     if (!coach) return null
     return (
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
@@ -123,7 +154,13 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
       onDrillPick={setDrillPick}
       notice={notice}
       onNotice={setNotice}
-      hideOfferingSelect={Boolean(offeringId)}
+      hideOfferingSelect={Boolean(offeringId) || athleteMode}
+      athleteMode={athleteMode}
+      athleteName={athleteName}
+      lessonAthletes={lessonAthletes}
+      onPickAthlete={onPickAthlete}
+      selectedAthleteId={athleteId}
+      lessonId={lessonId}
     />
   )
 
@@ -135,7 +172,9 @@ export function ChalkboardPanel({ viewer, offeringId = null, onToday = false, em
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Chalkboard
             </p>
-            <p className="truncate text-lg font-bold">{offering ? classLabel(offering) : 'Class'}</p>
+            <p className="truncate text-lg font-bold">
+              {athleteMode ? athleteName || 'Athlete board' : offering ? classLabel(offering) : 'Class'}
+            </p>
             <p className="text-xs text-white/55">Scroll the board. Every clip shows the full frame.</p>
           </div>
           <button
@@ -238,6 +277,12 @@ function ChalkboardBody({
   hideOfferingSelect,
   editTarget,
   onEditTarget,
+  athleteMode = false,
+  athleteName,
+  lessonAthletes = [],
+  onPickAthlete,
+  selectedAthleteId,
+  lessonId,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -262,6 +307,12 @@ function ChalkboardBody({
   hideOfferingSelect: boolean
   editTarget: ChalkboardScope
   onEditTarget: (scope: ChalkboardScope) => void
+  athleteMode?: boolean
+  athleteName?: string
+  lessonAthletes?: Athlete[]
+  onPickAthlete?: (id: string) => void
+  selectedAthleteId?: string | null
+  lessonId?: string | null
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -286,7 +337,26 @@ function ChalkboardBody({
         </select>
       )}
 
-      {coach && offering && (
+      {coach && athleteMode && lessonAthletes.length > 1 && onPickAthlete && (
+        <div className="flex flex-wrap gap-2">
+          {lessonAthletes.map((person) => (
+            <button
+              key={person.id}
+              type="button"
+              onClick={() => onPickAthlete(person.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                selectedAthleteId === person.id
+                  ? 'bg-[var(--accent)] text-[#06281f]'
+                  : 'border border-[var(--panel-border)] text-[var(--muted)]'
+              }`}
+            >
+              {person.firstName || person.name.split(' ')[0] || person.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {coach && offering && !athleteMode && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -313,12 +383,14 @@ function ChalkboardBody({
         </div>
       )}
 
-      {coach && offering && viewer && size !== 'compact' && (
+      {coach && (offering || athleteMode) && viewer && size !== 'compact' && (
         <div className="space-y-2 rounded-xl bg-[#0d1218] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {editTarget === 'type'
-              ? `Chalkboard on every ${offering.name} class`
-              : `Chalkboard for ${offering.weekday} ${offering.time} only`}
+            {athleteMode
+              ? `Chalkboard for ${athleteName || 'this athlete'}`
+              : editTarget === 'type'
+                ? `Chalkboard on every ${offering?.name} class`
+                : `Chalkboard for ${offering?.weekday} ${offering?.time} only`}
           </p>
           <div className="flex flex-wrap gap-2">
             {boards.map((b) => (
@@ -371,9 +443,11 @@ function ChalkboardBody({
               value={newName}
               onChange={(e) => onNewName(e.target.value)}
               placeholder={
-                editTarget === 'type'
-                  ? `New board for every ${offering.name} time`
-                  : 'New board for this hour only'
+                athleteMode
+                  ? `New board for ${athleteName || 'this athlete'}`
+                  : editTarget === 'type'
+                    ? `New board for every ${offering?.name} time`
+                    : 'New board for this hour only'
               }
               className="h-10 min-w-[12rem] flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
             />
@@ -382,15 +456,27 @@ function ChalkboardBody({
               onClick={() => {
                 const name = newName.trim()
                 if (!name) return
-                createBoard({
-                  offeringId:
-                    editTarget === 'type' ? typeOfferingId(offering.name) : offering.id,
-                  name,
-                  createdById: viewer.id,
-                  makeActive: true,
-                  scope: editTarget,
-                  classTypeKey: classTypeKey(offering.name),
-                })
+                if (athleteMode && selectedAthleteId) {
+                  createBoard({
+                    offeringId: athleteOfferingId(selectedAthleteId),
+                    name,
+                    createdById: viewer.id,
+                    makeActive: true,
+                    scope: 'athlete',
+                    athleteId: selectedAthleteId,
+                    lessonId: lessonId ?? undefined,
+                  })
+                } else if (offering) {
+                  createBoard({
+                    offeringId:
+                      editTarget === 'type' ? typeOfferingId(offering.name) : offering.id,
+                    name,
+                    createdById: viewer.id,
+                    makeActive: true,
+                    scope: editTarget,
+                    classTypeKey: classTypeKey(offering.name),
+                  })
+                }
                 onNewName('')
               }}
               className="rounded-lg bg-[var(--accent-dim)] px-3 text-xs font-semibold text-white"
@@ -398,7 +484,7 @@ function ChalkboardBody({
               Create chalkboard
             </button>
           </div>
-          {drills.length > 0 && (
+          {drills.length > 0 && !athleteMode && (
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Pin a drill list for this class
@@ -427,6 +513,7 @@ function ChalkboardBody({
                 type="button"
                 disabled={drillPick.length === 0}
                 onClick={() => {
+                  if (!offering) return
                   postToChalkboard({
                     offeringId:
                       editTarget === 'type' ? typeOfferingId(offering.name) : offering.id,

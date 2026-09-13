@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile, profileRole } from '../../lib/profileRole'
+import { linkAthleteToCoach } from '../../lib/coachLink'
 import {
   WEEKDAYS,
   addClassNote,
@@ -10,7 +11,7 @@ import {
   getActiveMeeting,
   getMeeting,
   hydrateCoachClasses,
-  loadOfferings,
+  loadOfferingsForCoach,
   markClassAttendance,
   offeringHelperCoachIds,
   offeringLeadCoachId,
@@ -66,7 +67,9 @@ export function ClassSession({
   onAthletesChange,
   onViewProfile,
 }: Props) {
-  const [offerings, setOfferings] = useState<CoachClassOffering[]>(() => loadOfferings())
+  const [offerings, setOfferings] = useState<CoachClassOffering[]>(() =>
+    loadOfferingsForCoach(coach.id),
+  )
   const [screen, setScreen] = useState<Screen>('pick')
   const [ended, setEnded] = useState<ClassMeeting | null>(null)
   const [endAsk, setEndAsk] = useState(false)
@@ -74,7 +77,7 @@ export function ClassSession({
   const startingRef = useRef(false)
 
   const refresh = () => {
-    setOfferings(loadOfferings())
+    setOfferings(loadOfferingsForCoach(coach.id))
     setTick((n) => n + 1)
   }
 
@@ -144,8 +147,8 @@ export function ClassSession({
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Start a class</h2>
               <p className="mt-2 text-sm text-white/65">
-                Pick the class you are on the floor for. This list is the
-                gym’s saved classes — the same on phone, iPad, and laptop.
+                Pick a class you teach. Other coaches’ hours stay on their
+                desks. Search Profiles when you need someone new on the floor.
                 Ending class asks whether to write Class nights — opening
                 Start and End alone does not log anyone.
               </p>
@@ -208,6 +211,8 @@ export function ClassSession({
             meeting={getMeeting(live.id) ?? live}
             offering={offeringFor(live.offeringId)}
             athletes={athletes}
+            coachId={coach.id}
+            onAthletesChange={onAthletesChange}
             onChanged={refresh}
             onCoachDesk={() => setScreen('live')}
             onStation={onOpenStation}
@@ -269,6 +274,8 @@ function ClassRollCall({
   meeting,
   offering,
   athletes,
+  coachId,
+  onAthletesChange,
   onChanged,
   onCoachDesk,
   onStation,
@@ -277,6 +284,8 @@ function ClassRollCall({
   meeting: ClassMeeting
   offering?: CoachClassOffering
   athletes: Athlete[]
+  coachId: string
+  onAthletesChange?: (next: Athlete[]) => void
   onChanged: () => void
   onCoachDesk: () => void
   onStation: () => void
@@ -302,6 +311,7 @@ function ClassRollCall({
       source: rosterIds.has(a.id) ? 'roster' : 'manual',
       logged: false,
     })
+    onAthletesChange?.(linkAthleteToCoach(a.id, coachId))
     onChanged()
   }
 
@@ -530,6 +540,7 @@ function LiveClass({
               lastName: a.lastName || parts.lastName,
               source: offering?.rosterIds.includes(a.id) ? 'roster' : 'manual',
             })
+            onAthletesChange?.(linkAthleteToCoach(a.id, coach.id))
             if (offering && !offering.rosterIds.includes(a.id)) {
               toggleOfferingRoster(offering.id, a.id)
             }

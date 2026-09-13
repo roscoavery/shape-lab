@@ -53,7 +53,7 @@ export function PastHoldLogForm({ athlete, items, onLogged, coach }: Props) {
       score: 0,
       ...(Number.isFinite(counted) && counted > 0 ? { kind: 'reps' as const, reps: counted } : { kind: 'hold' as const }),
       loggedFrom: inLesson ? 'lesson' : undefined,
-      sourceLabel: inLesson ? 'In a lesson' : 'Before Shape Lab',
+      sourceLabel: inLesson ? 'In a lesson' : 'Before shapelab',
       ...(coach ? { coachId: coach.id, coachName: coach.name } : {}),
     }
     addHomeworkLog(log)
@@ -80,7 +80,7 @@ export function PastHoldLogForm({ athlete, items, onLogged, coach }: Props) {
         <p className="mt-1 text-sm text-[var(--muted)]">
           {coach
             ? `Add a date and whether it was in a lesson for ${athlete.name.split(' ')[0]}.`
-            : 'Holds and reps from lessons before Shape Lab. Pick the date and if it was in a lesson.'}
+            : 'Holds and reps from lessons before shapelab. Pick the date and if it was in a lesson.'}
         </p>
       </button>
       {open && (

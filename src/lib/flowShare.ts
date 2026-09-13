@@ -59,7 +59,7 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
     const holds = report.holdAttempts ?? []
     const longest = holds.find((h) => h.highlighted) ?? holds[0]
     const lines = [
-      'Shape Lab — Handstand hold challenge',
+      'shapelab — Handstand hold challenge',
       `${who}${ig}`,
       report.sequenceName,
       new Date(report.createdAt).toLocaleString(),
@@ -85,7 +85,7 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
     return lines.join('\n')
   }
   const lines = [
-    'Shape Lab — Tasks 2 analysis',
+    'shapelab — Tasks 2 analysis',
     `${who}${ig}`,
     report.sequenceName,
     new Date(report.createdAt).toLocaleString(),
@@ -119,7 +119,7 @@ export function storyCaption(report: FlowRunReport, athlete?: Athlete | null): s
       `${report.nickname} · longest ${longest != null ? holdTimeLabel(longest) : '—'}`,
       bits.join(' · '),
       tag,
-      'Shape Lab hold challenge',
+      'shapelab hold challenge',
     ]
       .filter(Boolean)
       .join('\n')
@@ -132,7 +132,7 @@ export function storyCaption(report: FlowRunReport, athlete?: Athlete | null): s
     `${report.nickname} · ${avg}/100`,
     bits.join(' · '),
     tag,
-    'Shape Lab class flow',
+    'shapelab class flow',
   ]
     .filter(Boolean)
     .join('\n')
@@ -239,7 +239,7 @@ export async function shareToInstagramStory(
     const fileOnly: ShareData = { files: [file] }
     const withCaption: ShareData = isAppleMobile()
       ? fileOnly
-      : { files: [file], text: caption, title: `${report.nickname} · Shape Lab` }
+      : { files: [file], text: caption, title: `${report.nickname} · shapelab` }
     const tryShare = async (data: ShareData) => {
       const can = typeof nav.canShare === 'function' ? nav.canShare(data) : true
       if (!can) return false

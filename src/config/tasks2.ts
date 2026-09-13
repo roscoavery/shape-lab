@@ -44,7 +44,9 @@ export type FlowSequence = {
   nickname: string
   description: string
   /** Default is a spoken beat list. Hold challenge times inverted holds until Done. */
-  mode?: 'beats' | 'hs-hold'
+  mode?: 'beats' | 'hs-hold' | 'quality-hold'
+  /** Shape scored / logged for a hold challenge. */
+  holdShapeId?: string
   previewSpeak: string
   /**
    * Spoken and shown right before the first beat — get set (side view, clean).
@@ -884,10 +886,47 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     setupExtraSpeak:
       'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
     setupShapeId: 'handstand',
+    holdShapeId: 'handstand',
     previewShapes: [
       { shapeId: 'handstand', label: 'HS' },
     ],
     reviewShapeIds: ['handstand'],
+    beats: [],
+  },
+  {
+    id: 'flow_lunge_hold',
+    name: 'Quality lunge hold',
+    nickname: 'Lunge hold',
+    mode: 'quality-hold',
+    holdShapeId: 'lunge_start',
+    description:
+      'Quality lunge hold. The clock starts when the lunge is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
+    previewSpeak: 'Ready to hold a quality starting lunge?',
+    setupSpeak:
+      'Start in a clean lunge. Front knee over the ankle, back leg long, hips square. Hold when you are ready.',
+    setupExtraSpeak:
+      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+    setupShapeId: 'lunge_start',
+    previewShapes: [{ shapeId: 'lunge_start', label: 'LG' }],
+    reviewShapeIds: ['lunge_start'],
+    beats: [],
+  },
+  {
+    id: 'flow_lever_hold',
+    name: 'Quality lever hold',
+    nickname: 'Lever hold',
+    mode: 'quality-hold',
+    holdShapeId: 'lever',
+    description:
+      'Quality lever hold. The clock starts when the lever is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
+    previewSpeak: 'Ready to hold a quality lever?',
+    setupSpeak:
+      'Open to a lever. Shoulders over hands, hips stacked, legs tight. Hold when you are ready.',
+    setupExtraSpeak:
+      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+    setupShapeId: 'lever',
+    previewShapes: [{ shapeId: 'lever', label: 'LV' }],
+    reviewShapeIds: ['lever'],
     beats: [],
   },
   {
