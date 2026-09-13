@@ -48,6 +48,8 @@ type Props = {
   active?: boolean
   /** Transport overlays the picture (hide/show). Defaults on in fullscreen. */
   overlayChrome?: boolean
+  /** Start with the transport HUD open. Chalkboard defaults this off. */
+  startChromeOpen?: boolean
   /** Two-finger pinch-zoom on phones (Replay Last). */
   pinchZoom?: boolean
   /** Scrub window currently looping — used to save that exact clip to Photos. */
@@ -108,6 +110,7 @@ function VideoWorkbenchInner({
   bare = false,
   active,
   overlayChrome,
+  startChromeOpen,
   pinchZoom = false,
   onWindowChange,
   overlayActions,
@@ -155,7 +158,9 @@ function VideoWorkbenchInner({
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
   const overlay = overlayChrome ?? (fill || replayChrome)
-  const [chromeOpen, setChromeOpen] = useState(() => Boolean(compact && fill) || Boolean(replayChrome))
+  const [chromeOpen, setChromeOpen] = useState(
+    () => startChromeOpen ?? (Boolean(compact && fill) || Boolean(replayChrome)),
+  )
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
     dist: number

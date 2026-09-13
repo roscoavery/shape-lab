@@ -49,6 +49,7 @@ import {
 } from './feedStore.ts'
 import {
   addCoachStillFromBody,
+  deleteCoachStill,
   extrasForClient,
   readRequestBodyLimited as readCoachStillBody,
   sendCoachStillFile,
@@ -207,7 +208,7 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'glaze' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'rime' })
     return true
   }
   if (path === '/api/persist') {
@@ -384,7 +385,17 @@ export async function handleShapeLabApi(
       sendJson(res, 200, saved)
       return true
     }
-    sendJson(res, 405, { error: 'Use GET, POST, or PUT' })
+    if (req.method === 'DELETE') {
+      const id = url.searchParams.get('id') ?? ''
+      const saved = await deleteCoachStill(id)
+      if (!saved) {
+        sendJson(res, 404, { error: 'Still not found' })
+        return true
+      }
+      sendJson(res, 200, saved)
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, PUT, or DELETE' })
     return true
   }
   if (path === '/api/coach-still-file') {

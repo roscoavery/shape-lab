@@ -34,6 +34,11 @@ export type FlowBeat = {
   replayStart?: boolean
   /** Stop the saved replay after this beat (drop standing-clean after the lunge). */
   replayEnd?: boolean
+  /**
+   * Pause or resume the rolling recap recorder without starting a new file.
+   * Lemon rest uses this so every set stays in one video.
+   */
+  record?: 'pause' | 'resume'
   /** Rep number for numbered handstand grades (MC HS 5 reps). */
   rep?: number
 }
@@ -601,15 +606,27 @@ function pikeTuckHollowArchClass(): FlowBeat[] {
 }
 
 /** Lemon squeezes: pike (open shoulders) → tuck, then hollow / tuck reps. */
-function lemonSqueezesClass(opts?: { sets?: number; repsPerSet?: number[] }): FlowBeat[] {
-  const sets = Math.min(3, Math.max(1, opts?.sets ?? 3))
-  const repsPerSet = opts?.repsPerSet ?? [10, 8, 6]
+function lemonSqueezesClass(opts?: {
+  sets?: number
+  repsPerSet?: number[]
+  restSec?: number
+}): FlowBeat[] {
+  const sets = Math.min(5, Math.max(1, opts?.sets ?? 3))
+  const repsPerSet = opts?.repsPerSet ?? Array.from({ length: sets }, () => 10)
+  const restSec = Math.min(20, Math.max(10, opts?.restSec ?? 15))
   const beats: FlowBeat[] = []
   const hollowMs = 550
   const tuckMs = 550
 
   for (let set = 1; set <= sets; set++) {
     const reps = Math.min(30, Math.max(5, repsPerSet[set - 1] ?? repsPerSet.at(-1) ?? 10))
+    if (set > 1) {
+      beats.push({
+        speak: `Rest. ${restSec} seconds.`,
+        pauseMs: restSec * 1000,
+        record: 'pause',
+      })
+    }
     beats.push({
       speak:
         set === 1
@@ -619,7 +636,7 @@ function lemonSqueezesClass(opts?: { sets?: number; repsPerSet?: number[] }): Fl
       pauseMs: 700,
       ...(set === 1
         ? { replayStart: true, snapshotAtMs: 280, snapLabel: 'Pike (open shoulders)' }
-        : {}),
+        : { record: 'resume' }),
     })
     beats.push({
       speak: 'Pull a tuck.',
@@ -900,8 +917,8 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     mode: 'quality-hold',
     holdShapeId: 'lunge_start',
     description:
-      'Quality lunge hold. The clock starts when the lunge is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
-    previewSpeak: 'Ready to hold a quality starting lunge?',
+      'Quality lunge hold. Pick starting lunge or landing lunge. The clock starts when the lunge is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
+    previewSpeak: 'Ready to hold a quality lunge? Pick starting or landing.',
     setupSpeak:
       'Start in a clean lunge. Front knee over the ankle, back leg long, hips square. Hold when you are ready.',
     setupExtraSpeak:
@@ -986,7 +1003,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: 'Lemon squeezes',
     nickname: 'Lemon squeezes',
     description:
-      'Start in a pike with open shoulders, pull a tuck, then hollow–tuck for the reps you pick. Default is 3 sets of 10, 8, and 6. Reset to pike with open shoulders each set. Not a gate.',
+      'Start in a pike with open shoulders, pull a tuck, then hollow–tuck for the reps you pick. Pick sets and a rest of 10–20 seconds between them. Recording pauses on rest so every set stays in one recap. Reset to pike with open shoulders each set. Not a gate.',
     previewSpeak:
       'Lemon squeezes. Pike with open shoulders, pull a tuck, then hollow, tuck.',
     setupSpeak: 'Side view. Start in a pike with open shoulders.',
@@ -998,7 +1015,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       { shapeId: 'tuck_open_shoulders', label: 'Tuck' },
       { shapeId: 'hollow_arms_down', label: 'Hollow' },
     ],
-    beats: lemonSqueezesClass({ sets: 3, repsPerSet: [10, 8, 6] }),
+    beats: lemonSqueezesClass({ sets: 3, repsPerSet: [10, 10, 10], restSec: 15 }),
   },
   {
     id: 'flow_core_home',
@@ -1034,9 +1051,9 @@ export function getFlowSequence(id: string): FlowSequence | undefined {
 export type FlowRunConfig = {
   pikeHollowArchMode?: 'learn' | 'reps'
   pikeHollowArchReps?: number
-  lemonPlan?: 'default' | 'custom'
   lemonSets?: number
   lemonReps?: number
+  lemonRestSec?: number
 }
 
 /** Build the spoken run for Start / Go again, including pike–hollow–arch reps and lemon sets. */
@@ -1049,11 +1066,11 @@ export function resolveFlowRun(id: string, config?: FlowRunConfig): FlowSequence
     return { ...base, beats: pikeHollowArchClass({ mode, reps }) }
   }
   if (id === 'flow_lemon_squeezes') {
-    const plan = config?.lemonPlan ?? 'default'
-    const sets = plan === 'default' ? 3 : Math.min(3, Math.max(1, config?.lemonSets ?? 3))
+    const sets = Math.min(5, Math.max(1, config?.lemonSets ?? 3))
     const reps = Math.min(30, Math.max(5, config?.lemonReps ?? 10))
-    const repsPerSet = plan === 'default' ? [10, 8, 6] : Array.from({ length: sets }, () => reps)
-    return { ...base, beats: lemonSqueezesClass({ sets, repsPerSet }) }
+    const restSec = Math.min(20, Math.max(10, config?.lemonRestSec ?? 15))
+    const repsPerSet = Array.from({ length: sets }, () => reps)
+    return { ...base, beats: lemonSqueezesClass({ sets, repsPerSet, restSec }) }
   }
   return base
 }

@@ -3,7 +3,7 @@
  * Gym-wide so iPad and phone show the same library.
  */
 
-import { loadMainCoachStills, setMainCoachStill } from './coachStillPrefs'
+import { setMainCoachStill } from './coachStillPrefs'
 import { capReferencePhotos, loadReferencePhotos, saveReferencePhotos } from './storage'
 import type { ReferencePhoto } from '../types'
 
@@ -185,6 +185,26 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<Per
       ok: false,
       error: 'Could not reach the gym file. Leave gym:mac running, then try again.',
     }
+  }
+}
+
+export async function removeCoachStillExtra(id: string): Promise<PersistStillResult> {
+  try {
+    const res = await fetch(`/api/coach-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!res.ok) {
+      return { ok: false, error: 'Could not delete that still from the gym.' }
+    }
+    const saved = (await res.json()) as CoachStillsFile
+    try {
+      saveReferencePhotos(loadReferencePhotos().filter((p) => p.id !== id))
+    } catch {
+      /* quota */
+    }
+    rememberCoachExtrasLocally(saved.extras)
+    emitCoachStills(saved.extras)
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Could not reach the gym file to delete that still.' }
   }
 }
 

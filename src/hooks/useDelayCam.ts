@@ -31,6 +31,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
   const rollingPumpRef = useRef(0)
   const flushWaiterRef = useRef<((blob: Blob | null) => void) | null>(null)
   const lastBlobRef = useRef<Blob | null>(null)
+  const rollingPausedAtRef = useRef<number | null>(null)
+  const rollingPausedAccumRef = useRef(0)
 
   const [buffering, setBuffering] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +90,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
         rollingMimeRef.current = mime ?? 'video/mp4'
         rollingChunksRef.current = []
         lastBlobRef.current = null
+        rollingPausedAtRef.current = null
+        rollingPausedAccumRef.current = 0
         rollingStartRef.current = performance.now()
         rollingGenRef.current += 1
         const gen = rollingGenRef.current
@@ -201,6 +205,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
       flushWaiterRef.current = null
       rollingChunksRef.current = []
       lastBlobRef.current = null
+      rollingPausedAtRef.current = null
+      rollingPausedAccumRef.current = 0
       rollingStartRef.current = performance.now()
       rollingGenRef.current += 1
       if (rec && rec.state !== 'inactive') {
@@ -359,11 +365,51 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     [stopDelay, stopRolling],
   )
 
-  const capturedSec = () => (performance.now() - rollingStartRef.current) / 1000
+  const capturedSec = () => {
+    const now = rollingPausedAtRef.current ?? performance.now()
+    return (now - rollingStartRef.current - rollingPausedAccumRef.current) / 1000
+  }
   const hasRollingData = () =>
     rollingChunksRef.current.some((part) => part.size > 200) ||
     Boolean(lastBlobRef.current && lastBlobRef.current.size > 500)
   const peekRollingBlob = () => blobFromParts()
+
+  /** Pause the same MediaRecorder so rest is not filmed, but the recap stays one file. */
+  const pauseRolling = useCallback(async () => {
+    const rec = rollingRecorderRef.current
+    if (!rec || rec.state !== 'recording') return
+    try {
+      rec.requestData()
+    } catch {
+      /* pause can still work */
+    }
+    try {
+      rec.pause()
+      rollingPausedAtRef.current = performance.now()
+    } catch {
+      /* keep recording — rest stays in the file rather than splitting sets */
+    }
+  }, [])
+
+  const resumeRolling = useCallback(async () => {
+    const rec = rollingRecorderRef.current
+    if (!rec || rec.state !== 'paused') {
+      if (rollingPausedAtRef.current != null) {
+        rollingPausedAccumRef.current += performance.now() - rollingPausedAtRef.current
+        rollingPausedAtRef.current = null
+      }
+      return
+    }
+    try {
+      rec.resume()
+      if (rollingPausedAtRef.current != null) {
+        rollingPausedAccumRef.current += performance.now() - rollingPausedAtRef.current
+        rollingPausedAtRef.current = null
+      }
+    } catch {
+      /* stay paused until the next successful resume */
+    }
+  }, [])
 
   return {
     delayVideoRef,
@@ -376,6 +422,8 @@ export function useDelayCam(stream: MediaStream | null, delaySec: number, enable
     peekRollingBlob,
     startRolling,
     restartRolling,
+    pauseRolling,
+    resumeRolling,
     capturedSec,
     hasRollingData,
   }

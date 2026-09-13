@@ -242,9 +242,9 @@ export function Tasks2Panel({
   const [runSeq, setRunSeq] = useState<FlowSequence | null>(null)
   const [phaMode, setPhaMode] = useState<'learn' | 'reps'>('reps')
   const [phaReps, setPhaReps] = useState(5)
-  const [lemonPlan, setLemonPlan] = useState<'default' | 'custom'>('default')
   const [lemonSets, setLemonSets] = useState(3)
   const [lemonReps, setLemonReps] = useState(10)
+  const [lemonRestSec, setLemonRestSec] = useState(15)
   const [phase, setPhase] = useState<Phase>('idle')
   const [beatIndex, setBeatIndex] = useState(-1)
   const [cue, setCue] = useState('')
@@ -273,6 +273,9 @@ export function Tasks2Panel({
   const [holdWall, setHoldWall] = useState(false)
   const holdWallRef = useRef(false)
   holdWallRef.current = holdWall
+  const [holdLunge, setHoldLunge] = useState<'start' | 'land'>('start')
+  const holdLungeRef = useRef<'start' | 'land'>('start')
+  holdLungeRef.current = holdLunge
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
   const [deviceSave, setDeviceSave] = useState<{
     blob: Blob
@@ -590,9 +593,9 @@ export function Tasks2Panel({
       const counts = chosenFlowCounts(seqRun.id, {
         pikeHollowArchMode: phaMode,
         pikeHollowArchReps: phaReps,
-        lemonPlan,
         lemonSets,
         lemonReps,
+        lemonRestSec,
       })
       const built: FlowRunReport = {
         id: createId('flow'),
@@ -652,7 +655,7 @@ export function Tasks2Panel({
             : 'Watch your run. Then read the grades and choose whether to keep the clip.',
       )
     },
-    [athlete?.instagramHandle, athleteId, delay, lemonPlan, lemonReps, lemonSets, onExitFullscreen, phaMode, phaReps],
+    [athlete?.instagramHandle, athleteId, delay, lemonReps, lemonRestSec, lemonSets, onExitFullscreen, phaMode, phaReps],
   )
 
   const revokeClipUrls = useCallback(() => {
@@ -717,7 +720,11 @@ export function Tasks2Panel({
       const holdShapeId =
         seqRun.mode === 'hs-hold' && holdWallRef.current
           ? 'wall_handstand'
-          : seqRun.holdShapeId || 'handstand'
+          : seqRun.id === 'flow_lunge_hold'
+            ? holdLungeRef.current === 'land'
+              ? 'lunge_land'
+              : 'lunge_start'
+            : seqRun.holdShapeId || 'handstand'
       const holdShapeName = getShape(holdShapeId)?.name || holdShapeId
       const collected: SnapView[] = []
       const holds: FlowHoldAttempt[] = []
@@ -817,8 +824,22 @@ export function Tasks2Panel({
         id: createId('flow'),
         athleteId: athleteId ?? 'none',
         sequenceId: seqRun.id,
-        sequenceName: holdShapeId === 'wall_handstand' ? 'Wall handstand hold' : seqRun.name,
-        nickname: holdShapeId === 'wall_handstand' ? 'Wall hold' : seqRun.nickname,
+        sequenceName:
+          holdShapeId === 'wall_handstand'
+            ? 'Wall handstand hold'
+            : holdShapeId === 'lunge_land'
+              ? 'Quality landing lunge hold'
+              : holdShapeId === 'lunge_start' && seqRun.id === 'flow_lunge_hold'
+                ? 'Quality starting lunge hold'
+                : seqRun.name,
+        nickname:
+          holdShapeId === 'wall_handstand'
+            ? 'Wall hold'
+            : holdShapeId === 'lunge_land'
+              ? 'Landing lunge hold'
+              : holdShapeId === 'lunge_start' && seqRun.id === 'flow_lunge_hold'
+                ? 'Starting lunge hold'
+                : seqRun.nickname,
         createdAt: new Date().toISOString(),
         replayCaptureId,
         steps,
@@ -1022,7 +1043,11 @@ export function Tasks2Panel({
           const holdShape =
             seqRun.mode === 'hs-hold' && holdWallRef.current
               ? 'wall_handstand'
-              : seqRun.holdShapeId || 'handstand'
+              : seqRun.id === 'flow_lunge_hold'
+                ? holdLungeRef.current === 'land'
+                  ? 'lunge_land'
+                  : 'lunge_start'
+                : seqRun.holdShapeId || 'handstand'
           onRequestShape(holdShape, 'auto', { profileOk: true })
           setCue(
             seqRun.mode === 'quality-hold'
@@ -1202,6 +1227,20 @@ export function Tasks2Panel({
       for (let i = 0; i < seqRun.beats.length; i++) {
         if (!alive()) return
         const beat = seqRun.beats[i]!
+        if (beat.record === 'pause') {
+          try {
+            await delay.pauseRolling()
+          } catch {
+            /* keep the same recorder so rest does not split the recap */
+          }
+        }
+        if (beat.record === 'resume') {
+          try {
+            await delay.resumeRolling()
+          } catch {
+            /* stay on the same file */
+          }
+        }
         if (beat.shapeId) {
           currentShape = beat.shapeId
           onRequestShape(beat.shapeId, beat.stance ?? 'auto', {
@@ -1351,9 +1390,9 @@ export function Tasks2Panel({
   const flowConfig = () => ({
     pikeHollowArchMode: phaMode,
     pikeHollowArchReps: phaReps,
-    lemonPlan,
     lemonSets,
     lemonReps,
+    lemonRestSec,
   })
 
   const nextSequence = () => {
@@ -2031,6 +2070,37 @@ export function Tasks2Panel({
             </p>
           </div>
         )}
+        {seq.id === 'flow_lunge_hold' && phase === 'idle' && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setHoldLunge('start')}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                holdLunge === 'start'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Starting lunge
+            </button>
+            <button
+              type="button"
+              onClick={() => setHoldLunge('land')}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                holdLunge === 'land'
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Landing lunge
+            </button>
+            <p className="w-full text-[12px] text-[var(--muted)]">
+              {holdLunge === 'land'
+                ? 'Hold the landing lunge — the stick after you come down.'
+                : 'Hold the starting lunge — the lunge you kick from.'}
+            </p>
+          </div>
+        )}
         {seq.mode === 'hs-hold' && holdDay && holdDay.today > 0 && (
           <p className={`mt-1 text-[13px] font-semibold ${HOLD_PINK_TEXT}`}>
             Today {formatSeconds(holdDay.today)} in a handstand
@@ -2039,7 +2109,11 @@ export function Tasks2Panel({
         )}
         <div className="mt-2">
           <ShapeStillStrip
-            items={seq.previewShapes}
+            items={
+              seq.id === 'flow_lunge_hold'
+                ? [{ shapeId: holdLunge === 'land' ? 'lunge_land' : 'lunge_start', label: 'LG' }]
+                : seq.previewShapes
+            }
             photos={referencePhotos}
             activeShapeId={askedShapeId}
             size="sm"
@@ -2094,27 +2168,13 @@ export function Tasks2Panel({
               Sets and reps
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setLemonPlan('default')}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  lemonPlan === 'default'
-                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                    : 'border border-white/15 text-[var(--muted)]'
-                }`}
-              >
-                Default · 10, 8, 6
-              </button>
-              {([1, 2, 3] as const).map((n) => (
+              {([1, 2, 3, 4, 5] as const).map((n) => (
                 <button
                   key={n}
                   type="button"
-                  onClick={() => {
-                    setLemonPlan('custom')
-                    setLemonSets(n)
-                  }}
+                  onClick={() => setLemonSets(n)}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                    lemonPlan === 'custom' && lemonSets === n
+                    lemonSets === n
                       ? 'bg-[var(--accent)] text-[var(--on-accent)]'
                       : 'border border-white/15 text-[var(--muted)]'
                   }`}
@@ -2123,24 +2183,36 @@ export function Tasks2Panel({
                 </button>
               ))}
             </div>
-            {lemonPlan === 'custom' && (
+            <label className="mt-2 block text-[11px] text-[var(--muted)]">
+              Reps each set · {lemonReps}
+              <input
+                type="range"
+                min={5}
+                max={30}
+                step={1}
+                value={lemonReps}
+                onChange={(e) => setLemonReps(Number(e.target.value))}
+                className="mt-1 w-full"
+              />
+            </label>
+            {lemonSets > 1 && (
               <label className="mt-2 block text-[11px] text-[var(--muted)]">
-                Reps each set · {lemonReps}
+                Rest between sets · {lemonRestSec}s
                 <input
                   type="range"
-                  min={5}
-                  max={30}
+                  min={10}
+                  max={20}
                   step={1}
-                  value={lemonReps}
-                  onChange={(e) => setLemonReps(Number(e.target.value))}
+                  value={lemonRestSec}
+                  onChange={(e) => setLemonRestSec(Number(e.target.value))}
                   className="mt-1 w-full"
                 />
               </label>
             )}
             <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
-              {lemonPlan === 'default'
-                ? '3 sets. Pike with open shoulders, pull a tuck, then hollow–tuck 10, 8, and 6. Reset to pike each set.'
-                : `${lemonSets} set${lemonSets === 1 ? '' : 's'} of ${lemonReps}. Pike with open shoulders, pull a tuck, then hollow–tuck. Reset to pike each set.`}
+              {lemonSets === 1
+                ? `1 set of ${lemonReps}. Pike with open shoulders, pull a tuck, then hollow–tuck.`
+                : `${lemonSets} sets of ${lemonReps} with ${lemonRestSec}s rest. Recording pauses on rest. Every set stays in the same recap.`}
             </p>
           </div>
         )}

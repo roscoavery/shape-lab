@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
 import { socialPlatform, youtubeEmbedSrc } from '../lib/socialUrls'
@@ -25,6 +25,7 @@ type Props = {
   markupSwipeSafe?: boolean
   hudCorner?: ReactNode
   overlayChrome?: boolean
+  startChromeOpen?: boolean
   postedBy?: string | null
   onPostedBy?: (handle: string) => void
   /** Overlay Share on fill players. Off for reels that already have Share in chrome. */
@@ -51,6 +52,7 @@ export function GymClipPlayer({
   markupSwipeSafe = false,
   hudCorner,
   overlayChrome,
+  startChromeOpen,
   postedBy,
   onPostedBy,
   shareChrome,
@@ -80,13 +82,7 @@ export function GymClipPlayer({
   if (yt) {
     const embed = (
       <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
-        <iframe
-          title="YouTube clip"
-          src={yt}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className={fill ? 'h-full w-full' : 'aspect-video w-full rounded-lg'}
-        />
+        <YoutubeFrame src={yt} fill={fill} active={active} />
         {hudCorner ? (
           <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
             {hudCorner}
@@ -125,6 +121,7 @@ export function GymClipPlayer({
         markupSwipeSafe={markupSwipeSafe}
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
+        startChromeOpen={startChromeOpen}
         postedBy={postedBy}
         onPostedBy={onPostedBy}
         fit={objectFit}
@@ -162,6 +159,7 @@ export function GymClipPlayer({
       active={active}
       hudCorner={hudCorner}
       overlayChrome={overlayChrome}
+      startChromeOpen={startChromeOpen}
     />
   )
   return fill ? (
@@ -174,5 +172,42 @@ export function GymClipPlayer({
       {bench}
       {!quiet && !bare && <ClipWatchMeta url={persistUrl || url} />}
     </div>
+  )
+}
+
+function YoutubeFrame({
+  src,
+  fill,
+  active,
+}: {
+  src: string
+  fill: boolean
+  active?: boolean
+}) {
+  const ref = useRef<HTMLIFrameElement>(null)
+  const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : ''
+  const withApi = `${src}${src.includes('?') ? '&' : '?'}enablejsapi=1${origin ? `&origin=${origin}` : ''}`
+
+  useEffect(() => {
+    const win = ref.current?.contentWindow
+    if (!win) return
+    const func = active === false ? 'pauseVideo' : active === true ? 'playVideo' : null
+    if (!func) return
+    try {
+      win.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*')
+    } catch {
+      /* iframe may not be ready */
+    }
+  }, [active, withApi])
+
+  return (
+    <iframe
+      ref={ref}
+      title="YouTube clip"
+      src={withApi}
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+      className={fill ? 'h-full w-full' : 'aspect-video w-full rounded-lg'}
+    />
   )
 }

@@ -184,6 +184,7 @@ type Props = {
   markup?: boolean
   markupSwipeSafe?: boolean
   overlayChrome?: boolean
+  startChromeOpen?: boolean
   /** Letterbox the full frame (chalkboard) instead of cropping 9:16. */
   fit?: 'cover' | 'contain'
   smartFit?: boolean
@@ -210,6 +211,7 @@ export function InstagramEmbed({
   markup,
   markupSwipeSafe = false,
   overlayChrome,
+  startChromeOpen,
   fit,
   smartFit,
   savedUrl,
@@ -646,6 +648,7 @@ export function InstagramEmbed({
         active={active}
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
+        startChromeOpen={startChromeOpen}
         pictureChrome={carouselChrome}
         onError={() => {
           skipHostedRef.current = true

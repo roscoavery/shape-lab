@@ -48,7 +48,6 @@ export function chosenFlowCounts(
     return { reps: config?.pikeHollowArchReps ?? 5, sets: 1 }
   }
   if (sequenceId === 'flow_lemon_squeezes') {
-    if (config?.lemonPlan === 'default') return { sets: 3, reps: 10 }
     return { sets: config?.lemonSets ?? 3, reps: config?.lemonReps ?? 10 }
   }
   return { reps: 1 }

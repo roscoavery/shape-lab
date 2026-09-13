@@ -4,7 +4,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readBin, readJson, writeBin, writeJson } from './persist.ts'
+import { readBin, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
 const FILE = 'data/coach-stills.json'
 const blobRel = (name: string) => `data/coach-blobs/${name}`
@@ -199,6 +199,28 @@ export async function addCoachStillFromBody(body: unknown): Promise<CoachStillsF
     updatedAt: new Date().toISOString(),
     main: file.main,
     extras,
+  }
+  await writeJson(FILE, next)
+  return extrasForClient(next)
+}
+
+export async function deleteCoachStill(idRaw: string): Promise<CoachStillsFile | null> {
+  const id = safeId(idRaw)
+  if (!id) return null
+  const file = await readCoachStillsFile()
+  const row = file.extras.find((s) => s.id === id)
+  if (!row) return extrasForClient(file)
+  if (row.file) await removeFile(blobRel(row.file))
+  const main = { ...file.main }
+  for (const [shapeId, stillId] of Object.entries(main)) {
+    if (stillId === id) delete main[shapeId]
+  }
+  const next: CoachStillsFile = {
+    kind: 'shape-lab-coach-stills',
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    main,
+    extras: file.extras.filter((s) => s.id !== id),
   }
   await writeJson(FILE, next)
   return extrasForClient(next)

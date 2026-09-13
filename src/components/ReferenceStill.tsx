@@ -5,7 +5,7 @@ import {
   pickCoachStill,
   shippedStillCandidates,
 } from '../lib/shippedRefs'
-import { persistCoachStillExtra, persistMainCoachStill } from '../lib/coachStillStore'
+import { persistCoachStillExtra, persistMainCoachStill, removeCoachStillExtra } from '../lib/coachStillStore'
 import { loadMainCoachStills } from '../lib/coachStillPrefs'
 import { fileToJpegBlob, blobToDataUrl } from '../lib/glossaryStore'
 import { createId, saveReferencePhoto } from '../lib/storage'
@@ -110,6 +110,19 @@ export function CoachStillGallery({
     setMainTick((n) => n + 1)
   }
 
+  const removeStill = async (id: string) => {
+    if (!onPhotosChange || id.startsWith('default_')) return
+    setFlash('Removing still…')
+    const remote = await removeCoachStillExtra(id)
+    onPhotosChange(photos.filter((p) => p.id !== id))
+    if (mainId === id) {
+      const next = stills.find((p) => p.id !== id && !p.id.startsWith('default_')) ?? stills.find((p) => p.id !== id)
+      if (next) setMain(next.id)
+    }
+    setFlash(remote.ok ? 'Removed from this gym.' : remote.error ?? 'Could not remove that still.')
+    window.setTimeout(() => setFlash(null), 3500)
+  }
+
   const addStill = async (file: File) => {
     if (!onPhotosChange) return
     setFlash('Saving still…')
@@ -187,14 +200,27 @@ export function CoachStillGallery({
               )}
               <figcaption className="flex items-center justify-between gap-2 px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--muted)]">
                 <span>{p.id === mainId ? 'Main still' : p.label || 'Coach still'}</span>
-                {canEdit && p.id !== mainId && (
-                  <button
-                    type="button"
-                    onClick={() => setMain(p.id)}
-                    className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[var(--on-accent)]"
-                  >
-                    Set as main
-                  </button>
+                {canEdit && (
+                  <span className="flex gap-1">
+                    {p.id !== mainId && (
+                      <button
+                        type="button"
+                        onClick={() => setMain(p.id)}
+                        className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[var(--on-accent)]"
+                      >
+                        Set as main
+                      </button>
+                    )}
+                    {!p.id.startsWith('default_') && onPhotosChange && (
+                      <button
+                        type="button"
+                        onClick={() => void removeStill(p.id)}
+                        className="rounded bg-[var(--bad)]/20 px-1.5 py-0.5 font-semibold text-[var(--bad)]"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </span>
                 )}
               </figcaption>
             </figure>

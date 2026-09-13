@@ -52,6 +52,23 @@ import { ChalkboardMark } from './ChalkboardMark'
 
 type Size = 'compact' | 'more' | 'full'
 
+function useOnScreen(ref: React.RefObject<Element | null>, ratio = 0.35): boolean {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setOn(Boolean(entry?.isIntersecting && (entry.intersectionRatio ?? 0) >= ratio))
+      },
+      { threshold: [0, 0.2, 0.35, 0.5, 0.75, 1] },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [ref, ratio])
+  return on
+}
+
 type Props = {
   viewer: Athlete | null
   /** When set, always edit this class type (class session). */
@@ -617,6 +634,9 @@ function ChalkboardCard({
   const [textDraft, setTextDraft] = useState('')
   const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
   const [place, setPlace] = useState({ x: 72, y: 18 })
+  const [editing, setEditing] = useState(false)
+  const frameRef = useRef<HTMLDivElement | null>(null)
+  const onScreen = useOnScreen(frameRef)
   const drills = item.kind === 'drill-list' || item.kind === 'drill' ? listDrills() : []
   const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
   const overlays = item.overlays ?? []
@@ -667,6 +687,12 @@ function ChalkboardCard({
     setPlace((p) => ({ x: Math.min(88, p.x + 6), y: Math.min(80, p.y + 10) }))
   }
 
+  const moveOverlay = (id: string, x: number, y: number) => {
+    updateChalkboardItem(item.id, {
+      overlays: overlays.map((row) => (row.id === id ? { ...row, x, y } : row)),
+    })
+  }
+
   const clipPlayer = item.url ? (
     <GymClipPlayer
       url={item.url}
@@ -680,14 +706,17 @@ function ChalkboardCard({
       smartFit={false}
       quiet
       markupSwipeSafe
+      active={onScreen}
+      startChromeOpen={false}
     />
   ) : null
 
   const media = (
     <div
+      ref={frameRef}
       className={`relative w-full touch-pan-y overflow-hidden bg-black ${playerH}`}
       onClick={(e) => {
-        if (!coach) return
+        if (!coach || !editing) return
         const rect = e.currentTarget.getBoundingClientRect()
         setPlace({
           x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
@@ -696,7 +725,13 @@ function ChalkboardCard({
       }}
     >
       {clipPlayer}
-      <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+      <OverlayLayer
+        overlays={overlays}
+        coach={coachProfile}
+        coachName={item.createdByName}
+        canDrag={coach && editing}
+        onMove={moveOverlay}
+      />
     </div>
   )
 
@@ -765,7 +800,13 @@ function ChalkboardCard({
             alt={item.title}
             className="max-h-72 w-full object-contain"
           />
-          <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+          <OverlayLayer
+            overlays={overlays}
+            coach={coachProfile}
+            coachName={item.createdByName}
+            canDrag={coach && editing}
+            onMove={moveOverlay}
+          />
         </div>
       )}
       {item.kind === 'drill' && item.drillId && (
@@ -795,8 +836,34 @@ function ChalkboardCard({
           />
         </div>
       )}
-      {coach && !compact && (
+      {coach && !compact && !editing && (
+        <div className="border-t border-white/5 px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[11px] font-semibold text-[var(--accent)]"
+          >
+            Edit marks and notes
+          </button>
+        </div>
+      )}
+      {coach && !compact && editing && (
         <div className="space-y-2 border-t border-white/5 px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Coach edit
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                saveComment()
+                setEditing(false)
+              }}
+              className="rounded-lg bg-[var(--accent)] px-2.5 py-1 text-[11px] font-bold text-[var(--on-accent)]"
+            >
+              Save and close
+            </button>
+          </div>
           <label className="block">
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Coach comment
@@ -839,7 +906,7 @@ function ChalkboardCard({
             </button>
           </div>
           <p className="text-[10px] text-[var(--muted)]">
-            Tap the reel, then open Marks or add text. Your profile pic stays on the mark.
+            Tap the reel to place a mark, then drag artistic text anywhere. Your profile pic stays on the mark.
           </p>
           <MarksTool
             onPick={(id) => addOverlay({ kind: 'sticker', label: id })}
@@ -927,6 +994,7 @@ function ReelTheater({
   const scrollerRef = useRef<HTMLDivElement>(null)
   const startIndex = Math.max(0, items.findIndex((item) => item.id === startId))
   const [index, setIndex] = useState(startIndex)
+  const [coachEdit, setCoachEdit] = useState(false)
 
   useEffect(() => {
     const node = scrollerRef.current?.querySelector(`[data-reel="${items[index]?.id ?? startId}"]`)
@@ -944,6 +1012,17 @@ function ReelTheater({
           {items[index]?.title ?? 'Reel'} · {index + 1}/{items.length}
         </p>
         <div className="flex shrink-0 gap-2">
+          {coach && (
+            <button
+              type="button"
+              onClick={() => setCoachEdit((on) => !on)}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                coachEdit ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
+              }`}
+            >
+              {coachEdit ? 'Athlete view' : 'Coach edit'}
+            </button>
+          )}
           <button
             type="button"
             disabled={index <= 0}
@@ -992,6 +1071,7 @@ function ReelTheater({
             key={item.id}
             item={item}
             coach={coach}
+            allowEdit={coach && coachEdit}
             active={i === index}
           />
         ))}
@@ -1004,10 +1084,12 @@ function ReelTheater({
 function ReelSlide({
   item,
   coach,
+  allowEdit,
   active,
 }: {
   item: ChalkboardItem
   coach: boolean
+  allowEdit: boolean
   active: boolean
 }) {
   const { clipForUrl } = useGymLibrary()
@@ -1019,6 +1101,7 @@ function ReelSlide({
   const [textDraft, setTextDraft] = useState('')
   const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
   const [place, setPlace] = useState({ x: 72, y: 18 })
+  const [editing, setEditing] = useState(false)
   const coachProfile = useMemo(
     () => loadAthletes().find((a) => a.id === item.createdById) ?? null,
     [item.createdById],
@@ -1027,6 +1110,17 @@ function ReelSlide({
   useEffect(() => {
     setCommentDraft(item.comment ?? '')
   }, [item.comment])
+
+  useEffect(() => {
+    if (!allowEdit) setEditing(false)
+  }, [allowEdit])
+
+  const saveComment = () => {
+    updateChalkboardItem(item.id, {
+      comment: commentDraft,
+      commentPlacement: item.commentPlacement ?? 'below',
+    })
+  }
 
   const addOverlay = (overlay: Omit<ChalkboardOverlay, 'id' | 'x' | 'y'> & { x?: number; y?: number }) => {
     updateChalkboardItem(item.id, {
@@ -1046,6 +1140,12 @@ function ReelSlide({
     setPlace((p) => ({ x: Math.min(88, p.x + 6), y: Math.min(80, p.y + 10) }))
   }
 
+  const moveOverlay = (id: string, x: number, y: number) => {
+    updateChalkboardItem(item.id, {
+      overlays: overlays.map((row) => (row.id === id ? { ...row, x, y } : row)),
+    })
+  }
+
   const commentBlock = comment ? (
     <CoachComment text={comment} coach={coachProfile} coachName={item.createdByName} />
   ) : null
@@ -1056,11 +1156,11 @@ function ReelSlide({
       className="flex min-h-full snap-start flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
       {commentAbove && commentBlock}
-      {active && item.url ? (
+      {item.url ? (
         <div
           className="relative mx-auto h-[min(52vh,30rem)] w-full max-w-3xl bg-black"
           onClick={(e) => {
-            if (!coach) return
+            if (!coach || !editing) return
             const rect = e.currentTarget.getBoundingClientRect()
             setPlace({
               x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
@@ -1079,8 +1179,16 @@ function ReelSlide({
             smartFit={false}
             quiet
             markupSwipeSafe
+            active={active}
+            startChromeOpen={false}
           />
-          <OverlayLayer overlays={overlays} coach={coachProfile} coachName={item.createdByName} />
+          <OverlayLayer
+            overlays={overlays}
+            coach={coachProfile}
+            coachName={item.createdByName}
+            canDrag={coach && editing}
+            onMove={moveOverlay}
+          />
         </div>
       ) : (
         <div className="mx-auto flex h-[min(52vh,30rem)] w-full max-w-3xl items-center justify-center bg-black text-sm text-white/50">
@@ -1093,21 +1201,43 @@ function ReelSlide({
         <p className="text-xs text-white/55">
           Swipe or use Next for the next reel. Coach notes and text sit with this clip.
         </p>
-        {coach && (
+        {allowEdit && !editing && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-[11px] font-semibold text-[#2dd4a8]"
+          >
+            Edit this reel
+          </button>
+        )}
+        {allowEdit && editing && (
           <>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Coach edit
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  saveComment()
+                  setEditing(false)
+                }}
+                className="rounded-lg bg-[#2dd4a8] px-2.5 py-1 text-[11px] font-bold text-[#061418]"
+              >
+                Save and close
+              </button>
+            </div>
             <textarea
               value={commentDraft}
               onChange={(e) => setCommentDraft(e.target.value)}
-              onBlur={() =>
-                updateChalkboardItem(item.id, {
-                  comment: commentDraft,
-                  commentPlacement: item.commentPlacement ?? 'below',
-                })
-              }
+              onBlur={saveComment}
               rows={2}
               placeholder="Write a note athletes can read with this reel"
               className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm"
             />
+            <p className="text-[10px] text-white/50">
+              Tap the reel to place a mark, then drag artistic text anywhere.
+            </p>
             <MarksTool onPick={(id) => addOverlay({ kind: 'sticker', label: id })} />
             <div className="flex flex-wrap gap-2">
               <input
@@ -1137,6 +1267,15 @@ function ReelSlide({
                 Add text
               </button>
             </div>
+            {overlays.length > 0 && (
+              <button
+                type="button"
+                onClick={() => updateChalkboardItem(item.id, { overlays: overlays.slice(0, -1) })}
+                className="text-[11px] font-semibold text-[var(--bad)]"
+              >
+                Remove last mark
+              </button>
+            )}
           </>
         )}
       </div>
@@ -1170,44 +1309,105 @@ function OverlayLayer({
   overlays,
   coach,
   coachName,
+  canDrag = false,
+  onMove,
 }: {
   overlays: ChalkboardOverlay[]
   coach: ReturnType<typeof loadAthletes>[number] | null
   coachName: string
+  canDrag?: boolean
+  onMove?: (id: string, x: number, y: number) => void
 }) {
+  const layerRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<string | null>(null)
+  const [draft, setDraft] = useState<Record<string, { x: number; y: number }>>({})
+
+  const pct = (clientX: number, clientY: number) => {
+    const rect = layerRef.current?.getBoundingClientRect()
+    if (!rect || rect.width < 1 || rect.height < 1) return { x: 50, y: 50 }
+    return {
+      x: Math.round(Math.min(96, Math.max(4, ((clientX - rect.left) / rect.width) * 100))),
+      y: Math.round(Math.min(96, Math.max(4, ((clientY - rect.top) / rect.height) * 100))),
+    }
+  }
+
   if (overlays.length === 0) return null
   return (
-    <div className="pointer-events-none absolute inset-0">
-      {overlays.map((overlay) => (
-        <div
-          key={overlay.id}
-          className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-          style={{ left: `${overlay.x}%`, top: `${overlay.y}%` }}
-        >
-          {overlay.kind === 'sticker' && isChalkboardMark(overlay.label) ? (
-            <ChalkboardMark id={overlay.label} className="h-11 w-11 drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]" />
-          ) : (
-            <span
-              className={
-                overlay.kind === 'sticker'
-                  ? 'text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
-                  : overlay.style === 'script'
-                    ? 'font-[cursive] text-2xl font-semibold text-[#f5c542] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
-                    : overlay.style === 'banner'
-                      ? 'rounded-md bg-[#f5c542] px-2 py-0.5 text-xs font-black uppercase tracking-wide text-[#3b2203]'
-                      : 'text-sm font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
-              }
-              style={overlay.kind === 'text' && overlay.style === 'plain' && overlay.color ? { color: overlay.color } : undefined}
-            >
-              {overlay.label}
+    <div ref={layerRef} className={`absolute inset-0 ${canDrag ? '' : 'pointer-events-none'}`}>
+      {overlays.map((overlay) => {
+        const pos = draft[overlay.id] ?? overlay
+        return (
+          <div
+            key={overlay.id}
+            className={`absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 ${
+              canDrag ? 'pointer-events-auto cursor-grab touch-none active:cursor-grabbing' : ''
+            }`}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            onPointerDown={
+              canDrag
+                ? (e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    dragRef.current = overlay.id
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                  }
+                : undefined
+            }
+            onPointerMove={
+              canDrag
+                ? (e) => {
+                    if (dragRef.current !== overlay.id) return
+                    setDraft((cur) => ({ ...cur, [overlay.id]: pct(e.clientX, e.clientY) }))
+                  }
+                : undefined
+            }
+            onPointerUp={
+              canDrag
+                ? (e) => {
+                    if (dragRef.current !== overlay.id) return
+                    const next = pct(e.clientX, e.clientY)
+                    onMove?.(overlay.id, next.x, next.y)
+                    setDraft((cur) => {
+                      const { [overlay.id]: _drop, ...rest } = cur
+                      return rest
+                    })
+                    dragRef.current = null
+                  }
+                : undefined
+            }
+            onPointerCancel={
+              canDrag
+                ? () => {
+                    dragRef.current = null
+                  }
+                : undefined
+            }
+          >
+            {overlay.kind === 'sticker' && isChalkboardMark(overlay.label) ? (
+              <ChalkboardMark id={overlay.label} className="h-11 w-11 drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]" />
+            ) : (
+              <span
+                className={
+                  overlay.kind === 'sticker'
+                    ? 'text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
+                    : overlay.style === 'script'
+                      ? 'font-[cursive] text-2xl font-semibold text-[#f5c542] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+                      : overlay.style === 'banner'
+                        ? 'rounded-md bg-[#f5c542] px-2 py-0.5 text-xs font-black uppercase tracking-wide text-[#3b2203]'
+                        : 'text-sm font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]'
+                }
+                style={overlay.kind === 'text' && overlay.style === 'plain' && overlay.color ? { color: overlay.color } : undefined}
+              >
+                {overlay.label}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5">
+              <AthleteAvatar athlete={coach ?? { name: coachName }} size="xs" />
+              <span className="text-[9px] font-semibold text-white/90">{coachName || 'Coach'}</span>
             </span>
-          )}
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5">
-            <AthleteAvatar athlete={coach ?? { name: coachName }} size="xs" />
-            <span className="text-[9px] font-semibold text-white/90">{coachName || 'Coach'}</span>
-          </span>
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </div>
   )
 }
