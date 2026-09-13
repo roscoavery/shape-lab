@@ -768,7 +768,7 @@ function HomeView({
       {coach && onNamesTest && (
         <button type="button" onClick={() => onNamesTest()} className="sl-names-glow sl-left px-5 py-5">
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#6ec8d6]">
-            Coach tool · glow
+            Coach tool
           </p>
           <h3 className="mt-2 text-3xl font-black tracking-tight text-[var(--text)]">Names test</h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">

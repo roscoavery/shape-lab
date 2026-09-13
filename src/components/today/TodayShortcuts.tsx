@@ -105,7 +105,7 @@ export function TodayShortcuts({ onGo, showStation = true, showNames = false }: 
       {showNames && (
         <button type="button" onClick={() => onGo('names')} className="sl-names-glow sl-left px-4 py-4">
           <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6ec8d6]">
-            Coach tool · glow
+            Coach tool
           </span>
           <span className="mt-1 block text-xl font-black tracking-tight sm:text-2xl">
             Names test

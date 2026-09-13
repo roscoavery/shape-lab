@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
-import { givenName } from '../../lib/classStation'
 import {
   buildNamesDeck,
   findNamesGroup,
@@ -429,7 +428,6 @@ function QuizScreen({
 }) {
   const locked = picked !== null
   const correct = picked === q.answerId
-  const answer = q.choices.find((c) => c.id === q.answerId)
 
   return (
     <section className="rounded-2xl border border-[#6ec8d6]/35 bg-[#0d161c] p-4">
@@ -451,8 +449,8 @@ function QuizScreen({
           className="mx-auto mt-4 h-44 w-44 rounded-full object-cover ring-2 ring-[#6ec8d6]"
         />
       )}
-      {q.kind === 'face' && (
-        <p className="mt-2 text-lg font-semibold text-[#6ec8d6]">{answer?.label}</p>
+      {q.kind === 'face' && q.namePrompt && (
+        <p className="mt-2 text-lg font-semibold text-[#6ec8d6]">{q.namePrompt}</p>
       )}
 
       <div className={`mt-4 grid gap-2 ${q.kind === 'face' ? 'grid-cols-2' : ''}`}>
@@ -476,7 +474,6 @@ function QuizScreen({
                   ) : (
                     <AthleteAvatar athlete={{ name: c.label, photoDataUrl: c.photoDataUrl }} size="xl" />
                   )}
-                  <span className="text-sm font-bold">{givenName({ name: c.label })}</span>
                 </span>
               ) : (
                 <span className="block text-base font-bold">{c.label}</span>

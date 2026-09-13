@@ -28,7 +28,7 @@ export function NamesTestGlow({
   return (
     <button type="button" onClick={onClick} className="sl-names-glow sl-left px-4 py-4">
       <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#6ec8d6]">
-        Coach tool · glow
+        Coach tool
       </span>
       <span className="mt-1 block text-2xl font-black tracking-tight text-[var(--text)]">{title}</span>
       <span className="mt-1.5 block max-w-lg text-sm leading-relaxed text-[var(--muted)]">{hint}</span>

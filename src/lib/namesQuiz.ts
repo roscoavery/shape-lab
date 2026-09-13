@@ -4,17 +4,17 @@
  */
 
 import type { Athlete } from '../types'
-import { athletesOfCoach } from './coachLink'
+import { coachWorkedWithAthlete } from './coachLink'
 import {
   classLabel,
   getActiveMeeting,
+  loadMeetings,
   loadOfferingsForCoach,
-  priorOfferingAthleteIds,
   resolveAttendeeAthletes,
-  rosterAthletes,
   type ClassMeeting,
   type CoachClassOffering,
 } from './coachClasses'
+import { findLiveLesson, lessonAthleteIds } from './lessonStore'
 import { givenName } from './classStation'
 import { eventKindLabel, listTrainingEvents, type TrainingEvent } from './trainingEvents'
 import { profileRole } from './profileRole'
@@ -42,6 +42,8 @@ export type NamesQuestion = {
   id: string
   kind: 'who' | 'face'
   prompt: string
+  /** First name only — shown for face cards, never on who-is-this options. */
+  namePrompt?: string
   answerId: string
   photoUrl?: string
   choices: NamesChoice[]
@@ -77,6 +79,26 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+/** Standing roster plus every profile matched from past and live meetings. */
+function allOfferingAthleteIds(offering: CoachClassOffering, athletes: Athlete[]): string[] {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  for (const id of offering.rosterIds) {
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    ordered.push(id)
+  }
+  for (const meeting of loadMeetings()) {
+    if (meeting.offeringId !== offering.id) continue
+    for (const row of resolveAttendeeAthletes(meeting, athletes)) {
+      if (seen.has(row.id)) continue
+      seen.add(row.id)
+      ordered.push(row.id)
+    }
+  }
+  return ordered
+}
+
 function byId(athletes: Athlete[], ids: string[]): Athlete[] {
   const seen = new Set<string>()
   const out: Athlete[] = []
@@ -106,16 +128,26 @@ export function listNamesGroups(opts: {
 
   if (live) {
     const offering = offerings.find((o) => o.id === live.offeringId)
-    const here = resolveAttendeeAthletes(live, opts.athletes)
-    const roster = offering ? rosterAthletes(offering, opts.athletes) : []
-    const prior = offering ? byId(opts.athletes, priorOfferingAthleteIds(offering.id)) : []
-    const ids = [...new Set([...here, ...roster, ...prior].map((a) => a.id))]
+    const here = resolveAttendeeAthletes(live, opts.athletes).map((a) => a.id)
+    const fromOffering = offering ? allOfferingAthleteIds(offering, opts.athletes) : []
+    const ids = [...new Set([...here, ...fromOffering])]
     groups.push({
       id: 'live',
       kind: 'live',
       eyebrow: 'Live class',
       label: offering ? classLabel(offering) : 'Class tonight',
       athleteIds: ids,
+    })
+  }
+
+  const liveLesson = findLiveLesson(coach.id)
+  if (liveLesson) {
+    groups.push({
+      id: 'live-lesson',
+      kind: 'live',
+      eyebrow: 'Live lesson',
+      label: 'Lesson now',
+      athleteIds: [...lessonAthleteIds(liveLesson)],
     })
   }
 
@@ -130,9 +162,7 @@ export function listNamesGroups(opts: {
   }
 
   for (const offering of offerings) {
-    const roster = rosterAthletes(offering, opts.athletes)
-    const prior = byId(opts.athletes, priorOfferingAthleteIds(offering.id))
-    const ids = [...new Set([...roster, ...prior].map((a) => a.id))]
+    const ids = allOfferingAthleteIds(offering, opts.athletes)
     if (ids.length === 0) continue
     groups.push({
       id: `class:${offering.id}`,
@@ -143,7 +173,9 @@ export function listNamesGroups(opts: {
     })
   }
 
-  const desk = athletesOfCoach(coach.id, opts.athletes)
+  const desk = opts.athletes.filter(
+    (a) => isNamesKid(a) && coachWorkedWithAthlete(coach.id, a),
+  )
   groups.push({
     id: 'desk',
     kind: 'desk',
@@ -211,8 +243,7 @@ export function makeNamesQuestion(
       photoUrl: answer.photoDataUrl,
       choices: shuffle([answer, ...decoys]).map((a) => ({
         id: a.id,
-        label: a.name,
-        photoDataUrl: a.photoDataUrl,
+        label: givenName(a),
       })),
       explain: `That’s ${who} — ${answer.name}.`,
     }
@@ -221,8 +252,9 @@ export function makeNamesQuestion(
   return {
     id: `face-${answer.id}-${serial}`,
     kind: 'face',
-    prompt: `Which of these athletes is ${who}?`,
+    prompt: `Which face is this name?`,
     answerId: answer.id,
+    namePrompt: who,
     choices: shuffle([answer, ...decoys]).map((a) => ({
       id: a.id,
       label: a.name,
