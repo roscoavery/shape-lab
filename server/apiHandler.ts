@@ -47,7 +47,13 @@ import {
   toggleFeedLike,
   toggleFeedRepost,
 } from './feedStore.ts'
-import { readCoachStillsFile, writeCoachStillsFile } from './coachStillStore.ts'
+import {
+  addCoachStillFromBody,
+  extrasForClient,
+  readRequestBodyLimited as readCoachStillBody,
+  sendCoachStillFile,
+  writeCoachStillsFile,
+} from './coachStillStore.ts'
 import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, toggleFollowOnDisk, writeSocialFile } from './socialStore.ts'
 import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
@@ -106,6 +112,7 @@ const API_PATHS = new Set([
   '/api/shape-copy',
   '/api/learn-notes',
   '/api/coach-stills',
+  '/api/coach-still-file',
   '/api/still-crops',
   '/api/athlete-videos',
   '/api/athlete-video-file',
@@ -200,7 +207,7 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'frost' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'glaze' })
     return true
   }
   if (path === '/api/persist') {
@@ -356,7 +363,19 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/coach-stills') {
     if (req.method === 'GET') {
-      sendJson(res, 200, await readCoachStillsFile())
+      sendJson(res, 200, await extrasForClient())
+      return true
+    }
+    if (req.method === 'POST') {
+      try {
+        const body = await readCoachStillBody(req)
+        const saved = await addCoachStillFromBody(JSON.parse(body))
+        sendJson(res, 200, saved)
+      } catch (err) {
+        sendJson(res, 400, {
+          error: err instanceof Error ? err.message : 'Could not save that still.',
+        })
+      }
       return true
     }
     if (req.method === 'PUT') {
@@ -365,7 +384,14 @@ export async function handleShapeLabApi(
       sendJson(res, 200, saved)
       return true
     }
-    sendJson(res, 405, { error: 'Use GET or PUT' })
+    sendJson(res, 405, { error: 'Use GET, POST, or PUT' })
+    return true
+  }
+  if (path === '/api/coach-still-file') {
+    const id = url.searchParams.get('id') ?? ''
+    if (!(await sendCoachStillFile(id, res))) {
+      sendJson(res, 404, { error: 'Still file not found' })
+    }
     return true
   }
   if (path === '/api/learn-notes') {

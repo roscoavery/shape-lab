@@ -723,6 +723,7 @@ export default function App() {
   const ryanEdit = isRyanAthlete(
     athletes.find((a) => a.id === activeAthleteId) ?? null,
   )
+  const libraryEdit = ryanEdit || isCoachProfile(activeProfile)
   const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
@@ -749,7 +750,7 @@ export default function App() {
   return (
     <OverlayStillProvider>
     <IgStillProvider persistToApp onSave={saveIgStill}>
-    <ShapeCopyProvider canEdit={ryanEdit}>
+    <ShapeCopyProvider canEdit={libraryEdit}>
     <StillCropProvider canEdit={ryanEdit}>
     <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
     <ClipEditProvider viewer={activeProfile} athletes={athletes}>

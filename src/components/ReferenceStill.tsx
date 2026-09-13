@@ -112,32 +112,38 @@ export function CoachStillGallery({
 
   const addStill = async (file: File) => {
     if (!onPhotosChange) return
-    const jpeg = await fileToJpegBlob(file)
-    const dataUrl = await blobToDataUrl(jpeg)
-    const photo: ReferencePhoto = {
-      id: createId('coach'),
-      shapeId,
-      athleteId: null,
-      dataUrl,
-      label: `${alt || shapeId} extra`,
-      createdAt: new Date().toISOString(),
-      library: 'coach',
-    }
+    setFlash('Saving still…')
     try {
-      await saveReferencePhoto(photo)
+      const jpeg = await fileToJpegBlob(file)
+      const dataUrl = await blobToDataUrl(jpeg)
+      const photo: ReferencePhoto = {
+        id: createId('coach'),
+        shapeId,
+        athleteId: null,
+        dataUrl,
+        label: `${alt || shapeId} extra`,
+        createdAt: new Date().toISOString(),
+        library: 'coach',
+      }
+      const remote = await persistCoachStillExtra(photo)
+      const kept = remote.photo ?? photo
+      if (!remote.ok) {
+        setFlash(remote.error ?? 'Gym did not keep that still.')
+        onPhotosChange([kept, ...photos.filter((p) => p.id !== kept.id)])
+        return
+      }
+      try {
+        await saveReferencePhoto(kept)
+      } catch (err) {
+        setFlash(err instanceof Error ? err.message : 'Gym kept the still. This phone storage is full.')
+      }
+      onPhotosChange([kept, ...photos.filter((p) => p.id !== kept.id)])
+      if (stills.length === 0) setMain(kept.id)
+      setFlash('Saved on this gym — other devices will pick it up.')
+      window.setTimeout(() => setFlash(null), 3500)
     } catch (err) {
-      setFlash(err instanceof Error ? err.message : 'Could not keep that still on this device.')
-      return
+      setFlash(err instanceof Error ? err.message : 'Could not read that picture.')
     }
-    onPhotosChange([photo, ...photos.filter((p) => p.id !== photo.id)])
-    if (stills.length === 0) setMain(photo.id)
-    const remote = await persistCoachStillExtra(photo)
-    if (!remote.ok) {
-      setFlash(remote.error ?? 'Gym did not keep that still.')
-      return
-    }
-    setFlash('Saved on this gym — other devices will pick it up.')
-    window.setTimeout(() => setFlash(null), 3500)
   }
 
   if (stills.length === 0 && !canEdit) {
@@ -197,30 +203,31 @@ export function CoachStillGallery({
       )}
       {canEdit && onPhotosChange && (
         <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (file) void addStill(file)
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
-          >
-            Add another coach still
-          </button>
+          <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)]">
+            Add a coach still
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,.heic,.heif"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (file) void addStill(file)
+              }}
+            />
+          </label>
           <p className="mt-1 text-[11px] text-[var(--muted)]">
             Extra pictures for this body position. Pick which one is the main still used in class flows
-            and Compare.
+            and Compare. Screenshots and JPEGs work on iPhone.
           </p>
           {flash && <p className="mt-1 text-[11px] text-[var(--accent)]">{flash}</p>}
         </div>
+      )}
+      {!canEdit && (
+        <p className="text-[11px] text-[var(--muted)]">
+          Unlock Ryan or a coach profile to add a coach still to this shape.
+        </p>
       )}
     </div>
   )

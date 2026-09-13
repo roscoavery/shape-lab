@@ -9,7 +9,7 @@ import { readBin, readDiskJson, readJson, removeFile, writeBin, writeJson } from
 
 const META = 'data/ig-stills.json'
 const blobRel = (file: string) => `data/ig-blobs/${file}`
-const MAX_STILLS = 400
+const MAX_STILLS = 2500
 const SHIPPED_DIR = 'public/learn/ig-stills'
 const MAX_BYTES = 6 * 1024 * 1024
 
@@ -134,7 +134,8 @@ export async function readIgStillMeta(): Promise<DiskIgLibrary> {
     ...(remote.removedStillIds ?? []),
     ...(disk.removedStillIds ?? []),
   ])
-  const gone = new Set(removedStillIds)
+  const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
+  const gone = new Set(removedStillIds.filter((id) => !shippedIds.has(id)))
   const map = new Map<string, DiskIgStill>()
   const addAll = (lib: DiskIgLibrary | null) => {
     if (!lib || lib.kind !== 'shape-lab-ig-stills' || !Array.isArray(lib.stills)) return
@@ -146,7 +147,7 @@ export async function readIgStillMeta(): Promise<DiskIgLibrary> {
   addAll(disk)
   addAll(remote)
   for (const shipped of SHIPPED_FALLBACK) {
-    if (!gone.has(shipped.id) && !map.has(shipped.id)) map.set(shipped.id, shipped)
+    if (!map.has(shipped.id)) map.set(shipped.id, shipped)
   }
   return {
     ...EMPTY,
@@ -163,7 +164,9 @@ async function writeMeta(stills: DiskIgStill[], removedStillIds?: string[]): Pro
     version: 1,
     exportedAt: new Date().toISOString(),
     stills: stills.slice(0, MAX_STILLS),
-    removedStillIds: asIdList(removedStillIds ?? current?.removedStillIds ?? []),
+    removedStillIds: asIdList(removedStillIds ?? current?.removedStillIds ?? []).filter(
+      (id) => !SHIPPED_FALLBACK.some((s) => s.id === id),
+    ),
   }
   await writeJson(META, next)
   return next
@@ -175,9 +178,14 @@ export async function stillsForClient(): Promise<{
 }> {
   const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
   const meta = await readIgStillMeta()
-  return {
-    removedStillIds: meta.removedStillIds ?? [],
-    stills: meta.stills.map((s) => ({
+  const stills: Array<Record<string, unknown>> = []
+  for (const s of meta.stills) {
+    const shipped = shippedIds.has(s.id)
+    if (!shipped) {
+      const buf = await readBin(blobRel(s.file))
+      if (!buf) continue
+    }
+    stills.push({
       id: s.id,
       shapeId: s.shapeId,
       athleteId: s.athleteId,
@@ -188,10 +196,14 @@ export async function stillsForClient(): Promise<{
       library: 'ig',
       persistedToApp: true,
       showInShapeLibrary: Boolean(s.showInShapeLibrary),
-      dataUrl: shippedIds.has(s.id)
+      dataUrl: shipped
         ? `/learn/ig-stills/${s.file}`
         : `/api/ig-still-file?id=${encodeURIComponent(s.id)}`,
-    })),
+    })
+  }
+  return {
+    removedStillIds: (meta.removedStillIds ?? []).filter((id) => !shippedIds.has(id)),
+    stills,
   }
 }
 
@@ -280,7 +292,10 @@ export async function deleteIgStill(idRaw: string): Promise<boolean> {
   if (!id) return false
   const meta = await readIgStillMeta()
   const row = meta.stills.find((s) => s.id === id)
-  const removedStillIds = asIdList([...(meta.removedStillIds ?? []), id])
+  const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
+  const removedStillIds = asIdList([...(meta.removedStillIds ?? []), id]).filter(
+    (gone) => !shippedIds.has(gone),
+  )
   if (!row && (meta.removedStillIds ?? []).includes(id)) return true
   await writeMeta(
     meta.stills.filter((s) => s.id !== id),

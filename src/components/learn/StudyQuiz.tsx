@@ -61,6 +61,8 @@ export function StudyQuiz({
       const pickedChoice = question.choices.find((c) => c.id === choice)
       return {
         prompt: question.prompt,
+        photoUrl: question.photoUrl,
+        stillId: question.stillId,
         pickedLabel: pickedChoice?.label ?? '(no answer)',
         correctLabel: correctChoice?.label ?? '',
         correct: choice === question.answerId,
@@ -101,6 +103,11 @@ export function StudyQuiz({
       </div>
 
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{q.prompt}</p>
+      {q.photoUrl && (
+        <div className="mt-3 overflow-hidden rounded-lg bg-black">
+          <img src={q.photoUrl} alt="" className="mx-auto max-h-72 w-full object-contain" />
+        </div>
+      )}
 
       <div className="mt-4 grid gap-2">
         {q.choices.map((c) => {

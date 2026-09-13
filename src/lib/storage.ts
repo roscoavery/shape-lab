@@ -771,9 +771,20 @@ export function capReferencePhotos(photos: ReferencePhoto[]): ReferencePhoto[] {
   ]
 }
 
+function slimForDevice(photo: ReferencePhoto): ReferencePhoto {
+  if (!photo.dataUrl.startsWith('data:image') || photo.dataUrl.length < 4000) return photo
+  if (photo.library === 'ig') {
+    return { ...photo, dataUrl: `/api/ig-still-file?id=${encodeURIComponent(photo.id)}` }
+  }
+  if (photo.library === 'coach') {
+    return { ...photo, dataUrl: `/api/coach-still-file?id=${encodeURIComponent(photo.id)}` }
+  }
+  return photo
+}
+
 export function saveReferencePhotos(photos: ReferencePhoto[]) {
   try {
-    writeJson(REFS_KEY, photos)
+    writeJson(REFS_KEY, photos.map(slimForDevice))
   } catch {
     throw new Error('Storage is full. Delete some IG stills in Learn → IG shapes.')
   }

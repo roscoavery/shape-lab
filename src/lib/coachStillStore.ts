@@ -23,7 +23,11 @@ export type CoachStillsFile = {
   extras: CoachStillExtra[]
 }
 
-export type PersistStillResult = { ok: boolean; error?: string }
+export type PersistStillResult = {
+  ok: boolean
+  error?: string
+  photo?: ReferencePhoto
+}
 
 const MAX_EXTRAS = 2000
 
@@ -48,7 +52,7 @@ function emitCoachStills(extras: CoachStillExtra[]) {
 
 function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
   return extras
-    .filter((row) => row.id && row.shapeId && row.dataUrl.startsWith('data:image'))
+    .filter((row) => row.id && row.shapeId && typeof row.dataUrl === 'string' && row.dataUrl)
     .map((row) => ({
       id: row.id,
       shapeId: row.shapeId,
@@ -92,10 +96,17 @@ export async function pullCoachStills(): Promise<CoachStillsFile> {
 
 export async function pushCoachStills(file: CoachStillsFile): Promise<CoachStillsFile | null> {
   try {
+    const slim: CoachStillsFile = {
+      ...file,
+      extras: file.extras.map((row) => ({
+        ...row,
+        dataUrl: row.dataUrl.startsWith('data:image') ? '' : row.dataUrl,
+      })),
+    }
     const res = await fetch('/api/coach-stills', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
+      body: JSON.stringify(slim),
     })
     if (!res.ok) return null
     return (await res.json()) as CoachStillsFile
@@ -127,34 +138,54 @@ export async function hydrateCoachStills(
 }
 
 export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<PersistStillResult> {
-  if (photo.library === 'ig' || !photo.dataUrl.startsWith('data:image')) {
-    return { ok: true }
-  }
-  const file = await pullCoachStills()
-  const extra: CoachStillExtra = {
-    id: photo.id,
-    shapeId: photo.shapeId,
-    dataUrl: photo.dataUrl,
-    label: photo.label,
-    createdAt: photo.createdAt,
-  }
-  const extras = [extra, ...file.extras.filter((row) => row.id !== photo.id)].slice(0, MAX_EXTRAS)
-  const saved = await pushCoachStills({
-    kind: 'shape-lab-coach-stills',
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    main: { ...loadMainCoachStills(), ...file.main },
-    extras,
-  })
-  if (!saved) {
+  if (photo.library === 'ig') return { ok: true, photo }
+  try {
+    const res = await fetch('/api/coach-stills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: photo.id,
+        shapeId: photo.shapeId,
+        dataUrl: photo.dataUrl,
+        label: photo.label,
+        createdAt: photo.createdAt,
+      }),
+    })
+    if (!res.ok) {
+      let detail = ''
+      try {
+        const body = (await res.json()) as { error?: string }
+        detail = body.error ?? ''
+      } catch {
+        /* ignore */
+      }
+      return {
+        ok: false,
+        error:
+          detail ||
+          'This device kept the still, but the gym file did not. Leave gym:mac running, then try again.',
+      }
+    }
+    const saved = (await res.json()) as CoachStillsFile
+    rememberCoachExtrasLocally(saved.extras)
+    emitCoachStills(saved.extras)
+    const row = saved.extras.find((extra) => extra.id === photo.id)
+    return {
+      ok: true,
+      photo: row
+        ? {
+            ...photo,
+            dataUrl: row.dataUrl,
+            persistedToApp: true,
+          }
+        : { ...photo, persistedToApp: true },
+    }
+  } catch {
     return {
       ok: false,
-      error: 'This device kept the still, but the gym file did not. Leave gym:mac running, then try again.',
+      error: 'Could not reach the gym file. Leave gym:mac running, then try again.',
     }
   }
-  rememberCoachExtrasLocally(saved.extras)
-  emitCoachStills(saved.extras)
-  return { ok: true }
 }
 
 export async function persistMainCoachStill(shapeId: string, stillId: string): Promise<void> {

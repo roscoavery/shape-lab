@@ -16,6 +16,8 @@ export type PhysicsQuizItem = {
   answerId: string
   /** Shown after the test on misses so they can learn the right idea immediately. */
   explain: string
+  photoUrl?: string | null
+  stillId?: string | null
 }
 
 export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [

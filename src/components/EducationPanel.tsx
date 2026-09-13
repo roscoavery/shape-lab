@@ -227,7 +227,7 @@ export function EducationPanel({
               <NavChip
                 active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
                 onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
-                label="Shape test"
+                label="Shape test 1"
               />
               <NavChip
                 active={view.kind === 'shapeBody'}
@@ -456,7 +456,7 @@ export function EducationPanel({
 
       {view.kind === 'shapeBody' && (
         <PanelErrorBoundary label="Shape test 2">
-          <ShapeBodyQuiz onExit={goHome} />
+          <ShapeBodyQuiz onExit={goHome} referencePhotos={referencePhotos} />
         </PanelErrorBoundary>
       )}
 
@@ -770,16 +770,16 @@ function HomeView({
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <button type="button" onClick={onQuiz} className="learn-exam-ink">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Pictures</p>
-            <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test</h3>
+            <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 1</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Name the still. Starting lunge, landing lunge, and mountain climber sit together.
             </p>
           </button>
           <button type="button" onClick={onShapeBody} className="learn-exam-ink">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Body</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Look closer</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 2</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              More specific. Where the hips, knees, and hands actually are.
+              Same stills, harder. Pick the lookalike, or name one detail on the picture.
             </p>
           </button>
           <button type="button" onClick={onMovements} className="learn-exam-ink">

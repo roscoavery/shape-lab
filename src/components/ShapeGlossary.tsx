@@ -75,35 +75,40 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
   }, [])
 
   const uploadForShape = async (shapeId: string, file: File, notes: string) => {
-    const jpeg = await fileToJpegBlob(file)
-    const dataUrl = await blobToDataUrl(jpeg)
     const shape = getShape(shapeId)
-    const photo: ReferencePhoto = {
-      id: createId('ref'),
-      shapeId,
-      athleteId: null,
-      dataUrl,
-      label: shape?.name ?? shapeId,
-      notes: notes.trim() || undefined,
-      createdAt: new Date().toISOString(),
-      library: 'coach',
-    }
     try {
-      await saveReferencePhoto(photo)
+      const jpeg = await fileToJpegBlob(file)
+      const dataUrl = await blobToDataUrl(jpeg)
+      const photo: ReferencePhoto = {
+        id: createId('ref'),
+        shapeId,
+        athleteId: null,
+        dataUrl,
+        label: shape?.name ?? shapeId,
+        notes: notes.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        library: 'coach',
+      }
+      const remote = await persistCoachStillExtra(photo)
+      const kept = remote.photo ?? photo
+      if (!remote.ok) {
+        setFlash(remote.error ?? `Could not save ${shape?.name ?? shapeId} to the gym.`)
+        window.setTimeout(() => setFlash(null), 5000)
+        return
+      }
+      try {
+        await saveReferencePhoto(kept)
+      } catch (err) {
+        setFlash(err instanceof Error ? err.message : 'Gym kept the still. This phone storage is full.')
+        window.setTimeout(() => setFlash(null), 5000)
+      }
+      onReferencesChange([kept, ...referencePhotos.filter((p) => p.id !== kept.id)])
+      setFlash(`Saved reference for ${shape?.name ?? shapeId}`)
+      window.setTimeout(() => setFlash(null), 2500)
     } catch (err) {
-      setFlash(err instanceof Error ? err.message : 'Could not keep that still on this device.')
+      setFlash(err instanceof Error ? err.message : 'Could not read that picture.')
       window.setTimeout(() => setFlash(null), 5000)
-      return
     }
-    onReferencesChange([photo, ...referencePhotos.filter((p) => p.id !== photo.id)])
-    const remote = await persistCoachStillExtra(photo)
-    if (!remote.ok) {
-      setFlash(remote.error ?? `Saved on this device only for ${shape?.name ?? shapeId}.`)
-      window.setTimeout(() => setFlash(null), 5000)
-      return
-    }
-    setFlash(`Saved reference for ${shape?.name ?? shapeId}`)
-    window.setTimeout(() => setFlash(null), 2500)
   }
 
   return (

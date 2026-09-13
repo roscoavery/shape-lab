@@ -42,10 +42,12 @@ export function forgetRemovedIgStill(id: string) {
   saveRemovedIgStillIds(loadRemovedIgStillIds().filter((row) => row !== id))
 }
 
+const SHIPPED_IG_IDS = new Set(SHIPPED_IG_STILLS.map((p) => p.id))
+
 function dropRemovedIgStills(photos: ReferencePhoto[]): ReferencePhoto[] {
   const gone = new Set(loadRemovedIgStillIds())
   if (gone.size === 0) return photos
-  return photos.filter((p) => !gone.has(p.id))
+  return photos.filter((p) => SHIPPED_IG_IDS.has(p.id) || !gone.has(p.id))
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -167,7 +169,9 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
   const remote = await pullServerIgStills()
   if (remote.removedStillIds.length) {
     const localIds = new Set(local.map((p) => p.id))
-    const keepLocal = remote.removedStillIds.filter((id) => !localIds.has(id))
+    const keepLocal = remote.removedStillIds.filter(
+      (id) => !localIds.has(id) && !SHIPPED_IG_IDS.has(id),
+    )
     if (keepLocal.length) saveRemovedIgStillIds([...loadRemovedIgStillIds(), ...keepLocal])
   }
   const remoteIds = new Set(remote.stills.map((p) => p.id))
