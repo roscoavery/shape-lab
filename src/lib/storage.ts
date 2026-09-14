@@ -838,6 +838,7 @@ export const APP_TABS = [
   'research',
   'coach',
   'history',
+  'accounts',
   'about',
 ] as const
 export type AppTab = (typeof APP_TABS)[number]

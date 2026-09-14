@@ -331,10 +331,6 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
   if (!sid) return false
   const data = await loadIndex()
   const ref = asRef(data.photos[sid], data.exportedAt)
-  if (ref?.url && isDirectHttpUrl(ref.url) && persistMode() === 'blob') {
-    sendPublicRedirect(res, ref.url)
-    return true
-  }
   let buf = await readBin(photoBinRel(sid))
   let mime = ref?.mime || 'image/jpeg'
   if (!buf) {
@@ -345,36 +341,24 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
         const current = clientPhotoMap(data)
         current[sid] = migrated
         await persistIndex(current)
-        if (isDirectHttpUrl(migrated.url)) {
-          sendPublicRedirect(res, migrated.url)
-          return true
-        }
         buf = await readBin(photoBinRel(sid))
         mime = migrated.mime
       }
     }
   }
-  if (!buf) return false
-  if (persistMode() === 'blob') {
-    try {
-      const publicUrl = await writePublicBin(photoBinRel(sid), buf, mime)
-      if (publicUrl) {
-        const current = clientPhotoMap(data)
-        current[sid] = { url: publicUrl, mime, updatedAt: new Date().toISOString() }
-        await persistIndex(current)
-        sendPublicRedirect(res, publicUrl)
-        return true
-      }
-    } catch {
-      /* stream the bytes this once */
-    }
+  if (buf) {
+    res.statusCode = 200
+    res.setHeader('Content-Type', mime)
+    res.setHeader('Content-Length', String(buf.length))
+    res.setHeader('Cache-Control', 'private, max-age=3600')
+    res.end(buf)
+    return true
   }
-  res.statusCode = 200
-  res.setHeader('Content-Type', mime)
-  res.setHeader('Content-Length', String(buf.length))
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-  res.end(buf)
-  return true
+  if (ref?.url && isDirectHttpUrl(ref.url)) {
+    sendPublicRedirect(res, ref.url)
+    return true
+  }
+  return false
 }
 
 export function photosFromAthletes(athletes: unknown[]): Record<string, string> {

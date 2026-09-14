@@ -160,8 +160,70 @@ export async function authenticateAccount(email: string, password: string): Prom
   return ok ? account : null
 }
 
+export async function accountPasswordMatches(accountId: string, password: string): Promise<boolean> {
+  const account = await findAccountById(accountId)
+  if (!account) return false
+  return verifyPassword(password, account.passwordHash)
+}
+
 export async function accountsWithoutSecrets(): Promise<
   Omit<Account, 'passwordHash'>[]
 > {
   return (await readFile()).accounts.map(({ passwordHash: _hash, ...rest }) => rest)
+}
+
+export async function changeAccountPassword(
+  accountId: string,
+  nextPassword: string,
+): Promise<void> {
+  if (!nextPassword || nextPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters.')
+  }
+  const file = await readFile()
+  const idx = file.accounts.findIndex((row) => row.id === accountId)
+  if (idx < 0) throw new Error('That account is gone.')
+  const current = file.accounts[idx]
+  if (!current) throw new Error('That account is gone.')
+  const next = [...file.accounts]
+  next[idx] = {
+    ...current,
+    passwordHash: await hashPassword(nextPassword),
+    updatedAt: new Date().toISOString(),
+  }
+  await writeFile(next)
+}
+
+export async function updateAccount(
+  accountId: string,
+  patch: {
+    displayName?: string
+    role?: AccountRole
+    rosterProfileId?: string | null
+    linkedAthleteIds?: string[]
+  },
+): Promise<Omit<Account, 'passwordHash'>> {
+  const file = await readFile()
+  const idx = file.accounts.findIndex((row) => row.id === accountId)
+  if (idx < 0) throw new Error('That account is gone.')
+  const current = file.accounts[idx]
+  if (!current) throw new Error('That account is gone.')
+  const nextRow: Account = {
+    ...current,
+    displayName: patch.displayName?.trim() || current.displayName,
+    role: patch.role ?? current.role,
+    rosterProfileId:
+      patch.rosterProfileId === null
+        ? undefined
+        : patch.rosterProfileId !== undefined
+          ? patch.rosterProfileId
+          : current.rosterProfileId,
+    linkedAthleteIds:
+      patch.linkedAthleteIds !== undefined ? patch.linkedAthleteIds : current.linkedAthleteIds,
+    updatedAt: new Date().toISOString(),
+  }
+  const next = [...file.accounts]
+  next[idx] = nextRow
+  await writeFile(next)
+  const { passwordHash: _hash, ...safe } = nextRow
+  return safe
 }

@@ -75,6 +75,11 @@ export async function destroySession(sessionId: string): Promise<void> {
   await writeFile(file.sessions.filter((row) => row.id !== sessionId))
 }
 
+export async function destroySessionsForAccount(accountId: string): Promise<void> {
+  const file = await readFile()
+  await writeFile(file.sessions.filter((row) => row.accountId !== accountId))
+}
+
 export function readSessionId(req: IncomingMessage): string | null {
   const header = typeof req.headers.cookie === 'string' ? req.headers.cookie : ''
   const id = parseCookieHeader(header, SESSION_COOKIE)

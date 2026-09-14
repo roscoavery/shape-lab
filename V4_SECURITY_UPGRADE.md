@@ -11,7 +11,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Existing public Vercel Blob URLs for some photos/videos may still work if someone already has the exact URL.
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
 - Parent consent UX is not built. Consent fields exist and default to `unknown`.
-- Account invites, password reset, and magic-link login are not built.
+- Account invites by email and magic-link login are not built. Admin can create a login and reset a password in More → Accounts.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.
 
@@ -55,6 +55,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - Match stills admin tool was removed. Shape still add / rename / delete / description edits still save on the gym API and poll across devices.
 - `data/roster.json` is gitignored going forward. `data/roster.example.json` is fictional only. Startup does not copy the example over a live file.
 - Tiny audit log in gitignored `data/audit.json`.
+- **Phase 2:** More → Accounts lets admin create / link / reset logins. Anyone signed in can change their own password. Other sessions are signed out on a password change. Authorized roster photos stream privately when the bytes are on disk instead of minting a new public Blob URL.
 
 ## Authentication architecture
 

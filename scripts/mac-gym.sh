@@ -83,8 +83,8 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
 
   echo
   echo "============================================================"
-  echo "  SORT BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a cyan chip that says Sort build."
+  echo "  KEYS BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a cyan chip that says Keys build (V4) or Sort build (V3)."
   echo "  Firm, Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember"
   echo "  means this window is still old — Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"

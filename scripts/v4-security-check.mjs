@@ -223,6 +223,27 @@ async function main() {
     ok('parent login', parent.status === 200, String(parent.status))
   }
 
+  const coachPatch = await req('/api/auth/accounts', {
+    method: 'PATCH',
+    cookie: coachCookie,
+    body: JSON.stringify({ id: me.json?.user?.accountId, role: 'admin' }),
+  })
+  ok('coach cannot patch accounts', coachPatch.status === 403 || coachPatch.status === 401)
+
+  const coachReset = await req('/api/auth/password', {
+    method: 'POST',
+    cookie: coachCookie,
+    body: JSON.stringify({ accountId: me.json?.user?.accountId, newPassword: 'should-not-work-1' }),
+  })
+  ok('coach cannot reset admin password', coachReset.status === 403 || coachReset.status === 401)
+
+  const pw = await req('/api/auth/password', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ currentPassword: ADMIN_PASSWORD, newPassword: ADMIN_PASSWORD }),
+  })
+  ok('admin can change own password', pw.status === 200, String(pw.status))
+
   if (failed) {
     console.log(`\n${failed} check(s) failed`)
     process.exit(1)

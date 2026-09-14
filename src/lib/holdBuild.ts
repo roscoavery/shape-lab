@@ -1,7 +1,7 @@
 /** Visible hold-challenge stamp. Change this when you need to prove a new gym build. */
-export const HOLD_BUILD = 'Sort'
-export const HOLD_BUILD_SLUG = 'sort'
-export const HOLD_BUILD_LABEL = 'Sort build'
+export const HOLD_BUILD = 'Keys'
+export const HOLD_BUILD_SLUG = 'keys'
+export const HOLD_BUILD_LABEL = 'Keys build'
 /** Drawn on recap / saved clips — not the stamp name. */
 export const HOLD_HUD_LABEL = 'shapelab'
 export const HOLD_PINK = '#6ec8d6'

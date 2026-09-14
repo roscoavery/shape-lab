@@ -6,12 +6,15 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { sendJson } from '../instagramResolve.ts'
 import { readRequestBody } from '../libraryStore.ts'
 import {
+  accountPasswordMatches,
   accountsWithoutSecrets,
   allowFirstAdmin,
   authenticateAccount,
+  changeAccountPassword,
   createAccount,
   ensureBootstrapAdmin,
   hasAdminAccount,
+  updateAccount,
 } from './accounts.ts'
 import { writeAudit } from './audit.ts'
 import { isAdmin } from './permissions.ts'
@@ -19,6 +22,7 @@ import {
   clearSessionCookie,
   createSession,
   destroySession,
+  destroySessionsForAccount,
   readSessionId,
   setSessionCookie,
   userFromRequest,
@@ -202,7 +206,96 @@ export async function handleAuthRoutes(
       }
       return true
     }
-    sendJson(res, 405, { error: 'Use GET or POST' })
+    if (req.method === 'PATCH') {
+      let body: {
+        id?: string
+        displayName?: string
+        role?: string
+        rosterProfileId?: string | null
+        linkedAthleteIds?: string[]
+      } = {}
+      try {
+        body = JSON.parse(await readRequestBody(req)) as typeof body
+      } catch {
+        sendJson(res, 400, { error: 'Could not read that request.' })
+        return true
+      }
+      if (!body.id) {
+        sendJson(res, 400, { error: 'Which account?' })
+        return true
+      }
+      if (body.role && !isAccountRole(body.role)) {
+        sendJson(res, 400, { error: 'Pick a role: admin, coach, athlete, parent, or gymOwner.' })
+        return true
+      }
+      try {
+        const saved = await updateAccount(body.id, {
+          displayName: body.displayName,
+          role: body.role && isAccountRole(body.role) ? body.role : undefined,
+          rosterProfileId: body.rosterProfileId,
+          linkedAthleteIds: body.linkedAthleteIds,
+        })
+        await writeAudit('role.change', user, {
+          detail: `${saved.email} ${saved.role} ${saved.rosterProfileId ?? ''}`,
+        })
+        sendJson(res, 200, { account: saved })
+      } catch (err) {
+        sendJson(res, 400, {
+          error: err instanceof Error ? err.message : 'Could not update that account.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, or PATCH' })
+    return true
+  }
+
+  if (path === '/api/auth/password') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    let body: { currentPassword?: string; newPassword?: string; accountId?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const targetId = body.accountId || user.accountId
+    const resettingOther = Boolean(body.accountId && body.accountId !== user.accountId)
+    if (resettingOther && !isAdmin(user)) {
+      sendJson(res, 403, { error: 'Only gym admin can reset another password.' })
+      return true
+    }
+    if (!resettingOther) {
+      const ok = await accountPasswordMatches(user.accountId, body.currentPassword || '')
+      if (!ok) {
+        sendJson(res, 401, { error: 'Current password is wrong.' })
+        return true
+      }
+    }
+    try {
+      await changeAccountPassword(targetId, body.newPassword || '')
+      await destroySessionsForAccount(targetId)
+      if (!resettingOther) {
+        const session = await createSession(user.accountId)
+        setSessionCookie(req, res, session.id)
+      }
+      await writeAudit('role.change', user, {
+        detail: resettingOther ? `password reset ${targetId}` : 'password change',
+      })
+      sendJson(res, 200, { ok: true, signedOutOthers: true })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not change that password.',
+      })
+    }
     return true
   }
 
