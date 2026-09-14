@@ -42,12 +42,12 @@ export function ReferenceStill({
     const add = (u?: string | null) => {
       if (u && isUsablePhotoSrc(u) && !list.includes(u)) list.push(u)
     }
-    if (photo?.dataUrl) add(photo.dataUrl)
-    if (!photo) {
-      if (coach?.dataUrl?.startsWith('data:image')) add(coach.dataUrl)
-      for (const u of shippedStillCandidates(shapeId)) add(u)
-      if (coach?.dataUrl && !coach.dataUrl.startsWith('data:image')) add(coach.dataUrl)
-    }
+    if (photo?.dataUrl?.startsWith('data:image')) add(photo.dataUrl)
+    else if (photo?.dataUrl) add(photo.dataUrl)
+    if (coach?.dataUrl?.startsWith('data:image')) add(coach.dataUrl)
+    for (const u of shippedStillCandidates(shapeId)) add(u)
+    if (coach?.dataUrl && !coach.dataUrl.startsWith('data:image')) add(coach.dataUrl)
+    if (photo?.dataUrl && !photo.dataUrl.startsWith('data:image')) add(photo.dataUrl)
     return list
   }, [shapeId, coach?.dataUrl, photo?.dataUrl])
 

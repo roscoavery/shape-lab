@@ -169,6 +169,37 @@ await pullFileList('data/feed-posts.json', 'posts', '/api/feed-file', 'data/feed
 await pullFileList('data/athlete-videos.json', 'videos', '/api/athlete-video-file', 'data/athlete-video-blobs')
 await pullFileList('data/stories.json', 'stories', '/api/story-file', 'data/story-blobs')
 
+async function pullStillFiles(metaRel, listKey, fileUrl, destDir, ext = '.jpg') {
+  const dest = join(ROOT, metaRel)
+  if (!existsSync(dest)) return
+  const data = JSON.parse((await import('node:fs')).readFileSync(dest, 'utf8'))
+  const rows = Array.isArray(data[listKey]) ? data[listKey] : []
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    const id = typeof row.id === 'string' ? row.id : ''
+    if (!id || /[^a-zA-Z0-9_-]/.test(id)) continue
+    const file = typeof row.file === 'string' && row.file ? row.file : `${id}${ext}`
+    const destRel = `${destDir}/${file}`
+    if (existsSync(join(ROOT, destRel))) continue
+    const url =
+      typeof row.dataUrl === 'string' && /^https:\/\//i.test(row.dataUrl)
+        ? row.dataUrl
+        : `${BASE}${fileUrl}?id=${encodeURIComponent(id)}`
+    const buf = await getBytes(url)
+    if (!buf) {
+      console.warn(`skipped still ${id} (no pixels on live gym)`)
+      continue
+    }
+    writeBinFile(destRel, buf)
+    files += 1
+    bytes += buf.length
+    console.log(`saved ${destRel} (${buf.length} bytes)`)
+  }
+}
+
+await pullStillFiles('data/ig-stills.json', 'stills', '/api/ig-still-file', 'data/ig-blobs')
+await pullStillFiles('data/coach-stills.json', 'extras', '/api/coach-still-file', 'data/coach-blobs')
+
 console.log('')
 console.log(`Pulled ${files} gym files (${Math.round(bytes / 1024)} KB binaries) into ${join(ROOT, 'data')}.`)
 console.log('Next: npm run gym')

@@ -126,7 +126,7 @@ function unionIgLists(local: ReferencePhoto[], remote: ReferencePhoto[]): Refere
       ...prev,
       ...row,
       persistedToApp: true,
-      dataUrl: prev?.dataUrl?.startsWith('data:') ? prev.dataUrl : row.dataUrl,
+      dataUrl: keepPixelUrl(prev?.dataUrl, row.dataUrl),
     })
   }
   return [...map.values()]
@@ -145,23 +145,37 @@ async function loadAllFromDb(): Promise<ReferencePhoto[]> {
     .slice(0, MAX_IG)
 }
 
+function keepPixelUrl(local: string | undefined, remote: string | undefined): string {
+  if (local?.startsWith('data:image')) return local
+  if (remote && remote.length > 0) return remote
+  return local ?? ''
+}
+
 async function pullServerIgStills(): Promise<{
   stills: ReferencePhoto[]
   removedStillIds: string[]
+  missingStillIds: string[]
 }> {
   try {
     const res = await fetch('/api/ig-stills')
-    if (!res.ok) return { stills: [], removedStillIds: [] }
-    const data = (await res.json()) as { stills?: ReferencePhoto[]; removedStillIds?: unknown }
+    if (!res.ok) return { stills: [], removedStillIds: [], missingStillIds: [] }
+    const data = (await res.json()) as {
+      stills?: ReferencePhoto[]
+      removedStillIds?: unknown
+      missingStillIds?: unknown
+    }
     const stills = Array.isArray(data.stills)
       ? data.stills.map((p) => ({ ...p, library: 'ig' as const, persistedToApp: true }))
       : []
     const removedStillIds = Array.isArray(data.removedStillIds)
       ? data.removedStillIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
       : []
-    return { stills, removedStillIds }
+    const missingStillIds = Array.isArray(data.missingStillIds)
+      ? data.missingStillIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : []
+    return { stills, removedStillIds, missingStillIds }
   } catch {
-    return { stills: [], removedStillIds: [] }
+    return { stills: [], removedStillIds: [], missingStillIds: [] }
   }
 }
 
@@ -180,10 +194,19 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
     ])
   }
   const remoteIds = new Set(remote.stills.map((p) => p.id))
+  const missingPixels = new Set(remote.missingStillIds)
   memory = dropRemovedIgStills(unionIgLists([...SHIPPED_IG_STILLS, ...local], remote.stills))
+  // A gym 404 URL is not a picture. Drop it unless this device still has
+  // the JPEG (data:) so we can POST it back.
+  memory = memory.filter(
+    (p) =>
+      SHIPPED_IG_IDS.has(p.id) ||
+      !missingPixels.has(p.id) ||
+      (typeof p.dataUrl === 'string' && p.dataUrl.startsWith('data:image')),
+  )
   emit()
   // Re-upload any still this device still has as pixels if the gym file is
-  // missing that id — recovers crops after an empty Blob overwrite.
+  // missing that id or the blob — recovers crops after an empty overwrite.
   const gone = new Set(loadRemovedIgStillIds())
   const unsaved = memory.filter(
     (p) =>
@@ -191,7 +214,7 @@ export async function hydrateIgStills(): Promise<ReferencePhoto[]> {
       p.dataUrl.startsWith('data:image') &&
       !gone.has(p.id) &&
       !SHIPPED_IG_IDS.has(p.id) &&
-      (!p.persistedToApp || !remoteIds.has(p.id)),
+      (!p.persistedToApp || !remoteIds.has(p.id) || missingPixels.has(p.id)),
   )
   for (const photo of unsaved) {
     const saved = await postServerStill(photo)
@@ -226,7 +249,13 @@ async function postServerStill(photo: ReferencePhoto): Promise<ReferencePhoto | 
     })
     if (!res.ok) return null
     const saved = (await res.json()) as ReferencePhoto
-    return { ...photo, ...saved, library: 'ig', persistedToApp: true }
+    return {
+      ...photo,
+      ...saved,
+      library: 'ig',
+      persistedToApp: true,
+      dataUrl: keepPixelUrl(photo.dataUrl, saved.dataUrl),
+    }
   } catch {
     return null
   }
@@ -279,7 +308,7 @@ export async function updateIgStill(
     next = {
       ...next,
       ...saved,
-      dataUrl: next.dataUrl.startsWith('data:') ? next.dataUrl : saved.dataUrl,
+      dataUrl: keepPixelUrl(next.dataUrl, saved.dataUrl),
       library: 'ig',
       persistedToApp: true,
     }

@@ -1,6 +1,6 @@
 /**
- * IG crops we still have on disk after the gym Blob library went empty.
- * Hydrate merges these so they show even when /api/ig-stills is blank.
+ * IG crops that ship in git. Gym leftover rows live in gitignored
+ * data/ig-blobs/ — if that folder is empty, only these four stills remain.
  */
 
 import type { ReferencePhoto } from '../types'

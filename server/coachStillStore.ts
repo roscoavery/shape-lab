@@ -170,9 +170,35 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
 
 export async function extrasForClient(file?: CoachStillsFile) {
   const next = file ?? (await readCoachStillsFile())
+  const extras: CoachStillExtra[] = []
+  let wrote = false
+  for (const row of next.extras) {
+    if (row.dataUrl?.startsWith('data:image') && !row.file) {
+      const saved = await persistPixels(row)
+      extras.push(saved)
+      if (saved.file && saved.file !== row.file) wrote = true
+    } else {
+      extras.push(row)
+    }
+  }
+  if (wrote) {
+    const persisted: CoachStillsFile = {
+      ...next,
+      extras,
+      updatedAt: new Date().toISOString(),
+    }
+    await writeJson(FILE, persisted)
+    return {
+      ...persisted,
+      extras: extras.map((row) => ({
+        ...row,
+        dataUrl: clientUrl(row),
+      })),
+    }
+  }
   return {
     ...next,
-    extras: next.extras.map((row) => ({
+    extras: extras.map((row) => ({
       ...row,
       dataUrl: clientUrl(row),
     })),

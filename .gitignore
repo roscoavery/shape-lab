@@ -25,6 +25,7 @@ dist-ssr
 *.sln
 data/ig-blobs/
 data/ig-stills.json
+.gym-park/
 data/shape-copy.json
 data/learn-notes.json
 data/coach-stills.json

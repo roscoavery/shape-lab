@@ -172,15 +172,31 @@ async function writeMeta(stills: DiskIgStill[], removedStillIds?: string[]): Pro
   return next
 }
 
+async function igStillBytes(row: DiskIgStill): Promise<Buffer | null> {
+  return (
+    (await readBin(blobRel(row.file))) ??
+    (await readBin(path.posix.join(SHIPPED_DIR, row.file))) ??
+    (await readBin(path.posix.join(SHIPPED_DIR, `${row.id}.jpg`)))
+  )
+}
+
 export async function stillsForClient(): Promise<{
   stills: Array<Record<string, unknown>>
   removedStillIds: string[]
+  missingStillIds: string[]
 }> {
   const shippedIds = new Set(SHIPPED_FALLBACK.map((s) => s.id))
   const meta = await readIgStillMeta()
   const stills: Array<Record<string, unknown>> = []
+  const missingStillIds: string[] = []
   for (const s of meta.stills) {
     const shipped = shippedIds.has(s.id)
+    if (!shipped && !(await igStillBytes(s))) {
+      // Keep the id on disk so a phone that still has the JPEG can POST it
+      // back. Do not send a 404 URL — that overwrote IndexedDB pixels.
+      missingStillIds.push(s.id)
+      continue
+    }
     stills.push({
       id: s.id,
       shapeId: s.shapeId,
@@ -199,6 +215,7 @@ export async function stillsForClient(): Promise<{
   }
   return {
     removedStillIds: (meta.removedStillIds ?? []).filter((id) => !shippedIds.has(id)),
+    missingStillIds,
     stills,
   }
 }
@@ -306,10 +323,7 @@ export async function sendIgStillFile(idRaw: string, res: ServerResponse): Promi
   if (!id) return false
   const row = (await readIgStillMeta()).stills.find((s) => s.id === id)
   if (!row) return false
-  const buf =
-    (await readBin(blobRel(row.file))) ??
-    (await readBin(path.posix.join(SHIPPED_DIR, row.file))) ??
-    (await readBin(path.posix.join(SHIPPED_DIR, `${id}.jpg`)))
+  const buf = await igStillBytes(row)
   if (!buf) return false
   const { type } = mimeToExt(row.file)
   res.statusCode = 200

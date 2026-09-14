@@ -39,11 +39,16 @@ export function igStillDisplayName(photo: ReferencePhoto): string {
   return photo.shapeId
 }
 
+const SHIPPED_IG_BY_ID = new Map(SHIPPED_IG_STILLS.map((still) => [still.id, still]))
+
 /** Recover a paint-able src if a description edit dropped the data URL. */
 export function igStillSrc(photo: ReferencePhoto): string | null {
+  if (photo.dataUrl?.startsWith('data:image') && photo.dataUrl.length > 80) return photo.dataUrl
+  const shipped = SHIPPED_IG_BY_ID.get(photo.id)
+  if (shipped && isUsablePhotoSrc(shipped.dataUrl)) return shipped.dataUrl
   if (isUsablePhotoSrc(photo.dataUrl)) return photo.dataUrl
   if (photo.id && (photo.persistedToApp || photo.library === 'ig')) {
-    return `/api/ig-still-file?id=${encodeURIComponent(photo.id)}`
+    return `/learn/ig-stills/${photo.id}.jpg`
   }
   return null
 }

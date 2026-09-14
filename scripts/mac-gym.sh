@@ -22,6 +22,14 @@ if [ -d .git ]; then
   git fetch origin v2-rebuild 2>/dev/null || git fetch origin v2-rebuild || true
 
   STASHED=0
+  PARK="$ROOT/.gym-park"
+  mkdir -p "$PARK/data"
+  for item in ig-blobs coach-blobs ig-stills.json coach-stills.json; do
+    if [ -e "$ROOT/data/$item" ]; then
+      rm -rf "$PARK/data/$item"
+      cp -a "$ROOT/data/$item" "$PARK/data/$item"
+    fi
+  done
   if [ -n "$(git status --porcelain -- data training 2>/dev/null || true)" ]; then
     echo "Parking gym data files so they cannot block the update…"
     if git stash push -u -m "gym-mac-data" -- data training; then
@@ -49,12 +57,27 @@ if [ -d .git ]; then
     fi
   fi
 
+  # git stash -u skips gitignored JPEGs. Put parked stills back if the update
+  # left an empty ig-blobs / coach-blobs folder.
+  mkdir -p "$ROOT/data/ig-blobs" "$ROOT/data/coach-blobs"
+  if [ -d "$PARK/data/ig-blobs" ]; then
+    cp -an "$PARK/data/ig-blobs/." "$ROOT/data/ig-blobs/" 2>/dev/null || true
+  fi
+  if [ -d "$PARK/data/coach-blobs" ]; then
+    cp -an "$PARK/data/coach-blobs/." "$ROOT/data/coach-blobs/" 2>/dev/null || true
+  fi
+  for item in ig-stills.json coach-stills.json; do
+    if [ -f "$PARK/data/$item" ] && [ ! -f "$ROOT/data/$item" ]; then
+      cp -a "$PARK/data/$item" "$ROOT/data/$item"
+    fi
+  done
+
   echo
   echo "============================================================"
-  echo "  ASH BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show an ember ASH chip that says Ash build."
-  echo "  Ember, fern, gold, pink, aqua, or no bar means this window is still old —"
-  echo "  Ctrl+C, then run npm run gym:mac again."
+  echo "  PRINT BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a cyan chip that says Print build."
+  echo "  Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember"
+  echo "  means this window is still old — Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo
 fi
