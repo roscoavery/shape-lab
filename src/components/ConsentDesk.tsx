@@ -133,6 +133,8 @@ export function ConsentDesk({ user }: Props) {
           These flags only control the gym feed, wins wall, stories, and a public
           profile page. Class, homework, lessons, and coaching notes keep working
           for assigned coaches. A blank or “Not asked” answer is not permission.
+          Coaching media and instructional / reference media are separate — saving
+          a private coaching video does not make it a Shape Lab teaching clip.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
           This page records what a parent, athlete, or gym admin said. It is{' '}
@@ -205,13 +207,17 @@ export function ConsentDesk({ user }: Props) {
                   />
                 </label>
                 <label>
-                  <FieldLabel>Photos and video of this athlete</FieldLabel>
+                  <FieldLabel>Coaching media (private lesson / class video)</FieldLabel>
                   <Select
                     value={row.mediaConsent ?? 'unknown'}
                     options={CONSENT_OPTIONS}
                     disabled={busy}
                     onChange={(mediaConsent) => save(row.id, { mediaConsent })}
                   />
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    Lets the coach save a tumbling video for coaching this athlete. This is not
+                    permission to use it as a Shape Lab teaching reference.
+                  </p>
                 </label>
                 <label>
                   <FieldLabel>Public profile page</FieldLabel>
@@ -223,7 +229,7 @@ export function ConsentDesk({ user }: Props) {
                   />
                 </label>
                 <label>
-                  <FieldLabel>Instructional stills and class clips</FieldLabel>
+                  <FieldLabel>Instructional / reference media</FieldLabel>
                   <Select
                     value={row.instructionalMediaConsent ?? 'unknown'}
                     options={CONSENT_OPTIONS}
@@ -232,6 +238,10 @@ export function ConsentDesk({ user }: Props) {
                       save(row.id, { instructionalMediaConsent })
                     }
                   />
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    Separate from coaching media. Yes means an approved photo or video may be used
+                    as Shape Lab teaching / reference material.
+                  </p>
                 </label>
                 <label className="sm:col-span-2">
                   <FieldLabel>Research notes (not used to share yet)</FieldLabel>

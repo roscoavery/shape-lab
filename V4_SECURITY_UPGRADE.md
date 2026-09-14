@@ -192,6 +192,10 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 4. CSRF tokens live in this tab’s JavaScript (`GET /api/auth/me`). There is no strict CSP because MediaPipe loads wasm / blob clips, so XSS could still steal the gym mark. SameSite=Lax cookies and Origin checks are already in place.
 5. Away lock is not floor mode. Keep the shared iPad in floor mode; Away only covers the office browser. Clear returns a dead cookie to sign-in; it does not lock the office screen.
 
+## Family experience (this branch)
+
+Role desks, parent linking, age-aware access, parent wellness privacy, and coach-entered holds are documented in `V4_FAMILY_EXPERIENCE.md`. Those features do not make Shape Lab COPPA, FERPA, or medically compliant.
+
 ## Tests
 
 ```bash

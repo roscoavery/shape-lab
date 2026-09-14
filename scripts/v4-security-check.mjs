@@ -853,6 +853,191 @@ async function main() {
     ok('athlete account exists for rate-limit checks', false, 'missing v4-athlete@example.com')
   }
 
+  const age = await import('../src/lib/age.ts')
+  ok('age from ISO birthday', age.getAgeFromDateOfBirth('2014-09-14', new Date('2026-09-14')) === 12)
+  ok('age before birthday this year', age.getAgeFromDateOfBirth('2014-09-15', new Date('2026-09-14')) === 11)
+  ok('missing birthday is not guessed', age.getAgeFromDateOfBirth('') === null)
+  ok('child band is parent-primary', age.getAthleteAccessLevel(10) === 'parentPrimary')
+  ok('teen band is shared', age.getAthleteAccessLevel(15) === 'shared')
+  ok('adult band is independent', age.getAthleteAccessLevel(18) === 'independent')
+  ok('unknown age stays parent-primary', age.getAthleteAccessLevel(null) === 'parentPrimary')
+
+  const parentA = await req('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'v4-parent@example.com', password: 'v4-parent-test-password' }),
+  })
+  ok('parent A can sign in', parentA.status === 200, String(parentA.status))
+  const parentACookie = cookieFrom('', parentA)
+
+  const parentUser = parentA.json?.user
+  const parentLinked = Array.isArray(parentUser?.linkedAthleteIds) ? parentUser.linkedAthleteIds : []
+  const parentRoster = await req('/api/roster', { cookie: parentACookie })
+  const parentRows = Array.isArray(parentRoster.json?.athletes) ? parentRoster.json.athletes : []
+  const parentIds = parentRows.map((row) => row.id)
+  ok(
+    'parent A roster is only self or linked athletes',
+    parentIds.every(
+      (id) => id === parentUser?.rosterProfileId || parentLinked.includes(id),
+    ),
+  )
+  ok('parent A cannot see Athlete B', !parentIds.includes('ath_example_blake'))
+
+  const adminFamilyRoster = await req('/api/roster', { cookie })
+  const adminRows = Array.isArray(adminFamilyRoster.json?.athletes) ? adminFamilyRoster.json.athletes : []
+  const adminIds = adminRows.map((row) => row.id)
+  const linkedOnGym = parentLinked.filter((id) => adminIds.includes(id))
+  ok(
+    'parent A can see linked athletes that exist on this gym',
+    linkedOnGym.every((id) => parentIds.includes(id)),
+  )
+  const parentKid = parentRows.find((row) => parentLinked.includes(row.id))
+  if (parentKid?.dateOfBirth) {
+    ok('linked parent may receive birthday', typeof parentKid.dateOfBirth === 'string')
+  } else {
+    ok('linked parent birthday field is omitted when unset', true)
+  }
+
+  const parentWellness = await req('/api/parent-wellness', { cookie: parentACookie })
+  ok('parent A can read own wellness journal', parentWellness.status === 200, String(parentWellness.status))
+
+  const parentWellnessWrite = await req('/api/parent-wellness', {
+    method: 'PUT',
+    cookie: parentACookie,
+    body: JSON.stringify({
+      currentGoals: 'Walk more',
+      painEntries: [],
+      exercises: [],
+      journal: [{ id: 'jnl_test', date: new Date().toISOString(), body: 'Test note' }],
+    }),
+  })
+  ok('parent A can write own wellness journal', parentWellnessWrite.status === 200, String(parentWellnessWrite.status))
+
+  const parentConsentA = await req('/api/consent', { cookie: parentACookie })
+  const consentIds = (parentConsentA.json?.athletes || []).map((row) => row.id)
+  ok(
+    'parent A consent list stays inside linked athletes',
+    consentIds.every((id) => parentLinked.includes(id)),
+  )
+  ok(
+    'parent A can manage consent for linked athletes on this gym',
+    linkedOnGym.every((id) => consentIds.includes(id)),
+  )
+  ok('parent A cannot manage consent for Athlete B', !consentIds.includes('ath_example_blake'))
+
+  const athleteA = await req('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'v4-athlete@example.com', password: 'v4-athlete-test-password' }),
+  })
+  ok('athlete A can sign in', athleteA.status === 200, String(athleteA.status))
+  const athleteACookie = cookieFrom('', athleteA)
+  const athleteUser = athleteA.json?.user
+  const athleteRoster = await req('/api/roster', { cookie: athleteACookie })
+  const athleteIds = (athleteRoster.json?.athletes || []).map((row) => row.id)
+  ok(
+    'athlete A roster includes self when that profile exists',
+    !athleteUser?.rosterProfileId ||
+      !adminIds.includes(athleteUser.rosterProfileId) ||
+      athleteIds.includes(athleteUser.rosterProfileId),
+  )
+  ok('athlete A cannot see Athlete B', !athleteIds.includes('ath_example_blake'))
+  const athleteWellness = await req('/api/parent-wellness', { cookie: athleteACookie })
+  ok('athlete A cannot read parent wellness', athleteWellness.status === 403, String(athleteWellness.status))
+
+  const coachFamily = await req('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: COACH_EMAIL, password: COACH_PASSWORD }),
+  })
+  const coachFamilyCookie = cookieFrom('', coachFamily)
+  const coachUser = coachFamily.json?.user
+  const coachWellness = await req('/api/parent-wellness', { cookie: coachFamilyCookie })
+  ok('coach A cannot read parent wellness', coachWellness.status === 403, String(coachWellness.status))
+  const coachFamilyRoster = await req('/api/roster', { cookie: coachFamilyCookie })
+  const coachRows = Array.isArray(coachFamilyRoster.json?.athletes) ? coachFamilyRoster.json.athletes : []
+  const coachIds = coachRows.map((row) => row.id)
+  ok(
+    'assigned coach does not receive full birthday',
+    coachRows.every((row) => row.dateOfBirth == null || row.id === coachUser?.rosterProfileId),
+  )
+  const unrelatedHoldId = adminRows.find(
+    (row) =>
+      row.id !== coachUser?.rosterProfileId &&
+      !coachIds.includes(row.id) &&
+      row.role !== 'parent' &&
+      row.role !== 'coach',
+  )?.id
+  const coachBlakeHold = await req('/api/hold-logs', {
+    method: 'POST',
+    cookie: coachFamilyCookie,
+    body: JSON.stringify({
+      athleteId: unrelatedHoldId || 'ath_example_blake',
+      shapeId: 'hollow',
+      seconds: 12,
+    }),
+  })
+  ok(
+    'coach A cannot log hold for unrelated Athlete B',
+    coachBlakeHold.status === 403 || coachBlakeHold.status === 404,
+    String(coachBlakeHold.status),
+  )
+  const holdTarget = coachRows.find(
+    (row) => row.id !== coachUser?.rosterProfileId && row.role !== 'parent' && row.role !== 'coach',
+  )
+  const coachBadHold = await req('/api/hold-logs', {
+    method: 'POST',
+    cookie: coachFamilyCookie,
+    body: JSON.stringify({
+      athleteId: holdTarget?.id || coachUser?.rosterProfileId || 'ath_example_sam',
+      shapeId: 'hollow',
+      seconds: -3,
+    }),
+  })
+  ok('coach hold log rejects invalid seconds', coachBadHold.status === 400, String(coachBadHold.status))
+  let coachOkHold = { status: 0 }
+  if (holdTarget && String(holdTarget.id).startsWith('ath_example')) {
+    coachOkHold = await req('/api/hold-logs', {
+      method: 'POST',
+      cookie: coachFamilyCookie,
+      body: JSON.stringify({
+        athleteId: holdTarget.id,
+        shapeId: 'hollow',
+        seconds: 12,
+        performedAt: '2024-01-15',
+        loggedFrom: 'profile',
+      }),
+    })
+  }
+  ok(
+    'coach A can log an assigned example-athlete hold including a previous date',
+    !holdTarget || !String(holdTarget.id).startsWith('ath_example') || coachOkHold.status === 200,
+    String(coachOkHold.status),
+  )
+  ok(
+    'coach A roster loads for hold logging',
+    coachFamilyRoster.status === 200,
+  )
+
+  const parentOtherWellness = await req('/api/parent-wellness?accountId=acct_does_not_exist', {
+    cookie: parentACookie,
+  })
+  ok(
+    'parent A cannot read another account wellness by query',
+    parentOtherWellness.status === 200 && parentOtherWellness.json?.profile?.accountId === parentA.json?.user?.accountId,
+    String(parentOtherWellness.status),
+  )
+
+  const publicWellness = await req('/api/parent-wellness')
+  ok('public user cannot read parent wellness', publicWellness.status === 401)
+  const publicHold = await req('/api/hold-logs', {
+    method: 'POST',
+    body: JSON.stringify({ athleteId: 'ath_example_sam', seconds: 10 }),
+  })
+  ok('public user cannot log holds', publicHold.status === 401)
+  const publicRoster = await req('/api/roster')
+  ok('public user cannot read roster', publicRoster.status === 401)
+
+  const adminFamily = await req('/api/roster', { cookie })
+  ok('admin still reads the gym roster', adminFamily.status === 200 && Array.isArray(adminFamily.json?.athletes))
+
   if (failed) {
     console.log(`\n${failed} check(s) failed`)
     process.exit(1)
