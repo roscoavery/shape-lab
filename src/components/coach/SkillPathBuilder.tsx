@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { TrainingSurface } from '../../types'
+import type { Athlete, TrainingSurface } from '../../types'
 import {
   NEED_KIND_LABEL,
   TRAINING_SURFACES,
@@ -16,25 +16,34 @@ import {
   saveSkill,
   searchSkills,
   subscribeSkillPaths,
+  surfaceLabel,
+  unmatchedAthleteGoals,
   type SkillDef,
   type SkillNeedKind,
 } from '../../lib/skillPaths'
 
 type Props = {
   coachId?: string
+  athletes?: Athlete[]
   onClose: () => void
   startSkillId?: string | null
 }
 
 const KINDS: SkillNeedKind[] = ['required', 'helpful', 'alt']
 
-export function SkillPathBuilder({ coachId, onClose, startSkillId = null }: Props) {
+export function SkillPathBuilder({
+  coachId,
+  athletes = [],
+  onClose,
+  startSkillId = null,
+}: Props) {
   const [tick, setTick] = useState(0)
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState<string | null>(startSkillId)
   useEffect(() => subscribeSkillPaths(() => setTick((n) => n + 1)), [])
   void tick
   const skills = useMemo(() => (query.trim() ? searchSkills(query) : listSkills()), [query, tick])
+  const listedHopes = useMemo(() => unmatchedAthleteGoals(athletes), [athletes, tick])
 
   return (
     <div className="fixed inset-0 z-[85] flex flex-col bg-[#071018] text-[var(--text)]">
@@ -69,6 +78,44 @@ export function SkillPathBuilder({ coachId, onClose, startSkillId = null }: Prop
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {listedHopes.length > 0 && (
+            <section className="rounded-2xl border border-[#6ec8d6]/35 bg-[#102028] p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6ec8d6]">
+                Skills athletes listed as goals
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-white/65">
+                These hopes are not in the pathway yet. They stay here until you
+                add them — they are not added automatically.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {listedHopes.map((row) => (
+                  <li
+                    key={row.key}
+                    className="rounded-xl border border-white/10 bg-black/25 px-3 py-2"
+                  >
+                    <p className="text-sm font-bold">
+                      {row.label}
+                      {row.surface ? ` · ${surfaceLabel(row.surface)}` : ''}
+                    </p>
+                    <p className="mt-0.5 text-xs text-white/55">
+                      {row.athletes.map((a) => a.name).join(', ')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const saved = saveSkill({ name: row.label, coachId })
+                        setOpenId(saved.id)
+                        setQuery('')
+                      }}
+                      className="mt-2 text-xs font-semibold text-[#6ec8d6]"
+                    >
+                      Add to pathway
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <NewSkillForm
             coachId={coachId}
             onSaved={(id) => {

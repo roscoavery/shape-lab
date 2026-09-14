@@ -12,7 +12,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_ro_bhs_tuck',
     name: 'Round-off handspring back tuck',
-    aliases: ['RO BHS tuck', 'round off back handspring tuck'],
+    aliases: ['RO BHS tuck', 'round off back handspring tuck', 'ro hs tuck', 'ro bhs tuck'],
     note: 'Name the surface. Floor and dead mat need a series that speeds up and a handspring that can rebound.',
     surfaces: ['spring_floor', 'dead_mat', 'tramp', 'tumble_trak', 'rod_airfloor'],
     createdAt: now,
@@ -22,7 +22,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_ro_bhs_full',
     name: 'Round-off handspring full twisting layout',
-    aliases: ['RO BHS full', 'round off back handspring full'],
+    aliases: ['RO BHS full', 'round off back handspring full', 'ro hs full', 'ro bhs full'],
     note: 'Layout shape deadline and a tramp full come before expecting this on floor.',
     surfaces: ['spring_floor', 'dead_mat', 'tramp', 'tumble_trak'],
     createdAt: now,
@@ -32,7 +32,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_standing_tuck',
     name: 'Standing back tuck',
-    aliases: ['standing tuck'],
+    aliases: ['standing tuck', 'tuck'],
     note: 'Athletes can get this before a running tuck. Work it from more power down to less power.',
     surfaces: ['tramp', 'tumble_trak', 'rod_airfloor', 'spring_floor', 'dead_mat'],
     powerDown: [
@@ -70,7 +70,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_standing_full',
     name: 'Standing full',
-    aliases: ['standing full twist'],
+    aliases: ['standing full twist', 'full'],
     note: 'Same power-down idea as tuck and layout. Pair with the open tuck and a tuck up a raised surface.',
     surfaces: ['tramp', 'tumble_trak', 'rod_airfloor', 'spring_floor'],
     powerDown: [
@@ -118,7 +118,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_ro_bhs_series',
     name: 'Round-off back handspring series',
-    aliases: ['RO BHS series'],
+    aliases: ['RO BHS series', 'round off series', 'round-off series', 'round off series (3 back handsprings)'],
     note: 'Quality series that speeds up — not just making it to the end.',
     surfaces: ['spring_floor', 'dead_mat', 'tumble_trak', 'rod_airfloor'],
     createdAt: now,
@@ -186,7 +186,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_ro_bhs',
     name: 'Round-off back handspring',
-    aliases: ['RO BHS'],
+    aliases: ['RO BHS', 'round off back handspring', 'round-off back handspring'],
     note: 'An athlete can get a standing back handspring first, or this first. Neither is the only order.',
     surfaces: ['spring_floor', 'dead_mat', 'tumble_trak', 'rod_airfloor'],
     createdAt: now,
@@ -196,7 +196,7 @@ export const SHIPPED_SKILLS: SkillDef[] = [
   {
     id: 'skl_standing_bhs',
     name: 'Standing back handspring',
-    aliases: ['standing BHS'],
+    aliases: ['standing BHS', 'back handspring', 'BHS'],
     note: 'Can come before a round-off handspring, or after.',
     surfaces: ['spring_floor', 'dead_mat', 'tumble_trak', 'rod_airfloor', 'tramp'],
     createdAt: now,

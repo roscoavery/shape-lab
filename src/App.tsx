@@ -1435,6 +1435,17 @@ export default function App() {
             setQuizPreset(null)
             setLearnIntent(null)
             goTab('today')
+          }}
+          onFinishQuizToday={() => {
+            setQuizPreset(null)
+            setLearnIntent(null)
+            goTab('today')
+            setStationOpen(false)
+          }}
+          onFinishQuizAnother={() => {
+            setQuizPreset(null)
+            setLearnIntent(null)
+            goTab('today')
             setStationOpen(true)
           }}
         />
@@ -2036,6 +2047,7 @@ export default function App() {
     {skillPathsOpen && (
       <SkillPathBuilder
         coachId={activeProfile?.id}
+        athletes={athletes}
         onClose={() => setSkillPathsOpen(false)}
       />
     )}

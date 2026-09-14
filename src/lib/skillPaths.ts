@@ -5,8 +5,10 @@
 
 import { createId } from './storage'
 import { gymWriteFetch } from './gymWritePace'
+import { labelsMatch, skillKey, type SkillGoalChoice } from '../config/skillGoalCatalog'
 import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS } from '../config/skillPathSeed'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
+import { givenName } from './classStation'
 
 export type SkillNeedKind = 'required' | 'helpful' | 'alt'
 
@@ -187,20 +189,32 @@ export function searchSkills(query: string): SkillDef[] {
   })
 }
 
-export function matchSkill(label: string): SkillDef | null {
-  const q = label.trim().toLowerCase()
-  if (!q) return null
+function skillKeys(skill: Pick<SkillDef, 'name' | 'aliases'>): string[] {
+  return [skillKey(skill.name), ...(skill.aliases ?? []).map(skillKey)].filter(Boolean)
+}
+
+/** Exact name or alias, ignoring punctuation. Does not substring-match drills. */
+export function matchSkillExact(label: string, extraNames: string[] = []): SkillDef | null {
+  const wanted = [label, ...extraNames].map(skillKey).filter(Boolean)
+  if (wanted.length === 0) return null
+  const want = new Set(wanted)
   return (
-    listSkills().find((s) => {
-      if (s.name.toLowerCase() === q) return true
-      return (s.aliases ?? []).some((a) => a.toLowerCase() === q)
-    }) ??
-    listSkills().find((s) => {
-      const hay = `${s.name} ${(s.aliases ?? []).join(' ')}`.toLowerCase()
-      return hay.includes(q) || q.includes(s.name.toLowerCase())
-    }) ??
-    null
+    listSkills().find((s) => skillKeys(s).some((key) => want.has(key))) ?? null
   )
+}
+
+/**
+ * Link an athlete-typed hope to a pathway skill only when the name already
+ * exists. Substring matches are skipped so “tuck” does not swallow every
+ * tuck drill in the map.
+ */
+export function matchSkill(label: string): SkillDef | null {
+  return matchSkillExact(label)
+}
+
+export function matchCatalogChoice(choice: SkillGoalChoice, typedLabel?: string): SkillDef | null {
+  if (choice.other) return matchSkillExact(typedLabel ?? '')
+  return matchSkillExact(choice.label, choice.matchNames ?? [])
 }
 
 export function needsForSkill(skillId: string, surface?: TrainingSurface | null): SkillNeed[] {
@@ -302,13 +316,16 @@ export function makeSkillGoal(input: {
   label?: string
   surface?: TrainingSurface
   source?: AthleteSkillGoal['source']
+  matchNames?: string[]
 }): AthleteSkillGoal | null {
-  const skill = input.skillId ? getSkill(input.skillId) : matchSkill(input.label ?? '')
+  const skill = input.skillId
+    ? getSkill(input.skillId)
+    : matchSkillExact(input.label ?? '', input.matchNames ?? [])
   const label = (input.label || skill?.name || '').trim()
   if (!label) return null
   return {
     id: createId('goal'),
-    skillId: skill?.id ?? input.skillId,
+    skillId: skill?.id,
     label,
     surface: input.surface,
     setAt: new Date().toISOString(),
@@ -322,8 +339,47 @@ export function goalLine(goal: AthleteSkillGoal): string {
 }
 
 export function resolveGoalSkill(goal: AthleteSkillGoal): SkillDef | null {
-  return getSkill(goal.skillId) ?? matchSkill(goal.label)
+  return getSkill(goal.skillId) ?? matchSkillExact(goal.label)
 }
+
+export type ListedAthleteGoal = {
+  key: string
+  label: string
+  surface?: TrainingSurface
+  athletes: { id: string; name: string }[]
+}
+
+/**
+ * Hopes athletes named that are not already a skill in the pathway.
+ * Coaches see these on the skill-path desk. They are not auto-added.
+ */
+export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] {
+  const map = new Map<string, ListedAthleteGoal>()
+  for (const a of athletes) {
+    const name = (a.name || givenName(a)).trim() || 'Athlete'
+    for (const goal of a.skillGoals ?? []) {
+      const label = goal.label.trim()
+      if (!label) continue
+      if (resolveGoalSkill(goal)) continue
+      const key = `${skillKey(label)}|${goal.surface ?? ''}`
+      const have = map.get(key)
+      const row = { id: a.id, name }
+      if (have) {
+        if (!have.athletes.some((x) => x.id === a.id)) have.athletes.push(row)
+      } else {
+        map.set(key, {
+          key,
+          label,
+          surface: goal.surface,
+          athletes: [row],
+        })
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label))
+}
+
+export { labelsMatch, skillKey }
 
 export type GoalGroup = {
   key: string

@@ -100,6 +100,8 @@ type Props = {
   onRecordQuiz?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
   onParkQuiz?: () => void
+  onFinishQuizToday?: () => void
+  onFinishQuizAnother?: () => void
   onOpenNamesTest?: (groupId?: string) => void
   onOpenSkillPaths?: () => void
   /** Videos tab only needs the reference scroll. */
@@ -124,6 +126,8 @@ export function EducationPanel({
   onRecordQuiz,
   onAthleteChange,
   onParkQuiz,
+  onFinishQuizToday,
+  onFinishQuizAnother,
   onOpenNamesTest,
   onOpenSkillPaths,
   surface = 'learn',
@@ -482,6 +486,8 @@ export function EducationPanel({
             goHome()
             onParkQuiz?.()
           }}
+          onDoneToday={onFinishQuizToday}
+          onDoneAnother={onFinishQuizAnother}
         />
       )}
 

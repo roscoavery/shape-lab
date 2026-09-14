@@ -1,11 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { AthleteSkillGoal, TrainingSurface } from '../../types'
+import {
+  SKILL_GOAL_CHOICES,
+  SKILL_GOAL_GROUPS,
+  type SkillGoalChoice,
+  type SkillGoalGroupId,
+} from '../../config/skillGoalCatalog'
 import {
   SKILL_GOAL_DISCLAIMER,
   TRAINING_SURFACES,
   goalLine,
   makeSkillGoal,
-  searchSkills,
+  matchCatalogChoice,
 } from '../../lib/skillPaths'
 
 type Props = {
@@ -15,24 +21,51 @@ type Props = {
 }
 
 export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props) {
-  const [query, setQuery] = useState('')
   const [surface, setSurface] = useState<TrainingSurface | ''>('')
-  const matches = useMemo(() => searchSkills(query).slice(0, 8), [query])
+  const [otherGroup, setOtherGroup] = useState<SkillGoalGroupId | null>(null)
+  const [otherText, setOtherText] = useState('')
 
-  const add = (skillId?: string, label?: string) => {
+  const addGoal = (label: string, skillId?: string, matchNames?: string[]) => {
     const goal = makeSkillGoal({
       skillId,
-      label: label || query,
+      label,
+      matchNames,
       surface: surface || undefined,
       source: athleteFacing ? 'intake' : 'coach',
     })
     if (!goal) return
-    if (value.some((g) => g.label.toLowerCase() === goal.label.toLowerCase() && g.surface === goal.surface)) {
-      setQuery('')
+    if (
+      value.some(
+        (g) =>
+          g.label.toLowerCase() === goal.label.toLowerCase() && g.surface === goal.surface,
+      )
+    ) {
       return
     }
     onChange([...value, goal])
-    setQuery('')
+  }
+
+  const pick = (choice: SkillGoalChoice) => {
+    if (choice.other) {
+      setOtherGroup(choice.group)
+      setOtherText('')
+      return
+    }
+    const skill = matchCatalogChoice(choice)
+    addGoal(choice.label, skill?.id, choice.matchNames)
+    setOtherGroup(null)
+  }
+
+  const addOther = () => {
+    const label = otherText.trim()
+    if (!label || !otherGroup) return
+    const skill = matchCatalogChoice(
+      SKILL_GOAL_CHOICES.find((c) => c.group === otherGroup && c.other)!,
+      label,
+    )
+    addGoal(label, skill?.id)
+    setOtherText('')
+    setOtherGroup(null)
   }
 
   return (
@@ -74,39 +107,63 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
           </button>
         ))}
       </div>
-      <input
-        className="h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
-        placeholder="Round-off handspring tuck, standing full…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            add(matches[0]?.id, query.trim() || matches[0]?.name)
-          }
-        }}
-      />
-      <div className="grid gap-1.5">
-        {matches.map((skill) => (
-          <button
-            key={skill.id}
-            type="button"
-            onClick={() => add(skill.id, skill.name)}
-            className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-left text-sm font-semibold"
-          >
-            {skill.name}
-          </button>
-        ))}
-        {query.trim() && !matches.some((s) => s.name.toLowerCase() === query.trim().toLowerCase()) && (
-          <button
-            type="button"
-            onClick={() => add(undefined, query.trim())}
-            className="rounded-xl border border-dashed border-white/20 px-3 py-2 text-left text-sm"
-          >
-            Add “{query.trim()}”{surface ? ` on ${TRAINING_SURFACES.find((s) => s.id === surface)?.label}` : ''}
-          </button>
-        )}
-      </div>
+      {SKILL_GOAL_GROUPS.map((group) => (
+        <div key={group.id}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6ec8d6]">
+            {group.title}
+          </p>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {SKILL_GOAL_CHOICES.filter((row) => row.group === group.id).map((choice) => {
+              const selected = value.some(
+                (g) =>
+                  g.label.toLowerCase() === choice.label.toLowerCase() &&
+                  g.surface === (surface || undefined),
+              )
+              return (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() => pick(choice)}
+                  className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold ${
+                    selected
+                      ? 'border-[#6ec8d6] bg-[#102028] text-[#d7f6fb]'
+                      : choice.other
+                        ? 'border-dashed border-white/25 bg-black/20'
+                        : 'border-white/10 bg-black/25'
+                  }`}
+                >
+                  {choice.other ? 'Other… write it' : choice.label}
+                </button>
+              )
+            })}
+          </div>
+          {otherGroup === group.id && (
+            <div className="mt-2 flex gap-2">
+              <input
+                className="h-11 min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
+                placeholder={`Name the ${group.title.toLowerCase()} skill`}
+                value={otherText}
+                autoFocus
+                onChange={(e) => setOtherText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addOther()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={!otherText.trim()}
+                onClick={addOther}
+                className="rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

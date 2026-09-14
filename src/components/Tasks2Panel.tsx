@@ -68,7 +68,7 @@ import {
   saveFlowAnalysis,
   saveFlowProgress,
 } from '../lib/storage'
-import { chosenFlowCounts, logHomeworkSequenceRun } from '../lib/homeworkFlow'
+import { chosenFlowCounts, lemonHomeworkFromCheck, logHomeworkSequenceRun } from '../lib/homeworkFlow'
 import { recordHoldSession, sessionHoldTotal, todayHoldSeconds } from '../lib/holdDay'
 import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
 import { writtenCues } from '../lib/taskAnalysis'
@@ -144,6 +144,95 @@ function wait(ms: number) {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms)
   })
+}
+
+function LemonSqueezeCheck({
+  plannedSets,
+  plannedReps,
+  onYes,
+  onNo,
+}: {
+  plannedSets: number
+  plannedReps: number
+  onYes: () => void
+  onNo: (actual: number) => void
+}) {
+  const [step, setStep] = useState<'ask' | 'count'>('ask')
+  const [count, setCount] = useState('')
+  const planned =
+    plannedSets > 1 ? `${plannedSets} sets of ${plannedReps}` : `${plannedReps} reps`
+  const actual = Number.parseInt(count, 10)
+
+  return (
+    <div className="rounded-xl border border-[#f0c36a]/50 bg-[#1a160c] p-3 text-white">
+      {step === 'ask' ? (
+        <>
+          <p className="text-sm font-semibold leading-snug">
+            Did you make it all the way through {planned}?
+          </p>
+          <p className="mt-1 text-[11px] leading-snug text-white/70">
+            Only log the selected reps if you stayed with the exercise.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onYes}
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
+            >
+              Yes · log {planned}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('count')}
+              className="rounded-lg border border-white/25 px-3 py-2 text-sm font-semibold"
+            >
+              No · I did not keep up
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold leading-snug">How many did you do?</p>
+          <p className="mt-1 text-[11px] leading-snug text-white/70">
+            We will log an attempt, not the full {planned}.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="number"
+              min={0}
+              max={200}
+              inputMode="numeric"
+              className="h-11 w-24 rounded-lg border border-white/20 bg-black/40 px-3 text-sm tabular-nums"
+              value={count}
+              autoFocus
+              onChange={(e) => setCount(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && Number.isFinite(actual) && actual >= 0) {
+                  e.preventDefault()
+                  onNo(actual)
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={!Number.isFinite(actual) || actual < 0 || count.trim() === ''}
+              onClick={() => onNo(actual)}
+              className="rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
+            >
+              Log attempt
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('ask')}
+              className="text-xs font-semibold text-white/70"
+            >
+              Back
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function snapTitle(s: { shapeId: string; shapeName: string; marker?: 'playhead'; rep?: number; holdSeconds?: number }): string {
@@ -245,6 +334,11 @@ export function Tasks2Panel({
   const [lemonSets, setLemonSets] = useState(3)
   const [lemonReps, setLemonReps] = useState(10)
   const [lemonRestSec, setLemonRestSec] = useState(15)
+  const [lemonAsk, setLemonAsk] = useState<{
+    report: FlowRunReport
+    plannedSets: number
+    plannedReps: number
+  } | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [beatIndex, setBeatIndex] = useState(-1)
   const [cue, setCue] = useState('')
@@ -615,7 +709,15 @@ export function Tasks2Panel({
         saveFlowAnalysis(built)
         const next = recordFlowCompletion(athleteId, seqRun.id)
         setProgress(next)
-        logHomeworkSequenceRun(built)
+        if (seqRun.id === 'flow_lemon_squeezes') {
+          setLemonAsk({
+            report: built,
+            plannedSets: counts.sets ?? 1,
+            plannedReps: counts.reps ?? 10,
+          })
+        } else {
+          logHomeworkSequenceRun(built)
+        }
       }
       if (blob && blob.size > 800 && replayCaptureId) {
         const filename = videoFileName(built, blob.type)
@@ -973,6 +1075,7 @@ export function Tasks2Panel({
       snapsRef.current = []
       setSnaps([])
       setReport(null)
+      setLemonAsk(null)
       setSeekTo(null)
       pendingStillsRef.current = []
       setHitsAsk(null)
@@ -1379,6 +1482,7 @@ export function Tasks2Panel({
     setRunSeq(null)
     setPhase('idle')
     setReport(null)
+    setLemonAsk(null)
     if (athleteId) {
       const p = loadFlowProgress(athleteId)
       const next = { ...p, currentId: id }
@@ -1394,6 +1498,29 @@ export function Tasks2Panel({
     lemonReps,
     lemonRestSec,
   })
+
+  const confirmLemonLog = (finished: boolean, actualReps?: number) => {
+    if (!lemonAsk) return
+    const counted = lemonHomeworkFromCheck({
+      finished,
+      plannedSets: lemonAsk.plannedSets,
+      plannedReps: lemonAsk.plannedReps,
+      actualReps,
+      nickname: lemonAsk.report.nickname,
+    })
+    const next: FlowRunReport = {
+      ...lemonAsk.report,
+      chosenReps: counted.chosenReps,
+      ...(counted.chosenSets ? { chosenSets: counted.chosenSets } : { chosenSets: undefined }),
+      plannedReps: counted.plannedReps,
+      plannedSets: counted.plannedSets,
+      incomplete: counted.incomplete,
+    }
+    saveFlowAnalysis(next)
+    setReport(next)
+    logHomeworkSequenceRun(next)
+    setLemonAsk(null)
+  }
 
   const nextSequence = () => {
     const idx = FLOW_SEQUENCES.findIndex((s) => s.id === seq.id)
@@ -2564,6 +2691,14 @@ export function Tasks2Panel({
             <p className="text-[11px] leading-snug text-white/70">
               Watch first. Grades stay on the next screen — then choose whether to keep the clip.
             </p>
+            {lemonAsk && (
+              <LemonSqueezeCheck
+                plannedSets={lemonAsk.plannedSets}
+                plannedReps={lemonAsk.plannedReps}
+                onYes={() => confirmLemonLog(true)}
+                onNo={(actual) => confirmLemonLog(false, actual)}
+              />
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -2685,6 +2820,16 @@ export function Tasks2Panel({
           </p>
           <h3 className="text-sm font-semibold text-[var(--text)]">{report.sequenceName}</h3>
           <p className="mt-1 text-sm leading-snug text-[var(--text)]">{report.summary}</p>
+          {lemonAsk && report.sequenceId === 'flow_lemon_squeezes' && (
+            <div className="mt-2">
+              <LemonSqueezeCheck
+                plannedSets={lemonAsk.plannedSets}
+                plannedReps={lemonAsk.plannedReps}
+                onYes={() => confirmLemonLog(true)}
+                onNo={(actual) => confirmLemonLog(false, actual)}
+              />
+            </div>
+          )}
           {replayUrl && (
             <video
               src={replayUrl}

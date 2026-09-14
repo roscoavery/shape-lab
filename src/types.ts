@@ -531,6 +531,11 @@ export type FlowRunReport = {
   /** Chosen reps / sets when the sequence has a picker (pike–hollow–arch, lemons). */
   chosenReps?: number
   chosenSets?: number
+  /** Planned lemon sets/reps when the athlete did not finish the selected volume. */
+  plannedReps?: number
+  plannedSets?: number
+  /** True when the athlete said they did not make it all the way through. */
+  incomplete?: boolean
 }
 
 export type FlowProgress = {
@@ -671,6 +676,8 @@ export type HomeworkLog = {
   reps?: number
   /** How many sets this log covers (reps are per set). */
   sets?: number
+  /** Athlete did not finish the selected volume (lemon squeezes). */
+  incomplete?: boolean
   /** Reps the athlete counted as quality (form they would show a coach). */
   qualityReps?: number
   /** Back-extension rep speed: 0 = fast, 100 = slow. */

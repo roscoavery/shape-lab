@@ -18,6 +18,8 @@ import {
 import { addHomeworkItem, addHomeworkLog, createId, loadAllHomework } from './storage'
 import { sessionHoldTotal } from './holdDay'
 
+export { lemonHomeworkFromCheck } from './lemonHomework'
+
 export { flowIdForHomeworkItem } from './homeworkLabel'
 
 export function getHomeworkFlow(
@@ -86,8 +88,15 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
   const item =
     items.find((h) => flowIdForHomeworkItem(h) === report.sequenceId) ??
     ensureSequenceHomework(report.athleteId, report.sequenceId, report.sequenceName)
-  const reps = report.chosenReps && report.chosenReps > 0 ? report.chosenReps : 1
-  const sets = report.chosenSets && report.chosenSets > 1 ? report.chosenSets : undefined
+  const incomplete = report.incomplete === true
+  const reps = incomplete
+    ? Math.max(0, Math.floor(report.chosenReps ?? 0))
+    : report.chosenReps && report.chosenReps > 0
+      ? report.chosenReps
+      : 1
+  const sets = !incomplete && report.chosenSets && report.chosenSets > 1 ? report.chosenSets : undefined
+  const plannedSets = report.plannedSets ?? report.chosenSets ?? 1
+  const plannedReps = report.plannedReps ?? (incomplete ? undefined : report.chosenReps)
   const log: HomeworkLog = {
     id: createId('hwlog'),
     athleteId: report.athleteId,
@@ -98,9 +107,14 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
     kind: 'sequence',
     reps,
     ...(sets ? { sets } : {}),
+    ...(incomplete ? { incomplete: true } : {}),
     totalHoldSeconds: sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0,
     score: overallFlowScore(report),
-    sourceLabel: sets ? `${report.nickname} · ${sets}×${reps}` : `${report.nickname} · ${reps} run${reps === 1 ? '' : 's'}`,
+    sourceLabel: incomplete
+      ? `${report.nickname} · attempt · ${reps} of ${plannedSets}×${plannedReps ?? '?'}`
+      : sets
+        ? `${report.nickname} · ${sets}×${reps}`
+        : `${report.nickname} · ${reps} run${reps === 1 ? '' : 's'}`,
   }
   addHomeworkLog(log)
   return log

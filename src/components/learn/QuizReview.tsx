@@ -24,8 +24,12 @@ type Props = {
   midCopy: string
   failCopy: string
   retryLabel?: string
+  exitLabel?: string
+  secondaryLabel?: string
+  exitPrimary?: boolean
   onRetry: () => void
   onExit: () => void
+  onSecondary?: () => void
 }
 
 export function QuizReview({
@@ -37,8 +41,12 @@ export function QuizReview({
   midCopy,
   failCopy,
   retryLabel = 'New quiz',
+  exitLabel = 'Back to Learn',
+  secondaryLabel,
+  exitPrimary = false,
   onRetry,
   onExit,
+  onSecondary,
 }: Props) {
   const misses = items.filter((i) => !i.correct)
   const hits = items.filter((i) => i.correct)
@@ -60,20 +68,50 @@ export function QuizReview({
           </p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
-            onClick={onRetry}
-          >
-            {retryLabel}
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
-            onClick={onExit}
-          >
-            Back to Learn
-          </button>
+          {exitPrimary ? (
+            <>
+              <button
+                type="button"
+                className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
+                onClick={onExit}
+              >
+                {exitLabel}
+              </button>
+              {onSecondary && secondaryLabel && (
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+                  onClick={onSecondary}
+                >
+                  {secondaryLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+                onClick={onRetry}
+              >
+                {retryLabel}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
+                onClick={onRetry}
+              >
+                {retryLabel}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm"
+                onClick={onExit}
+              >
+                {exitLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

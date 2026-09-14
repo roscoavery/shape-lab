@@ -38,6 +38,8 @@ type Props = {
   onGrade?: (taker: QuizTaker, record: ShapeTestRecord) => void
   onAthleteChange?: (next: Athlete) => void
   onPark?: () => void
+  onDoneToday?: () => void
+  onDoneAnother?: () => void
 }
 
 export function ShapeQuiz({
@@ -51,6 +53,8 @@ export function ShapeQuiz({
   onGrade,
   onAthleteChange,
   onPark,
+  onDoneToday,
+  onDoneAnother,
 }: Props) {
   const { copyFor } = useShapeCopy()
   const parkedAtOpen = readTakerPark(presetTaker, athletes)
@@ -324,7 +328,13 @@ export function ShapeQuiz({
           failCopy="Study the correct names on each miss, then retake."
           retryLabel="New quiz, same type"
           onRetry={restartSame}
-          onExit={onExit}
+          onExit={onDoneToday ?? onExit}
+          exitLabel={onDoneToday ? 'Back to Today' : 'Back to Learn'}
+          exitPrimary={Boolean(onDoneToday)}
+          secondaryLabel={
+            onDoneAnother ? 'Another athlete · new athlete / shape test' : undefined
+          }
+          onSecondary={onDoneAnother}
         />
         <button type="button" className="text-sm text-[var(--accent)]" onClick={changeType}>
           Pictures, descriptions, or both…
