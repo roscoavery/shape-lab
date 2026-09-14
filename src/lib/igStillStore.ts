@@ -3,6 +3,7 @@
  * (POST /api/ig-stills) so every gym link has the same library.
  */
 
+import { markedFetch } from './authSession'
 import { SHIPPED_IG_STILLS } from '../config/shippedIgStills'
 import type { ReferencePhoto } from '../types'
 
@@ -242,7 +243,7 @@ async function writeLocal(photo: ReferencePhoto): Promise<void> {
 async function postServerStill(photo: ReferencePhoto): Promise<ReferencePhoto | null> {
   if (!photo.dataUrl.startsWith('data:image')) return { ...photo, persistedToApp: true }
   try {
-    const res = await fetch('/api/ig-stills', {
+    const res = await markedFetch('/api/ig-stills', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(photo),
@@ -298,7 +299,7 @@ export async function updateIgStill(
   await writeLocal(next)
 
   if (opts?.persistToApp) {
-    const res = await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, {
+    const res = await markedFetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -339,7 +340,7 @@ export async function removeIgStill(
     /* IndexedDB down — memory already dropped it */
   }
   try {
-    await fetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    await markedFetch(`/api/ig-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
   } catch {
     /* server down — local tombstone already recorded */
   }

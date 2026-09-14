@@ -3,6 +3,7 @@
  * Compare, Learn scroll, and Classes share the same stars.
  */
 
+import { markedFetch } from './authSession'
 import {
   createContext,
   useCallback,
@@ -83,7 +84,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const flush = useCallback((next: FavoritesState) => {
     if (timerRef.current) window.clearTimeout(timerRef.current)
     timerRef.current = window.setTimeout(() => {
-      void fetch('/api/favorites', {
+      void markedFetch('/api/favorites', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

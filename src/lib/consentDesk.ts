@@ -1,3 +1,5 @@
+import { markedFetch } from './authSession'
+
 export type ConsentState = 'unknown' | 'pending' | 'granted' | 'declined'
 export type ProfileVisibility = 'private' | 'public' | 'gym'
 
@@ -52,7 +54,7 @@ export async function listConsentAthletes(): Promise<ConsentRow[]> {
 }
 
 export async function patchConsent(patch: ConsentPatch): Promise<ConsentRow> {
-  const res = await fetch('/api/consent', {
+  const res = await markedFetch('/api/consent', {
     method: 'PATCH',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },

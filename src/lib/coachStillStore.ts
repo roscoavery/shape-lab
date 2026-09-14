@@ -3,6 +3,7 @@
  * Gym-wide so iPad and phone show the same library.
  */
 
+import { markedFetch } from './authSession'
 import { makeShippedCoachExtras, SHIPPED_COACH_EXTRA_BY_ID } from '../config/shippedCoachExtras'
 import { setMainCoachStill } from './coachStillPrefs'
 import { fileToJpegBlob, blobToDataUrl } from './glossaryStore'
@@ -159,7 +160,7 @@ export async function pushCoachStills(file: CoachStillsFile): Promise<CoachStill
         dataUrl: row.dataUrl.startsWith('data:image') ? '' : row.dataUrl,
       })),
     }
-    const res = await fetch('/api/coach-stills', {
+    const res = await markedFetch('/api/coach-stills', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(slim),
@@ -243,7 +244,7 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<Per
   if (photo.library === 'ig') return { ok: true, photo }
   forgetRemovedCoachStill(photo.id)
   try {
-    const res = await fetch('/api/coach-stills', {
+    const res = await markedFetch('/api/coach-stills', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -299,7 +300,7 @@ export async function removeCoachStillExtra(id: string): Promise<PersistStillRes
   }
   emitCoachStills([])
   try {
-    const res = await fetch(`/api/coach-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    const res = await markedFetch(`/api/coach-stills?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     if (!res.ok) {
       return { ok: false, error: 'Could not delete that still from the gym.' }
     }

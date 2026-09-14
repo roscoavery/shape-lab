@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { SHIPPED_STILL_CROPS, mergeStillCrops } from './shippedStillCrops'
 import type { StillCropRect } from './stillCrop'
 
@@ -25,7 +26,7 @@ export async function pullStillCrops(): Promise<Record<string, StillCropRect>> {
 export async function pushStillCrops(
   crops: Record<string, StillCropRect>,
 ): Promise<Record<string, StillCropRect>> {
-  const res = await fetch('/api/still-crops', {
+  const res = await markedFetch('/api/still-crops', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

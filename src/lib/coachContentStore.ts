@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { createId } from './storage'
 import { dispatchLibraryChanged } from './libraryEvents'
+import { markedFetch } from './authSession'
 import { gymWriteFetch, isStopWriteStatus } from './gymWritePace'
 
 const KEY = 'shape-lab.coachContent.v1'
@@ -624,7 +625,7 @@ export async function uploadCoachMedia(opts: {
 }): Promise<string> {
   const id = createId('cmed')
   const mime = opts.file.type || 'application/octet-stream'
-  const res = await fetch(
+  const res = await markedFetch(
     `/api/coach-media?id=${encodeURIComponent(id)}&ownerId=${encodeURIComponent(opts.ownerId)}&name=${encodeURIComponent(opts.name)}&mime=${encodeURIComponent(mime)}`,
     {
       method: 'POST',

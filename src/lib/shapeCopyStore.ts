@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import type { ShapeCopyFields } from './shapeCopy'
 
 export type ShapeCopyFile = {
@@ -24,7 +25,7 @@ export async function pullShapeCopy(): Promise<Record<string, ShapeCopyFields>> 
 export async function pushShapeCopy(
   shapes: Record<string, ShapeCopyFields>,
 ): Promise<Record<string, ShapeCopyFields>> {
-  const res = await fetch('/api/shape-copy', {
+  const res = await markedFetch('/api/shape-copy', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

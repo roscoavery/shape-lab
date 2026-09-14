@@ -4,6 +4,7 @@
  * tunnel URL changes. Instagram post URLs themselves do not expire.
  */
 
+import { markedFetch } from './authSession'
 import {
   deleteCollectionRecord,
   getCollections,
@@ -322,7 +323,7 @@ export async function pullServerLibrary(): Promise<LibraryBackup | null> {
 export async function pushServerLibrary(collections: RefCollection[]): Promise<boolean> {
   try {
     const gym = collections.filter((c) => !c.athleteId)
-    const res = await fetch('/api/library', {
+    const res = await markedFetch('/api/library', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collectionsToBackup(gym)),

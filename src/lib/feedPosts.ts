@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 import type { CollageShare } from './collages'
 import { feedBlobPath, uploadGymMedia } from './mediaUpload'
@@ -184,7 +185,7 @@ export async function publishFeedPostResult(params: {
   const uploaded = await uploadGymMedia(feedBlobPath(id, mime), params.blob, mime)
   if ('url' in uploaded) {
     try {
-      const res = await fetch('/api/feed?kind=video', {
+      const res = await markedFetch('/api/feed?kind=video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
@@ -222,7 +223,7 @@ export async function publishFeedPostResult(params: {
       ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
     })
     try {
-      const res = await fetch(`/api/feed?${qs.toString()}`, {
+      const res = await markedFetch(`/api/feed?${qs.toString()}`, {
         method: 'POST',
         headers: { 'Content-Type': mime },
         body: params.blob,
@@ -250,7 +251,7 @@ export async function publishCollagePost(params: {
 }): Promise<FeedPost | null> {
   const id = createId('post')
   try {
-    const res = await fetch('/api/feed?kind=collage', {
+    const res = await markedFetch('/api/feed?kind=collage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -306,7 +307,7 @@ export async function publishTextPostResult(params: {
     ...(params.sharedByName ? { sharedByName: params.sharedByName } : {}),
   }
   try {
-    const res = await fetch('/api/feed?kind=text', {
+    const res = await markedFetch('/api/feed?kind=text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -319,7 +320,7 @@ export async function publishTextPostResult(params: {
 
 export async function toggleFeedHi5(postId: string, actorId: string): Promise<FeedPost | null> {
   try {
-    const res = await fetch('/api/feed?kind=hi5', {
+    const res = await markedFetch('/api/feed?kind=hi5', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'hi5', id: postId, authorId: actorId }),
@@ -335,7 +336,7 @@ export async function toggleFeedHi5(postId: string, actorId: string): Promise<Fe
 
 export async function toggleFeedRepost(postId: string, actorId: string): Promise<FeedPost | null> {
   try {
-    const res = await fetch('/api/feed?kind=repost', {
+    const res = await markedFetch('/api/feed?kind=repost', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'repost', id: postId, authorId: actorId }),
@@ -351,7 +352,7 @@ export async function toggleFeedRepost(postId: string, actorId: string): Promise
 
 export async function toggleFeedLike(postId: string, actorId: string): Promise<FeedPost | null> {
   try {
-    const res = await fetch('/api/feed?kind=like', {
+    const res = await markedFetch('/api/feed?kind=like', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'like', id: postId, authorId: actorId }),
@@ -367,7 +368,7 @@ export async function toggleFeedLike(postId: string, actorId: string): Promise<F
 
 export async function celebrateFeedPost(postId: string, actorId: string): Promise<FeedPost | null> {
   try {
-    const res = await fetch('/api/feed?kind=celebrate', {
+    const res = await markedFetch('/api/feed?kind=celebrate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'celebrate', id: postId, authorId: actorId }),
@@ -394,7 +395,7 @@ export async function attachFeedVideoResult(
   const uploaded = await uploadGymMedia(feedBlobPath(postId, mime), blob, mime)
   if ('url' in uploaded) {
     try {
-      const res = await fetch('/api/feed?kind=attach', {
+      const res = await markedFetch('/api/feed?kind=attach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
@@ -425,7 +426,7 @@ export async function attachFeedVideoResult(
       coach: coach ? '1' : '0',
     })
     try {
-      const res = await fetch(`/api/feed?${qs.toString()}`, {
+      const res = await markedFetch(`/api/feed?${qs.toString()}`, {
         method: 'POST',
         headers: { 'Content-Type': mime },
         body: blob,
@@ -461,7 +462,7 @@ export async function removeFeedPost(id: string, actorId: string, admin: boolean
       actorId,
       admin: admin ? '1' : '0',
     })
-    const res = await fetch(`/api/feed?${qs.toString()}`, { method: 'DELETE' })
+    const res = await markedFetch(`/api/feed?${qs.toString()}`, { method: 'DELETE' })
     if (!res.ok) return false
     if (feedCache) feedCache = feedCache.filter((row) => row.id !== id)
     return true

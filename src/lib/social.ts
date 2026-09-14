@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 import type { Athlete } from '../types'
 
@@ -65,7 +66,7 @@ export async function toggleFollowRemote(opts: {
   if (!opts.followerId || !opts.followingId || opts.followerId === opts.followingId) {
     throw new Error('Pick someone else to follow.')
   }
-  const res = await fetch('/api/social', {
+  const res = await markedFetch('/api/social', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -82,7 +83,7 @@ export async function toggleFollowRemote(opts: {
 
 export async function saveSocial(file: SocialFile): Promise<SocialFile | null> {
   try {
-    const res = await fetch('/api/social', {
+    const res = await markedFetch('/api/social', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(file),

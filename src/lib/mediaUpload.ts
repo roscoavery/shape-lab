@@ -3,6 +3,8 @@
  * on Vercel’s ~4.5MB request limit. Upload straight to Blob, then save a URL.
  */
 
+import { markedFetch } from './authSession'
+
 export type MediaUploadResult = { url: string } | { error: string; direct?: boolean }
 
 function extForMime(mime: string, fallback: 'mp4' | 'jpg'): string {
@@ -36,7 +38,7 @@ export async function uploadGymMedia(
   contentType: string,
 ): Promise<MediaUploadResult> {
   try {
-    const tokenRes = await fetch('/api/media-token', {
+    const tokenRes = await markedFetch('/api/media-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',

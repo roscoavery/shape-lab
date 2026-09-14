@@ -81,11 +81,11 @@ export function WatchDesk({ user }: Props) {
         <span className={`${HOLD_BUILD_CHIP} mt-2`}>{HOLD_BUILD_LABEL}</span>
         <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">Watch</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          This is a gym log, not a legal record. Login changes and gym file
-          saves from this browser carry a gym mark so another site cannot send
-          them. A new sign-in on the same email ends the last one. Session ids
-          stay on the server. Roster saves stay off this list unless you turn
-          them on — the gym writes that file often.
+          This is a gym log, not a legal record. Login changes, gym file saves,
+          and feed / consent / stills from this browser carry a gym mark so
+          another site cannot send them. A new sign-in on the same email ends
+          the last one. Session ids stay on the server. Roster saves stay off
+          this list unless you turn them on — the gym writes that file often.
         </p>
       </section>
 

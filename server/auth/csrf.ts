@@ -1,7 +1,7 @@
 /**
  * Gym mark for cookie-backed writes.
- * Account routes and gym-file PUTs (roster, lessons, classes, …) require it.
- * Other writes still rely on Origin (Bind).
+ * Account routes and every other gated API write (feed, consent, stills, …)
+ * require it. Login, first admin, and invite redeem do not.
  */
 
 import { timingSafeEqual } from 'node:crypto'
@@ -42,8 +42,16 @@ export function gymWriteNeedsCsrf(method: string | undefined, path: string): boo
   return GYM_WRITE_PATHS.has(path)
 }
 
+export function gateWriteNeedsCsrf(method: string | undefined, path: string): boolean {
+  if (!isWriteMethod(method)) return false
+  if (!path.startsWith('/api/')) return false
+  if (path.startsWith('/api/auth/')) return false
+  if (path === '/api/health') return false
+  return true
+}
+
 export function writeNeedsCsrf(method: string | undefined, path: string): boolean {
-  return authWriteNeedsCsrf(method, path) || gymWriteNeedsCsrf(method, path)
+  return authWriteNeedsCsrf(method, path) || gateWriteNeedsCsrf(method, path)
 }
 
 export function readCsrfHeader(headers: IncomingHttpHeaders): string {

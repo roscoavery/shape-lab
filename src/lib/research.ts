@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 import { fieldVisible, type StudyDef, type StudyField } from '../config/researchStudies'
 
@@ -109,7 +110,7 @@ export async function saveResearch(file: ResearchFile): Promise<ResearchFile | n
   const mergedLocal = mergeResearch(readCachedResearch(), file)
   writeCachedResearch(mergedLocal)
   try {
-    const res = await fetch('/api/research', {
+    const res = await markedFetch('/api/research', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(mergedLocal),

@@ -3,6 +3,7 @@
  * Learn, Compare, and Classes share the same list and the selected loop.
  */
 
+import { markedFetch } from './authSession'
 import {
   createContext,
   useCallback,
@@ -129,7 +130,7 @@ export function ClipLoopsProvider({ children }: { children: ReactNode }) {
   const flush = useCallback((next: Record<string, ClipLoopSet>) => {
     if (timerRef.current) window.clearTimeout(timerRef.current)
     timerRef.current = window.setTimeout(() => {
-      void fetch('/api/clip-loops', {
+      void markedFetch('/api/clip-loops', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

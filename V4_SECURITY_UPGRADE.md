@@ -13,7 +13,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
 - Email delivery of invites is optional. Set SMTP on the gym computer (`SHAPE_LAB_SMTP_HOST` + `SHAPE_LAB_MAIL_FROM`). Copy the one-time sign-in link from More → Accounts still works. The recipient opens the URL and sets their own password. The token is never written to the audit log.
 - More → Watch is a gym log, not a legal-compliance system. Routine roster opens, roster saves, and photo opens are hidden by default.
-- Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. After a 429 this browser pauses gym PUTs for a minute and only runs one roster save at a time. Writes with a foreign `Origin` are 403. Cookie-backed account writes and gym-file saves (roster, lessons, classes, chalkboards, skill paths, camp lists) need the gym mark from `GET /api/auth/me` (`X-Shape-Lab-Csrf`). Feed, consent, and stills still use Origin only. Session cookies are SameSite=Lax.
+- Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. After a 429 this browser pauses gym PUTs for a minute and only runs one roster save at a time. Writes with a foreign `Origin` are 403. Cookie-backed account writes and every other gated API write (roster, lessons, feed, consent, stills, …) need the gym mark from `GET /api/auth/me` (`X-Shape-Lab-Csrf`). Session cookies are SameSite=Lax.
 - Away lock covers this browser's screen only. The session cookie still works until sign-out or Watch ends the login. It is not a substitute for floor mode on the shared iPad. When Watch or a password change ends this cookie, this tab returns to sign-in instead of polling 401s.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.
@@ -72,8 +72,9 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - **Phase 13 (Mail build):** More → Accounts can email a one-time sign-in link when SMTP is set on this gym. Copy-link stays. Without SMTP, email is off and the link is still copied. The invite token is not stored in Watch.
 - **Phase 14 (Mark build):** Cookie-backed account writes (`/api/auth/*` except login, first admin, and invite redeem) require `X-Shape-Lab-Csrf` from this session. `GET /api/auth/me` and login return `csrf`. The mark is not the session cookie and is not written to Watch.
 - **Phase 15 (Grip build):** Gym-file PUTs (roster, photos, lessons, classes, chalkboards, skill paths, camp lists) also require that gym mark. This tab attaches it on those saves. Feed, consent, and stills still use Origin only.
+- **Phase 16 (Lace build):** Every remaining gated API write (feed, consent, stills, stories, notices, library, research, …) also requires that gym mark. This tab attaches it on those saves. Login, first admin, and invite redeem still skip it.
 
-**Gym-open look:** header chip and fallback banner say **Grip build** / **GRIP BUILD**. Health `holdBuild` is `"grip"`. The HUD on camera still reads **shapelab**.
+**Gym-open look:** header chip and fallback banner say **Lace build** / **LACE BUILD**. Health `holdBuild` is `"lace"`. The HUD on camera still reads **shapelab**.
 
 ## Authentication architecture
 
@@ -94,7 +95,8 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 15. Cookie writes whose `Origin` host does not match this gym are 403. GET is not origin-checked.
 16. `POST /api/auth/invites` with `{ accountId, sendEmail: true }` emails the link when SMTP is configured. `GET /api/auth/me` includes `mailEnabled` for gym admin.
 17. Cookie-backed account writes need `X-Shape-Lab-Csrf` matching this session. Login, first admin, and invite redeem do not.
-18. Gym-file PUTs (roster, lessons, classes, chalkboards, skill paths, camp lists) need the same gym mark. Feed, consent, and stills do not.
+18. Gym-file PUTs (roster, lessons, classes, chalkboards, skill paths, camp lists) need the same gym mark.
+19. Every other gated API write (feed, consent, stills, stories, library, …) needs the same gym mark. Login, first admin, and invite redeem do not.
 
 Never put secrets in `VITE_` variables or client source.
 
@@ -152,7 +154,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Grip build** on the header. `/api/health` should include `"holdBuild":"grip"`. If you still see Mark, Mail, Bind, Clear, Quiet, Away, Pace, Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Accounts still copies a sign-in link. Email is off until SMTP is set on that Mac. Lock / unlock and Watch still work; account changes and gym file saves from this browser carry a gym mark.
+5. Look for **Lace build** on the header. `/api/health` should include `"holdBuild":"lace"`. If you still see Grip, Mark, Mail, Bind, Clear, Quiet, Away, Pace, Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Accounts still copies a sign-in link. Email is off until SMTP is set on that Mac. Lock / unlock and Watch still work; account changes, gym file saves, and feed / consent / stills from this browser carry a gym mark.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -187,7 +189,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 1. Rotate any Blob tokens that were ever in a shell history.
 2. Point SMTP at this gym (`SHAPE_LAB_SMTP_HOST` + `SHAPE_LAB_MAIL_FROM` in `.env` on the Mac). Copy-link already works.
 3. Separate historical Git cleanup, only with an explicit backup and written approval.
-4. CSRF on remaining writes (feed, consent, stills) if Shape Lab is ever embedded on another site. Account writes and gym-file saves already carry a gym mark. SameSite=Lax cookies and Origin checks are already in place.
+4. CSRF tokens live in this tab’s JavaScript (`GET /api/auth/me`). There is no strict CSP because MediaPipe loads wasm / blob clips, so XSS could still steal the gym mark. SameSite=Lax cookies and Origin checks are already in place.
 5. Away lock is not floor mode. Keep the shared iPad in floor mode; Away only covers the office browser. Clear returns a dead cookie to sign-in; it does not lock the office screen.
 
 ## Tests

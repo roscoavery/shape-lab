@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 
 export type NotifyKind =
@@ -64,7 +65,7 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
     athleteId: notice.athleteId,
   }
   try {
-    await fetch('/api/notices', {
+    await markedFetch('/api/notices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
@@ -88,7 +89,7 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
 export async function markNoticesRead(ids: string[]): Promise<void> {
   if (ids.length === 0) return
   try {
-    await fetch('/api/notices', {
+    await markedFetch('/api/notices', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),

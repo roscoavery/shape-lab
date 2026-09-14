@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 import { DISCUSS_TOPICS } from '../config/discussTopics'
 
@@ -50,7 +51,7 @@ export async function loadDiscuss(): Promise<DiscussFile> {
 
 export async function saveDiscuss(file: DiscussFile): Promise<DiscussFile | null> {
   try {
-    const res = await fetch('/api/discuss', {
+    const res = await markedFetch('/api/discuss', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(file),

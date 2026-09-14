@@ -37,6 +37,14 @@ export function withCsrfHeaders(headers?: HeadersInit): Headers {
   return next
 }
 
+/** Same-origin write. Adds the gym mark on POST / PUT / PATCH / DELETE. */
+export async function markedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const method = String(init?.method || 'GET').toUpperCase()
+  const write = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+  if (!write) return fetch(input, init)
+  return fetch(input, { ...init, headers: withCsrfHeaders(init?.headers) })
+}
+
 export function authWriteInit(body?: string): RequestInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',

@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 
 export type CollageSlot = {
@@ -50,7 +51,7 @@ export async function listCollages(ownerId?: string | null): Promise<Collage[]> 
 
 export async function saveCollage(collage: Collage): Promise<Collage | null> {
   try {
-    const res = await fetch('/api/collages', {
+    const res = await markedFetch('/api/collages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collage),
@@ -64,7 +65,7 @@ export async function saveCollage(collage: Collage): Promise<Collage | null> {
 
 export async function removeCollage(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/collages?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    const res = await markedFetch(`/api/collages?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     return res.ok
   } catch {
     return false

@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { createId } from './storage'
 
 export const STORY_LIFE_MS = 24 * 60 * 60 * 1000
@@ -93,7 +94,7 @@ export async function publishStory(opts: {
     mime,
     tagged: (opts.taggedIds ?? []).join(','),
   })
-  const res = await fetch(`/api/stories?${qs.toString()}`, {
+  const res = await markedFetch(`/api/stories?${qs.toString()}`, {
     method: 'POST',
     headers: { 'Content-Type': mime },
     body,
@@ -147,7 +148,7 @@ export async function saveHighlight(opts: {
   title: string
   storyIds: string[]
 }): Promise<StoryHighlight> {
-  const res = await fetch('/api/stories?kind=highlight', {
+  const res = await markedFetch('/api/stories?kind=highlight', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

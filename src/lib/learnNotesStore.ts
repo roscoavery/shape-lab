@@ -3,6 +3,7 @@
  * Overlays sit on top of the shipped lesson text and persist on the gym computer.
  */
 
+import { markedFetch } from './authSession'
 import type { PhysicsLesson } from '../config/tumblingPhysics'
 
 export type LearnNoteOverlay = {
@@ -68,7 +69,7 @@ export async function pullLearnNotes(): Promise<Record<string, LearnNoteOverlay>
 export async function pushLearnNotes(
   lessons: Record<string, LearnNoteOverlay>,
 ): Promise<Record<string, LearnNoteOverlay>> {
-  const res = await fetch('/api/learn-notes', {
+  const res = await markedFetch('/api/learn-notes', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

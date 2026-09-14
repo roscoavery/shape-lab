@@ -3,6 +3,7 @@
  * Personal lists live on /api/coach-library and in localStorage.
  */
 
+import { markedFetch } from './authSession'
 import {
   getCollections,
   isSameReferenceUrl,
@@ -43,7 +44,7 @@ export async function pushCoachLibrary(
       .filter((c) => c.athleteId === athleteId)
       .map((c) => ({ ...c, athleteId }))
     saveAthleteCompareLibrary(athleteId, personal)
-    const res = await fetch(`/api/coach-library?athleteId=${encodeURIComponent(athleteId)}`, {
+    const res = await markedFetch(`/api/coach-library?athleteId=${encodeURIComponent(athleteId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(collectionsToBackup(personal)),

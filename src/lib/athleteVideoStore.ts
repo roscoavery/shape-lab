@@ -1,3 +1,4 @@
+import { markedFetch } from './authSession'
 import { athleteVideoBlobPath, uploadGymMedia } from './mediaUpload'
 import { createId } from './storage'
 
@@ -81,7 +82,7 @@ export async function uploadAthleteVideo(opts: {
   const mime = opts.blob.type || 'video/webm'
   const uploaded = await uploadGymMedia(athleteVideoBlobPath(id, mime), opts.blob, mime)
   if ('url' in uploaded) {
-    const res = await fetch('/api/athlete-videos', {
+    const res = await markedFetch('/api/athlete-videos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
@@ -115,7 +116,7 @@ export async function uploadAthleteVideo(opts: {
     : ''
   const classQ = opts.classId ? `&classId=${encodeURIComponent(opts.classId)}` : ''
   const classNameQ = opts.className ? `&className=${encodeURIComponent(opts.className)}` : ''
-  const res = await fetch(
+  const res = await markedFetch(
     `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(opts.athleteId)}&name=${encodeURIComponent(opts.name)}&source=${encodeURIComponent(opts.source)}&mime=${encodeURIComponent(mime)}&durationSec=${encodeURIComponent(String(opts.durationSec ?? ''))}${lessonQ}${skillQ}${skillLabelQ}${classQ}${classNameQ}`,
     {
       method: 'POST',
@@ -132,7 +133,7 @@ export async function uploadAthleteVideo(opts: {
 }
 
 export async function deleteAthleteVideo(id: string, athleteId: string): Promise<void> {
-  const res = await fetch(
+  const res = await markedFetch(
     `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(athleteId)}`,
     { method: 'DELETE', credentials: 'same-origin' },
   )

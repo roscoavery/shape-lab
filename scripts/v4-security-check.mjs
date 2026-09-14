@@ -149,10 +149,18 @@ async function main() {
       csrf.gymWriteNeedsCsrf('GET', '/api/roster') === false &&
       csrf.gymWriteNeedsCsrf('POST', '/api/feed') === false,
   )
+  ok(
+    'lace marks consent and feed',
+    csrf.gateWriteNeedsCsrf('PATCH', '/api/consent') === true &&
+      csrf.gateWriteNeedsCsrf('POST', '/api/feed') === true &&
+      csrf.gateWriteNeedsCsrf('GET', '/api/feed') === false &&
+      csrf.gateWriteNeedsCsrf('POST', '/api/auth/accounts') === false &&
+      csrf.gateWriteNeedsCsrf('GET', '/api/health') === false,
+  )
 
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is grip', health.json?.holdBuild === 'grip', String(health.json?.holdBuild))
+  ok('health stamp is lace', health.json?.holdBuild === 'lace', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -319,6 +327,32 @@ async function main() {
     'gym write without gym mark is 403',
     gripNo.status === 403,
     gripNo.json?.error || String(gripNo.status),
+  )
+  const laceConsent = await req('/api/consent', {
+    method: 'PATCH',
+    cookie,
+    noCsrf: true,
+    body: JSON.stringify({ athleteId: 'ath_does_not_exist_lace', allowStories: true }),
+  })
+  ok(
+    'consent write without gym mark is 403',
+    laceConsent.status === 403,
+    laceConsent.json?.error || String(laceConsent.status),
+  )
+  const laceFeed = await req('/api/feed?kind=text', {
+    method: 'POST',
+    cookie,
+    noCsrf: true,
+    body: JSON.stringify({
+      kind: 'text',
+      caption: 'should not save',
+      authorId: 'ath_does_not_exist_lace',
+    }),
+  })
+  ok(
+    'feed write without gym mark is 403',
+    laceFeed.status === 403,
+    laceFeed.json?.error || String(laceFeed.status),
   )
   const athletes = Array.isArray(roster.json?.athletes) ? roster.json.athletes : []
   const other = athletes.find((row) => row.id && row.id !== 'ath_ryan' && row.role !== 'coach')
