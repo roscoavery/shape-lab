@@ -8,6 +8,7 @@ import { sendJson } from '../instagramResolve.ts'
 import { userFromRequest } from './sessions.ts'
 import { canWriteCoachTools, canWriteGymLibrary, isAdmin } from './permissions.ts'
 import { tooMany } from './rateLimit.ts'
+import { requestWriteOriginForbidden } from './origin.ts'
 import type { AuthUser } from './types.ts'
 
 /** Instructional / gym-tool writes limited to admin. */
@@ -47,6 +48,11 @@ export async function gateApiRequest(
   res: ServerResponse,
   path: string,
 ): Promise<GateResult> {
+  if (requestWriteOriginForbidden(req)) {
+    sendJson(res, 403, { error: 'That request did not come from this gym.' })
+    return { handled: true }
+  }
+
   const user = await userFromRequest(req)
   if (!user) {
     sendJson(res, 401, { error: 'Sign in to continue.' })

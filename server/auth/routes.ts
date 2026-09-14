@@ -34,6 +34,7 @@ import {
 } from './sessions.ts'
 import { isAccountRole, isAdminRole } from './types.ts'
 import { ipKey, tooMany } from './rateLimit.ts'
+import { requestWriteOriginForbidden } from './origin.ts'
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const AUTH_WRITE_WINDOW_MS = 15 * 60 * 1000
@@ -52,6 +53,11 @@ export async function handleAuthRoutes(
   res: ServerResponse,
   path: string,
 ): Promise<boolean> {
+  if (requestWriteOriginForbidden(req)) {
+    sendJson(res, 403, { error: 'That request did not come from this gym.' })
+    return true
+  }
+
   if (path === '/api/auth/me') {
     if (req.method !== 'GET') {
       sendJson(res, 405, { error: 'Use GET' })

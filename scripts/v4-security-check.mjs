@@ -89,9 +89,27 @@ async function main() {
   )
   ok('clear ignores 429', auth.shouldClearSession(429, 'Too many saves. Wait a minute.') === false)
 
+  const origin = await import('../server/auth/origin.ts')
+  ok(
+    'bind allows writes with no Origin',
+    origin.writeOriginForbidden('POST', undefined, '127.0.0.1:43127') === false,
+  )
+  ok(
+    'bind allows writes from this gym',
+    origin.writeOriginForbidden('POST', 'http://127.0.0.1:43127', '127.0.0.1:43127') === false,
+  )
+  ok(
+    'bind blocks writes from another site',
+    origin.writeOriginForbidden('POST', 'https://evil.example', '127.0.0.1:43127') === true,
+  )
+  ok(
+    'bind does not origin-check GET',
+    origin.writeOriginForbidden('GET', 'https://evil.example', '127.0.0.1:43127') === false,
+  )
+
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is clear', health.json?.holdBuild === 'clear', String(health.json?.holdBuild))
+  ok('health stamp is bind', health.json?.holdBuild === 'bind', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -174,6 +192,31 @@ async function main() {
 
   const revIn = await req('/api/revision', { cookie })
   ok('signed-in revision is 200', revIn.status === 200, String(revIn.status))
+
+  const evilLogout = await req('/api/auth/logout', {
+    method: 'POST',
+    cookie,
+    headers: { Origin: 'https://evil.example' },
+  })
+  ok('foreign origin cannot sign out this gym', evilLogout.status === 403, String(evilLogout.status))
+  const stillIn = await req('/api/auth/me', { cookie })
+  ok(
+    'session stays after foreign logout',
+    stillIn.json?.authenticated === true,
+    JSON.stringify(stillIn.json),
+  )
+  const hereOrigin = new URL(BASE).origin
+  const hereUnlock = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    headers: { Origin: hereOrigin },
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  })
+  ok(
+    'this gym origin can unlock',
+    hereUnlock.status === 200 && hereUnlock.json?.ok === true,
+    hereUnlock.json?.error || String(hereUnlock.status),
+  )
 
   const anonFeedFile = await req('/api/feed-file?id=post_does_not_exist')
   ok('anon feed file is 401', anonFeedFile.status === 401)
