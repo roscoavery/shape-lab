@@ -14,6 +14,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
 import { ConsentDesk } from './components/ConsentDesk'
+import { FloorKioskBar } from './components/FloorKioskBar'
 import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
@@ -157,8 +158,10 @@ import {
   fetchAuthMe,
   logoutSession,
   sessionIsAdmin,
+  sessionIsKiosk,
   type AuthSessionUser,
 } from './lib/authSession'
+import { isOfficeOnlyTab } from './lib/appNav'
 import type {
   AppSettings,
   Athlete,
@@ -553,7 +556,8 @@ export default function App() {
   useEffect(() => {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (!ryan && isRyanOnlyTab(tab)) setTab('today')
-  }, [athletes, activeAthleteId, tab])
+    if (sessionIsKiosk(authUser) && isOfficeOnlyTab(tab)) setTab('today')
+  }, [athletes, activeAthleteId, tab, authUser])
 
   useEffect(
     () => () => {
@@ -591,6 +595,7 @@ export default function App() {
   const goTab = (id: AppTab) => {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (isRyanOnlyTab(id) && !ryan) return
+    if (sessionIsKiosk(authUser) && isOfficeOnlyTab(id)) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -767,9 +772,10 @@ export default function App() {
 
   const liveClass = getActiveMeeting(activeAthleteId)
   const liveClassOffering = liveClass ? getOffering(liveClass.offeringId) : null
-  const ryanEdit = isRyanAthlete(
-    athletes.find((a) => a.id === activeAthleteId) ?? null,
-  )
+  const floorKiosk = sessionIsKiosk(authUser)
+  const ryanEdit =
+    !floorKiosk &&
+    isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
   const libraryEdit = ryanEdit || isCoachProfile(activeProfile)
   const openProfile = (id: string) => {
     const row = athletes.find((a) => a.id === id)
@@ -842,6 +848,11 @@ export default function App() {
           <p className="mt-1">
             <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
           </p>
+          {floorKiosk && (
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-[#6ec8d6]">
+              Floor iPad
+            </p>
+          )}
           <button
             type="button"
             className="mt-2 text-xs text-[var(--muted)] underline"
@@ -858,11 +869,13 @@ export default function App() {
             Sign out {authUser.email}
           </button>
         </div>
-        <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
+        <AppNav tab={tab} ryan={ryanEdit} kiosk={floorKiosk} onGo={goTab} />
         <div className="ml-auto shrink-0">
           <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
         </div>
       </header>
+
+      {floorKiosk && <FloorKioskBar user={authUser} onUser={setAuthUser} />}
 
       {tab === 'today' && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
@@ -1451,7 +1464,7 @@ export default function App() {
         />
       )}
 
-      {tab === 'research' && (
+      {tab === 'research' && !floorKiosk && (
         <ResearchPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
@@ -1547,11 +1560,11 @@ export default function App() {
         </div>
       )}
 
-      {tab === 'accounts' && (
-        <AccountsDesk user={authUser} athletes={athletes} />
+      {tab === 'accounts' && !floorKiosk && (
+        <AccountsDesk user={authUser} athletes={athletes} onUser={setAuthUser} />
       )}
 
-      {tab === 'consent' && <ConsentDesk user={authUser} />}
+      {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}
 
       {tab === 'about' && (
         <div className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[var(--muted)]">

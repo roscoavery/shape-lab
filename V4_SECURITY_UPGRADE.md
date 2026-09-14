@@ -57,6 +57,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - Tiny audit log in gitignored `data/audit.json`.
 - **Phase 2:** More → Accounts lets admin create / link / reset logins. Anyone signed in can change their own password. Other sessions are signed out on a password change. Authorized roster photos stream privately when the bytes are on disk instead of minting a new public Blob URL.
 - **Phase 3 (Ask build):** `GET`/`PATCH /api/consent` for parents, the athlete, and admin. Gym feed and stories are filtered per viewer. Coaches can still post wins; people without a relationship do not see them unless the family allowed that channel.
+- **Phase 4 (Floor build):** More → Accounts → “Use this iPad on the floor” marks only this browser as a kiosk. The account stays signed in. Contacts, accounts, consent, research, password changes, and injury journals lock until the admin password leaves floor mode. Class, homework, and lessons stay. Signing out also ends floor mode.
 
 ## Authentication architecture
 
@@ -124,7 +125,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Ask build** on the header. `/api/health` should include `"holdBuild":"ask"`. If you still see Keys, this window is still old.
+5. Look for **Floor build** on the header. `/api/health` should include `"holdBuild":"floor"`. If you still see Ask or Keys, this window is still old. After sign-in, More → Accounts → Use this iPad on the floor.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -148,7 +149,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 
 ## Known risks
 
-- Shared gym iPad: an admin session on the floor is still an admin session. Sign out when the device leaves the gym.
+- Shared gym iPad: turn on floor mode for that browser. Without floor mode, an admin session is still a full admin session. Sign out when the device leaves the gym.
 - Historical Git may contain real athlete JSON. Do not rewrite history in this project. A later, separate history-cleanup pass may be needed.
 - Public Blob URLs created before V4.
 - 4-digit PINs are still SHA-256 convenience hashes, not account passwords.
@@ -159,9 +160,8 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 1. Rotate any Blob tokens that were ever in a shell history.
 2. Move remaining public athlete Blob objects to private storage.
 3. Password reset, email invites, and magic-link login.
-4. Per-device gym kiosk mode so floor iPads are not full admin browsers.
-5. Separate historical Git cleanup, only with an explicit backup and written approval.
-6. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
+4. Separate historical Git cleanup, only with an explicit backup and written approval.
+5. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
 
 ## Tests
 

@@ -8,7 +8,12 @@ import {
   patchGymAccount,
   type PublicAccount,
 } from '../lib/accountAdmin'
-import { sessionIsAdmin, type AuthSessionUser, type SessionRole } from '../lib/authSession'
+import {
+  sessionIsAdmin,
+  setFloorKiosk,
+  type AuthSessionUser,
+  type SessionRole,
+} from '../lib/authSession'
 
 const ROLES: { id: SessionRole; label: string }[] = [
   { id: 'admin', label: 'Admin' },
@@ -21,9 +26,10 @@ const ROLES: { id: SessionRole; label: string }[] = [
 type Props = {
   user: AuthSessionUser
   athletes: Athlete[]
+  onUser?: (user: AuthSessionUser) => void
 }
 
-export function AccountsDesk({ user, athletes }: Props) {
+export function AccountsDesk({ user, athletes, onUser }: Props) {
   const admin = sessionIsAdmin(user)
   const [accounts, setAccounts] = useState<PublicAccount[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -118,6 +124,37 @@ export function AccountsDesk({ user, athletes }: Props) {
           Save new password
         </button>
       </section>
+
+      {admin && (
+        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+          <h2 className="text-xl font-semibold text-[var(--text)]">Floor iPad</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            Use this when the shared gym iPad stays signed in. Class, homework,
+            and lessons keep working. This browser cannot open contacts,
+            accounts, consent, or research until someone types the admin
+            password.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void setFloorKiosk(true)
+                .then((result) => {
+                  if (result.user) onUser?.(result.user)
+                  flash('This browser is now a floor iPad.')
+                })
+                .catch((err) =>
+                  setError(err instanceof Error ? err.message : 'Could not turn this device into a floor iPad.'),
+                )
+                .finally(() => setBusy(false))
+            }}
+            className="mt-4 rounded-full bg-[#6ec8d6] px-4 py-2 text-sm font-semibold text-[#061418] disabled:opacity-50"
+          >
+            Use this iPad on the floor
+          </button>
+        </section>
+      )}
 
       {admin && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

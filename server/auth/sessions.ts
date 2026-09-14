@@ -113,5 +113,16 @@ export async function userFromRequest(req: IncomingMessage): Promise<AuthUser | 
   if (!session) return null
   const account = await findAccountById(session.accountId)
   if (!account) return null
-  return publicUserFromAccount(account)
+  return { ...publicUserFromAccount(account), kiosk: session.kiosk === true }
+}
+
+export async function setSessionKiosk(sessionId: string, kiosk: boolean): Promise<boolean> {
+  const file = await readFile()
+  const now = Date.now()
+  const idx = file.sessions.findIndex((row) => row.id === sessionId && stillValid(row, now))
+  if (idx < 0) return false
+  const next = file.sessions.slice()
+  next[idx] = { ...next[idx], kiosk }
+  await writeFile(next)
+  return true
 }

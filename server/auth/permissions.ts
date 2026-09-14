@@ -28,8 +28,12 @@ export function requireAdmin(user: AuthUser | null): AuthUser {
   return authed
 }
 
+export function isKiosk(user: AuthUser | null | undefined): boolean {
+  return Boolean(user?.kiosk)
+}
+
 export function isAdmin(user: AuthUser | null | undefined): boolean {
-  return Boolean(user && isAdminRole(user.role))
+  return Boolean(user && isAdminRole(user.role) && !user.kiosk)
 }
 
 function asIds(value: unknown): string[] {
@@ -197,8 +201,8 @@ export async function canEditAthlete(
 }
 
 export function canCreateAthlete(user: AuthUser | null | undefined): boolean {
-  if (!user) return false
-  return isAdminRole(user.role) || user.role === 'coach'
+  if (!user || isKiosk(user)) return false
+  return isAdmin(user) || user.role === 'coach'
 }
 
 export function canSeeAdminContacts(user: AuthUser | null | undefined): boolean {
@@ -211,7 +215,7 @@ export async function canSeeHealth(
   athletes: RosterAthlete[] = [],
 ): Promise<boolean> {
   if (!user) return false
-  if (isAdminRole(user.role)) return true
+  if (isAdmin(user)) return true
   if (user.rosterProfileId === athlete.id) return true
   if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
   if (user.role === 'coach') return canCoachAthlete(user, athlete)

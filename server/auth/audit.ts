@@ -13,6 +13,7 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.logout'
   | 'auth.account_create'
+  | 'auth.kiosk'
   | 'roster.view'
   | 'roster.write'
   | 'contacts.view'

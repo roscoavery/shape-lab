@@ -84,6 +84,12 @@ async function main() {
   })
   ok('anon consent write is 401', anonConsentWrite.status === 401)
 
+  const anonKiosk = await req('/api/auth/kiosk', {
+    method: 'POST',
+    body: JSON.stringify({ enabled: true }),
+  })
+  ok('anon kiosk is 401', anonKiosk.status === 401)
+
   let cookie = ''
   const login = await req('/api/auth/login', {
     method: 'POST',
@@ -287,6 +293,70 @@ async function main() {
   } else {
     ok('admin consent list loaded', adminConsent.status === 200)
   }
+
+  const coachKiosk = await req('/api/auth/kiosk', {
+    method: 'POST',
+    cookie: coachCookie,
+    body: JSON.stringify({ enabled: true }),
+  })
+  ok('coach cannot enter floor mode', coachKiosk.status === 403, String(coachKiosk.status))
+
+  const enterFloor = await req('/api/auth/kiosk', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ enabled: true }),
+  })
+  ok('admin can enter floor mode', enterFloor.status === 200 && enterFloor.json?.user?.kiosk === true)
+
+  const floorContacts = await req('/api/contacts', { cookie })
+  ok('floor iPad contacts is 403', floorContacts.status === 403)
+
+  const floorAccounts = await req('/api/auth/accounts', { cookie })
+  ok('floor iPad accounts is 403', floorAccounts.status === 403)
+
+  const floorConsent = await req('/api/consent', {
+    method: 'PATCH',
+    cookie,
+    body: JSON.stringify({ athleteId: 'ath_example_sam', allowStories: true }),
+  })
+  ok(
+    'floor iPad cannot patch consent',
+    floorConsent.status === 403 || floorConsent.status === 404,
+    String(floorConsent.status),
+  )
+
+  const floorRoster = await req('/api/roster', { cookie })
+  ok('floor iPad can read roster', floorRoster.status === 200)
+  const floorAthletes = Array.isArray(floorRoster.json?.athletes) ? floorRoster.json.athletes : []
+  ok('floor iPad roster has no parentPhone fields', !floorAthletes.some((row) => row.parentPhone))
+  ok(
+    'floor iPad roster has no injury log dump',
+    !Array.isArray(floorRoster.json?.injuryLogs) || floorRoster.json.injuryLogs.length === 0,
+  )
+
+  const floorPassword = await req('/api/auth/password', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ currentPassword: ADMIN_PASSWORD, newPassword: ADMIN_PASSWORD }),
+  })
+  ok('floor iPad cannot change password', floorPassword.status === 403)
+
+  const leaveBad = await req('/api/auth/kiosk', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ enabled: false, password: 'wrong-floor-password' }),
+  })
+  ok('wrong password cannot leave the floor', leaveBad.status === 401)
+
+  const leaveFloor = await req('/api/auth/kiosk', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ enabled: false, password: ADMIN_PASSWORD }),
+  })
+  ok('admin password leaves the floor', leaveFloor.status === 200 && leaveFloor.json?.user?.kiosk !== true)
+
+  const afterFloorContacts = await req('/api/contacts', { cookie })
+  ok('admin contacts work after leaving the floor', afterFloorContacts.status === 200)
 
   const coachPatch = await req('/api/auth/accounts', {
     method: 'PATCH',

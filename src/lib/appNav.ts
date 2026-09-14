@@ -72,10 +72,18 @@ export function sectionForTab(tab: AppTab): AppSection {
   }
 }
 
-export function subnavForSection(section: AppSection, ryan: boolean) {
-  return SECTION_SUBNAV[section].filter((item) => ryan || !isRyanOnlyTab(item.id))
+export function isOfficeOnlyTab(tab: AppTab): boolean {
+  return tab === 'accounts' || tab === 'consent' || tab === 'research'
 }
 
-export function defaultTabForSection(section: AppSection, ryan: boolean): AppTab {
-  return subnavForSection(section, ryan)[0]?.id ?? 'today'
+export function subnavForSection(section: AppSection, ryan: boolean, kiosk = false) {
+  return SECTION_SUBNAV[section].filter((item) => {
+    if (!ryan && isRyanOnlyTab(item.id)) return false
+    if (kiosk && isOfficeOnlyTab(item.id)) return false
+    return true
+  })
+}
+
+export function defaultTabForSection(section: AppSection, ryan: boolean, kiosk = false): AppTab {
+  return subnavForSection(section, ryan, kiosk)[0]?.id ?? 'today'
 }

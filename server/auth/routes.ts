@@ -14,10 +14,11 @@ import {
   createAccount,
   ensureBootstrapAdmin,
   hasAdminAccount,
+  publicUserFromAccount,
   updateAccount,
 } from './accounts.ts'
 import { writeAudit } from './audit.ts'
-import { isAdmin } from './permissions.ts'
+import { isAdmin, isKiosk } from './permissions.ts'
 import {
   clearSessionCookie,
   createSession,
@@ -25,9 +26,10 @@ import {
   destroySessionsForAccount,
   readSessionId,
   setSessionCookie,
+  setSessionKiosk,
   userFromRequest,
 } from './sessions.ts'
-import { isAccountRole } from './types.ts'
+import { isAccountRole, isAdminRole } from './types.ts'
 
 const loginAttempts = new Map<string, { count: number; resetAt: number }>()
 
@@ -88,14 +90,7 @@ export async function handleAuthRoutes(
     }
     const session = await createSession(account.id)
     setSessionCookie(req, res, session.id)
-    const user = {
-      accountId: account.id,
-      email: account.email,
-      role: account.role,
-      displayName: account.displayName,
-      rosterProfileId: account.rosterProfileId,
-      linkedAthleteIds: account.linkedAthleteIds ?? [],
-    }
+    const user = { ...publicUserFromAccount(account), kiosk: false }
     await writeAudit('auth.login', user)
     sendJson(res, 200, { authenticated: true, user })
     return true
@@ -260,6 +255,10 @@ export async function handleAuthRoutes(
       sendJson(res, 401, { error: 'Sign in to continue.' })
       return true
     }
+    if (isKiosk(user)) {
+      sendJson(res, 403, { error: 'Leave floor mode before changing a password.' })
+      return true
+    }
     let body: { currentPassword?: string; newPassword?: string; accountId?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -296,6 +295,59 @@ export async function handleAuthRoutes(
         error: err instanceof Error ? err.message : 'Could not change that password.',
       })
     }
+    return true
+  }
+
+  if (path === '/api/auth/kiosk') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (!isAdminRole(user.role)) {
+      sendJson(res, 403, { error: 'Only gym admin can turn a device into a floor iPad.' })
+      return true
+    }
+    let body: { enabled?: boolean; password?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const sessionId = readSessionId(req)
+    if (!sessionId) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (body.enabled) {
+      if (user.kiosk) {
+        sendJson(res, 200, { authenticated: true, user })
+        return true
+      }
+      await setSessionKiosk(sessionId, true)
+      const next = { ...user, kiosk: true }
+      await writeAudit('auth.kiosk', next, { detail: 'enter floor' })
+      sendJson(res, 200, { authenticated: true, user: next })
+      return true
+    }
+    if (!user.kiosk) {
+      sendJson(res, 200, { authenticated: true, user })
+      return true
+    }
+    const ok = await accountPasswordMatches(user.accountId, body.password || '')
+    if (!ok) {
+      sendJson(res, 401, { error: 'Type the admin password to leave the floor.' })
+      return true
+    }
+    await setSessionKiosk(sessionId, false)
+    const next = { ...user, kiosk: false }
+    await writeAudit('auth.kiosk', next, { detail: 'leave floor' })
+    sendJson(res, 200, { authenticated: true, user: next })
     return true
   }
 

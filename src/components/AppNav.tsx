@@ -4,12 +4,13 @@ import type { AppTab } from '../lib/storage'
 type Props = {
   tab: AppTab
   ryan: boolean
+  kiosk?: boolean
   onGo: (id: AppTab) => void
 }
 
-export function AppNav({ tab, ryan, onGo }: Props) {
+export function AppNav({ tab, ryan, kiosk = false, onGo }: Props) {
   const section = sectionForTab(tab)
-  const subnav = subnavForSection(section, ryan)
+  const subnav = subnavForSection(section, ryan, kiosk)
   const showSubnav = subnav.length > 1 || section === 'more'
 
   return (
@@ -25,7 +26,7 @@ export function AppNav({ tab, ryan, onGo }: Props) {
             aria-current={section === item.id ? 'page' : undefined}
             onClick={() => {
               if (section === item.id) return
-              onGo(defaultTabForSection(item.id, ryan))
+              onGo(defaultTabForSection(item.id, ryan, kiosk))
             }}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm transition ${
               section === item.id

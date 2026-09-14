@@ -10,6 +10,7 @@ import {
   canCreateAthlete,
   canEditAthlete,
   isAdmin,
+  isKiosk,
   type RosterAthlete,
 } from './permissions.ts'
 import { sanitizeRosterForViewer } from './sanitize.ts'
@@ -90,23 +91,27 @@ function applyAllowedEdits(
   }
 
   let next: Record<string, unknown> = { ...existing, ...incoming, id: existing.id }
-  if (user.role === 'coach') {
+  if (user.role === 'coach' || isKiosk(user)) {
     next = stripFields(next, COACH_FORBIDDEN_FIELDS)
     next.role = existing.role
     next.email = existing.email
     next.parentPhone = existing.parentPhone
     next.passcodeHash = existing.passcodeHash
-    const existingCoaches = Array.isArray(existing.worksWithCoachIds)
-      ? existing.worksWithCoachIds.filter((id): id is string => typeof id === 'string')
-      : []
-    const incomingCoaches = Array.isArray(incoming.worksWithCoachIds)
-      ? incoming.worksWithCoachIds.filter((id): id is string => typeof id === 'string')
-      : existingCoaches
-    const coachId = user.rosterProfileId
-    next.worksWithCoachIds = [
-      ...new Set([...existingCoaches.filter((id) => id !== coachId), ...incomingCoaches, coachId].filter(Boolean)),
-    ]
     next.createdByCoachId = existing.createdByCoachId
+    if (isKiosk(user)) {
+      next.worksWithCoachIds = existing.worksWithCoachIds
+    } else {
+      const existingCoaches = Array.isArray(existing.worksWithCoachIds)
+        ? existing.worksWithCoachIds.filter((id): id is string => typeof id === 'string')
+        : []
+      const incomingCoaches = Array.isArray(incoming.worksWithCoachIds)
+        ? incoming.worksWithCoachIds.filter((id): id is string => typeof id === 'string')
+        : existingCoaches
+      const coachId = user.rosterProfileId
+      next.worksWithCoachIds = [
+        ...new Set([...existingCoaches.filter((id) => id !== coachId), ...incomingCoaches, coachId].filter(Boolean)),
+      ]
+    }
   }
   if (user.role === 'athlete' || user.role === 'parent') {
     next = stripFields(next, ADMIN_ONLY_FIELDS)

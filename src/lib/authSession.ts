@@ -12,6 +12,7 @@ export type AuthSessionUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  kiosk?: boolean
 }
 
 export type AuthMeResponse = {
@@ -25,8 +26,28 @@ const jsonInit: RequestInit = {
   headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
 }
 
+export function sessionIsKiosk(user: AuthSessionUser | null | undefined): boolean {
+  return user?.kiosk === true
+}
+
 export function sessionIsAdmin(user: AuthSessionUser | null | undefined): boolean {
+  if (sessionIsKiosk(user)) return false
   return user?.role === 'admin' || user?.role === 'gymOwner'
+}
+
+export async function setFloorKiosk(enabled: boolean, password?: string): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/kiosk', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ enabled, password }),
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  if (!res.ok) {
+    throw new Error(
+      data.error || (enabled ? 'Could not turn this device into a floor iPad.' : 'Could not leave the floor.'),
+    )
+  }
+  return data
 }
 
 export async function fetchAuthMe(): Promise<AuthMeResponse> {

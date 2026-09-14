@@ -24,6 +24,8 @@ export type SessionRecord = {
   accountId: string
   createdAt: string
   expiresAt: string
+  /** This browser is a floor iPad. Admin powers stay off until password leave. */
+  kiosk?: boolean
 }
 
 /** Authenticated viewer used by API authorization. Never includes a password hash. */
@@ -34,6 +36,7 @@ export type AuthUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  kiosk?: boolean
 }
 
 export type PublicAthlete = Record<string, unknown> & { id: string }

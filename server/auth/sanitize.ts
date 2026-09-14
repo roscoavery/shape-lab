@@ -9,6 +9,7 @@ import {
   canSeeCoachNotes,
   canSeeHealth,
   isAdmin,
+  isKiosk,
   type RosterAthlete,
 } from './permissions.ts'
 import type { AuthUser } from './types.ts'
@@ -103,6 +104,7 @@ export async function sanitizeRosterForViewer(
     allowed.map((athlete) => sanitizeAthleteForViewer(user, athlete, allowed)),
   )
   const healthOk = isAdmin(user)
+  const hideHealthLists = isKiosk(user)
   return {
     ...roster,
     athletes,
@@ -128,11 +130,15 @@ export async function sanitizeRosterForViewer(
             : {},
           allowedIds,
         ),
-    injuryLogs: healthOk
-      ? roster.injuryLogs ?? []
-      : filterRowsForAthleteIds(Array.isArray(roster.injuryLogs) ? roster.injuryLogs : [], allowedIds),
-    painJournals: healthOk
-      ? roster.painJournals ?? []
-      : filterRowsForAthleteIds(Array.isArray(roster.painJournals) ? roster.painJournals : [], allowedIds),
+    injuryLogs: hideHealthLists
+      ? []
+      : healthOk
+        ? roster.injuryLogs ?? []
+        : filterRowsForAthleteIds(Array.isArray(roster.injuryLogs) ? roster.injuryLogs : [], allowedIds),
+    painJournals: hideHealthLists
+      ? []
+      : healthOk
+        ? roster.painJournals ?? []
+        : filterRowsForAthleteIds(Array.isArray(roster.painJournals) ? roster.painJournals : [], allowedIds),
   }
 }
