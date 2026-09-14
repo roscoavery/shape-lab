@@ -5,10 +5,11 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { sendJson } from '../instagramResolve.ts'
-import { userFromRequest } from './sessions.ts'
+import { userFromRequest, sessionFromRequest } from './sessions.ts'
 import { canWriteCoachTools, canWriteGymLibrary, isAdmin } from './permissions.ts'
 import { tooMany } from './rateLimit.ts'
 import { requestWriteOriginForbidden } from './origin.ts'
+import { csrfForbidden, gymWriteNeedsCsrf, readCsrfHeader } from './csrf.ts'
 import type { AuthUser } from './types.ts'
 
 /** Instructional / gym-tool writes limited to admin. */
@@ -57,6 +58,14 @@ export async function gateApiRequest(
   if (!user) {
     sendJson(res, 401, { error: 'Sign in to continue.' })
     return { handled: true }
+  }
+
+  if (gymWriteNeedsCsrf(req.method, path)) {
+    const marked = await sessionFromRequest(req)
+    if (csrfForbidden(readCsrfHeader(req.headers), marked?.csrf)) {
+      sendJson(res, 403, { error: 'That request did not come from this gym.' })
+      return { handled: true }
+    }
   }
 
   if (isWrite(req.method) && tooMany(`write:${user.accountId}`, 180, 60_000)) {

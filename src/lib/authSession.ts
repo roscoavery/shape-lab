@@ -31,6 +31,12 @@ export function rememberCsrf(data: { csrf?: string } | null | undefined): void {
   if (data?.csrf) csrfToken = data.csrf
 }
 
+export function withCsrfHeaders(headers?: HeadersInit): Headers {
+  const next = new Headers(headers)
+  if (csrfToken) next.set(CSRF_HEADER, csrfToken)
+  return next
+}
+
 export function authWriteInit(body?: string): RequestInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',

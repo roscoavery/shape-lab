@@ -1,6 +1,7 @@
 /**
- * Gym mark for cookie-backed account writes.
- * Roster PUTs still rely on Origin (Bind). Missing Origin is allowed there.
+ * Gym mark for cookie-backed writes.
+ * Account routes and gym-file PUTs (roster, lessons, classes, …) require it.
+ * Other writes still rely on Origin (Bind).
  */
 
 import { timingSafeEqual } from 'node:crypto'
@@ -8,9 +9,24 @@ import type { IncomingHttpHeaders } from 'node:http'
 
 export const CSRF_HEADER = 'x-shape-lab-csrf'
 
-export function authWriteNeedsCsrf(method: string | undefined, path: string): boolean {
+const GYM_WRITE_PATHS = new Set([
+  '/api/roster',
+  '/api/roster-photos',
+  '/api/lessons',
+  '/api/coach-classes',
+  '/api/coach-content',
+  '/api/chalkboards',
+  '/api/skill-paths',
+  '/api/training-events',
+])
+
+function isWriteMethod(method: string | undefined): boolean {
   const m = (method || '').toUpperCase()
-  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS' || !m) return false
+  return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE'
+}
+
+export function authWriteNeedsCsrf(method: string | undefined, path: string): boolean {
+  if (!isWriteMethod(method)) return false
   if (
     path === '/api/auth/login' ||
     path === '/api/auth/bootstrap' ||
@@ -19,6 +35,15 @@ export function authWriteNeedsCsrf(method: string | undefined, path: string): bo
     return false
   }
   return path.startsWith('/api/auth/')
+}
+
+export function gymWriteNeedsCsrf(method: string | undefined, path: string): boolean {
+  if (!isWriteMethod(method)) return false
+  return GYM_WRITE_PATHS.has(path)
+}
+
+export function writeNeedsCsrf(method: string | undefined, path: string): boolean {
+  return authWriteNeedsCsrf(method, path) || gymWriteNeedsCsrf(method, path)
 }
 
 export function readCsrfHeader(headers: IncomingHttpHeaders): string {

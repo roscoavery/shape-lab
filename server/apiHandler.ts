@@ -232,7 +232,7 @@ export async function handleShapeLabApi(
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'mark' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'grip' })
     return true
   }
   if (path.startsWith('/api/auth')) {

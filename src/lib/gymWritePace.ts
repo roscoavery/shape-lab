@@ -3,7 +3,7 @@
  * Roster, lessons, and the other gym files share this cooldown in this tab.
  */
 
-import { noteSessionLost } from './authSession.ts'
+import { noteSessionLost, withCsrfHeaders } from './authSession.ts'
 
 export const GYM_WRITE_COOLDOWN_MS = 60_000
 
@@ -33,7 +33,8 @@ export async function gymWriteFetch(input: RequestInfo | URL, init?: RequestInit
       headers: { 'Content-Type': 'application/json' },
     })
   }
-  const res = await fetch(input, init)
+  const headers = withCsrfHeaders(init?.headers)
+  const res = await fetch(input, { ...init, headers })
   if (res.status === 429) noteGymWriteLimited()
   if (res.status === 401) noteSessionLost()
   return res

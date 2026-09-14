@@ -25,24 +25,21 @@ function authPath(path) {
   return String(path || '').split('?')[0]
 }
 
-function needsCsrf(path, method, opts) {
-  if (opts.noCsrf) return false
-  const m = String(method || 'GET').toUpperCase()
-  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return false
-  const p = authPath(path)
-  if (p === '/api/auth/login' || p === '/api/auth/bootstrap' || p === '/api/auth/invite') return false
-  return p.startsWith('/api/auth/')
-}
+let csrfMod = null
 
 async function req(path, opts = {}) {
+  if (!csrfMod) csrfMod = await import('../server/auth/csrf.ts')
   const headers = { ...(opts.headers || {}) }
   if (opts.cookie) headers.Cookie = opts.cookie
   if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
+  const p = authPath(path)
+  const m = opts.method || 'GET'
   if (
-    needsCsrf(path, opts.method, opts) &&
+    !opts.noCsrf &&
     opts.cookie &&
     !headers['X-Shape-Lab-Csrf'] &&
-    !headers['x-shape-lab-csrf']
+    !headers['x-shape-lab-csrf'] &&
+    csrfMod.writeNeedsCsrf(m, p)
   ) {
     const token = csrfByCookie.get(opts.cookie)
     if (token) headers['X-Shape-Lab-Csrf'] = token
@@ -145,10 +142,17 @@ async function main() {
   ok('mark rejects an empty gym mark', csrf.csrfForbidden('', sample) === true)
   ok('mark accepts a matching gym mark', csrf.csrfForbidden(sample, sample) === false)
   ok('mark rejects another gym mark', csrf.csrfForbidden('cd'.repeat(32), sample) === true)
+  ok(
+    'grip marks roster and lesson saves',
+    csrf.gymWriteNeedsCsrf('PUT', '/api/roster') === true &&
+      csrf.gymWriteNeedsCsrf('PUT', '/api/lessons') === true &&
+      csrf.gymWriteNeedsCsrf('GET', '/api/roster') === false &&
+      csrf.gymWriteNeedsCsrf('POST', '/api/feed') === false,
+  )
 
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is mark', health.json?.holdBuild === 'mark', String(health.json?.holdBuild))
+  ok('health stamp is grip', health.json?.holdBuild === 'grip', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -305,6 +309,17 @@ async function main() {
 
   const roster = await req('/api/roster', { cookie })
   ok('admin can read roster', roster.status === 200 && roster.json?.kind === 'shape-lab-roster')
+  const gripNo = await req('/api/roster', {
+    method: 'PUT',
+    cookie,
+    noCsrf: true,
+    body: JSON.stringify({ kind: 'shape-lab-roster', athletes: [] }),
+  })
+  ok(
+    'gym write without gym mark is 403',
+    gripNo.status === 403,
+    gripNo.json?.error || String(gripNo.status),
+  )
   const athletes = Array.isArray(roster.json?.athletes) ? roster.json.athletes : []
   const other = athletes.find((row) => row.id && row.id !== 'ath_ryan' && row.role !== 'coach')
   if (other) {
