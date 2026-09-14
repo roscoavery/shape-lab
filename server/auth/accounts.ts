@@ -5,6 +5,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { isHomeGym, readJson, writeJson } from '../persist.ts'
+import { serverEnv, serverEnvFlag } from './env.ts'
 import { hashPassword, verifyPassword } from './passwords.ts'
 import { isAccountRole, type Account, type AccountRole, type AuthUser } from './types.ts'
 
@@ -94,8 +95,7 @@ export async function findAccountByEmail(email: string): Promise<Account | null>
 }
 
 export function allowFirstAdmin(): boolean {
-  const flag = (process.env.SHAPE_LAB_ALLOW_FIRST_ADMIN || '').trim().toLowerCase()
-  if (flag === '1' || flag === 'true' || flag === 'yes') return true
+  if (serverEnvFlag('SHAPE_LAB_ALLOW_FIRST_ADMIN')) return true
   return isHomeGym()
 }
 
@@ -104,8 +104,8 @@ export async function hasAdminAccount(): Promise<boolean> {
 }
 
 export async function ensureBootstrapAdmin(): Promise<void> {
-  const email = (process.env.SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL || '').trim()
-  const password = process.env.SHAPE_LAB_BOOTSTRAP_ADMIN_PASSWORD || ''
+  const email = serverEnv('SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL').trim()
+  const password = serverEnv('SHAPE_LAB_BOOTSTRAP_ADMIN_PASSWORD')
   if (!email || !password) return
   if (await hasAdminAccount()) return
   await createAccount({

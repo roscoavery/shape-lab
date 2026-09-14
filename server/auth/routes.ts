@@ -116,8 +116,12 @@ export async function handleAuthRoutes(
       sendJson(res, 405, { error: 'Use POST' })
       return true
     }
-    if (await hasAdminAccount() || !allowFirstAdmin()) {
+    if (await hasAdminAccount()) {
       sendJson(res, 403, { error: 'The first admin account is already set.' })
+      return true
+    }
+    if (!allowFirstAdmin()) {
+      sendJson(res, 403, { error: 'Set SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL and PASSWORD, or allow first-admin on the gym computer.' })
       return true
     }
     let body: { email?: string; password?: string; displayName?: string } = {}
