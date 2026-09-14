@@ -450,8 +450,8 @@ function UploadFields({
         placeholder="Extra info for this picture (cues, what to look for, common mistakes…)"
         className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
       />
-      <label className="inline-block cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs hover:bg-[#243040]">
-        {busy ? 'Saving…' : replace ? 'Replace photo' : 'Upload photo'}
+      <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs hover:bg-[#243040]">
+        {busy ? 'Saving…' : <span className="inline-flex items-center gap-1"><span aria-hidden>+</span><span className="sr-only">{replace ? 'Replace photo' : 'Upload photo'}</span></span>}
         <input
           type="file"
           accept="image/*"

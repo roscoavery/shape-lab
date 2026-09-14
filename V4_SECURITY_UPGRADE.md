@@ -194,7 +194,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 
 ## Family experience (this branch)
 
-Role desks, parent linking, age-aware access, parent wellness privacy, and coach-entered holds are documented in `V4_FAMILY_EXPERIENCE.md`. Those features do not make Shape Lab COPPA, FERPA, or medically compliant.
+Role desks, parent linking, age-aware access, parent wellness privacy, coach-entered holds, and private still tags are documented in `V4_FAMILY_EXPERIENCE.md`. Those features do not make Shape Lab COPPA, FERPA, or medically compliant.
 
 ## Tests
 

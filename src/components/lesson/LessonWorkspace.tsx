@@ -377,39 +377,46 @@ export function LessonWorkspace({
             Log this time
           </button>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label>
-            <span className="text-[11px] uppercase text-[var(--muted)]">When</span>
-            <select
-              value={holdWhen}
-              onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
-              className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            >
-              <option value="today">Performed today</option>
-              <option value="past">Choose previous date</option>
-            </select>
-          </label>
-          {holdWhen === 'past' && (
+        <details className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
+          <summary className="cursor-pointer text-sm font-semibold">Log an older hold</summary>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            From notes or a previous date. One athlete at a time.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <label>
-              <span className="text-[11px] uppercase text-[var(--muted)]">Date</span>
-              <input
-                type="date"
-                value={holdPast}
-                onChange={(e) => setHoldPast(e.target.value)}
+              <span className="text-[11px] uppercase text-[var(--muted)]">When</span>
+              <select
+                value={holdWhen}
+                onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
                 className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-              />
+              >
+                <option value="today">Performed today</option>
+                <option value="past">Choose previous date</option>
+              </select>
             </label>
-          )}
-        </div>
-        {people.map((row) => (
-          <div key={row.id} className="mt-3">
-            <CoachHoldEntry
-              athlete={row}
-              viewer={coach}
-              lessonId={session.id}
-            />
+            {holdWhen === 'past' && (
+              <label>
+                <span className="text-[11px] uppercase text-[var(--muted)]">Date</span>
+                <input
+                  type="date"
+                  value={holdPast}
+                  onChange={(e) => setHoldPast(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                />
+              </label>
+            )}
           </div>
-        ))}
+          {people.map((row) => (
+            <div key={row.id} className="mt-2">
+              <CoachHoldEntry
+                athlete={row}
+                viewer={coach}
+                lessonId={session.id}
+                collapsed
+              />
+            </div>
+          ))}
+        </details>
         <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps / sets</p>
             {repFlash && (

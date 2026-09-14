@@ -95,6 +95,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'history', label: 'Profiles' },
     { id: 'accounts', label: 'Accounts' },
     { id: 'consent', label: 'Consent' },
+    { id: 'stills', label: 'Stills' },
     { id: 'watch', label: 'Watch' },
     { id: 'research', label: 'Research' },
     { id: 'about', label: 'About' },
@@ -139,11 +140,11 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
 }
 
 export function isOfficeOnlyTab(tab: AppTab): boolean {
-  return tab === 'accounts' || tab === 'consent' || tab === 'research' || tab === 'watch'
+  return tab === 'accounts' || tab === 'consent' || tab === 'research' || tab === 'watch' || tab === 'stills'
 }
 
 export function isAdminOnlyTab(tab: AppTab): boolean {
-  return tab === 'watch'
+  return tab === 'watch' || tab === 'stills'
 }
 
 export function subnavForSection(
@@ -174,7 +175,7 @@ export function subnavForSection(
       if (section === 'learn') return item.id === 'learn'
       if (section === 'more') return false
     }
-    if (role === 'coach' && item.id === 'watch') return false
+    if (role === 'coach' && (item.id === 'watch' || item.id === 'stills')) return false
     return true
   })
 }

@@ -1,5 +1,6 @@
 import type { Athlete } from '../types'
 import { splitMentions } from '../lib/profileHandle'
+import { publicFeedName } from '../lib/publicName'
 import { useViewProfile } from './ProfilePeekContext'
 
 type Props = {
@@ -24,7 +25,7 @@ export function MentionText({ text, athletes, className }: Props) {
             onClick={() => view(part.athlete!.id)}
             className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
           >
-            {part.value}
+            {publicFeedName(part.athlete)}
           </button>
         ) : (
           <span key={i}>{part.value}</span>

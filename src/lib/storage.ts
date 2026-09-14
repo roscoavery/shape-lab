@@ -840,6 +840,7 @@ export const APP_TABS = [
   'history',
   'accounts',
   'consent',
+  'stills',
   'watch',
   'about',
   'wellness',

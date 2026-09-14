@@ -15,6 +15,8 @@ import {
 } from '../../lib/lessonStore'
 import type { Athlete, LessonPlan, LessonSession } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { InfoHint } from '../ui/InfoHint'
+import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
@@ -122,10 +124,14 @@ export function HomeDashboard({
   const [rowMenuId, setRowMenuId] = useState<string | null>(null)
   const [addGroupFor, setAddGroupFor] = useState<string | null>(null)
   const [pickHint, setPickHint] = useState(false)
+  const [rosterOpen, setRosterOpen] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
   const [startKind, setStartKind] = useState<TrainingEventKind | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (pickHint) setRosterOpen(true)
+  }, [pickHint])
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
   useEffect(() => {
@@ -695,12 +701,31 @@ export function HomeDashboard({
               : ''
           }`}
         >
-          <h3 className="text-lg font-semibold">Who are you with?</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {pickHint && withAthletes.length === 0
-              ? 'Tap every athlete in this lesson, then Start lesson.'
-              : 'Tap names. Search if the list is long.'}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold">Who are you with?</h3>
+              {!rosterOpen && withAthletes.length > 0 && (
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {withAthletes.map((a) => a.name.split(' ')[0]).join(', ')}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <InfoHint>
+                {pickHint && withAthletes.length === 0
+                  ? 'Tap every athlete in this lesson, then Start lesson.'
+                  : 'The full list stays closed until you need it. Search after you open it.'}
+              </InfoHint>
+              <button
+                type="button"
+                aria-expanded={rosterOpen}
+                onClick={() => setRosterOpen((v) => !v)}
+                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
+              >
+                {rosterOpen ? 'Hide list' : withAthletes.length ? `List · ${withAthletes.length}` : 'Show list'}
+              </button>
+            </div>
+          </div>
           <TodayGymScope
             scope={gymScope}
             onScope={setGymScope}
@@ -737,7 +762,7 @@ export function HomeDashboard({
             onOpenBuilder={onOpenSkillPaths}
           />
         )}
-        {roster.length === 0 && gymScope.kind !== 'event' ? (
+        {rosterOpen && (roster.length === 0 && gymScope.kind !== 'event' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             {gymScope.kind === 'all'
               ? 'No other profiles on the network yet. Add one under More → Profiles.'
@@ -778,13 +803,11 @@ export function HomeDashboard({
                   </button>
                   <div className="flex shrink-0 items-center gap-1">
                     {gymScope.kind === 'event' && (
-                      <button
-                        type="button"
-                        className="text-[11px] font-semibold text-[var(--muted)]"
+                      <IconAction
+                        kind="remove"
+                        label="Remove"
                         onClick={() => toggleCampAthlete(a.id)}
-                      >
-                        Remove
-                      </button>
+                      />
                     )}
                     <button
                       type="button"
@@ -893,7 +916,7 @@ export function HomeDashboard({
               </p>
             )}
           </>
-        )}
+        ))}
         </div>
       </section>
 

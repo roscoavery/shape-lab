@@ -14,6 +14,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
 import { ConsentDesk } from './components/ConsentDesk'
+import { StillTagDesk } from './components/coach/StillTagDesk'
 import { WatchDesk } from './components/WatchDesk'
 import { AwayLockScreen, useAwayLock } from './components/AwayLockScreen'
 import { FloorKioskBar } from './components/FloorKioskBar'
@@ -1670,6 +1671,10 @@ export default function App() {
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}
+
+      {tab === 'stills' && !floorKiosk && sessionIsAdmin(authUser) && (
+        <StillTagDesk user={authUser} />
+      )}
 
       {tab === 'watch' && !floorKiosk && <WatchDesk user={authUser} />}
 

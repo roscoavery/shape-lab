@@ -196,6 +196,72 @@ async function main() {
   ok('public user cannot log holds', publicHold.status === 401)
   ok('admin still reads the gym roster', adminFamilyRoster.status === 200)
 
+  const publicName = await import('../src/lib/publicName.ts')
+  ok(
+    'public feed name is first plus last initial',
+    publicName.publicFeedName({ firstName: 'Ellie', lastName: 'Williams', name: 'Ellie Williams' }) === 'Ellie W.',
+  )
+
+  const publicTags = await req('/api/still-tags')
+  ok('public user cannot read still tags', publicTags.status === 401)
+
+  const stillsFile = await req('/api/coach-stills', { cookie })
+  ok('coach stills payload does not include athleteTags', stillsFile.json?.athleteTags == null)
+
+  const linkedKid = linkedOnGym[0]
+  const tagTarget =
+    linkedKid ||
+    adminRows.find((row) => row.role !== 'parent' && row.role !== 'coach' && row.id !== parentUser?.rosterProfileId)?.id
+  const unrelatedKid = adminRows.find(
+    (row) =>
+      row.role !== 'parent' &&
+      row.role !== 'coach' &&
+      row.id !== tagTarget &&
+      row.id !== parentUser?.rosterProfileId,
+  )?.id
+  if (tagTarget) {
+    const tagWrite = await req('/api/still-tags', {
+      method: 'PATCH',
+      cookie,
+      body: JSON.stringify({
+        stillId: 'still_family_check',
+        taggedAthleteIds: unrelatedKid ? [tagTarget, unrelatedKid] : [tagTarget],
+      }),
+    })
+    ok('admin can privately tag a still', tagWrite.status === 200, String(tagWrite.status))
+    const adminTags = await req('/api/still-tags', { cookie })
+    const adminTagged = (adminTags.json?.stills || []).find((row) => row.stillId === 'still_family_check')
+    ok('admin still-tags include consent flags', Boolean(adminTagged?.tagged?.[0]?.instructionalMediaConsent))
+    const parentTags = await req('/api/still-tags', { cookie: parentACookie })
+    const parentTagged = (parentTags.json?.stills || []).find((row) => row.stillId === 'still_family_check')
+    if (linkedKid && tagTarget === linkedKid) {
+      ok('parent sees tagged still for a linked child', Boolean(parentTagged))
+      ok(
+        'parent still-tags stay inside linked athletes',
+        !parentTagged || parentTagged.taggedAthleteIds.every((id) => parentLinked.includes(id)),
+      )
+    } else {
+      ok('parent does not see a still tagged with an unlinked athlete', !parentTagged)
+    }
+    const parentPatch = await req('/api/still-tags', {
+      method: 'PATCH',
+      cookie: parentACookie,
+      body: JSON.stringify({ stillId: 'still_family_check', taggedAthleteIds: [] }),
+    })
+    ok('parent cannot write still tags', parentPatch.status === 403, String(parentPatch.status))
+    const coachTags = await req('/api/still-tags', { cookie: coachFamilyCookie })
+    const coachTagged = (coachTags.json?.stills || []).find((row) => row.stillId === 'still_family_check')
+    ok(
+      'coach still-tags omit instructional consent',
+      !coachTagged || coachTagged.tagged.every((person) => person.instructionalMediaConsent == null),
+    )
+    await req('/api/still-tags', {
+      method: 'PATCH',
+      cookie,
+      body: JSON.stringify({ stillId: 'still_family_check', taggedAthleteIds: [] }),
+    })
+  }
+
   if (failed) {
     console.log(`\n${failed} check(s) failed`)
     process.exit(1)

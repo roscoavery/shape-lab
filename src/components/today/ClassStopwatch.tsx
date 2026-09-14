@@ -21,6 +21,10 @@ import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPost
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 import { videoFileAccept } from '../../lib/saveMedia'
+import { athleteMatchesQuery } from '../../lib/gymScope'
+import { isAthleteProfile } from '../../lib/profileRole'
+import { InfoHint } from '../ui/InfoHint'
+import { IconMark } from '../ui/IconAction'
 
 type Mode = 'hold' | 'vups' | 'skill' | 'other' | `extra:${string}`
 
@@ -56,17 +60,13 @@ export function ClassStopwatch({
   const meeting = getActiveMeeting(signedIn?.id)
   const offering = meeting ? getOffering(meeting.offeringId) : null
   const className = offering ? classLabel(offering) : undefined
+  const classOpen = Boolean(meeting)
   const present = useMemo(
     () => (meeting ? resolveAttendeeAthletes(meeting, athletes) : []),
     [meeting, athletes],
   )
-  const pool = present.length > 0
-    ? present
-    : coach
-      ? athletes.filter((a) => a.role !== 'parent')
-      : signedIn
-        ? [signedIn]
-        : []
+  /** Open class: present roster only. No class: empty until the coach searches. */
+  const pool = classOpen ? present : []
 
   const extras = offering?.extraExercises ?? []
   const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
@@ -90,16 +90,22 @@ export function ClassStopwatch({
   const [bigWin, setBigWin] = useState(false)
   const [skillFile, setSkillFile] = useState<File | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
-  const [holdWhen, setHoldWhen] = useState<'today' | 'past'>('today')
-  const [holdPast, setHoldPast] = useState('')
-  const [rapidTimes, setRapidTimes] = useState<Record<string, string>>({})
+  const [pickQuery, setPickQuery] = useState('')
+  const [extraPicks, setExtraPicks] = useState<Athlete[]>([])
   const startRef = useRef<number | null>(null)
   const accRef = useRef(0)
 
+  const logPool = classOpen ? pool : extraPicks
+
   useEffect(() => {
-    setSelected(pool.map((a) => a.id))
-    if (!skillAthleteId && pool[0]) setSkillAthleteId(pool[0].id)
-  }, [pool.map((a) => a.id).join('|')])
+    if (classOpen) {
+      setSelected(pool.map((a) => a.id))
+      if (!skillAthleteId && pool[0]) setSkillAthleteId(pool[0].id)
+      setExtraPicks([])
+      return
+    }
+    setSelected(extraPicks.map((a) => a.id))
+  }, [classOpen, pool.map((a) => a.id).join('|'), extraPicks.map((a) => a.id).join('|')])
 
   useEffect(() => {
     if (!running) return
@@ -138,6 +144,34 @@ export function ClassStopwatch({
   const toggle = (id: string) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
+
+  const addPick = (row: Athlete) => {
+    setExtraPicks((prev) => (prev.some((a) => a.id === row.id) ? prev : [...prev, row]))
+    setSelected((prev) => (prev.includes(row.id) ? prev : [...prev, row.id]))
+    setPickQuery('')
+  }
+
+  const removePick = (id: string) => {
+    setExtraPicks((prev) => prev.filter((a) => a.id !== id))
+    setSelected((prev) => prev.filter((x) => x !== id))
+  }
+
+  const logWho = (
+    <LogWho
+      classOpen={classOpen}
+      className={className}
+      pool={logPool}
+      selected={selected}
+      allAthletes={athletes}
+      pickQuery={pickQuery}
+      onPickQuery={setPickQuery}
+      onToggle={toggle}
+      onSelectAll={() => setSelected(logPool.map((a) => a.id))}
+      onSelectNone={() => setSelected([])}
+      onAddPick={addPick}
+      onRemovePick={removePick}
+    />
+  )
 
   const activeExtra = (id: string | null): ClassExtraExercise | undefined =>
     extras.find((ex) => ex.id === id)
@@ -179,7 +213,6 @@ export function ClassStopwatch({
       className,
       meetingId: meeting?.id,
       side: drill.autoKey === 'side_plank' ? side : undefined,
-      performedAt: holdWhen === 'past' && holdPast ? holdPast : undefined,
       coachId: signedIn?.id,
       coachName: signedIn?.name,
     })
@@ -484,108 +517,15 @@ export function ClassStopwatch({
             onStop={stop}
             onReset={reset}
           />
-          <RosterPicks
-            athletes={pool}
-            selected={selected}
-            onToggle={toggle}
-            onSelectAll={() => setSelected(pool.map((a) => a.id))}
-            onSelectNone={() => setSelected([])}
-          />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                When
-              </span>
-              <select
-                value={holdWhen}
-                onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
-                className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
-              >
-                <option value="today">Performed today</option>
-                <option value="past">Choose previous date</option>
-              </select>
-            </label>
-            {holdWhen === 'past' && (
-              <label>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                  Date
-                </span>
-                <input
-                  type="date"
-                  value={holdPast}
-                  onChange={(e) => setHoldPast(e.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
-                />
-              </label>
-            )}
-          </div>
+          {logWho}
           <button
             type="button"
             onClick={logHold}
             className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
-            Log {extraHoldId ? activeExtra(extraHoldId)?.label ?? 'hold' : 'hold'} for selected
+            Log {extraHoldId ? activeExtra(extraHoldId)?.label ?? 'hold' : 'hold'}
+            {selected.length ? ` · ${selected.length}` : ''}
           </button>
-          {coach && !extraHoldId && (
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                Rapid roster
-              </p>
-              <p className="mt-1 text-xs text-white/55">
-                Type seconds per athlete, then save. Does not need their login.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {pool.map((row) => (
-                  <li key={row.id} className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm">{row.name}</span>
-                    <input
-                      inputMode="decimal"
-                      value={rapidTimes[row.id] ?? ''}
-                      onChange={(e) =>
-                        setRapidTimes((prev) => ({ ...prev, [row.id]: e.target.value }))
-                      }
-                      placeholder="sec"
-                      className="h-10 w-20 rounded-lg border border-white/10 bg-black/30 px-2 text-sm"
-                    />
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                onClick={() => {
-                  const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
-                  if (!drill) return
-                  const holdName =
-                    drill.autoKey === 'side_plank' ? `${drill.label} · ${side}` : drill.label
-                  let n = 0
-                  for (const row of pool) {
-                    const secs = Number(rapidTimes[row.id])
-                    if (!Number.isFinite(secs) || secs < 0.2) continue
-                    n += logClassHoldForAthletes({
-                      athleteIds: [row.id],
-                      autoKey: drill.autoKey,
-                      seconds: secs,
-                      label: holdName,
-                      className,
-                      meetingId: meeting?.id,
-                      side: drill.autoKey === 'side_plank' ? side : undefined,
-                      performedAt: holdWhen === 'past' && holdPast ? holdPast : undefined,
-                      coachId: signedIn?.id,
-                      coachName: signedIn?.name,
-                    })
-                  }
-                  setFlash(
-                    n
-                      ? `Logged ${holdName} for ${n} athlete${n === 1 ? '' : 's'}.`
-                      : 'Type seconds next to at least one athlete.',
-                  )
-                }}
-                className="mt-3 h-11 w-full rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
-              >
-                Save roster times
-              </button>
-            </div>
-          )}
         </>
       )}
 
@@ -621,13 +561,7 @@ export function ClassStopwatch({
                 />
               </label>
             </div>
-            <RosterPicks
-              athletes={pool}
-              selected={selected}
-              onToggle={toggle}
-              onSelectAll={() => setSelected(pool.map((a) => a.id))}
-              onSelectNone={() => setSelected([])}
-            />
+            {logWho}
             <button
               type="button"
               onClick={() => logExtraReps(extra)}
@@ -710,13 +644,7 @@ export function ClassStopwatch({
               </label>
             </div>
           )}
-          <RosterPicks
-            athletes={pool}
-            selected={selected}
-            onToggle={toggle}
-            onSelectAll={() => setSelected(pool.map((a) => a.id))}
-            onSelectNone={() => setSelected([])}
-          />
+          {logWho}
           <button
             type="button"
             onClick={logOther}
@@ -756,13 +684,7 @@ export function ClassStopwatch({
             />
           </label>
           </div>
-          <RosterPicks
-            athletes={pool}
-            selected={selected}
-            onToggle={toggle}
-            onSelectAll={() => setSelected(pool.map((a) => a.id))}
-            onSelectNone={() => setSelected([])}
-          />
+          {logWho}
           <button
             type="button"
             onClick={logVups}
@@ -775,36 +697,60 @@ export function ClassStopwatch({
 
       {mode === 'skill' && (
         <>
-          <p className="text-sm text-white/60">
-            Pick who hit something, type it, and spam Wins. Check big win only
-            when it belongs on the main gym feed too.
-          </p>
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
-            {pool.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setSkillAthleteId(a.id)}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${
-                  skillAthleteId === a.id
-                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                    : 'bg-white/8'
-                }`}
-              >
-                <AthleteAvatar athlete={a} size="xs" />
-                <span className="font-semibold">{a.name}</span>
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Who</p>
+            <InfoHint>
+              Pick the athlete, type what they did, and post to Wins. Check big win only when it also belongs on the gym feed.
+            </InfoHint>
           </div>
+          {classOpen ? (
+            <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+              {logPool.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setSkillAthleteId(a.id)}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${
+                    skillAthleteId === a.id
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'bg-white/8'
+                  }`}
+                >
+                  <AthleteAvatar athlete={a} size="xs" />
+                  <span className="font-semibold">{a.name}</span>
+                </button>
+              ))}
+              {logPool.length === 0 && (
+                <p className="text-sm text-white/55">Mark who is present on this class first.</p>
+              )}
+            </div>
+          ) : (
+            <AthleteSearchField
+              athletes={athletes}
+              query={pickQuery}
+              onQuery={setPickQuery}
+              onPick={(row) => {
+                setSkillAthleteId(row.id)
+                addPick(row)
+              }}
+              excludeIds={[]}
+            />
+          )}
+          {skillAthleteId && !classOpen && (
+            <p className="text-sm">
+              {athletes.find((a) => a.id === skillAthleteId)?.name ?? 'Selected'}
+            </p>
+          )}
           <textarea
             value={skillText}
             onChange={(e) => setSkillText(e.target.value)}
             rows={3}
-            placeholder="First standing back tuck · stuck the layout · cartwheel on a beam…"
+            placeholder="First standing back tuck · stuck the layout…"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
           />
-          <label className="cursor-pointer self-start rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">
-            Attach clip from Photos
+          <label className="inline-flex cursor-pointer items-center gap-1 self-start rounded-full bg-white/10 px-2 py-2">
+            <IconMark kind="plus" />
+            <span className="sr-only">Attach clip from Photos</span>
             <input
               type="file"
               accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
@@ -813,7 +759,7 @@ export function ClassStopwatch({
             />
           </label>
           {skillFile && (
-            <p className="text-xs text-[var(--muted)]">Clip: {skillFile.name}</p>
+            <p className="text-xs text-[var(--muted)]">{skillFile.name}</p>
           )}
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -853,7 +799,7 @@ export function ClassStopwatch({
               Class clock
             </p>
             <p className="text-sm text-white/60">
-              {className ?? (coach ? 'Log holds for whoever you pick' : 'Quick stopwatch')}
+              {className ?? (coach ? 'Stopwatch' : 'Quick stopwatch')}
             </p>
           </div>
           {onClose && (
@@ -874,8 +820,13 @@ export function ClassStopwatch({
   if (embed) {
     return (
       <div>
-        <p className="mb-3 text-sm text-white/55">
-          {className ? `Holds for ${className}` : 'Time it. Log it. Done.'}
+        <p className="mb-3 flex items-center gap-2 text-sm text-white/55">
+          {className ? `Holds for ${className}` : 'Stopwatch'}
+          <InfoHint>
+            {classOpen
+              ? 'Logs go to athletes marked present on this class.'
+              : 'Search a name to log a hold. Older holds belong in an open lesson, not here.'}
+          </InfoHint>
         </p>
         {body}
       </div>
@@ -890,9 +841,13 @@ export function ClassStopwatch({
       <h3 className="mt-1 text-lg font-semibold">
         {className ? `Holds for ${className}` : 'Stopwatch'}
       </h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Same idea as homework — time a hold, or skip the body position and just
-        log the seconds. Everyone selected gets it on homework as in class.
+      <p className="mt-1 flex items-center gap-2 text-sm text-[var(--muted)]">
+        Time a hold, then log it.
+        <InfoHint>
+          {classOpen
+            ? 'Everyone selected on the present roster gets it as in class.'
+            : 'When no class is open, search who to log. Historical times go in a lesson.'}
+        </InfoHint>
       </p>
       <div className="mt-4">{body}</div>
     </section>
@@ -963,18 +918,144 @@ function HoldClock({
   )
 }
 
+function LogWho({
+  classOpen,
+  className,
+  pool,
+  selected,
+  allAthletes,
+  pickQuery,
+  onPickQuery,
+  onToggle,
+  onSelectAll,
+  onSelectNone,
+  onAddPick,
+  onRemovePick,
+}: {
+  classOpen: boolean
+  className?: string
+  pool: Athlete[]
+  selected: string[]
+  allAthletes: Athlete[]
+  pickQuery: string
+  onPickQuery: (v: string) => void
+  onToggle: (id: string) => void
+  onSelectAll: () => void
+  onSelectNone: () => void
+  onAddPick: (row: Athlete) => void
+  onRemovePick: (id: string) => void
+}) {
+  if (!classOpen) {
+    return (
+      <div>
+        <div className="mb-1 flex items-center gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Log for</p>
+          <InfoHint>No class is open, so the roster stays hidden. Search a name to log one hold.</InfoHint>
+        </div>
+        {pool.length > 0 && (
+          <ul className="mb-2 flex flex-wrap gap-1.5">
+            {pool.map((a) => (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => onRemovePick(a.id)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${
+                    selected.includes(a.id) ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/10'
+                  }`}
+                >
+                  {a.name.split(' ')[0]}
+                  <IconMark kind="remove" className="text-[var(--bad)]" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <AthleteSearchField
+          athletes={allAthletes}
+          query={pickQuery}
+          onQuery={onPickQuery}
+          onPick={onAddPick}
+          excludeIds={pool.map((a) => a.id)}
+        />
+      </div>
+    )
+  }
+  return (
+    <RosterPicks
+      athletes={pool}
+      selected={selected}
+      onToggle={onToggle}
+      onSelectAll={onSelectAll}
+      onSelectNone={onSelectNone}
+      emptyText={
+        className
+          ? 'Mark who is present on this class to log holds.'
+          : 'No one marked present yet.'
+      }
+    />
+  )
+}
+
+function AthleteSearchField({
+  athletes,
+  query,
+  onQuery,
+  onPick,
+  excludeIds,
+}: {
+  athletes: Athlete[]
+  query: string
+  onQuery: (v: string) => void
+  onPick: (row: Athlete) => void
+  excludeIds: string[]
+}) {
+  const hits = query.trim()
+    ? athletes
+        .filter((a) => isAthleteProfile(a) && !excludeIds.includes(a.id) && athleteMatchesQuery(a, query))
+        .slice(0, 8)
+    : []
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+        placeholder="Search an athlete to log"
+        className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
+      />
+      {hits.length > 0 && (
+        <ul className="mt-1 max-h-36 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1218]">
+          {hits.map((a) => (
+            <li key={a.id}>
+              <button
+                type="button"
+                onClick={() => onPick(a)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-white/8"
+              >
+                <AthleteAvatar athlete={a} size="xs" />
+                <span>{a.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function RosterPicks({
   athletes,
   selected,
   onToggle,
   onSelectAll,
   onSelectNone,
+  emptyText = 'No athletes on this list yet.',
 }: {
   athletes: Athlete[]
   selected: string[]
   onToggle: (id: string) => void
   onSelectAll: () => void
   onSelectNone: () => void
+  emptyText?: string
 }) {
   const allOn = athletes.length > 0 && selected.length === athletes.length
   return (
@@ -997,7 +1078,7 @@ function RosterPicks({
         </div>
       </div>
       {athletes.length === 0 ? (
-        <p className="text-sm text-white/55">No athletes on this list yet.</p>
+        <p className="text-sm text-white/55">{emptyText}</p>
       ) : (
         <ul className="max-h-40 space-y-1 overflow-y-auto">
           {athletes.map((a) => {

@@ -14,9 +14,11 @@ import {
   renameCoachStillExtra,
 } from '../lib/coachStillStore'
 import { loadMainCoachStills } from '../lib/coachStillPrefs'
-import type { ReferencePhoto } from '../types'
+import type { Athlete, ReferencePhoto } from '../types'
 import { CroppedStill } from './CroppedStill'
 import { StillCropEditor } from './StillCropEditor'
+import { StillTagPicker } from './coach/StillTagPicker'
+import { IconAction, IconMark } from './ui/IconAction'
 
 type Props = {
   shapeId: string
@@ -181,6 +183,7 @@ export function CoachStillGallery({
   allowCrop = false,
   canEdit = false,
   onPhotosChange,
+  tagAthletes = [],
 }: {
   shapeId: string
   photos: ReferencePhoto[]
@@ -191,6 +194,7 @@ export function CoachStillGallery({
   allowCrop?: boolean
   canEdit?: boolean
   onPhotosChange?: (photos: ReferencePhoto[]) => void
+  tagAthletes?: Athlete[]
 }) {
   const [mainTick, setMainTick] = useState(0)
   const [flash, setFlash] = useState<string | null>(null)
@@ -318,19 +322,23 @@ export function CoachStillGallery({
             </button>
           )}
           {canEdit && (
-            <span className="flex gap-1">
+            <span className="flex items-center gap-1">
+              {tagAthletes.length > 0 && isUsablePhotoSrc(p.dataUrl) && (
+                <StillTagPicker stillId={p.id} athletes={tagAthletes} />
+              )}
               {p.id !== mainId && isUsablePhotoSrc(p.dataUrl) && (
                 <button
                   type="button"
                   onClick={() => setMain(p.id)}
                   className="rounded bg-[var(--accent)] px-1.5 py-0.5 font-semibold text-[var(--on-accent)]"
                 >
-                  Set as main
+                  Main
                 </button>
               )}
               {onPhotosChange && (
-                <label className="cursor-pointer rounded bg-[#2c3a52] px-1.5 py-0.5 font-semibold text-[var(--text)]">
-                  Replace
+                <label className="inline-flex cursor-pointer items-center rounded-full p-1 text-white/80 hover:bg-white/10" title="Replace photo">
+                  <span className="sr-only">Replace photo</span>
+                  <IconMark kind="plus" />
                   <input
                     type="file"
                     accept="image/*,.heic,.heif"
@@ -344,13 +352,7 @@ export function CoachStillGallery({
                 </label>
               )}
               {onPhotosChange && (
-                <button
-                  type="button"
-                  onClick={() => void removeStill(p.id)}
-                  className="rounded bg-[var(--bad)]/20 px-1.5 py-0.5 font-semibold text-[var(--bad)]"
-                >
-                  Delete
-                </button>
+                <IconAction kind="remove" label="Remove still" onClick={() => void removeStill(p.id)} />
               )}
             </span>
           )}
@@ -388,8 +390,9 @@ export function CoachStillGallery({
           label="Add this photo"
         >
           <div className="px-3 py-4 text-center">
-            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)]">
-              Add a coach still
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)]">
+              <IconMark kind="plus" />
+              <span className="sr-only">Add a coach still</span>
               <input
                 ref={fileRef}
                 type="file"
@@ -403,10 +406,6 @@ export function CoachStillGallery({
                 }}
               />
             </label>
-            <p className="mt-2 text-[11px] text-[var(--muted)]">
-              Drag a photo onto a listed still to fill or replace it. You do not need to retype the
-              shape name. Edits save to this gym and show up on every device.
-            </p>
           </div>
         </StillDropTarget>
       )}

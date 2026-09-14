@@ -96,21 +96,32 @@ Stored: athleteId, exercise/shape, duration, date/time, source, coachId, lessonI
 
 UI:
 
-- Athlete profile → Log result (today or previous date)
-- Live lesson → Log this time + Log result, with historical date
-- Active class clock → log selected + rapid roster seconds
+- Athlete profile → Older hold (collapsed)
+- Live lesson → Log this time for today; **Log an older hold** is a closed details panel
+- Class clock → present roster when a class is open; search-to-log when it is not. No rapid roster list. Historical dates are not on Today.
 
-Local class/lesson logging still writes homework logs that roster sync persists.
+## Private still tags
+
+Admin/coach can privately tag an athlete on a Shape Library still. The still does **not** show the name. Tags live in additive `athleteTags` on `data/coach-stills.json` and are stripped from `GET /api/coach-stills`.
+
+`GET/PATCH /api/still-tags` is the authorized surface:
+
+- Admin: tagged stills plus instructional/reference consent (More → Stills)
+- Parent: shapes where a linked child is tagged (Consent)
+- Coach: can tag; does not receive consent flags here
+- Public: 401
+
+Instructional media consent is still a separate flag from coaching media.
 
 ## Migration behavior
 
-Additive only: `dateOfBirth`, `guardianRelationships`, `parentWellnessProfile` file, consent fields already present. Missing fields are allowed. No destructive rewrite of athletes, lessons, homework, holds, videos, wins, or profiles.
+Additive only: `dateOfBirth`, `guardianRelationships`, `parentWellnessProfile` file, `athleteTags` on coach stills, consent fields already present. Missing fields are allowed. No destructive rewrite of athletes, lessons, homework, holds, videos, wins, or profiles.
 
 ## Known limitations
 
 - Age thresholds are product defaults, not legal rules.
 - Parent invite email still depends on optional SMTP; copy-link works without it.
-- Class rapid roster writes local homework logs (then roster sync); profile Log result also POSTs `/api/hold-logs`.
+- Class clock logs present athletes when a class is open; search-to-log when it is not. Older holds are in lessons.
 - Floor Mode leave still uses the admin password.
 - This is not medical advice, not a diagnosis tool, and not COPPA/FERPA compliance.
 

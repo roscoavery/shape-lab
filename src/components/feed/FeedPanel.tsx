@@ -36,14 +36,17 @@ import {
 } from '../../lib/collages'
 import { canGiveHi5, isAthleteProfile, isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
 import { givenName } from '../../lib/classStation'
+import { publicFeedName } from '../../lib/publicName'
 import { childAthletes } from '../../lib/parentLink'
 import { findRyan } from '../../lib/ryanProfile'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { CollageStage } from '../classes/CollageStage'
 import { StoryRail } from '../stories/StoryRail'
 import { MentionText } from '../MentionText'
-import { mentionLabel, taggedIdsFromText } from '../../lib/profileHandle'
+import { taggedIdsFromText } from '../../lib/profileHandle'
 import { useViewProfile } from '../ProfilePeekContext'
+import { InfoHint } from '../ui/InfoHint'
+import { IconAction, IconMark } from '../ui/IconAction'
 
 type Props = {
   athletes: Athlete[]
@@ -250,14 +253,16 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           {wins ? 'Wins' : 'Gym feed'}
         </p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">
-          {wins ? 'Spam the little hits' : 'Accomplishments'}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          {wins
-            ? 'A place for firsts, stuck landings, and “they finally got it.” Check big win only when it should also show on the gym feed.'
-            : 'Bigger gym posts — collages, videos, and the wins someone marked as big.'}
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--text)]">
+            {wins ? 'Wins' : 'Accomplishments'}
+          </h2>
+          <InfoHint>
+            {wins
+              ? 'Little hits and firsts. Check big win only when it should also show on the gym feed.'
+              : 'Bigger gym posts — collages, videos, and wins marked as big.'}
+          </InfoHint>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
@@ -306,9 +311,10 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Video (optional)
               </span>
-              <div className="flex flex-wrap gap-2">
-                <label className="cursor-pointer rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">
-                  From Photos
+            <div className="flex flex-wrap gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-white/10 px-3 py-2" title="From Photos">
+                  <IconMark kind="plus" />
+                  <span className="sr-only">From Photos</span>
                   <input
                     type="file"
                     accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
@@ -322,9 +328,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                 <button
                   type="button"
                   onClick={() => setPickLib((v) => !v)}
-                  className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2"
+                  title="From video library"
                 >
-                  From video library
+                  <IconMark kind="clip" />
+                  <span className="sr-only">From video library</span>
                 </button>
               </div>
               {file && <p className="mt-1 text-xs text-[var(--muted)]">{file.name}</p>}
@@ -425,7 +433,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   <RoleBadge athlete={author} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--text)]">
-                      {author?.name ?? 'Unknown profile'}
+                      {author ? (wins ? publicFeedName(author) : author.name) : 'Unknown profile'}
                     </p>
                     <p className="text-[11px] text-[var(--muted)]">
                       {isPassPost(post)
@@ -454,13 +462,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                       onError={(message) => setError(message)}
                     />
                     {canRemoveFeedPost(post, athlete?.id, gymAdmin) && (
-                      <button
-                        type="button"
+                      <IconAction
+                        kind="remove"
+                        label="Remove"
                         onClick={() => void drop(post)}
-                        className="text-xs text-[var(--bad)]"
-                      >
-                        Remove
-                      </button>
+                      />
                     )}
                   </div>
                 </div>
@@ -523,8 +529,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                         onClick={() => viewProfile(a.id)}
                         className="rounded-full bg-[#0d1218] px-2 py-0.5 text-[11px] text-[var(--muted)]"
                       >
-                        <AthleteName athlete={a} size="xs" />
-                        <span className="ml-1">{mentionLabel(a)}</span>
+                        {wins ? publicFeedName(a) : a.name}
                       </button>
                     ))}
                   </div>
@@ -785,28 +790,24 @@ function WinReactBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
-      <button type="button" onClick={tapLike} className={reactClass(liked)}>
-        {liked ? 'Liked' : 'Like'}
-        {(post.likes ?? []).length > 0 ? ` · ${(post.likes ?? []).length}` : ''}
-      </button>
+    <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
+      <IconAction kind="like" label={liked ? 'Unlike' : 'Like'} on={liked} count={(post.likes ?? []).length} onClick={tapLike} />
       {athlete.id !== post.authorId && (
-        <button type="button" onClick={tapRepost} className={reactClass(reposted)}>
-          {reposted ? 'On your profile' : 'Repost'}
-        </button>
+        <IconAction kind="repost" label={reposted ? 'On your profile' : 'Repost'} on={reposted} onClick={tapRepost} />
       )}
       {showHi5 && (
-        <button type="button" onClick={tapHi5} className={reactClass(hi5ed)}>
-          {hi5ed ? 'High-fived' : 'High five'}
-          {(post.hi5s ?? []).length > 0 ? ` · ${(post.hi5s ?? []).length}` : ''}
+        <button type="button" onClick={tapHi5} className={reactClass(hi5ed)} aria-label={hi5ed ? 'High-fived' : 'High five'}>
+          🙌
+          {(post.hi5s ?? []).length > 0 ? ` ${(post.hi5s ?? []).length}` : ''}
         </button>
       )}
       <button
         type="button"
         onClick={tapAllThree}
+        aria-label="Like, high-five, and repost"
         className="rounded-full bg-[#f0b429] px-2.5 py-1 text-xs font-semibold text-[#2a1d08]"
       >
-        All 3
+        ★
       </button>
     </div>
   )

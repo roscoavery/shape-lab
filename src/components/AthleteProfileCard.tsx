@@ -43,7 +43,9 @@ import { handstandContest } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
-import { mentionLabel, profileHandle, taggedIdsFromText } from '../lib/profileHandle'
+import { publicFeedName } from '../lib/publicName'
+import { profileHandle, taggedIdsFromText } from '../lib/profileHandle'
+import { IconAction } from './ui/IconAction'
 import { MentionText } from './MentionText'
 import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
@@ -141,7 +143,7 @@ export function AthleteProfileCard({
   const theirCoaches = coachesOf(athlete, athletes)
   const gestureOk =
     Boolean(viewer) && !own && canGiveHi5(viewer) && isAthleteProfile(athlete)
-  const handle = mentionLabel(athlete)
+  const handle = profileHandle(athlete)
   const live = useMemo(
     () => storiesByAuthor(storiesFile, athlete.id, true),
     [storiesFile, athlete.id],
@@ -308,7 +310,6 @@ export function AthleteProfileCard({
             {athlete.name}
             {contest ? ' 🤸' : ''}
           </h2>
-          <p className="text-sm font-medium text-[var(--accent)]">{handle}</p>
           {athlete.instagramHandle && profileHandle(athlete) !== athlete.instagramHandle && (
             <p className="text-xs text-[var(--muted)]">IG @{athlete.instagramHandle}</p>
           )}
@@ -1017,8 +1018,7 @@ function PostsGrid({
                       key={a.id}
                       className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/80"
                     >
-                      {a.name}
-                      {mentionLabel(a) ? ` ${mentionLabel(a)}` : ''}
+                      {publicFeedName(a)}
                     </span>
                   ))}
                 </div>
@@ -1026,11 +1026,10 @@ function PostsGrid({
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 {new Date(p.createdAt).toLocaleString()}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-1">
               <AttachWinClip
                 post={p}
                 viewer={viewer}
-                className="cursor-pointer text-xs font-semibold text-[var(--accent)]"
                 onAttached={(next) => {
                   onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
                   setClipNote('Clip attached to this win.')
@@ -1038,32 +1037,29 @@ function PostsGrid({
                 onError={(message) => setClipNote(message)}
               />
               {viewer && viewer.id !== p.authorId && (
-                <button
-                  type="button"
+                <IconAction
+                  kind="repost"
+                  label={reposted ? 'On your profile' : 'Repost'}
+                  on={reposted}
                   onClick={() => {
                     void toggleFeedRepost(p.id, viewer.id).then((next) => {
                       if (!next) return
                       onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
                     })
                   }}
-                  className="text-xs font-semibold text-[var(--accent)]"
-                >
-                  {reposted ? 'On your profile' : 'Repost to your profile'}
-                </button>
+                />
               )}
               {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
-                <button
-                  type="button"
+                <IconAction
+                  kind="remove"
+                  label="Remove"
                   onClick={() => {
                     if (!viewer) return
                     void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
                       if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                     })
                   }}
-                  className="text-xs font-semibold text-[var(--muted)] underline"
-                >
-                  Remove
-                </button>
+                />
               )}
               </div>
             </div>
@@ -1140,9 +1136,9 @@ function PassesGrid({
                   if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                 })
               }}
-              className="absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-semibold"
+              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-[var(--bad)]"
             >
-              Remove
+              ×
             </span>
           )}
         </button>

@@ -9,10 +9,20 @@ type Props = {
   lessonId?: string
   classMeetingId?: string
   className?: string
+  /** Closed until the coach opens it — not an upfront Today control. */
+  collapsed?: boolean
 }
 
-export function CoachHoldEntry({ athlete, viewer, lessonId, classMeetingId, className }: Props) {
+export function CoachHoldEntry({
+  athlete,
+  viewer,
+  lessonId,
+  classMeetingId,
+  className,
+  collapsed = true,
+}: Props) {
   const coach = isCoachProfile(viewer)
+  const [open, setOpen] = useState(!collapsed)
   const [shapeId, setShapeId] = useState(COACH_HOLD_CHOICES[0]!.id)
   const [custom, setCustom] = useState('')
   const [seconds, setSeconds] = useState('')
@@ -26,13 +36,27 @@ export function CoachHoldEntry({ athlete, viewer, lessonId, classMeetingId, clas
   const shapeName = shapeId === 'custom' ? custom.trim() : choice?.label || 'Hold'
 
   return (
-    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-        Log result
-      </p>
-      <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Hold time for {athlete.name}</h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Does not need their login. Use a previous date if this came from notes.
+    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            Older hold
+          </span>
+          <span className="text-sm font-semibold text-[var(--text)]">{athlete.name}</span>
+        </span>
+        <span className="text-lg text-[var(--muted)]" aria-hidden>
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open && (
+        <>
+      <p className="mt-2 text-xs text-[var(--muted)]">
+        From notes or a previous lesson. Does not need their login.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label>
@@ -130,6 +154,8 @@ export function CoachHoldEntry({ athlete, viewer, lessonId, classMeetingId, clas
         Save hold
       </button>
       {saved && <p className="mt-2 text-sm text-[var(--muted)]">{saved}</p>}
+        </>
+      )}
     </section>
   )
 }

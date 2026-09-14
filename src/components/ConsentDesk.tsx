@@ -7,6 +7,9 @@ import {
   type ProfileVisibility,
 } from '../lib/consentDesk'
 import { sessionIsAdmin, type AuthSessionUser } from '../lib/authSession'
+import { listStillTags, type StillTagRow } from '../lib/stillTags'
+import { getShape } from '../config/shapes'
+import { InfoHint } from './ui/InfoHint'
 
 const CONSENT_OPTIONS: { id: ConsentState; label: string }[] = [
   { id: 'unknown', label: 'Not asked' },
@@ -128,36 +131,26 @@ export function ConsentDesk({ user }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Consent
         </p>
-        <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Who can see social posts</h2>
-        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-          These flags only control the gym feed, wins wall, stories, and a public
-          profile page. Class, homework, lessons, and coaching notes keep working
-          for assigned coaches. A blank or “Not asked” answer is not permission.
-          Coaching media and instructional / reference media are separate — saving
-          a private coaching video does not make it a Shape Lab teaching clip.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-          This page records what a parent, athlete, or gym admin said. It is{' '}
-          <strong className="text-[var(--text)]">not a legal compliance tool</strong>{' '}
-          and does not make Shape Lab COPPA or GDPR compliant.
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-[var(--text)]">Who can see social posts</h2>
+          <InfoHint>
+            These flags only control feed, wins, stories, and a public profile. Class, homework, and
+            lessons keep working. Coaching media is not instructional/reference media. This page is
+            not a legal-compliance tool.
+          </InfoHint>
+        </div>
         {admin ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Signed in as gym admin. You can set consent for every athlete.
+            Gym admin. Tagged teaching stills and instructional consent live under More → Stills.
           </p>
         ) : user.role === 'parent' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
-            You can set consent for the athletes linked to this parent login.
+            Consent for linked athletes. Teaching stills they appear in are listed below.
           </p>
         ) : user.role === 'athlete' ? (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            You can set your own social flags. A parent can still change them.
-          </p>
+          <p className="mt-3 text-sm text-[var(--muted)]">Your social flags. A parent can still change them.</p>
         ) : (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            Coaches do not set consent. Ask a parent or gym admin if a post
-            should stay off the public feed.
-          </p>
+          <p className="mt-3 text-sm text-[var(--muted)]">Coaches do not set consent.</p>
         )}
       </section>
 
@@ -301,6 +294,37 @@ export function ConsentDesk({ user }: Props) {
           )
         })
       )}
+      {user.role === 'parent' && <ParentTaggedStills />}
     </div>
+  )
+}
+
+function ParentTaggedStills() {
+  const [rows, setRows] = useState<StillTagRow[]>([])
+  useEffect(() => {
+    void listStillTags().then(setRows)
+  }, [])
+  if (rows.length === 0) return null
+  return (
+    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <div className="flex items-center gap-2">
+        <h3 className="text-lg font-semibold">Teaching stills</h3>
+        <InfoHint>
+          Private tags on Shape Library pictures. The still itself does not show their name.
+        </InfoHint>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {rows.map((row) => (
+          <li key={row.stillId} className="flex items-center gap-3 text-sm">
+            {row.dataUrl ? (
+              <img src={row.dataUrl} alt="" className="h-12 w-16 rounded-md object-contain bg-black" />
+            ) : (
+              <span className="h-12 w-16 rounded-md bg-black/40" />
+            )}
+            <span>{getShape(row.shapeId)?.name ?? row.label ?? 'Shape'}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

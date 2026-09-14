@@ -6,6 +6,7 @@ import {
 } from '../../lib/feedPosts'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { IconMark } from '../ui/IconAction'
 
 type Props = {
   post: FeedPost
@@ -20,8 +21,15 @@ export function AttachWinClip({ post, viewer, onAttached, onError, className }: 
   const coach = isCoachProfile(viewer)
   if (!canAttachFeedVideo(post, viewer?.id, { admin, coach })) return null
   return (
-    <label className={className ?? 'cursor-pointer text-xs font-semibold text-[var(--accent)]'}>
-      Add clip
+    <label
+      className={
+        className ??
+        'inline-flex cursor-pointer items-center rounded-full p-2 text-[var(--accent)] hover:bg-white/10'
+      }
+      title="Add clip"
+    >
+      <span className="sr-only">Add clip</span>
+      <IconMark kind="plus" />
       <input
         type="file"
         accept={videoFileAccept()}

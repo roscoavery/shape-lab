@@ -31,6 +31,7 @@ const COACH_WRITE_PATHS = new Set([
   '/api/training-events',
   '/api/skill-paths',
   '/api/ig-stills',
+  '/api/still-tags',
   '/api/learn-notes',
   '/api/chalkboards',
   '/api/coach-library',

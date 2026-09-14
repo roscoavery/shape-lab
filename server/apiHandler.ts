@@ -115,6 +115,7 @@ import { writeAudit } from './auth/audit.ts'
 import type { AuthUser } from './auth/types.ts'
 import { appendHoldLog } from './holdLog.ts'
 import { readParentWellness, writeParentWellness } from './parentWellnessStore.ts'
+import { patchStillTags, stillTagsForViewer } from './stillTags.ts'
 
 const API_PATHS = new Set([
   '/api/auth/me',
@@ -140,6 +141,7 @@ const API_PATHS = new Set([
   '/api/consent',
   '/api/parent-wellness',
   '/api/hold-logs',
+  '/api/still-tags',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/health',
@@ -538,6 +540,33 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/still-tags') {
+    const roster = await readRosterFile()
+    const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []).filter(
+      (row): row is RosterAthlete =>
+        Boolean(row && typeof row === 'object' && typeof (row as RosterAthlete).id === 'string'),
+    )
+    if (req.method === 'GET') {
+      sendJson(res, 200, { stills: await stillTagsForViewer(viewer, athletes) })
+      return true
+    }
+    if (req.method === 'PATCH') {
+      try {
+        const body = JSON.parse(await readRequestBody(req))
+        const stills = await patchStillTags(viewer, body, athletes)
+        await writeAudit('athlete.edit', viewer, { detail: 'still-tags' })
+        sendJson(res, 200, { stills })
+      } catch (err) {
+        const status = (err as Error & { status?: number }).status ?? 400
+        sendJson(res, status, {
+          error: err instanceof Error ? err.message : 'Could not save that tag.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PATCH' })
     return true
   }
   if (path === '/api/hold-logs') {

@@ -67,6 +67,8 @@ export type CoachStillsFile = {
   main: Record<string, string>
   extras: CoachStillExtra[]
   removedCoachStillIds?: string[]
+  /** Private stillId → athlete ids. Never shown on the public still. */
+  athleteTags?: Record<string, string[]>
 }
 
 const EMPTY: CoachStillsFile = {
@@ -76,11 +78,31 @@ const EMPTY: CoachStillsFile = {
   main: {},
   extras: [],
   removedCoachStillIds: [],
+  athleteTags: {},
 }
 
 function asIdList(raw: unknown): string[] {
   if (!Array.isArray(raw)) return []
   return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function asTagMap(raw: unknown): Record<string, string[]> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const out: Record<string, string[]> = {}
+  for (const [stillId, ids] of Object.entries(raw as Record<string, unknown>)) {
+    const key = stillId.trim().slice(0, 80)
+    if (!key) continue
+    const list = asIdList(ids).slice(0, 12)
+    if (list.length) out[key] = list
+  }
+  return out
+}
+
+function mergeTagMaps(
+  older: Record<string, string[]> | undefined,
+  newer: Record<string, string[]> | undefined,
+): Record<string, string[]> {
+  return { ...(older ?? {}), ...(newer ?? {}) }
 }
 
 function safeId(id: string): string | null {
@@ -187,6 +209,7 @@ function asFile(data: CoachStillsFile): CoachStillsFile {
           .slice(0, MAX_EXTRAS)
       : [],
     removedCoachStillIds,
+    athleteTags: asTagMap(data.athleteTags),
   }
 }
 
@@ -302,6 +325,7 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
     main: { ...b.main, ...a.main },
     extras: [...byId.values()].slice(0, MAX_EXTRAS),
     removedCoachStillIds,
+    athleteTags: mergeTagMaps(b.athleteTags, a.athleteTags),
   }
   const recovered = extrasFromBlobDirs(merged)
   if (recovered.length !== merged.extras.length) {
@@ -337,17 +361,16 @@ export async function extrasForClient(file?: CoachStillsFile) {
       updatedAt: new Date().toISOString(),
     }
     await writeJson(FILE, persisted)
-    return {
-      ...persisted,
-      extras: extras.map((row) => ({
-        ...row,
-        dataUrl: clientUrl(row),
-      })),
-    }
+    return clientStills(persisted)
   }
+  return clientStills({ ...next, extras })
+}
+
+function clientStills(file: CoachStillsFile) {
+  const { athleteTags: _privateTags, ...rest } = file
   return {
-    ...next,
-    extras: extras.map((row) => ({
+    ...rest,
+    extras: file.extras.map((row) => ({
       ...row,
       dataUrl: clientUrl(row),
     })),
@@ -379,6 +402,9 @@ export async function writeCoachStillsFile(data: unknown): Promise<CoachStillsFi
       extras.push(prev)
     }
   }
+  const incomingTags = data && typeof data === 'object' && 'athleteTags' in (data as object)
+    ? parsed.athleteTags
+    : current.athleteTags
   const next: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',
     version: 1,
@@ -386,6 +412,7 @@ export async function writeCoachStillsFile(data: unknown): Promise<CoachStillsFi
     main: { ...current.main, ...parsed.main },
     extras: extras.slice(0, MAX_EXTRAS),
     removedCoachStillIds,
+    athleteTags: incomingTags,
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -425,6 +452,7 @@ export async function addCoachStillFromBody(body: unknown): Promise<CoachStillsF
     main: current.main,
     extras,
     removedCoachStillIds: asIdList(current.removedCoachStillIds).filter((gone) => gone !== id),
+    athleteTags: current.athleteTags,
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -441,6 +469,8 @@ export async function deleteCoachStill(idRaw: string): Promise<CoachStillsFile |
   for (const [shapeId, stillId] of Object.entries(main)) {
     if (stillId === id) delete main[shapeId]
   }
+  const athleteTags = { ...(file.athleteTags ?? {}) }
+  delete athleteTags[id]
   const next: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',
     version: 1,
@@ -448,6 +478,7 @@ export async function deleteCoachStill(idRaw: string): Promise<CoachStillsFile |
     main,
     extras: file.extras.filter((s) => s.id !== id),
     removedCoachStillIds: [...new Set([...asIdList(file.removedCoachStillIds), id])],
+    athleteTags,
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -513,4 +544,28 @@ export function readRequestBodyLimited(
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
     req.on('error', reject)
   })
+}
+
+export function stillAthleteTagsOf(file: CoachStillsFile): Record<string, string[]> {
+  return asTagMap(file.athleteTags)
+}
+
+export async function setStillAthleteTags(
+  stillIdRaw: string,
+  athleteIds: string[],
+): Promise<CoachStillsFile> {
+  const stillId = safeId(stillIdRaw)
+  if (!stillId) throw new Error('Still is missing.')
+  const file = await readCoachStillsFile()
+  const nextTags = { ...(file.athleteTags ?? {}) }
+  const cleaned = asIdList(athleteIds).slice(0, 12)
+  if (cleaned.length) nextTags[stillId] = cleaned
+  else delete nextTags[stillId]
+  const next: CoachStillsFile = {
+    ...file,
+    athleteTags: nextTags,
+    updatedAt: new Date().toISOString(),
+  }
+  await writeJson(FILE, next)
+  return next
 }

@@ -381,6 +381,7 @@ export function EducationPanel({
           onExplore={() => setExploreId(view.shapeId)}
           signedIn={signedIn}
           canDeleteGym={canAddGymShape}
+          tagAthletes={athletes}
         />
       )}
 
@@ -1215,6 +1216,7 @@ function ShapeDetail({
   onExplore,
   signedIn = null,
   canDeleteGym = false,
+  tagAthletes = [],
 }: {
   shapeId: string
   orderedShapeIds: string[]
@@ -1227,6 +1229,7 @@ function ShapeDetail({
   onExplore: () => void
   signedIn?: Athlete | null
   canDeleteGym?: boolean
+  tagAthletes?: Athlete[]
 }) {
   const { copyFor, canEdit } = useShapeCopy()
   const shape = getShape(shapeId)
@@ -1370,6 +1373,7 @@ function ShapeDetail({
               allowCrop={canEdit}
               canEdit={canEdit}
               onPhotosChange={onReferencesChange}
+              tagAthletes={tagAthletes}
             />
           </div>
           <ShapeSideArrow

@@ -16,6 +16,7 @@ import { listAthleteVideos, type AthleteVideo } from '../../lib/athleteVideoStor
 import { pushNotice } from '../../lib/notify'
 import { taggedIdsFromText } from '../../lib/profileHandle'
 import { videoFileAccept } from '../../lib/saveMedia'
+import { IconMark } from '../ui/IconAction'
 
 type Props = {
   athlete: Athlete
@@ -122,8 +123,9 @@ export function WinComposer({
         className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
       />
       <div className="flex flex-wrap gap-2">
-        <label className="cursor-pointer rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">
-          From Photos
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-white/10 px-3 py-2" title="From Photos">
+          <IconMark kind="plus" />
+          <span className="sr-only">From Photos</span>
           <input
             type="file"
             accept={videoFileAccept('video/mp4,video/webm,video/quicktime,video/*')}
@@ -137,9 +139,11 @@ export function WinComposer({
         <button
           type="button"
           onClick={() => setPickLib((v) => !v)}
-          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"
+          className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-2"
+          title="From video library"
         >
-          From video library
+          <IconMark kind="clip" />
+          <span className="sr-only">From video library</span>
         </button>
       </div>
       {file && (
