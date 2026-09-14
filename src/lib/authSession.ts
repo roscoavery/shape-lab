@@ -89,3 +89,29 @@ export async function bootstrapAdmin(
 export async function logoutSession(): Promise<void> {
   await fetch('/api/auth/logout', { ...jsonInit, method: 'POST' })
 }
+
+export async function peekInvite(token: string): Promise<{
+  valid: boolean
+  email?: string
+  displayName?: string
+}> {
+  const res = await fetch(`/api/auth/invite?token=${encodeURIComponent(token)}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  })
+  if (!res.ok) return { valid: false }
+  return (await res.json()) as { valid: boolean; email?: string; displayName?: string }
+}
+
+export async function redeemInvite(token: string, password: string): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/invite', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'That sign-in link is wrong or already used.')
+  }
+  return data
+}

@@ -4,6 +4,7 @@ import {
   adminResetPassword,
   changeOwnPassword,
   createGymAccount,
+  createSignInLink,
   listGymAccounts,
   patchGymAccount,
   type PublicAccount,
@@ -161,7 +162,9 @@ export function AccountsDesk({ user, athletes, onUser }: Props) {
           <h2 className="text-xl font-semibold text-[var(--text)]">Add a login</h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Coaches only see athletes assigned to them. Parents only see the
-            child you link. Athletes only see themselves.
+            child you link. Athletes only see themselves. Leave the password
+            blank to copy a one-time sign-in link — they choose their own
+            password. Shape Lab does not send email.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label>
@@ -187,7 +190,7 @@ export function AccountsDesk({ user, athletes, onUser }: Props) {
             </label>
             <label>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                Password
+                Password (optional)
               </span>
               <input
                 type="password"
@@ -259,19 +262,28 @@ export function AccountsDesk({ user, athletes, onUser }: Props) {
               setBusy(true)
               void createGymAccount({
                 email,
-                password: createPassword,
+                password: createPassword || undefined,
                 role,
                 displayName: displayName || email,
                 rosterProfileId: rosterProfileId || undefined,
                 linkedAthleteIds: parentChildId ? [parentChildId] : undefined,
               })
-                .then(() => {
+                .then(async (result) => {
                   setEmail('')
                   setCreatePassword('')
                   setDisplayName('')
                   setRosterProfileId('')
                   setParentChildId('')
-                  flash('Login created. They can sign in on any device with that email.')
+                  if (result.inviteUrl) {
+                    try {
+                      await navigator.clipboard.writeText(result.inviteUrl)
+                      flash('Login created. Sign-in link copied — it works for 7 days.')
+                    } catch {
+                      flash(`Login created. Send them this link: ${result.inviteUrl}`)
+                    }
+                  } else {
+                    flash('Login created. They can sign in on any device with that email.')
+                  }
                   return reload()
                 })
                 .catch((err) => setError(err instanceof Error ? err.message : 'Could not create that account.'))
@@ -399,6 +411,29 @@ function AccountRow({
           Reset
         </button>
       </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true)
+          void createSignInLink(account.id)
+            .then(async (invite) => {
+              try {
+                await navigator.clipboard.writeText(invite.url)
+                onSaved(`Sign-in link for ${account.displayName} copied. It works for 7 days.`)
+              } catch {
+                onSaved(invite.url)
+              }
+            })
+            .catch((err) =>
+              onError(err instanceof Error ? err.message : 'Could not make that sign-in link.'),
+            )
+            .finally(() => setBusy(false))
+        }}
+        className="mt-2 rounded-full border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold"
+      >
+        Copy sign-in link
+      </button>
     </li>
   )
 }

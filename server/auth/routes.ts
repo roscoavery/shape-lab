@@ -13,11 +13,13 @@ import {
   changeAccountPassword,
   createAccount,
   ensureBootstrapAdmin,
+  findAccountById,
   hasAdminAccount,
   publicUserFromAccount,
   updateAccount,
 } from './accounts.ts'
 import { writeAudit } from './audit.ts'
+import { createInvite, peekInvite, redeemInvite } from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
 import {
   clearSessionCookie,
@@ -190,10 +192,13 @@ export async function handleAuthRoutes(
           rosterProfileId: body.rosterProfileId,
           linkedAthleteIds: body.linkedAthleteIds,
         })
+        const invite = !body.password?.trim()
+          ? await createInvite(created.accountId, req)
+          : null
         await writeAudit('auth.account_create', user, {
           detail: `${created.role} ${created.email}`,
         })
-        sendJson(res, 200, { account: created })
+        sendJson(res, 200, { account: created, inviteUrl: invite?.url })
       } catch (err) {
         sendJson(res, 400, {
           error: err instanceof Error ? err.message : 'Could not create that account.',
@@ -293,6 +298,86 @@ export async function handleAuthRoutes(
     } catch (err) {
       sendJson(res, 400, {
         error: err instanceof Error ? err.message : 'Could not change that password.',
+      })
+    }
+    return true
+  }
+
+  if (path === '/api/auth/invites') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (!isAdmin(user)) {
+      sendJson(res, 403, { error: 'Only gym admin can copy a sign-in link.' })
+      return true
+    }
+    let body: { accountId?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    try {
+      const invite = await createInvite(body.accountId || '', req)
+      await writeAudit('auth.invite', user, {
+        athleteId: body.accountId,
+        detail: 'create sign-in link',
+      })
+      sendJson(res, 200, invite)
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not make that sign-in link.',
+      })
+    }
+    return true
+  }
+
+  if (path === '/api/auth/invite') {
+    if (req.method === 'GET') {
+      const url = new URL(req.url || '/', 'http://127.0.0.1')
+      sendJson(res, 200, await peekInvite(url.searchParams.get('token') || ''))
+      return true
+    }
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use GET or POST' })
+      return true
+    }
+    let body: { token?: string; password?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const token = body.token || ''
+    if (tooManyAttempts(`invite:${token.slice(0, 12) || 'unknown'}`)) {
+      sendJson(res, 429, { error: 'Too many tries. Wait a few minutes.' })
+      return true
+    }
+    const redeemed = await redeemInvite(token)
+    if (!redeemed) {
+      sendJson(res, 401, { error: 'That sign-in link is wrong or already used.' })
+      return true
+    }
+    try {
+      await changeAccountPassword(redeemed.accountId, body.password || '')
+      await destroySessionsForAccount(redeemed.accountId)
+      const session = await createSession(redeemed.accountId)
+      setSessionCookie(req, res, session.id)
+      const account = await findAccountById(redeemed.accountId)
+      const user = account ? { ...publicUserFromAccount(account), kiosk: false } : null
+      await writeAudit('auth.invite', user, { detail: 'redeem sign-in link' })
+      sendJson(res, 200, { authenticated: Boolean(user), user })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not set that password.',
       })
     }
     return true

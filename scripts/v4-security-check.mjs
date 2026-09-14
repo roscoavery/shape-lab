@@ -323,6 +323,13 @@ async function main() {
   })
   ok('admin can enter floor mode', enterFloor.status === 200 && enterFloor.json?.user?.kiosk === true)
 
+  const floorInvite = await req('/api/auth/invites', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ accountId: me.json?.user?.accountId }),
+  })
+  ok('floor iPad cannot copy a sign-in link', floorInvite.status === 403, String(floorInvite.status))
+
   const floorContacts = await req('/api/contacts', { cookie })
   ok('floor iPad contacts is 403', floorContacts.status === 403)
 
@@ -372,6 +379,79 @@ async function main() {
 
   const afterFloorContacts = await req('/api/contacts', { cookie })
   ok('admin contacts work after leaving the floor', afterFloorContacts.status === 200)
+
+  const anonInvite = await req('/api/auth/invites', {
+    method: 'POST',
+    body: JSON.stringify({ accountId: me.json?.user?.accountId }),
+  })
+  ok('anon invite create is 401', anonInvite.status === 401)
+
+  const coachInvite = await req('/api/auth/invites', {
+    method: 'POST',
+    cookie: coachCookie,
+    body: JSON.stringify({ accountId: me.json?.user?.accountId }),
+  })
+  ok('coach cannot copy a sign-in link', coachInvite.status === 403, String(coachInvite.status))
+
+  const listed = await req('/api/auth/accounts', { cookie })
+  const athleteAcc = (listed.json?.accounts || []).find((row) => row.email === 'v4-athlete@example.com')
+  if (athleteAcc?.id) {
+    const adminInvite = await req('/api/auth/invites', {
+      method: 'POST',
+      cookie,
+      body: JSON.stringify({ accountId: athleteAcc.id }),
+    })
+    const inviteUrl = String(adminInvite.json?.url || '')
+    ok(
+      'admin can copy a sign-in link',
+      adminInvite.status === 200 && inviteUrl.includes('invite='),
+      adminInvite.json?.error || String(adminInvite.status),
+    )
+    let token = ''
+    try {
+      token = new URL(inviteUrl).searchParams.get('invite') || ''
+    } catch {
+      token = ''
+    }
+
+    const peekBad = await req(`/api/auth/invite?token=${'0'.repeat(64)}`)
+    ok('bad invite peek is invalid', peekBad.status === 200 && peekBad.json?.valid === false)
+
+    const peekGood = await req(`/api/auth/invite?token=${encodeURIComponent(token)}`)
+    ok(
+      'good invite peek is valid',
+      peekGood.status === 200 && peekGood.json?.valid === true && peekGood.json?.email === 'v4-athlete@example.com',
+      JSON.stringify(peekGood.json),
+    )
+
+    const redeem = await req('/api/auth/invite', {
+      method: 'POST',
+      body: JSON.stringify({ token, password: 'v4-athlete-invite-temp' }),
+    })
+    ok(
+      'redeem invite sets a password',
+      redeem.status === 200 && redeem.json?.user?.email === 'v4-athlete@example.com',
+      redeem.json?.error || String(redeem.status),
+    )
+
+    const redeemAgain = await req('/api/auth/invite', {
+      method: 'POST',
+      body: JSON.stringify({ token, password: 'v4-athlete-invite-temp' }),
+    })
+    ok('used invite cannot redeem again', redeemAgain.status === 401)
+
+    const restoreAthlete = await req('/api/auth/password', {
+      method: 'POST',
+      cookie,
+      body: JSON.stringify({
+        accountId: athleteAcc.id,
+        newPassword: 'v4-athlete-test-password',
+      }),
+    })
+    ok('athlete password restored after invite test', restoreAthlete.status === 200, String(restoreAthlete.status))
+  } else {
+    ok('athlete account exists for invite checks', false, 'missing v4-athlete@example.com')
+  }
 
   const coachPatch = await req('/api/auth/accounts', {
     method: 'PATCH',

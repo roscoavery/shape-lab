@@ -52,5 +52,6 @@ data/roster.json
 data/accounts.json
 data/sessions.json
 data/audit.json
+data/invites.json
 data/stories.json
 data/story-blobs/

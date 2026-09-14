@@ -14,6 +14,7 @@ export type AuditAction =
   | 'auth.logout'
   | 'auth.account_create'
   | 'auth.kiosk'
+  | 'auth.invite'
   | 'roster.view'
   | 'roster.write'
   | 'contacts.view'

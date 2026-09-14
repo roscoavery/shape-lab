@@ -129,8 +129,11 @@ export async function createAccount(input: {
   if (!email || !email.includes('@')) {
     throw new Error('Enter a valid email address.')
   }
-  if (!input.password || input.password.length < 8) {
-    throw new Error('Password must be at least 8 characters.')
+  const password = input.password?.trim()
+    ? input.password
+    : randomBytes(32).toString('hex')
+  if (input.password && input.password.length < 8) {
+    throw new Error('Password must be at least 8 characters, or leave it blank for a sign-in link.')
   }
   const file = await readFile()
   if (file.accounts.some((row) => row.email === email)) {
@@ -140,7 +143,7 @@ export async function createAccount(input: {
   const account: Account = {
     id: newId(),
     email,
-    passwordHash: await hashPassword(input.password),
+    passwordHash: await hashPassword(password),
     role: input.role,
     displayName: input.displayName.trim() || email,
     rosterProfileId: input.rosterProfileId,

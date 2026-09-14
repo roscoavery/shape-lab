@@ -122,6 +122,8 @@ const API_PATHS = new Set([
   '/api/auth/accounts',
   '/api/auth/password',
   '/api/auth/kiosk',
+  '/api/auth/invite',
+  '/api/auth/invites',
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
@@ -227,7 +229,7 @@ export async function handleShapeLabApi(
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'seal' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'link' })
     return true
   }
   if (path.startsWith('/api/auth')) {

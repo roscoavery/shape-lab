@@ -30,21 +30,33 @@ export async function listGymAccounts(): Promise<PublicAccount[]> {
 
 export async function createGymAccount(input: {
   email: string
-  password: string
+  password?: string
   role: SessionRole
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
-}): Promise<AuthSessionUser> {
+}): Promise<{ account: AuthSessionUser; inviteUrl?: string }> {
   const res = await fetch('/api/auth/accounts', {
     ...jsonInit,
     method: 'POST',
     body: JSON.stringify(input),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not create that account.'))
-  const data = (await res.json()) as { account?: AuthSessionUser }
+  const data = (await res.json()) as { account?: AuthSessionUser; inviteUrl?: string }
   if (!data.account) throw new Error('Could not create that account.')
-  return data.account
+  return { account: data.account, inviteUrl: data.inviteUrl }
+}
+
+export async function createSignInLink(accountId: string): Promise<{ url: string; expiresAt: string }> {
+  const res = await fetch('/api/auth/invites', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ accountId }),
+  })
+  if (!res.ok) throw new Error(await readError(res, 'Could not make that sign-in link.'))
+  const data = (await res.json()) as { url?: string; expiresAt?: string }
+  if (!data.url) throw new Error('Could not make that sign-in link.')
+  return { url: data.url, expiresAt: data.expiresAt || '' }
 }
 
 export async function patchGymAccount(input: {
