@@ -1,4 +1,4 @@
-import type { SessionRole } from './authSession'
+import { authWriteInit, type SessionRole } from './authSession'
 
 export type WatchEvent = {
   at: string
@@ -21,9 +21,9 @@ export type WatchSession = {
   self: boolean
 }
 
-const jsonInit: RequestInit = {
+const jsonGet: RequestInit = {
   credentials: 'same-origin',
-  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+  cache: 'no-store',
 }
 
 async function readError(res: Response, fallback: string): Promise<string> {
@@ -33,14 +33,14 @@ async function readError(res: Response, fallback: string): Promise<string> {
 
 export async function listWatchEvents(includeViews = false): Promise<WatchEvent[]> {
   const qs = includeViews ? '?views=1' : ''
-  const res = await fetch(`/api/auth/audit${qs}`, { credentials: 'same-origin', cache: 'no-store' })
+  const res = await fetch(`/api/auth/audit${qs}`, jsonGet)
   if (!res.ok) throw new Error(await readError(res, 'Could not load the gym log.'))
   const data = (await res.json()) as { events?: WatchEvent[] }
   return Array.isArray(data.events) ? data.events : []
 }
 
 export async function listSignedInLogins(): Promise<WatchSession[]> {
-  const res = await fetch('/api/auth/sessions', { credentials: 'same-origin', cache: 'no-store' })
+  const res = await fetch('/api/auth/sessions', jsonGet)
   if (!res.ok) throw new Error(await readError(res, 'Could not see who is signed in.'))
   const data = (await res.json()) as { sessions?: WatchSession[] }
   return Array.isArray(data.sessions) ? data.sessions : []
@@ -48,9 +48,8 @@ export async function listSignedInLogins(): Promise<WatchSession[]> {
 
 export async function endSignedInLogin(accountId: string): Promise<void> {
   const res = await fetch('/api/auth/sessions', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ accountId })),
     method: 'POST',
-    body: JSON.stringify({ accountId }),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not end that login.'))
 }

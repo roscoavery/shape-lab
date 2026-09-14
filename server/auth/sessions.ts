@@ -56,11 +56,16 @@ function stillValid(row: SessionRecord, now = Date.now()): boolean {
   return Date.parse(row.expiresAt) > now
 }
 
+function newCsrfToken(): string {
+  return randomBytes(32).toString('hex')
+}
+
 export async function createSession(accountId: string): Promise<SessionRecord> {
   const now = Date.now()
   const session: SessionRecord = {
     id: randomBytes(32).toString('hex'),
     accountId,
+    csrf: newCsrfToken(),
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
   }
@@ -104,12 +109,25 @@ export function clearSessionCookie(req: IncomingMessage, res: ServerResponse): v
   res.setHeader('Set-Cookie', parts.join('; '))
 }
 
-export async function userFromRequest(req: IncomingMessage): Promise<AuthUser | null> {
+export async function sessionFromRequest(req: IncomingMessage): Promise<SessionRecord | null> {
   const sessionId = readSessionId(req)
   if (!sessionId) return null
   const file = await readFile()
   const now = Date.now()
-  const session = file.sessions.find((row) => row.id === sessionId && stillValid(row, now))
+  const idx = file.sessions.findIndex((row) => row.id === sessionId && stillValid(row, now))
+  if (idx < 0) return null
+  const session = file.sessions[idx]
+  if (!session) return null
+  if (session.csrf && session.csrf.length >= 32) return session
+  const next = { ...session, csrf: newCsrfToken() }
+  const sessions = file.sessions.slice()
+  sessions[idx] = next
+  await writeFile(sessions)
+  return next
+}
+
+export async function userFromRequest(req: IncomingMessage): Promise<AuthUser | null> {
+  const session = await sessionFromRequest(req)
   if (!session) return null
   const account = await findAccountById(session.accountId)
   if (!account) return null

@@ -20,11 +20,24 @@ export type AuthMeResponse = {
   user: AuthSessionUser | null
   bootstrapAllowed?: boolean
   mailEnabled?: boolean
+  csrf?: string
 }
 
-const jsonInit: RequestInit = {
-  credentials: 'same-origin',
-  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+const CSRF_HEADER = 'X-Shape-Lab-Csrf'
+
+let csrfToken = ''
+
+export function rememberCsrf(data: { csrf?: string } | null | undefined): void {
+  if (data?.csrf) csrfToken = data.csrf
+}
+
+export function authWriteInit(body?: string): RequestInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  }
+  if (csrfToken) headers[CSRF_HEADER] = csrfToken
+  return { credentials: 'same-origin', headers, body }
 }
 
 export const SESSION_LOST_EVENT = 'shape-lab-session-lost'
@@ -52,6 +65,7 @@ export function noteSessionLost(): void {
 
 export function resetSessionLostForTests(): void {
   sessionLost = false
+  csrfToken = ''
 }
 
 export function sessionIsKiosk(user: AuthSessionUser | null | undefined): boolean {
@@ -65,11 +79,11 @@ export function sessionIsAdmin(user: AuthSessionUser | null | undefined): boolea
 
 export async function setFloorKiosk(enabled: boolean, password?: string): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/kiosk', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ enabled, password })),
     method: 'POST',
-    body: JSON.stringify({ enabled, password }),
   })
   const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  rememberCsrf(data)
   if (!res.ok) {
     throw new Error(
       data.error || (enabled ? 'Could not turn this device into a floor iPad.' : 'Could not leave the floor.'),
@@ -80,11 +94,11 @@ export async function setFloorKiosk(enabled: boolean, password?: string): Promis
 
 export async function unlockAway(password: string): Promise<void> {
   const res = await fetch('/api/auth/unlock', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ password })),
     method: 'POST',
-    body: JSON.stringify({ password }),
   })
-  const data = (await res.json().catch(() => ({}))) as { error?: string }
+  const data = (await res.json().catch(() => ({}))) as { error?: string; csrf?: string }
+  rememberCsrf(data)
   if (!res.ok) {
     if (shouldClearSession(res.status, data.error)) noteSessionLost()
     throw new Error(data.error || 'Password is wrong.')
@@ -94,19 +108,21 @@ export async function unlockAway(password: string): Promise<void> {
 export async function fetchAuthMe(): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
   if (!res.ok) return { authenticated: false, user: null, bootstrapAllowed: false }
-  return (await res.json()) as AuthMeResponse
+  const data = (await res.json()) as AuthMeResponse
+  rememberCsrf(data)
+  return data
 }
 
 export async function loginWithPassword(email: string, password: string): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/login', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ email, password })),
     method: 'POST',
-    body: JSON.stringify({ email, password }),
   })
   const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
   if (!res.ok) {
     throw new Error(data.error || 'Email or password is wrong.')
   }
+  rememberCsrf(data)
   markSessionPresent()
   return data
 }
@@ -117,20 +133,21 @@ export async function bootstrapAdmin(
   displayName: string,
 ): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/bootstrap', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ email, password, displayName })),
     method: 'POST',
-    body: JSON.stringify({ email, password, displayName }),
   })
   const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
   if (!res.ok) {
     throw new Error(data.error || 'Could not create the first admin account.')
   }
+  rememberCsrf(data)
   markSessionPresent()
   return data
 }
 
 export async function logoutSession(): Promise<void> {
-  await fetch('/api/auth/logout', { ...jsonInit, method: 'POST' })
+  await fetch('/api/auth/logout', { ...authWriteInit(), method: 'POST' })
+  csrfToken = ''
 }
 
 export async function peekInvite(token: string): Promise<{
@@ -148,14 +165,14 @@ export async function peekInvite(token: string): Promise<{
 
 export async function redeemInvite(token: string, password: string): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/invite', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ token, password })),
     method: 'POST',
-    body: JSON.stringify({ token, password }),
   })
   const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
   if (!res.ok) {
     throw new Error(data.error || 'That sign-in link is wrong or already used.')
   }
+  rememberCsrf(data)
   markSessionPresent()
   return data
 }

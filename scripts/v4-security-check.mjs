@@ -10,6 +10,7 @@ const COACH_EMAIL = 'v4-coach@example.com'
 const COACH_PASSWORD = 'v4-coach-test-password'
 
 let failed = 0
+const csrfByCookie = new Map()
 
 function ok(name, cond, extra = '') {
   if (cond) {
@@ -20,10 +21,32 @@ function ok(name, cond, extra = '') {
   console.log(`  FAIL  ${name}${extra ? ` — ${extra}` : ''}`)
 }
 
+function authPath(path) {
+  return String(path || '').split('?')[0]
+}
+
+function needsCsrf(path, method, opts) {
+  if (opts.noCsrf) return false
+  const m = String(method || 'GET').toUpperCase()
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return false
+  const p = authPath(path)
+  if (p === '/api/auth/login' || p === '/api/auth/bootstrap' || p === '/api/auth/invite') return false
+  return p.startsWith('/api/auth/')
+}
+
 async function req(path, opts = {}) {
   const headers = { ...(opts.headers || {}) }
   if (opts.cookie) headers.Cookie = opts.cookie
   if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
+  if (
+    needsCsrf(path, opts.method, opts) &&
+    opts.cookie &&
+    !headers['X-Shape-Lab-Csrf'] &&
+    !headers['x-shape-lab-csrf']
+  ) {
+    const token = csrfByCookie.get(opts.cookie)
+    if (token) headers['X-Shape-Lab-Csrf'] = token
+  }
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     headers,
@@ -41,6 +64,10 @@ async function req(path, opts = {}) {
     .map((row) => row.split(';')[0])
     .filter((row) => row.startsWith('shape_lab_session='))
     .join('; ')
+  const jar = cookie || opts.cookie || ''
+  if (jar && json && typeof json.csrf === 'string' && json.csrf.length >= 32) {
+    csrfByCookie.set(jar, json.csrf)
+  }
   return { status: res.status, json, text, cookie, headers: res.headers }
 }
 
@@ -107,9 +134,21 @@ async function main() {
     origin.writeOriginForbidden('GET', 'https://evil.example', '127.0.0.1:43127') === false,
   )
 
+  const csrf = await import('../server/auth/csrf.ts')
+  const sample = 'ab'.repeat(32)
+  ok(
+    'mark skips login and invite redeem',
+    csrf.authWriteNeedsCsrf('POST', '/api/auth/login') === false &&
+      csrf.authWriteNeedsCsrf('POST', '/api/auth/invite') === false &&
+      csrf.authWriteNeedsCsrf('POST', '/api/auth/invites') === true,
+  )
+  ok('mark rejects an empty gym mark', csrf.csrfForbidden('', sample) === true)
+  ok('mark accepts a matching gym mark', csrf.csrfForbidden(sample, sample) === false)
+  ok('mark rejects another gym mark', csrf.csrfForbidden('cd'.repeat(32), sample) === true)
+
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is mail', health.json?.holdBuild === 'mail', String(health.json?.holdBuild))
+  ok('health stamp is mark', health.json?.holdBuild === 'mark', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -187,14 +226,39 @@ async function main() {
     cookie = cookieFrom(cookie, login)
   }
 
+  ok(
+    'session has a gym mark',
+    typeof csrfByCookie.get(cookie) === 'string' && csrfByCookie.get(cookie).length === 64,
+  )
+
   const me = await req('/api/auth/me', { cookie })
   ok('admin session is admin', me.json?.user?.role === 'admin' || me.json?.user?.role === 'gymOwner')
+  ok(
+    'me returns the same gym mark',
+    me.json?.csrf === csrfByCookie.get(cookie),
+    String(me.json?.csrf),
+  )
   const mail = await import('../server/auth/mail.ts')
   ok(
     'mailEnabled matches SMTP config',
     Boolean(me.json?.mailEnabled) === mail.mailConfigured(),
     String(me.json?.mailEnabled),
   )
+
+  const noMark = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    noCsrf: true,
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  })
+  ok('auth write without gym mark is 403', noMark.status === 403, String(noMark.status))
+  const badMark = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    headers: { 'X-Shape-Lab-Csrf': '0'.repeat(64) },
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  })
+  ok('auth write with the wrong gym mark is 403', badMark.status === 403, String(badMark.status))
 
   const revIn = await req('/api/revision', { cookie })
   ok('signed-in revision is 200', revIn.status === 200, String(revIn.status))
@@ -651,6 +715,10 @@ async function main() {
   ok(
     'signed-in list has no raw session id',
     liveRows.every((row) => row.id == null && row.accountId),
+  )
+  ok(
+    'signed-in list has no gym mark',
+    liveRows.every((row) => row.csrf == null),
   )
 
   const listedForKick = await req('/api/auth/accounts', { cookie })

@@ -1,4 +1,4 @@
-import type { AuthSessionUser, SessionRole } from './authSession'
+import { authWriteInit, rememberCsrf, type AuthSessionUser, type SessionRole } from './authSession'
 
 export type PublicAccount = {
   id: string
@@ -11,13 +11,9 @@ export type PublicAccount = {
   updatedAt: string
 }
 
-const jsonInit: RequestInit = {
-  credentials: 'same-origin',
-  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-}
-
 async function readError(res: Response, fallback: string): Promise<string> {
-  const data = (await res.json().catch(() => ({}))) as { error?: string }
+  const data = (await res.json().catch(() => ({}))) as { error?: string; csrf?: string }
+  rememberCsrf(data)
   return data.error || fallback
 }
 
@@ -38,9 +34,8 @@ export async function createGymAccount(input: {
   sendEmail?: boolean
 }): Promise<{ account: AuthSessionUser; inviteUrl?: string; mailed?: boolean }> {
   const res = await fetch('/api/auth/accounts', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify(input)),
     method: 'POST',
-    body: JSON.stringify(input),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not create that account.'))
   const data = (await res.json()) as { account?: AuthSessionUser; inviteUrl?: string; mailed?: boolean }
@@ -53,9 +48,8 @@ export async function createSignInLink(
   sendEmail = false,
 ): Promise<{ url: string; expiresAt: string; mailed: boolean; mailError?: string }> {
   const res = await fetch('/api/auth/invites', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ accountId, sendEmail })),
     method: 'POST',
-    body: JSON.stringify({ accountId, sendEmail }),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not make that sign-in link.'))
   const data = (await res.json()) as {
@@ -81,9 +75,8 @@ export async function patchGymAccount(input: {
   linkedAthleteIds?: string[]
 }): Promise<PublicAccount> {
   const res = await fetch('/api/auth/accounts', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify(input)),
     method: 'PATCH',
-    body: JSON.stringify(input),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not update that account.'))
   const data = (await res.json()) as { account?: PublicAccount }
@@ -93,18 +86,18 @@ export async function patchGymAccount(input: {
 
 export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
   const res = await fetch('/api/auth/password', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ currentPassword, newPassword })),
     method: 'POST',
-    body: JSON.stringify({ currentPassword, newPassword }),
   })
-  if (!res.ok) throw new Error(await readError(res, 'Could not change that password.'))
+  const data = (await res.json().catch(() => ({}))) as { error?: string; csrf?: string }
+  rememberCsrf(data)
+  if (!res.ok) throw new Error(data.error || 'Could not change that password.')
 }
 
 export async function adminResetPassword(accountId: string, newPassword: string): Promise<void> {
   const res = await fetch('/api/auth/password', {
-    ...jsonInit,
+    ...authWriteInit(JSON.stringify({ accountId, newPassword })),
     method: 'POST',
-    body: JSON.stringify({ accountId, newPassword }),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not reset that password.'))
 }

@@ -29,6 +29,7 @@ import {
   destroySessionsForAccount,
   listLiveSessions,
   readSessionId,
+  sessionFromRequest,
   setSessionCookie,
   setSessionKiosk,
   userFromRequest,
@@ -36,6 +37,7 @@ import {
 import { isAccountRole, isAdminRole } from './types.ts'
 import { ipKey, tooMany } from './rateLimit.ts'
 import { requestWriteOriginForbidden } from './origin.ts'
+import { authWriteNeedsCsrf, csrfForbidden, readCsrfHeader } from './csrf.ts'
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const AUTH_WRITE_WINDOW_MS = 15 * 60 * 1000
@@ -58,6 +60,13 @@ export async function handleAuthRoutes(
     sendJson(res, 403, { error: 'That request did not come from this gym.' })
     return true
   }
+  if (authWriteNeedsCsrf(req.method, path)) {
+    const marked = await sessionFromRequest(req)
+    if (marked && csrfForbidden(readCsrfHeader(req.headers), marked.csrf)) {
+      sendJson(res, 403, { error: 'That request did not come from this gym.' })
+      return true
+    }
+  }
 
   if (path === '/api/auth/me') {
     if (req.method !== 'GET') {
@@ -65,12 +74,14 @@ export async function handleAuthRoutes(
       return true
     }
     await ensureBootstrapAdmin()
+    const session = await sessionFromRequest(req)
     const user = await userFromRequest(req)
     sendJson(res, 200, {
       authenticated: Boolean(user),
       user: user ?? null,
       bootstrapAllowed: !(await hasAdminAccount()) && allowFirstAdmin(),
       mailEnabled: mailEnabledFor(user),
+      csrf: session?.csrf,
     })
     return true
   }
@@ -103,7 +114,12 @@ export async function handleAuthRoutes(
     setSessionCookie(req, res, session.id)
     const user = { ...publicUserFromAccount(account), kiosk: false }
     await writeAudit('auth.login', user)
-    sendJson(res, 200, { authenticated: true, user, mailEnabled: mailEnabledFor(user) })
+    sendJson(res, 200, {
+      authenticated: true,
+      user,
+      mailEnabled: mailEnabledFor(user),
+      csrf: session.csrf,
+    })
     return true
   }
 
@@ -151,7 +167,7 @@ export async function handleAuthRoutes(
       sendJson(res, 401, { error: 'Password is wrong.' })
       return true
     }
-    sendJson(res, 200, { ok: true })
+    sendJson(res, 200, { ok: true, csrf: (await sessionFromRequest(req))?.csrf })
     return true
   }
 
@@ -186,7 +202,7 @@ export async function handleAuthRoutes(
       const session = await createSession(user.accountId)
       setSessionCookie(req, res, session.id)
       await writeAudit('auth.account_create', user, { detail: 'bootstrap admin' })
-      sendJson(res, 200, { authenticated: true, user })
+      sendJson(res, 200, { authenticated: true, user, csrf: session.csrf })
     } catch (err) {
       sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not create that account.' })
     }
@@ -342,14 +358,18 @@ export async function handleAuthRoutes(
     try {
       await changeAccountPassword(targetId, body.newPassword || '')
       await destroySessionsForAccount(targetId)
+      let csrf: string | undefined
       if (!resettingOther) {
         const session = await createSession(user.accountId)
         setSessionCookie(req, res, session.id)
+        csrf = session.csrf
+      } else {
+        csrf = (await sessionFromRequest(req))?.csrf
       }
       await writeAudit('role.change', user, {
         detail: resettingOther ? `password reset ${targetId}` : 'password change',
       })
-      sendJson(res, 200, { ok: true, signedOutOthers: true })
+      sendJson(res, 200, { ok: true, signedOutOthers: true, csrf })
     } catch (err) {
       sendJson(res, 400, {
         error: err instanceof Error ? err.message : 'Could not change that password.',
@@ -446,7 +466,7 @@ export async function handleAuthRoutes(
       const account = await findAccountById(redeemed.accountId)
       const user = account ? { ...publicUserFromAccount(account), kiosk: false } : null
       await writeAudit('auth.invite', user, { detail: 'redeem sign-in link' })
-      sendJson(res, 200, { authenticated: Boolean(user), user })
+      sendJson(res, 200, { authenticated: Boolean(user), user, csrf: session.csrf })
     } catch (err) {
       sendJson(res, 400, {
         error: err instanceof Error ? err.message : 'Could not set that password.',
@@ -482,19 +502,20 @@ export async function handleAuthRoutes(
       sendJson(res, 401, { error: 'Sign in to continue.' })
       return true
     }
+    const csrf = (await sessionFromRequest(req))?.csrf
     if (body.enabled) {
       if (user.kiosk) {
-        sendJson(res, 200, { authenticated: true, user })
+        sendJson(res, 200, { authenticated: true, user, csrf })
         return true
       }
       await setSessionKiosk(sessionId, true)
       const next = { ...user, kiosk: true }
       await writeAudit('auth.kiosk', next, { detail: 'enter floor' })
-      sendJson(res, 200, { authenticated: true, user: next })
+      sendJson(res, 200, { authenticated: true, user: next, csrf })
       return true
     }
     if (!user.kiosk) {
-      sendJson(res, 200, { authenticated: true, user })
+      sendJson(res, 200, { authenticated: true, user, csrf })
       return true
     }
     const ok = await accountPasswordMatches(user.accountId, body.password || '')
@@ -505,7 +526,7 @@ export async function handleAuthRoutes(
     await setSessionKiosk(sessionId, false)
     const next = { ...user, kiosk: false }
     await writeAudit('auth.kiosk', next, { detail: 'leave floor' })
-    sendJson(res, 200, { authenticated: true, user: next })
+    sendJson(res, 200, { authenticated: true, user: next, csrf })
     return true
   }
 

@@ -24,6 +24,8 @@ export type SessionRecord = {
   accountId: string
   createdAt: string
   expiresAt: string
+  /** Browser-only mark for account writes. Not the session cookie. */
+  csrf?: string
   /** This browser is a floor iPad. Admin powers stay off until password leave. */
   kiosk?: boolean
 }
