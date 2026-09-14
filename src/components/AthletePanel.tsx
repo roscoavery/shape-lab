@@ -7,6 +7,7 @@ import {
   PROFILE_KINDS,
   canEditAthleteProfile,
   isCoachProfile,
+  isGymAdmin,
   profileRole,
   roleHint,
   roleLabel,
@@ -32,7 +33,9 @@ import {
 import { AthleteAvatar, AthleteName } from './AthleteAvatar'
 import { AthleteProfileCard } from './AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../lib/athleteNotes'
-import { withLinkedAthletes } from '../lib/parentLink'
+import { withLinkedAthletes, linkParentToAthletes, linkedAthleteIds } from '../lib/parentLink'
+import { likelyExistingAthletes, duplicateAthleteMessage } from '../lib/familyDuplicates'
+import { birthdayNeeded, parseDateOfBirth } from '../lib/age'
 import { CoachPicker } from './CoachPicker'
 import { DeleteProfileAsk } from './DeleteProfileAsk'
 import { TUMBLE_SMART, normalizeGymName } from '../config/gyms'
@@ -44,6 +47,8 @@ type Props = {
   onSelect: (id: string | null) => void
   /** Destructive profile controls belong only on More → Profiles. */
   allowDelete?: boolean
+  /** Hide the new-profile form (parents and athletes use linking, not create). */
+  allowCreate?: boolean
   /** Gym admin sees every profile. Everyone else only sees their own. */
   canSeeAllProfiles?: boolean
   onViewProfile?: (id: string) => void
@@ -68,6 +73,7 @@ export function AthletePanel({
   onChangeAthletes,
   onSelect,
   allowDelete = false,
+  allowCreate = true,
   canSeeAllProfiles = false,
   onViewProfile,
   viewer = null,
@@ -94,6 +100,8 @@ export function AthletePanel({
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [parentPhone, setParentPhone] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [newDateOfBirth, setNewDateOfBirth] = useState('')
   const [gymName, setGymName] = useState('')
   const [classGymsText, setClassGymsText] = useState('')
   const [linkedIds, setLinkedIds] = useState<string[]>([])
@@ -106,6 +114,19 @@ export function AthletePanel({
 
   const active = athletes.find((a) => a.id === activeId) ?? null
   const canEditActive = canEditAthleteProfile(viewer, active)
+  const canCreateProfiles =
+    allowCreate && (!viewer || isCoachProfile(viewer) || isGymAdmin(viewer))
+  const listed = (() => {
+    if (canSeeAllProfiles || isGymAdmin(viewer)) return athletes
+    if (viewer && profileRole(viewer) === 'parent') {
+      const ids = new Set([viewer.id, ...linkedAthleteIds(viewer)])
+      return athletes.filter((a) => ids.has(a.id))
+    }
+    if (viewer && profileRole(viewer) === 'athlete') {
+      return athletes.filter((a) => a.id === viewer.id)
+    }
+    return athletes
+  })()
 
   useEffect(() => {
     setHandle(active?.instagramHandle ?? '')
@@ -116,6 +137,7 @@ export function AthletePanel({
     setEmail(active?.email ?? '')
     setPhone(active?.phone ?? '')
     setParentPhone(active?.parentPhone ?? '')
+    setDateOfBirth(active?.dateOfBirth ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
   }, [active?.id])
@@ -135,6 +157,17 @@ export function AthletePanel({
     if (!newEmail.trim() || !newPhone.trim()) {
       flash('Add an email and a phone number so we can tell people apart.')
       return
+    }
+    if (newRole === 'athlete') {
+      const dupes = likelyExistingAthletes(firstName, lastName, athletes)
+      if (dupes.length) {
+        flash(duplicateAthleteMessage(dupes), 5200)
+        return
+      }
+      if (newDateOfBirth && !parseDateOfBirth(newDateOfBirth)) {
+        flash('Birthday must be a real date.')
+        return
+      }
     }
     const existing = athletes.find(
       (a) => a.name.trim().toLowerCase() === trimmed.toLowerCase(),
@@ -184,6 +217,7 @@ export function AthletePanel({
             ],
             showCoachesOnProfile: newShowCoaches,
             profilePublic: false,
+            ...(newDateOfBirth ? { dateOfBirth: newDateOfBirth } : {}),
           }
         : {}),
       ...(newBackPain != null ? { hasBackPain: newBackPain } : {}),
@@ -195,7 +229,11 @@ export function AthletePanel({
         : athlete
     markProfileUnlocked(id)
     forgetQuizGuest(firstName, lastName)
-    onChangeAthletes([...athletes, saved])
+    onChangeAthletes(
+      role === 'parent'
+        ? linkParentToAthletes(saved, newLinkedIds, [...athletes, saved])
+        : [...athletes, saved],
+    )
     onSelect(saved.id)
     setName('')
     setFirstName('')
@@ -213,6 +251,7 @@ export function AthletePanel({
     setPasscodeAgain('')
     setNewRole('athlete')
     setNewBackPain(null)
+    setNewDateOfBirth('')
     flash(
       role === 'coach' || role === 'gym_owner'
         ? `${saved.name} is ready as ${roleLabel(saved)}. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
@@ -231,21 +270,23 @@ export function AthletePanel({
       profileRole(active) === 'parent'
         ? withLinkedAthletes(active, linkedIds, athletes)
         : active
+    const patched = {
+      ...next,
+      instagramHandle,
+      shapeLabHandle,
+      gymName: nextGym,
+      classGyms: nextClassGyms,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      parentPhone: parentPhone.trim() || undefined,
+      ...(profileRole(active) === 'athlete'
+        ? { dateOfBirth: dateOfBirth.trim() || next.dateOfBirth }
+        : {}),
+    }
     onChangeAthletes(
-      athletes.map((a) =>
-        a.id === active.id
-          ? {
-              ...next,
-              instagramHandle,
-              shapeLabHandle,
-              gymName: nextGym,
-              classGyms: nextClassGyms,
-              email: email.trim() || undefined,
-              phone: phone.trim() || undefined,
-              parentPhone: parentPhone.trim() || undefined,
-            }
-          : a,
-      ),
+      profileRole(active) === 'parent'
+        ? linkParentToAthletes(patched, linkedIds, athletes)
+        : athletes.map((a) => (a.id === active.id ? patched : a)),
     )
     const bits = [
       shapeLabHandle ? `@${shapeLabHandle}` : instagramHandle ? `@${instagramHandle}` : null,
@@ -337,7 +378,7 @@ export function AthletePanel({
       )}
       {allowDelete && (
         <ul className="mb-3 max-h-[min(50vh,22rem)] space-y-1 overflow-y-auto">
-          {athletes.map((a) => (
+          {listed.map((a) => (
             <li
               key={a.id}
               className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
@@ -382,7 +423,7 @@ export function AthletePanel({
         onChange={(e) => onSelect(e.target.value || null)}
       >
         <option value="">Select profile…</option>
-        {athletes.map((a) => {
+        {listed.map((a) => {
           const last = lastShapeTest(a)
           return (
             <option key={a.id} value={a.id}>
@@ -424,6 +465,8 @@ export function AthletePanel({
         </div>
       )}
 
+      {canCreateProfiles && (
+        <>
       <button
         type="button"
         aria-expanded={newProfileOpen}
@@ -503,6 +546,19 @@ export function AthletePanel({
           value={newPhone}
           onChange={(e) => setNewPhone(e.target.value)}
         />
+        {newRole === 'athlete' && (
+          <label>
+            <span className="text-[11px] text-[var(--muted)]">
+              Birthday — private, used for age-appropriate access and safety settings
+            </span>
+            <input
+              type="date"
+              className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+              value={newDateOfBirth}
+              onChange={(e) => setNewDateOfBirth(e.target.value)}
+            />
+          </label>
+        )}
         <button
           type="button"
           onClick={() => void add()}
@@ -603,6 +659,8 @@ export function AthletePanel({
         )}
         <p className="text-[11px] leading-snug text-[var(--muted)]">{roleHint(newRole)}</p>
       </div>}
+        </>
+      )}
 
       {active && canEditActive && !active.passcodeHash && (
         <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
@@ -679,6 +737,19 @@ export function AthletePanel({
             value={parentPhone}
             onChange={(e) => setParentPhone(e.target.value)}
           />
+          {profileRole(active) === 'athlete' && (
+            <label>
+              <span className="text-[11px] text-[var(--muted)]">
+                {birthdayNeeded(active.dateOfBirth) ? 'Birthday needed — stays private' : 'Birthday (private)'}
+              </span>
+              <input
+                type="date"
+                className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+              />
+            </label>
+          )}
           {(profileRole(active) === 'gym_owner' ||
             profileRole(active) === 'coach' ||
             profileRole(active) === 'athlete') && (

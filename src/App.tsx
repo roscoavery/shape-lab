@@ -49,6 +49,9 @@ import { NamesQuiz } from './components/coach/NamesQuiz'
 import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
+import { ParentEducationDesk, ParentHome } from './components/family/ParentHome'
+import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
+import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
@@ -150,6 +153,11 @@ import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
 import { childAthletes } from './lib/parentLink'
 import { coachShareLabel } from './lib/coachShare'
 import {
+  isOfficeOnlyTab,
+  navRoleFromSession,
+  tabAllowedForNavRole,
+} from './lib/appNav'
+import {
   isProfileUnlocked,
   lockAllProfiles,
   markProfileUnlocked,
@@ -165,7 +173,6 @@ import {
   SESSION_LOST_EVENT,
   type AuthSessionUser,
 } from './lib/authSession'
-import { isOfficeOnlyTab } from './lib/appNav'
 import type {
   AppSettings,
   Athlete,
@@ -587,6 +594,8 @@ export default function App() {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (!ryan && isRyanOnlyTab(tab)) setTab('today')
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(tab)) setTab('today')
+    const role = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
+    if (authUser && !tabAllowedForNavRole(tab, role, ryan)) setTab('today')
   }, [athletes, activeAthleteId, tab, authUser])
 
   useEffect(
@@ -626,6 +635,8 @@ export default function App() {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (isRyanOnlyTab(id) && !ryan) return
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(id)) return
+    const role = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
+    if (authUser && !tabAllowedForNavRole(id, role, ryan)) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -813,6 +824,7 @@ export default function App() {
     setViewingAthleteId(id)
   }
   const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
+  const deskRole = navRoleFromSession(authUser?.role, floorKiosk)
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
       ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
@@ -901,6 +913,7 @@ export default function App() {
           ryan={ryanEdit}
           kiosk={floorKiosk}
           admin={sessionIsAdmin(authUser)}
+          role={authUser.role}
           onGo={goTab}
         />
         <div className="ml-auto shrink-0">
@@ -910,7 +923,26 @@ export default function App() {
 
       {floorKiosk && <FloorKioskBar user={authUser} onUser={setAuthUser} />}
 
-      {tab === 'today' && (
+      {tab === 'today' && deskRole === 'parent' && activeProfile && (
+        <ParentHome
+          parent={activeProfile}
+          kids={parentKids}
+          focusId={parentFocusId}
+          onFocus={setParentFocusId}
+          onOpenAthletes={() => goTab('history')}
+          onOpenLearn={() => goTab('learn')}
+          onOpenWellness={() => goTab('wellness')}
+        />
+      )}
+      {tab === 'today' && deskRole === 'athlete' && (
+        <AthleteHome
+          athlete={activeProfile}
+          onPractice={() => goTab('homework')}
+          onProgress={() => goTab('progress')}
+          onVideos={() => goTab('compare')}
+        />
+      )}
+      {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
@@ -1338,7 +1370,8 @@ export default function App() {
 
       {tab === 'warmup' && <WarmupPanel signedIn={activeProfile} />}
 
-      {tab === 'learn' && (
+      {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk />}
+      {tab === 'learn' && deskRole !== 'parent' && (
         <EducationPanel
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
@@ -1570,7 +1603,46 @@ export default function App() {
         </div>
       )}
 
-      {tab === 'history' && (
+      {tab === 'wellness' && deskRole === 'parent' && (
+        <ParentWellnessDesk accountId={authUser.accountId} />
+      )}
+
+      {tab === 'progress' && (
+        <AthleteProgress athlete={homeworkAthlete ?? activeProfile} />
+      )}
+
+      {tab === 'history' && deskRole === 'parent' && (
+        <div className="mx-auto grid max-w-3xl gap-4">
+          <AthletePanel
+            athletes={parentKids}
+            activeId={parentFocusId ?? parentKids[0]?.id ?? null}
+            onChangeAthletes={setAthleteRoster}
+            onSelect={(id) => {
+              setParentFocusId(id)
+              if (id) openProfile(id)
+            }}
+            allowCreate={false}
+            onViewProfile={openProfile}
+            viewer={activeProfile}
+          />
+        </div>
+      )}
+
+      {tab === 'history' && deskRole === 'athlete' && (
+        <div className="mx-auto grid max-w-3xl gap-4">
+          <AthletePanel
+            athletes={activeProfile ? [activeProfile] : []}
+            activeId={activeProfile?.id ?? null}
+            onChangeAthletes={setAthleteRoster}
+            onSelect={requestSelectAthlete}
+            allowCreate={false}
+            onViewProfile={openProfile}
+            viewer={activeProfile}
+          />
+        </div>
+      )}
+
+      {tab === 'history' && deskRole !== 'parent' && deskRole !== 'athlete' && (
         <div className="mx-auto grid max-w-3xl gap-4">
           {ryanEdit && <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />}
           <AthletePanel

@@ -842,6 +842,8 @@ export const APP_TABS = [
   'consent',
   'watch',
   'about',
+  'wellness',
+  'progress',
 ] as const
 export type AppTab = (typeof APP_TABS)[number]
 

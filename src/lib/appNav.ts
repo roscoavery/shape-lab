@@ -1,7 +1,31 @@
+import type { SessionRole } from './authSession'
 import type { AppTab } from './storage'
 import { isRyanOnlyTab } from './storage'
 
-export type AppSection = 'today' | 'practice' | 'videos' | 'learn' | 'team' | 'more'
+export type AppSection =
+  | 'today'
+  | 'practice'
+  | 'videos'
+  | 'learn'
+  | 'team'
+  | 'more'
+  | 'family'
+  | 'wellness'
+  | 'progress'
+
+export type NavRole = 'admin' | 'coach' | 'athlete' | 'parent' | 'kiosk'
+
+export function navRoleFromSession(
+  role: SessionRole | undefined,
+  kiosk: boolean,
+): NavRole {
+  if (kiosk) return 'kiosk'
+  if (role === 'parent') return 'parent'
+  if (role === 'athlete') return 'athlete'
+  if (role === 'coach') return 'coach'
+  if (role === 'admin' || role === 'gymOwner') return 'admin'
+  return 'coach'
+}
 
 export const APP_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'today', label: 'Today' },
@@ -11,6 +35,37 @@ export const APP_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'team', label: 'Team' },
   { id: 'more', label: 'More' },
 ]
+
+const PARENT_SECTIONS: { id: AppSection; label: string }[] = [
+  { id: 'today', label: 'Home' },
+  { id: 'family', label: 'My Athletes' },
+  { id: 'learn', label: 'Learn' },
+  { id: 'wellness', label: 'My Wellness' },
+  { id: 'more', label: 'Settings' },
+]
+
+const ATHLETE_SECTIONS: { id: AppSection; label: string }[] = [
+  { id: 'today', label: 'Home' },
+  { id: 'practice', label: 'Practice' },
+  { id: 'progress', label: 'Progress' },
+  { id: 'videos', label: 'Videos' },
+  { id: 'learn', label: 'Learn' },
+  { id: 'more', label: 'Profile' },
+]
+
+const KIOSK_SECTIONS: { id: AppSection; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'practice', label: 'Practice' },
+  { id: 'videos', label: 'Replay' },
+  { id: 'learn', label: 'Shapes' },
+]
+
+export function sectionsForNavRole(role: NavRole): { id: AppSection; label: string }[] {
+  if (role === 'parent') return PARENT_SECTIONS
+  if (role === 'athlete') return ATHLETE_SECTIONS
+  if (role === 'kiosk') return KIOSK_SECTIONS
+  return APP_SECTIONS
+}
 
 export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]> = {
   today: [{ id: 'today', label: 'Home' }],
@@ -44,9 +99,15 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'research', label: 'Research' },
     { id: 'about', label: 'About' },
   ],
+  family: [{ id: 'history', label: 'My Athletes' }],
+  wellness: [{ id: 'wellness', label: 'My Wellness' }],
+  progress: [{ id: 'progress', label: 'Progress' }],
 }
 
-export function sectionForTab(tab: AppTab): AppSection {
+export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection {
+  if (role === 'parent' && tab === 'history') return 'family'
+  if (role === 'parent' && (tab === 'consent' || tab === 'accounts' || tab === 'about')) return 'more'
+  if (role === 'athlete' && tab === 'history') return 'more'
   switch (tab) {
     case 'today':
       return 'today'
@@ -68,6 +129,10 @@ export function sectionForTab(tab: AppTab): AppSection {
     case 'wins':
     case 'network':
       return 'team'
+    case 'wellness':
+      return 'wellness'
+    case 'progress':
+      return 'progress'
     default:
       return 'more'
   }
@@ -86,11 +151,30 @@ export function subnavForSection(
   ryan: boolean,
   kiosk = false,
   admin = false,
+  role: NavRole = admin ? 'admin' : 'coach',
 ) {
-  return SECTION_SUBNAV[section].filter((item) => {
+  const items = SECTION_SUBNAV[section] ?? []
+  return items.filter((item) => {
     if (!ryan && isRyanOnlyTab(item.id)) return false
     if (kiosk && isOfficeOnlyTab(item.id)) return false
     if (!admin && isAdminOnlyTab(item.id)) return false
+    if (role === 'parent') {
+      if (section === 'more') return item.id === 'consent' || item.id === 'accounts' || item.id === 'about'
+      if (section === 'learn') return item.id === 'learn'
+    }
+    if (role === 'athlete') {
+      if (section === 'practice') return item.id === 'homework' || item.id === 'tasks2'
+      if (section === 'videos') return item.id === 'compare'
+      if (section === 'learn') return item.id === 'learn'
+      if (section === 'more') return item.id === 'history' || item.id === 'about'
+    }
+    if (role === 'kiosk') {
+      if (section === 'practice') return item.id === 'homework' || item.id === 'tasks2'
+      if (section === 'videos') return item.id === 'compare'
+      if (section === 'learn') return item.id === 'learn'
+      if (section === 'more') return false
+    }
+    if (role === 'coach' && item.id === 'watch') return false
     return true
   })
 }
@@ -100,6 +184,41 @@ export function defaultTabForSection(
   ryan: boolean,
   kiosk = false,
   admin = false,
+  role: NavRole = admin ? 'admin' : 'coach',
 ): AppTab {
-  return subnavForSection(section, ryan, kiosk, admin)[0]?.id ?? 'today'
+  return subnavForSection(section, ryan, kiosk, admin, role)[0]?.id ?? 'today'
+}
+
+export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean): boolean {
+  if (isRyanOnlyTab(tab) && !ryan && role !== 'admin') return false
+  if (role === 'kiosk' && isOfficeOnlyTab(tab)) return false
+  if (role === 'parent') {
+    return (
+      tab === 'today' ||
+      tab === 'history' ||
+      tab === 'learn' ||
+      tab === 'wellness' ||
+      tab === 'consent' ||
+      tab === 'accounts' ||
+      tab === 'about' ||
+      tab === 'homework'
+    )
+  }
+  if (role === 'athlete') {
+    return (
+      tab === 'today' ||
+      tab === 'homework' ||
+      tab === 'tasks2' ||
+      tab === 'progress' ||
+      tab === 'compare' ||
+      tab === 'learn' ||
+      tab === 'history' ||
+      tab === 'about' ||
+      tab === 'wins'
+    )
+  }
+  if (role === 'kiosk') {
+    return tab === 'today' || tab === 'homework' || tab === 'tasks2' || tab === 'compare' || tab === 'learn'
+  }
+  return true
 }

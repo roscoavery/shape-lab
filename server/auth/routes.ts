@@ -19,6 +19,7 @@ import {
   updateAccount,
 } from './accounts.ts'
 import { readAudit, writeAudit } from './audit.ts'
+import { stampGuardianLinks } from './familyLinks.ts'
 import { createInvite, peekInvite, redeemInvite } from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
 import { mailEnabledFor, sendInviteEmail } from './mail.ts'
@@ -253,6 +254,13 @@ export async function handleAuthRoutes(
           rosterProfileId: body.rosterProfileId,
           linkedAthleteIds: body.linkedAthleteIds,
         })
+        if (created.role === 'parent') {
+          await stampGuardianLinks({
+            accountId: created.accountId,
+            rosterProfileId: created.rosterProfileId,
+            linkedAthleteIds: created.linkedAthleteIds,
+          })
+        }
         const invite = !body.password?.trim()
           ? await createInvite(created.accountId, req)
           : null
@@ -305,6 +313,13 @@ export async function handleAuthRoutes(
           rosterProfileId: body.rosterProfileId,
           linkedAthleteIds: body.linkedAthleteIds,
         })
+        if (saved.role === 'parent') {
+          await stampGuardianLinks({
+            accountId: saved.id,
+            rosterProfileId: saved.rosterProfileId,
+            linkedAthleteIds: saved.linkedAthleteIds,
+          })
+        }
         await writeAudit('role.change', user, {
           detail: `${saved.email} ${saved.role} ${saved.rosterProfileId ?? ''}`,
         })

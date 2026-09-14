@@ -45,7 +45,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState<SessionRole>('coach')
   const [rosterProfileId, setRosterProfileId] = useState('')
-  const [parentChildId, setParentChildId] = useState('')
+  const [parentChildIds, setParentChildIds] = useState<string[]>([])
   const [mailEnabled, setMailEnabled] = useState(false)
   const [emailNewLogin, setEmailNewLogin] = useState(false)
 
@@ -266,25 +266,41 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
               </select>
             </label>
             {role === 'parent' && (
-              <label className="sm:col-span-2">
+              <div className="sm:col-span-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Child this parent can see
+                  Athletes this parent can see
                 </span>
-                <select
-                  value={parentChildId}
-                  onChange={(e) => setParentChildId(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
-                >
-                  <option value="">Pick the athlete</option>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Link to existing profiles. Do not create a second child.
+                </p>
+                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-[var(--panel-border)] bg-[#0d1218] p-2">
                   {sortedAthletes
                     .filter((athlete) => athlete.role !== 'parent' && athlete.role !== 'coach')
-                    .map((athlete) => (
-                      <option key={athlete.id} value={athlete.id}>
-                        {athlete.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+                    .map((athlete) => {
+                      const on = parentChildIds.includes(athlete.id)
+                      return (
+                        <li key={athlete.id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setParentChildIds(
+                                on
+                                  ? parentChildIds.filter((id) => id !== athlete.id)
+                                  : [...parentChildIds, athlete.id],
+                              )
+                            }
+                            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm ${
+                              on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--muted)]'
+                            }`}
+                          >
+                            <span>{athlete.name}</span>
+                            <span className="text-[11px]">{on ? 'Linked' : 'Select'}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </div>
             )}
           </div>
           <button
@@ -298,7 +314,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
                 role,
                 displayName: displayName || email,
                 rosterProfileId: rosterProfileId || undefined,
-                linkedAthleteIds: parentChildId ? [parentChildId] : undefined,
+                linkedAthleteIds: parentChildIds.length ? parentChildIds : undefined,
                 sendEmail: mailEnabled && emailNewLogin && !createPassword,
               })
                 .then(async (result) => {
@@ -306,7 +322,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
                   setCreatePassword('')
                   setDisplayName('')
                   setRosterProfileId('')
-                  setParentChildId('')
+                  setParentChildIds([])
                   if (result.inviteUrl) {
                     try {
                       await navigator.clipboard.writeText(result.inviteUrl)
@@ -384,6 +400,7 @@ function AccountRow({
   setBusy: (busy: boolean) => void
 }) {
   const [profileId, setProfileId] = useState(account.rosterProfileId ?? '')
+  const [childIds, setChildIds] = useState<string[]>(account.linkedAthleteIds ?? [])
   const [resetPassword, setResetPassword] = useState('')
   const linked = athletes.find((row) => row.id === account.rosterProfileId)
 
@@ -425,6 +442,53 @@ function AccountRow({
           Save link
         </button>
       </div>
+      {account.role === 'parent' && (
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Linked athletes
+          </p>
+          <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+            {athletes
+              .filter((athlete) => athlete.role !== 'parent' && athlete.role !== 'coach')
+              .map((athlete) => {
+                const on = childIds.includes(athlete.id)
+                return (
+                  <li key={athlete.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setChildIds(on ? childIds.filter((id) => id !== athlete.id) : [...childIds, athlete.id])
+                      }
+                      className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs ${
+                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--muted)]'
+                      }`}
+                    >
+                      <span>{athlete.name}</span>
+                      <span>{on ? 'Linked' : 'Select'}</span>
+                    </button>
+                  </li>
+                )
+              })}
+          </ul>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void patchGymAccount({
+                id: account.id,
+                linkedAthleteIds: childIds,
+              })
+                .then(() => onSaved(`Updated athletes for ${account.displayName}.`))
+                .catch((err) => onError(err instanceof Error ? err.message : 'Could not link those athletes.'))
+                .finally(() => setBusy(false))
+            }}
+            className="mt-2 rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold"
+          >
+            Save athlete links
+          </button>
+        </div>
+      )}
       <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
         <input
           type="password"

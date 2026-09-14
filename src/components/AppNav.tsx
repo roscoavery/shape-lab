@@ -1,4 +1,12 @@
-import { APP_SECTIONS, defaultTabForSection, sectionForTab, subnavForSection } from '../lib/appNav'
+import {
+  defaultTabForSection,
+  navRoleFromSession,
+  sectionForTab,
+  sectionsForNavRole,
+  subnavForSection,
+  type NavRole,
+} from '../lib/appNav'
+import type { SessionRole } from '../lib/authSession'
 import type { AppTab } from '../lib/storage'
 
 type Props = {
@@ -6,13 +14,16 @@ type Props = {
   ryan: boolean
   kiosk?: boolean
   admin?: boolean
+  role?: SessionRole
   onGo: (id: AppTab) => void
 }
 
-export function AppNav({ tab, ryan, kiosk = false, admin = false, onGo }: Props) {
-  const section = sectionForTab(tab)
-  const subnav = subnavForSection(section, ryan, kiosk, admin)
-  const showSubnav = subnav.length > 1 || section === 'more'
+export function AppNav({ tab, ryan, kiosk = false, admin = false, role, onGo }: Props) {
+  const navRole: NavRole = navRoleFromSession(role, kiosk)
+  const section = sectionForTab(tab, navRole)
+  const sections = sectionsForNavRole(navRole)
+  const subnav = subnavForSection(section, ryan, kiosk, admin, navRole)
+  const showSubnav = subnav.length > 1 || (navRole !== 'parent' && navRole !== 'athlete' && section === 'more')
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -20,14 +31,14 @@ export function AppNav({ tab, ryan, kiosk = false, admin = false, onGo }: Props)
         aria-label="Main"
         className="relative z-20 flex max-w-full shrink-0 gap-0.5 overflow-x-auto rounded-full bg-[#0a1014] p-1"
       >
-        {APP_SECTIONS.map((item) => (
+        {sections.map((item) => (
           <button
             key={item.id}
             type="button"
             aria-current={section === item.id ? 'page' : undefined}
             onClick={() => {
               if (section === item.id) return
-              onGo(defaultTabForSection(item.id, ryan, kiosk, admin))
+              onGo(defaultTabForSection(item.id, ryan, kiosk, admin, navRole))
             }}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm transition ${
               section === item.id
