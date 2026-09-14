@@ -61,6 +61,7 @@ import {
 } from './careStore'
 import { compressProfilePhoto, isPhotoUrl, photoIdentity } from './profilePhoto'
 import { gymWriteFetch, isStopWriteStatus, shouldHoldGymWrite } from './gymWritePace'
+import { noteSessionLost } from './authSession'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -274,6 +275,10 @@ export async function pullServerRoster(opts?: {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const res = await fetch('/api/roster', gymGetInit(timeoutMs))
+      if (res.status === 401) {
+        noteSessionLost()
+        return null
+      }
       if (!res.ok) {
         await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)))
         continue
@@ -418,6 +423,10 @@ export async function pullServerRosterPhotos(): Promise<Record<string, string>> 
   const photos: Record<string, string> = {}
   try {
     const res = await fetch('/api/roster-photos', gymGetInit(12_000))
+    if (res.status === 401) {
+      noteSessionLost()
+      return {}
+    }
     if (!res.ok) return {}
     const data = (await res.json()) as {
       kind?: string

@@ -159,8 +159,10 @@ import {
 import {
   fetchAuthMe,
   logoutSession,
+  markSessionPresent,
   sessionIsAdmin,
   sessionIsKiosk,
+  SESSION_LOST_EVENT,
   type AuthSessionUser,
 } from './lib/authSession'
 import { isOfficeOnlyTab } from './lib/appNav'
@@ -242,7 +244,26 @@ export default function App() {
   const [authBootstrap, setAuthBootstrap] = useState(false)
   const [awayLocked, setAwayLocked] = useState(false)
   const lockAway = useCallback(() => setAwayLocked(true), [])
+  const clearSignedInDesk = useCallback(() => {
+    lockAllProfiles()
+    setActiveAthleteId(null)
+    setAuthUser(null)
+    setAuthStatus('out')
+    setGymBoot('loading')
+    setAwayLocked(false)
+  }, [])
+  const authStatusRef = useRef(authStatus)
+  authStatusRef.current = authStatus
   useAwayLock(authStatus === 'in' && !sessionIsKiosk(authUser) && !awayLocked, lockAway)
+
+  useEffect(() => {
+    const onLost = () => {
+      if (authStatusRef.current !== 'in') return
+      clearSignedInDesk()
+    }
+    window.addEventListener(SESSION_LOST_EVENT, onLost)
+    return () => window.removeEventListener(SESSION_LOST_EVENT, onLost)
+  }, [clearSignedInDesk])
 
   useEffect(() => {
     let cancelled = false
@@ -251,6 +272,7 @@ export default function App() {
         if (cancelled) return
         setAuthBootstrap(Boolean(me.bootstrapAllowed))
         if (me.authenticated && me.user) {
+          markSessionPresent()
           setAuthUser(me.user)
           setAuthStatus('in')
         } else {
@@ -270,6 +292,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (authStatus !== 'in') return
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
     void hydrateCoachClasses().then(() => setLessonTick((n) => n + 1))
     void hydrateChalkboards()
@@ -281,23 +304,25 @@ export default function App() {
       unsubLessons()
       unsubClasses()
     }
-  }, [])
+  }, [authStatus])
 
   useEffect(() => {
+    if (authStatus !== 'in') return
     const unsub = subscribeIgStills((ig) => {
       setReferencePhotos((prev) => mergeIgStills(prev, ig))
     })
     void hydrateIgStills()
     return unsub
-  }, [])
+  }, [authStatus])
 
   useEffect(() => {
+    if (authStatus !== 'in') return
     const unsub = subscribeCoachStills((extras) => {
       setReferencePhotos((prev) => mergeCoachExtras(prev, extras))
     })
     void hydrateCoachStills(loadReferencePhotos())
     return unsub
-  }, [])
+  }, [authStatus])
 
   const qualityThreshold =
     settings.qualityThresholdOverride ?? shape.qualityThreshold
@@ -806,6 +831,7 @@ export default function App() {
       <AuthLoginScreen
         bootstrapAllowed={authBootstrap}
         onSignedIn={(user) => {
+          markSessionPresent()
           setAuthUser(user)
           setAuthStatus('in')
           if (sessionIsAdmin(user)) {
@@ -863,12 +889,7 @@ export default function App() {
             className="mt-2 text-xs text-[var(--muted)] underline"
             onClick={() => {
               void logoutSession().then(() => {
-                lockAllProfiles()
-                setActiveAthleteId(null)
-                setAuthUser(null)
-                setAuthStatus('out')
-                setGymBoot('loading')
-                setAwayLocked(false)
+                clearSignedInDesk()
               })
             }}
           >
@@ -1968,14 +1989,7 @@ export default function App() {
       <AwayLockScreen
         user={authUser}
         onUnlocked={() => setAwayLocked(false)}
-        onSignedOut={() => {
-          lockAllProfiles()
-          setActiveAthleteId(null)
-          setAuthUser(null)
-          setAuthStatus('out')
-          setGymBoot('loading')
-          setAwayLocked(false)
-        }}
+        onSignedOut={clearSignedInDesk}
       />
     )}
     </ProfilePeekProvider>

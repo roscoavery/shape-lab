@@ -74,9 +74,24 @@ async function main() {
   ok('quiet skip does not PUT the roster', skipped.status === 429)
   pace.resetGymWritePaceForTests()
 
+  const auth = await import('../src/lib/authSession.ts')
+  ok(
+    'clear keeps the desk on a wrong password',
+    auth.shouldClearSession(401, 'Password is wrong.') === false,
+  )
+  ok(
+    'clear keeps the desk on a wrong email login',
+    auth.shouldClearSession(401, 'Email or password is wrong.') === false,
+  )
+  ok(
+    'clear leaves the desk when the cookie is gone',
+    auth.shouldClearSession(401, 'Sign in to continue.') === true,
+  )
+  ok('clear ignores 429', auth.shouldClearSession(429, 'Too many saves. Wait a minute.') === false)
+
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is quiet', health.json?.holdBuild === 'quiet', String(health.json?.holdBuild))
+  ok('health stamp is clear', health.json?.holdBuild === 'clear', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -90,6 +105,9 @@ async function main() {
 
   const anonRoster = await req('/api/roster')
   ok('anon roster is 401', anonRoster.status === 401)
+
+  const anonRevision = await req('/api/revision')
+  ok('anon revision is 401', anonRevision.status === 401)
 
   const anonContacts = await req('/api/contacts')
   ok('anon contacts is 401', anonContacts.status === 401)
@@ -153,6 +171,9 @@ async function main() {
 
   const me = await req('/api/auth/me', { cookie })
   ok('admin session is admin', me.json?.user?.role === 'admin' || me.json?.user?.role === 'gymOwner')
+
+  const revIn = await req('/api/revision', { cookie })
+  ok('signed-in revision is 200', revIn.status === 200, String(revIn.status))
 
   const anonFeedFile = await req('/api/feed-file?id=post_does_not_exist')
   ok('anon feed file is 401', anonFeedFile.status === 401)
@@ -605,6 +626,8 @@ async function main() {
       kidMe.json?.authenticated !== true,
       JSON.stringify(kidMe.json),
     )
+    const kidRev = await req('/api/revision', { cookie: kidCookie })
+    ok('ended login cannot poll revision', kidRev.status === 401, String(kidRev.status))
   } else {
     ok('athlete account exists for session kick', false, 'missing v4-athlete@example.com')
   }

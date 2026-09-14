@@ -26,6 +26,33 @@ const jsonInit: RequestInit = {
   headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
 }
 
+export const SESSION_LOST_EVENT = 'shape-lab-session-lost'
+
+let sessionLost = false
+
+/** Wrong password is 401; the cookie is still good. A missing cookie is not. */
+export function shouldClearSession(status: number, error?: string): boolean {
+  if (status !== 401) return false
+  if (error === 'Password is wrong.') return false
+  if (error === 'Email or password is wrong.') return false
+  return true
+}
+
+export function markSessionPresent(): void {
+  sessionLost = false
+}
+
+export function noteSessionLost(): void {
+  if (sessionLost) return
+  sessionLost = true
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(SESSION_LOST_EVENT))
+}
+
+export function resetSessionLostForTests(): void {
+  sessionLost = false
+}
+
 export function sessionIsKiosk(user: AuthSessionUser | null | undefined): boolean {
   return user?.kiosk === true
 }
@@ -58,6 +85,7 @@ export async function unlockAway(password: string): Promise<void> {
   })
   const data = (await res.json().catch(() => ({}))) as { error?: string }
   if (!res.ok) {
+    if (shouldClearSession(res.status, data.error)) noteSessionLost()
     throw new Error(data.error || 'Password is wrong.')
   }
 }
@@ -78,6 +106,7 @@ export async function loginWithPassword(email: string, password: string): Promis
   if (!res.ok) {
     throw new Error(data.error || 'Email or password is wrong.')
   }
+  markSessionPresent()
   return data
 }
 
@@ -95,6 +124,7 @@ export async function bootstrapAdmin(
   if (!res.ok) {
     throw new Error(data.error || 'Could not create the first admin account.')
   }
+  markSessionPresent()
   return data
 }
 
@@ -125,5 +155,6 @@ export async function redeemInvite(token: string, password: string): Promise<Aut
   if (!res.ok) {
     throw new Error(data.error || 'That sign-in link is wrong or already used.')
   }
+  markSessionPresent()
   return data
 }

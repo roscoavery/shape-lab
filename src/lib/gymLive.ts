@@ -19,6 +19,7 @@ import {
   enableServerRosterPush,
 } from './rosterSync'
 import { ensureRyanInAthletes } from './ryanProfile'
+import { noteSessionLost } from './authSession'
 import { loadAthletes, loadReferencePhotos } from './storage'
 import type { Athlete } from '../types'
 
@@ -66,6 +67,10 @@ export async function pullGymRevision(): Promise<GymRevisionStores | null> {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     })
+    if (res.status === 401) {
+      noteSessionLost()
+      return null
+    }
     if (!res.ok) return null
     const data = (await res.json()) as { stores?: GymRevisionStores }
     if (!data?.stores) return null

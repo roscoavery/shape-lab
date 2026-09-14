@@ -27,7 +27,12 @@ export function AwayLockScreen({ user, onUnlocked, onSignedOut }: Props) {
       setPassword('')
       onUnlocked()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not unlock.')
+      const message = err instanceof Error ? err.message : 'Could not unlock.'
+      if (message === 'Sign in to continue.') {
+        onSignedOut()
+        return
+      }
+      setError(message)
     } finally {
       setBusy(false)
     }
