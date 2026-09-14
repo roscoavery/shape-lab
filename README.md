@@ -193,6 +193,16 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
 
    That installs deps, copies Production onto this Mac (`data/`) if this Mac has no gym copy yet, builds a production bundle (phones load a few hashed files instead of hundreds of Vite source files through the tunnel), keeps the laptop awake, and prints the **Wi-Fi URL** (`http://192.168.…:43127`). Leave the Terminal window open. Plug the Mac in and leave sleep off. The first start after a `git pull` spends a minute building — that is expected. After that, **https://gym.shapelab.win** should feel closer to Vercel.
 
+   **Version 4** (sign-in, private roster) is a different branch. A Cursor preview on this cloud machine is not reachable from your phone. To put V4 on the same HTTPS gym link, stop the old gym window and run:
+
+   ```bash
+   git fetch origin shape-lab-v4
+   git checkout shape-lab-v4
+   npm run gym:mac:v4
+   ```
+
+   Then open **https://gym.shapelab.win** and sign in (or create the first gym admin account). `npm run gym:mac` without `:v4` stays on the working V3 / `v2-rebuild` gym. Athlete files in `data/` stay on this Mac either way.
+
    An iPad refresh does **not** pull GitHub. Safari keeps the last Class flow selected, so landing on Handstand Hold again is not proof the new code loaded. After each push: stop the gym window, then `npm run gym:mac` again. That script now parks gym data files (including IG / coach still JPEGs), resets this folder to GitHub `v2-rebuild`, reloads itself so the banner matches the files, and rebuilds the phone bundle. Dirty `data/` files will not block the update. The current stamp is **Sort build**. If you still see Firm, Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember, this window is still old. `/api/health` should include `"holdBuild":"sort"`.
 
    Yesterday’s coach stills now **ship in git**. Unlock Ryan and open Learn → **Match stills** to drag or tap a photo onto the correct shape name. Delete on that desk (or on a shape card) stays gone on every device — shipped extras no longer reappear. `gym:mac` copies the JPEGs into `data/coach-blobs/`. **Send everything on this device** also sends shape stills.

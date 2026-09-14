@@ -103,6 +103,34 @@ Sanitization happens on the server before JSON is sent. Hiding a field in React 
 - `data/roster.json` remains on the gym computer. It is no longer a file that should be committed.
 - Do not copy `roster.example.json` over a live gym file.
 
+## How to open V4 on https://gym.shapelab.win
+
+The Cursor cloud preview (`http://127.0.0.1:43127`) is only on the agent machine. Phones and your computer browser cannot open that.
+
+`https://gym.shapelab.win` is the Cloudflare tunnel on **the gym Mac**. It serves whatever that Mac is running. A refresh on the iPad does not pull GitHub.
+
+On the gym Mac, in a **second** Terminal tab if a gym window is already open:
+
+1. Ctrl+C the old `gym:mac` window (closing it stops the HTTPS link).
+2. In the Shape Lab folder:
+
+```bash
+git fetch origin shape-lab-v4
+git checkout shape-lab-v4
+npm run gym:mac:v4
+```
+
+3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
+4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
+5. Optional in `.env` on that Mac (never commit it):
+
+```
+SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL=you@example.com
+SHAPE_LAB_BOOTSTRAP_ADMIN_PASSWORD=a-long-password-you-choose
+```
+
+`npm run gym:mac` (no `:v4`) still resets the Mac to the working V3 / `v2-rebuild` gym.
+
 ## How to roll back to Version 3
 
 ```bash
