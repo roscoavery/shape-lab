@@ -3,7 +3,7 @@
  * Roster, lessons, and the other gym files share this cooldown in this tab.
  */
 
-import { noteSessionLost } from './authSession'
+import { noteSessionLost } from './authSession.ts'
 
 export const GYM_WRITE_COOLDOWN_MS = 60_000
 
