@@ -1,0 +1,112 @@
+/**
+ * Server-managed sessions. Session ids live in HTTP-only cookies.
+ */
+
+import { randomBytes } from 'node:crypto'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { readJson, writeJson } from '../persist.ts'
+import { findAccountById, publicUserFromAccount } from './accounts.ts'
+import type { AuthUser, SessionRecord } from './types.ts'
+
+const FILE = 'data/sessions.json'
+export const SESSION_COOKIE = 'shape_lab_session'
+const SESSION_DAYS = 7
+
+type SessionFile = {
+  kind: 'shape-lab-sessions'
+  version: 1
+  sessions: SessionRecord[]
+}
+
+const EMPTY: SessionFile = {
+  kind: 'shape-lab-sessions',
+  version: 1,
+  sessions: [],
+}
+
+function cookieSecure(req: IncomingMessage): boolean {
+  const proto =
+    (typeof req.headers['x-forwarded-proto'] === 'string' && req.headers['x-forwarded-proto']) ||
+    ''
+  return proto.split(',')[0]?.trim() === 'https'
+}
+
+function parseCookieHeader(header: string | undefined, name: string): string | null {
+  if (!header) return null
+  for (const part of header.split(';')) {
+    const [rawKey, ...rest] = part.split('=')
+    if (rawKey?.trim() === name) return decodeURIComponent(rest.join('=').trim())
+  }
+  return null
+}
+
+async function readFile(): Promise<SessionFile> {
+  const stored = await readJson<SessionFile>(FILE, EMPTY)
+  if (!stored || stored.kind !== 'shape-lab-sessions' || !Array.isArray(stored.sessions)) {
+    return { ...EMPTY }
+  }
+  return stored
+}
+
+async function writeFile(sessions: SessionRecord[]): Promise<void> {
+  await writeJson(FILE, { kind: 'shape-lab-sessions', version: 1, sessions } satisfies SessionFile)
+}
+
+function stillValid(row: SessionRecord, now = Date.now()): boolean {
+  return Date.parse(row.expiresAt) > now
+}
+
+export async function createSession(accountId: string): Promise<SessionRecord> {
+  const now = Date.now()
+  const session: SessionRecord = {
+    id: randomBytes(32).toString('hex'),
+    accountId,
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+  }
+  const file = await readFile()
+  const kept = file.sessions.filter((row) => stillValid(row, now) && row.accountId !== accountId)
+  await writeFile([...kept, session])
+  return session
+}
+
+export async function destroySession(sessionId: string): Promise<void> {
+  const file = await readFile()
+  await writeFile(file.sessions.filter((row) => row.id !== sessionId))
+}
+
+export function readSessionId(req: IncomingMessage): string | null {
+  const header = typeof req.headers.cookie === 'string' ? req.headers.cookie : ''
+  const id = parseCookieHeader(header, SESSION_COOKIE)
+  return id && /^[a-f0-9]{32,128}$/i.test(id) ? id : null
+}
+
+export function setSessionCookie(req: IncomingMessage, res: ServerResponse, sessionId: string): void {
+  const parts = [
+    `${SESSION_COOKIE}=${sessionId}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${SESSION_DAYS * 24 * 60 * 60}`,
+  ]
+  if (cookieSecure(req)) parts.push('Secure')
+  res.setHeader('Set-Cookie', parts.join('; '))
+}
+
+export function clearSessionCookie(req: IncomingMessage, res: ServerResponse): void {
+  const parts = [`${SESSION_COOKIE}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0']
+  if (cookieSecure(req)) parts.push('Secure')
+  res.setHeader('Set-Cookie', parts.join('; '))
+}
+
+export async function userFromRequest(req: IncomingMessage): Promise<AuthUser | null> {
+  const sessionId = readSessionId(req)
+  if (!sessionId) return null
+  const file = await readFile()
+  const now = Date.now()
+  const session = file.sessions.find((row) => row.id === sessionId && stillValid(row, now))
+  if (!session) return null
+  const account = await findAccountById(session.accountId)
+  if (!account) return null
+  return publicUserFromAccount(account)
+}

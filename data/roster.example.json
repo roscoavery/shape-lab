@@ -1,0 +1,78 @@
+{
+  "kind": "shape-lab-roster",
+  "version": 1,
+  "exportedAt": "2026-09-14T00:00:00.000Z",
+  "athletes": [
+    {
+      "id": "ath_example_admin",
+      "name": "Avery Reed",
+      "firstName": "Avery",
+      "lastName": "Reed",
+      "role": "coach",
+      "gymName": "Example Gym",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "profilePublic": false,
+      "profileVisibility": "private"
+    },
+    {
+      "id": "ath_example_coach",
+      "name": "Jordan Hale",
+      "firstName": "Jordan",
+      "lastName": "Hale",
+      "role": "coach",
+      "gymName": "Example Gym",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "profilePublic": false,
+      "profileVisibility": "private"
+    },
+    {
+      "id": "ath_example_sam",
+      "name": "Sam Ortega",
+      "firstName": "Sam",
+      "lastName": "Ortega",
+      "role": "athlete",
+      "gymName": "Example Gym",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "worksWithCoachIds": ["ath_example_coach"],
+      "createdByCoachId": "ath_example_coach",
+      "profilePublic": false,
+      "profileVisibility": "private",
+      "parentConsentStatus": "unknown",
+      "mediaConsent": "unknown"
+    },
+    {
+      "id": "ath_example_blake",
+      "name": "Blake Nguyen",
+      "firstName": "Blake",
+      "lastName": "Nguyen",
+      "role": "athlete",
+      "gymName": "Example Gym",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "profilePublic": false,
+      "profileVisibility": "private"
+    },
+    {
+      "id": "ath_example_parent",
+      "name": "Casey Reed",
+      "firstName": "Casey",
+      "lastName": "Reed",
+      "role": "parent",
+      "gymName": "Example Gym",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "linkedAthleteIds": ["ath_example_sam"],
+      "profilePublic": false,
+      "profileVisibility": "private"
+    }
+  ],
+  "activeAthleteId": null,
+  "homework": [],
+  "homeworkLogs": [],
+  "taskProgress": {},
+  "flowProgress": {},
+  "attempts": [],
+  "compareLibraries": {},
+  "removedAthleteIds": [],
+  "injuryLogs": [],
+  "painJournals": [],
+  "coachExercises": []
+}

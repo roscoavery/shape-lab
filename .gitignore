@@ -48,5 +48,9 @@ data/chalkboards.json
 data/coach-classes.json
 data/revision.json
 data/roster-photos/
+data/roster.json
+data/accounts.json
+data/sessions.json
+data/audit.json
 data/stories.json
 data/story-blobs/

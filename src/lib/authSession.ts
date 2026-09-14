@@ -1,0 +1,70 @@
+/**
+ * Client helper for the V4 account session.
+ * The 4-digit profile PIN is not used here — the cookie is the real login.
+ */
+
+export type SessionRole = 'admin' | 'coach' | 'athlete' | 'parent' | 'gymOwner'
+
+export type AuthSessionUser = {
+  accountId: string
+  email: string
+  role: SessionRole
+  displayName: string
+  rosterProfileId?: string
+  linkedAthleteIds: string[]
+}
+
+export type AuthMeResponse = {
+  authenticated: boolean
+  user: AuthSessionUser | null
+  bootstrapAllowed?: boolean
+}
+
+const jsonInit: RequestInit = {
+  credentials: 'same-origin',
+  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+}
+
+export function sessionIsAdmin(user: AuthSessionUser | null | undefined): boolean {
+  return user?.role === 'admin' || user?.role === 'gymOwner'
+}
+
+export async function fetchAuthMe(): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+  if (!res.ok) return { authenticated: false, user: null, bootstrapAllowed: false }
+  return (await res.json()) as AuthMeResponse
+}
+
+export async function loginWithPassword(email: string, password: string): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/login', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'Email or password is wrong.')
+  }
+  return data
+}
+
+export async function bootstrapAdmin(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/bootstrap', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ email, password, displayName }),
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not create the first admin account.')
+  }
+  return data
+}
+
+export async function logoutSession(): Promise<void> {
+  await fetch('/api/auth/logout', { ...jsonInit, method: 'POST' })
+}

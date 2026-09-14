@@ -41,7 +41,9 @@ export const SOURCE_LABEL: Record<AthleteVideoSource, string> = {
 
 export async function listAthleteVideos(athleteId: string): Promise<AthleteVideo[]> {
   try {
-    const res = await fetch(`/api/athlete-videos?athleteId=${encodeURIComponent(athleteId)}`)
+    const res = await fetch(`/api/athlete-videos?athleteId=${encodeURIComponent(athleteId)}`, {
+      credentials: 'same-origin',
+    })
     if (!res.ok) return []
     const data = (await res.json()) as { videos?: AthleteVideo[] }
     return Array.isArray(data.videos) ? data.videos : []
@@ -52,7 +54,9 @@ export async function listAthleteVideos(athleteId: string): Promise<AthleteVideo
 
 export async function listClassVideos(classId: string): Promise<AthleteVideo[]> {
   try {
-    const res = await fetch(`/api/athlete-videos?classId=${encodeURIComponent(classId)}`)
+    const res = await fetch(`/api/athlete-videos?classId=${encodeURIComponent(classId)}`, {
+      credentials: 'same-origin',
+    })
     if (!res.ok) return []
     const data = (await res.json()) as { videos?: AthleteVideo[] }
     return Array.isArray(data.videos) ? data.videos : []
@@ -116,6 +120,7 @@ export async function uploadAthleteVideo(opts: {
     {
       method: 'POST',
       headers: { 'Content-Type': mime },
+      credentials: 'same-origin',
       body: opts.blob,
     },
   )
@@ -129,7 +134,7 @@ export async function uploadAthleteVideo(opts: {
 export async function deleteAthleteVideo(id: string, athleteId: string): Promise<void> {
   const res = await fetch(
     `/api/athlete-videos?id=${encodeURIComponent(id)}&athleteId=${encodeURIComponent(athleteId)}`,
-    { method: 'DELETE' },
+    { method: 'DELETE', credentials: 'same-origin' },
   )
   if (!res.ok) throw new Error('Could not delete that video.')
 }

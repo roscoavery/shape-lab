@@ -120,7 +120,14 @@ export async function videosForClient(
 }
 
 export function athleteVideoClientUrl(video: Pick<DiskAthleteVideo, 'id' | 'publicUrl'>): string {
-  return video.publicUrl || `/api/athlete-video-file?id=${encodeURIComponent(video.id)}`
+  void video.publicUrl
+  return `/api/athlete-video-file?id=${encodeURIComponent(video.id)}`
+}
+
+export async function findAthleteVideo(id: string): Promise<DiskAthleteVideo | null> {
+  const sid = safeId(id)
+  if (!sid) return null
+  return (await readAthleteVideoMeta()).videos.find((v) => v.id === sid) ?? null
 }
 
 async function rememberVideo(video: DiskAthleteVideo): Promise<DiskAthleteVideo> {
@@ -278,28 +285,18 @@ export async function sendAthleteVideoFile(id: string, res: ServerResponse): Pro
   if (!sid) return false
   const found = (await readAthleteVideoMeta()).videos.find((v) => v.id === sid)
   if (!found) return false
+  const buf = await readBin(blobRel(found.file))
+  if (buf) {
+    res.statusCode = 200
+    res.setHeader('Content-Type', found.mime || 'video/webm')
+    res.setHeader('Content-Length', String(buf.length))
+    res.setHeader('Cache-Control', 'private, max-age=3600')
+    res.end(buf)
+    return true
+  }
   if (found.publicUrl && isDirectHttpUrl(found.publicUrl)) {
     sendPublicRedirect(res, found.publicUrl)
     return true
   }
-  const buf = await readBin(blobRel(found.file))
-  if (!buf) return false
-  try {
-    const publicUrl = await writePublicBin(blobRel(found.file), buf, found.mime || 'video/webm')
-    if (publicUrl) {
-      found.publicUrl = publicUrl
-      const meta = await readAthleteVideoMeta()
-      await writeMeta(meta.videos.map((v) => (v.id === found.id ? { ...v, publicUrl } : v)))
-      sendPublicRedirect(res, publicUrl)
-      return true
-    }
-  } catch {
-    /* stream the bytes this once */
-  }
-  res.statusCode = 200
-  res.setHeader('Content-Type', found.mime || 'video/webm')
-  res.setHeader('Content-Length', String(buf.length))
-  res.setHeader('Cache-Control', 'private, max-age=3600')
-  res.end(buf)
-  return true
+  return false
 }

@@ -1,6 +1,6 @@
 /**
  * Unlock a profile that already has a 4-digit passcode.
- * Ryan / gym admin always requires 2223 — tapping the name is not enough.
+ * Profile PIN is a device convenience after a real account session exists.
  */
 
 import { useState } from 'react'
@@ -68,8 +68,8 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
         </p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           {admin
-            ? 'This is Ryan’s gym admin profile. A shared link does not open it by tapping the name — enter the 4-digit passcode. Other coaches stay in their own profiles.'
-            : 'Enter the 4-digit passcode set when this profile was created. That loads homework, hold times, Compare, and the video library on this link. Only one profile stays unlocked at a time.'}
+            ? 'Gym admin on this device uses the signed-in account. A leftover profile PIN only unlocks this name locally — it cannot open the private roster by itself.'
+            : 'Enter the 4-digit passcode set when this profile was created. That loads homework, hold times, Compare, and the video library on this device. Only one profile stays unlocked at a time.'}
         </p>
         <label className="mt-4 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">

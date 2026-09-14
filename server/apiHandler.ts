@@ -21,7 +21,6 @@ import {
   readRosterPhotosFile,
   sendRosterPhotoFile,
   writeRosterPhotoBytes,
-  writeRosterPhotosFile,
 } from './rosterPhotoStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
@@ -74,6 +73,7 @@ import {
   addAthleteVideoFromUrl,
   athleteVideoClientUrl,
   deleteAthleteVideo,
+  findAthleteVideo,
   readRequestBuffer,
   sendAthleteVideoFile,
   videosForClient,
@@ -96,7 +96,19 @@ import {
   storiesForClient,
 } from './storyStore.ts'
 
+import { handleAuthRoutes } from './auth/routes.ts'
+import { gateApiRequest } from './auth/gate.ts'
+import { authorizeRosterWrite, presentRosterForViewer } from './auth/rosterAccess.ts'
+import { canAccessAthlete, canEditAthlete, type RosterAthlete } from './auth/permissions.ts'
+import { writeAudit } from './auth/audit.ts'
+import type { AuthUser } from './auth/types.ts'
+
 const API_PATHS = new Set([
+  '/api/auth/me',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/bootstrap',
+  '/api/auth/accounts',
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
@@ -159,6 +171,38 @@ function apiPath(pathname: string): string {
   return pathname
 }
 
+async function rosterAthleteById(id: string): Promise<{
+  athlete: RosterAthlete | null
+  athletes: RosterAthlete[]
+}> {
+  const roster = await readRosterFile()
+  const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []).filter(
+    (row): row is RosterAthlete => Boolean(row && typeof row === 'object' && typeof (row as RosterAthlete).id === 'string'),
+  ) as RosterAthlete[]
+  return { athlete: athletes.find((row) => row.id === id) ?? null, athletes }
+}
+
+async function denyUnlessAthleteAccess(
+  res: ServerResponse,
+  user: AuthUser,
+  athleteId: string,
+  write: boolean,
+): Promise<boolean> {
+  const { athlete, athletes } = await rosterAthleteById(athleteId)
+  if (!athlete) {
+    sendJson(res, 404, { error: 'Athlete not found' })
+    return true
+  }
+  const ok = write
+    ? await canEditAthlete(user, athlete, athletes)
+    : await canAccessAthlete(user, athlete, athletes)
+  if (!ok) {
+    sendJson(res, 403, { error: 'You cannot access that athlete.' })
+    return true
+  }
+  return false
+}
+
 /** Returns true when this request is a Shape Lab API call (response already written). */
 export async function handleShapeLabApi(
   req: IncomingMessage,
@@ -167,6 +211,18 @@ export async function handleShapeLabApi(
   const url = requestUrl(req)
   const path = apiPath(url.pathname)
   if (!API_PATHS.has(path)) return false
+
+  if (path === '/api/health') {
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'sort' })
+    return true
+  }
+  if (path.startsWith('/api/auth')) {
+    return handleAuthRoutes(req, res, path)
+  }
+
+  const gate = await gateApiRequest(req, res, path)
+  if (gate.handled) return true
+  const viewer = gate.user
 
   if (path === '/api/ig-stills') {
     if (req.method === 'GET') {
@@ -207,10 +263,6 @@ export async function handleShapeLabApi(
     if (!(await sendIgStillFile(id, res))) {
       sendJson(res, 404, { error: 'Still file not found' })
     }
-    return true
-  }
-  if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'sort' })
     return true
   }
   if (path === '/api/persist') {
@@ -261,6 +313,10 @@ export async function handleShapeLabApi(
       sendJson(res, 400, { error: 'That upload path is not allowed.' })
       return true
     }
+    const photoMatch = pathname.match(/^data\/roster-photos\/([A-Za-z0-9_-]+)/)
+    if (photoMatch?.[1] && (await denyUnlessAthleteAccess(res, viewer, photoMatch[1], true))) {
+      return true
+    }
     try {
       const { generateClientTokenFromReadWriteToken } = await import('@vercel/blob/client')
       const token = await generateClientTokenFromReadWriteToken({
@@ -293,11 +349,14 @@ export async function handleShapeLabApi(
       sendJson(res, 405, { error: 'Use GET' })
       return true
     }
+    await writeAudit('contacts.view', viewer, { detail: path })
     await sendContactsPage(req, res, path.endsWith('.csv') ? 'csv' : 'html')
     return true
   }
   if (path === '/api/roster-photo-file') {
     const photoId = url.searchParams.get('id') ?? ''
+    if (await denyUnlessAthleteAccess(res, viewer, photoId, false)) return true
+    await writeAudit('media.view', viewer, { athleteId: photoId, detail: 'roster-photo-file' })
     if (!(await sendRosterPhotoFile(photoId, res))) {
       sendJson(res, 404, { error: 'Photo not found' })
     }
@@ -307,6 +366,7 @@ export async function handleShapeLabApi(
     const photoId = url.searchParams.get('id') ?? ''
     if (req.method === 'GET') {
       if (photoId) {
+        if (await denyUnlessAthleteAccess(res, viewer, photoId, false)) return true
         sendJson(res, 200, {
           kind: 'shape-lab-roster-photo',
           id: photoId,
@@ -314,12 +374,28 @@ export async function handleShapeLabApi(
         })
         return true
       }
-      sendJson(res, 200, await readRosterPhotosFile())
+      const index = await readRosterPhotosFile()
+      const allowed: Record<string, unknown> = {}
+      const photos = index.photos && typeof index.photos === 'object' ? index.photos : {}
+      const roster = await readRosterFile()
+      const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []).filter(
+        (row): row is RosterAthlete =>
+          Boolean(row && typeof row === 'object' && typeof (row as RosterAthlete).id === 'string'),
+      ) as RosterAthlete[]
+      for (const id of Object.keys(photos)) {
+        const athlete = athletes.find((row) => row.id === id)
+        if (!athlete) continue
+        if (await canAccessAthlete(viewer, athlete, athletes)) {
+          allowed[id] = (photos as Record<string, unknown>)[id]
+        }
+      }
+      sendJson(res, 200, { ...index, photos: allowed })
       return true
     }
     if (req.method === 'PUT') {
       const ct = String(req.headers['content-type'] || '').toLowerCase()
       if (photoId && (ct.startsWith('image/') || ct === 'application/octet-stream')) {
+        if (await denyUnlessAthleteAccess(res, viewer, photoId, true)) return true
         const buf = await readRequestBuffer(req, 8 * 1024 * 1024)
         const saved = await writeRosterPhotoBytes(photoId, buf, ct.startsWith('image/') ? ct : 'image/jpeg')
         if (!saved) {
@@ -329,8 +405,7 @@ export async function handleShapeLabApi(
         sendJson(res, 200, { kind: 'shape-lab-roster-photo', id: photoId, ...saved })
         return true
       }
-      const body = await readRequestBody(req)
-      sendJson(res, 200, await writeRosterPhotosFile(JSON.parse(body)))
+      sendJson(res, 403, { error: 'Bulk photo replace is limited to one authorized athlete at a time.' })
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
@@ -338,13 +413,22 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/roster') {
     if (req.method === 'GET') {
-      sendJson(res, 200, await readRosterFile())
+      const roster = await readRosterFile()
+      const presented = await presentRosterForViewer(viewer, roster)
+      await writeAudit('roster.view', viewer, { detail: `athletes:${Array.isArray(presented.athletes) ? presented.athletes.length : 0}` })
+      sendJson(res, 200, presented)
       return true
     }
     if (req.method === 'PUT') {
       try {
         const body = await readRequestBody(req)
-        const saved = await writeRosterFile(JSON.parse(body))
+        const incoming = JSON.parse(body) as { athletes?: unknown[] }
+        const existing = await readRosterFile()
+        const authorized = await authorizeRosterWrite(viewer, existing, incoming)
+        const saved = await writeRosterFile(authorized)
+        await writeAudit('roster.write', viewer, {
+          detail: `athletes:${saved.athletes.length}`,
+        })
         sendJson(res, 200, {
           kind: 'shape-lab-roster',
           ok: true,
@@ -453,11 +537,26 @@ export async function handleShapeLabApi(
     if (req.method === 'GET') {
       const athleteId = url.searchParams.get('athleteId') ?? ''
       const classId = url.searchParams.get('classId') ?? ''
-      const videos = (await videosForClient(athleteId || undefined, classId || undefined)).map((v) => ({
-        ...v,
-        url: athleteVideoClientUrl(v),
-      }))
-      sendJson(res, 200, { kind: 'shape-lab-athlete-videos', videos })
+      if (athleteId) {
+        if (await denyUnlessAthleteAccess(res, viewer, athleteId, false)) return true
+      }
+      const roster = await readRosterFile()
+      const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []).filter(
+        (row): row is RosterAthlete =>
+          Boolean(row && typeof row === 'object' && typeof (row as RosterAthlete).id === 'string'),
+      ) as RosterAthlete[]
+      const visible = []
+      for (const video of await videosForClient(athleteId || undefined, classId || undefined)) {
+        const owner = athletes.find((row) => row.id === video.athleteId)
+        if (!owner) continue
+        if (!(await canAccessAthlete(viewer, owner, athletes))) continue
+        visible.push({
+          ...video,
+          publicUrl: undefined,
+          url: athleteVideoClientUrl(video),
+        })
+      }
+      sendJson(res, 200, { kind: 'shape-lab-athlete-videos', videos: visible })
       return true
     }
     if (req.method === 'POST') {
@@ -486,9 +585,11 @@ export async function handleShapeLabApi(
           sendJson(res, 400, { error: 'Could not save that video.' })
           return true
         }
+        const videoAthleteId = body.athleteId ?? url.searchParams.get('athleteId') ?? ''
+        if (await denyUnlessAthleteAccess(res, viewer, videoAthleteId, true)) return true
         const saved = await addAthleteVideoFromUrl({
           id: body.id ?? url.searchParams.get('id') ?? '',
-          athleteId: body.athleteId ?? url.searchParams.get('athleteId') ?? '',
+          athleteId: videoAthleteId,
           name: body.name ?? url.searchParams.get('name') ?? 'Clip',
           source: body.source ?? url.searchParams.get('source') ?? 'compare-replay',
           createdAt: body.createdAt,
@@ -510,9 +611,11 @@ export async function handleShapeLabApi(
         return true
       }
       const buf = await readRequestBuffer(req)
+      const uploadAthleteId = url.searchParams.get('athleteId') ?? ''
+      if (await denyUnlessAthleteAccess(res, viewer, uploadAthleteId, true)) return true
       const saved = await addAthleteVideoFromBody({
         id: url.searchParams.get('id') ?? '',
-        athleteId: url.searchParams.get('athleteId') ?? '',
+        athleteId: uploadAthleteId,
         name: url.searchParams.get('name') ?? 'Clip',
         source: url.searchParams.get('source') ?? 'compare-replay',
         createdAt: url.searchParams.get('createdAt') ?? undefined,
@@ -539,11 +642,17 @@ export async function handleShapeLabApi(
     }
     if (req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? ''
-      const athleteId = url.searchParams.get('athleteId') ?? ''
-      if (!(await deleteAthleteVideo(id, athleteId || undefined))) {
+      const found = await findAthleteVideo(id)
+      if (!found) {
         sendJson(res, 404, { error: 'Video not found' })
         return true
       }
+      if (await denyUnlessAthleteAccess(res, viewer, found.athleteId, true)) return true
+      if (!(await deleteAthleteVideo(id, found.athleteId))) {
+        sendJson(res, 404, { error: 'Video not found' })
+        return true
+      }
+      await writeAudit('media.delete', viewer, { athleteId: found.athleteId, detail: id })
       sendJson(res, 200, { ok: true })
       return true
     }
@@ -552,6 +661,13 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/athlete-video-file') {
     const id = url.searchParams.get('id') ?? ''
+    const found = await findAthleteVideo(id)
+    if (!found) {
+      sendJson(res, 404, { error: 'Video file not found' })
+      return true
+    }
+    if (await denyUnlessAthleteAccess(res, viewer, found.athleteId, false)) return true
+    await writeAudit('media.view', viewer, { athleteId: found.athleteId, detail: id })
     if (!(await sendAthleteVideoFile(id, res))) {
       sendJson(res, 404, { error: 'Video file not found' })
     }

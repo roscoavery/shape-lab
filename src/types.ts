@@ -220,6 +220,25 @@ export type Athlete = {
    */
   profilePublic?: boolean
   /**
+   * V4 privacy. Missing is treated as private unless profilePublic is true.
+   * Additive — existing public profiles stay public.
+   */
+  profileVisibility?: 'private' | 'public' | 'gym'
+  allowWinsOnFeed?: boolean
+  allowStories?: boolean
+  showProfilePhoto?: boolean
+  showCoachNames?: boolean
+  /**
+   * CONSENT UX INCOMPLETE. Stored for a later parent-consent flow.
+   * unknown / missing is not permission.
+   */
+  parentConsentStatus?: 'unknown' | 'pending' | 'granted' | 'declined'
+  parentConsentAt?: string
+  mediaConsent?: 'unknown' | 'pending' | 'granted' | 'declined'
+  publicProfileConsent?: 'unknown' | 'pending' | 'granted' | 'declined'
+  instructionalMediaConsent?: 'unknown' | 'pending' | 'granted' | 'declined'
+  researchConsent?: 'unknown' | 'pending' | 'granted' | 'declined'
+  /**
    * When true or missing, the profile shows who they work with.
    * False keeps that list off the public page. Listed coaches still
    * see homework.

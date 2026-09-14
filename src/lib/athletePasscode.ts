@@ -9,7 +9,7 @@
  */
 
 import type { Athlete } from '../types'
-import { findRyan, isRyanAthlete } from './ryanProfile'
+import { isRyanAthlete } from './ryanProfile'
 import { sha256Hex } from './sha256'
 
 const UNLOCKED_KEY = 'shape-lab.unlockedProfile.v2'
@@ -17,9 +17,6 @@ const UNLOCKED_LS = 'shape-lab.unlockedProfile.v3'
 const DEVICE_SESSION = 'shape-lab.deviceSession.v1'
 
 type UnlockRec = { id: string; at: number }
-
-/** Coach / gym-admin PIN — same on every link once the hash is on the roster. */
-export const RYAN_PASSCODE = '2223'
 
 function bytesToHex(buf: ArrayBuffer): string {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -57,20 +54,7 @@ export function profileNeedsPasscode(athlete: Athlete | null | undefined): boole
 
 export async function expectedPasscodeHash(athlete: Athlete): Promise<string | null> {
   if (athlete.passcodeHash) return athlete.passcodeHash
-  if (isRyanAthlete(athlete)) return hashPasscode(athlete.id, RYAN_PASSCODE)
   return null
-}
-
-export async function withRyanPasscode(athletes: Athlete[]): Promise<Athlete[]> {
-  const ryan = findRyan(athletes)
-  if (!ryan) return athletes
-  try {
-    const hash = await hashPasscode(ryan.id, RYAN_PASSCODE)
-    if (ryan.passcodeHash === hash) return athletes
-    return athletes.map((a) => (a.id === ryan.id ? { ...a, passcodeHash: hash } : a))
-  } catch {
-    return athletes
-  }
 }
 
 function parseUnlockRec(raw: string | null): string | null {

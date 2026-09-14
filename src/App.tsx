@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
+import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
 import { applyAppTheme, FAVORITE_COLORS } from './lib/profileTheme'
@@ -149,8 +150,13 @@ import {
   markProfileUnlocked,
   profileNeedsPasscode,
   unlockedProfileId,
-  withRyanPasscode,
 } from './lib/athletePasscode'
+import {
+  fetchAuthMe,
+  logoutSession,
+  sessionIsAdmin,
+  type AuthSessionUser,
+} from './lib/authSession'
 import type {
   AppSettings,
   Athlete,
@@ -224,6 +230,34 @@ export default function App() {
   const [gymBootError, setGymBootError] = useState<string | null>(null)
   const [gymPersist, setGymPersist] = useState<PersistInfo | null>(null)
   const [gymBootTick, setGymBootTick] = useState(0)
+  const [authUser, setAuthUser] = useState<AuthSessionUser | null>(null)
+  const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
+  const [authBootstrap, setAuthBootstrap] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchAuthMe()
+      .then((me) => {
+        if (cancelled) return
+        setAuthBootstrap(Boolean(me.bootstrapAllowed))
+        if (me.authenticated && me.user) {
+          setAuthUser(me.user)
+          setAuthStatus('in')
+        } else {
+          setAuthUser(null)
+          setAuthStatus('out')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuthUser(null)
+          setAuthStatus('out')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     void hydrateLessons().then(() => setLessonTick((n) => n + 1))
@@ -333,6 +367,18 @@ export default function App() {
         setAthleteGate(null)
         return
       }
+      if (sessionIsAdmin(authUser) && isRyanAthlete(a)) {
+        markProfileUnlocked(a.id)
+        setActiveAthleteId(id)
+        setAthleteGate(null)
+        return
+      }
+      if (authUser?.rosterProfileId && authUser.rosterProfileId === a.id) {
+        markProfileUnlocked(a.id)
+        setActiveAthleteId(id)
+        setAthleteGate(null)
+        return
+      }
       if (profileNeedsPasscode(a)) {
         setAthleteGate(a)
         return
@@ -340,7 +386,7 @@ export default function App() {
       markProfileUnlocked(a.id)
       setActiveAthleteId(id)
     },
-    [athletes],
+    [athletes, authUser],
   )
 
   const rosterReadyRef = useRef(false)
@@ -390,15 +436,6 @@ export default function App() {
         setActiveAthleteId(null)
         setAthleteGate(null)
       }
-      void withRyanPasscode(next).then((hashed) => {
-        if (cancelled) return
-        setAthletes((prev) =>
-          hashed.map((a) => ({
-            ...a,
-            photoDataUrl: a.photoDataUrl || prev.find((p) => p.id === a.id)?.photoDataUrl,
-          })),
-        )
-      })
       return next
     }
     let settled = false
@@ -410,6 +447,7 @@ export default function App() {
       if (message) setGymBootError(message)
       setGymBoot(state)
     }
+    if (authStatus !== 'in') return
     const run = async () => {
       setGymBoot('loading')
       setGymBootError(null)
@@ -447,7 +485,7 @@ export default function App() {
       cancelled = true
       window.clearTimeout(watchdog)
     }
-  }, [gymBootTick])
+  }, [gymBootTick, authStatus])
 
   useEffect(() => {
     if (gymBoot !== 'ready') return
@@ -747,6 +785,29 @@ export default function App() {
   const personalCompare =
     Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
 
+  if (authStatus === 'loading') {
+    return <GymBootScreen phase="loading" persist={gymPersist} />
+  }
+  if (authStatus === 'out' || !authUser) {
+    return (
+      <AuthLoginScreen
+        bootstrapAllowed={authBootstrap}
+        onSignedIn={(user) => {
+          setAuthUser(user)
+          setAuthStatus('in')
+          if (sessionIsAdmin(user)) {
+            markProfileUnlocked('ath_ryan')
+            setActiveAthleteId('ath_ryan')
+          } else if (user.rosterProfileId) {
+            markProfileUnlocked(user.rosterProfileId)
+            setActiveAthleteId(user.rosterProfileId)
+          }
+          setGymBootTick((n) => n + 1)
+        }}
+      />
+    )
+  }
+
   if (gymBoot !== 'ready') {
     return (
       <GymBootScreen
@@ -779,6 +840,21 @@ export default function App() {
           <p className="mt-1">
             <span className={HOLD_BUILD_CHIP}>{HOLD_BUILD_LABEL}</span>
           </p>
+          <button
+            type="button"
+            className="mt-2 text-xs text-[var(--muted)] underline"
+            onClick={() => {
+              void logoutSession().then(() => {
+                lockAllProfiles()
+                setActiveAthleteId(null)
+                setAuthUser(null)
+                setAuthStatus('out')
+                setGymBoot('loading')
+              })
+            }}
+          >
+            Sign out {authUser.email}
+          </button>
         </div>
         <AppNav tab={tab} ryan={ryanEdit} onGo={goTab} />
         <div className="ml-auto shrink-0">
@@ -1847,7 +1923,7 @@ export default function App() {
         onUnlocked={(a) => {
           setActiveAthleteId(a.id)
           setAthleteGate(null)
-          void withRyanPasscode(athletes).then(setAthleteRoster)
+          setAthleteRoster(athletes)
         }}
       />
     )}
