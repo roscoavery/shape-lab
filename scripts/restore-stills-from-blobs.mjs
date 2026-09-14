@@ -6,6 +6,7 @@
  *   cd /Users/ryanwilliams/shape-lab && npm run gym:stills
  */
 
+import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { Readable } from 'node:stream'
@@ -16,8 +17,7 @@ const JSON_PATH = join(ROOT, 'data', 'coach-stills.json')
 const LIVE = join(ROOT, 'data', 'coach-blobs')
 const PARK = join(ROOT, '.gym-park', 'data', 'coach-blobs')
 
-function applyDotEnv() {
-  const path = join(ROOT, '.env')
+function applyDotEnvFile(path) {
   if (!existsSync(path)) return
   for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
     const trimmed = line.trim()
@@ -34,6 +34,28 @@ function applyDotEnv() {
     }
     if (process.env[key] == null || process.env[key] === '') process.env[key] = value
   }
+}
+
+function applyDotEnv() {
+  for (const name of ['.env', '.env.local', '.env.vercel', '.env.production']) {
+    applyDotEnvFile(join(ROOT, name))
+  }
+}
+
+function tryVercelEnvPull() {
+  if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return
+  const dest = join(ROOT, '.env.vercel')
+  console.log('Asking the existing Vercel project for BLOB_READ_WRITE_TOKEN (no new store)…')
+  const result = spawnSync(
+    'npx',
+    ['--yes', 'vercel', 'env', 'pull', dest, '--yes', '--environment', 'production'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 },
+  )
+  if (result.status !== 0) {
+    console.warn((result.stderr || result.stdout || 'vercel env pull failed').trim().slice(0, 400))
+    return
+  }
+  applyDotEnvFile(dest)
 }
 
 function blobId(name) {
@@ -61,7 +83,63 @@ async function streamToBuffer(stream) {
 }
 
 applyDotEnv()
+tryVercelEnvPull()
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim()
+const LIVE_GYM = (
+  process.env.GYM_PULL_URL || 'https://temporary-racing-sulfur-78x9doy.vercel.app'
+).replace(/\/$/, '')
+
+async function getBytes(url) {
+  try {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' })
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    return buf.length >= 32 ? buf : null
+  } catch {
+    return null
+  }
+}
+
+async function pullFromLiveGym(file) {
+  console.log(`Trying the Production gym ${LIVE_GYM} (unpause that project if this 503s)…`)
+  const metaBuf = await getBytes(`${LIVE_GYM}/api/coach-stills`)
+  if (!metaBuf) {
+    console.warn('Production gym is paused or unreachable. Unpause the existing Vercel project, then run this again.')
+    return file
+  }
+  let remoteFile
+  try {
+    remoteFile = asFile(JSON.parse(metaBuf.toString('utf8')))
+  } catch {
+    console.warn('Production gym did not return a coach-stills file.')
+    return file
+  }
+  console.log(`Production gym has ${remoteFile.extras.length} extras.`)
+  mkdirSync(LIVE, { recursive: true })
+  const ids = new Set([
+    ...remoteFile.extras.map((row) => row.id),
+    ...Object.values(remoteFile.main),
+    ...Object.values(file.main),
+  ])
+  let n = 0
+  for (const id of ids) {
+    if (!id || /[^a-zA-Z0-9_-]/.test(id)) continue
+    const dest = join(LIVE, `${id}.jpg`)
+    if (existsSync(dest)) continue
+    const buf = await getBytes(`${LIVE_GYM}/api/coach-still-file?id=${encodeURIComponent(id)}`)
+    if (!buf) continue
+    writeFileSync(dest, buf)
+    n += 1
+    console.log(`downloaded ${id}.jpg from Production (${buf.length} bytes)`)
+  }
+  console.log(`New JPEGs from Production: ${n}`)
+  return {
+    ...file,
+    main: { ...remoteFile.main, ...file.main },
+    extras: [...remoteFile.extras, ...file.extras],
+    removedCoachStillIds: [...remoteFile.removedCoachStillIds, ...file.removedCoachStillIds],
+  }
+}
 
 const empty = {
   kind: 'shape-lab-coach-stills',
@@ -143,8 +221,22 @@ if (token) {
   } while (cursor)
   console.log(`New JPEGs from Blob: ${pulled}`)
 } else {
-  console.log('No BLOB_READ_WRITE_TOKEN in .env — using JPEGs already on this Mac only.')
+  console.log('No BLOB_READ_WRITE_TOKEN in .env yet.')
 }
+
+const liveHit = await pullFromLiveGym({
+  ...local,
+  main: { ...remote.main, ...local.main },
+  extras: [...remote.extras, ...local.extras],
+  removedCoachStillIds: [...remote.removedCoachStillIds, ...local.removedCoachStillIds],
+})
+remote = {
+  ...remote,
+  main: { ...remote.main, ...liveHit.main },
+  extras: [...remote.extras, ...liveHit.extras],
+  removedCoachStillIds: [...remote.removedCoachStillIds, ...liveHit.removedCoachStillIds],
+}
+local.main = { ...liveHit.main, ...local.main }
 
 const gone = new Set(
   [...local.removedCoachStillIds, ...remote.removedCoachStillIds].filter(
