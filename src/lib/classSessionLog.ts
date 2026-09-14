@@ -82,9 +82,16 @@ export function logClassHoldForAthletes(opts: {
   className?: string
   meetingId?: string
   side?: 'left' | 'right'
+  performedAt?: string
+  coachId?: string
+  coachName?: string
 }): number {
   let n = 0
   const sourceLabel = classLabel(opts.label, opts.className)
+  const date =
+    opts.performedAt && /^\d{4}-\d{2}-\d{2}$/.test(opts.performedAt)
+      ? `${opts.performedAt}T12:00:00.000Z`
+      : new Date().toISOString()
   for (const athleteId of opts.athleteIds) {
     const items = ensureAutoHomework(athleteId)
     const hw = items.find((h) => h.autoKey === opts.autoKey)
@@ -94,7 +101,9 @@ export function logClassHoldForAthletes(opts: {
       athleteId,
       homeworkId: hw.id,
       shapeId: hw.shapeId,
-      date: new Date().toISOString(),
+      date,
+      loggedAt: new Date().toISOString(),
+      loggedByRole: 'coach',
       method: 'manual',
       kind: 'hold',
       totalHoldSeconds: Number(opts.seconds.toFixed(2)),
@@ -104,6 +113,8 @@ export function logClassHoldForAthletes(opts: {
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
       ...(opts.side ? { side: opts.side } : {}),
+      ...(opts.coachId ? { coachId: opts.coachId } : {}),
+      ...(opts.coachName ? { coachName: opts.coachName } : {}),
     }
     addHomeworkLog(log)
     n += 1

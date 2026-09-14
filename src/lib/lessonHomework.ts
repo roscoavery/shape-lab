@@ -23,6 +23,7 @@ export function logLessonHoldOnAthleteHomework(args: {
   score: number
   method: 'camera' | 'manual'
   side?: 'left' | 'right'
+  performedAt?: string
 }): HomeworkLog | null {
   if (!args.athleteId || args.totalHoldSeconds < 0.2) return null
 
@@ -56,7 +57,12 @@ export function logLessonHoldOnAthleteHomework(args: {
     athleteId: args.athleteId,
     homeworkId: item.id,
     shapeId: item.shapeId,
-    date: new Date().toISOString(),
+    date:
+      args.performedAt && /^\d{4}-\d{2}-\d{2}$/.test(args.performedAt)
+        ? `${args.performedAt}T12:00:00.000Z`
+        : new Date().toISOString(),
+    loggedAt: new Date().toISOString(),
+    loggedByRole: 'coach',
     method: args.method,
     totalHoldSeconds: Number(args.totalHoldSeconds.toFixed(2)),
     ...(args.method === 'camera'
@@ -68,7 +74,7 @@ export function logLessonHoldOnAthleteHomework(args: {
     coachId: args.coachId,
     coachName: args.coachName,
     ...(args.side ? { side: args.side } : {}),
-    ...(args.side ? { sourceLabel: `Lesson · ${args.shapeName}` } : {}),
+    sourceLabel: `Lesson · ${args.shapeName}`,
   }
   addHomeworkLog(log)
   return log

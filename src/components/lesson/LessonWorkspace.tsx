@@ -27,6 +27,7 @@ import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
 import { logClassSkillForAthlete } from '../../lib/classSessionLog'
 import { publishTextPost } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
+import { CoachHoldEntry } from '../family/CoachHoldEntry'
 
 type Props = {
   session: LessonSession
@@ -140,6 +141,7 @@ export function LessonWorkspace({
           score: scoreValue,
           method,
           ...(holdTopic.side ? { side: holdTopic.side } : {}),
+          ...(holdWhen === 'past' && holdPast ? { performedAt: holdPast } : {}),
         })
       }
       onSessionChange(next)
@@ -152,6 +154,8 @@ export function LessonWorkspace({
   const [otherName, setOtherName] = useState('')
   const [otherReps, setOtherReps] = useState('')
   const [otherSets, setOtherSets] = useState('1')
+  const [holdWhen, setHoldWhen] = useState<'today' | 'past'>('today')
+  const [holdPast, setHoldPast] = useState('')
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()
     const offering = meeting ? getOffering(meeting.offeringId) : null
@@ -373,6 +377,39 @@ export function LessonWorkspace({
             Log this time
           </button>
         </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <label>
+            <span className="text-[11px] uppercase text-[var(--muted)]">When</span>
+            <select
+              value={holdWhen}
+              onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
+              className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            >
+              <option value="today">Performed today</option>
+              <option value="past">Choose previous date</option>
+            </select>
+          </label>
+          {holdWhen === 'past' && (
+            <label>
+              <span className="text-[11px] uppercase text-[var(--muted)]">Date</span>
+              <input
+                type="date"
+                value={holdPast}
+                onChange={(e) => setHoldPast(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+              />
+            </label>
+          )}
+        </div>
+        {people.map((row) => (
+          <div key={row.id} className="mt-3">
+            <CoachHoldEntry
+              athlete={row}
+              viewer={coach}
+              lessonId={session.id}
+            />
+          </div>
+        ))}
         <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps / sets</p>
             {repFlash && (

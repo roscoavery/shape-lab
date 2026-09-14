@@ -74,6 +74,8 @@ import { FollowButton } from './network/FollowButton'
 import { DeleteProfileAsk } from './DeleteProfileAsk'
 import { playGestureBurst } from '../lib/gestureBurst'
 import { isRyanAthlete } from '../lib/ryanProfile'
+import { birthdayNeeded } from '../lib/age'
+import { CoachHoldEntry } from './family/CoachHoldEntry'
 
 type Tab = 'posts' | 'passes' | 'stories'
 type Compose = 'story' | 'post' | 'pass' | null
@@ -380,6 +382,13 @@ export function AthleteProfileCard({
           {parentsOf(athlete.id, athletes).map((p) => p.name).join(', ')}
         </p>
       )}
+      {(athlete.birthdayNeeded || birthdayNeeded(athlete.dateOfBirth)) &&
+        isAthleteProfile(athlete) &&
+        (isCoachProfile(viewer) || isGymAdmin(viewer) || profileRole(viewer) === 'parent') && (
+        <p className="rounded-xl border border-[#6ec8d6]/40 bg-[#6ec8d6]/10 px-3 py-2 text-sm">
+          Birthday needed. It stays private and is used for age-appropriate access and safety settings.
+        </p>
+      )}
       {profileRole(athlete) === 'parent' && childNamesLabel(athlete, athletes) && (
         <p className="text-xs text-[var(--muted)]">Parent of {childNamesLabel(athlete, athletes)}</p>
       )}
@@ -415,6 +424,9 @@ export function AthleteProfileCard({
             </div>
           )}
         </div>
+      )}
+      {isCoachProfile(viewer) && isAthleteProfile(athlete) && (
+        <CoachHoldEntry athlete={athlete} viewer={viewer} />
       )}
       {storySheet && own && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center">

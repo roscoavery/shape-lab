@@ -90,6 +90,9 @@ export function ClassStopwatch({
   const [bigWin, setBigWin] = useState(false)
   const [skillFile, setSkillFile] = useState<File | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
+  const [holdWhen, setHoldWhen] = useState<'today' | 'past'>('today')
+  const [holdPast, setHoldPast] = useState('')
+  const [rapidTimes, setRapidTimes] = useState<Record<string, string>>({})
   const startRef = useRef<number | null>(null)
   const accRef = useRef(0)
 
@@ -176,6 +179,9 @@ export function ClassStopwatch({
       className,
       meetingId: meeting?.id,
       side: drill.autoKey === 'side_plank' ? side : undefined,
+      performedAt: holdWhen === 'past' && holdPast ? holdPast : undefined,
+      coachId: signedIn?.id,
+      coachName: signedIn?.name,
     })
     reset()
     setFlash(
@@ -485,6 +491,34 @@ export function ClassStopwatch({
             onSelectAll={() => setSelected(pool.map((a) => a.id))}
             onSelectNone={() => setSelected([])}
           />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                When
+              </span>
+              <select
+                value={holdWhen}
+                onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
+                className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
+              >
+                <option value="today">Performed today</option>
+                <option value="past">Choose previous date</option>
+              </select>
+            </label>
+            {holdWhen === 'past' && (
+              <label>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  value={holdPast}
+                  onChange={(e) => setHoldPast(e.target.value)}
+                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm"
+                />
+              </label>
+            )}
+          </div>
           <button
             type="button"
             onClick={logHold}
@@ -492,6 +526,66 @@ export function ClassStopwatch({
           >
             Log {extraHoldId ? activeExtra(extraHoldId)?.label ?? 'hold' : 'hold'} for selected
           </button>
+          {coach && !extraHoldId && (
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                Rapid roster
+              </p>
+              <p className="mt-1 text-xs text-white/55">
+                Type seconds per athlete, then save. Does not need their login.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {pool.map((row) => (
+                  <li key={row.id} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm">{row.name}</span>
+                    <input
+                      inputMode="decimal"
+                      value={rapidTimes[row.id] ?? ''}
+                      onChange={(e) =>
+                        setRapidTimes((prev) => ({ ...prev, [row.id]: e.target.value }))
+                      }
+                      placeholder="sec"
+                      className="h-10 w-20 rounded-lg border border-white/10 bg-black/30 px-2 text-sm"
+                    />
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => {
+                  const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
+                  if (!drill) return
+                  const holdName =
+                    drill.autoKey === 'side_plank' ? `${drill.label} · ${side}` : drill.label
+                  let n = 0
+                  for (const row of pool) {
+                    const secs = Number(rapidTimes[row.id])
+                    if (!Number.isFinite(secs) || secs < 0.2) continue
+                    n += logClassHoldForAthletes({
+                      athleteIds: [row.id],
+                      autoKey: drill.autoKey,
+                      seconds: secs,
+                      label: holdName,
+                      className,
+                      meetingId: meeting?.id,
+                      side: drill.autoKey === 'side_plank' ? side : undefined,
+                      performedAt: holdWhen === 'past' && holdPast ? holdPast : undefined,
+                      coachId: signedIn?.id,
+                      coachName: signedIn?.name,
+                    })
+                  }
+                  setFlash(
+                    n
+                      ? `Logged ${holdName} for ${n} athlete${n === 1 ? '' : 's'}.`
+                      : 'Type seconds next to at least one athlete.',
+                  )
+                }}
+                className="mt-3 h-11 w-full rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
+              >
+                Save roster times
+              </button>
+            </div>
+          )}
         </>
       )}
 
