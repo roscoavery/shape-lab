@@ -72,7 +72,21 @@ export function parentLinkedFromRoster(
 ): string[] {
   const fromAccount = [...user.linkedAthleteIds]
   const profile = athletes.find((row) => row.id && row.id === user.rosterProfileId)
-  return [...new Set([...fromAccount, ...asIds(profile?.linkedAthleteIds)])]
+  const fromParentRow = asIds(profile?.linkedAthleteIds)
+  const fromGuardians = athletes
+    .filter((row) => {
+      const rels = Array.isArray(row.guardianRelationships) ? row.guardianRelationships : []
+      return rels.some((raw) => {
+        if (!raw || typeof raw !== 'object') return false
+        const rel = raw as { rosterProfileId?: unknown; accountId?: unknown }
+        return (
+          (typeof rel.rosterProfileId === 'string' && rel.rosterProfileId === user.rosterProfileId) ||
+          (typeof rel.accountId === 'string' && rel.accountId === user.accountId)
+        )
+      })
+    })
+    .map((row) => row.id)
+  return [...new Set([...fromAccount, ...fromParentRow, ...fromGuardians])]
 }
 
 function parentSees(user: AuthUser, athlete: RosterAthlete, athletes: RosterAthlete[]): boolean {
@@ -219,6 +233,19 @@ export async function canSeeHealth(
   if (user.rosterProfileId === athlete.id) return true
   if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
   if (user.role === 'coach') return canCoachAthlete(user, athlete)
+  return false
+}
+
+/** Full birthday. Admin, the athlete, and linked parents only. */
+export function canSeeDateOfBirth(
+  user: AuthUser | null | undefined,
+  athlete: RosterAthlete,
+  athletes: RosterAthlete[] = [],
+): boolean {
+  if (!user) return false
+  if (isAdmin(user)) return true
+  if (user.rosterProfileId === athlete.id) return true
+  if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
   return false
 }
 

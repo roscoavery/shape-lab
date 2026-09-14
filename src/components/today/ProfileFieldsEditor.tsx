@@ -1,4 +1,5 @@
 import type { Athlete, FavoriteColor } from '../../types'
+import { birthdayNeeded, getAgeFromDateOfBirth } from '../../lib/age'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { StationSnapshot } from './StationSnapshot'
 import { CoachPicker } from '../CoachPicker'
@@ -60,6 +61,28 @@ export function ProfileFieldsEditor({
 
   return (
     <div className="flex flex-col gap-6">
+      {profileRole(athlete) === 'athlete' && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">
+            {birthdayNeeded(athlete.dateOfBirth) ? 'Birthday needed' : 'Birthday'}
+          </h3>
+          <p className="text-xs text-[var(--muted)]">
+            Used for age-appropriate account access, privacy, and safety settings.
+            It stays private — not shown on the feed or public profile.
+          </p>
+          <input
+            type="date"
+            value={athlete.dateOfBirth ?? ''}
+            onChange={(e) => patch({ dateOfBirth: e.target.value || undefined })}
+            className="h-12 rounded-2xl border border-white/10 bg-black/30 px-4 text-sm"
+          />
+          {getAgeFromDateOfBirth(athlete.dateOfBirth) != null && (
+            <p className="text-xs text-[var(--muted)]">
+              Age {getAgeFromDateOfBirth(athlete.dateOfBirth)}
+            </p>
+          )}
+        </section>
+      )}
       {profileRole(athlete) === 'athlete' && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">Who can open this profile</h3>

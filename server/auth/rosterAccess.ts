@@ -3,6 +3,7 @@
  * athletes they are not allowed to see.
  */
 
+import { athleteMaySelfManageProfile, getAgeFromDateOfBirth } from '../../src/lib/age.ts'
 import { applyConsentPatch, canEditConsent, CONSENT_KEYS, parseConsentPatch } from './consent.ts'
 import { newAthletePrivacyDefaults } from './privacy.ts'
 import {
@@ -15,6 +16,8 @@ import {
 } from './permissions.ts'
 import { sanitizeRosterForViewer } from './sanitize.ts'
 import type { AuthUser } from './types.ts'
+
+const NEVER_ON_ATHLETE = ['parentWellnessProfile'] as const
 
 const ADMIN_ONLY_FIELDS = [
   'role',
@@ -84,13 +87,15 @@ function applyAllowedEdits(
 ): RosterAthlete {
   if (isAdmin(user)) {
     return applyConsentOnWrite(user, existing, incoming, athletes, {
-      ...existing,
-      ...incoming,
+      ...stripFields({ ...existing, ...incoming, id: existing.id }, NEVER_ON_ATHLETE),
       id: existing.id,
-    })
+    } as RosterAthlete)
   }
 
   let next: Record<string, unknown> = { ...existing, ...incoming, id: existing.id }
+  next = stripFields(next, NEVER_ON_ATHLETE)
+  const incomingDob = typeof incoming.dateOfBirth === 'string' ? incoming.dateOfBirth.trim() : ''
+  if (!incomingDob) next.dateOfBirth = existing.dateOfBirth
   if (user.role === 'coach' || isKiosk(user)) {
     next = stripFields(next, COACH_FORBIDDEN_FIELDS)
     next.role = existing.role
@@ -121,6 +126,14 @@ function applyAllowedEdits(
     next.passcodeHash = incoming.passcodeHash || existing.passcodeHash
     if (user.role === 'parent') {
       next.email = existing.email
+    }
+    if (user.role === 'athlete') {
+      const age = getAgeFromDateOfBirth(
+        typeof existing.dateOfBirth === 'string' ? existing.dateOfBirth : '',
+      )
+      if (!athleteMaySelfManageProfile(age)) {
+        next.dateOfBirth = existing.dateOfBirth
+      }
     }
   }
   return applyConsentOnWrite(user, existing, incoming, athletes, next as RosterAthlete)

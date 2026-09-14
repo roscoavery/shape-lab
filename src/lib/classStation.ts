@@ -16,6 +16,7 @@ export type SkateStance = 'regular' | 'goofy'
 export type StationStep =
   | 'who'
   | 'parentPhone'
+  | 'dateOfBirth'
   | 'cartwheel'
   | 'harder'
   | 'shoulder'
@@ -40,6 +41,7 @@ export type StationDraft = {
   firstName: string
   lastName: string
   parentPhone?: string
+  dateOfBirth?: string
   email?: string
   phone?: string
   gymName?: string
@@ -170,6 +172,7 @@ export function forgetQuizGuest(firstName: string, lastName: string): QuizGuestN
 export const STATION_STEPS: StationStep[] = [
   'who',
   'parentPhone',
+  'dateOfBirth',
   'cartwheel',
   'harder',
   'shoulder',
@@ -200,6 +203,7 @@ export function stationStepFilled(
   athlete?: {
     photoDataUrl?: string
     parentPhone?: string
+    dateOfBirth?: string
     phone?: string
     favoriteColor?: string
     skillGoals?: { id: string }[]
@@ -212,6 +216,7 @@ export function stationStepFilled(
   } | null,
 ): boolean {
   if (step === 'photo') return Boolean(draft.photoDataUrl || athlete?.photoDataUrl)
+  if (step === 'dateOfBirth') return draftHas(draft.dateOfBirth) || Boolean(athlete?.dateOfBirth)
   if (step === 'skillGoal') return Boolean(draft.skillGoals?.length || athlete?.skillGoals?.length)
   if (step === 'favoriteColor') return draftHas(draft.favoriteColor) || Boolean(athlete?.favoriteColor)
   if (step === 'handstandFloor') return draftHas(draft.handstandFloor) || Boolean(athlete?.handstandFloor)
@@ -238,6 +243,7 @@ export function nextStationStep(
     if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
     if (step === 'done') return 'done'
     const skipable =
+      step === 'dateOfBirth' ||
       step === 'skillGoal' ||
       step === 'favoriteColor' ||
       step === 'handstandFloor' ||
@@ -262,6 +268,7 @@ export function prevStationStep(
     const step = STATION_STEPS[i]!
     if (step === 'twistBetter' && draft.twistDirection !== 'both') continue
     const skipable =
+      step === 'dateOfBirth' ||
       step === 'skillGoal' ||
       step === 'favoriteColor' ||
       step === 'handstandFloor' ||

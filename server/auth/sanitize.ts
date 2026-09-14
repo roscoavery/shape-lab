@@ -4,10 +4,13 @@
  */
 
 import { applyPrivacyDefaults } from './privacy.ts'
+import { birthdayNeeded, getAgeFromDateOfBirth } from '../../src/lib/age.ts'
 import {
   canSeeAdminContacts,
   canSeeCoachNotes,
+  canSeeDateOfBirth,
   canSeeHealth,
+  canCoachAthlete,
   isAdmin,
   isKiosk,
   type RosterAthlete,
@@ -18,6 +21,7 @@ const CONTACT_FIELDS = ['email', 'phone', 'parentPhone'] as const
 const HEALTH_FIELDS = ['hasBackPain', 'injuryActive', 'intakeAnswers'] as const
 const AUTH_FIELDS = ['passcodeHash'] as const
 const INTERNAL_FIELDS = ['coachNotes'] as const
+const DOB_FIELDS = ['dateOfBirth'] as const
 
 function omit(row: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
   const next = { ...row }
@@ -56,6 +60,24 @@ export async function sanitizeAthleteForViewer(
 
   if (!(await canSeeCoachNotes(user, athlete))) {
     next = omit(next, INTERNAL_FIELDS)
+  }
+
+  const dob = typeof next.dateOfBirth === 'string' ? next.dateOfBirth : ''
+  const missingBirthday = birthdayNeeded(dob)
+  const assignedCoach = user.role === 'coach' && (await canCoachAthlete(user, athlete))
+  if (canSeeDateOfBirth(user, athlete, athletes)) {
+    next.birthdayNeeded = missingBirthday
+    const ageYears = getAgeFromDateOfBirth(dob)
+    if (ageYears != null) next.ageYears = ageYears
+  } else if (assignedCoach || isAdmin(user)) {
+    next = omit(next, DOB_FIELDS)
+    next.birthdayNeeded = missingBirthday
+    const ageYears = getAgeFromDateOfBirth(dob)
+    if (ageYears != null) next.ageYears = ageYears
+  } else {
+    next = omit(next, DOB_FIELDS)
+    delete next.birthdayNeeded
+    delete next.ageYears
   }
 
   return next as RosterAthlete

@@ -174,6 +174,16 @@ export type SequenceDef = {
   steps: SequenceStep[]
 }
 
+export type GuardianRelationship = {
+  id: string
+  /** Parent / guardian roster profile id. */
+  rosterProfileId?: string
+  /** Login account id when that parent has an email login. */
+  accountId?: string
+  kind: 'parent' | 'guardian'
+  createdAt: string
+}
+
 export type Athlete = {
   id: string
   name: string
@@ -257,6 +267,19 @@ export type Athlete = {
   phone?: string
   /** Mom or dad — used on the class station so Ryan can text a parent. */
   parentPhone?: string
+  /**
+   * ISO date `YYYY-MM-DD`. Private. Used for age-aware access, not shown
+   * on public profiles or the feed. Missing on older profiles is allowed.
+   */
+  dateOfBirth?: string
+  /** Set by the server for viewers who may know age but not the birthday. */
+  ageYears?: number
+  birthdayNeeded?: boolean
+  /**
+   * Extra parent / guardian links. Additive — `linkedAthleteIds` on parent
+   * roster rows is still the primary relationship.
+   */
+  guardianRelationships?: GuardianRelationship[]
   /** Which leg goes forward on a cartwheel. */
   cartwheelLeg?: 'left' | 'right'
   /** Research: which hold feels harder. */
@@ -661,7 +684,11 @@ export type HomeworkLog = {
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
   /** Lesson holds land on the athlete’s homework, labeled with the coach. */
-  loggedFrom?: 'lesson' | 'class'
+  loggedFrom?: 'lesson' | 'class' | 'profile' | 'today'
+  /** Who entered this log. Coach-entered rows do not need the athlete signed in. */
+  loggedByRole?: 'coach' | 'athlete' | 'parent'
+  /** When the coach saved the log, if that is later than `date` (historical entry). */
+  loggedAt?: string
   lessonId?: string
   coachId?: string
   coachName?: string

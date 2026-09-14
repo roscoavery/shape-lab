@@ -145,6 +145,7 @@ export function ClassStation({
       lastName,
       athleteId: existing?.id,
       parentPhone: draft.parentPhone || existing?.parentPhone,
+      dateOfBirth: draft.dateOfBirth || existing?.dateOfBirth,
       email: draft.email || existing?.email,
       phone: draft.phone || existing?.phone,
       gymName: extra.gymName || existing?.gymName || TUMBLE_SMART,
@@ -186,6 +187,7 @@ export function ClassStation({
       gymName: home,
       classGyms: existing?.classGyms,
       parentPhone: from.parentPhone || existing?.parentPhone,
+      dateOfBirth: from.dateOfBirth || existing?.dateOfBirth,
       email: from.email || existing?.email,
       phone: from.phone || existing?.phone,
       cartwheelLeg: from.cartwheelLeg ?? existing?.cartwheelLeg,
@@ -547,10 +549,33 @@ export function ClassStation({
             <button
               type="button"
               disabled={!draft.parentPhone?.trim()}
-              onClick={() => go('cartwheel')}
+              onClick={() => go('dateOfBirth')}
               className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
             >
               Next
+            </button>
+          </Question>
+        )}
+
+        {draft.step === 'dateOfBirth' && (
+          <Question
+            title="Birthday"
+            hint="Used for age-appropriate account access, privacy, and safety settings. It stays private — we do not show it on profiles or the feed."
+            onBack={() => go('parentPhone')}
+          >
+            <input
+              autoFocus
+              type="date"
+              className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+              value={draft.dateOfBirth ?? ''}
+              onChange={(e) => persist({ ...draft, dateOfBirth: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => go('cartwheel')}
+              className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
+            >
+              {draft.dateOfBirth ? 'Next' : 'Skip for now'}
             </button>
           </Question>
         )}
@@ -559,7 +584,7 @@ export function ClassStation({
           <Question
             title="Which way do you cartwheel?"
             hint="Which leg goes forward."
-            onBack={() => go('parentPhone')}
+            onBack={() => go('dateOfBirth')}
           >
             <div className="grid gap-3">
               {(
