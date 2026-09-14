@@ -14,6 +14,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Email delivery of invites is not built. Admin can copy a one-time sign-in link from More → Accounts. The recipient opens the URL and sets their own password. Shape Lab does not send email.
 - More → Watch is a gym log, not a legal-compliance system. Routine roster opens, roster saves, and photo opens are hidden by default.
 - Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. CSRF tokens are not added; session cookies are SameSite=Lax.
+- Away lock covers this browser's screen only. The session cookie still works until sign-out or Watch ends the login. It is not a substitute for floor mode on the shared iPad.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.
 
@@ -64,6 +65,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - **Phase 6 (Link build):** Admin copies a one-time `/?invite=` URL from More → Accounts (or when creating a login with a blank password). Tokens are SHA-256 hashed in gitignored `data/invites.json`, last 7 days, and burn on first use. The person who opens the link sets their own password. No email is sent. Coaches and floor iPads cannot mint links.
 - **Phase 7 (Watch build):** More → Watch shows who is signed in and the last office actions (sign-in, links, floor, contacts, password/role changes). Admin can end another login. Session ids stay on the server. Coaches and floor iPads cannot open Watch. A new sign-in on the same email still ends the previous one.
 - **Phase 8 (Pace build):** Sign-in, invite peek/redeem, account writes, and gym saves are rate-limited on this process. Watch only records a roster save when the file actually changed. CSRF tokens are not added; cookies are SameSite=Lax.
+- **Phase 9 (Away build):** More → Accounts → “Lock this gym” covers this browser until that email’s password is typed (`POST /api/auth/unlock`). Idle taps pause 20 minutes. Floor iPads skip Away. JSON APIs send `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: strict-origin-when-cross-origin`. No strict CSP (MediaPipe wasm / blob clips). Gym PUTs stop retrying 401 / 403 / 429.
 
 ## Authentication architecture
 
@@ -78,6 +80,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 9. Anyone with the URL can `GET /api/auth/invite?token=` then `POST /api/auth/invite` with `{ token, password }` to set a password and start a session. The token burns.
 10. Admin can `GET /api/auth/audit` and `GET /api/auth/sessions`. `POST /api/auth/sessions` with `{ accountId }` ends that login. You cannot end your own.
 11. Account writes (create/reset/invite/kiosk/end-login) share a 40 / 15-minute cap per account. Gym writes share 180 / minute. Unknown-email sign-in tries cap at 12 / 15 minutes.
+12. `POST /api/auth/unlock` with `{ password }` unlocks the Away overlay. The cookie stays. Floor kiosk is 403. Wrong passwords cap at 12 / 15 minutes per account.
 
 Never put secrets in `VITE_` variables or client source.
 
@@ -135,7 +138,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Pace build** on the header. `/api/health` should include `"holdBuild":"pace"`. If you still see Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Watch shows who is signed in. More → Accounts still copies a sign-in link.
+5. Look for **Away build** on the header. `/api/health` should include `"holdBuild":"away"`. If you still see Pace, Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Accounts has **Lock this gym**. Floor mode is still the shared iPad tool.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -159,7 +162,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 
 ## Known risks
 
-- Shared gym iPad: turn on floor mode for that browser. Without floor mode, an admin session is still a full admin session. Sign out when the device leaves the gym.
+- Shared gym iPad: turn on floor mode for that browser. Away lock is this screen only — the cookie still works if someone copies it. Without floor mode, an admin session is still a full admin session. Sign out when the device leaves the gym.
 - Historical Git may contain real athlete JSON. Do not rewrite history in this project. A later, separate history-cleanup pass may be needed.
 - Public Blob URLs created before V4.
 - 4-digit PINs are still SHA-256 convenience hashes, not account passwords.
@@ -171,6 +174,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 2. Email delivery of those sign-in links (SMTP). Copy-link reset is already built.
 3. Separate historical Git cleanup, only with an explicit backup and written approval.
 4. CSRF tokens if Shape Lab is ever embedded on another site. Write pacing and SameSite=Lax cookies are already in place.
+5. Away lock is not floor mode. Keep the shared iPad in floor mode; Away only covers the office browser.
 
 ## Tests
 

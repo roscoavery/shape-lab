@@ -28,9 +28,10 @@ type Props = {
   user: AuthSessionUser
   athletes: Athlete[]
   onUser?: (user: AuthSessionUser) => void
+  onLock?: () => void
 }
 
-export function AccountsDesk({ user, athletes, onUser }: Props) {
+export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
   const admin = sessionIsAdmin(user)
   const [accounts, setAccounts] = useState<PublicAccount[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -124,6 +125,23 @@ export function AccountsDesk({ user, athletes, onUser }: Props) {
         >
           Save new password
         </button>
+        {onLock && (
+          <>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--muted)]">
+              Lock this browser when you walk away. It asks for your password
+              again after 20 minutes of no taps. The shared iPad should use
+              floor mode instead.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onLock()}
+              className="mt-3 rounded-full border border-[var(--panel-border)] px-4 py-2 text-sm font-semibold"
+            >
+              Lock this gym
+            </button>
+          </>
+        )}
       </section>
 
       {admin && (

@@ -958,6 +958,7 @@ export async function publishClassList(): Promise<boolean> {
         body: JSON.stringify(file),
       })
       if (res.ok) return true
+      if (res.status === 401 || res.status === 403 || res.status === 429) return false
     } catch {
       /* retry */
     }

@@ -41,7 +41,7 @@ async function req(path, opts = {}) {
     .map((row) => row.split(';')[0])
     .filter((row) => row.startsWith('shape_lab_session='))
     .join('; ')
-  return { status: res.status, json, text, cookie }
+  return { status: res.status, json, text, cookie, headers: res.headers }
 }
 
 function cookieFrom(prev, next) {
@@ -53,6 +53,16 @@ async function main() {
 
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
+  ok(
+    'health denies framing',
+    (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
+    health.headers.get('x-frame-options') || 'missing',
+  )
+  ok(
+    'health nosniff',
+    (health.headers.get('x-content-type-options') || '').toLowerCase() === 'nosniff',
+    health.headers.get('x-content-type-options') || 'missing',
+  )
 
   const anonRoster = await req('/api/roster')
   ok('anon roster is 401', anonRoster.status === 401)
@@ -89,6 +99,12 @@ async function main() {
     body: JSON.stringify({ enabled: true }),
   })
   ok('anon kiosk is 401', anonKiosk.status === 401)
+
+  const anonUnlock = await req('/api/auth/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ password: 'wrong-away-password' }),
+  })
+  ok('anon unlock is 401', anonUnlock.status === 401)
 
   let cookie = ''
   const login = await req('/api/auth/login', {
@@ -342,6 +358,13 @@ async function main() {
   const floorSessions = await req('/api/auth/sessions', { cookie })
   ok('floor iPad signed-in list is 403', floorSessions.status === 403)
 
+  const floorUnlock = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  })
+  ok('floor iPad cannot unlock the office screen', floorUnlock.status === 403, String(floorUnlock.status))
+
   const floorConsent = await req('/api/consent', {
     method: 'PATCH',
     cookie,
@@ -385,6 +408,31 @@ async function main() {
 
   const afterFloorContacts = await req('/api/contacts', { cookie })
   ok('admin contacts work after leaving the floor', afterFloorContacts.status === 200)
+
+  const coachUnlockBad = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie: coachCookie,
+    body: JSON.stringify({ password: 'wrong-away-password' }),
+  })
+  ok('coach unlock wrong password is 401', coachUnlockBad.status === 401, String(coachUnlockBad.status))
+
+  const adminUnlockBad = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ password: 'wrong-away-password' }),
+  })
+  ok('admin unlock wrong password is 401', adminUnlockBad.status === 401, String(adminUnlockBad.status))
+
+  const adminUnlock = await req('/api/auth/unlock', {
+    method: 'POST',
+    cookie,
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  })
+  ok(
+    'admin unlock works',
+    adminUnlock.status === 200 && adminUnlock.json?.ok === true,
+    adminUnlock.json?.error || String(adminUnlock.status),
+  )
 
   const anonInvite = await req('/api/auth/invites', {
     method: 'POST',

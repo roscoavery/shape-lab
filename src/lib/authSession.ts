@@ -50,6 +50,18 @@ export async function setFloorKiosk(enabled: boolean, password?: string): Promis
   return data
 }
 
+export async function unlockAway(password: string): Promise<void> {
+  const res = await fetch('/api/auth/unlock', {
+    ...jsonInit,
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  })
+  const data = (await res.json().catch(() => ({}))) as { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'Password is wrong.')
+  }
+}
+
 export async function fetchAuthMe(): Promise<AuthMeResponse> {
   const res = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
   if (!res.ok) return { authenticated: false, user: null, bootstrapAllowed: false }

@@ -113,6 +113,40 @@ export async function handleAuthRoutes(
     return true
   }
 
+  if (path === '/api/auth/unlock') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (isKiosk(user)) {
+      sendJson(res, 403, { error: 'Leave floor mode to unlock the office screen.' })
+      return true
+    }
+    let body: { password?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    if (tooMany(`unlock:${user.accountId}`, 12, LOGIN_WINDOW_MS)) {
+      sendJson(res, 429, { error: 'Too many tries. Wait a few minutes.' })
+      return true
+    }
+    const ok = await accountPasswordMatches(user.accountId, body.password || '')
+    if (!ok) {
+      sendJson(res, 401, { error: 'Password is wrong.' })
+      return true
+    }
+    sendJson(res, 200, { ok: true })
+    return true
+  }
+
   if (path === '/api/auth/bootstrap') {
     if (req.method !== 'POST') {
       sendJson(res, 405, { error: 'Use POST' })

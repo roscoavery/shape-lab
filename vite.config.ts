@@ -20,6 +20,9 @@ export default defineConfig({
     hmr: process.env.GYM_HOME ? false : true,
     headers: {
       'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
     },
     watch: {
       // Writing the Compare library must not full-reload the preview.
@@ -31,5 +34,10 @@ export default defineConfig({
     port: 43127,
     strictPort: true,
     allowedHosts: true,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
   },
 })

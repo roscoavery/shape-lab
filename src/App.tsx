@@ -15,6 +15,7 @@ import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
 import { ConsentDesk } from './components/ConsentDesk'
 import { WatchDesk } from './components/WatchDesk'
+import { AwayLockScreen, useAwayLock } from './components/AwayLockScreen'
 import { FloorKioskBar } from './components/FloorKioskBar'
 import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
@@ -239,6 +240,9 @@ export default function App() {
   const [authUser, setAuthUser] = useState<AuthSessionUser | null>(null)
   const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
   const [authBootstrap, setAuthBootstrap] = useState(false)
+  const [awayLocked, setAwayLocked] = useState(false)
+  const lockAway = useCallback(() => setAwayLocked(true), [])
+  useAwayLock(authStatus === 'in' && !sessionIsKiosk(authUser) && !awayLocked, lockAway)
 
   useEffect(() => {
     let cancelled = false
@@ -864,6 +868,7 @@ export default function App() {
                 setAuthUser(null)
                 setAuthStatus('out')
                 setGymBoot('loading')
+                setAwayLocked(false)
               })
             }}
           >
@@ -1568,7 +1573,7 @@ export default function App() {
       )}
 
       {tab === 'accounts' && !floorKiosk && (
-        <AccountsDesk user={authUser} athletes={athletes} onUser={setAuthUser} />
+        <AccountsDesk user={authUser} athletes={athletes} onUser={setAuthUser} onLock={lockAway} />
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}
@@ -1956,6 +1961,20 @@ export default function App() {
           setActiveAthleteId(a.id)
           setAthleteGate(null)
           setAthleteRoster(athletes)
+        }}
+      />
+    )}
+    {awayLocked && authUser && !floorKiosk && (
+      <AwayLockScreen
+        user={authUser}
+        onUnlocked={() => setAwayLocked(false)}
+        onSignedOut={() => {
+          lockAllProfiles()
+          setActiveAthleteId(null)
+          setAuthUser(null)
+          setAuthStatus('out')
+          setGymBoot('loading')
+          setAwayLocked(false)
         }}
       />
     )}

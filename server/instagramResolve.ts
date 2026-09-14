@@ -36,6 +36,7 @@ import {
 } from '../src/lib/socialUrls.ts'
 import { cachedIgFile, lookupIgPublicUrl, storeIgDiskMedia, storeIgPublicMedia } from './igMediaStore.ts'
 import { persistMode, sendPublicRedirect } from './persist.ts'
+import { applySecurityHeaders } from './securityHeaders.ts'
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -989,5 +990,6 @@ export function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Cache-Control', 'no-store')
+  applySecurityHeaders(res)
   res.end(JSON.stringify(body))
 }

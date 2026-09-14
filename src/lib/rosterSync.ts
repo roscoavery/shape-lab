@@ -488,6 +488,7 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
         body: JSON.stringify(slim),
       })
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403 || res.status === 429) return false
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
         continue
       }
