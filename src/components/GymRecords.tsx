@@ -6,6 +6,8 @@ import {
   localOnlyPhotoCount,
   pushThisDeviceToGym,
 } from '../lib/rosterSync'
+import { flushLocalCoachStills } from '../lib/coachStillStore'
+import { hydrateIgStills } from '../lib/igStillStore'
 import { lastShapeTest, formatQuizScore } from '../lib/quizGrades'
 import {
   athleteContact,
@@ -116,13 +118,15 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         flash(result.error || 'Could not send this device’s gym file.')
         return
       }
+      const stills = await flushLocalCoachStills()
+      await hydrateIgStills()
       if (result.remainingPhotos && result.remainingPhotos > 0) {
         flash(result.error || `${result.remainingPhotos} picture(s) still only on this device. Stay on this URL and tap Send again.`)
         return
       }
       flash(
         persist?.lasting
-          ? `Sent ${result.profiles} profiles and ${result.photos} picture${result.photos === 1 ? '' : 's'} from this device. Open the same URL on the phone and laptop — no new Blob store.`
+          ? `Sent ${result.profiles} profiles, ${result.photos} face${result.photos === 1 ? '' : 's'}, and ${stills.sent} shape still${stills.sent === 1 ? '' : 's'} from this device.`
           : `Saved ${result.profiles} profiles on this link. This project still needs its existing Blob connected — do not create a second one.`,
       )
     } catch {

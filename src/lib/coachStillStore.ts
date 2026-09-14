@@ -104,11 +104,23 @@ function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
     }))
 }
 
+function keepPixelUrl(local: string | undefined, remote: string | undefined): string {
+  if (local?.startsWith('data:image')) return local
+  if (remote && remote.length > 0) return remote
+  return local ?? ''
+}
+
 function rememberCoachExtrasLocally(extras: CoachStillExtra[]) {
   const gone = new Set(loadRemovedCoachStillIds())
-  const incoming = extrasAsPhotos(extras).filter((p) => !gone.has(p.id))
+  const all = loadReferencePhotos()
+  const localById = new Map(all.map((p) => [p.id, p]))
+  const incoming = extrasAsPhotos(extras)
+    .filter((p) => !gone.has(p.id))
+    .map((p) => ({
+      ...p,
+      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl),
+    }))
   try {
-    const all = loadReferencePhotos()
     const ids = new Set(incoming.map((p) => p.id))
     saveReferencePhotos(
       capReferencePhotos([
@@ -172,12 +184,35 @@ export function mergeCoachExtras(
   extras: CoachStillExtra[],
 ): ReferencePhoto[] {
   const gone = new Set(loadRemovedCoachStillIds())
-  const incoming = extrasAsPhotos(extras).filter((p) => !gone.has(p.id))
+  const localById = new Map(photos.map((p) => [p.id, p]))
+  const incoming = extrasAsPhotos(extras)
+    .filter((p) => !gone.has(p.id))
+    .map((p) => ({
+      ...p,
+      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl),
+    }))
   const ids = new Set(incoming.map((p) => p.id))
   return [
     ...incoming,
     ...photos.filter((p) => !(p.library === 'coach' && gone.has(p.id)) && !ids.has(p.id)),
   ]
+}
+
+export async function flushLocalCoachStills(): Promise<{ sent: number; failed: number }> {
+  const local = loadReferencePhotos().filter(
+    (p) =>
+      p.library === 'coach' &&
+      typeof p.dataUrl === 'string' &&
+      p.dataUrl.startsWith('data:image'),
+  )
+  let sent = 0
+  let failed = 0
+  for (const photo of local) {
+    const result = await persistCoachStillExtra(photo)
+    if (result.ok) sent += 1
+    else failed += 1
+  }
+  return { sent, failed }
 }
 
 export async function hydrateCoachStills(
@@ -188,8 +223,20 @@ export async function hydrateCoachStills(
     if (shapeId && stillId) setMainCoachStill(shapeId, stillId)
   }
   rememberCoachExtrasLocally(file.extras)
+  const remoteIds = new Set(file.extras.map((row) => row.id))
+  const merged = mergeCoachExtras(photos, file.extras)
   emitCoachStills(file.extras)
-  return mergeCoachExtras(photos, file.extras)
+  const unsaved = merged.filter(
+    (p) =>
+      p.library === 'coach' &&
+      typeof p.dataUrl === 'string' &&
+      p.dataUrl.startsWith('data:image') &&
+      !remoteIds.has(p.id),
+  )
+  for (const photo of unsaved) {
+    await persistCoachStillExtra(photo)
+  }
+  return mergeCoachExtras(merged, file.extras)
 }
 
 export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<PersistStillResult> {
@@ -228,13 +275,12 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<Per
     const row = saved.extras.find((extra) => extra.id === photo.id)
     return {
       ok: true,
-      photo: row
-        ? {
-            ...photo,
-            dataUrl: row.dataUrl,
-            persistedToApp: true,
-          }
-        : { ...photo, persistedToApp: true },
+      photo: {
+        ...photo,
+        ...(row ?? {}),
+        dataUrl: keepPixelUrl(photo.dataUrl, row?.dataUrl),
+        persistedToApp: true,
+      },
     }
   } catch {
     return {

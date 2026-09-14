@@ -772,13 +772,8 @@ export function capReferencePhotos(photos: ReferencePhoto[]): ReferencePhoto[] {
 }
 
 function slimForDevice(photo: ReferencePhoto): ReferencePhoto {
-  if (!photo.dataUrl.startsWith('data:image') || photo.dataUrl.length < 4000) return photo
-  if (photo.library === 'ig') {
-    return { ...photo, dataUrl: `/api/ig-still-file?id=${encodeURIComponent(photo.id)}` }
-  }
-  if (photo.library === 'coach') {
-    return { ...photo, dataUrl: `/api/coach-still-file?id=${encodeURIComponent(photo.id)}` }
-  }
+  // Keep the JPEG on this device. Swapping it for /api/coach-still-file
+  // is what made yesterday's library vanish after the gym file lost the blob.
   return photo
 }
 
