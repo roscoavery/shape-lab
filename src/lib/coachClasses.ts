@@ -9,6 +9,7 @@ import { createId, loadAthletes } from './storage'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
 import { isGymAdmin } from './profileRole'
 import { RYAN_PROFILE_ID } from './ryanProfile'
+import { gymWriteFetch, isStopWriteStatus } from './gymWritePace'
 
 export const DEFAULT_CLASS_TYPES: {
   id: string
@@ -952,13 +953,13 @@ export async function publishClassList(): Promise<boolean> {
   const file = read()
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      const res = await fetch('/api/coach-classes', {
+      const res = await gymWriteFetch('/api/coach-classes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file),
       })
       if (res.ok) return true
-      if (res.status === 401 || res.status === 403 || res.status === 429) return false
+      if (isStopWriteStatus(res.status)) return false
     } catch {
       /* retry */
     }

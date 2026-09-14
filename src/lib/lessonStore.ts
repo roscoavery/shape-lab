@@ -4,6 +4,7 @@
 
 import type { LessonHold, LessonNote, LessonPlan, LessonSession } from '../types'
 import { createId } from './storage'
+import { gymWriteFetch } from './gymWritePace'
 
 const PLANS_KEY = 'shape-lab.lessonPlans.v1'
 const SESSIONS_KEY = 'shape-lab.lessonSessions.v1'
@@ -77,7 +78,7 @@ function ensureLessonFlush() {
         plans: loadLessonPlans(),
         sessions: loadLessonSessions(),
       } satisfies LessonFile)
-      void fetch('/api/lessons', {
+      void gymWriteFetch('/api/lessons', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body,
@@ -102,7 +103,7 @@ async function pushLessons() {
     sessions: loadLessonSessions(),
   }
   try {
-    await fetch('/api/lessons', {
+    await gymWriteFetch('/api/lessons', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

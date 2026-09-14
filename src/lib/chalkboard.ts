@@ -6,6 +6,7 @@
 
 import { createId } from './storage'
 import { classTypeKey, getActiveMeeting, loadOfferings, type CoachClassOffering } from './coachClasses'
+import { gymWriteFetch, isStopWriteStatus } from './gymWritePace'
 
 export type ChalkboardScope = 'type' | 'time' | 'athlete' | 'library'
 
@@ -736,13 +737,13 @@ export async function publishChalkboards(): Promise<boolean> {
   const file = read()
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      const res = await fetch('/api/chalkboards', {
+      const res = await gymWriteFetch('/api/chalkboards', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file),
       })
       if (res.ok) return true
-      if (res.status === 401 || res.status === 403 || res.status === 429) return false
+      if (isStopWriteStatus(res.status)) return false
     } catch {
       /* retry */
     }

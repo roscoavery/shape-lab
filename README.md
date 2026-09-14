@@ -201,7 +201,7 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
    npm run gym:mac:v4
    ```
 
-   Then open **https://gym.shapelab.win** and sign in (or create the first gym admin account). Look for **Away build**. More → Accounts → **Lock this gym** covers this browser; use floor mode on the shared iPad. `npm run gym:mac` without `:v4` stays on the working V3 / `v2-rebuild` gym. Athlete files in `data/` stay on this Mac either way.
+   Then open **https://gym.shapelab.win** and sign in (or create the first gym admin account). Look for **Quiet build**. More → Accounts → **Lock this gym** covers this browser; use floor mode on the shared iPad. `npm run gym:mac` without `:v4` stays on the working V3 / `v2-rebuild` gym. Athlete files in `data/` stay on this Mac either way.
 
    An iPad refresh does **not** pull GitHub. Safari keeps the last Class flow selected, so landing on Handstand Hold again is not proof the new code loaded. After each push: stop the gym window, then `npm run gym:mac` again. That script now parks gym data files (including IG / coach still JPEGs), resets this folder to GitHub `v2-rebuild`, reloads itself so the banner matches the files, and rebuilds the phone bundle. Dirty `data/` files will not block the update. The current stamp is **Sort build**. If you still see Firm, Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember, this window is still old. `/api/health` should include `"holdBuild":"sort"`.
 

@@ -60,6 +60,7 @@ import {
   savePainJournal,
 } from './careStore'
 import { compressProfilePhoto, isPhotoUrl, photoIdentity } from './profilePhoto'
+import { gymWriteFetch, isStopWriteStatus, shouldHoldGymWrite } from './gymWritePace'
 
 export type RosterBackup = {
   kind: 'shape-lab-roster'
@@ -453,7 +454,7 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   // Profile JPEGs are small. Client Blob uploads ask for public access and
   // 500 on this private store — write the bytes through the gym file instead.
   try {
-    const res = await fetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
+    const res = await gymWriteFetch(`/api/roster-photos?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'image/jpeg' },
       cache: 'no-store',
@@ -470,7 +471,10 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
   }
 }
 
-export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean> {
+let rosterPushBusy = false
+let rosterPushAgain = false
+
+async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
   const body = snapshot ?? localRosterSnapshot()
   if (!shouldPushRoster(body.athletes.length)) return false
   const photos = photosFromSnapshot(body.athletes)
@@ -480,7 +484,7 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
   }
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      const res = await fetch('/api/roster', {
+      const res = await gymWriteFetch('/api/roster', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
@@ -488,7 +492,7 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
         body: JSON.stringify(slim),
       })
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403 || res.status === 429) return false
+        if (isStopWriteStatus(res.status)) return false
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
         continue
       }
@@ -510,6 +514,32 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
     }
   }
   return false
+}
+
+export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean> {
+  if (shouldHoldGymWrite()) return false
+  if (!shouldPushRoster((snapshot ?? localRosterSnapshot()).athletes.length)) return false
+  if (rosterPushBusy) {
+    rosterPushAgain = true
+    return false
+  }
+  rosterPushBusy = true
+  try {
+    let next = snapshot
+    while (true) {
+      if (shouldHoldGymWrite()) return false
+      const ok = await putRosterNow(next)
+      if (!ok) {
+        rosterPushAgain = false
+        return false
+      }
+      if (!rosterPushAgain) return true
+      rosterPushAgain = false
+      next = undefined
+    }
+  } finally {
+    rosterPushBusy = false
+  }
 }
 
 export type RosterSyncResult = {

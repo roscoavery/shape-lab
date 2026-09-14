@@ -51,8 +51,32 @@ function cookieFrom(prev, next) {
 async function main() {
   console.log(`V4 security check → ${BASE}`)
 
+  const pace = await import('../src/lib/gymWritePace.ts')
+  pace.resetGymWritePaceForTests()
+  ok('quiet writes are allowed before a 429', pace.shouldHoldGymWrite(1_000) === false)
+  pace.noteGymWriteLimited(1_000)
+  ok('quiet holds writes after a 429', pace.shouldHoldGymWrite(1_001) === true)
+  ok(
+    'quiet write pause lasts a minute',
+    pace.shouldHoldGymWrite(1_000 + pace.GYM_WRITE_COOLDOWN_MS - 1) === true &&
+      pace.shouldHoldGymWrite(1_000 + pace.GYM_WRITE_COOLDOWN_MS) === false,
+  )
+  ok(
+    'quiet stops 401 403 429',
+    pace.isStopWriteStatus(401) &&
+      pace.isStopWriteStatus(403) &&
+      pace.isStopWriteStatus(429) &&
+      !pace.isStopWriteStatus(500),
+  )
+  pace.resetGymWritePaceForTests()
+  pace.noteGymWriteLimited()
+  const skipped = await pace.gymWriteFetch('/api/roster', { method: 'PUT', body: '{}' })
+  ok('quiet skip does not PUT the roster', skipped.status === 429)
+  pace.resetGymWritePaceForTests()
+
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
+  ok('health stamp is quiet', health.json?.holdBuild === 'quiet', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',

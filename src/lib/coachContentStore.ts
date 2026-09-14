@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { createId } from './storage'
 import { dispatchLibraryChanged } from './libraryEvents'
+import { gymWriteFetch, isStopWriteStatus } from './gymWritePace'
 
 const KEY = 'shape-lab.coachContent.v1'
 
@@ -238,13 +239,13 @@ export async function publishCoachContent(): Promise<boolean> {
   const file = readFile()
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      const res = await fetch('/api/coach-content', {
+      const res = await gymWriteFetch('/api/coach-content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file),
       })
       if (res.ok) return true
-      if (res.status === 401 || res.status === 403 || res.status === 429) return false
+      if (isStopWriteStatus(res.status)) return false
     } catch {
       /* retry */
     }

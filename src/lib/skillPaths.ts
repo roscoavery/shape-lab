@@ -4,6 +4,7 @@
  */
 
 import { createId } from './storage'
+import { gymWriteFetch } from './gymWritePace'
 import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS } from '../config/skillPathSeed'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
 
@@ -147,7 +148,7 @@ function write(file: SkillPathFile) {
   const next = { ...file, exportedAt: new Date().toISOString() }
   localStorage.setItem(KEY, JSON.stringify(next))
   for (const cb of listeners) cb()
-  void fetch('/api/skill-paths', {
+  void gymWriteFetch('/api/skill-paths', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(next),

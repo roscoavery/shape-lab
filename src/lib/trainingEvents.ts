@@ -4,6 +4,7 @@
  */
 
 import { createId } from './storage'
+import { gymWriteFetch } from './gymWritePace'
 
 export type TrainingEventKind = 'school' | 'camp' | 'clinic' | 'other'
 
@@ -69,7 +70,7 @@ function write(file: TrainingEventFile) {
   const next = { ...file, exportedAt: new Date().toISOString() }
   localStorage.setItem(KEY, JSON.stringify(next))
   for (const cb of listeners) cb()
-  void fetch('/api/training-events', {
+  void gymWriteFetch('/api/training-events', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(next),
