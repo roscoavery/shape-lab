@@ -33,18 +33,18 @@ import {
   userFromRequest,
 } from './sessions.ts'
 import { isAccountRole, isAdminRole } from './types.ts'
+import { ipKey, tooMany } from './rateLimit.ts'
 
-const loginAttempts = new Map<string, { count: number; resetAt: number }>()
+const LOGIN_WINDOW_MS = 15 * 60 * 1000
+const AUTH_WRITE_WINDOW_MS = 15 * 60 * 1000
+const AUTH_WRITE_MAX = 40
 
-function tooManyAttempts(email: string): boolean {
-  const now = Date.now()
-  const row = loginAttempts.get(email)
-  if (!row || now > row.resetAt) {
-    loginAttempts.set(email, { count: 1, resetAt: now + 15 * 60 * 1000 })
-    return false
+function denyAuthWriteFlood(res: ServerResponse, user: { accountId: string }): boolean {
+  if (tooMany(`authwrite:${user.accountId}`, AUTH_WRITE_MAX, AUTH_WRITE_WINDOW_MS)) {
+    sendJson(res, 429, { error: 'Too many account changes. Wait a few minutes.' })
+    return true
   }
-  row.count += 1
-  return row.count > 12
+  return false
 }
 
 export async function handleAuthRoutes(
@@ -82,7 +82,7 @@ export async function handleAuthRoutes(
     }
     const email = (body.email || '').trim().toLowerCase()
     const password = body.password || ''
-    if (tooManyAttempts(email || 'unknown')) {
+    if (tooMany(`login:${email || 'unknown'}`, 12, LOGIN_WINDOW_MS)) {
       sendJson(res, 429, { error: 'Too many sign-in tries. Wait a few minutes.' })
       return true
     }
@@ -165,6 +165,7 @@ export async function handleAuthRoutes(
       sendJson(res, 200, { kind: 'shape-lab-accounts', accounts: await accountsWithoutSecrets() })
       return true
     }
+    if (denyAuthWriteFlood(res, user)) return true
     if (req.method === 'POST') {
       let body: {
         email?: string
@@ -265,6 +266,7 @@ export async function handleAuthRoutes(
       sendJson(res, 403, { error: 'Leave floor mode before changing a password.' })
       return true
     }
+    if (denyAuthWriteFlood(res, user)) return true
     let body: { currentPassword?: string; newPassword?: string; accountId?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -318,6 +320,7 @@ export async function handleAuthRoutes(
       sendJson(res, 403, { error: 'Only gym admin can copy a sign-in link.' })
       return true
     }
+    if (denyAuthWriteFlood(res, user)) return true
     let body: { accountId?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -342,6 +345,10 @@ export async function handleAuthRoutes(
 
   if (path === '/api/auth/invite') {
     if (req.method === 'GET') {
+      if (tooMany(ipKey(req, 'peek'), 90, 60_000)) {
+        sendJson(res, 429, { error: 'Too many tries. Wait a minute.' })
+        return true
+      }
       const url = new URL(req.url || '/', 'http://127.0.0.1')
       sendJson(res, 200, await peekInvite(url.searchParams.get('token') || ''))
       return true
@@ -358,7 +365,7 @@ export async function handleAuthRoutes(
       return true
     }
     const token = body.token || ''
-    if (tooManyAttempts(`invite:${token.slice(0, 12) || 'unknown'}`)) {
+    if (tooMany(`invite:${token.slice(0, 12) || 'unknown'}`, 12, LOGIN_WINDOW_MS)) {
       sendJson(res, 429, { error: 'Too many tries. Wait a few minutes.' })
       return true
     }
@@ -398,6 +405,7 @@ export async function handleAuthRoutes(
       sendJson(res, 403, { error: 'Only gym admin can turn a device into a floor iPad.' })
       return true
     }
+    if (denyAuthWriteFlood(res, user)) return true
     let body: { enabled?: boolean; password?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -482,6 +490,7 @@ export async function handleAuthRoutes(
       sendJson(res, 405, { error: 'Use GET or POST' })
       return true
     }
+    if (denyAuthWriteFlood(res, user)) return true
     let body: { accountId?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body

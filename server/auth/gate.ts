@@ -7,6 +7,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { sendJson } from '../instagramResolve.ts'
 import { userFromRequest } from './sessions.ts'
 import { canWriteCoachTools, canWriteGymLibrary, isAdmin } from './permissions.ts'
+import { tooMany } from './rateLimit.ts'
 import type { AuthUser } from './types.ts'
 
 /** Instructional / gym-tool writes limited to admin. */
@@ -49,6 +50,11 @@ export async function gateApiRequest(
   const user = await userFromRequest(req)
   if (!user) {
     sendJson(res, 401, { error: 'Sign in to continue.' })
+    return { handled: true }
+  }
+
+  if (isWrite(req.method) && tooMany(`write:${user.accountId}`, 180, 60_000)) {
+    sendJson(res, 429, { error: 'Too many saves. Wait a minute.' })
     return { handled: true }
   }
 

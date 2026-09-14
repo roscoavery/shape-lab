@@ -81,7 +81,8 @@ export function WatchDesk({ user }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Sign-ins, sign-in links, floor iPad, contacts, and login changes.
           This is a gym log, not a legal record. A new sign-in on the same
-          email ends the last one. Session ids stay on the server.
+          email ends the last one. Session ids stay on the server. A roster
+          save is only logged when names or records actually changed.
         </p>
       </section>
 

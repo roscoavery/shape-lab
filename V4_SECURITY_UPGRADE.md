@@ -12,7 +12,8 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
 - Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
 - Email delivery of invites is not built. Admin can copy a one-time sign-in link from More → Accounts. The recipient opens the URL and sets their own password. Shape Lab does not send email.
-- More → Watch is a gym log, not a legal-compliance system. Routine roster and photo opens are hidden by default.
+- More → Watch is a gym log, not a legal-compliance system. Routine roster and photo opens are hidden by default. Roster saves that did not change records are not logged.
+- Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. CSRF tokens are not added; session cookies are SameSite=Lax.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.
 
@@ -62,6 +63,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - **Phase 5 (Seal build):** Feed, roster photos, and athlete videos stream through `/api/…-file` after sign-in. The server writes those bytes privately, does not mint a public Blob URL on read, and does not 302 the browser to an old public link. Instagram instructional stills may still use a public copy. Existing leaked URLs are not deleted from Vercel.
 - **Phase 6 (Link build):** Admin copies a one-time `/?invite=` URL from More → Accounts (or when creating a login with a blank password). Tokens are SHA-256 hashed in gitignored `data/invites.json`, last 7 days, and burn on first use. The person who opens the link sets their own password. No email is sent. Coaches and floor iPads cannot mint links.
 - **Phase 7 (Watch build):** More → Watch shows who is signed in and the last office actions (sign-in, links, floor, contacts, password/role changes). Admin can end another login. Session ids stay on the server. Coaches and floor iPads cannot open Watch. A new sign-in on the same email still ends the previous one.
+- **Phase 8 (Pace build):** Sign-in, invite peek/redeem, account writes, and gym saves are rate-limited on this process. Watch only records a roster save when the file actually changed. CSRF tokens are not added; cookies are SameSite=Lax.
 
 ## Authentication architecture
 
@@ -75,6 +77,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 8. Admin can `POST /api/auth/invites` with `{ accountId }` to copy a one-time `/?invite=` URL (7 days, hashed in `data/invites.json`).
 9. Anyone with the URL can `GET /api/auth/invite?token=` then `POST /api/auth/invite` with `{ token, password }` to set a password and start a session. The token burns.
 10. Admin can `GET /api/auth/audit` and `GET /api/auth/sessions`. `POST /api/auth/sessions` with `{ accountId }` ends that login. You cannot end your own.
+11. Account writes (create/reset/invite/kiosk/end-login) share a 40 / 15-minute cap per account. Gym writes share 180 / minute. Unknown-email sign-in tries cap at 12 / 15 minutes.
 
 Never put secrets in `VITE_` variables or client source.
 
@@ -132,7 +135,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Watch build** on the header. `/api/health` should include `"holdBuild":"watch"`. If you still see Link, Seal, Floor, or Ask, this window is still old. After sign-in, More → Watch shows who is signed in. More → Accounts still copies a sign-in link.
+5. Look for **Pace build** on the header. `/api/health` should include `"holdBuild":"pace"`. If you still see Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Watch shows who is signed in. More → Accounts still copies a sign-in link.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -167,7 +170,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 1. Rotate any Blob tokens that were ever in a shell history.
 2. Email delivery of those sign-in links (SMTP). Copy-link reset is already built.
 3. Separate historical Git cleanup, only with an explicit backup and written approval.
-4. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
+4. CSRF tokens if Shape Lab is ever embedded on another site. Write pacing and SameSite=Lax cookies are already in place.
 
 ## Tests
 

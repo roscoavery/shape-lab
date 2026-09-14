@@ -549,12 +549,43 @@ async function main() {
   })
   ok('coach cannot reset admin password', coachReset.status === 403 || coachReset.status === 401)
 
+  let probe = { status: 0 }
+  for (let i = 0; i < 13; i += 1) {
+    probe = await req('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'pace-probe@example.com',
+        password: 'wrong-pace-password',
+      }),
+    })
+  }
+  ok('unknown email lockout after many tries', probe.status === 429, String(probe.status))
+
   const pw = await req('/api/auth/password', {
     method: 'POST',
     cookie,
     body: JSON.stringify({ currentPassword: ADMIN_PASSWORD, newPassword: ADMIN_PASSWORD }),
   })
   ok('admin can change own password', pw.status === 200, String(pw.status))
+  cookie = cookieFrom(cookie, pw)
+
+  const listedPace = await req('/api/auth/accounts', { cookie })
+  const athletePace = (listedPace.json?.accounts || []).find((row) => row.email === 'v4-athlete@example.com')
+  if (athletePace?.id) {
+    let inviteStatus = 200
+    for (let i = 0; i < 50; i += 1) {
+      const row = await req('/api/auth/invites', {
+        method: 'POST',
+        cookie,
+        body: JSON.stringify({ accountId: athletePace.id }),
+      })
+      inviteStatus = row.status
+      if (inviteStatus === 429) break
+    }
+    ok('sign-in link create is rate limited', inviteStatus === 429, String(inviteStatus))
+  } else {
+    ok('athlete account exists for rate-limit checks', false, 'missing v4-athlete@example.com')
+  }
 
   if (failed) {
     console.log(`\n${failed} check(s) failed`)

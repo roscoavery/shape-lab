@@ -231,7 +231,7 @@ export async function handleShapeLabApi(
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'watch' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'pace' })
     return true
   }
   if (path.startsWith('/api/auth')) {
@@ -508,9 +508,11 @@ export async function handleShapeLabApi(
         const existing = await readRosterFile()
         const authorized = await authorizeRosterWrite(viewer, existing, incoming)
         const saved = await writeRosterFile(authorized)
-        await writeAudit('roster.write', viewer, {
-          detail: `athletes:${saved.athletes.length}`,
-        })
+        if (saved.exportedAt !== existing.exportedAt) {
+          await writeAudit('roster.write', viewer, {
+            detail: `athletes:${saved.athletes.length}`,
+          })
+        }
         sendJson(res, 200, {
           kind: 'shape-lab-roster',
           ok: true,
