@@ -8,7 +8,7 @@ Do not point the current working production gym at this branch until Ryan explic
 
 Important protections are in place on `shape-lab-v4`, but the following are still incomplete:
 
-- Existing public Vercel Blob URLs for some photos/videos may still work if someone already has the exact URL.
+- Older public Vercel Blob URLs created before this phase may still work if someone already has the exact URL. New plays go through the signed-in file routes. The app no longer mints or redirects to a public CDN link for gym photos, feed clips, or athlete videos.
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
 - Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
 - Account invites by email and magic-link login are not built. Admin can create a login and reset a password in More → Accounts.
@@ -58,6 +58,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - **Phase 2:** More → Accounts lets admin create / link / reset logins. Anyone signed in can change their own password. Other sessions are signed out on a password change. Authorized roster photos stream privately when the bytes are on disk instead of minting a new public Blob URL.
 - **Phase 3 (Ask build):** `GET`/`PATCH /api/consent` for parents, the athlete, and admin. Gym feed and stories are filtered per viewer. Coaches can still post wins; people without a relationship do not see them unless the family allowed that channel.
 - **Phase 4 (Floor build):** More → Accounts → “Use this iPad on the floor” marks only this browser as a kiosk. The account stays signed in. Contacts, accounts, consent, research, password changes, and injury journals lock until the admin password leaves floor mode. Class, homework, and lessons stay. Signing out also ends floor mode.
+- **Phase 5 (Seal build):** Feed, roster photos, and athlete videos stream through `/api/…-file` after sign-in. The server writes those bytes privately, does not mint a public Blob URL on read, and does not 302 the browser to an old public link. Instagram instructional stills may still use a public copy. Existing leaked URLs are not deleted from Vercel.
 
 ## Authentication architecture
 
@@ -93,10 +94,10 @@ Sanitization happens on the server before JSON is sent. Hiding a field in React 
 
 ## Media security model
 
-- `/api/roster-photo-file` and `/api/athlete-video-file` require a session and athlete access.
-- Client video URLs now point at the authenticated file route instead of a raw Blob URL.
-- If bytes exist on disk they are streamed privately.
-- Older public Blob URLs may still exist in storage. That is a known risk, not a completed migration.
+- `/api/roster-photo-file`, `/api/athlete-video-file`, `/api/feed-file`, and `/api/story-file` require a session. Feed and story files also honor consent visibility.
+- Client URLs for gym photos, wins, and athlete clips are the authenticated file routes.
+- If bytes exist on disk they are streamed privately. If only an old public URL exists, the server fetches it and streams it — the browser does not get a 302.
+- Older public Blob objects may still exist in storage if someone already copied the URL. That is a leftover, not a new leak.
 
 ## Migration notes
 
@@ -125,7 +126,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Floor build** on the header. `/api/health` should include `"holdBuild":"floor"`. If you still see Ask or Keys, this window is still old. After sign-in, More → Accounts → Use this iPad on the floor.
+5. Look for **Seal build** on the header. `/api/health` should include `"holdBuild":"seal"`. If you still see Floor, Ask, or Keys, this window is still old. After sign-in, More → Accounts → Use this iPad on the floor.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -158,10 +159,9 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 ## Recommended next security / privacy tasks
 
 1. Rotate any Blob tokens that were ever in a shell history.
-2. Move remaining public athlete Blob objects to private storage.
-3. Password reset, email invites, and magic-link login.
-4. Separate historical Git cleanup, only with an explicit backup and written approval.
-5. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
+2. Password reset, email invites, and magic-link login.
+3. Separate historical Git cleanup, only with an explicit backup and written approval.
+4. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
 
 ## Tests
 

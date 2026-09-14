@@ -114,6 +114,21 @@ async function main() {
   const me = await req('/api/auth/me', { cookie })
   ok('admin session is admin', me.json?.user?.role === 'admin' || me.json?.user?.role === 'gymOwner')
 
+  const anonFeedFile = await req('/api/feed-file?id=post_does_not_exist')
+  ok('anon feed file is 401', anonFeedFile.status === 401)
+
+  const feed = await req('/api/feed', { cookie })
+  ok('admin can read feed', feed.status === 200)
+  const posts = Array.isArray(feed.json?.posts) ? feed.json.posts : []
+  ok(
+    'feed urls stay on the signed-in API',
+    posts.every((row) => !row.url || String(row.url).startsWith('/api/feed-file')),
+  )
+  ok(
+    'feed json does not include publicUrl',
+    posts.every((row) => row.publicUrl == null || row.publicUrl === ''),
+  )
+
   const roster = await req('/api/roster', { cookie })
   ok('admin can read roster', roster.status === 200 && roster.json?.kind === 'shape-lab-roster')
   const athletes = Array.isArray(roster.json?.athletes) ? roster.json.athletes : []

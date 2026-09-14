@@ -1575,7 +1575,9 @@ export default function App() {
               homework stay in the app on this gym link. Add a Blob store on the claimed
               Vercel project so class sign-ups are still here tomorrow. Only the gym
               admin sees every profile&apos;s shared phones and photos. Your own
-              profile still shows what you entered.
+              profile still shows what you entered. Gym photos, wins, and athlete
+              clips play through this signed-in gym — the app does not hand the
+              browser a public file link.
             </p>
           </section>
           <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

@@ -1,14 +1,13 @@
 import type { ServerResponse } from 'node:http'
 import {
   isDirectHttpUrl,
-  persistMode,
   readBin,
   readJson,
   readText,
   removeFile,
-  sendPublicRedirect,
+  sendPrivateOrProxy,
+  writeBin,
   writeJson,
-  writePublicBin,
 } from './persist.ts'
 
 const FILE = 'data/roster-photos.json'
@@ -92,9 +91,9 @@ async function writePhotoBytes(
   mime: string,
 ): Promise<PhotoRef> {
   const updatedAt = new Date().toISOString()
-  const publicUrl = await writePublicBin(photoBinRel(id), buf, mime || 'image/jpeg')
+  await writeBin(photoBinRel(id), buf, mime || 'image/jpeg')
   return {
-    url: publicUrl || photoFileUrl(id, updatedAt),
+    url: photoFileUrl(id, updatedAt),
     mime: mime || 'image/jpeg',
     updatedAt,
   }
@@ -201,15 +200,12 @@ function clientPhotoMap(data: DiskRosterPhotos): Record<string, PhotoRef> {
   const photos: Record<string, PhotoRef> = {}
   const at = data.exportedAt || new Date().toISOString()
   const ids = new Set([...(data.ids ?? []), ...Object.keys(data.photos)])
-  const serveLocal = persistMode() !== 'blob'
   for (const id of ids) {
     const sid = safePhotoId(id)
     if (!sid) continue
     const ref = asRef(data.photos[sid], at)
     if (ref) {
-      photos[sid] = serveLocal
-        ? { ...ref, url: photoFileUrl(sid, ref.updatedAt || at) }
-        : ref
+      photos[sid] = { ...ref, url: photoFileUrl(sid, ref.updatedAt || at) }
       continue
     }
     photos[sid] = {
@@ -346,19 +342,12 @@ export async function sendRosterPhotoFile(id: string, res: ServerResponse): Prom
       }
     }
   }
-  if (buf) {
-    res.statusCode = 200
-    res.setHeader('Content-Type', mime)
-    res.setHeader('Content-Length', String(buf.length))
-    res.setHeader('Cache-Control', 'private, max-age=3600')
-    res.end(buf)
-    return true
-  }
-  if (ref?.url && isDirectHttpUrl(ref.url)) {
-    sendPublicRedirect(res, ref.url)
-    return true
-  }
-  return false
+  return sendPrivateOrProxy(
+    res,
+    buf,
+    mime,
+    ref?.url && isDirectHttpUrl(ref.url) ? ref.url : undefined,
+  )
 }
 
 export function photosFromAthletes(athletes: unknown[]): Record<string, string> {

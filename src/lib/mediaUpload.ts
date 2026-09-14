@@ -60,7 +60,7 @@ export async function uploadGymMedia(
     if (!data.token) return { error: 'direct', direct: true }
     const { put } = await import('@vercel/blob/client')
     const saved = await put(data.pathname || pathname, body, {
-      access: 'public',
+      access: 'private',
       token: data.token,
       contentType,
       multipart: body.size > 4_000_000,

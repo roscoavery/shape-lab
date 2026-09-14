@@ -13,9 +13,9 @@ import {
   readBin,
   readJson,
   removeFile,
-  sendPublicRedirect,
+  sendPrivateOrProxy,
+  writeBin,
   writeJson,
-  writePublicBin,
 } from './persist.ts'
 
 const META = 'data/feed-posts.json'
@@ -49,7 +49,16 @@ export type DiskFeedPost = {
 type FeedChannel = 'gym' | 'wins' | 'passes'
 
 export function feedPostClientUrl(post: DiskFeedPost): string {
-  return post.publicUrl || (post.file ? `/api/feed-file?id=${encodeURIComponent(post.id)}` : '')
+  if (post.file || post.publicUrl) return `/api/feed-file?id=${encodeURIComponent(post.id)}`
+  return ''
+}
+
+function inferredFeedFile(id: string, mime: string, url?: string): string {
+  if (url) {
+    const name = url.match(/feed-blobs\/([^/?#]+)/i)?.[1]
+    if (name && /^[a-zA-Z0-9._-]+$/.test(name)) return name
+  }
+  return `${id}${extForMime(mime)}`
 }
 
 /** Coach posted this as the athlete's win — keep that athlete tagged, including after a repost. */
@@ -168,8 +177,9 @@ async function writeMeta(posts: DiskFeedPost[], removedIds: string[] = []): Prom
 
 function toClientPost(p: DiskFeedPost): DiskFeedPost & { url: string } {
   ensureWinAthleteTagged(p)
+  const { publicUrl: _publicUrl, ...rest } = p
   return {
-    ...p,
+    ...rest,
     kind:
       p.kind === 'collage' || p.collage
         ? 'collage'
@@ -178,6 +188,10 @@ function toClientPost(p: DiskFeedPost): DiskFeedPost & { url: string } {
           : 'video',
     url: feedPostClientUrl(p),
   }
+}
+
+export function presentFeedPost(post: DiskFeedPost): DiskFeedPost & { url: string } {
+  return toClientPost(post)
 }
 
 export async function findFeedPost(id: string): Promise<DiskFeedPost | null> {
@@ -256,7 +270,7 @@ export async function addFeedPostFromBody(params: {
       ? 'video/mp4'
       : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
+  await writeBin(blobRel(file), params.buf, mime)
   const taggedIds = params.taggedIds
     .map((x) => safeId(x))
     .filter((x): x is string => Boolean(x))
@@ -270,7 +284,6 @@ export async function addFeedPostFromBody(params: {
     mime,
     sizeBytes: params.buf.length,
     file,
-    ...(publicUrl ? { publicUrl } : {}),
     kind: 'video',
     channels: cleanChannels(params.channels),
     ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
@@ -326,7 +339,8 @@ export async function addFeedPostFromUrl(params: {
     taggedIds,
     mime,
     sizeBytes: params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : 0,
-    publicUrl: url,
+    file: inferredFeedFile(id, mime, url),
+    ...(isDirectHttpUrl(url) ? { publicUrl: url } : {}),
     kind: 'video',
     channels: cleanChannels(params.channels),
     ...(safeId(params.sharedById || '') ? { sharedById: safeId(params.sharedById || '')! } : {}),
@@ -525,14 +539,14 @@ export async function attachVideoToFeedPost(params: {
   ensureWinAthleteTagged(found)
 
   if (params.url && (/^https:\/\//i.test(params.url) || params.url.startsWith('/api/'))) {
-    found.publicUrl = params.url
-    found.file = undefined
     found.mime =
       params.mime && (params.mime.includes('mp4') || params.mime.includes('quicktime'))
         ? 'video/mp4'
         : params.mime?.includes('webm')
           ? 'video/webm'
           : 'video/mp4'
+    found.file = inferredFeedFile(sid, found.mime, params.url)
+    found.publicUrl = isDirectHttpUrl(params.url) ? params.url : undefined
     found.sizeBytes = params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : found.sizeBytes
     found.kind = 'video'
     await writeMeta(meta.posts, meta.removedIds)
@@ -546,9 +560,9 @@ export async function attachVideoToFeedPost(params: {
       : 'video/webm'
   if (found.file) await removeFile(blobRel(found.file))
   const file = `${sid}${extForMime(mime)}`
-  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
+  await writeBin(blobRel(file), params.buf, mime)
   found.file = file
-  found.publicUrl = publicUrl || undefined
+  found.publicUrl = undefined
   found.mime = mime
   found.sizeBytes = params.buf.length
   found.kind = 'video'
@@ -580,32 +594,7 @@ export async function sendFeedFile(id: string, res: ServerResponse): Promise<boo
   if (!sid) return false
   const found = (await readFeedFile()).posts.find((p) => p.id === sid)
   if (!found) return false
-  if (found.publicUrl && isDirectHttpUrl(found.publicUrl)) {
-    sendPublicRedirect(res, found.publicUrl)
-    return true
-  }
-  if (!found.file) return false
-  const buf = await readBin(blobRel(found.file))
-  if (!buf) return false
-  try {
-    const publicUrl = await writePublicBin(blobRel(found.file), buf, found.mime || 'video/webm')
-    if (publicUrl) {
-      found.publicUrl = publicUrl
-      const meta = await readFeedFile()
-      await writeMeta(
-        meta.posts.map((p) => (p.id === found.id ? { ...p, publicUrl } : p)),
-        meta.removedIds,
-      )
-      sendPublicRedirect(res, publicUrl)
-      return true
-    }
-  } catch {
-    /* stream the bytes this once */
-  }
-  res.statusCode = 200
-  res.setHeader('Content-Type', found.mime || 'video/webm')
-  res.setHeader('Content-Length', String(buf.length))
-  res.setHeader('Cache-Control', 'private, max-age=3600')
-  res.end(buf)
-  return true
+  const file = found.file || (found.publicUrl ? inferredFeedFile(found.id, found.mime || 'video/webm', found.publicUrl) : '')
+  const buf = file ? await readBin(blobRel(file)) : null
+  return sendPrivateOrProxy(res, buf, found.mime || 'video/webm', found.publicUrl)
 }

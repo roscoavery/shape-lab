@@ -39,11 +39,11 @@ import {
   deleteFeedPost,
   findFeedPost,
   postsForClient,
+  presentFeedPost,
   sendFeedFile,
   viewerMaySeeFeedPost,
   attachVideoToFeedPost,
   celebrateFeedPost,
-  feedPostClientUrl,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
@@ -227,7 +227,7 @@ export async function handleShapeLabApi(
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'floor' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'seal' })
     return true
   }
   if (path.startsWith('/api/auth')) {
@@ -333,7 +333,7 @@ export async function handleShapeLabApi(
     }
     try {
       const { generateClientTokenFromReadWriteToken } = await import('@vercel/blob/client')
-      const token = await generateClientTokenFromReadWriteToken({
+      const tokenOpts = {
         pathname,
         token: process.env.BLOB_READ_WRITE_TOKEN,
         allowedContentTypes: [
@@ -349,7 +349,16 @@ export async function handleShapeLabApi(
         addRandomSuffix: false,
         allowOverwrite: true,
         cacheControlMaxAge: 31536000,
-      })
+      }
+      let token: string
+      try {
+        token = await generateClientTokenFromReadWriteToken({
+          ...tokenOpts,
+          access: 'private',
+        })
+      } catch {
+        token = await generateClientTokenFromReadWriteToken(tokenOpts)
+      }
       sendJson(res, 200, { token, pathname })
     } catch (err) {
       sendJson(res, 400, {
@@ -879,10 +888,7 @@ export async function handleShapeLabApi(
             })
             return true
           }
-          sendJson(res, 200, {
-            ...saved,
-            url: feedPostClientUrl(saved),
-          })
+          sendJson(res, 200, presentFeedPost(saved))
           return true
         }
         if (kind === 'attach') {
@@ -899,10 +905,7 @@ export async function handleShapeLabApi(
             sendJson(res, 400, { error: 'Could not attach that clip to the win.' })
             return true
           }
-          sendJson(res, 200, {
-            ...saved,
-            url: saved.publicUrl || (saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : ''),
-          })
+          sendJson(res, 200, presentFeedPost(saved))
           return true
         }
         if (kind === 'video') {
@@ -923,7 +926,7 @@ export async function handleShapeLabApi(
             sendJson(res, 400, { error: 'Could not save that video win.' })
             return true
           }
-          sendJson(res, 200, { ...saved, url: saved.publicUrl || '' })
+          sendJson(res, 200, presentFeedPost(saved))
           return true
         }
         if (kind === 'text') {
@@ -974,10 +977,7 @@ export async function handleShapeLabApi(
           sendJson(res, 400, { error: 'Could not attach that clip to the win.' })
           return true
         }
-        sendJson(res, 200, {
-          ...saved,
-          url: saved.publicUrl || (saved.file ? `/api/feed-file?id=${encodeURIComponent(saved.id)}` : ''),
-        })
+        sendJson(res, 200, presentFeedPost(saved))
         return true
       }
       const taggedRaw = url.searchParams.get('taggedIds') ?? ''
@@ -997,10 +997,7 @@ export async function handleShapeLabApi(
         sendJson(res, 400, { error: 'Could not save that post.' })
         return true
       }
-      sendJson(res, 200, {
-        ...saved,
-        url: `/api/feed-file?id=${encodeURIComponent(saved.id)}`,
-      })
+      sendJson(res, 200, presentFeedPost(saved))
       return true
     }
     if (req.method === 'DELETE') {

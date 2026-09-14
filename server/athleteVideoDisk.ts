@@ -9,9 +9,9 @@ import {
   readBin,
   readJson,
   removeFile,
-  sendPublicRedirect,
+  sendPrivateOrProxy,
+  writeBin,
   writeJson,
-  writePublicBin,
 } from './persist.ts'
 
 const META = 'data/athlete-videos.json'
@@ -188,7 +188,7 @@ export async function addAthleteVideoFromBody(params: {
     : 'compare-replay'
   const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  const publicUrl = await writePublicBin(blobRel(file), params.buf, mime)
+  await writeBin(blobRel(file), params.buf, mime)
   const video: DiskAthleteVideo = {
     id,
     athleteId,
@@ -202,7 +202,6 @@ export async function addAthleteVideoFromBody(params: {
     sizeBytes: params.buf.length,
     mime,
     file,
-    ...(publicUrl ? { publicUrl } : {}),
     ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
     ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
     ...(params.skillLabel?.trim()
@@ -286,17 +285,10 @@ export async function sendAthleteVideoFile(id: string, res: ServerResponse): Pro
   const found = (await readAthleteVideoMeta()).videos.find((v) => v.id === sid)
   if (!found) return false
   const buf = await readBin(blobRel(found.file))
-  if (buf) {
-    res.statusCode = 200
-    res.setHeader('Content-Type', found.mime || 'video/webm')
-    res.setHeader('Content-Length', String(buf.length))
-    res.setHeader('Cache-Control', 'private, max-age=3600')
-    res.end(buf)
-    return true
-  }
-  if (found.publicUrl && isDirectHttpUrl(found.publicUrl)) {
-    sendPublicRedirect(res, found.publicUrl)
-    return true
-  }
-  return false
+  return sendPrivateOrProxy(
+    res,
+    buf,
+    found.mime || 'video/webm',
+    found.publicUrl && isDirectHttpUrl(found.publicUrl) ? found.publicUrl : undefined,
+  )
 }

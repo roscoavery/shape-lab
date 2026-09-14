@@ -123,6 +123,38 @@ export function sendPublicRedirect(res: ServerResponse, location: string): void 
   res.end()
 }
 
+export function sendPrivateBytes(res: ServerResponse, buf: Buffer, mime: string): void {
+  res.statusCode = 200
+  res.setHeader('Content-Type', mime || 'application/octet-stream')
+  res.setHeader('Content-Length', String(buf.length))
+  res.setHeader('Cache-Control', 'private, max-age=3600')
+  res.end(buf)
+}
+
+/** Stream gym media through the API. Never 302 the browser to a public Blob URL. */
+export async function sendPrivateOrProxy(
+  res: ServerResponse,
+  buf: Buffer | null,
+  mime: string,
+  fallbackUrl?: string,
+): Promise<boolean> {
+  if (buf && buf.length) {
+    sendPrivateBytes(res, buf, mime)
+    return true
+  }
+  if (!fallbackUrl || !isDirectHttpUrl(fallbackUrl)) return false
+  try {
+    const remote = await fetch(fallbackUrl)
+    if (!remote.ok) return false
+    const proxied = Buffer.from(await remote.arrayBuffer())
+    if (!proxied.length) return false
+    sendPrivateBytes(res, proxied, remote.headers.get('content-type') || mime)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function readText(rel: string): Promise<string | null> {
   // Always hit Blob first. A warm function used to return its in-memory
   // copy and hide profiles / wins another device had just saved.
@@ -241,7 +273,7 @@ export async function writeBin(rel: string, buf: Buffer, contentType: string): P
   fs.writeFileSync(dest, buf)
 }
 
-/** Store media on the public Blob CDN and return that URL (null on disk). */
+/** Instructional Instagram copies only. Athlete / feed / story bytes use writeBin. */
 export async function writePublicBin(
   rel: string,
   buf: Buffer,
