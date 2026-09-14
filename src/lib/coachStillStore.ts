@@ -3,8 +3,11 @@
  * Gym-wide so iPad and phone show the same library.
  */
 
+import { makeShippedCoachExtras, SHIPPED_COACH_EXTRA_BY_ID } from '../config/shippedCoachExtras'
 import { setMainCoachStill } from './coachStillPrefs'
-import { capReferencePhotos, loadReferencePhotos, saveReferencePhotos } from './storage'
+import { fileToJpegBlob, blobToDataUrl } from './glossaryStore'
+import { emptyCoachStillSlot } from './shippedRefs'
+import { capReferencePhotos, createId, loadReferencePhotos, saveReferencePhotos, saveReferencePhoto } from './storage'
 import type { ReferencePhoto } from '../types'
 
 export type CoachStillExtra = {
@@ -91,22 +94,34 @@ function emitCoachStills(extras: CoachStillExtra[]) {
 
 function extrasAsPhotos(extras: CoachStillExtra[]): ReferencePhoto[] {
   return extras
-    .filter((row) => row.id && row.shapeId && typeof row.dataUrl === 'string' && row.dataUrl)
-    .map((row) => ({
-      id: row.id,
-      shapeId: row.shapeId,
-      athleteId: null,
-      dataUrl: row.dataUrl,
-      label: row.label,
-      createdAt: row.createdAt,
-      library: 'coach' as const,
-      persistedToApp: true,
-    }))
+    .filter((row) => row.id && row.shapeId)
+    .map((row) => {
+      const shipped = SHIPPED_COACH_EXTRA_BY_ID.get(row.id)
+      const dataUrl =
+        row.dataUrl && row.dataUrl.startsWith('data:image')
+          ? row.dataUrl
+          : row.dataUrl || (shipped ? `/learn/coach-stills/${shipped.file}` : '')
+      return {
+        id: row.id,
+        shapeId: row.shapeId,
+        athleteId: null,
+        dataUrl,
+        label: row.label,
+        createdAt: row.createdAt,
+        library: 'coach' as const,
+        persistedToApp: true,
+      }
+    })
 }
 
-function keepPixelUrl(local: string | undefined, remote: string | undefined): string {
+function keepPixelUrl(local: string | undefined, remote: string | undefined, id?: string): string {
   if (local?.startsWith('data:image')) return local
+  const shipped = id ? SHIPPED_COACH_EXTRA_BY_ID.get(id) : undefined
+  if (shipped && (!remote || remote.includes('/api/coach-still-file'))) {
+    return `/learn/coach-stills/${shipped.file}`
+  }
   if (remote && remote.length > 0) return remote
+  if (shipped) return `/learn/coach-stills/${shipped.file}`
   return local ?? ''
 }
 
@@ -118,7 +133,7 @@ function rememberCoachExtrasLocally(extras: CoachStillExtra[]) {
     .filter((p) => !gone.has(p.id))
     .map((p) => ({
       ...p,
-      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl),
+      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl, p.id),
     }))
   try {
     const ids = new Set(incoming.map((p) => p.id))
@@ -189,11 +204,19 @@ export function mergeCoachExtras(
     .filter((p) => !gone.has(p.id))
     .map((p) => ({
       ...p,
-      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl),
+      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl, p.id),
     }))
   const ids = new Set(incoming.map((p) => p.id))
+  const shipped = makeShippedCoachExtras()
+    .filter((p) => !gone.has(p.id) && !ids.has(p.id))
+    .map((p) => ({
+      ...p,
+      dataUrl: keepPixelUrl(localById.get(p.id)?.dataUrl, p.dataUrl, p.id),
+    }))
+  for (const p of shipped) ids.add(p.id)
   return [
     ...incoming,
+    ...shipped,
     ...photos.filter((p) => !(p.library === 'coach' && gone.has(p.id)) && !ids.has(p.id)),
   ]
 }
@@ -224,7 +247,7 @@ export async function hydrateCoachStills(
   }
   rememberCoachExtrasLocally(file.extras)
   const remoteIds = new Set(file.extras.map((row) => row.id))
-  const merged = mergeCoachExtras(photos, file.extras)
+  const merged = mergeCoachExtras([...makeShippedCoachExtras(), ...photos], file.extras)
   emitCoachStills(file.extras)
   const unsaved = merged.filter(
     (p) =>
@@ -278,7 +301,7 @@ export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<Per
       photo: {
         ...photo,
         ...(row ?? {}),
-        dataUrl: keepPixelUrl(photo.dataUrl, row?.dataUrl),
+        dataUrl: keepPixelUrl(photo.dataUrl, row?.dataUrl, photo.id),
         persistedToApp: true,
       },
     }
@@ -331,4 +354,46 @@ export async function persistMainCoachStill(shapeId: string, stillId: string): P
     extras: file.extras,
     removedCoachStillIds: file.removedCoachStillIds,
   })
+}
+
+export async function renameCoachStillExtra(
+  id: string,
+  label: string,
+  photos: ReferencePhoto[],
+): Promise<PersistStillResult> {
+  const photo = photos.find((p) => p.id === id)
+  if (!photo) return { ok: false, error: 'That still is not on this device.' }
+  return persistCoachStillExtra({ ...photo, label: label.trim().slice(0, 80) })
+}
+
+/** Drop or pick a JPEG onto an existing library still, or onto a shape card. */
+export async function applyStillFromFile(opts: {
+  shapeId: string
+  file: File
+  replaceId?: string | null
+  photos: ReferencePhoto[]
+  label?: string
+}): Promise<PersistStillResult> {
+  const jpeg = await fileToJpegBlob(opts.file)
+  const dataUrl = await blobToDataUrl(jpeg)
+  const empty = emptyCoachStillSlot(opts.photos, opts.shapeId)
+  const id = opts.replaceId || empty?.id || createId('coach')
+  const existing = opts.photos.find((p) => p.id === id)
+  const photo: ReferencePhoto = {
+    id,
+    shapeId: opts.shapeId,
+    athleteId: null,
+    dataUrl,
+    label: opts.label || existing?.label || empty?.label,
+    createdAt: existing?.createdAt || empty?.createdAt || new Date().toISOString(),
+    library: 'coach',
+  }
+  const remote = await persistCoachStillExtra(photo)
+  const kept = remote.photo ?? photo
+  try {
+    await saveReferencePhoto(kept)
+  } catch {
+    /* quota — gym file still has it */
+  }
+  return { ...remote, photo: kept }
 }

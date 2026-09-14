@@ -1,0 +1,116 @@
+{
+  "extras": [
+    {
+      "id": "coach_mtvrn0g3_a5rsza",
+      "shapeId": "wall_handstand",
+      "file": "wall_handstand_extra.jpg",
+      "label": "One foot on wall",
+      "createdAt": "2026-09-10T16:52:52.611Z"
+    },
+    {
+      "id": "coach_mtyzjoor_qhz7vd",
+      "shapeId": "gym_mad_cat",
+      "file": "gym_mad_cat.jpg",
+      "label": "Mad cat",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "coach_mtyzmlu4_ghky54",
+      "shapeId": "gym_front_support",
+      "file": "gym_front_support.jpg",
+      "label": "Front support",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "coach_mtyzraba_s1pk9j",
+      "shapeId": "gym_side_support",
+      "file": "gym_side_support.jpg",
+      "label": "Side support",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "shipped_gym_side_support_coach",
+      "shapeId": "gym_side_support",
+      "file": "gym_side_support_coach.jpg",
+      "label": "Coach demo",
+      "createdAt": "2026-09-13T18:00:01.000Z"
+    },
+    {
+      "id": "coach_mtyzxnga_h5hqol",
+      "shapeId": "gym_lightning_bolt",
+      "file": "gym_lightning_bolt.jpg",
+      "label": "Lightning bolt",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "coach_mtz0a9ba_f6pp1u",
+      "shapeId": "gym_tucked_handstand",
+      "file": "gym_tucked_handstand.jpg",
+      "label": "On block",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "coach_mtz0ekpq_gcdbdr",
+      "shapeId": "gym_piked_handstand",
+      "file": "gym_piked_handstand.jpg",
+      "label": "At wall",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "shipped_gym_piked_handstand_b",
+      "shapeId": "gym_piked_handstand",
+      "file": "gym_piked_handstand_b.jpg",
+      "label": "On block",
+      "createdAt": "2026-09-13T18:00:01.000Z"
+    },
+    {
+      "id": "coach_mtz0n8ye_2ky13i",
+      "shapeId": "gym_l_handstand",
+      "file": "gym_l_handstand.jpg",
+      "label": "At wall",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "shipped_gym_l_handstand_b",
+      "shapeId": "gym_l_handstand",
+      "file": "gym_l_handstand_b.jpg",
+      "label": "On block",
+      "createdAt": "2026-09-13T18:00:01.000Z"
+    },
+    {
+      "id": "coach_mtz14ia1_l5y40w",
+      "shapeId": "gym_curl_up",
+      "file": "gym_curl_up.jpg",
+      "label": "Start",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "shipped_gym_curl_up_b",
+      "shapeId": "gym_curl_up",
+      "file": "gym_curl_up_b.jpg",
+      "label": "Second view",
+      "createdAt": "2026-09-13T18:00:01.000Z"
+    },
+    {
+      "id": "coach_mtz33nya_0nom74",
+      "shapeId": "gym_hands_turned_in_position",
+      "file": "gym_hands_turned_in_position.jpg",
+      "label": "Arm out",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "shipped_gym_hands_turned_in_b",
+      "shapeId": "gym_hands_turned_in_position",
+      "file": "gym_hands_turned_in_position_b.jpg",
+      "label": "Arm up",
+      "createdAt": "2026-09-13T18:00:01.000Z"
+    },
+    {
+      "id": "coach_mtz35uk1_rf6xih",
+      "shapeId": "gym_kneeling_wall_hollow",
+      "file": "gym_kneeling_wall_hollow.jpg",
+      "label": "Kneeling wall hollow",
+      "createdAt": "2026-09-13T18:00:00.000Z"
+    }
+  ]
+}

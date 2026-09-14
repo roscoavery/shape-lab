@@ -5,6 +5,7 @@
 
 import { SHAPES_BY_ID } from '../config/shapes'
 import { SHIPPED_DRILLS } from '../config/drills'
+import { SHIPPED_GYM_SHAPES } from '../config/shippedGymShapes'
 import { setGymShapeCache } from './gymShapeCache'
 import type {
   CoachShape,
@@ -61,7 +62,10 @@ function applyTombstones(file: CoachContentFile): CoachContentFile {
     ...file,
     warmups: file.warmups.filter((w) => w?.id && !goneWarmups.has(w.id)),
     stars: file.stars.filter((s) => s?.warmupId && !goneWarmups.has(s.warmupId)),
-    gymLibrary: cleanGymLibrary(file.gymLibrary ?? []).filter((s) => s.id && !goneShapes.has(s.id)),
+    gymLibrary: mergeShippedGymShapes(
+      cleanGymLibrary(file.gymLibrary ?? []).filter((s) => s.id && !goneShapes.has(s.id)),
+      goneShapes,
+    ),
     removedWarmupIds,
     removedGymShapeIds,
   }
@@ -172,6 +176,15 @@ function cleanGymLibrary(rows: GymLibraryShape[]): GymLibraryShape[] {
       s.id !== 'gym_gym_candlestick_rock' &&
       !/candlestick\s*rock/i.test(s.name ?? ''),
   )
+}
+
+function mergeShippedGymShapes(
+  rows: GymLibraryShape[],
+  gone: Set<string>,
+): GymLibraryShape[] {
+  const have = new Set(rows.map((s) => s.id))
+  const extra = SHIPPED_GYM_SHAPES.filter((s) => !gone.has(s.id) && !have.has(s.id))
+  return extra.length === 0 ? rows : [...rows, ...extra]
 }
 
 function gymRowToDef(row: GymLibraryShape): ShapeDef {

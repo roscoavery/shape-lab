@@ -16,7 +16,7 @@ import {
   otherSamePositionIds,
   visibleCriteria,
 } from '../lib/educationCopy'
-import { CoachStillGallery, ReferenceStill } from './ReferenceStill'
+import { CoachStillGallery, ReferenceStill, StillDropTarget } from './ReferenceStill'
 import { listCaptures, type TaskCapture } from '../lib/captureStore'
 import { ViewCallout } from './ViewCallout'
 import { ShapeGlossary } from './ShapeGlossary'
@@ -360,8 +360,10 @@ export function EducationPanel({
             onOpen={openShape}
             onExplore={(id) => setExploreId(id)}
             referencePhotos={referencePhotos}
+            onReferencesChange={onReferencesChange}
             signedIn={signedIn}
             canDeleteGym={canAddGymShape}
+            canEdit={canAddGymShape}
           />
         </>
       )}
@@ -952,8 +954,10 @@ function ShapeLibrary({
   onOpen,
   onExplore,
   referencePhotos,
+  onReferencesChange,
   signedIn = null,
   canDeleteGym = false,
+  canEdit = false,
 }: {
   shapes: ShapeDef[]
   pathwayIds: Set<string>
@@ -964,8 +968,10 @@ function ShapeLibrary({
   onOpen: (id: string) => void
   onExplore: (id: string) => void
   referencePhotos: ReferencePhoto[]
+  onReferencesChange?: (photos: ReferencePhoto[]) => void
   signedIn?: Athlete | null
   canDeleteGym?: boolean
+  canEdit?: boolean
 }) {
   const { copyFor } = useShapeCopy()
   return (
@@ -1011,6 +1017,9 @@ function ShapeLibrary({
         <p className="text-xs text-[var(--muted)]">
           {shapes.length} shape{shapes.length === 1 ? '' : 's'} as pictures. Tap a
           still for notes, or open full screen to swipe, tap through, or play a slideshow.
+          {canEdit
+            ? ' Drag a photo onto a card to fill that still — you do not have to retype the name.'
+            : ''}
         </p>
         {shapes.length > 0 && (
           <button
@@ -1035,12 +1044,29 @@ function ShapeLibrary({
                 className="flex w-full flex-1 flex-col text-left transition hover:border-[var(--accent-dim)]"
               >
                 <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[#0d1218]">
-                  <ReferenceStill
-                    shapeId={shape.id}
-                    photos={referencePhotos}
-                    alt={shape.name}
-                    className="h-full w-full object-contain"
-                  />
+                  {canEdit && onReferencesChange ? (
+                    <StillDropTarget
+                      shapeId={shape.id}
+                      photos={referencePhotos}
+                      onPhotosChange={onReferencesChange}
+                      className="h-full w-full"
+                      label={`Drop on ${shape.name}`}
+                    >
+                      <ReferenceStill
+                        shapeId={shape.id}
+                        photos={referencePhotos}
+                        alt={shape.name}
+                        className="h-full w-full object-contain"
+                      />
+                    </StillDropTarget>
+                  ) : (
+                    <ReferenceStill
+                      shapeId={shape.id}
+                      photos={referencePhotos}
+                      alt={shape.name}
+                      className="h-full w-full object-contain"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 px-2.5 py-2">
                   <div className="flex flex-wrap items-center gap-2">

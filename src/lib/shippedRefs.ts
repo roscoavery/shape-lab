@@ -4,6 +4,11 @@
  * and the written cues in src/config/shapes.ts — not browser storage.
  */
 
+import {
+  EMPTY_COACH_STILL_SLOTS,
+  shippedExtrasForShape,
+  shippedExtraCandidatesForId,
+} from '../config/shippedCoachExtras'
 import { loadMainCoachStills } from './coachStillPrefs'
 import type { ReferencePhoto } from '../types'
 
@@ -193,6 +198,18 @@ export function makeShippedPhotos(shapeId: string): ReferencePhoto[] {
   return out
 }
 
+function withShippedExtraPixels(photo: ReferencePhoto): ReferencePhoto {
+  if (photo.dataUrl?.startsWith('data:image') && photo.dataUrl.length > 80) return photo
+  const fallback = shippedExtraCandidatesForId(photo.id)[0]
+  if (fallback && (!isUsablePhotoSrc(photo.dataUrl) || photo.dataUrl.includes('/api/coach-still-file'))) {
+    return { ...photo, dataUrl: fallback, library: photo.library ?? 'coach' }
+  }
+  if (fallback && !isUsablePhotoSrc(photo.dataUrl)) {
+    return { ...photo, dataUrl: fallback, library: photo.library ?? 'coach' }
+  }
+  return photo
+}
+
 /** Shipped stills plus extra coach uploads for this shape. */
 export function listCoachStills(
   photos: ReferencePhoto[],
@@ -201,17 +218,50 @@ export function listCoachStills(
   if (!shapeId) return []
   const shipped = makeShippedPhotos(shapeId)
   const seen = new Set(shipped.map((p) => p.id))
-  const extras = photos.filter((p) => {
-    if (p.shapeId !== shapeId) return false
-    if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
-    if (p.library === 'ig' && !p.showInShapeLibrary) return false
-    if (p.library !== 'ig' && p.athleteId != null) return false
-    if (!isUsablePhotoSrc(p.dataUrl)) return false
-    if (seen.has(p.id)) return false
+  const extras: ReferencePhoto[] = []
+  const add = (p: ReferencePhoto) => {
+    if (seen.has(p.id)) return
+    if (!isUsablePhotoSrc(p.dataUrl)) return
     seen.add(p.id)
+    extras.push(p)
+  }
+  for (const p of photos) {
+    if (p.shapeId !== shapeId) continue
+    if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) continue
+    if (p.library === 'ig' && !p.showInShapeLibrary) continue
+    if (p.library !== 'ig' && p.athleteId != null) continue
+    add(withShippedExtraPixels(p))
+  }
+  for (const p of shippedExtrasForShape(shapeId)) add(p)
+  return [...shipped, ...extras]
+}
+
+/** Live stills plus empty leftover slots a coach can drop a photo onto. */
+export function listCoachStillSlots(
+  photos: ReferencePhoto[],
+  shapeId: string,
+): ReferencePhoto[] {
+  const live = listCoachStills(photos, shapeId)
+  const seen = new Set(live.map((p) => p.id))
+  const empty = [...photos, ...EMPTY_COACH_STILL_SLOTS].filter((p) => {
+    if (p.shapeId !== shapeId) return false
+    if (seen.has(p.id)) return false
+    if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
+    if (p.library === 'ig') return false
+    if (p.athleteId != null) return false
     return true
   })
-  return [...shipped, ...extras]
+  return [...live, ...empty]
+}
+
+/** First leftover extra on this shape that has no picture yet. */
+export function emptyCoachStillSlot(
+  photos: ReferencePhoto[],
+  shapeId: string,
+): ReferencePhoto | null {
+  return (
+    listCoachStillSlots(photos, shapeId).find((p) => !isUsablePhotoSrc(p.dataUrl)) ?? null
+  )
 }
 
 /**

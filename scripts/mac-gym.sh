@@ -74,9 +74,9 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
 
   echo
   echo "============================================================"
-  echo "  PRINT BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a cyan chip that says Print build."
-  echo "  Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember"
+  echo "  FIRM BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  iPad must show a cyan chip that says Firm build."
+  echo "  Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember"
   echo "  means this window is still old — Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo
@@ -86,6 +86,22 @@ fi
 
 npm install
 echo
+
+# JPEGs that ship in git — copy onto this Mac so Learn cannot go blank
+# if Blob is paused or an iPad wiped its copy.
+mkdir -p "$ROOT/data/coach-blobs"
+node --input-type=module -e "
+import fs from 'node:fs'
+import path from 'node:path'
+const man = JSON.parse(fs.readFileSync('src/config/shippedCoachStills.json', 'utf8'))
+for (const row of man.extras || []) {
+  if (!row?.id || !row.file) continue
+  const src = path.join('public/learn/coach-stills', row.file)
+  const dest = path.join('data/coach-blobs', row.id + path.extname(row.file))
+  if (fs.existsSync(src) && !fs.existsSync(dest)) fs.copyFileSync(src, dest)
+}
+console.log('Shipped coach stills are in data/coach-blobs.')
+" || true
 
 PHOTO_DIR="$ROOT/data/roster-photos"
 PHOTO_COUNT=0

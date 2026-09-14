@@ -10,8 +10,46 @@ import { readBin, readDiskJson, readJson, removeFile, writeBin, writeJson } from
 
 const FILE = 'data/coach-stills.json'
 const blobRel = (name: string) => `data/coach-blobs/${name}`
+const SHIPPED_DIR = 'public/learn/coach-stills'
+const SHIPPED_MANIFEST = 'src/config/shippedCoachStills.json'
 const MAX_EXTRAS = 2000
 const MAX_BYTES = 6 * 1024 * 1024
+
+type ShippedManifestExtra = {
+  id: string
+  shapeId: string
+  file: string
+  label?: string
+  createdAt?: string
+}
+
+let shippedManifest: ShippedManifestExtra[] | null = null
+
+function loadShippedManifest(): ShippedManifestExtra[] {
+  if (shippedManifest) return shippedManifest
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), SHIPPED_MANIFEST), 'utf8')) as {
+      extras?: ShippedManifestExtra[]
+    }
+    shippedManifest = Array.isArray(raw.extras) ? raw.extras : []
+  } catch {
+    shippedManifest = []
+  }
+  return shippedManifest
+}
+
+function shippedSrc(file: string): string {
+  return path.join(process.cwd(), SHIPPED_DIR, file)
+}
+
+function blobAbs(name: string): string {
+  return path.join(process.cwd(), blobRel(name))
+}
+
+function blobExists(name: string | undefined): boolean {
+  if (!name) return false
+  return fs.existsSync(blobAbs(name))
+}
 
 export type CoachStillExtra = {
   id: string
@@ -72,11 +110,18 @@ function mimeToExt(mime: string): { ext: string; type: string } {
 }
 
 function clientUrl(row: CoachStillExtra): string {
-  if (row.file) return `/api/coach-still-file?id=${encodeURIComponent(row.id)}`
-  if (row.dataUrl?.startsWith('data:image') || row.dataUrl?.startsWith('/')) {
+  if (row.file && blobExists(row.file)) {
+    return `/api/coach-still-file?id=${encodeURIComponent(row.id)}`
+  }
+  const shipped = loadShippedManifest().find((extra) => extra.id === row.id)
+  if (shipped && fs.existsSync(shippedSrc(shipped.file))) {
+    return `/learn/coach-stills/${shipped.file}`
+  }
+  if (row.dataUrl?.startsWith('data:image') || row.dataUrl?.startsWith('/learn/')) {
     return row.dataUrl
   }
-  return `/api/coach-still-file?id=${encodeURIComponent(row.id)}`
+  if (row.file) return `/api/coach-still-file?id=${encodeURIComponent(row.id)}`
+  return row.dataUrl || ''
 }
 
 function cleanExtra(row: unknown): CoachStillExtra | null {
@@ -138,7 +183,7 @@ function asFile(data: CoachStillsFile): CoachStillsFile {
     extras: Array.isArray(data.extras)
       ? data.extras
           .map(cleanExtra)
-          .filter((row): row is CoachStillExtra => Boolean(row) && !gone.has(row.id))
+          .filter((row): row is CoachStillExtra => Boolean(row) && !gone.has(row!.id))
           .slice(0, MAX_EXTRAS)
       : [],
     removedCoachStillIds,
@@ -189,6 +234,52 @@ function extrasFromBlobDirs(file: CoachStillsFile): CoachStillExtra[] {
   return extras.slice(0, MAX_EXTRAS)
 }
 
+function seedShippedInto(file: CoachStillsFile): { file: CoachStillsFile; wrote: boolean } {
+  const gone = new Set(asIdList(file.removedCoachStillIds))
+  const byId = new Map(file.extras.map((row) => [row.id, row]))
+  let wrote = false
+  for (const row of loadShippedManifest()) {
+    if (!row.id || !row.shapeId || gone.has(row.id)) continue
+    const src = shippedSrc(row.file)
+    if (!fs.existsSync(src)) continue
+    const destName = `${row.id}${path.extname(row.file) || '.jpg'}`
+    const dest = blobAbs(destName)
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true })
+      fs.copyFileSync(src, dest)
+      wrote = true
+    }
+    const prev = byId.get(row.id)
+    if (!prev) {
+      byId.set(row.id, {
+        id: row.id,
+        shapeId: row.shapeId,
+        label: row.label,
+        createdAt: row.createdAt || new Date().toISOString(),
+        file: destName,
+      })
+      wrote = true
+      continue
+    }
+    if (!prev.file || !blobExists(prev.file)) {
+      byId.set(row.id, {
+        ...prev,
+        shapeId: prev.shapeId || row.shapeId,
+        label: prev.label || row.label,
+        file: destName,
+      })
+      wrote = true
+    }
+  }
+  return {
+    file: {
+      ...file,
+      extras: [...byId.values()].slice(0, MAX_EXTRAS),
+    },
+    wrote,
+  }
+}
+
 export async function readCoachStillsFile(): Promise<CoachStillsFile> {
   const remote = await readJson<CoachStillsFile>(FILE, { ...EMPTY })
   const disk = readDiskJson<CoachStillsFile>(FILE, { ...EMPTY })
@@ -218,7 +309,12 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
     merged.updatedAt = new Date().toISOString()
     await writeJson(FILE, merged)
   }
-  return merged
+  const seeded = seedShippedInto(merged)
+  if (seeded.wrote) {
+    seeded.file.updatedAt = new Date().toISOString()
+    await writeJson(FILE, seeded.file)
+  }
+  return seeded.file
 }
 
 export async function extrasForClient(file?: CoachStillsFile) {
@@ -302,25 +398,33 @@ export async function addCoachStillFromBody(body: unknown): Promise<CoachStillsF
   const shapeId = typeof p.shapeId === 'string' ? p.shapeId.trim().slice(0, 80) : ''
   const dataUrl = typeof p.dataUrl === 'string' ? p.dataUrl : ''
   if (!id || !shapeId) throw new Error('Still needs an id and a shape')
+  const current = await readCoachStillsFile()
+  const prev = current.extras.find((row) => row.id === id)
   const extra = await persistPixels({
     id,
     shapeId,
-    dataUrl,
-    label: typeof p.label === 'string' ? p.label.trim().slice(0, 80) : undefined,
-    createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
+    dataUrl: dataUrl.startsWith('data:image') ? dataUrl : undefined,
+    file: prev?.file,
+    label:
+      typeof p.label === 'string'
+        ? p.label.trim().slice(0, 80)
+        : prev?.label,
+    createdAt:
+      typeof p.createdAt === 'string' && p.createdAt
+        ? p.createdAt
+        : prev?.createdAt || new Date().toISOString(),
   })
   if (!extra.file && !extra.dataUrl?.startsWith('data:image')) {
     throw new Error('Still needs a picture')
   }
-  const file = await readCoachStillsFile()
-  const extras = [extra, ...file.extras.filter((row) => row.id !== id)].slice(0, MAX_EXTRAS)
+  const extras = [extra, ...current.extras.filter((row) => row.id !== id)].slice(0, MAX_EXTRAS)
   const next: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',
     version: 1,
     updatedAt: new Date().toISOString(),
-    main: file.main,
+    main: current.main,
     extras,
-    removedCoachStillIds: asIdList(file.removedCoachStillIds).filter((gone) => gone !== id),
+    removedCoachStillIds: asIdList(current.removedCoachStillIds).filter((gone) => gone !== id),
   }
   await writeJson(FILE, next)
   return extrasForClient(next)
@@ -357,13 +461,26 @@ export async function sendCoachStillFile(idRaw: string, res: ServerResponse): Pr
   if (!row) return false
   if (row.file) {
     const buf = await readBin(blobRel(row.file))
-    if (!buf) return false
-    const { type } = mimeToExt(row.file)
-    res.statusCode = 200
-    res.setHeader('Content-Type', type)
-    res.setHeader('Cache-Control', 'public, max-age=86400')
-    res.end(buf)
-    return true
+    if (buf) {
+      const { type } = mimeToExt(row.file)
+      res.statusCode = 200
+      res.setHeader('Content-Type', type)
+      res.setHeader('Cache-Control', 'public, max-age=86400')
+      res.end(buf)
+      return true
+    }
+  }
+  const shipped = loadShippedManifest().find((extra) => extra.id === id)
+  if (shipped) {
+    const src = shippedSrc(shipped.file)
+    if (fs.existsSync(src)) {
+      const buf = fs.readFileSync(src)
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'image/jpeg')
+      res.setHeader('Cache-Control', 'public, max-age=86400')
+      res.end(buf)
+      return true
+    }
   }
   if (row.dataUrl?.startsWith('data:image')) {
     const parsed = parseDataUrl(row.dataUrl)

@@ -466,7 +466,7 @@ export default function App() {
     let tick = 0
     const start = () => {
       if (tick) return
-      tick = window.setInterval(pull, 12_000)
+      tick = window.setInterval(pull, 4_000)
     }
     const stop = () => {
       window.clearInterval(tick)
