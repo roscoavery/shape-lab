@@ -4,6 +4,8 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import fs from 'node:fs'
+import path from 'node:path'
 import { readBin, readDiskJson, readJson, removeFile, writeBin, writeJson } from './persist.ts'
 
 const FILE = 'data/coach-stills.json'
@@ -143,6 +145,50 @@ function asFile(data: CoachStillsFile): CoachStillsFile {
   }
 }
 
+function blobFileId(name: string): string | null {
+  const match = /^([a-zA-Z0-9_-]+)\.(jpe?g|png|webp)$/i.exec(name)
+  return match ? match[1] : null
+}
+
+/** Main still picks can outlive extras if a PUT dropped the JPEG rows. */
+function extrasFromBlobDirs(file: CoachStillsFile): CoachStillExtra[] {
+  const gone = new Set(asIdList(file.removedCoachStillIds))
+  const extras = [...file.extras]
+  const have = new Set(extras.map((row) => row.id))
+  const shapeByStill = Object.fromEntries(
+    Object.entries(file.main).map(([shapeId, stillId]) => [stillId, shapeId]),
+  )
+  const dirs = ['data/coach-blobs', '.gym-park/data/coach-blobs']
+  for (const dir of dirs) {
+    let names: string[] = []
+    try {
+      names = fs.readdirSync(path.join(process.cwd(), dir))
+    } catch {
+      continue
+    }
+    for (const name of names) {
+      const id = blobFileId(name)
+      if (!id || gone.has(id) || have.has(id)) continue
+      const shapeId = shapeByStill[id]
+      if (!shapeId) continue
+      const live = path.join(process.cwd(), 'data/coach-blobs', name)
+      const src = path.join(process.cwd(), dir, name)
+      if (dir.includes('gym-park') && !fs.existsSync(live)) {
+        fs.mkdirSync(path.dirname(live), { recursive: true })
+        fs.copyFileSync(src, live)
+      }
+      extras.push({
+        id,
+        shapeId,
+        file: name,
+        createdAt: new Date().toISOString(),
+      })
+      have.add(id)
+    }
+  }
+  return extras.slice(0, MAX_EXTRAS)
+}
+
 export async function readCoachStillsFile(): Promise<CoachStillsFile> {
   const remote = await readJson<CoachStillsFile>(FILE, { ...EMPTY })
   const disk = readDiskJson<CoachStillsFile>(FILE, { ...EMPTY })
@@ -158,7 +204,7 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
       byId.set(row.id, row)
     }
   }
-  return {
+  const merged: CoachStillsFile = {
     kind: 'shape-lab-coach-stills',
     version: 1,
     updatedAt: a.updatedAt || b.updatedAt || '',
@@ -166,6 +212,13 @@ export async function readCoachStillsFile(): Promise<CoachStillsFile> {
     extras: [...byId.values()].slice(0, MAX_EXTRAS),
     removedCoachStillIds,
   }
+  const recovered = extrasFromBlobDirs(merged)
+  if (recovered.length !== merged.extras.length) {
+    merged.extras = recovered
+    merged.updatedAt = new Date().toISOString()
+    await writeJson(FILE, merged)
+  }
+  return merged
 }
 
 export async function extrasForClient(file?: CoachStillsFile) {

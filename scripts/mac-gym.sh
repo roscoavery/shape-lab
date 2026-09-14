@@ -17,7 +17,7 @@ echo "Node $(node -v)   npm $(npm -v)"
 echo "Folder: $ROOT"
 echo
 
-if [ -d .git ]; then
+if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
   echo "Updating this Mac to GitHub v2-rebuild. Gym names and clips stay on this computer."
   git fetch origin v2-rebuild 2>/dev/null || git fetch origin v2-rebuild || true
 
@@ -80,6 +80,8 @@ if [ -d .git ]; then
   echo "  means this window is still old — Ctrl+C, then run npm run gym:mac again."
   echo "============================================================"
   echo
+  echo "Reloading this script from the files that just landed…"
+  exec env GYM_MAC_BOOTED=1 bash "$ROOT/scripts/mac-gym.sh"
 fi
 
 npm install
