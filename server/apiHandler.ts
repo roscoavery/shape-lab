@@ -110,9 +110,11 @@ import {
   consentFieldsOf,
   parseConsentPatch,
 } from './auth/consent.ts'
-import { canAccessAthlete, canEditAthlete, type RosterAthlete } from './auth/permissions.ts'
+import { canAccessAthlete, canCoachAthlete, canEditAthlete, canParentAccessAthlete, isAdmin, type RosterAthlete } from './auth/permissions.ts'
 import { writeAudit } from './auth/audit.ts'
 import type { AuthUser } from './auth/types.ts'
+import { appendHoldLog } from './holdLog.ts'
+import { readParentWellness, writeParentWellness } from './parentWellnessStore.ts'
 
 const API_PATHS = new Set([
   '/api/auth/me',
@@ -136,6 +138,8 @@ const API_PATHS = new Set([
   '/api/revision',
   '/api/media-token',
   '/api/consent',
+  '/api/parent-wellness',
+  '/api/hold-logs',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/health',
@@ -492,6 +496,127 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PATCH' })
+    return true
+  }
+  if (path === '/api/parent-wellness') {
+    const accountId =
+      isAdmin(viewer) && typeof url.searchParams.get('accountId') === 'string'
+        ? url.searchParams.get('accountId') || viewer.accountId
+        : viewer.accountId
+    if (req.method === 'GET') {
+      if (viewer.role === 'parent') {
+        sendJson(res, 200, { profile: await readParentWellness(viewer.accountId) })
+        return true
+      }
+      if (isAdmin(viewer)) {
+        sendJson(res, 200, { profile: await readParentWellness(accountId) })
+        return true
+      }
+      sendJson(res, 403, { error: 'Parent wellness notes stay with that parent.' })
+      return true
+    }
+    if (req.method === 'PUT') {
+      if (viewer.role !== 'parent' && !isAdmin(viewer)) {
+        sendJson(res, 403, { error: 'Parent wellness notes stay with that parent.' })
+        return true
+      }
+      if (viewer.role === 'parent' && accountId !== viewer.accountId) {
+        sendJson(res, 403, { error: 'Parent wellness notes stay with that parent.' })
+        return true
+      }
+      try {
+        const body = JSON.parse(await readRequestBody(req))
+        const target = viewer.role === 'parent' ? viewer.accountId : accountId
+        const profile = await writeParentWellness(target, body)
+        await writeAudit('athlete.edit', viewer, { detail: 'parent-wellness' })
+        sendJson(res, 200, { profile })
+      } catch (err) {
+        sendJson(res, 400, {
+          error: err instanceof Error ? err.message : 'Could not save wellness notes.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/hold-logs') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: {
+      athleteId?: string
+      shapeId?: string
+      shapeName?: string
+      seconds?: number
+      performedAt?: string
+      source?: 'coach' | 'athlete' | 'parent'
+      lessonId?: string
+      classMeetingId?: string
+      className?: string
+      side?: 'left' | 'right'
+      logId?: string
+      loggedFrom?: 'lesson' | 'class' | 'profile' | 'today'
+    } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that hold.' })
+      return true
+    }
+    const athleteId = typeof body.athleteId === 'string' ? body.athleteId : ''
+    if (!athleteId) {
+      sendJson(res, 400, { error: 'Which athlete?' })
+      return true
+    }
+    const seconds = Number(body.seconds)
+    if (!Number.isFinite(seconds) || seconds < 0.2) {
+      sendJson(res, 400, { error: 'Enter a hold time in seconds.' })
+      return true
+    }
+    const { athlete, athletes } = await rosterAthleteById(athleteId)
+    if (!athlete) {
+      sendJson(res, 404, { error: 'Athlete not found' })
+      return true
+    }
+    const source = body.source ?? (viewer.role === 'coach' || isAdmin(viewer) ? 'coach' : viewer.role === 'parent' ? 'parent' : 'athlete')
+    if (source === 'coach') {
+      if (!(await canCoachAthlete(viewer, athlete))) {
+        sendJson(res, 403, { error: 'You cannot log a hold for that athlete.' })
+        return true
+      }
+    } else if (source === 'parent') {
+      if (!canParentAccessAthlete(viewer, athlete, athletes)) {
+        sendJson(res, 403, { error: 'You cannot log a hold for that athlete.' })
+        return true
+      }
+    } else if (viewer.rosterProfileId !== athleteId) {
+      sendJson(res, 403, { error: 'You cannot log a hold for that athlete.' })
+      return true
+    }
+    const saved = await appendHoldLog({
+      athleteId,
+      shapeId: body.shapeId,
+      shapeName: body.shapeName,
+      seconds,
+      performedAt: body.performedAt,
+      source,
+      coachId: source === 'coach' ? viewer.rosterProfileId : undefined,
+      coachName: source === 'coach' ? viewer.displayName : undefined,
+      lessonId: body.lessonId,
+      classMeetingId: body.classMeetingId,
+      className: body.className,
+      side: body.side,
+      logId: body.logId,
+      loggedFrom: body.loggedFrom,
+    })
+    if (!saved) {
+      sendJson(res, 400, { error: 'Could not save that hold.' })
+      return true
+    }
+    await writeAudit('athlete.edit', viewer, { athleteId, detail: 'hold-log' })
+    sendJson(res, 200, { ok: true, log: saved })
     return true
   }
   if (path === '/api/roster') {
