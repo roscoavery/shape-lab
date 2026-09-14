@@ -1,14 +1,15 @@
 /**
  * Additive privacy and consent defaults.
  * Never flip an existing intentionally-public profile to private.
- * Consent UX is incomplete — defaults stay conservative.
+ * More → Consent writes these fields. unknown is not permission.
+ * This is not a legal-compliance system.
  */
 
 export type ProfileVisibility = 'private' | 'public' | 'gym'
 export type ConsentState = 'unknown' | 'pending' | 'granted' | 'declined'
 
 export const CONSENT_INCOMPLETE =
-  'CONSENT UX INCOMPLETE: these fields are stored for a later parent-consent flow. Do not treat a missing or unknown value as permission.'
+  'Consent fields are stored and honored on feed, stories, and public profile. unknown is not permission. This is not a COPPA/GDPR compliance system.'
 
 export type PrivacyFields = {
   profileVisibility: ProfileVisibility

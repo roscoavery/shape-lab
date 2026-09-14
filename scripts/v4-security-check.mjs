@@ -75,6 +75,15 @@ async function main() {
   })
   ok('anon roster write is 401', anonWrite.status === 401)
 
+  const anonConsent = await req('/api/consent')
+  ok('anon consent is 401', anonConsent.status === 401)
+
+  const anonConsentWrite = await req('/api/consent', {
+    method: 'PATCH',
+    body: JSON.stringify({ athleteId: 'ath_example_sam', allowStories: true }),
+  })
+  ok('anon consent write is 401', anonConsentWrite.status === 401)
+
   let cookie = ''
   const login = await req('/api/auth/login', {
     method: 'POST',
@@ -219,8 +228,64 @@ async function main() {
       parentSwap.status === 403 || parentSwap.status === 404,
       String(parentSwap.status),
     )
+    const parentConsent = await req('/api/consent', { cookie: parentCookie })
+    ok('parent can read consent', parentConsent.status === 200)
+    const parentIds = (parentConsent.json?.athletes || []).map((row) => row.id)
+    ok('parent consent list does not include an unlinked child', !parentIds.includes('ath_example_blake'))
+    const parentOther = await req('/api/consent', {
+      method: 'PATCH',
+      cookie: parentCookie,
+      body: JSON.stringify({ athleteId: 'ath_example_blake', allowStories: true }),
+    })
+    ok(
+      'parent cannot patch an unlinked child',
+      parentOther.status === 403 || parentOther.status === 404,
+      String(parentOther.status),
+    )
+    const linked = (parentConsent.json?.athletes || []).find((row) => row.id === 'ath_example_sam')
+    if (linked) {
+      const restore = await req('/api/consent', {
+        method: 'PATCH',
+        cookie: parentCookie,
+        body: JSON.stringify({
+          athleteId: 'ath_example_sam',
+          allowStories: linked.allowStories === true,
+        }),
+      })
+      ok('parent can patch a linked child', restore.status === 200, String(restore.status))
+    } else {
+      ok('parent consent includes linked child when that athlete exists', true)
+    }
   } else {
     ok('parent login', parent.status === 200, String(parent.status))
+  }
+
+  const coachConsent = await req('/api/consent', {
+    method: 'PATCH',
+    cookie: coachCookie,
+    body: JSON.stringify({ athleteId: 'ath_example_sam', allowWinsOnFeed: true }),
+  })
+  ok(
+    'coach cannot patch consent',
+    coachConsent.status === 403 || coachConsent.status === 404,
+    String(coachConsent.status),
+  )
+
+  const adminConsent = await req('/api/consent', { cookie })
+  ok('admin can read consent', adminConsent.status === 200)
+  const adminRow = (adminConsent.json?.athletes || []).find((row) => row.id === 'ath_example_sam')
+  if (adminRow) {
+    const adminPatch = await req('/api/consent', {
+      method: 'PATCH',
+      cookie,
+      body: JSON.stringify({
+        athleteId: 'ath_example_sam',
+        allowWinsOnFeed: adminRow.allowWinsOnFeed === true,
+      }),
+    })
+    ok('admin can patch consent', adminPatch.status === 200, String(adminPatch.status))
+  } else {
+    ok('admin consent list loaded', adminConsent.status === 200)
   }
 
   const coachPatch = await req('/api/auth/accounts', {

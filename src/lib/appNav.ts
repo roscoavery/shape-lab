@@ -39,6 +39,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
   more: [
     { id: 'history', label: 'Profiles' },
     { id: 'accounts', label: 'Accounts' },
+    { id: 'consent', label: 'Consent' },
     { id: 'research', label: 'Research' },
     { id: 'about', label: 'About' },
   ],

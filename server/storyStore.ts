@@ -4,6 +4,9 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { viewerCanSeeSocialSubjects } from './auth/consent.ts'
+import type { RosterAthlete } from './auth/permissions.ts'
+import type { AuthUser } from './auth/types.ts'
 import { readBin, readJson, writeBin, writeJson } from './persist.ts'
 
 const META = 'data/stories.json'
@@ -120,19 +123,42 @@ export function storyClientUrl(id: string): string {
   return `/api/story-file?id=${encodeURIComponent(id)}`
 }
 
-export async function storiesForClient(): Promise<{
+export async function findStory(id: string): Promise<DiskStory | null> {
+  const sid = safeId(id)
+  if (!sid) return null
+  return (await readStoriesFile()).stories.find((s) => s.id === sid) ?? null
+}
+
+export async function viewerMaySeeStory(
+  user: AuthUser,
+  story: DiskStory,
+  athletes: RosterAthlete[],
+): Promise<boolean> {
+  return viewerCanSeeSocialSubjects(user, athletes, 'stories', story.authorId, story.taggedIds)
+}
+
+export async function storiesForClient(
+  user: AuthUser,
+  athletes: RosterAthlete[],
+): Promise<{
   stories: Array<DiskStory & { url: string; live: boolean }>
   highlights: DiskHighlight[]
 }> {
   const file = await readStoriesFile()
   const now = Date.now()
   const kept = new Set(file.highlights.flatMap((h) => h.storyIds))
-  const stories = file.stories
-    .filter((s) => isLive(s, now) || kept.has(s.id))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, MAX_LIVE + 80)
-    .map((s) => ({ ...s, url: storyClientUrl(s.id), live: isLive(s, now) }))
-  return { stories, highlights: file.highlights }
+  const visible: Array<DiskStory & { url: string; live: boolean }> = []
+  for (const s of file.stories) {
+    if (!(isLive(s, now) || kept.has(s.id))) continue
+    if (!(await viewerMaySeeStory(user, s, athletes))) continue
+    visible.push({ ...s, url: storyClientUrl(s.id), live: isLive(s, now) })
+  }
+  visible.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const visibleIds = new Set(visible.map((s) => s.id))
+  const highlights = file.highlights
+    .map((h) => ({ ...h, storyIds: h.storyIds.filter((id) => visibleIds.has(id)) }))
+    .filter((h) => h.storyIds.length > 0)
+  return { stories: visible.slice(0, MAX_LIVE + 80), highlights }
 }
 
 export async function addStoryFromBody(params: {

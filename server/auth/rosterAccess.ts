@@ -3,6 +3,7 @@
  * athletes they are not allowed to see.
  */
 
+import { applyConsentPatch, canEditConsent, CONSENT_KEYS, parseConsentPatch } from './consent.ts'
 import { newAthletePrivacyDefaults } from './privacy.ts'
 import {
   canAccessAthlete,
@@ -57,12 +58,36 @@ function stripFields(row: Record<string, unknown>, keys: readonly string[]): Rec
   return next
 }
 
+function applyConsentOnWrite(
+  user: AuthUser,
+  existing: RosterAthlete,
+  incoming: RosterAthlete,
+  athletes: RosterAthlete[],
+  merged: RosterAthlete,
+): RosterAthlete {
+  const withoutConsent = stripFields(merged, CONSENT_KEYS) as RosterAthlete
+  for (const key of CONSENT_KEYS) {
+    if (key in existing) (withoutConsent as Record<string, unknown>)[key] = existing[key]
+  }
+  if (!canEditConsent(user, existing, athletes)) return withoutConsent
+  const patch = parseConsentPatch(incoming)
+  if (Object.keys(patch).length === 0) return withoutConsent
+  return applyConsentPatch(withoutConsent, patch)
+}
+
 function applyAllowedEdits(
   user: AuthUser,
   existing: RosterAthlete,
   incoming: RosterAthlete,
+  athletes: RosterAthlete[],
 ): RosterAthlete {
-  if (isAdmin(user)) return { ...existing, ...incoming, id: existing.id }
+  if (isAdmin(user)) {
+    return applyConsentOnWrite(user, existing, incoming, athletes, {
+      ...existing,
+      ...incoming,
+      id: existing.id,
+    })
+  }
 
   let next: Record<string, unknown> = { ...existing, ...incoming, id: existing.id }
   if (user.role === 'coach') {
@@ -93,7 +118,7 @@ function applyAllowedEdits(
       next.email = existing.email
     }
   }
-  return next as RosterAthlete
+  return applyConsentOnWrite(user, existing, incoming, athletes, next as RosterAthlete)
 }
 
 function athleteIdOf(row: unknown): string | null {
@@ -172,7 +197,7 @@ export async function authorizeRosterWrite(
       continue
     }
     if (!(await canEditAthlete(user, prev, existingAthletes))) continue
-    const patched = applyAllowedEdits(user, prev, incomingRow)
+    const patched = applyAllowedEdits(user, prev, incomingRow, existingAthletes)
     const idx = nextAthletes.findIndex((row) => row.id === prev.id)
     if (idx >= 0) nextAthletes[idx] = patched
   }

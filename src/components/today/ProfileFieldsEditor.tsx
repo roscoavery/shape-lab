@@ -66,7 +66,9 @@ export function ProfileFieldsEditor({
           <p className="text-xs text-[var(--muted)]">
             Private by default. Coaches who have this athlete in a lesson, class,
             camp, clinic, or school can still open it. Everyone else only sees
-            the name when they add them to a group.
+            the name when they add them to a group. Feed, stories, and public
+            profile flags live in More → Consent. Class, homework, and lessons
+            keep working either way.
           </p>
           <label className="flex items-start gap-2 text-sm">
             <input

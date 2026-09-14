@@ -5,6 +5,9 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { cleanCollageShare, type DiskCollageShare } from './collageStore.ts'
+import { viewerCanSeeSocialSubjects, socialKindForFeedChannels } from './auth/consent.ts'
+import type { RosterAthlete } from './auth/permissions.ts'
+import type { AuthUser } from './auth/types.ts'
 import {
   isDirectHttpUrl,
   readBin,
@@ -163,23 +166,53 @@ async function writeMeta(posts: DiskFeedPost[], removedIds: string[] = []): Prom
   return next
 }
 
-export async function postsForClient(): Promise<Array<DiskFeedPost & { url: string }>> {
-  return (await readFeedFile())
-    .posts.slice()
+function toClientPost(p: DiskFeedPost): DiskFeedPost & { url: string } {
+  ensureWinAthleteTagged(p)
+  return {
+    ...p,
+    kind:
+      p.kind === 'collage' || p.collage
+        ? 'collage'
+        : p.kind === 'text' || (!p.file && (p.caption || '').trim())
+          ? 'text'
+          : 'video',
+    url: feedPostClientUrl(p),
+  }
+}
+
+export async function findFeedPost(id: string): Promise<DiskFeedPost | null> {
+  const sid = safeId(id)
+  if (!sid) return null
+  return (await readFeedFile()).posts.find((p) => p.id === sid) ?? null
+}
+
+export async function viewerMaySeeFeedPost(
+  user: AuthUser,
+  post: DiskFeedPost,
+  athletes: RosterAthlete[],
+): Promise<boolean> {
+  ensureWinAthleteTagged(post)
+  return viewerCanSeeSocialSubjects(
+    user,
+    athletes,
+    socialKindForFeedChannels(post.channels),
+    post.authorId,
+    post.taggedIds,
+  )
+}
+
+export async function postsForClient(
+  user: AuthUser,
+  athletes: RosterAthlete[],
+): Promise<Array<DiskFeedPost & { url: string }>> {
+  const posts = (await readFeedFile()).posts
+    .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((p) => {
-      ensureWinAthleteTagged(p)
-      return {
-        ...p,
-        kind:
-          p.kind === 'collage' || p.collage
-            ? 'collage'
-            : p.kind === 'text' || (!p.file && (p.caption || '').trim())
-              ? 'text'
-              : 'video',
-        url: feedPostClientUrl(p),
-      }
-    })
+  const visible: Array<DiskFeedPost & { url: string }> = []
+  for (const p of posts) {
+    if (await viewerMaySeeFeedPost(user, p, athletes)) visible.push(toClientPost(p))
+  }
+  return visible
 }
 
 export function readRequestBuffer(

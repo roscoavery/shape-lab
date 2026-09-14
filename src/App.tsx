@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
+import { ConsentDesk } from './components/ConsentDesk'
 import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
@@ -1549,6 +1550,8 @@ export default function App() {
       {tab === 'accounts' && (
         <AccountsDesk user={authUser} athletes={athletes} />
       )}
+
+      {tab === 'consent' && <ConsentDesk user={authUser} />}
 
       {tab === 'about' && (
         <div className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[var(--muted)]">

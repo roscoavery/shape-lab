@@ -10,7 +10,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 
 - Existing public Vercel Blob URLs for some photos/videos may still work if someone already has the exact URL.
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
-- Parent consent UX is not built. Consent fields exist and default to `unknown`.
+- Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
 - Account invites by email and magic-link login are not built. Admin can create a login and reset a password in More → Accounts.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.
@@ -48,7 +48,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - Writes to roster, photos, videos, lessons, classes, stills, and related stores require a session. The server ignores browser-supplied admin flags.
 - Athlete photos and videos are authorized per athlete id. Changing `athleteId` in a URL does not grant access.
 - New athletes default to private. Existing `profilePublic: true` stays public.
-- Additive consent fields are stored. Defaults are conservative. **CONSENT UX INCOMPLETE.**
+- Additive consent fields are stored. Defaults are conservative. More → Consent lets a parent, the athlete, or gym admin set them. Coaches cannot. Feed and stories hide posts about an athlete from people who are not assigned / family unless that athlete allowed that channel. Class, homework, and lessons do not read these flags.
 - Health fields (`hasBackPain`, `injuryActive`, injury/pain journals, intake) are stripped from viewers who should not see them.
 - Hard-coded gym admin PIN `2223` was removed from client JavaScript.
 - Profile PINs remain as a device convenience after a real login.
@@ -56,6 +56,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - `data/roster.json` is gitignored going forward. `data/roster.example.json` is fictional only. Startup does not copy the example over a live file.
 - Tiny audit log in gitignored `data/audit.json`.
 - **Phase 2:** More → Accounts lets admin create / link / reset logins. Anyone signed in can change their own password. Other sessions are signed out on a password change. Authorized roster photos stream privately when the bytes are on disk instead of minting a new public Blob URL.
+- **Phase 3 (Ask build):** `GET`/`PATCH /api/consent` for parents, the athlete, and admin. Gym feed and stories are filtered per viewer. Coaches can still post wins; people without a relationship do not see them unless the family allowed that channel.
 
 ## Authentication architecture
 
@@ -123,7 +124,8 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Optional in `.env` on that Mac (never commit it):
+5. Look for **Ask build** on the header. `/api/health` should include `"holdBuild":"ask"`. If you still see Keys, this window is still old.
+6. Optional in `.env` on that Mac (never commit it):
 
 ```
 SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL=you@example.com
@@ -156,11 +158,10 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 
 1. Rotate any Blob tokens that were ever in a shell history.
 2. Move remaining public athlete Blob objects to private storage.
-3. Password reset + magic link.
-4. Finish parent consent UX and block public/social features on `unknown` consent.
-5. Per-device gym kiosk mode so floor iPads are not full admin browsers.
-6. Separate historical Git cleanup, only with an explicit backup and written approval.
-7. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
+3. Password reset, email invites, and magic-link login.
+4. Per-device gym kiosk mode so floor iPads are not full admin browsers.
+5. Separate historical Git cleanup, only with an explicit backup and written approval.
+6. Rate-limit more write routes and add CSRF tokens if Shape Lab is ever embedded cross-site.
 
 ## Tests
 

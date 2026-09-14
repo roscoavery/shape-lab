@@ -37,8 +37,10 @@ import {
   addFeedPostFromUrl,
   addTextFeedPost,
   deleteFeedPost,
+  findFeedPost,
   postsForClient,
   sendFeedFile,
+  viewerMaySeeFeedPost,
   attachVideoToFeedPost,
   celebrateFeedPost,
   feedPostClientUrl,
@@ -92,13 +94,22 @@ import {
   addHighlight,
   addStoryFromBody,
   readStoryRequestBuffer,
+  findStory,
   sendStoryFile,
   storiesForClient,
+  viewerMaySeeStory,
 } from './storyStore.ts'
 
 import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { authorizeRosterWrite, presentRosterForViewer } from './auth/rosterAccess.ts'
+import {
+  applyConsentPatch,
+  athletesViewerMayConsent,
+  canEditConsent,
+  consentFieldsOf,
+  parseConsentPatch,
+} from './auth/consent.ts'
 import { canAccessAthlete, canEditAthlete, type RosterAthlete } from './auth/permissions.ts'
 import { writeAudit } from './auth/audit.ts'
 import type { AuthUser } from './auth/types.ts'
@@ -118,6 +129,7 @@ const API_PATHS = new Set([
   '/api/roster-photo-file',
   '/api/revision',
   '/api/media-token',
+  '/api/consent',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/health',
@@ -214,7 +226,7 @@ export async function handleShapeLabApi(
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {
-    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'keys' })
+    sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'ask' })
     return true
   }
   if (path.startsWith('/api/auth')) {
@@ -410,6 +422,61 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/consent') {
+    const { athletes } = await rosterAthleteById('')
+    if (req.method === 'GET') {
+      sendJson(res, 200, {
+        kind: 'shape-lab-consent',
+        athletes: athletesViewerMayConsent(viewer, athletes).map(consentFieldsOf),
+      })
+      return true
+    }
+    if (req.method === 'PATCH') {
+      let body: Record<string, unknown> = {}
+      try {
+        const raw = await readRequestBody(req)
+        body = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+      } catch {
+        sendJson(res, 400, { error: 'That consent update did not save. Try again.' })
+        return true
+      }
+      const athleteId = typeof body.athleteId === 'string' ? body.athleteId.trim() : ''
+      const athlete = athletes.find((row) => row.id === athleteId)
+      if (!athlete) {
+        sendJson(res, 404, { error: 'Athlete not found' })
+        return true
+      }
+      if (!canEditConsent(viewer, athlete, athletes)) {
+        sendJson(res, 403, {
+          error: 'Only a parent, the athlete, or gym admin can change consent.',
+        })
+        return true
+      }
+      try {
+        const roster = await readRosterFile()
+        const nextAthletes = (Array.isArray(roster.athletes) ? roster.athletes : []).map((row) => {
+          if (!row || typeof row !== 'object' || (row as RosterAthlete).id !== athleteId) return row
+          return applyConsentPatch(row as RosterAthlete, parseConsentPatch(body))
+        })
+        const saved = await writeRosterFile({ ...roster, athletes: nextAthletes })
+        const updated = (Array.isArray(saved.athletes) ? saved.athletes : []).find(
+          (row) => row && typeof row === 'object' && (row as RosterAthlete).id === athleteId,
+        ) as RosterAthlete | undefined
+        await writeAudit('athlete.edit', viewer, { athleteId, detail: 'consent' })
+        sendJson(res, 200, {
+          ok: true,
+          athlete: updated ? consentFieldsOf(updated) : consentFieldsOf(athlete),
+        })
+      } catch (err) {
+        sendJson(res, 503, {
+          error: err instanceof Error ? err.message : 'Could not save consent on this gym.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PATCH' })
     return true
   }
   if (path === '/api/roster') {
@@ -733,7 +800,8 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/feed') {
     if (req.method === 'GET') {
-      sendJson(res, 200, { kind: 'shape-lab-feed', posts: await postsForClient() })
+      const { athletes } = await rosterAthleteById('')
+      sendJson(res, 200, { kind: 'shape-lab-feed', posts: await postsForClient(viewer, athletes) })
       return true
     }
     if (req.method === 'POST') {
@@ -1005,6 +1073,12 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/feed-file') {
     const id = url.searchParams.get('id') ?? ''
+    const found = await findFeedPost(id)
+    const { athletes } = await rosterAthleteById('')
+    if (!found || !(await viewerMaySeeFeedPost(viewer, found, athletes))) {
+      sendJson(res, 404, { error: 'Post video not found' })
+      return true
+    }
     if (!(await sendFeedFile(id, res))) {
       sendJson(res, 404, { error: 'Post video not found' })
     }
@@ -1156,7 +1230,8 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/stories') {
     if (req.method === 'GET') {
-      sendJson(res, 200, await storiesForClient())
+      const { athletes } = await rosterAthleteById('')
+      sendJson(res, 200, await storiesForClient(viewer, athletes))
       return true
     }
     if (req.method === 'POST') {
@@ -1209,6 +1284,12 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/story-file') {
     const id = url.searchParams.get('id') ?? ''
+    const found = await findStory(id)
+    const { athletes } = await rosterAthleteById('')
+    if (!found || !(await viewerMaySeeStory(viewer, found, athletes))) {
+      sendJson(res, 404, { error: 'Story not found' })
+      return true
+    }
     if (!(await sendStoryFile(id, res))) {
       sendJson(res, 404, { error: 'Story not found' })
     }
