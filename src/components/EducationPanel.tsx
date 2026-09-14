@@ -49,7 +49,8 @@ import {
   isDeletableGymLibraryShape,
   subscribeCoachContent,
 } from '../lib/coachContentStore'
-import { isCoachProfile } from '../lib/profileRole'
+import { isCoachProfile, isGymAdmin } from '../lib/profileRole'
+import { AdminStillDesk } from './coach/AdminStillDesk'
 import { AddGymShapeForm } from './AddGymShapeForm'
 import { CollapsibleSection } from './CollapsibleSection'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
@@ -81,6 +82,7 @@ type EduView =
   | { kind: 'progression' }
   | { kind: 'athleteProgress' }
   | { kind: 'coachStudy' }
+  | { kind: 'stillDesk' }
 
 export type LearnIntent = 'shapes' | 'quiz' | 'scroll' | 'names'
 
@@ -137,6 +139,7 @@ export function EducationPanel({
   const { copyFor } = useShapeCopy()
   const canAddGymShape = Boolean(signedIn && isCoachProfile(signedIn))
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
+  const gymAdmin = Boolean(signedIn && isGymAdmin(signedIn))
 
   useEffect(() => subscribeCoachContent(() => setCatalogTick((n) => n + 1)), [])
 
@@ -232,6 +235,13 @@ export function EducationPanel({
                 onClick={goShapes}
                 label="Shape library"
               />
+              {gymAdmin && (
+                <NavChip
+                  active={view.kind === 'stillDesk'}
+                  onClick={() => setView({ kind: 'stillDesk' })}
+                  label="Match stills"
+                />
+              )}
               <NavChip active={view.kind === 'ig'} onClick={() => setView({ kind: 'ig' })} label="IG shapes" />
               <NavChip active={view.kind === 'hits'} onClick={() => setView({ kind: 'hits' })} label="My shapes" />
               <NavChip
@@ -338,11 +348,16 @@ export function EducationPanel({
           onPathways={goPathways}
           onGlossary={() => setView({ kind: 'glossary' })}
           onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
+          onStillDesk={gymAdmin ? () => setView({ kind: 'stillDesk' }) : undefined}
           igCount={listIgStills(referencePhotos).length}
           referencePhotos={referencePhotos}
           shapes={catalog}
           coach={coach}
         />
+      )}
+
+      {view.kind === 'stillDesk' && gymAdmin && (
+        <AdminStillDesk photos={referencePhotos} onPhotosChange={onReferencesChange} />
       )}
 
       {view.kind === 'shapes' && (
@@ -737,6 +752,7 @@ function HomeView({
   onPathways,
   onGlossary,
   onArmQuiz,
+  onStillDesk,
   igCount,
   referencePhotos,
   shapes,
@@ -757,6 +773,7 @@ function HomeView({
   onPathways: () => void
   onGlossary: () => void
   onArmQuiz: () => void
+  onStillDesk?: () => void
   igCount: number
   referencePhotos: ReferencePhoto[]
   shapes: ShapeDef[]
@@ -768,6 +785,21 @@ function HomeView({
     .slice(0, 4)
   return (
     <div className="space-y-5">
+      {onStillDesk && (
+        <button type="button" onClick={onStillDesk} className="learn-hero px-5 py-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#6ec8d6]">
+            Gym admin
+          </p>
+          <h3 className="mt-2 text-3xl font-black tracking-tight text-[var(--text)]">Match stills</h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+            Drag or tap a photo onto the shape name it belongs to. Delete stays
+            gone on every device. Use this when a still landed on the wrong card.
+          </p>
+          <span className="mt-4 inline-flex rounded-full bg-[#6ec8d6] px-4 py-2 text-sm font-black text-[#061418]">
+            Open the still desk
+          </span>
+        </button>
+      )}
       {coach && onNamesTest && (
         <button type="button" onClick={() => onNamesTest()} className="sl-names-glow sl-left px-5 py-5">
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#6ec8d6]">

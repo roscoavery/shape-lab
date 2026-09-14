@@ -9,6 +9,7 @@ import {
   shippedExtrasForShape,
   shippedExtraCandidatesForId,
 } from '../config/shippedCoachExtras'
+import { isRemovedCoachStill, UNMATCHED_STILL_SHAPE } from './removedCoachStills'
 import { loadMainCoachStills } from './coachStillPrefs'
 import type { ReferencePhoto } from '../types'
 
@@ -184,10 +185,12 @@ export function makeShippedPhotos(shapeId: string): ReferencePhoto[] {
   const files = shippedFileList(shapeId)
   const out: ReferencePhoto[] = []
   files.forEach((file, i) => {
+    const id = `default_${shapeId}_${i}`
+    if (isRemovedCoachStill(id)) return
     const url = shippedFileCandidates(file)[0]
     if (!url) return
     out.push({
-      id: `default_${shapeId}_${i}`,
+      id,
       shapeId,
       athleteId: null,
       dataUrl: url,
@@ -221,18 +224,25 @@ export function listCoachStills(
   const extras: ReferencePhoto[] = []
   const add = (p: ReferencePhoto) => {
     if (seen.has(p.id)) return
+    if (isRemovedCoachStill(p.id)) return
     if (!isUsablePhotoSrc(p.dataUrl)) return
     seen.add(p.id)
     extras.push(p)
   }
   for (const p of photos) {
     if (p.shapeId !== shapeId) continue
+    if (p.shapeId === UNMATCHED_STILL_SHAPE) continue
     if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) continue
+    if (isRemovedCoachStill(p.id)) continue
     if (p.library === 'ig' && !p.showInShapeLibrary) continue
     if (p.library !== 'ig' && p.athleteId != null) continue
     add(withShippedExtraPixels(p))
   }
-  for (const p of shippedExtrasForShape(shapeId)) add(p)
+  for (const p of shippedExtrasForShape(shapeId)) {
+    const live = photos.find((row) => row.id === p.id)
+    if (live && live.shapeId !== shapeId) continue
+    add(p)
+  }
   return [...shipped, ...extras]
 }
 
@@ -246,6 +256,7 @@ export function listCoachStillSlots(
   const empty = [...photos, ...EMPTY_COACH_STILL_SLOTS].filter((p) => {
     if (p.shapeId !== shapeId) return false
     if (seen.has(p.id)) return false
+    if (isRemovedCoachStill(p.id)) return false
     if (p.id.startsWith('hitref_') || p.id.startsWith('default_')) return false
     if (p.library === 'ig') return false
     if (p.athleteId != null) return false

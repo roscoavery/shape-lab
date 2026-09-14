@@ -9,8 +9,8 @@ import {
 } from '../lib/shippedRefs'
 import {
   applyStillFromFile,
+  hideCoachStill,
   persistMainCoachStill,
-  removeCoachStillExtra,
   renameCoachStillExtra,
 } from '../lib/coachStillStore'
 import { loadMainCoachStills } from '../lib/coachStillPrefs'
@@ -207,9 +207,9 @@ export function CoachStillGallery({
   }
 
   const removeStill = async (id: string) => {
-    if (!onPhotosChange || id.startsWith('default_')) return
+    if (!onPhotosChange) return
     setFlash('Removing still…')
-    const remote = await removeCoachStillExtra(id)
+    const remote = await hideCoachStill(id)
     onPhotosChange(photos.filter((p) => p.id !== id))
     if (mainId === id) {
       const next = stills.find((p) => p.id !== id && !p.id.startsWith('default_')) ?? stills.find((p) => p.id !== id)
@@ -343,7 +343,7 @@ export function CoachStillGallery({
                   />
                 </label>
               )}
-              {!p.id.startsWith('default_') && onPhotosChange && (
+              {onPhotosChange && (
                 <button
                   type="button"
                   onClick={() => void removeStill(p.id)}

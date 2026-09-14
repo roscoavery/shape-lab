@@ -6,9 +6,18 @@
 import { makeShippedCoachExtras, SHIPPED_COACH_EXTRA_BY_ID } from '../config/shippedCoachExtras'
 import { setMainCoachStill } from './coachStillPrefs'
 import { fileToJpegBlob, blobToDataUrl } from './glossaryStore'
+import {
+  forgetRemovedCoachStill,
+  loadRemovedCoachStillIds,
+  noteRemovedCoachStill,
+  saveRemovedCoachStillIds,
+  UNMATCHED_STILL_SHAPE,
+} from './removedCoachStills'
 import { emptyCoachStillSlot } from './shippedRefs'
 import { capReferencePhotos, createId, loadReferencePhotos, saveReferencePhotos, saveReferencePhoto } from './storage'
 import type { ReferencePhoto } from '../types'
+
+export { isRemovedCoachStill, removedCoachStillIdSet, UNMATCHED_STILL_SHAPE } from './removedCoachStills'
 
 export type CoachStillExtra = {
   id: string
@@ -42,38 +51,6 @@ const EMPTY: CoachStillsFile = {
   main: {},
   extras: [],
   removedCoachStillIds: [],
-}
-
-const REMOVED_KEY = 'shape-lab.removedCoachStills.v1'
-
-function loadRemovedCoachStillIds(): string[] {
-  try {
-    const raw = localStorage.getItem(REMOVED_KEY)
-    if (!raw) return []
-    const data = JSON.parse(raw) as unknown
-    if (!Array.isArray(data)) return []
-    return data.filter((id): id is string => typeof id === 'string' && id.length > 0)
-  } catch {
-    return []
-  }
-}
-
-function saveRemovedCoachStillIds(ids: string[]) {
-  try {
-    localStorage.setItem(REMOVED_KEY, JSON.stringify([...new Set(ids)].slice(-2000)))
-  } catch {
-    /* quota */
-  }
-}
-
-function noteRemovedCoachStill(id: string) {
-  if (!id) return
-  saveRemovedCoachStillIds([...loadRemovedCoachStillIds(), id])
-}
-
-function forgetRemovedCoachStill(id: string) {
-  if (!id) return
-  saveRemovedCoachStillIds(loadRemovedCoachStillIds().filter((row) => row !== id))
 }
 
 function asIdList(raw: unknown): string[] {
@@ -396,4 +373,69 @@ export async function applyStillFromFile(opts: {
     /* quota — gym file still has it */
   }
   return { ...remote, photo: kept }
+}
+
+export async function reassignCoachStill(
+  photo: ReferencePhoto,
+  shapeId: string,
+): Promise<PersistStillResult> {
+  const next: ReferencePhoto = {
+    ...photo,
+    shapeId: shapeId || UNMATCHED_STILL_SHAPE,
+    library: 'coach',
+  }
+  forgetRemovedCoachStill(next.id)
+  const remote = await persistCoachStillExtra(next)
+  const kept = remote.photo ?? next
+  try {
+    await saveReferencePhoto(kept)
+  } catch {
+    /* quota */
+  }
+  return { ...remote, photo: kept }
+}
+
+/** Hide an extra or an original shipped still. Tombstone stays on every device. */
+export async function hideCoachStill(id: string): Promise<PersistStillResult> {
+  if (!id) return { ok: false, error: 'Still is missing.' }
+  if (id.startsWith('default_')) {
+    noteRemovedCoachStill(id)
+    try {
+      saveReferencePhotos(loadReferencePhotos().filter((p) => p.id !== id))
+    } catch {
+      /* quota */
+    }
+    const file = await pullCoachStills()
+    emitCoachStills(file.extras)
+    const saved = await pushCoachStills({
+      kind: 'shape-lab-coach-stills',
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      main: file.main,
+      extras: file.extras,
+      removedCoachStillIds: [...new Set([...(file.removedCoachStillIds ?? []), id])],
+    })
+    if (!saved) {
+      return { ok: false, error: 'Hidden on this device. Gym file did not keep the delete.' }
+    }
+    return { ok: true }
+  }
+  return removeCoachStillExtra(id)
+}
+
+export function listAssignableCoachStills(photos: ReferencePhoto[]): ReferencePhoto[] {
+  const gone = new Set(loadRemovedCoachStillIds())
+  const byId = new Map<string, ReferencePhoto>()
+  for (const p of photos) {
+    if (gone.has(p.id)) continue
+    if (p.library === 'ig' || p.id.startsWith('hitref_') || p.id.startsWith('default_')) continue
+    if (p.athleteId != null && p.library !== 'coach') continue
+    if (p.library !== 'coach' && !p.id.startsWith('coach_') && !p.id.startsWith('shipped_')) continue
+    byId.set(p.id, { ...p, library: 'coach' })
+  }
+  for (const p of makeShippedCoachExtras()) {
+    if (gone.has(p.id) || byId.has(p.id)) continue
+    byId.set(p.id, p)
+  }
+  return [...byId.values()].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
 }
