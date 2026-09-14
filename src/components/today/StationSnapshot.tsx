@@ -62,9 +62,20 @@ type Props = {
   athleteId?: string
   onCapture: (dataUrl: string) => void
   allowUpload?: boolean
+  /** Fill the sheet — school / camp quick add. */
+  size?: 'default' | 'hero'
+  /** Open the camera as soon as this step is on screen. */
+  autoStart?: boolean
 }
 
-export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUpload }: Props) {
+export function StationSnapshot({
+  photoDataUrl,
+  athleteId,
+  onCapture,
+  allowUpload,
+  size = 'default',
+  autoStart = false,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [live, setLive] = useState(false)
@@ -121,6 +132,13 @@ export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUploa
     }
   }
 
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || shownPhoto || pending) return
+    autoStarted.current = true
+    void openCamera()
+  }, [autoStart, shownPhoto, pending])
+
   const snap = () => {
     const video = videoRef.current
     if (!video || video.videoWidth < 2) {
@@ -161,6 +179,15 @@ export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUploa
     )
   }
 
+  const frame =
+    size === 'hero'
+      ? 'mx-auto h-[min(58vh,26rem)] w-full max-w-md rounded-[2rem] bg-black object-cover'
+      : 'mx-auto h-40 w-40 rounded-full object-cover'
+  const liveFrame =
+    size === 'hero'
+      ? 'mx-auto h-[min(58vh,26rem)] w-full max-w-md rounded-[2rem] bg-black object-cover'
+      : 'mx-auto h-56 w-56 rounded-full bg-black object-cover'
+
   return (
     <div className="flex flex-col gap-3">
       {shownPhoto && !live ? (
@@ -168,7 +195,7 @@ export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUploa
           key={photoDisplayKey(shownPhoto)}
           src={shownPhoto}
           alt=""
-          className="mx-auto h-40 w-40 rounded-full object-cover"
+          className={frame}
         />
       ) : live ? (
         <video
@@ -176,7 +203,7 @@ export function StationSnapshot({ photoDataUrl, athleteId, onCapture, allowUploa
           playsInline
           muted
           autoPlay
-          className="mx-auto h-56 w-56 rounded-full bg-black object-cover"
+          className={liveFrame}
         />
       ) : (
         <p className="text-sm text-white/55">

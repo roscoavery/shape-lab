@@ -23,6 +23,10 @@ type Props = {
   /** Open the create form with this kind already selected. */
   startKind?: TrainingEventKind | null
   onStartKindConsumed?: () => void
+  gymAdmin?: boolean
+  hiddenGyms?: string[]
+  onHideGym?: (gym: string) => void
+  onUnhideGym?: (gym: string) => void
 }
 
 function chipClass(on: boolean) {
@@ -43,6 +47,10 @@ export function TodayGymScope({
   onCreated,
   startKind = null,
   onStartKindConsumed,
+  gymAdmin = false,
+  hiddenGyms = [],
+  onHideGym,
+  onUnhideGym,
 }: Props) {
   const [making, setMaking] = useState(false)
   const [name, setName] = useState('')
@@ -119,16 +127,49 @@ export function TodayGymScope({
           </summary>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {otherGyms.map((gym) => (
-              <button
-                key={gym}
-                type="button"
-                className={chipClass(scope.kind === 'gym' && sameGym(scope.gym, gym))}
-                onClick={() => onScope({ kind: 'gym', gym })}
-              >
-                {gym}
-              </button>
+              <span key={gym} className="inline-flex items-center gap-0.5">
+                <button
+                  type="button"
+                  className={chipClass(scope.kind === 'gym' && sameGym(scope.gym, gym))}
+                  onClick={() => onScope({ kind: 'gym', gym })}
+                >
+                  {gym}
+                </button>
+                {gymAdmin && onHideGym && (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${gym} from this list`}
+                    title={`Hide ${gym}`}
+                    className="rounded-full px-1.5 py-1 text-xs font-bold text-[var(--bad)]"
+                    onClick={() => {
+                      if (confirm(`Hide “${gym}” from Other gyms? Profiles stay. You can unhide it later.`)) {
+                        onHideGym(gym)
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
             ))}
           </div>
+          {gymAdmin && hiddenGyms.length > 0 && (
+            <div className="mt-2 border-t border-white/5 pt-2">
+              <p className="text-[11px] text-[var(--muted)]">Hidden ({hiddenGyms.length})</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {hiddenGyms.map((gym) => (
+                  <button
+                    key={gym}
+                    type="button"
+                    className="rounded-full border border-dashed border-white/20 px-3 py-1 text-[11px] text-[var(--muted)]"
+                    onClick={() => onUnhideGym?.(gym)}
+                  >
+                    {gym} · unhide
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </details>
       )}
 
@@ -165,17 +206,33 @@ export function TodayGymScope({
             {activeEvent.athleteIds.length === 1 ? 'athlete' : 'athletes'}. They
             do not show on This gym unless they also take class there.
           </p>
-          <button
-            type="button"
-            className="mt-2 text-xs font-semibold text-[var(--bad)]"
-            onClick={() => {
-              deleteTrainingEvent(activeEvent.id)
-              onEventsChange()
-              onScope({ kind: 'desk' })
-            }}
-          >
-            Delete this group
-          </button>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--accent)]"
+              onClick={() => onScope({ kind: 'desk' })}
+            >
+              End {eventKindLabel(activeEvent.kind).toLowerCase()}
+            </button>
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--bad)]"
+              onClick={() => {
+                if (
+                  !confirm(
+                    `Delete “${activeEvent.name}”? That removes the group, not the athlete profiles.`,
+                  )
+                ) {
+                  return
+                }
+                deleteTrainingEvent(activeEvent.id)
+                onEventsChange()
+                onScope({ kind: 'desk' })
+              }}
+            >
+              Delete this group
+            </button>
+          </div>
         </div>
       )}
 

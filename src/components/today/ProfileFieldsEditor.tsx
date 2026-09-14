@@ -1,6 +1,7 @@
 import type { Athlete, FavoriteColor } from '../../types'
-import { birthdayNeeded, getAgeFromDateOfBirth } from '../../lib/age'
+import { birthdayNeeded } from '../../lib/age'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
+import { BirthdayQuickPick } from './BirthdayQuickPick'
 import { StationSnapshot } from './StationSnapshot'
 import { CoachPicker } from '../CoachPicker'
 import { profileRole } from '../../lib/profileRole'
@@ -70,17 +71,10 @@ export function ProfileFieldsEditor({
             Used for age-appropriate account access, privacy, and safety settings.
             It stays private — not shown on the feed or public profile.
           </p>
-          <input
-            type="date"
+          <BirthdayQuickPick
             value={athlete.dateOfBirth ?? ''}
-            onChange={(e) => patch({ dateOfBirth: e.target.value || undefined })}
-            className="h-12 rounded-2xl border border-white/10 bg-black/30 px-4 text-sm"
+            onChange={(iso) => patch({ dateOfBirth: iso || undefined })}
           />
-          {getAgeFromDateOfBirth(athlete.dateOfBirth) != null && (
-            <p className="text-xs text-[var(--muted)]">
-              Age {getAgeFromDateOfBirth(athlete.dateOfBirth)}
-            </p>
-          )}
         </section>
       )}
       {profileRole(athlete) === 'athlete' && (

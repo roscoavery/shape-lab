@@ -63,10 +63,18 @@ import {
 } from '../../lib/trainingEvents'
 import { GymBadge, gymHint } from '../today/GymBadge'
 import { TodayGymScope } from '../today/TodayGymScope'
-import { QuickGroupEnroll } from '../today/QuickGroupEnroll'
+import { GroupNeedFaces, QuickGroupEnroll } from '../today/QuickGroupEnroll'
 import { NamesTestGlow } from '../coach/NamesTestGlow'
 import { GoalGroupBoard } from '../coach/GoalGroupBoard'
+import { GroupCoachNotes } from '../today/GroupCoachNotes'
+import { AthleteSearchField } from '../today/AthleteSearchField'
 import { namesReadyCount } from '../../lib/namesQuiz'
+import {
+  hideListedGym,
+  listHiddenGyms,
+  subscribeHiddenGyms,
+  unhideListedGym,
+} from '../../lib/hiddenGyms'
 
 function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
   const seen = new Set<string>()
@@ -127,6 +135,10 @@ export function HomeDashboard({
   const [rosterOpen, setRosterOpen] = useState(false)
   const [endAsk, setEndAsk] = useState(false)
   const [startKind, setStartKind] = useState<TrainingEventKind | null>(null)
+  const [groupView, setGroupView] = useState<'coach' | 'athlete'>('coach')
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [hiddenTick, setHiddenTick] = useState(0)
+  const [addQuery, setAddQuery] = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -138,6 +150,7 @@ export function HomeDashboard({
     void hydrateCoachClasses().then(() => setRefresh((n) => n + 1))
   }, [])
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
+  useEffect(() => subscribeHiddenGyms(() => setHiddenTick((n) => n + 1)), [])
   const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
   const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const liveLesson = coach && signedIn ? findLiveLesson(signedIn.id) : null
@@ -154,7 +167,11 @@ export function HomeDashboard({
     if (!signedIn || isGymAdmin(signedIn)) return all
     return all.filter((event) => event.coachIds.includes(signedIn.id))
   }, [refresh, signedIn])
-  const knownGyms = useMemo(() => listKnownGyms(athletes), [athletes])
+  const hiddenGyms = useMemo(() => {
+    void hiddenTick
+    return listHiddenGyms()
+  }, [hiddenTick])
+  const knownGyms = useMemo(() => listKnownGyms(athletes, hiddenGyms), [athletes, hiddenGyms])
   const viewerGym = viewerHomeGym(signedIn)
 
   const roster = useMemo(
@@ -178,15 +195,12 @@ export function HomeDashboard({
   const eventAddMatches = useMemo(() => {
     if (gymScope.kind !== 'event' || !signedIn) return []
     const onEvent = new Set(roster.map((a) => a.id))
-    const q = lessonQuery.trim()
-    const fromDesk = scopeAthletes(athletes, signedIn, { kind: 'desk' }, events).filter(
-      (a) => !onEvent.has(a.id),
-    )
-    if (!q) return fromDesk
+    const q = addQuery.trim() || lessonQuery.trim()
+    if (!q) return []
     return scopeAthletes(athletes, signedIn, { kind: 'all' }, events)
       .filter((a) => !onEvent.has(a.id) && athleteMatchesQuery(a, q))
-      .slice(0, 16)
-  }, [athletes, signedIn, events, gymScope, lessonQuery, roster])
+      .slice(0, 8)
+  }, [athletes, signedIn, events, gymScope, lessonQuery, addQuery, roster])
 
   const withAthletes = withIds
     .map((id) => athletes.find((a) => a.id === id) ?? null)
@@ -230,6 +244,15 @@ export function HomeDashboard({
   const activeGroupReady = activeGroup
     ? namesReadyCount(athletes.filter((a) => activeGroup.athleteIds.includes(a.id)))
     : null
+  const groupAthletes = activeGroup
+    ? athletes.filter((a) => activeGroup.athleteIds.includes(a.id))
+    : []
+  const endActiveGroup = () => {
+    setGymScope({ kind: 'desk' })
+    setQuickAddOpen(false)
+    setAddQuery('')
+    setRosterOpen(false)
+  }
   const startTrainingKind = (kind: 'school' | 'camp') => {
     const matches = events.filter((e) => e.kind === kind)
     if (matches[0]) {
@@ -585,6 +608,7 @@ export function HomeDashboard({
             onStay={() => setEndAsk(false)}
           />
         )}
+        {!(activeGroup && groupView === 'athlete') && (
         <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
           {onStartClass && !liveClass && (
             <button type="button" onClick={onStartClass} className="sl-card sl-left px-4 py-4">
@@ -620,6 +644,8 @@ export function HomeDashboard({
             </span>
           </button>
         </div>
+        )}
+        {!activeGroup && (
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -642,24 +668,17 @@ export function HomeDashboard({
             <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start camp</span>
           </button>
         </div>
-        {onOpenNamesTest && (
+        )}
+        {onOpenNamesTest && !activeGroup && (
           <div className="mt-3">
             <NamesTestGlow
               onClick={() =>
                 onOpenNamesTest(
-                  activeGroup
-                    ? `event:${activeGroup.id}`
-                    : liveClass
-                      ? 'live'
-                      : undefined,
+                  liveClass ? 'live' : undefined,
                 )
               }
               hint="Every athlete on that list. The test keeps going until you get them all right, and leads with the names you miss most."
-              meta={
-                activeGroupReady
-                  ? `${activeGroupReady.faces} faces on ${activeGroup?.name}`
-                  : 'Class, camp, school, or your desk'
-              }
+              meta="Class, camp, school, or your desk"
             />
           </div>
         )}
@@ -673,26 +692,51 @@ export function HomeDashboard({
               {activeGroup.athleteIds.length} athlete
               {activeGroup.athleteIds.length === 1 ? '' : 's'}
               {activeGroupReady
-                ? ` · ${activeGroupReady.faces} face${activeGroupReady.faces === 1 ? '' : 's'} ready for names`
+                ? ` · ${activeGroupReady.faces} face${activeGroupReady.faces === 1 ? '' : 's'} on file`
                 : ''}
               . They stay off the gym desk.
             </p>
-            {onOpenNamesTest && (
-              <div className="mt-2">
-                <NamesTestGlow
-                  compact
-                  onClick={() => onOpenNamesTest(`event:${activeGroup.id}`)}
-                  title="Learn these names"
-                  meta={
-                    activeGroupReady
-                      ? `${activeGroupReady.faces} ready · ${activeGroupReady.missing} need a snapshot`
-                      : undefined
-                  }
-                />
-              </div>
-            )}
+            <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-xl bg-black/30 p-1">
+              <button
+                type="button"
+                onClick={() => setGroupView('coach')}
+                className={`rounded-lg px-3 py-2 text-sm font-bold ${
+                  groupView === 'coach' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-white/70'
+                }`}
+              >
+                Coach
+              </button>
+              <button
+                type="button"
+                onClick={() => setGroupView('athlete')}
+                className={`rounded-lg px-3 py-2 text-sm font-bold ${
+                  groupView === 'athlete' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-white/70'
+                }`}
+              >
+                Athlete
+              </button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={endActiveGroup}
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
+              >
+                End {eventKindLabel(activeGroup.kind).toLowerCase()}
+              </button>
+              {signedIn && onAthletesChange && (
+                <button
+                  type="button"
+                  onClick={() => setQuickAddOpen(true)}
+                  className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
+                >
+                  Quick add athlete
+                </button>
+              )}
+            </div>
           </div>
         )}
+        {(!activeGroup || groupView === 'coach') && (
         <div
           ref={pickerRef}
           className={`mt-5 rounded-xl p-1 transition-shadow ${
@@ -701,6 +745,7 @@ export function HomeDashboard({
               : ''
           }`}
         >
+          {!activeGroup && (
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">Who are you with?</h3>
@@ -726,6 +771,7 @@ export function HomeDashboard({
               </button>
             </div>
           </div>
+          )}
           <TodayGymScope
             scope={gymScope}
             onScope={setGymScope}
@@ -745,24 +791,51 @@ export function HomeDashboard({
             }}
             startKind={startKind}
             onStartKindConsumed={() => setStartKind(null)}
+            gymAdmin={isGymAdmin(signedIn)}
+            hiddenGyms={hiddenGyms}
+            onHideGym={(gym) => {
+              hideListedGym(gym)
+              if (gymScope.kind === 'gym' && gymScope.gym === gym) setGymScope({ kind: 'desk' })
+            }}
+            onUnhideGym={(gym) => unhideListedGym(gym)}
           />
-        {activeGroup && signedIn && onAthletesChange && (
-          <QuickGroupEnroll
-            event={activeGroup}
-            coach={signedIn}
-            athletes={athletes}
-            onAthletesChange={onAthletesChange}
-            onAdded={() => setRefresh((n) => n + 1)}
-          />
+        {activeGroup && groupView === 'coach' && signedIn && onAthletesChange && (
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Already has a profile
+              </p>
+              <AthleteSearchField
+                athletes={athletes.filter((a) => !activeGroup.athleteIds.includes(a.id))}
+                query={addQuery}
+                onQuery={setAddQuery}
+                onPick={(row) => {
+                  toggleCampAthlete(row.id)
+                  setAddQuery('')
+                }}
+                placeholder="Search a name to add them to this group"
+                emptyText="No match. Use Quick add for a new profile."
+              />
+            </div>
+            <GoalGroupBoard
+              athletes={groupAthletes}
+              onViewProfile={onViewProfile}
+              onOpenBuilder={onOpenSkillPaths}
+            />
+            <GroupCoachNotes
+              athletes={athletes}
+              pool={groupAthletes}
+              coach={signedIn}
+              onAthletesChange={onAthletesChange}
+            />
+            <GroupNeedFaces
+              event={activeGroup}
+              athletes={athletes}
+              onAthletesChange={onAthletesChange}
+            />
+          </div>
         )}
-        {activeGroup && (
-          <GoalGroupBoard
-            athletes={athletes.filter((a) => activeGroup.athleteIds.includes(a.id))}
-            onViewProfile={onViewProfile}
-            onOpenBuilder={onOpenSkillPaths}
-          />
-        )}
-        {rosterOpen && (roster.length === 0 && gymScope.kind !== 'event' ? (
+        {rosterOpen && !activeGroup && (roster.length === 0 && gymScope.kind !== 'event' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
             {gymScope.kind === 'all'
               ? 'No other profiles on the network yet. Add one under More → Profiles.'
@@ -878,7 +951,7 @@ export function HomeDashboard({
             {gymScope.kind === 'event' && eventAddMatches.length > 0 && (
               <div className="mt-3 space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {lessonQuery.trim() ? 'Add from the network' : 'Add from this gym'}
+                  Add from search
                 </p>
                 {eventAddMatches.map((a) => (
                   <div
@@ -905,7 +978,7 @@ export function HomeDashboard({
                 {gymScope.kind === 'event'
                   ? lessonQuery.trim()
                     ? 'No network names match that search. Create their profile under More → Profiles or New athlete / shape test, then add them here.'
-                    : 'No one on this group yet. Add a fast profile above, or pick a name from this gym below.'
+                    : 'No one on this group yet. Search a name above or use Quick add.'
                   : 'No names match that search. Try Search all if they train at another gym.'}
               </p>
             )}
@@ -918,9 +991,10 @@ export function HomeDashboard({
           </>
         ))}
         </div>
+        )}
       </section>
 
-      {withAthlete && !editing && (
+      {!(activeGroup && groupView === 'athlete') && withAthlete && !editing && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
           <h3 className="font-semibold">
             Lesson with{' '}
@@ -1016,7 +1090,60 @@ export function HomeDashboard({
         />
       )}
 
-      {coach && (
+      {activeGroup && groupView === 'athlete' && (
+        <div className="space-y-3">
+          {signedIn && onAthletesChange && (
+            <button
+              type="button"
+              onClick={() => setQuickAddOpen(true)}
+              className="sl-btn-mint sl-center w-full rounded-2xl px-4 py-4 text-lg font-bold"
+            >
+              Quick add athlete
+            </button>
+          )}
+          <TodayDock
+            id="clock-floor"
+            icon="⏱️"
+            eyebrow="Hold clock"
+            title="Who is holding?"
+            hint="Search a name, pick the hold, start the clock."
+            defaultOpen
+          >
+            <ClassStopwatch
+              athletes={athletes}
+              signedIn={signedIn}
+              coach={coach}
+              embed
+              floorMode
+              candidates={groupAthletes}
+            />
+          </TodayDock>
+          <TodayDock
+            id="chalk-floor"
+            icon="📋"
+            eyebrow="Floor"
+            title="Chalkboard"
+            hint="Pin clips and drills. Tap to open."
+            defaultOpen
+          >
+            <ChalkboardPanel viewer={signedIn} onToday embed />
+          </TodayDock>
+          {onShortcut && (
+            <TodayDock
+              id="collage-floor"
+              icon="🎬"
+              eyebrow="Floor"
+              title="Collage"
+              hint="Play the board."
+              defaultOpen
+            >
+              <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} embed />
+            </TodayDock>
+          )}
+        </div>
+      )}
+
+      {(!activeGroup || groupView === 'coach') && coach && (
         <TodayDock
           id="clock"
           icon="⏱️"
@@ -1028,6 +1155,7 @@ export function HomeDashboard({
         </TodayDock>
       )}
 
+      {(!activeGroup || groupView === 'coach') && (
       <TodayDock
         id="chalk"
         icon="📋"
@@ -1037,7 +1165,8 @@ export function HomeDashboard({
       >
         <ChalkboardPanel viewer={signedIn} onToday embed />
       </TodayDock>
-      {onShortcut && (
+      )}
+      {(!activeGroup || groupView === 'coach') && onShortcut && (
         <TodayDock
           id="collage"
           icon="🎬"
@@ -1050,7 +1179,11 @@ export function HomeDashboard({
       )}
 
       {onShortcut && (
-        <TodayShortcuts onGo={onShortcut} showStation showNames={Boolean(onOpenNamesTest)} />
+        <TodayShortcuts
+          onGo={onShortcut}
+          showStation
+          showNames={Boolean(onOpenNamesTest) && !activeGroup}
+        />
       )}
 
       <ClassRecapList
@@ -1071,6 +1204,16 @@ export function HomeDashboard({
         onAthletesChange={onAthletesChange}
         onViewProfile={onViewProfile}
       />
+      {quickAddOpen && activeGroup && signedIn && onAthletesChange && (
+        <QuickGroupEnroll
+          event={activeGroup}
+          coach={signedIn}
+          athletes={athletes}
+          onAthletesChange={onAthletesChange}
+          onClose={() => setQuickAddOpen(false)}
+          onAdded={() => setRefresh((n) => n + 1)}
+        />
+      )}
     </div>
   )
 }

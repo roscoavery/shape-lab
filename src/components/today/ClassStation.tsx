@@ -36,6 +36,7 @@ import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { AthleteName } from '../AthleteAvatar'
 import { TUMBLE_SMART, normalizeGymName, sameGym } from '../../config/gyms'
 import { trainsAtGym, viewerHomeGym, withClassGym } from '../../lib/gymScope'
+import { BirthdayQuickPick } from './BirthdayQuickPick'
 import { GymBadge } from './GymBadge'
 import { StationSnapshot } from './StationSnapshot'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
@@ -563,12 +564,10 @@ export function ClassStation({
             hint="Used for age-appropriate account access, privacy, and safety settings. It stays private — we do not show it on profiles or the feed."
             onBack={() => go('parentPhone')}
           >
-            <input
-              autoFocus
-              type="date"
-              className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
+            <BirthdayQuickPick
+              size="station"
               value={draft.dateOfBirth ?? ''}
-              onChange={(e) => persist({ ...draft, dateOfBirth: e.target.value })}
+              onChange={(iso) => persist({ ...draft, dateOfBirth: iso || undefined })}
             />
             <button
               type="button"

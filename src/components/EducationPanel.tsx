@@ -201,16 +201,21 @@ export function EducationPanel({
   const openTask = (taskId: string) => setView({ kind: 'task', taskId })
 
   return (
-    <div className={`mx-auto space-y-4 ${view.kind === 'scroll' ? 'max-w-xl' : 'max-w-4xl'}`}>
+    <div className={`mx-auto space-y-4 ${view.kind === 'scroll' && surface !== 'videos' ? 'max-w-xl' : 'max-w-4xl'}`}>
       {surface === 'videos' ? (
-        <header className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-            Videos
-          </p>
-          <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Reference scroll</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Same gym Instagram library as Compare. Also lives under Learn.
-          </p>
+        <header className="learn-masthead">
+          <div className="relative z-[1]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+              shapelab
+            </p>
+            <h2 className="learn-serif mt-1 text-4xl font-semibold tracking-tight text-[var(--text)] sm:text-5xl">
+              Videos
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+              Swipe stills the way you swipe a story. Same gym library as Compare
+              and Learn — reference scroll, not a camera grade.
+            </p>
+          </div>
         </header>
       ) : (
         <header className="learn-masthead">

@@ -47,6 +47,7 @@ import { taggedIdsFromText } from '../../lib/profileHandle'
 import { useViewProfile } from '../ProfilePeekContext'
 import { InfoHint } from '../ui/InfoHint'
 import { IconAction, IconMark } from '../ui/IconAction'
+import { AthleteSearchField } from '../today/AthleteSearchField'
 
 type Props = {
   athletes: Athlete[]
@@ -70,6 +71,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [bigWin, setBigWin] = useState(false)
+  const [tagQuery, setTagQuery] = useState('')
   const wins = channel === 'wins'
   const coach = isCoachProfile(athlete)
   const gymAdmin = isGymAdmin(athlete)
@@ -259,10 +261,16 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
           </h2>
           <InfoHint>
             {wins
-              ? 'Little hits and firsts. Check big win only when it should also show on the gym feed.'
+              ? 'Spam wins. Little hits and firsts — check big win only when it should also show on the gym feed.'
               : 'Bigger gym posts — collages, videos, and wins marked as big.'}
           </InfoHint>
         </div>
+        {wins && (
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            Spam wins. Log the little hits — a first, a stuck landing, a hold that
+            finally counted. Check big win only when it should also jump to the gym feed.
+          </p>
+        )}
       </section>
 
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
@@ -365,26 +373,38 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                   {coach ? 'Tag athletes' : 'Tag coach'}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {tagChoices.map((a) => {
-                    const on = tagged.includes(a.id)
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => toggleTag(a.id)}
-                        className={`rounded-full px-2.5 py-1 text-xs ${
-                          on
-                            ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                            : 'border border-[var(--panel-border)] text-[var(--muted)]'
-                        }`}
-                      >
-                        <AthleteName athlete={a} size="xs" />
-                        <span className="ml-1 opacity-70">{roleLabel(a)}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                {tagged.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {tagged.map((id) => {
+                      const a = athletes.find((row) => row.id === id)
+                      if (!a) return null
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggleTag(id)}
+                          className="rounded-full bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
+                        >
+                          <AthleteName athlete={a} size="xs" />
+                          <span className="ml-1 opacity-70">×</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                <AthleteSearchField
+                  athletes={tagChoices}
+                  query={tagQuery}
+                  onQuery={setTagQuery}
+                  onPick={(row) => {
+                    toggleTag(row.id)
+                    setTagQuery('')
+                  }}
+                  excludeIds={tagged}
+                  anyRole
+                  placeholder={coach ? 'Search an athlete to tag' : 'Search a coach to tag'}
+                  emptyText="No names match. You can also tag with @handle in the caption."
+                />
               </div>
             )}
             {wins && (
@@ -413,7 +433,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
       {visiblePosts.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
           {wins
-            ? 'No wins yet. Log a skill from Today → Class clock, or write one here.'
+            ? 'No wins yet. Spam the little hits — log a skill from Today → Class clock, or write one here.'
             : 'No posts yet. A thought, a first hit of the day, or a class collage from Classes can live here.'}
         </p>
       ) : (

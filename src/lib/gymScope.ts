@@ -68,12 +68,15 @@ export type GymScope =
   | { kind: 'gym'; gym: string }
   | { kind: 'event'; eventId: string }
 
-export function listKnownGyms(athletes: Athlete[]): string[] {
+export function listKnownGyms(athletes: Athlete[], hiddenGyms: string[] = []): string[] {
   const names = new Set<string>([TUMBLE_SMART])
   for (const a of athletes) {
     for (const g of classGymsOf(a)) names.add(g)
   }
-  const ordered = [...names].sort((a, b) => a.localeCompare(b))
+  const hidden = hiddenGyms.map((n) => n.trim().toLowerCase()).filter(Boolean)
+  const ordered = [...names]
+    .filter((name) => sameGym(name, TUMBLE_SMART) || !hidden.includes(name.toLowerCase()))
+    .sort((a, b) => a.localeCompare(b))
   return ordered.sort((a, b) => {
     if (sameGym(a, TUMBLE_SMART)) return -1
     if (sameGym(b, TUMBLE_SMART)) return 1

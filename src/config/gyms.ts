@@ -6,6 +6,7 @@
 export const TUMBLE_SMART = 'Tumble Smart Athletics'
 
 const TSA_ALIASES = new Set([
+  'tumble',
   'tumble smart',
   'tumble smart athletics',
   'tumblesmart',

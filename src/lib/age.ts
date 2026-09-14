@@ -66,6 +66,31 @@ export function birthdayNeeded(dateOfBirth: string | null | undefined): boolean 
   return parseDateOfBirth(dateOfBirth) == null
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** Calendar days in `month` (1–12). Uses 2016 (leap) when year is unknown so Feb can show 29. */
+export function daysInMonth(year: number, month: number): number {
+  const y = year >= 1900 ? year : 2016
+  const m = Math.min(12, Math.max(1, month))
+  return new Date(y, m, 0).getDate()
+}
+
+/** ISO `YYYY-MM-DD` if that calendar date is a real past birthday. */
+export function isoDateOfBirth(year: number, month: number, day: number): string | null {
+  const iso = `${year}-${pad2(month)}-${pad2(day)}`
+  return parseDateOfBirth(iso) ? iso : null
+}
+
+export function splitDateOfBirth(
+  value: string | null | undefined,
+): { year: number; month: number; day: number } | null {
+  const born = parseDateOfBirth(value)
+  if (!born) return null
+  return { year: born.getFullYear(), month: born.getMonth() + 1, day: born.getDate() }
+}
+
 export function athleteMaySelfManageProfile(age: number | null | undefined): boolean {
   const level = getAthleteAccessLevel(age)
   return level === 'shared' || level === 'independent'

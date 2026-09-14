@@ -989,7 +989,20 @@ function PostsGrid({
           .map((id) => athletes.find((a) => a.id === id))
           .filter((a): a is Athlete => Boolean(a))
         return (
-          <li key={p.id} className="overflow-hidden rounded-2xl bg-black/30">
+          <li key={p.id} className="relative overflow-hidden rounded-2xl bg-black/30">
+            {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
+              <IconAction
+                kind="remove"
+                label="Remove"
+                className="absolute right-2 top-2 z-10 bg-black/70"
+                onClick={() => {
+                  if (!viewer) return
+                  void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
+                    if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
+                  })
+                }}
+              />
+            )}
             {p.url && p.kind !== 'text' && p.kind !== 'collage' && (
               <video src={p.url} controls playsInline className="max-h-80 w-full bg-black object-contain" />
             )}
@@ -1045,18 +1058,6 @@ function PostsGrid({
                     void toggleFeedRepost(p.id, viewer.id).then((next) => {
                       if (!next) return
                       onChange((prev) => prev.map((row) => (row.id === next.id ? next : row)))
-                    })
-                  }}
-                />
-              )}
-              {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
-                <IconAction
-                  kind="remove"
-                  label="Remove"
-                  onClick={() => {
-                    if (!viewer) return
-                    void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
-                      if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                     })
                   }}
                 />

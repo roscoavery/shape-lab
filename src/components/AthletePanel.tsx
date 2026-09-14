@@ -36,6 +36,7 @@ import { addCoachNotesToAthletes } from '../lib/athleteNotes'
 import { withLinkedAthletes, linkParentToAthletes, linkedAthleteIds } from '../lib/parentLink'
 import { likelyExistingAthletes, duplicateAthleteMessage } from '../lib/familyDuplicates'
 import { birthdayNeeded, parseDateOfBirth } from '../lib/age'
+import { BirthdayQuickPick } from './today/BirthdayQuickPick'
 import { CoachPicker } from './CoachPicker'
 import { DeleteProfileAsk } from './DeleteProfileAsk'
 import { TUMBLE_SMART, normalizeGymName } from '../config/gyms'
@@ -551,11 +552,9 @@ export function AthletePanel({
             <span className="text-[11px] text-[var(--muted)]">
               Birthday — private, used for age-appropriate access and safety settings
             </span>
-            <input
-              type="date"
-              className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            <BirthdayQuickPick
               value={newDateOfBirth}
-              onChange={(e) => setNewDateOfBirth(e.target.value)}
+              onChange={setNewDateOfBirth}
             />
           </label>
         )}
@@ -742,12 +741,7 @@ export function AthletePanel({
               <span className="text-[11px] text-[var(--muted)]">
                 {birthdayNeeded(active.dateOfBirth) ? 'Birthday needed — stays private' : 'Birthday (private)'}
               </span>
-              <input
-                type="date"
-                className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-              />
+              <BirthdayQuickPick value={dateOfBirth} onChange={setDateOfBirth} />
             </label>
           )}
           {(profileRole(active) === 'gym_owner' ||
