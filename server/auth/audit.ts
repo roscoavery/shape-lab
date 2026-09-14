@@ -43,7 +43,12 @@ type AuditFile = {
 
 const EMPTY: AuditFile = { kind: 'shape-lab-audit', version: 1, events: [] }
 
-const VIEW_ACTIONS = new Set<AuditAction>(['roster.view', 'media.view', 'athlete.view'])
+const VIEW_ACTIONS = new Set<AuditAction>([
+  'roster.view',
+  'roster.write',
+  'media.view',
+  'athlete.view',
+])
 
 export async function readAudit(opts?: {
   includeViews?: boolean

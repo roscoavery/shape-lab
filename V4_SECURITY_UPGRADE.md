@@ -12,7 +12,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
 - Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
 - Email delivery of invites is not built. Admin can copy a one-time sign-in link from More → Accounts. The recipient opens the URL and sets their own password. Shape Lab does not send email.
-- More → Watch is a gym log, not a legal-compliance system. Routine roster and photo opens are hidden by default. Roster saves that did not change records are not logged.
+- More → Watch is a gym log, not a legal-compliance system. Routine roster opens, roster saves, and photo opens are hidden by default.
 - Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. CSRF tokens are not added; session cookies are SameSite=Lax.
 - Historical Git still contains older copies of `data/roster.json`. Adding the file to `.gitignore` does not erase history.
 - This upgrade is technical. It does not make Shape Lab COPPA / GDPR / studio-policy compliant by itself.

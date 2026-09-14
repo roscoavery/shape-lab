@@ -159,6 +159,37 @@ async function readRawRoster(): Promise<DiskRoster> {
   return listsToDisk(merged, stored.exportedAt || bundled.exportedAt)
 }
 
+const PEOPLE_KEYS = [
+  'id',
+  'name',
+  'firstName',
+  'lastName',
+  'role',
+  'email',
+  'phone',
+  'parentPhone',
+  'profilePublic',
+  'profileVisibility',
+  'linkedAthleteIds',
+  'worksWithCoachIds',
+] as const
+
+/** Stable stamp of who is on the roster — ignores homework, photos, and updatedAt. */
+export function rosterPeopleStamp(athletes: unknown[] | undefined): string {
+  const rows = Array.isArray(athletes) ? athletes : []
+  const slim = rows
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null
+      const athlete = row as Record<string, unknown>
+      const out: Record<string, unknown> = {}
+      for (const key of PEOPLE_KEYS) out[key] = athlete[key] ?? null
+      return out
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(a?.id ?? '').localeCompare(String(b?.id ?? '')))
+  return JSON.stringify(slim)
+}
+
 function listsEqual(a: RosterLists, b: RosterLists): boolean {
   const slim = (lists: RosterLists) =>
     JSON.stringify({

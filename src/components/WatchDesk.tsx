@@ -81,8 +81,9 @@ export function WatchDesk({ user }: Props) {
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Sign-ins, sign-in links, floor iPad, contacts, and login changes.
           This is a gym log, not a legal record. A new sign-in on the same
-          email ends the last one. Session ids stay on the server. A roster
-          save is only logged when names or records actually changed.
+          email ends the last one. Session ids stay on the server. Roster
+          saves stay off this list unless you turn them on — the gym writes
+          that file often.
         </p>
       </section>
 
@@ -145,12 +146,12 @@ export function WatchDesk({ user }: Props) {
               checked={includeViews}
               onChange={(e) => setIncludeViews(e.target.checked)}
             />
-            Show roster and photo opens
+            Show roster opens and saves
           </label>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Routine roster and photo opens are hidden unless you turn that on.
-          The gym polls those often, so they crowd out the useful lines.
+          Routine roster opens and saves are hidden unless you turn that on.
+          The gym writes that file often, so they crowd out the useful lines.
         </p>
         {loading && <p className="mt-3 text-sm text-[var(--muted)]">Loading the gym log…</p>}
         {!loading && events.length === 0 && (

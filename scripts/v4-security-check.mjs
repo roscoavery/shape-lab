@@ -474,7 +474,9 @@ async function main() {
   ok(
     'gym log hides routine roster views by default',
     adminAudit.status === 200 &&
-      (adminAudit.json?.events || []).every((row) => row.action !== 'roster.view'),
+      (adminAudit.json?.events || []).every(
+        (row) => row.action !== 'roster.view' && row.action !== 'roster.write',
+      ),
   )
 
   const anonSessions = await req('/api/auth/sessions')

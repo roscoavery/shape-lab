@@ -15,7 +15,7 @@ import {
 import { postedByFromUrl } from '../src/lib/socialUrls.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
-import { readRosterFile, writeRosterFile } from './rosterStore.ts'
+import { readRosterFile, rosterPeopleStamp, writeRosterFile } from './rosterStore.ts'
 import {
   readRosterPhoto,
   readRosterPhotosFile,
@@ -508,7 +508,7 @@ export async function handleShapeLabApi(
         const existing = await readRosterFile()
         const authorized = await authorizeRosterWrite(viewer, existing, incoming)
         const saved = await writeRosterFile(authorized)
-        if (saved.exportedAt !== existing.exportedAt) {
+        if (rosterPeopleStamp(existing.athletes) !== rosterPeopleStamp(saved.athletes)) {
           await writeAudit('roster.write', viewer, {
             detail: `athletes:${saved.athletes.length}`,
           })
