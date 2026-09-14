@@ -18,9 +18,9 @@ await esbuild.build({
   target: 'node20',
   minify: true,
   logLevel: 'info',
-  // Keep Blob on Node’s real module, not the bundled ESM rewrite
+  // Keep Blob and nodemailer on Node’s real modules, not the bundled ESM rewrite
   // that throws “Dynamic require of node:buffer is not supported”.
-  external: ['@vercel/blob', '@vercel/blob/client'],
+  external: ['@vercel/blob', '@vercel/blob/client', 'nodemailer'],
 })
 
 console.log(`bundled ${outfile}`)

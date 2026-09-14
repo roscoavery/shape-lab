@@ -11,7 +11,7 @@ Important protections are in place on `shape-lab-v4`, but the following are stil
 - Older public Vercel Blob URLs created before this phase may still work if someone already has the exact URL. New plays go through the signed-in file routes. The app no longer mints or redirects to a public CDN link for gym photos, feed clips, or athlete videos.
 - Class-attendance-only coach relationships are loaded from disk when those files exist; a brand-new class store may not yet grant access until `worksWithCoachIds` is set.
 - Parent consent is recorded in More → Consent and honored on feed / stories / public profile. `unknown` is not permission. This is still not a legal-compliance system.
-- Email delivery of invites is not built. Admin can copy a one-time sign-in link from More → Accounts. The recipient opens the URL and sets their own password. Shape Lab does not send email.
+- Email delivery of invites is optional. Set SMTP on the gym computer (`SHAPE_LAB_SMTP_HOST` + `SHAPE_LAB_MAIL_FROM`). Copy the one-time sign-in link from More → Accounts still works. The recipient opens the URL and sets their own password. The token is never written to the audit log.
 - More → Watch is a gym log, not a legal-compliance system. Routine roster opens, roster saves, and photo opens are hidden by default.
 - Write pacing is per Node process (40 account changes / 15 minutes, 180 gym saves / minute, 12 sign-in tries / 15 minutes). It is not a WAF. After a 429 this browser pauses gym PUTs for a minute and only runs one roster save at a time. Writes with a foreign `Origin` are 403. Missing Origin is still allowed. CSRF tokens are not added; session cookies are SameSite=Lax.
 - Away lock covers this browser's screen only. The session cookie still works until sign-out or Watch ends the login. It is not a substitute for floor mode on the shared iPad. When Watch or a password change ends this cookie, this tab returns to sign-in instead of polling 401s.
@@ -69,6 +69,9 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 - **Phase 10 (Quiet build):** After a 429 this tab pauses gym PUTs for a minute (roster, lessons, classes, chalkboards, skill paths, camp lists). Overlapping roster saves collapse into one in-flight PUT, then one more with the latest local file. This is still not a WAF.
 - **Phase 11 (Clear build):** A 401 on revision, roster, gym writes, or Away unlock (missing cookie, not a wrong password) returns this tab to the sign-in screen and stops the 4-second gym poll. Wrong passwords stay on the lock overlay.
 - **Phase 12 (Bind build):** POST / PUT / PATCH / DELETE with an `Origin` whose host does not match this gym is 403. Node tests and some iPad fetches omit Origin and still work. CSRF tokens are not added.
+- **Phase 13 (Mail build):** More → Accounts can email a one-time sign-in link when SMTP is set on this gym. Copy-link stays. Without SMTP, email is off and the link is still copied. The invite token is not stored in Watch.
+
+**Gym-open look:** header chip and fallback banner say **Mail build** / **MAIL BUILD**. Health `holdBuild` is `"mail"`. The HUD on camera still reads **shapelab**.
 
 ## Authentication architecture
 
@@ -87,6 +90,7 @@ Do not force-push, squash, rewrite, or delete `shape-lab-v3-frozen` or `v3-worki
 13. Gym PUTs from this browser pause for a minute after a 429. Roster saves run one at a time.
 14. A dead session (401, not a wrong password) raises `shape-lab-session-lost` and this tab shows sign-in.
 15. Cookie writes whose `Origin` host does not match this gym are 403. GET is not origin-checked.
+16. `POST /api/auth/invites` with `{ accountId, sendEmail: true }` emails the link when SMTP is configured. `GET /api/auth/me` includes `mailEnabled` for gym admin.
 
 Never put secrets in `VITE_` variables or client source.
 
@@ -144,7 +148,7 @@ npm run gym:mac:v4
 
 3. Leave that window open. On the iPad / computer open **https://gym.shapelab.win**.
 4. Sign in, or create the first admin account on that Mac (`GYM_HOME=1` allows it).
-5. Look for **Bind build** on the header. `/api/health` should include `"holdBuild":"bind"`. If you still see Clear, Quiet, Away, Pace, Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Accounts has **Lock this gym**. Floor mode is still the shared iPad tool.
+5. Look for **Mail build** on the header. `/api/health` should include `"holdBuild":"mail"`. If you still see Bind, Clear, Quiet, Away, Pace, Watch, Link, Seal, or Floor, this window is still old. After sign-in, More → Accounts still copies a sign-in link. Email is off until SMTP is set on that Mac.
 6. Optional in `.env` on that Mac (never commit it):
 
 ```
@@ -177,7 +181,7 @@ The live gym Mac still has its `data/` folder. Version 3 reads those files the s
 ## Recommended next security / privacy tasks
 
 1. Rotate any Blob tokens that were ever in a shell history.
-2. Email delivery of those sign-in links (SMTP). Copy-link reset is already built.
+2. Point SMTP at this gym (`SHAPE_LAB_SMTP_HOST` + `SHAPE_LAB_MAIL_FROM` in `.env` on the Mac). Copy-link already works.
 3. Separate historical Git cleanup, only with an explicit backup and written approval.
 4. CSRF tokens if Shape Lab is ever embedded on another site. Writes already require this gym's Origin (or no Origin). SameSite=Lax cookies are already in place.
 5. Away lock is not floor mode. Keep the shared iPad in floor mode; Away only covers the office browser. Clear returns a dead cookie to sign-in; it does not lock the office screen.

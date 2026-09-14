@@ -19,6 +19,7 @@ export type AuthMeResponse = {
   authenticated: boolean
   user: AuthSessionUser | null
   bootstrapAllowed?: boolean
+  mailEnabled?: boolean
 }
 
 const jsonInit: RequestInit = {

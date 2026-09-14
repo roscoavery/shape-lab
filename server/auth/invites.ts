@@ -1,5 +1,5 @@
 /**
- * One-time sign-in links. Admin copies the URL. No email is sent.
+ * One-time sign-in links. Admin copies the URL, or emails it when SMTP is set.
  * Tokens are stored as SHA-256 hashes in gitignored data/invites.json.
  */
 

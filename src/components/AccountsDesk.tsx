@@ -12,6 +12,7 @@ import {
 import {
   sessionIsAdmin,
   setFloorKiosk,
+  fetchAuthMe,
   type AuthSessionUser,
   type SessionRole,
 } from '../lib/authSession'
@@ -45,6 +46,8 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
   const [role, setRole] = useState<SessionRole>('coach')
   const [rosterProfileId, setRosterProfileId] = useState('')
   const [parentChildId, setParentChildId] = useState('')
+  const [mailEnabled, setMailEnabled] = useState(false)
+  const [emailNewLogin, setEmailNewLogin] = useState(false)
 
   const sortedAthletes = useMemo(
     () => [...athletes].sort((a, b) => a.name.localeCompare(b.name)),
@@ -62,6 +65,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
     void reload().catch((err) => {
       setError(err instanceof Error ? err.message : 'Could not load accounts.')
     })
+    void fetchAuthMe().then((me) => setMailEnabled(Boolean(me.mailEnabled)))
   }, [admin])
 
   const flash = (message: string) => {
@@ -182,8 +186,18 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
             Coaches only see athletes assigned to them. Parents only see the
             child you link. Athletes only see themselves. Leave the password
             blank to copy a one-time sign-in link — they choose their own
-            password. Shape Lab does not send email.
+            password. Email is off on this gym until SMTP is set on the Mac.
           </p>
+          {mailEnabled && (
+            <label className="mt-3 flex items-center gap-2 text-sm text-[var(--text)]">
+              <input
+                type="checkbox"
+                checked={emailNewLogin}
+                onChange={(e) => setEmailNewLogin(e.target.checked)}
+              />
+              Email them the sign-in link when the password is blank
+            </label>
+          )}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -285,6 +299,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
                 displayName: displayName || email,
                 rosterProfileId: rosterProfileId || undefined,
                 linkedAthleteIds: parentChildId ? [parentChildId] : undefined,
+                sendEmail: mailEnabled && emailNewLogin && !createPassword,
               })
                 .then(async (result) => {
                   setEmail('')
@@ -295,7 +310,11 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
                   if (result.inviteUrl) {
                     try {
                       await navigator.clipboard.writeText(result.inviteUrl)
-                      flash('Login created. Sign-in link copied — it works for 7 days.')
+                      flash(
+                        result.mailed
+                          ? 'Login created. Sign-in link emailed and copied — it works for 7 days.'
+                          : 'Login created. Sign-in link copied — it works for 7 days. Email is off on this gym.',
+                      )
                     } catch {
                       flash(`Login created. Send them this link: ${result.inviteUrl}`)
                     }
@@ -327,6 +346,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
                   account={account}
                   athletes={sortedAthletes}
                   busy={busy}
+                  mailEnabled={mailEnabled}
                   onError={setError}
                   onSaved={(message) => {
                     flash(message)
@@ -350,6 +370,7 @@ function AccountRow({
   account,
   athletes,
   busy,
+  mailEnabled,
   onError,
   onSaved,
   setBusy,
@@ -357,9 +378,10 @@ function AccountRow({
   account: PublicAccount
   athletes: Athlete[]
   busy: boolean
+  mailEnabled: boolean
   onError: (message: string) => void
   onSaved: (message: string) => void
-  setBusy: (value: boolean) => void
+  setBusy: (busy: boolean) => void
 }) {
   const [profileId, setProfileId] = useState(account.rosterProfileId ?? '')
   const [resetPassword, setResetPassword] = useState('')
@@ -452,6 +474,38 @@ function AccountRow({
       >
         Copy sign-in link
       </button>
+      {mailEnabled && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void createSignInLink(account.id, true)
+              .then(async (invite) => {
+                try {
+                  await navigator.clipboard.writeText(invite.url)
+                } catch {
+                  /* copy is extra */
+                }
+                if (invite.mailed) {
+                  onSaved(`Sign-in link emailed to ${account.email}. It works for 7 days.`)
+                } else {
+                  onSaved(
+                    invite.mailError ||
+                      `Could not email ${account.email}. Sign-in link copied instead.`,
+                  )
+                }
+              })
+              .catch((err) =>
+                onError(err instanceof Error ? err.message : 'Could not make that sign-in link.'),
+              )
+              .finally(() => setBusy(false))
+          }}
+          className="mt-2 ml-2 rounded-full border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold"
+        >
+          Email sign-in link
+        </button>
+      )}
     </li>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from '../lib/holdBuild'
 import { sessionIsAdmin, type AuthSessionUser } from '../lib/authSession'
 import {
   endSignedInLogin,
@@ -77,7 +78,8 @@ export function WatchDesk({ user }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Office
         </p>
-        <h2 className="mt-1 text-xl font-semibold text-[var(--text)]">Watch</h2>
+        <span className={`${HOLD_BUILD_CHIP} mt-2`}>{HOLD_BUILD_LABEL}</span>
+        <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">Watch</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Sign-ins, sign-in links, floor iPad, contacts, and login changes.
           This is a gym log, not a legal record. A new sign-in on the same

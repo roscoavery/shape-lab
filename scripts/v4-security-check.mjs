@@ -109,7 +109,7 @@ async function main() {
 
   const health = await req('/api/health')
   ok('health is public', health.status === 200)
-  ok('health stamp is bind', health.json?.holdBuild === 'bind', String(health.json?.holdBuild))
+  ok('health stamp is mail', health.json?.holdBuild === 'mail', String(health.json?.holdBuild))
   ok(
     'health denies framing',
     (health.headers.get('x-frame-options') || '').toUpperCase() === 'DENY',
@@ -189,6 +189,12 @@ async function main() {
 
   const me = await req('/api/auth/me', { cookie })
   ok('admin session is admin', me.json?.user?.role === 'admin' || me.json?.user?.role === 'gymOwner')
+  const mail = await import('../server/auth/mail.ts')
+  ok(
+    'mailEnabled matches SMTP config',
+    Boolean(me.json?.mailEnabled) === mail.mailConfigured(),
+    String(me.json?.mailEnabled),
+  )
 
   const revIn = await req('/api/revision', { cookie })
   ok('signed-in revision is 200', revIn.status === 200, String(revIn.status))
@@ -275,6 +281,8 @@ async function main() {
   })
   ok('coach login works', coachLogin.status === 200)
   const coachCookie = cookieFrom('', coachLogin)
+  const coachMe = await req('/api/auth/me', { cookie: coachCookie })
+  ok('coach mail stays off', coachMe.json?.mailEnabled !== true)
 
   const coachContacts = await req('/api/contacts', { cookie: coachCookie })
   ok('coach contacts is 403', coachContacts.status === 403)
@@ -549,6 +557,7 @@ async function main() {
       adminInvite.status === 200 && inviteUrl.includes('invite='),
       adminInvite.json?.error || String(adminInvite.status),
     )
+    ok('invite is not emailed without SMTP', adminInvite.json?.mailed !== true)
     let token = ''
     try {
       token = new URL(inviteUrl).searchParams.get('invite') || ''

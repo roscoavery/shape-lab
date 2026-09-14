@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from '../lib/holdBuild'
 import { logoutSession, unlockAway, type AuthSessionUser } from '../lib/authSession'
 
 export const AWAY_IDLE_MS = 20 * 60 * 1000
@@ -49,7 +50,8 @@ export function AwayLockScreen({ user, onUnlocked, onSignedOut }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Away
         </p>
-        <h2 id="away-lock-title" className="mt-1 text-xl font-semibold text-[var(--text)]">
+        <span className={`${HOLD_BUILD_CHIP} mt-2`}>{HOLD_BUILD_LABEL}</span>
+        <h2 id="away-lock-title" className="mt-2 text-xl font-semibold text-[var(--text)]">
           This gym is locked
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">

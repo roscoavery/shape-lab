@@ -21,6 +21,7 @@ import {
 import { readAudit, writeAudit } from './audit.ts'
 import { createInvite, peekInvite, redeemInvite } from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
+import { mailEnabledFor, sendInviteEmail } from './mail.ts'
 import {
   clearSessionCookie,
   createSession,
@@ -69,6 +70,7 @@ export async function handleAuthRoutes(
       authenticated: Boolean(user),
       user: user ?? null,
       bootstrapAllowed: !(await hasAdminAccount()) && allowFirstAdmin(),
+      mailEnabled: mailEnabledFor(user),
     })
     return true
   }
@@ -101,7 +103,7 @@ export async function handleAuthRoutes(
     setSessionCookie(req, res, session.id)
     const user = { ...publicUserFromAccount(account), kiosk: false }
     await writeAudit('auth.login', user)
-    sendJson(res, 200, { authenticated: true, user })
+    sendJson(res, 200, { authenticated: true, user, mailEnabled: mailEnabledFor(user) })
     return true
   }
 
@@ -214,6 +216,7 @@ export async function handleAuthRoutes(
         displayName?: string
         rosterProfileId?: string
         linkedAthleteIds?: string[]
+        sendEmail?: boolean
       } = {}
       try {
         body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -237,10 +240,19 @@ export async function handleAuthRoutes(
         const invite = !body.password?.trim()
           ? await createInvite(created.accountId, req)
           : null
+        let mailed = false
+        if (invite && body.sendEmail) {
+          const sent = await sendInviteEmail({
+            to: created.email,
+            url: invite.url,
+            displayName: created.displayName,
+          })
+          mailed = sent.mailed
+        }
         await writeAudit('auth.account_create', user, {
           detail: `${created.role} ${created.email}`,
         })
-        sendJson(res, 200, { account: created, inviteUrl: invite?.url })
+        sendJson(res, 200, { account: created, inviteUrl: invite?.url, mailed })
       } catch (err) {
         sendJson(res, 400, {
           error: err instanceof Error ? err.message : 'Could not create that account.',
@@ -361,7 +373,7 @@ export async function handleAuthRoutes(
       return true
     }
     if (denyAuthWriteFlood(res, user)) return true
-    let body: { accountId?: string } = {}
+    let body: { accountId?: string; sendEmail?: boolean } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
     } catch {
@@ -370,11 +382,23 @@ export async function handleAuthRoutes(
     }
     try {
       const invite = await createInvite(body.accountId || '', req)
+      let mailed = false
+      let mailError: string | undefined
+      if (body.sendEmail) {
+        const account = await findAccountById(body.accountId || '')
+        const sent = await sendInviteEmail({
+          to: account?.email || '',
+          url: invite.url,
+          displayName: account?.displayName || '',
+        })
+        mailed = sent.mailed
+        mailError = sent.error
+      }
       await writeAudit('auth.invite', user, {
         athleteId: body.accountId,
-        detail: 'create sign-in link',
+        detail: mailed ? 'emailed sign-in link' : 'create sign-in link',
       })
-      sendJson(res, 200, invite)
+      sendJson(res, 200, { ...invite, mailed, mailError })
     } catch (err) {
       sendJson(res, 400, {
         error: err instanceof Error ? err.message : 'Could not make that sign-in link.',

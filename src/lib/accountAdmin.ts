@@ -35,28 +35,42 @@ export async function createGymAccount(input: {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
-}): Promise<{ account: AuthSessionUser; inviteUrl?: string }> {
+  sendEmail?: boolean
+}): Promise<{ account: AuthSessionUser; inviteUrl?: string; mailed?: boolean }> {
   const res = await fetch('/api/auth/accounts', {
     ...jsonInit,
     method: 'POST',
     body: JSON.stringify(input),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not create that account.'))
-  const data = (await res.json()) as { account?: AuthSessionUser; inviteUrl?: string }
+  const data = (await res.json()) as { account?: AuthSessionUser; inviteUrl?: string; mailed?: boolean }
   if (!data.account) throw new Error('Could not create that account.')
-  return { account: data.account, inviteUrl: data.inviteUrl }
+  return { account: data.account, inviteUrl: data.inviteUrl, mailed: data.mailed }
 }
 
-export async function createSignInLink(accountId: string): Promise<{ url: string; expiresAt: string }> {
+export async function createSignInLink(
+  accountId: string,
+  sendEmail = false,
+): Promise<{ url: string; expiresAt: string; mailed: boolean; mailError?: string }> {
   const res = await fetch('/api/auth/invites', {
     ...jsonInit,
     method: 'POST',
-    body: JSON.stringify({ accountId }),
+    body: JSON.stringify({ accountId, sendEmail }),
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not make that sign-in link.'))
-  const data = (await res.json()) as { url?: string; expiresAt?: string }
+  const data = (await res.json()) as {
+    url?: string
+    expiresAt?: string
+    mailed?: boolean
+    mailError?: string
+  }
   if (!data.url) throw new Error('Could not make that sign-in link.')
-  return { url: data.url, expiresAt: data.expiresAt || '' }
+  return {
+    url: data.url,
+    expiresAt: data.expiresAt || '',
+    mailed: data.mailed === true,
+    mailError: data.mailError,
+  }
 }
 
 export async function patchGymAccount(input: {
