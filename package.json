@@ -17,6 +17,7 @@
     "gym:pull": "node scripts/pull-from-blob.mjs",
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
+    "gym:mac:v4": "GYM_BRANCH=shape-lab-v4 bash scripts/mac-gym.sh",
     "gym:token": "node scripts/set-tunnel-token.mjs",
     "gym:photos": "node scripts/restore-photos-from-backup.mjs",
     "gym:shapes": "node scripts/delete-gym-shape.mjs",

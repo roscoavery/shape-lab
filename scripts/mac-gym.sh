@@ -17,9 +17,12 @@ echo "Node $(node -v)   npm $(npm -v)"
 echo "Folder: $ROOT"
 echo
 
+GYM_BRANCH="${GYM_BRANCH:-v2-rebuild}"
+
 if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
-  echo "Updating this Mac to GitHub v2-rebuild. Gym names and clips stay on this computer."
-  git fetch origin v2-rebuild 2>/dev/null || git fetch origin v2-rebuild || true
+  echo "Updating this Mac to GitHub ${GYM_BRANCH}. Gym names and clips stay on this computer."
+  git fetch origin "$GYM_BRANCH" 2>/dev/null || git fetch origin "$GYM_BRANCH" || true
+  git fetch github "$GYM_BRANCH" 2>/dev/null || true
 
   STASHED=0
   PARK="$ROOT/.gym-park"
@@ -37,18 +40,24 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
     fi
   fi
 
-  git checkout v2-rebuild 2>/dev/null || true
-  if git rev-parse --verify origin/v2-rebuild >/dev/null 2>&1; then
+  git checkout "$GYM_BRANCH" 2>/dev/null || true
+  REMOTE_REF=""
+  if git rev-parse --verify "origin/${GYM_BRANCH}" >/dev/null 2>&1; then
+    REMOTE_REF="origin/${GYM_BRANCH}"
+  elif git rev-parse --verify "github/${GYM_BRANCH}" >/dev/null 2>&1; then
+    REMOTE_REF="github/${GYM_BRANCH}"
+  fi
+  if [ -n "$REMOTE_REF" ]; then
     BEFORE="$(git rev-parse --short HEAD)"
-    git reset --hard origin/v2-rebuild
+    git reset --hard "$REMOTE_REF"
     AFTER="$(git rev-parse --short HEAD)"
-    echo "This Mac now matches GitHub: $AFTER"
+    echo "This Mac now matches ${REMOTE_REF}: $AFTER"
     if [ "$BEFORE" != "$AFTER" ]; then
       rm -f dist/index.html
       echo "Forcing a new phone bundle ($BEFORE → $AFTER) so Safari cannot keep yesterday's files."
     fi
   else
-    echo "WARNING: could not see origin/v2-rebuild. Staying on $(git rev-parse --short HEAD)."
+    echo "WARNING: could not see ${GYM_BRANCH} on origin/github. Staying on $(git rev-parse --short HEAD)."
   fi
 
   if [ "$STASHED" = 1 ]; then
