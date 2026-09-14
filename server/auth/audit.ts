@@ -43,6 +43,25 @@ type AuditFile = {
 
 const EMPTY: AuditFile = { kind: 'shape-lab-audit', version: 1, events: [] }
 
+const VIEW_ACTIONS = new Set<AuditAction>(['roster.view', 'media.view', 'athlete.view'])
+
+export async function readAudit(opts?: {
+  includeViews?: boolean
+  limit?: number
+}): Promise<AuditEvent[]> {
+  try {
+    const stored = await readJson<AuditFile>(FILE, EMPTY)
+    const events = Array.isArray(stored.events) ? stored.events : []
+    const filtered = opts?.includeViews
+      ? events
+      : events.filter((row) => !VIEW_ACTIONS.has(row.action))
+    const limit = Math.min(Math.max(opts?.limit ?? 80, 1), 400)
+    return filtered.slice(-limit).reverse()
+  } catch {
+    return []
+  }
+}
+
 export async function writeAudit(
   action: AuditAction,
   user: AuthUser | null | undefined,

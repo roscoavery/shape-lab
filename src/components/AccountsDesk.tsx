@@ -132,7 +132,7 @@ export function AccountsDesk({ user, athletes, onUser }: Props) {
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Use this when the shared gym iPad stays signed in. Class, homework,
             and lessons keep working. This browser cannot open contacts,
-            accounts, consent, or research until someone types the admin
+            accounts, consent, Watch, or research until someone types the admin
             password.
           </p>
           <button

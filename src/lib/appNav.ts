@@ -40,6 +40,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'history', label: 'Profiles' },
     { id: 'accounts', label: 'Accounts' },
     { id: 'consent', label: 'Consent' },
+    { id: 'watch', label: 'Watch' },
     { id: 'research', label: 'Research' },
     { id: 'about', label: 'About' },
   ],
@@ -73,17 +74,32 @@ export function sectionForTab(tab: AppTab): AppSection {
 }
 
 export function isOfficeOnlyTab(tab: AppTab): boolean {
-  return tab === 'accounts' || tab === 'consent' || tab === 'research'
+  return tab === 'accounts' || tab === 'consent' || tab === 'research' || tab === 'watch'
 }
 
-export function subnavForSection(section: AppSection, ryan: boolean, kiosk = false) {
+export function isAdminOnlyTab(tab: AppTab): boolean {
+  return tab === 'watch'
+}
+
+export function subnavForSection(
+  section: AppSection,
+  ryan: boolean,
+  kiosk = false,
+  admin = false,
+) {
   return SECTION_SUBNAV[section].filter((item) => {
     if (!ryan && isRyanOnlyTab(item.id)) return false
     if (kiosk && isOfficeOnlyTab(item.id)) return false
+    if (!admin && isAdminOnlyTab(item.id)) return false
     return true
   })
 }
 
-export function defaultTabForSection(section: AppSection, ryan: boolean, kiosk = false): AppTab {
-  return subnavForSection(section, ryan, kiosk)[0]?.id ?? 'today'
+export function defaultTabForSection(
+  section: AppSection,
+  ryan: boolean,
+  kiosk = false,
+  admin = false,
+): AppTab {
+  return subnavForSection(section, ryan, kiosk, admin)[0]?.id ?? 'today'
 }

@@ -18,7 +18,7 @@ import {
   publicUserFromAccount,
   updateAccount,
 } from './accounts.ts'
-import { writeAudit } from './audit.ts'
+import { readAudit, writeAudit } from './audit.ts'
 import { createInvite, peekInvite, redeemInvite } from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
 import {
@@ -26,6 +26,7 @@ import {
   createSession,
   destroySession,
   destroySessionsForAccount,
+  listLiveSessions,
   readSessionId,
   setSessionCookie,
   setSessionKiosk,
@@ -433,6 +434,75 @@ export async function handleAuthRoutes(
     const next = { ...user, kiosk: false }
     await writeAudit('auth.kiosk', next, { detail: 'leave floor' })
     sendJson(res, 200, { authenticated: true, user: next })
+    return true
+  }
+
+  if (path === '/api/auth/audit') {
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { error: 'Use GET' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (!isAdmin(user)) {
+      sendJson(res, 403, { error: 'Only gym admin can open the gym log.' })
+      return true
+    }
+    const url = new URL(req.url || '/', 'http://127.0.0.1')
+    const includeViews = url.searchParams.get('views') === '1'
+    sendJson(res, 200, {
+      kind: 'shape-lab-audit',
+      events: await readAudit({ includeViews }),
+    })
+    return true
+  }
+
+  if (path === '/api/auth/sessions') {
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (!isAdmin(user)) {
+      sendJson(res, 403, { error: 'Only gym admin can see who is signed in.' })
+      return true
+    }
+    if (req.method === 'GET') {
+      const sessions = (await listLiveSessions()).map((row) => ({
+        ...row,
+        self: row.accountId === user.accountId,
+      }))
+      sendJson(res, 200, { kind: 'shape-lab-sessions', sessions })
+      return true
+    }
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use GET or POST' })
+      return true
+    }
+    let body: { accountId?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    if (!body.accountId) {
+      sendJson(res, 400, { error: 'Which login?' })
+      return true
+    }
+    if (body.accountId === user.accountId) {
+      sendJson(res, 400, { error: 'Sign out to end your own login.' })
+      return true
+    }
+    const target = await findAccountById(body.accountId)
+    await destroySessionsForAccount(body.accountId)
+    await writeAudit('auth.logout', user, {
+      detail: target ? `ended login for ${target.email}` : 'ended a login',
+    })
+    sendJson(res, 200, { ok: true })
     return true
   }
 

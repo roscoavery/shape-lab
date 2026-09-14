@@ -18,9 +18,9 @@ export function FloorKioskBar({ user, onUser }: Props) {
       </p>
       <h2 className="mt-1 text-lg font-semibold text-[var(--text)]">This device is on the floor</h2>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-        Class, homework, and lessons still work. Contacts, accounts, consent, and
-        research stay locked on this browser until someone types the admin
-        password. Signing out also ends floor mode.
+        Class, homework, and lessons still work. Contacts, accounts, consent,
+        Watch, and research stay locked on this browser until someone types the
+        admin password. Signing out also ends floor mode.
       </p>
       <p className="mt-1 text-xs text-[var(--muted)]">{user.email}</p>
       <label className="mt-3 block max-w-sm">

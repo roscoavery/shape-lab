@@ -116,6 +116,38 @@ export async function userFromRequest(req: IncomingMessage): Promise<AuthUser | 
   return { ...publicUserFromAccount(account), kiosk: session.kiosk === true }
 }
 
+export type PublicSession = {
+  accountId: string
+  email: string
+  displayName: string
+  role: string
+  createdAt: string
+  expiresAt: string
+  kiosk: boolean
+}
+
+/** Live logins. Session ids stay on the server. */
+export async function listLiveSessions(): Promise<PublicSession[]> {
+  const file = await readFile()
+  const now = Date.now()
+  const rows: PublicSession[] = []
+  for (const session of file.sessions) {
+    if (!stillValid(session, now)) continue
+    const account = await findAccountById(session.accountId)
+    if (!account) continue
+    rows.push({
+      accountId: account.id,
+      email: account.email,
+      displayName: account.displayName,
+      role: account.role,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      kiosk: session.kiosk === true,
+    })
+  }
+  return rows.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+}
+
 export async function setSessionKiosk(sessionId: string, kiosk: boolean): Promise<boolean> {
   const file = await readFile()
   const now = Date.now()

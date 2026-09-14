@@ -14,6 +14,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
 import { ConsentDesk } from './components/ConsentDesk'
+import { WatchDesk } from './components/WatchDesk'
 import { FloorKioskBar } from './components/FloorKioskBar'
 import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
@@ -869,7 +870,13 @@ export default function App() {
             Sign out {authUser.email}
           </button>
         </div>
-        <AppNav tab={tab} ryan={ryanEdit} kiosk={floorKiosk} onGo={goTab} />
+        <AppNav
+          tab={tab}
+          ryan={ryanEdit}
+          kiosk={floorKiosk}
+          admin={sessionIsAdmin(authUser)}
+          onGo={goTab}
+        />
         <div className="ml-auto shrink-0">
           <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
         </div>
@@ -1565,6 +1572,8 @@ export default function App() {
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}
+
+      {tab === 'watch' && !floorKiosk && <WatchDesk user={authUser} />}
 
       {tab === 'about' && (
         <div className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[var(--muted)]">

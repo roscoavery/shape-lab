@@ -336,6 +336,12 @@ async function main() {
   const floorAccounts = await req('/api/auth/accounts', { cookie })
   ok('floor iPad accounts is 403', floorAccounts.status === 403)
 
+  const floorAudit = await req('/api/auth/audit', { cookie })
+  ok('floor iPad watch log is 403', floorAudit.status === 403)
+
+  const floorSessions = await req('/api/auth/sessions', { cookie })
+  ok('floor iPad signed-in list is 403', floorSessions.status === 403)
+
   const floorConsent = await req('/api/consent', {
     method: 'PATCH',
     cookie,
@@ -451,6 +457,82 @@ async function main() {
     ok('athlete password restored after invite test', restoreAthlete.status === 200, String(restoreAthlete.status))
   } else {
     ok('athlete account exists for invite checks', false, 'missing v4-athlete@example.com')
+  }
+
+  const anonAudit = await req('/api/auth/audit')
+  ok('anon watch log is 401', anonAudit.status === 401)
+
+  const coachAudit = await req('/api/auth/audit', { cookie: coachCookie })
+  ok('coach watch log is 403', coachAudit.status === 403, String(coachAudit.status))
+
+  const adminAudit = await req('/api/auth/audit', { cookie })
+  ok(
+    'admin can read the gym log',
+    adminAudit.status === 200 && Array.isArray(adminAudit.json?.events),
+    String(adminAudit.status),
+  )
+  ok(
+    'gym log hides routine roster views by default',
+    adminAudit.status === 200 &&
+      (adminAudit.json?.events || []).every((row) => row.action !== 'roster.view'),
+  )
+
+  const anonSessions = await req('/api/auth/sessions')
+  ok('anon signed-in list is 401', anonSessions.status === 401)
+
+  const coachSessions = await req('/api/auth/sessions', { cookie: coachCookie })
+  ok('coach signed-in list is 403', coachSessions.status === 403, String(coachSessions.status))
+
+  const kidSession = await req('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'v4-athlete@example.com', password: 'v4-athlete-test-password' }),
+  })
+  ok('athlete login for session kick', kidSession.status === 200, String(kidSession.status))
+  const kidCookie = cookieFrom('', kidSession)
+
+  const live = await req('/api/auth/sessions', { cookie })
+  const liveRows = Array.isArray(live.json?.sessions) ? live.json.sessions : []
+  ok('admin can list signed-in logins', live.status === 200)
+  ok(
+    'signed-in list includes this admin',
+    liveRows.some((row) => row.email === ADMIN_EMAIL && row.self === true),
+  )
+  ok(
+    'signed-in list includes the athlete',
+    liveRows.some((row) => row.email === 'v4-athlete@example.com' && row.self !== true),
+  )
+  ok(
+    'signed-in list has no raw session id',
+    liveRows.every((row) => row.id == null && row.accountId),
+  )
+
+  const listedForKick = await req('/api/auth/accounts', { cookie })
+  const athleteForKick = (listedForKick.json?.accounts || []).find(
+    (row) => row.email === 'v4-athlete@example.com',
+  )
+  if (athleteForKick?.id) {
+    const kickSelf = await req('/api/auth/sessions', {
+      method: 'POST',
+      cookie,
+      body: JSON.stringify({ accountId: me.json?.user?.accountId }),
+    })
+    ok('admin cannot end own login from Watch', kickSelf.status === 400)
+
+    const kick = await req('/api/auth/sessions', {
+      method: 'POST',
+      cookie,
+      body: JSON.stringify({ accountId: athleteForKick.id }),
+    })
+    ok('admin can end another login', kick.status === 200, String(kick.status))
+
+    const kidMe = await req('/api/auth/me', { cookie: kidCookie })
+    ok(
+      'ended login cannot keep using the gym',
+      kidMe.json?.authenticated !== true,
+      JSON.stringify(kidMe.json),
+    )
+  } else {
+    ok('athlete account exists for session kick', false, 'missing v4-athlete@example.com')
   }
 
   const coachPatch = await req('/api/auth/accounts', {
