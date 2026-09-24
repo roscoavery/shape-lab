@@ -974,7 +974,7 @@ export default function App() {
             </div>
           )}
         </div>
-        <div className="min-w-0 max-w-full flex-1">
+        <div className="min-w-0 max-w-full flex-1 basis-full sm:basis-auto">
           <AppNav
             tab={tab}
             ryan={ryanEdit}

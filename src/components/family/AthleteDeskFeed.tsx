@@ -25,11 +25,14 @@ type Props = {
 export function AthleteDeskFeed({ athlete, logs: logsProp }: Props) {
   const [upcoming, setUpcoming] = useState<UpcomingLesson[]>([])
   const [tick, setTick] = useState(0)
-  const logs = useMemo(
-    () => logsProp ?? loadHomeworkLogs().filter((row) => row.athleteId === athlete.id),
-    [logsProp, athlete.id, tick],
-  )
-  const visits = useMemo(() => recentVisitsForAthlete(athlete.id), [athlete.id, tick])
+  const logs = useMemo(() => {
+    void tick
+    return logsProp ?? loadHomeworkLogs().filter((row) => row.athleteId === athlete.id)
+  }, [logsProp, athlete.id, tick])
+  const visits = useMemo(() => {
+    void tick
+    return recentVisitsForAthlete(athlete.id)
+  }, [athlete.id, tick])
   const gains = useMemo(() => holdGains(logs), [logs])
 
   useEffect(() => subscribeAthleteDesk(() => setTick((n) => n + 1)), [])
