@@ -1,5 +1,6 @@
 import type { AppTab } from '../../lib/storage'
 import { saveTab } from '../../lib/storage'
+import { MobilePortal } from './MobilePortal'
 
 export type DiscoverTarget = 'all' | 'scroll' | 'wins' | 'feed' | 'compare'
 
@@ -20,8 +21,9 @@ const ROWS: { target: DiscoverTarget; tab: AppTab; title: string; hint: string }
 export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
   if (!open) return null
   return (
+    <MobilePortal>
     <div
-      className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55 md:hidden"
+      className="fixed inset-0 z-[220] flex items-end justify-center bg-black/70 md:hidden"
       role="dialog"
       aria-label="Discover"
       onClick={onClose}
@@ -56,5 +58,6 @@ export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
         </button>
       </div>
     </div>
+    </MobilePortal>
   )
 }

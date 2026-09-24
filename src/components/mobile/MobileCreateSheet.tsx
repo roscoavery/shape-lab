@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import type { AppTab } from '../../lib/storage'
 import { saveTab } from '../../lib/storage'
 import { IgCreateIcon } from './IgNavIcons'
+import { MobilePortal } from './MobilePortal'
 
 type Props = {
   athlete: Athlete | null
@@ -43,8 +44,9 @@ export function MobileCreateSheet({ athlete, onGo, onStory }: Props) {
         <IgCreateIcon className="h-7 w-7" />
       </button>
       {open && (
+        <MobilePortal>
         <div
-          className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55 md:hidden"
+          className="fixed inset-0 z-[220] flex items-end justify-center bg-black/70 md:hidden"
           role="dialog"
           aria-label="Create"
           onClick={() => setOpen(false)}
@@ -86,6 +88,7 @@ export function MobileCreateSheet({ athlete, onGo, onStory }: Props) {
             </button>
           </div>
         </div>
+        </MobilePortal>
       )}
     </>
   )

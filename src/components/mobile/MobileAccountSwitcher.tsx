@@ -1,155 +1,87 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Athlete } from '../../types'
-import type { AppTab } from '../../lib/storage'
+import { useState } from 'react'
 import type { AuthSessionUser } from '../../lib/authSession'
-import { listGymAccounts, type PublicAccount } from '../../lib/accountAdmin'
 import { sessionIsAdmin } from '../../lib/authSession'
-import { saveDeskPreview, type DeskPreview } from '../../lib/deskPreview'
+import { DESK_PREVIEW_OPTIONS, type DeskPreview } from '../../lib/deskPreview'
+import { MobilePortal } from './MobilePortal'
 
 type Props = {
   user: AuthSessionUser
-  athletes: Athlete[]
-  onGo: (tab: AppTab) => void
+  deskPreview: DeskPreview
+  onDeskPreview: (next: DeskPreview) => void
 }
 
-function matchTestAccount(accounts: PublicAccount[], pattern: RegExp): PublicAccount | undefined {
-  return accounts.find((a) => pattern.test(a.email) || pattern.test(a.displayName))
+const HINT: Record<DeskPreview, string> = {
+  home: 'Your real gym login',
+  coach: 'Coach desk preview',
+  gymOwner: 'Gym owner desk preview',
+  parent: 'Parent desk preview',
+  athlete: 'Athlete desk preview',
 }
 
-export function MobileAccountSwitcher({ user, athletes, onGo }: Props) {
+export function MobileAccountSwitcher({ user, deskPreview, onDeskPreview }: Props) {
   const [open, setOpen] = useState(false)
-  const [accounts, setAccounts] = useState<PublicAccount[]>([])
-  const admin = sessionIsAdmin(user)
+  if (!sessionIsAdmin(user)) return null
 
-  useEffect(() => {
-    if (!admin) return
-    void listGymAccounts().then(setAccounts).catch(() => {})
-  }, [admin])
+  const current = DESK_PREVIEW_OPTIONS.find((row) => row.id === deskPreview) ?? DESK_PREVIEW_OPTIONS[0]
+  const title = deskPreview === 'home' ? user.displayName || 'Gym desk' : `${current.label} preview`
 
-  const testAthleteA = useMemo(
-    () =>
-      athletes.find((a) => /test athlete a/i.test(a.name)) ??
-      athletes.find((a) => a.id.includes('test_a')),
-    [athletes],
-  )
-  const testAthleteB = useMemo(
-    () =>
-      athletes.find((a) => /test athlete b/i.test(a.name)) ??
-      athletes.find((a) => a.id.includes('test_b')),
-    [athletes],
-  )
-  const testParentA = matchTestAccount(accounts, /test parent a|parent.*test a/i)
-  const testParentB = matchTestAccount(accounts, /test parent b|parent.*test b/i)
-
-  const previewAs = (desk: DeskPreview) => {
-    saveDeskPreview(desk)
+  const pick = (next: DeskPreview) => {
     setOpen(false)
-    onGo('today')
-    window.location.reload()
-  }
-
-  const rows: { label: string; hint?: string; action: () => void }[] = [
-    {
-      label: user.displayName || user.email,
-      hint: `${user.role} · this login`,
-      action: () => {
-        saveDeskPreview('home')
-        setOpen(false)
-      },
-    },
-  ]
-
-  if (admin) {
-    rows.push(
-      { label: 'Coach desk view', action: () => previewAs('coach') },
-      { label: 'Parent desk view', action: () => previewAs('parent') },
-      { label: 'Athlete desk view', action: () => previewAs('athlete') },
-      { label: 'Gym owner view', action: () => previewAs('gymOwner') },
-    )
-    if (testAthleteA) {
-      rows.push({
-        label: testAthleteA.name,
-        hint: 'Test athlete A profile',
-        action: () => {
-          saveDeskPreview('athlete')
-          setOpen(false)
-          onGo('history')
-        },
-      })
-    }
-    if (testAthleteB) {
-      rows.push({
-        label: testAthleteB.name,
-        hint: 'Test athlete B profile',
-        action: () => {
-          saveDeskPreview('athlete')
-          setOpen(false)
-          onGo('history')
-        },
-      })
-    }
-    if (testParentA) {
-      rows.push({
-        label: testParentA.displayName,
-        hint: 'Test parent A account',
-        action: () => onGo('accounts'),
-      })
-    }
-    if (testParentB) {
-      rows.push({
-        label: testParentB.displayName,
-        hint: 'Test parent B account',
-        action: () => onGo('accounts'),
-      })
-    }
-    rows.push({
-      label: 'All gym accounts',
-      hint: `${accounts.length} saved logins`,
-      action: () => {
-        setOpen(false)
-        onGo('accounts')
-      },
-    })
+    if (next === deskPreview) return
+    onDeskPreview(next)
   }
 
   return (
     <>
       <button
         type="button"
-        className="mx-auto flex max-w-[14rem] items-center justify-center gap-1 truncate text-sm font-semibold"
-        onClick={() => setOpen((v) => !v)}
+        aria-label="Switch desk view"
+        className="mx-auto flex max-w-[12rem] items-center justify-center gap-1 truncate text-sm font-semibold"
+        onClick={() => setOpen(true)}
       >
-        <span className="truncate">{user.displayName || 'Account'}</span>
+        <span className="truncate">{title}</span>
         <span className="text-[10px] text-[var(--muted)]">▾</span>
       </button>
       {open && (
-        <div
-          className="fixed inset-0 z-[85] flex items-start justify-center bg-black/50 pt-16 px-4"
-          onClick={() => setOpen(false)}
-        >
+        <MobilePortal>
           <div
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-2 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[230] flex items-end justify-center bg-black/70 md:hidden"
+            onClick={() => setOpen(false)}
+            role="dialog"
+            aria-label="Switch desk"
           >
-            <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Switch view
-            </p>
-            <ul className="max-h-[60vh] overflow-y-auto">
-              {rows.map((row) => (
-                <li key={row.label}>
-                  <button
-                    type="button"
-                    className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-white/5"
-                    onClick={row.action}
-                  >
-                    <p className="text-sm font-medium">{row.label}</p>
-                    {row.hint && <p className="text-xs text-[var(--muted)]">{row.hint}</p>}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div
+              className="w-full max-w-lg rounded-t-2xl border border-white/10 bg-[#121820] px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />
+              <p className="px-2 text-center text-base font-semibold">Switch desk</p>
+              <p className="mt-1 px-2 text-center text-xs text-[var(--muted)]">
+                Still signed in as {user.email}. Only the gym login can switch desks.
+              </p>
+              <ul className="mt-3">
+                {DESK_PREVIEW_OPTIONS.map((row) => {
+                  const on = row.id === deskPreview
+                  return (
+                    <li key={row.id}>
+                      <button
+                        type="button"
+                        className={`w-full rounded-xl px-3 py-3 text-left ${on ? 'bg-white/10' : ''}`}
+                        onClick={() => pick(row.id)}
+                      >
+                        <p className="text-sm font-medium">{row.id === 'home' ? 'Gym desk (admin)' : row.label}</p>
+                        <p className="text-xs text-[var(--muted)]">{HINT[row.id]}{on ? ' · current' : ''}</p>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              <button type="button" className="mt-1 w-full py-3 text-sm text-[var(--muted)]" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
+        </MobilePortal>
       )}
     </>
   )

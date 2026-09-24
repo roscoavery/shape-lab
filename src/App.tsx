@@ -967,6 +967,12 @@ export default function App() {
         admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
         navRole={previewRole ?? authUser.role}
         deskPreview={deskPreview}
+        onDeskPreview={chooseDeskPreview}
+        onSignOut={() => {
+          void logoutSession().then(() => {
+            clearSignedInDesk()
+          })
+        }}
         onOpenMyProfile={() => {
           if (activeProfile) setProfileOpen(true)
         }}
