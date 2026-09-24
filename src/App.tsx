@@ -1442,6 +1442,7 @@ export default function App() {
       {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk />}
       {tab === 'learn' && deskRole !== 'parent' && (
         <EducationPanel
+          key={deskRole}
           referencePhotos={referencePhotos}
           athleteId={activeAthleteId}
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
