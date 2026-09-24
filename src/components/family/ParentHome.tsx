@@ -6,6 +6,7 @@ import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/pare
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
+import { CollapsibleSection } from '../CollapsibleSection'
 
 type Props = {
   parent: Athlete
@@ -191,7 +192,9 @@ export function ParentEducationDesk() {
         </article>
       )}
     </div>
-      <NutritionFactsBrowse />
+      <CollapsibleSection title="Nutrition questions" hint="NutritionFacts.org" defaultOpen={false}>
+        <NutritionFactsBrowse compact />
+      </CollapsibleSection>
     </div>
   )
 }

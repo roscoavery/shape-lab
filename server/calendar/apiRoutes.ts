@@ -453,6 +453,46 @@ export async function handleCalendarApi(
 
   if (segments[0] === 'events' && segments.length >= 2) {
     const eventId = segments[1]
+    if (req.method === 'DELETE' && segments.length === 2) {
+      try {
+        const db = await readCalendarDb()
+        const ev = db.events.find((e) => e.id === eventId && e.coachId === coachId)
+        if (!ev) {
+          sendJson(res, 404, { error: 'NOT_FOUND' })
+          return true
+        }
+        const conn = connectionForCoach(db, coachId)
+        if (!conn) {
+          sendJson(res, 404, { error: 'NO_CONNECTION' })
+          return true
+        }
+        const calendar = calendarsForConnection(db, conn.id).find(
+          (c) => c.providerCalendarId === ev.providerCalendarId,
+        )
+        if (!calendar) {
+          sendJson(res, 400, { error: 'CALENDAR_NOT_FOUND' })
+          return true
+        }
+        const credential = decodeCredential(decryptSecret(conn.encryptedCredential))
+        const removed = await icloudCalendarProvider.deleteEvent?.(credential, calendar, ev.providerEventId, {
+          start: new Date(Date.parse(ev.startAt) - 7 * 86400000),
+          end: new Date(Date.parse(ev.endAt || ev.startAt) + 7 * 86400000),
+        })
+        if (!removed) {
+          sendJson(res, 404, { error: 'REMOTE_NOT_FOUND' })
+          return true
+        }
+        await persistDb({
+          ...db,
+          events: db.events.filter((e) => e.id !== eventId),
+          lessonLinks: db.lessonLinks.filter((l) => l.calendarEventId !== eventId),
+        })
+        sendJson(res, 200, { ok: true })
+      } catch (err) {
+        sendJson(res, 502, { error: 'DELETE_FAILED', message: safeErrorMessage(err) })
+      }
+      return true
+    }
     if (req.method === 'POST' && segments[2] === 'match') {
       try {
         const body = JSON.parse(await readRequestBody(req)) as {

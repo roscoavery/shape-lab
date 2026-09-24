@@ -1,7 +1,7 @@
 {
   "kind": "shape-lab-coach-content",
   "version": 1,
-  "exportedAt": "2026-08-31T01:15:39.792Z",
+  "exportedAt": "2026-09-24T06:46:16.163Z",
   "shapes": [
     {
       "id": "csh_mteud99l_o9gti1",
@@ -176,5 +176,147 @@
       "athleteId": "ath_ryan",
       "warmupId": "wup_mteugjja_gihwle"
     }
-  ]
+  ],
+  "gymLibrary": [
+    {
+      "id": "gym_mad_cat",
+      "name": "Mad cat",
+      "description": "",
+      "bodyPosition": "Hands and knees, round the spine.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_front_support",
+      "name": "Front support",
+      "description": "",
+      "bodyPosition": "Straight-body plank on the hands.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_side_support",
+      "name": "Side support",
+      "description": "",
+      "bodyPosition": "Side plank on one hand or forearm.",
+      "category": "hold",
+      "scoreShapeId": "side_plank",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_back_support",
+      "name": "Back support",
+      "description": "",
+      "bodyPosition": "Reverse plank, hips high, belly up.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_lightning_bolt",
+      "name": "Lightning bolt",
+      "description": "",
+      "bodyPosition": "Pike fold on the hands, hips high.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_tucked_handstand",
+      "name": "Tucked handstand",
+      "description": "",
+      "bodyPosition": "Handstand with both knees tucked.",
+      "category": "hold",
+      "scoreShapeId": "handstand",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_piked_handstand",
+      "name": "Piked handstand",
+      "description": "",
+      "bodyPosition": "Handstand with a pike fold.",
+      "category": "hold",
+      "scoreShapeId": "handstand",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_l_handstand",
+      "name": "L handstand",
+      "description": "",
+      "bodyPosition": "Handstand with one leg vertical and one on a block or wall.",
+      "category": "hold",
+      "scoreShapeId": "handstand",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_curl_up",
+      "name": "Curl up",
+      "description": "",
+      "bodyPosition": "On the back, one knee bent, ready to curl.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_cartwheel_head_placement",
+      "name": "Cartwheel head placement",
+      "description": "",
+      "bodyPosition": "Head looks at the hands before the cartwheel.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_hands_turned_in_position",
+      "name": "Hands turned in position",
+      "description": "",
+      "bodyPosition": "Squat with the hands turned in.",
+      "category": "hold",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    },
+    {
+      "id": "gym_kneeling_wall_hollow",
+      "name": "Kneeling wall hollow",
+      "description": "",
+      "bodyPosition": "Kneeling at the wall, arms up in a hollow.",
+      "category": "hold",
+      "scoreShapeId": "hollow_arms_up",
+      "createdById": "ath_ryan",
+      "createdByName": "Ryan",
+      "createdAt": "2026-09-13T18:00:00.000Z",
+      "updatedAt": "2026-09-13T18:00:00.000Z"
+    }
+  ],
+  "drills": [],
+  "removedWarmupIds": [],
+  "removedGymShapeIds": []
 }

@@ -43,4 +43,11 @@ export interface CalendarProvider {
     calendar: ConnectedCalendar,
     input: { title: string; startAt: string; endAt: string; location?: string },
   ): Promise<NormalizedCalendarEvent>
+
+  deleteEvent?(
+    credential: ICloudCredentialPayload,
+    calendar: ConnectedCalendar,
+    providerEventId: string,
+    window?: SyncWindow,
+  ): Promise<boolean>
 }

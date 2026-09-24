@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import {
   authorizeCalendarApi,
   authorizeCalendarFromSession,
   createCalendarEvent,
+  deleteCalendarEvent,
   fetchCalendarRange,
   hasCalendarApiToken,
   matchCalendarEvent,
   syncCalendarNow,
   type TodayCalendarEvent,
 } from '../../lib/calendarClient'
+import {
+  eventIsPast,
+  loadCalendarClipboard,
+  loadCalendarDisplayPrefs,
+  mergeCalendarEvents,
+  saveCalendarClipboard,
+} from '../../lib/calendarDisplay'
+import { CalendarLayersSheet } from './CalendarLayersSheet'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 
@@ -99,7 +108,7 @@ type LaidEvent = {
   height: number
 }
 
-function layoutTimedEvents(events: TodayCalendarEvent[]): LaidEvent[] {
+function layoutTimedEvents(events: TodayCalendarEvent[], hourPx: number): LaidEvent[] {
   const timed = events
     .filter((ev) => !isAllDay(ev))
     .map((ev) => ({
@@ -127,8 +136,8 @@ function layoutTimedEvents(events: TodayCalendarEvent[]): LaidEvent[] {
       ev: row.ev,
       col: row.col,
       cols,
-      top: row.start * HOUR_PX,
-      height: Math.max(22, (row.end - row.start) * HOUR_PX - 2),
+      top: row.start * hourPx,
+      height: Math.max(22, (row.end - row.start) * hourPx - 2),
     }
   })
 }
@@ -156,7 +165,7 @@ export function happeningNow(events: TodayCalendarEvent[], now = new Date()): To
 export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [selected, setSelected] = useState(() => new Date())
-  const [view, setView] = useState<'month' | 'week' | 'day'>('month')
+  const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month')
   const [events, setEvents] = useState<TodayCalendarEvent[]>([])
   const [loadError, setLoadError] = useState(false)
   const [needsAuth, setNeedsAuth] = useState(false)
@@ -173,6 +182,15 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const [openEventId, setOpenEventId] = useState<string | null>(null)
   const [fullScreen, setFullScreen] = useState(false)
+  const [displayPrefs, setDisplayPrefs] = useState(() => loadCalendarDisplayPrefs())
+  const [layersOpen, setLayersOpen] = useState(false)
+  const [viewsOpen, setViewsOpen] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [syncBusy, setSyncBusy] = useState(false)
+  const timelineHostRef = useRef<HTMLDivElement | null>(null)
+  const [hourPx, setHourPx] = useState(HOUR_PX)
 
   const roster = useMemo(
     () =>
@@ -267,14 +285,45 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
     [selected],
   )
 
-  const dayEvents = events
+  const rangeFrom = useMemo(() => {
+    const from = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
+    from.setDate(from.getDate() - 7)
+    return from
+  }, [cursor])
+
+  const rangeTo = useMemo(() => {
+    const to = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 7)
+    return to
+  }, [cursor])
+
+  const displayEvents = useMemo(() => {
+    let rows = mergeCalendarEvents(events, coachId, rangeFrom, rangeTo, displayPrefs)
+    const q = searchQuery.trim().toLowerCase()
+    if (q) rows = rows.filter((ev) => (ev.title || '').toLowerCase().includes(q))
+    return rows
+  }, [events, coachId, rangeFrom, rangeTo, displayPrefs, searchQuery])
+
+  const dayEvents = displayEvents
     .filter((ev) => sameDay(new Date(ev.startAt), selected))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
 
+  const runSync = useCallback(async () => {
+    setSyncBusy(true)
+    try {
+      await syncCalendarNow()
+      setMessage('Synced with iCloud.')
+      await refresh()
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Sync failed.')
+    } finally {
+      setSyncBusy(false)
+    }
+  }, [refresh])
+
   const athleteName = (id: string | null) => roster.find((a) => a.id === id)?.name?.trim() || 'Athlete'
   const activeLessonId = loadActiveLessonId()
-  const pickEvent = events.find((e) => e.id === pickEventId) ?? null
-  const openEvent = events.find((e) => e.id === openEventId) ?? null
+  const pickEvent = displayEvents.find((e) => e.id === pickEventId) ?? events.find((e) => e.id === pickEventId) ?? null
+  const openEvent = displayEvents.find((e) => e.id === openEventId) ?? events.find((e) => e.id === openEventId) ?? null
 
   const startLesson = (ev: TodayCalendarEvent, athleteId: string) => {
     onStartLesson([athleteId], null, {
@@ -291,6 +340,84 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
     [],
   )
 
+  useEffect(() => {
+    if (!fullScreen || (view !== 'week' && view !== 'day')) return
+    const el = timelineHostRef.current
+    if (!el) return
+    const fit = () => {
+      const h = el.clientHeight
+      if (h < 120) return
+      const allDay = 36
+      const next = Math.max(28, Math.min(HOUR_PX, Math.floor((h - allDay) / hours.length)))
+      setHourPx(next)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fullScreen, view, hours.length])
+
+  const copyOpenEvent = () => {
+    if (!openEvent) return
+    saveCalendarClipboard({
+      title: openEvent.title,
+      startAt: openEvent.startAt,
+      endAt: openEvent.endAt,
+      location: openEvent.location,
+      notes: openEvent.notes,
+    })
+    setMessage('Event copied — use Tools → Paste on another slot.')
+    setToolsOpen(false)
+  }
+
+  const pasteClipboard = () => {
+    const clip = loadCalendarClipboard()
+    if (!clip) {
+      setMessage('Nothing copied yet.')
+      return
+    }
+    const dur = Date.parse(clip.endAt) - Date.parse(clip.startAt)
+    const start = new Date(selected)
+    start.setHours(new Date(clip.startAt).getHours(), new Date(clip.startAt).getMinutes(), 0, 0)
+    const end = new Date(start.getTime() + (Number.isFinite(dur) && dur > 0 ? dur : 3600000))
+    setBusy(true)
+    void createCalendarEvent({
+      title: clip.title,
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      location: clip.location,
+    })
+      .then(() => {
+        setMessage('Pasted to iCloud on the selected day.')
+        return refresh()
+      })
+      .catch((err) => setMessage(err instanceof Error ? err.message : 'Paste failed.'))
+      .finally(() => {
+        setBusy(false)
+        setToolsOpen(false)
+      })
+  }
+
+  const deleteOpenEvent = () => {
+    if (!openEvent || openEvent.id.startsWith('shapelab-class:')) {
+      setMessage('Only iCloud events can be deleted here.')
+      return
+    }
+    if (!confirm(`Delete “${openEvent.title}” from iCloud?`)) return
+    setBusy(true)
+    void deleteCalendarEvent(openEvent.id)
+      .then(() => {
+        setOpenEventId(null)
+        setMessage('Deleted from iCloud.')
+        return refresh()
+      })
+      .catch((err) => setMessage(err instanceof Error ? err.message : 'Delete failed.'))
+      .finally(() => {
+        setBusy(false)
+        setToolsOpen(false)
+      })
+  }
+
   return (
     <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 sm:p-4">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
@@ -299,7 +426,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           <h3 className="text-lg font-semibold">Calendar</h3>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {(['month', 'week', 'day'] as const).map((id) => (
+          {(['month', 'week', 'day', 'agenda'] as const).map((id) => (
             <button
               key={id}
               type="button"
@@ -354,8 +481,20 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           >
             →
           </button>
-          <button type="button" className="text-xs text-[var(--muted)] underline" onClick={() => void refresh()}>
-            Sync
+          <button
+            type="button"
+            className="text-xs text-[var(--muted)] underline disabled:opacity-50"
+            disabled={syncBusy}
+            onClick={() => void runSync()}
+          >
+            {syncBusy ? 'Syncing…' : 'Sync'}
+          </button>
+          <button
+            type="button"
+            className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs font-semibold"
+            onClick={() => setLayersOpen(true)}
+          >
+            Calendars
           </button>
           {(view === 'week' || view === 'day') && (
             <button
@@ -414,7 +553,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           </div>
           <div className="mt-1 grid grid-cols-7 gap-1">
             {days.map((day) => {
-              const count = events.filter((ev) => sameDay(new Date(ev.startAt), day)).length
+              const count = displayEvents.filter((ev) => sameDay(new Date(ev.startAt), day)).length
               const on = sameDay(day, selected)
               const today = sameDay(day, new Date())
               const inMonth = day.getMonth() === cursor.getMonth()
@@ -444,7 +583,8 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
         <WeekTimeline
           days={weekDays}
           hours={hours}
-          events={events}
+          hourPx={HOUR_PX}
+          events={displayEvents}
           selected={selected}
           openEventId={openEventId}
           onSelectDay={setSelected}
@@ -456,7 +596,19 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
         <DayTimeline
           day={selected}
           hours={hours}
+          hourPx={HOUR_PX}
           events={dayEvents}
+          openEventId={openEventId}
+          onToggleEvent={(id) => setOpenEventId((cur) => (cur === id ? null : id))}
+        />
+      )}
+
+      {view === 'agenda' && (
+        <AgendaList
+          events={displayEvents.filter((ev) => {
+            const t = Date.parse(ev.startAt)
+            return t >= rangeFrom.getTime() && t <= rangeTo.getTime()
+          })}
           openEventId={openEventId}
           onToggleEvent={(id) => setOpenEventId((cur) => (cur === id ? null : id))}
         />
@@ -566,8 +718,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
 
       {view === 'month' && !loadError && !needsAuth && dayEvents.length === 0 && (
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Nothing on this day. If sync said it worked, turn on “All events” and the right calendars under More →
-          Profiles → Calendar connections.
+          Nothing on this day. Tap Calendars above to turn on iCloud feeds or gym classes, then Sync.
         </p>
       )}
 
@@ -678,12 +829,13 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
               </button>
             </div>
           </header>
-          <div className="min-h-0 flex-1 overflow-hidden px-2">
+          <div ref={timelineHostRef} className="min-h-0 flex-1 overflow-hidden px-2">
             {view === 'week' ? (
               <WeekTimeline
                 days={weekDays}
                 hours={hours}
-                events={events}
+                hourPx={hourPx}
+                events={displayEvents}
                 selected={selected}
                 openEventId={openEventId}
                 onSelectDay={setSelected}
@@ -694,6 +846,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
               <DayTimeline
                 day={selected}
                 hours={hours}
+                hourPx={hourPx}
                 events={dayEvents}
                 openEventId={openEventId}
                 onToggleEvent={(id) => setOpenEventId((cur) => (cur === id ? null : id))}
@@ -702,7 +855,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
             )}
           </div>
           {openEvent && (
-            <div className="max-h-[36vh] shrink-0 overflow-y-auto border-t border-white/10 p-3">
+            <div className="max-h-[30vh] shrink-0 overflow-y-auto border-t border-white/10 p-3">
               <EventPreview
                 ev={openEvent}
                 open
@@ -714,8 +867,113 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
               />
             </div>
           )}
+          <nav
+            className="flex shrink-0 items-center justify-between gap-1 border-t border-white/10 bg-[#0a1014] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            aria-label="Calendar actions"
+          >
+            <button type="button" className="flex flex-1 flex-col items-center gap-0.5 text-[10px]" onClick={() => setViewsOpen(true)}>
+              <span className="text-base">▤</span>
+              Views
+            </button>
+            <button type="button" className="flex flex-1 flex-col items-center gap-0.5 text-[10px]" onClick={() => setLayersOpen(true)}>
+              <span className="text-base">▦</span>
+              Calendars
+            </button>
+            <button
+              type="button"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#e05a5a] text-xl font-light text-white"
+              aria-label="New event"
+              onClick={() => {
+                setFullScreen(false)
+                setCreating(true)
+              }}
+            >
+              +
+            </button>
+            <button type="button" className="flex flex-1 flex-col items-center gap-0.5 text-[10px]" onClick={() => setToolsOpen(true)}>
+              <span className="text-base">✎</span>
+              Tools
+            </button>
+            <button type="button" className="flex flex-1 flex-col items-center gap-0.5 text-[10px]" onClick={() => setSearchOpen((v) => !v)}>
+              <span className="text-base">⌕</span>
+              Search
+            </button>
+          </nav>
+          {searchOpen && (
+            <div className="shrink-0 border-t border-white/10 px-3 py-2">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search events…"
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+          {viewsOpen && (
+            <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 p-4" role="dialog">
+              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-3">
+                <p className="text-sm font-semibold">Views</p>
+                {(['month', 'week', 'day', 'agenda'] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`mt-2 block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                      view === id ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/5'
+                    }`}
+                    onClick={() => {
+                      setView(id)
+                      setViewsOpen(false)
+                      if (id === 'week' || id === 'day') setFullScreen(true)
+                      else setFullScreen(false)
+                    }}
+                  >
+                    {id === 'month' ? 'Month' : id === 'week' ? 'Week' : id === 'day' ? 'Day' : 'Agenda'}
+                  </button>
+                ))}
+                <button type="button" className="mt-3 w-full text-sm text-[var(--muted)] underline" onClick={() => setViewsOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+          {toolsOpen && (
+            <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/50 p-4" role="dialog">
+              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-3">
+                <p className="text-sm font-semibold">Tools</p>
+                <button type="button" className="mt-2 block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm" onClick={copyOpenEvent}>
+                  Copy selected event
+                </button>
+                <button type="button" className="mt-2 block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm" onClick={pasteClipboard}>
+                  Paste on selected day
+                </button>
+                <button type="button" className="mt-2 block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm text-red-300" onClick={deleteOpenEvent}>
+                  Delete selected event (iCloud)
+                </button>
+                <button
+                  type="button"
+                  className="mt-2 block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm"
+                  disabled={syncBusy}
+                  onClick={() => void runSync().then(() => setToolsOpen(false))}
+                >
+                  {syncBusy ? 'Syncing…' : 'Sync with iCloud'}
+                </button>
+                <button type="button" className="mt-3 w-full text-sm text-[var(--muted)] underline" onClick={() => setToolsOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      <CalendarLayersSheet
+        open={layersOpen}
+        onClose={() => setLayersOpen(false)}
+        onChanged={() => {
+          setDisplayPrefs(loadCalendarDisplayPrefs())
+          void refresh()
+        }}
+      />
     </section>
   )
 }
@@ -818,28 +1076,28 @@ function EventPreview({
   )
 }
 
-function HourLines({ hours }: { hours: number[] }) {
+function HourLines({ hours, hourPx }: { hours: number[]; hourPx: number }) {
   return (
     <>
       {hours.map((h, i) => (
         <div
           key={h}
           className="absolute inset-x-0 border-t border-white/8"
-          style={{ top: i * HOUR_PX, height: HOUR_PX }}
+          style={{ top: i * hourPx, height: hourPx }}
         />
       ))}
     </>
   )
 }
 
-function HourGutter({ hours, height }: { hours: number[]; height: number }) {
+function HourGutter({ hours, height, hourPx }: { hours: number[]; height: number; hourPx: number }) {
   return (
     <div className="relative sticky left-0 z-[3] bg-[var(--panel)]" style={{ height }}>
       {hours.map((h, i) => (
         <p
           key={h}
           className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-[var(--muted)]"
-          style={{ top: i * HOUR_PX }}
+          style={{ top: i * hourPx }}
         >
           {formatHourLabel(h)}
         </p>
@@ -861,6 +1119,7 @@ function EventChip({
   const widthPct = 100 / laid.cols
   const leftPct = laid.col * widthPct
   const short = laid.height < 36
+  const past = eventIsPast(laid.ev)
   return (
     <button
       type="button"
@@ -868,7 +1127,7 @@ function EventChip({
       title={`${formatTimeRange(laid.ev.startAt, laid.ev.endAt)} · ${laid.ev.title || 'Untitled'}`}
       className={`absolute z-[1] overflow-hidden rounded-md px-1 text-left font-semibold leading-tight text-[#10161c] ${
         short ? 'py-0 text-[10px]' : 'py-0.5 text-[11px]'
-      } ${selected ? 'ring-2 ring-white' : ''}`}
+      } ${selected ? 'ring-2 ring-white' : ''} ${past ? 'opacity-45 saturate-[0.65]' : ''}`}
       style={{
         top: laid.top,
         height: laid.height,
@@ -914,10 +1173,10 @@ function AllDayPills({
   )
 }
 
-function NowLine({ day, hours }: { day: Date; hours: number[] }) {
+function NowLine({ day, hours, hourPx }: { day: Date; hours: number[]; hourPx: number }) {
   if (!sameDay(day, new Date())) return null
-  const top = hourOffset(new Date().toISOString()) * HOUR_PX
-  if (top <= 0 || top >= hours.length * HOUR_PX) return null
+  const top = hourOffset(new Date().toISOString()) * hourPx
+  if (top <= 0 || top >= hours.length * hourPx) return null
   return (
     <div className="pointer-events-none absolute inset-x-0 z-[2] flex items-center" style={{ top }}>
       <span className="h-2 w-2 -translate-x-1 rounded-full bg-[#e05a5a]" />
@@ -929,6 +1188,7 @@ function NowLine({ day, hours }: { day: Date; hours: number[] }) {
 function WeekTimeline({
   days,
   hours,
+  hourPx,
   events,
   selected,
   openEventId,
@@ -938,6 +1198,7 @@ function WeekTimeline({
 }: {
   days: Date[]
   hours: number[]
+  hourPx: number
   events: TodayCalendarEvent[]
   selected: Date
   openEventId: string | null
@@ -945,7 +1206,7 @@ function WeekTimeline({
   onToggleEvent: (id: string) => void
   fullHeight?: boolean
 }) {
-  const height = hours.length * HOUR_PX
+  const height = hours.length * hourPx
   return (
     <div
       className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
@@ -992,17 +1253,20 @@ function WeekTimeline({
           ))}
         </div>
         <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
-          <HourGutter hours={hours} height={height} />
+          <HourGutter hours={hours} height={height} hourPx={hourPx} />
           {days.map((day) => {
-            const laid = layoutTimedEvents(events.filter((ev) => sameDay(new Date(ev.startAt), day)))
+            const laid = layoutTimedEvents(
+              events.filter((ev) => sameDay(new Date(ev.startAt), day)),
+              hourPx,
+            )
             return (
               <div
                 key={`col-${day.toISOString()}`}
                 className="relative border-l border-white/8 bg-[#0d1218]"
                 style={{ height }}
               >
-                <HourLines hours={hours} />
-                <NowLine day={day} hours={hours} />
+                <HourLines hours={hours} hourPx={hourPx} />
+                <NowLine day={day} hours={hours} hourPx={hourPx} />
                 {laid.map((row) => (
                   <EventChip
                     key={row.ev.id}
@@ -1020,9 +1284,65 @@ function WeekTimeline({
   )
 }
 
+function AgendaList({
+  events,
+  openEventId,
+  onToggleEvent,
+}: {
+  events: TodayCalendarEvent[]
+  openEventId: string | null
+  onToggleEvent: (id: string) => void
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<string, TodayCalendarEvent[]>()
+    for (const ev of events) {
+      const key = ev.startAt.slice(0, 10)
+      const list = map.get(key) ?? []
+      list.push(ev)
+      map.set(key, list)
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [events])
+  if (groups.length === 0) {
+    return <p className="mt-3 text-sm text-[var(--muted)]">No events in this range.</p>
+  }
+  return (
+    <ul className="mt-3 space-y-4">
+      {groups.map(([day, list]) => (
+        <li key={day}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+            {new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
+              weekday: 'long',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {list.map((ev) => (
+              <li key={ev.id}>
+                <button
+                  type="button"
+                  onClick={() => onToggleEvent(ev.id)}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${
+                    openEventId === ev.id ? 'bg-white/10' : 'bg-[#121820]'
+                  } ${eventIsPast(ev) ? 'opacity-50' : ''}`}
+                >
+                  <span className="w-16 shrink-0 text-xs text-[var(--muted)]">{formatStart(ev.startAt)}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium">{ev.title || 'Untitled'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function DayTimeline({
   day,
   hours,
+  hourPx,
   events,
   openEventId,
   onToggleEvent,
@@ -1030,14 +1350,15 @@ function DayTimeline({
 }: {
   day: Date
   hours: number[]
+  hourPx: number
   events: TodayCalendarEvent[]
   openEventId: string | null
   onToggleEvent: (id: string) => void
   fullHeight?: boolean
 }) {
-  const height = hours.length * HOUR_PX
+  const height = hours.length * hourPx
   const allDay = events.filter(isAllDay)
-  const laid = layoutTimedEvents(events)
+  const laid = layoutTimedEvents(events, hourPx)
   return (
     <div
       className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
@@ -1052,10 +1373,10 @@ function DayTimeline({
           <AllDayPills events={allDay} selectedId={openEventId} onToggle={onToggleEvent} />
         </div>
         <div className="grid grid-cols-[3.5rem_minmax(0,1fr)]">
-          <HourGutter hours={hours} height={height} />
+          <HourGutter hours={hours} height={height} hourPx={hourPx} />
           <div className="relative rounded-r-lg bg-[#0d1218]" style={{ height }}>
-            <HourLines hours={hours} />
-            <NowLine day={day} hours={hours} />
+            <HourLines hours={hours} hourPx={hourPx} />
+            <NowLine day={day} hours={hours} hourPx={hourPx} />
             {events.length === 0 && (
               <p className="absolute inset-x-3 top-4 text-sm text-[var(--muted)]">Nothing on this day.</p>
             )}

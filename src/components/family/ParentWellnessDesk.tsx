@@ -10,6 +10,7 @@ import {
 } from '../../lib/parentWellness'
 import { createId } from '../../lib/storage'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
+import { CollapsibleSection } from '../CollapsibleSection'
 
 type Props = {
   accountId: string
@@ -267,7 +268,9 @@ export function ParentWellnessDesk({ accountId }: Props) {
         </ul>
       </section>
 
-      <NutritionFactsBrowse />
+      <CollapsibleSection title="Nutrition questions" hint="NutritionFacts.org · open when you have a question" defaultOpen={false}>
+        <NutritionFactsBrowse compact />
+      </CollapsibleSection>
     </div>
   )
 }

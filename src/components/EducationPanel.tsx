@@ -365,7 +365,7 @@ export function EducationPanel({
             onIg={() => setView({ kind: 'ig' })}
             onScroll={() => setView({ kind: 'scroll' })}
             onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
-            onNutrition={coach ? undefined : () => setView({ kind: 'nutrition' })}
+            onNutrition={() => setView({ kind: 'nutrition' })}
             onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
             onNamesTest={onOpenNamesTest}
             onSkillPaths={onOpenSkillPaths}

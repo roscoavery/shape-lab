@@ -195,6 +195,26 @@ export const icloudCalendarProvider: CalendarProvider = {
       lastModifiedAt: new Date().toISOString(),
     }
   },
+
+  async deleteEvent(credential, calendar, providerEventId, window) {
+    const client = await davClient(credential)
+    const start = window?.start ?? new Date(Date.now() - 90 * 86400000)
+    const end = window?.end ?? new Date(Date.now() + 180 * 86400000)
+    const objects = (await client.fetchCalendarObjects({
+      calendar: { url: calendar.providerCalendarId },
+      timeRange: { start: start.toISOString(), end: end.toISOString() },
+      expand: true,
+    })) as DAVObject[]
+    const needle = providerEventId.trim()
+    for (const obj of objects) {
+      const data = typeof obj.data === 'string' ? obj.data : ''
+      if (!data.includes(needle)) continue
+      if (!data.includes('BEGIN:VEVENT')) continue
+      await client.deleteCalendarObject({ calendarObject: obj as DAVObject })
+      return true
+    }
+    return false
+  },
 }
 
 function toIcsUtc(iso: string): string {

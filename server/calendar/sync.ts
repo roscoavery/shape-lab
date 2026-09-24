@@ -77,8 +77,13 @@ export async function syncConnectionForCoach(
     const roster = coachAthletes(coachAthleteList, connection.coachId)
     const now = new Date().toISOString()
     const mapped: CalendarEvent[] = []
+    const seenKeys = new Set<string>()
+    const enabledIds = new Set(calendars.map((c) => c.providerCalendarId))
 
     for (const norm of result.events) {
+      seenKeys.add(
+        `${connection.id}|${norm.providerCalendarId}|${norm.providerEventId}|${norm.recurrenceInstanceKey}`,
+      )
       if (!passesFilter(norm.title, connection.eventFilter)) continue
       const seriesKey = norm.recurrenceInstanceKey.split('|')[0] ?? norm.providerEventId
       const existing = db.events.find(
@@ -161,6 +166,19 @@ export async function syncConnectionForCoach(
     }
 
     db = upsertEvents(db, mapped)
+    const winStart = window.start.getTime()
+    const winEnd = window.end.getTime()
+    db = {
+      ...db,
+      events: db.events.filter((e) => {
+        if (e.connectionId !== connection.id) return true
+        if (!enabledIds.has(e.providerCalendarId)) return true
+        const start = Date.parse(e.startAt)
+        if (!Number.isFinite(start) || start < winStart || start > winEnd) return true
+        const key = `${e.connectionId}|${e.providerCalendarId}|${e.providerEventId}|${e.recurrenceInstanceKey}`
+        return seenKeys.has(key)
+      }),
+    }
     db = setSyncState(db, {
       connectionId: connection.id,
       calendarSyncTokens: result.syncTokens ?? prior.calendarSyncTokens,

@@ -200,6 +200,14 @@ export async function fetchCalendarRange(from: Date, to: Date): Promise<{
   return { events: data.events ?? [], unauthorized: false }
 }
 
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  const res = await calendarFetch(`/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string; message?: string }
+    throw new Error(data.message || data.error || 'Could not delete that event.')
+  }
+}
+
 export async function createCalendarEvent(input: {
   title: string
   startAt: string

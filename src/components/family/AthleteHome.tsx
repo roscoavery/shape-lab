@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import type { Athlete } from '../../types'
-import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
+import { loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
+import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 
 type Props = {
   athlete: Athlete | null
@@ -21,10 +22,6 @@ export function AthleteHome({
   onVideos: () => void
   onQuickLog?: () => void
 }) {
-  const homework = useMemo(
-    () => (athlete ? loadAllHomework().filter((row) => row.athleteId === athlete.id).slice(0, 6) : []),
-    [athlete],
-  )
   if (!athlete) {
     return <p className="text-sm text-[var(--muted)]">Sign in with your athlete login to see homework.</p>
   }
@@ -40,31 +37,15 @@ export function AthleteHome({
           </p>
         )}
       </section>
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="font-semibold">Today’s homework</h3>
-        <ul className="mt-3 space-y-2 text-sm">
-          {homework.map((row) => (
-            <li key={row.id}>{row.customLabel || row.shapeId}</li>
-          ))}
-          {homework.length === 0 && <li className="text-[var(--muted)]">Nothing assigned yet.</li>}
-        </ul>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={onPractice} className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-sm font-bold text-[var(--on-accent)]">
-            Practice
-          </button>
-          {onQuickLog && (
-            <button type="button" onClick={onQuickLog} className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
-              Class clock
-            </button>
-          )}
-          <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
-            Progress
-          </button>
-          <button type="button" onClick={onVideos} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
-            Videos
-          </button>
-        </div>
-      </section>
+      <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
+      <div className="flex flex-wrap gap-2 px-1">
+        <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
+          Progress
+        </button>
+        <button type="button" onClick={onVideos} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
+          Videos
+        </button>
+      </div>
       <DeskMessageCarousel audience="athlete" surface="home" />
       <AthleteDeskFeed athlete={athlete} />
     </div>
