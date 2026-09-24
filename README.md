@@ -51,7 +51,15 @@ npm install
 npm start              # same as npm run gym — gate on 43127, production build when possible
 ```
 
-Or double-click **`Start-Gym.command`** in Finder. If `npm run build` fails, run `npm install` again, then `npm run build` — both must pass before phones rely on the static build.
+Or double-click **`Start-Gym.command`** in Finder (same as `npm run gym:mac`).
+
+**One command on the Mac gym computer:**
+
+```bash
+npm run gym:mac
+```
+
+(`npm run mac` is the same.) The script updates code from GitHub, keeps your local `data/`, heals git merge conflicts automatically, installs deps, builds if needed, and starts the tunnel. If `npm run build` fails, run `npm install` once, then `npm run gym:mac` again.
 
 `GYM_DEV=1 npm start` uses Vite on **43128** behind the gate when you are actively editing UI.
 

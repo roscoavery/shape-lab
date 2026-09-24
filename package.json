@@ -21,6 +21,7 @@
     "gym:pull": "node scripts/pull-from-blob.mjs",
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
+    "mac": "bash scripts/mac-gym.sh",
     "gym:recover": "bash scripts/recover-gym-v4.sh",
     "gym:boot": "bash scripts/boot-lace.sh",
     "gym:lace": "bash scripts/mac-gym.sh",
