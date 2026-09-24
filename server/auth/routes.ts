@@ -19,6 +19,7 @@ import {
   publicUserFromAccount,
   updateAccount,
 } from './accounts.ts'
+import { clampMaxDevices } from './types.ts'
 import { readAudit, writeAudit } from './audit.ts'
 import { stampGuardianLinks } from './familyLinks.ts'
 import { createInvite, peekInvite, redeemInvite } from './invites.ts'
@@ -629,6 +630,48 @@ export async function handleAuthRoutes(
     const next = { ...user, kiosk: false }
     await writeAudit('auth.kiosk', next, { detail: 'leave floor' })
     sendJson(res, 200, { authenticated: true, user: next, csrf })
+    return true
+  }
+
+  if (path === '/api/auth/devices') {
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (req.method === 'GET') {
+      sendJson(res, 200, { maxDevices: clampMaxDevices(user.maxDevices) })
+      return true
+    }
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use GET or POST' })
+      return true
+    }
+    if (isKiosk(user)) {
+      sendJson(res, 403, { error: 'Leave floor mode before changing device limits.' })
+      return true
+    }
+    if (denyAuthWriteFlood(res, user)) return true
+    let body: { maxDevices?: number } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    try {
+      const saved = await updateAccount(user.accountId, { maxDevices: clampMaxDevices(body.maxDevices) })
+      sendJson(res, 200, {
+        ok: true,
+        maxDevices: clampMaxDevices(saved.maxDevices),
+        user: { ...user, maxDevices: clampMaxDevices(saved.maxDevices) },
+        csrf: (await sessionFromRequest(req))?.csrf,
+      })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not save that device limit.',
+      })
+    }
     return true
   }
 

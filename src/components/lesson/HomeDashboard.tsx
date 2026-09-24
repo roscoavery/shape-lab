@@ -526,13 +526,13 @@ export function HomeDashboard({
   }
 
   return (
-    <div className="mx-auto grid min-w-0 max-w-3xl gap-4 overflow-x-hidden">
+    <div className="mx-auto grid min-w-0 max-w-3xl gap-4">
       <CollapsibleSection
         title="Calendar"
         hint="Month, week, or day · collapsed until you need it"
         defaultOpen={false}
       >
-        <div className="min-w-0 max-w-full overflow-x-hidden">
+        <div className="min-w-0 w-full max-w-full">
         <CalendarDesk
           coachId={signedIn.id}
           athletes={athletes}

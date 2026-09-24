@@ -12,6 +12,7 @@ export type AuthSessionUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  maxDevices?: number
   kiosk?: boolean
 }
 
@@ -89,6 +90,17 @@ export function sessionIsKiosk(user: AuthSessionUser | null | undefined): boolea
 export function sessionIsAdmin(user: AuthSessionUser | null | undefined): boolean {
   if (sessionIsKiosk(user)) return false
   return user?.role === 'admin' || user?.role === 'gymOwner'
+}
+
+export async function saveMaxDevices(maxDevices: number): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/devices', {
+    ...authWriteInit(JSON.stringify({ maxDevices })),
+    method: 'POST',
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string; maxDevices?: number }
+  rememberCsrf(data)
+  if (!res.ok) throw new Error(data.error || 'Could not save that device limit.')
+  return data
 }
 
 export async function setFloorKiosk(enabled: boolean, password?: string): Promise<AuthMeResponse> {

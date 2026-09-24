@@ -133,6 +133,7 @@ const API_PATHS = new Set([
   '/api/auth/invites',
   '/api/auth/audit',
   '/api/auth/sessions',
+  '/api/auth/devices',
   '/api/auth/unlock',
   '/api/ig-resolve',
   '/api/ig-media',

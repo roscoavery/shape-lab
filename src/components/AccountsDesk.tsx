@@ -15,10 +15,13 @@ import {
   sessionIsAdmin,
   setFloorKiosk,
   fetchAuthMe,
+  saveMaxDevices,
   type AuthSessionUser,
   type SessionRole,
 } from '../lib/authSession'
 import { CollapsibleSection } from './CollapsibleSection'
+import { DeskPreviewPicker } from './DeskPreviewPicker'
+import { type DeskPreview } from '../lib/deskPreview'
 
 const ROLES: { id: SessionRole; label: string }[] = [
   { id: 'admin', label: 'Admin' },
@@ -33,9 +36,11 @@ type Props = {
   athletes: Athlete[]
   onUser?: (user: AuthSessionUser) => void
   onLock?: () => void
+  deskPreview?: DeskPreview
+  onDeskPreview?: (next: DeskPreview) => void
 }
 
-export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
+export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDeskPreview }: Props) {
   const admin = sessionIsAdmin(user)
   const [accounts, setAccounts] = useState<PublicAccount[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +48,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
   const [busy, setBusy] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [maxDevices, setMaxDevices] = useState(user.maxDevices ?? 4)
   const [email, setEmail] = useState('')
   const [createPassword, setCreatePassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -133,6 +139,55 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
         >
           Save new password
         </button>
+        <div className="mt-6">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Devices signed in at once
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+            Phones and iPads stay signed in until you hit this number. Signing in on a new
+            device then drops the oldest one. Changing your password still signs the others
+            out.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <input
+              type="range"
+              min={1}
+              max={12}
+              value={maxDevices}
+              onChange={(e) => setMaxDevices(Number(e.target.value))}
+              className="min-w-0 flex-1"
+            />
+            <span className="w-8 text-right text-sm font-semibold">{maxDevices}</span>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void saveMaxDevices(maxDevices)
+                .then((result) => {
+                  if (result.user) onUser?.(result.user)
+                  flash(`This login keeps ${maxDevices} device${maxDevices === 1 ? '' : 's'} signed in.`)
+                })
+                .catch((err) => setError(err instanceof Error ? err.message : 'Could not save that limit.'))
+                .finally(() => setBusy(false))
+            }}
+            className="mt-3 rounded-full border border-[var(--panel-border)] px-4 py-2 text-sm font-semibold"
+          >
+            Save device limit
+          </button>
+        </div>
+        {admin && onDeskPreview && (
+          <div className="mt-6">
+            <DeskPreviewPicker
+              value={deskPreview ?? 'home'}
+              onChange={(next) => {
+                onDeskPreview(next)
+                flash(`Desk is now ${next === 'home' ? 'this gym login' : next}.`)
+              }}
+            />
+          </div>
+        )}
         <button
           type="button"
           disabled={busy}

@@ -91,10 +91,12 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     name: 'Push-ups',
     trackMode: 'reps',
     targetReps: 10,
-    notes: 'Plank line. Chest to a fist-height if full range is not there yet.',
+    notes: 'Plank line. Chest to a fist-height if full range is not there yet. Specs: elbows in (triceps), wide hands, piked, or handstand push-ups.',
     cues: [
       'Ribs in, glutes on, neck long.',
-      'Elbows track about 45° — not flared to the ears.',
+      'Default: elbows track about 45° — not flared to the ears.',
+      'Elbows in keeps the upper arm against the ribs. Wide hands open the chest.',
+      'Piked and handstand versions load the shoulders more than the chest.',
       'Quality reps keep the same plank from the first to the last.',
     ],
   },
@@ -215,6 +217,20 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     cues: [
       'Do not swing the whole body.',
       'Pause at the top of a quality rep.',
+    ],
+  },
+  {
+    id: 'split_squat',
+    name: 'Split squats',
+    trackMode: 'reps',
+    audience: 'class',
+    targetReps: 8,
+    notes:
+      'Rear-foot split squat. Optional elevated front foot. Front-foot height runs from flat ground up to just above the knee.',
+    cues: [
+      'Front knee tracks over the toes. Rear knee lowers under the hip.',
+      'Chest stays tall. Do not dump into the low back.',
+      'Log the front-foot height so the next set can match it.',
     ],
   },
 ]

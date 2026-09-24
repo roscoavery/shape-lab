@@ -52,8 +52,10 @@ import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { ImproveNotesDock } from './components/ImproveNotesDock'
-import { ParentEducationDesk, ParentHome } from './components/family/ParentHome'
+import { DeskPreviewPicker } from './components/DeskPreviewPicker'
+import { loadDeskPreview, saveDeskPreview, type DeskPreview } from './lib/deskPreview'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
+import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
@@ -176,6 +178,7 @@ import {
   sessionIsKiosk,
   SESSION_LOST_EVENT,
   type AuthSessionUser,
+  type SessionRole,
 } from './lib/authSession'
 import type {
   AppSettings,
@@ -253,6 +256,12 @@ export default function App() {
   const [authUser, setAuthUser] = useState<AuthSessionUser | null>(null)
   const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
   const [authBootstrap, setAuthBootstrap] = useState(false)
+  const [deskPreview, setDeskPreview] = useState<DeskPreview>(() => loadDeskPreview())
+  const chooseDeskPreview = (next: DeskPreview) => {
+    saveDeskPreview(next)
+    setDeskPreview(next)
+    setTab('today')
+  }
   const [awayLocked, setAwayLocked] = useState(false)
   const lockAway = useCallback(() => setAwayLocked(true), [])
   const clearSignedInDesk = useCallback(() => {
@@ -595,12 +604,19 @@ export default function App() {
   }, [tab])
 
   useEffect(() => {
-    const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
+    const ryan =
+      deskPreview === 'home' && isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (!ryan && isRyanOnlyTab(tab)) setTab('today')
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(tab)) setTab('today')
-    const role = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
+    const previewed: SessionRole | undefined =
+      sessionIsAdmin(authUser) && deskPreview !== 'home'
+        ? deskPreview === 'gymOwner'
+          ? 'gymOwner'
+          : deskPreview
+        : authUser?.role
+    const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
     if (authUser && !tabAllowedForNavRole(tab, role, ryan)) setTab('today')
-  }, [athletes, activeAthleteId, tab, authUser])
+  }, [athletes, activeAthleteId, tab, authUser, deskPreview])
 
   useEffect(
     () => () => {
@@ -844,15 +860,28 @@ export default function App() {
   const floorKiosk = sessionIsKiosk(authUser)
   const ryanEdit =
     !floorKiosk &&
+    deskPreview === 'home' &&
     isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
-  const libraryEdit = ryanEdit || isCoachProfile(activeProfile)
+  const libraryEdit = ryanEdit || (deskPreview === 'home' && isCoachProfile(activeProfile))
   const openProfile = (id: string) => {
     const row = athletes.find((a) => a.id === id)
     if (row && !canViewAthleteProfile(activeProfile, row)) return
     setViewingAthleteId(id)
   }
   const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
-  const deskRole = navRoleFromSession(authUser?.role, floorKiosk)
+  const previewRole: SessionRole | undefined =
+    sessionIsAdmin(authUser) && deskPreview !== 'home'
+      ? deskPreview === 'gymOwner'
+        ? 'gymOwner'
+        : deskPreview
+      : authUser?.role
+  const deskRole = navRoleFromSession(previewRole, floorKiosk)
+  const previewProfile: Athlete | null =
+    activeProfile && deskPreview === 'parent'
+      ? { ...activeProfile, role: 'parent' }
+      : activeProfile && deskPreview === 'athlete'
+        ? { ...activeProfile, role: 'athlete' }
+        : activeProfile
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
       ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
@@ -935,13 +964,18 @@ export default function App() {
           >
             Sign out
           </button>
+          {sessionIsAdmin(authUser) && !floorKiosk && (
+            <div className="mt-3">
+              <DeskPreviewPicker value={deskPreview} onChange={chooseDeskPreview} compact />
+            </div>
+          )}
         </div>
         <AppNav
           tab={tab}
           ryan={ryanEdit}
           kiosk={floorKiosk}
-          admin={sessionIsAdmin(authUser)}
-          role={authUser.role}
+          admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
+          role={previewRole ?? authUser.role}
           onGo={goTab}
         />
         <div className="ml-auto shrink-0">
@@ -951,9 +985,9 @@ export default function App() {
 
       {floorKiosk && <FloorKioskBar user={authUser} onUser={setAuthUser} />}
 
-      {tab === 'today' && deskRole === 'parent' && activeProfile && (
+      {tab === 'today' && deskRole === 'parent' && previewProfile && (
         <ParentHome
-          parent={activeProfile}
+          parent={previewProfile}
           kids={parentKids}
           focusId={parentFocusId}
           onFocus={setParentFocusId}
@@ -964,14 +998,14 @@ export default function App() {
       )}
       {tab === 'today' && deskRole === 'athlete' && (
         <AthleteHome
-          athlete={activeProfile}
+          athlete={previewProfile}
           onPractice={() => goTab('homework')}
           onProgress={() => goTab('progress')}
           onVideos={() => goTab('compare')}
         />
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="grid min-w-0 gap-4 overflow-x-hidden xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
               <div className="grid gap-4">
@@ -1705,7 +1739,14 @@ export default function App() {
       )}
 
       {tab === 'accounts' && !floorKiosk && (
-        <AccountsDesk user={authUser} athletes={athletes} onUser={setAuthUser} onLock={lockAway} />
+        <AccountsDesk
+          user={authUser}
+          athletes={athletes}
+          onUser={setAuthUser}
+          onLock={lockAway}
+          deskPreview={deskPreview}
+          onDeskPreview={chooseDeskPreview}
+        />
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}

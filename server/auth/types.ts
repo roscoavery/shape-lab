@@ -15,6 +15,8 @@ export type Account = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
+  /** How many browsers may stay signed in at once. Default 4. */
+  maxDevices?: number
   createdAt: string
   updatedAt: string
 }
@@ -38,10 +40,20 @@ export type AuthUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  maxDevices?: number
   kiosk?: boolean
 }
 
 export type PublicAthlete = Record<string, unknown> & { id: string }
+
+export const DEFAULT_MAX_DEVICES = 4
+export const MAX_DEVICES_CAP = 12
+
+export function clampMaxDevices(value: unknown): number {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return DEFAULT_MAX_DEVICES
+  return Math.min(MAX_DEVICES_CAP, Math.max(1, Math.round(n)))
+}
 
 export function isAccountRole(value: unknown): value is AccountRole {
   return typeof value === 'string' && (ACCOUNT_ROLES as readonly string[]).includes(value)

@@ -32,12 +32,27 @@ type HoldId = (typeof CLASS_HOLD_DRILLS)[number]['id']
 type HollowArms = 'down' | 'up'
 type HoldSpec = string | null
 
+const FRONT_FOOT_MAX = 10
+
+function frontFootHeightLabel(n: number): string {
+  if (n <= 0) return 'flat ground'
+  if (n >= FRONT_FOOT_MAX) return 'just above the knee'
+  return `${n} of ${FRONT_FOOT_MAX} toward the knee`
+}
+
 const HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
   hollow: [
     { id: 'bent_knee', label: 'Bent-knee' },
     { id: 'tucked', label: 'Tucked' },
     { id: 'curl_up', label: 'Curl up' },
   ],
+  pushup: [
+    { id: 'elbows_in', label: 'Elbows in (triceps)' },
+    { id: 'wide', label: 'Wide hands' },
+    { id: 'piked', label: 'Piked' },
+    { id: 'handstand', label: 'Handstand push-ups' },
+  ],
+  split_squat: [{ id: 'elevated_front', label: 'Elevated front foot' }],
   wall_handstand: [
     { id: 'tucked', label: 'Tucked' },
     { id: 'l', label: 'L' },
@@ -81,6 +96,7 @@ const KNEE_DRILLS: CatalogPick[] = [
   { id: 'slantboard_squat', label: 'Slantboard squats', track: 'reps' },
   { id: 'poliquin_step', label: 'Poliquin steps', track: 'reps' },
   { id: 'tib_raise', label: 'Tib raises', track: 'reps' },
+  { id: 'split_squat', label: 'Split squats', track: 'reps' },
 ]
 
 type Props = {
@@ -136,6 +152,7 @@ export function ClassStopwatch({
   const [holdId, setHoldId] = useState<HoldId>('hollow')
   const [hollowArms, setHollowArms] = useState<HollowArms>('down')
   const [holdSpec, setHoldSpec] = useState<HoldSpec>(null)
+  const [frontFootHeight, setFrontFootHeight] = useState(0)
   const [holdPage, setHoldPage] = useState(0)
   const [catalogPick, setCatalogPick] = useState<CatalogPick | null>(null)
   const swipeX = useRef<number | null>(null)
@@ -395,7 +412,9 @@ export function ClassStopwatch({
 
   const logVups = () => {
     const nReps = Number(reps)
-    const label = repsCatalog === 'pushup' ? 'Push-ups' : 'V-ups'
+    const specLabel =
+      repsCatalog === 'pushup' ? HOLD_SPECS.pushup?.find((s) => s.id === holdSpec)?.label : undefined
+    const label = [repsCatalog === 'pushup' ? 'Push-ups' : 'V-ups', specLabel].filter(Boolean).join(' · ')
     if (!Number.isFinite(nReps) || nReps <= 0) {
       setFlash(`Enter how many ${label} they did.`)
       return
@@ -429,7 +448,8 @@ export function ClassStopwatch({
       return
     }
     const specLabel = HOLD_SPECS[catalogPick.id]?.find((s) => s.id === holdSpec)?.label
-    const label = [catalogPick.label, specLabel].filter(Boolean).join(' · ')
+    const heightLabel = catalogPick.id === 'split_squat' ? frontFootHeightLabel(frontFootHeight) : null
+    const label = [catalogPick.label, specLabel, heightLabel].filter(Boolean).join(' · ')
     if (catalogPick.track === 'hold') {
       const secs = Number(manual || offer)
       if (!Number.isFinite(secs) || secs <= 0) {
@@ -534,7 +554,6 @@ export function ClassStopwatch({
         {(
           [
             ['hold', 'Core holds'],
-            ['vups', 'V-ups'],
             ['skill', 'New skill / win'],
             ['other', 'Just did'],
           ] as const
@@ -546,10 +565,6 @@ export function ClassStopwatch({
               setMode(id)
               setExtraHoldId(null)
               if (id === 'hold') goPage(0)
-              if (id === 'vups') {
-                setRepsCatalog('v_up')
-                goPage(1)
-              }
             }}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
@@ -649,11 +664,26 @@ export function ClassStopwatch({
                       })}
                     </div>
                   ) : d.id === 'hollow' ? (
-                    <div key={d.id} className="flex flex-col overflow-hidden rounded-xl bg-white/8">
-                      <p className="pt-1.5 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">
+                    <div
+                      key={d.id}
+                      className={`flex flex-col rounded-xl ${
+                        !extraHoldId && holdId === 'hollow'
+                          ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                          : 'bg-white/8'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHoldId('hollow')
+                          setExtraHoldId(null)
+                          setMode('hold')
+                        }}
+                        className="px-3 py-2 text-sm font-semibold"
+                      >
                         Hollow
-                      </p>
-                      <div className="grid grid-cols-2">
+                      </button>
+                      <div className="flex justify-center gap-1.5 px-1 pb-1.5">
                         {(['down', 'up'] as const).map((arms) => {
                           const on = !extraHoldId && holdId === 'hollow' && hollowArms === arms
                           return (
@@ -669,9 +699,9 @@ export function ClassStopwatch({
                                 setExtraHoldId(null)
                                 setMode('hold')
                               }}
-                              className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
-                                arms === 'up' ? 'border-l border-white/15' : ''
-                              } ${on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-white/90'}`}
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-tight ${
+                                on ? 'bg-black/25' : 'text-current/75'
+                              }`}
                             >
                               {arms === 'down' ? 'Arms down' : 'Arms up'}
                             </button>
@@ -712,6 +742,7 @@ export function ClassStopwatch({
                     type="button"
                     onClick={() => {
                       setRepsCatalog(id)
+                      setHoldSpec(null)
                       setMode('vups')
                       setExtraHoldId(null)
                       setCatalogPick(null)
@@ -1016,6 +1047,30 @@ export function ClassStopwatch({
           <p className="text-sm text-white/60">
             {(repsCatalog === 'pushup' ? 'Push-up' : 'V-up')} counts change by class. Type the number this group just did.
           </p>
+          {repsCatalog === 'pushup' && HOLD_SPECS.pushup && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                Variation · none selected
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {HOLD_SPECS.pushup.map((spec) => {
+                  const on = holdSpec === spec.id
+                  return (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      onClick={() => setHoldSpec(on ? null : spec.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                      }`}
+                    >
+                      {spec.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
           <label className="block text-sm">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
@@ -1078,6 +1133,31 @@ export function ClassStopwatch({
                   )
                 })}
               </div>
+            </div>
+          )}
+          {catalogPick?.id === 'split_squat' && (
+            <div className="flex items-center gap-4 rounded-xl bg-white/8 px-3 py-3">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                  Just above the knee
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={FRONT_FOOT_MAX}
+                  value={frontFootHeight}
+                  onChange={(e) => setFrontFootHeight(Number(e.target.value))}
+                  aria-label="Front-foot height"
+                  className="my-2 h-32 w-8 cursor-pointer"
+                  style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                  Flat ground
+                </span>
+              </div>
+              <p className="text-sm text-white/70">
+                Front-foot height · <span className="font-semibold text-white">{frontFootHeightLabel(frontFootHeight)}</span>
+              </p>
             </div>
           )}
           {catalogPick?.track === 'hold' && (

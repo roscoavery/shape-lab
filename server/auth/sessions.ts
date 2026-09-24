@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readJson, writeJson } from '../persist.ts'
 import { findAccountById, publicUserFromAccount } from './accounts.ts'
-import type { AuthUser, SessionRecord } from './types.ts'
+import { clampMaxDevices, type AuthUser, type SessionRecord } from './types.ts'
 
 const FILE = 'data/sessions.json'
 export const SESSION_COOKIE = 'shape_lab_session'
@@ -70,8 +70,15 @@ export async function createSession(accountId: string): Promise<SessionRecord> {
     expiresAt: new Date(now + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
   }
   const file = await readFile()
-  const kept = file.sessions.filter((row) => stillValid(row, now) && row.accountId !== accountId)
-  await writeFile([...kept, session])
+  const account = await findAccountById(accountId)
+  const cap = clampMaxDevices(account?.maxDevices)
+  const live = file.sessions.filter((row) => stillValid(row, now))
+  const others = live.filter((row) => row.accountId !== accountId)
+  const mine = live
+    .filter((row) => row.accountId === accountId)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, Math.max(0, cap - 1))
+  await writeFile([...others, ...mine, session])
   return session
 }
 

@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto'
 import { isHomeGym, readJson, writeJson } from '../persist.ts'
 import { serverEnv, serverEnvFlag } from './env.ts'
 import { hashPassword, verifyPassword } from './passwords.ts'
-import { isAccountRole, type Account, type AccountRole, type AuthUser } from './types.ts'
+import { isAccountRole, clampMaxDevices, DEFAULT_MAX_DEVICES, type Account, type AccountRole, type AuthUser } from './types.ts'
 
 const FILE = 'data/accounts.json'
 
@@ -47,6 +47,7 @@ function asAccount(raw: unknown): Account | null {
     linkedAthleteIds: Array.isArray(row.linkedAthleteIds)
       ? row.linkedAthleteIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
       : undefined,
+    maxDevices: clampMaxDevices(row.maxDevices),
     createdAt: typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString(),
     updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : new Date().toISOString(),
   }
@@ -78,6 +79,7 @@ export function publicUserFromAccount(account: Account): AuthUser {
     displayName: account.displayName,
     rosterProfileId: account.rosterProfileId,
     linkedAthleteIds: account.linkedAthleteIds ?? [],
+    maxDevices: clampMaxDevices(account.maxDevices),
   }
 }
 
@@ -148,6 +150,7 @@ export async function createAccount(input: {
     displayName: input.displayName.trim() || email,
     rosterProfileId: input.rosterProfileId,
     linkedAthleteIds: input.linkedAthleteIds,
+    maxDevices: DEFAULT_MAX_DEVICES,
     createdAt: now,
     updatedAt: now,
   }
@@ -215,6 +218,7 @@ export async function updateAccount(
     role?: AccountRole
     rosterProfileId?: string | null
     linkedAthleteIds?: string[]
+    maxDevices?: number
   },
 ): Promise<Omit<Account, 'passwordHash'>> {
   const file = await readFile()
@@ -234,6 +238,8 @@ export async function updateAccount(
           : current.rosterProfileId,
     linkedAthleteIds:
       patch.linkedAthleteIds !== undefined ? patch.linkedAthleteIds : current.linkedAthleteIds,
+    maxDevices:
+      patch.maxDevices !== undefined ? clampMaxDevices(patch.maxDevices) : current.maxDevices,
     updatedAt: new Date().toISOString(),
   }
   const next = [...file.accounts]
