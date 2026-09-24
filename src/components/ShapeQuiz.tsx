@@ -67,7 +67,9 @@ export function ShapeQuiz({
     return Boolean(preset && pendingIntake(preset).length === 0)
   })
   const [format, setFormat] = useState<QuizFormat | null>(() =>
-    parkedAtOpen?.phase === 'quiz' ? parkedAtOpen.format ?? null : null,
+    parkedAtOpen?.phase === 'quiz'
+      ? (parkedAtOpen.format as QuizFormat | undefined) ?? null
+      : null,
   )
   const [seed, setSeed] = useState(0)
   const generated = useMemo(

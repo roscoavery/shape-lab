@@ -97,7 +97,8 @@ export function isPoseDebugEnabled(): boolean {
 }
 
 function visOk(p: Landmark | undefined, min = 0.28): p is Landmark {
-  return Boolean(p) && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
+  if (!p) return false
+  return Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
 }
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }): number {

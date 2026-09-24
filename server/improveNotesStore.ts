@@ -17,7 +17,7 @@ const EMPTY: ImproveNotesFile = {
 }
 
 export async function readImproveNotesFile(): Promise<ImproveNotesFile> {
-  const data = await readJson<ImproveNotesFile>(FILE)
+  const data = await readJson<ImproveNotesFile>(FILE, EMPTY)
   if (!data || data.kind !== 'shape-lab-improve-notes') return { ...EMPTY }
   return {
     kind: 'shape-lab-improve-notes',

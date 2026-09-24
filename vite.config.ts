@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 43127,
-    strictPort: true,
+    strictPort: false,
     allowedHosts: true,
     hmr: process.env.GYM_HOME ? false : true,
     headers: {
@@ -32,7 +32,7 @@ export default defineConfig({
   preview: {
     host: true,
     port: 43127,
-    strictPort: true,
+    strictPort: false,
     allowedHosts: true,
     headers: {
       'X-Content-Type-Options': 'nosniff',

@@ -30,12 +30,15 @@ export class OneEuro {
   private dx = new LowPass()
   private lastT = 0
   private lastX = 0
+  private minCutoff = 1.15
+  private beta = 0.085
+  private dCutoff = 1.0
 
-  constructor(
-    readonly minCutoff = 1.15,
-    readonly beta = 0.085,
-    readonly dCutoff = 1.0,
-  ) {}
+  constructor(minCutoff = 1.15, beta = 0.085, dCutoff = 1.0) {
+    this.minCutoff = minCutoff
+    this.beta = beta
+    this.dCutoff = dCutoff
+  }
 
   reset() {
     this.x.reset()

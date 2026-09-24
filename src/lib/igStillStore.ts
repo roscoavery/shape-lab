@@ -320,10 +320,7 @@ export async function updateIgStill(
   return next
 }
 
-export async function removeIgStill(
-  id: string,
-  opts?: { fromApp?: boolean },
-): Promise<void> {
+export async function removeIgStill(id: string, _opts?: { fromApp?: boolean }): Promise<void> {
   noteRemovedIgStill(id)
   memory = memory.filter((p) => p.id !== id)
   emit()

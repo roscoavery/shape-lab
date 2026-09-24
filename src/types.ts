@@ -184,6 +184,29 @@ export type GuardianRelationship = {
   createdAt: string
 }
 
+export type ShapeTestParkPhase = 'intake' | 'format' | 'quiz'
+
+export type ParkedQuizQuestion = {
+  id: string
+  kind: 'describe' | 'picture'
+  shapeId: string
+  prompt: string
+  stillId: string | null
+  choices: { id: string; label: string }[]
+  answerId: string
+}
+
+export type ShapeTestPark = {
+  phase: ShapeTestParkPhase
+  format?: string
+  pool?: string
+  index?: number
+  picked?: string | null
+  pickedIds?: (string | null)[]
+  questions?: ParkedQuizQuestion[]
+  updatedAt: string
+}
+
 export type Athlete = {
   id: string
   name: string
@@ -318,7 +341,7 @@ export type Athlete = {
    * In-progress New athlete · shape test. Finish later parks here so the
    * next rotation can continue without losing pictures-test answers.
    */
-  shapeTestPark?: import('./lib/shapeTestPark').ShapeTestPark
+  shapeTestPark?: ShapeTestPark
   /**
    * Skills they said they are working towards. A hope for grouping —
    * not a promise the coach will train that skill today.

@@ -52,7 +52,7 @@ export function parseGymBackup(raw: unknown): GymBackup | null {
 }
 
 export async function applyGymBackup(backup: GymBackup): Promise<{ athletes: Athlete[] }> {
-  const { athletes } = applyRosterSnapshot(backup.roster)
+  applyRosterSnapshot(backup.roster)
   enableServerRosterPush()
   await flushLocalPhotos()
   await pushServerRoster()

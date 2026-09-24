@@ -112,7 +112,8 @@ const LOST_MS = 1400
 const OUTLIER = 0.28
 
 function vis(p: Landmark | undefined, min = 0.28): p is Landmark {
-  return Boolean(p) && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
+  if (!p) return false
+  return Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
 }
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -144,7 +145,7 @@ export function clipImpossibleBones(lm: Landmark[]): { lm: Landmark[]; flags: Jo
   const out = cloneLm(lm)
   const flags: JointFlag[] = out.map(() => 'accepted')
   let broken = 0
-  const foot = new Set([
+  const foot = new Set<number>([
     LM.LEFT_HEEL,
     LM.RIGHT_HEEL,
     LM.LEFT_FOOT_INDEX,

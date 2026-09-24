@@ -5,33 +5,18 @@
  * continue without starting over.
  */
 
-import type { Athlete, ReferencePhoto } from '../types'
-import type { QuizFormat, QuizPool, QuizQuestion } from './shapeQuiz'
+import type {
+  Athlete,
+  ParkedQuizQuestion,
+  ReferencePhoto,
+  ShapeTestPark,
+  ShapeTestParkPhase,
+} from '../types'
+import type { QuizQuestion } from './shapeQuiz'
 import { pickReferencePhoto } from './storage'
 import { namesMatch } from './classStation'
 
-export type ShapeTestParkPhase = 'intake' | 'format' | 'quiz'
-
-export type ParkedQuizQuestion = {
-  id: string
-  kind: QuizQuestion['kind']
-  shapeId: string
-  prompt: string
-  stillId: string | null
-  choices: { id: string; label: string }[]
-  answerId: string
-}
-
-export type ShapeTestPark = {
-  phase: ShapeTestParkPhase
-  format?: QuizFormat
-  pool?: QuizPool
-  index?: number
-  picked?: string | null
-  pickedIds?: (string | null)[]
-  questions?: ParkedQuizQuestion[]
-  updatedAt: string
-}
+export type { ShapeTestPark, ShapeTestParkPhase, ParkedQuizQuestion } from '../types'
 
 export type GuestShapeTestPark = {
   firstName: string

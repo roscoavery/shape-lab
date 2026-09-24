@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 43127",
+    "start": "node scripts/gym-home.mjs",
     "build": "tsc -b && vite build",
     "build:api": "node scripts/bundle-api.mjs",
     "lint": "oxlint",

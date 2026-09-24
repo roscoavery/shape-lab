@@ -374,14 +374,7 @@ export async function handleShapeLabApi(
         cacheControlMaxAge: 31536000,
       }
       let token: string
-      try {
-        token = await generateClientTokenFromReadWriteToken({
-          ...tokenOpts,
-          access: 'private',
-        })
-      } catch {
-        token = await generateClientTokenFromReadWriteToken(tokenOpts)
-      }
+      token = await generateClientTokenFromReadWriteToken(tokenOpts)
       sendJson(res, 200, { token, pathname })
     } catch (err) {
       sendJson(res, 400, {

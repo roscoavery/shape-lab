@@ -175,12 +175,12 @@ if (useStatic) {
 let vite = null
 if (!useStatic) {
   vite = existsSync(viteJs)
-    ? spawn(process.execPath, [viteJs, '--host', '127.0.0.1', '--port', VITE_PORT, '--strictPort'], {
+    ? spawn(process.execPath, [viteJs, '--host', '127.0.0.1', '--port', VITE_PORT], {
         cwd: ROOT,
         stdio: 'inherit',
         env,
       })
-    : spawn(npm, ['exec', '--', 'vite', '--host', '127.0.0.1', '--port', VITE_PORT, '--strictPort'], {
+    : spawn(npm, ['exec', '--', 'vite', '--host', '127.0.0.1', '--port', VITE_PORT], {
         cwd: ROOT,
         stdio: 'inherit',
         env,

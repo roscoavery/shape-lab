@@ -48,7 +48,8 @@ export type HoldDetectSample = {
 }
 
 function visOk(p: Landmark | undefined, min = VIS): p is Landmark {
-  return Boolean(p) && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
+  if (!p) return false
+  return Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
 }
 
 function pair(
@@ -318,7 +319,8 @@ export function swapUpperLower(lm: Landmark[]): Landmark[] {
 }
 
 function visPt(p: Landmark | undefined, min = VIS): p is Landmark {
-  return Boolean(p) && Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
+  if (!p) return false
+  return Number.isFinite(p.x) && Number.isFinite(p.y) && (p.visibility ?? 1) >= min
 }
 
 function faceNearShoulders(lm: Landmark[]): boolean {
