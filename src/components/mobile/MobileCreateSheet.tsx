@@ -1,17 +1,28 @@
 import { useState } from 'react'
 import type { Athlete } from '../../types'
 import type { AppTab } from '../../lib/storage'
+import { saveTab } from '../../lib/storage'
+import { IgCreateIcon } from './IgNavIcons'
 
 type Props = {
   athlete: Athlete | null
   onGo: (tab: AppTab) => void
 }
 
+const OPTIONS: { tab: AppTab; title: string; hint: string; glyph: string }[] = [
+  { tab: 'wins', title: 'Win', hint: 'Little hit or first — Wins feed', glyph: '🙌' },
+  { tab: 'feed', title: 'Gym post', hint: 'Bigger share for the team feed', glyph: '📣' },
+  { tab: 'scroll', title: 'Pass / reel', hint: 'Reference clip or pass video', glyph: '▶' },
+  { tab: 'homework', title: 'Homework log', hint: 'Log holds, reps, or drills', glyph: '✓' },
+  { tab: 'today', title: 'Today', hint: 'Class board, schedule, assignments', glyph: '📅' },
+]
+
 export function MobileCreateSheet({ athlete, onGo }: Props) {
   const [open, setOpen] = useState(false)
 
   const pick = (tab: AppTab) => {
     setOpen(false)
+    saveTab(tab)
     onGo(tab)
   }
 
@@ -20,59 +31,49 @@ export function MobileCreateSheet({ athlete, onGo }: Props) {
       <button
         type="button"
         aria-label="Create"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-xl font-light text-[var(--text)]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--text)]"
         onClick={() => setOpen(true)}
       >
-        +
+        <IgCreateIcon className="h-7 w-7" />
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4"
+          className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55 md:hidden"
           role="dialog"
-          aria-label="Create post"
+          aria-label="Create"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-3"
+            className="w-full max-w-lg rounded-t-2xl border border-white/10 bg-[#121820] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm font-semibold">Share on the gym feed</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              {athlete ? `Posting as ${athlete.name}` : 'Sign in with a profile to post.'}
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />
+            <p className="text-center text-base font-semibold">Create</p>
+            <p className="mt-1 text-center text-xs text-[var(--muted)]">
+              {athlete ? `As ${athlete.name}` : 'Unlock a profile to post'}
             </p>
-            <div className="mt-3 grid gap-2">
-              <button
-                type="button"
-                className="rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm"
-                onClick={() => pick('wins')}
-              >
-                Win — little hit or first
-              </button>
-              <button
-                type="button"
-                className="rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm"
-                onClick={() => pick('feed')}
-              >
-                Gym post — bigger share
-              </button>
-              <button
-                type="button"
-                className="rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm"
-                onClick={() => pick('scroll')}
-              >
-                Pass / reference reel
-              </button>
-              <button
-                type="button"
-                className="rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm"
-                onClick={() => pick('today')}
-              >
-                Today — class & homework
-              </button>
-            </div>
+            <ul className="mt-4 space-y-1">
+              {OPTIONS.map((row) => (
+                <li key={row.tab}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left active:bg-white/10"
+                    onClick={() => pick(row.tab)}
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-lg">
+                      {row.glyph}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{row.title}</span>
+                      <span className="block text-xs text-[var(--muted)]">{row.hint}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
             <button
               type="button"
-              className="mt-3 w-full text-sm text-[var(--muted)] underline"
+              className="mt-2 w-full rounded-xl py-3 text-sm font-medium text-[var(--muted)]"
               onClick={() => setOpen(false)}
             >
               Cancel

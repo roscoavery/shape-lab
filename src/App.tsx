@@ -954,6 +954,10 @@ export default function App() {
         activeAthleteId={activeAthleteId}
         settings={settings}
         onViewProfile={openProfile}
+        ryan={ryanEdit}
+        kiosk={floorKiosk}
+        admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
+        navRole={previewRole ?? authUser.role}
       >
       <header className="mb-4 hidden min-w-0 max-w-full flex-wrap items-start justify-between gap-3 md:flex">
         <div className="min-w-0">

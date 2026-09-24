@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react'
 import type { AppTab } from '../../lib/storage'
 import type { AuthSessionUser } from '../../lib/authSession'
+import type { SessionRole } from '../../lib/authSession'
 import type { Athlete } from '../../types'
 import { AthleteAvatar } from '../AthleteAvatar'
 import { NotifyBell } from '../NotifyBell'
 import type { AppSettings } from '../../types'
+import { AppNav } from '../AppNav'
 import { MobileCreateSheet } from './MobileCreateSheet'
 import { MobileAppSearch } from './MobileAppSearch'
 import { MobileAccountSwitcher } from './MobileAccountSwitcher'
+import { MobileNavDrawer } from './MobileNavDrawer'
 import { IgHomeIcon, IgMessagesIcon, IgReelsIcon } from './IgNavIcons'
 
 type ShellTab = 'home' | 'reels' | 'messages' | 'search' | 'profile'
@@ -46,6 +49,10 @@ type Props = {
   activeAthleteId: string | null
   settings: AppSettings
   onViewProfile?: (id: string) => void
+  ryan: boolean
+  kiosk?: boolean
+  admin?: boolean
+  navRole?: SessionRole
   children: ReactNode
 }
 
@@ -58,6 +65,10 @@ export function IgMobileShell({
   activeAthleteId,
   settings,
   onViewProfile,
+  ryan,
+  kiosk = false,
+  admin = false,
+  navRole,
   children,
 }: Props) {
   const active = shellTabForAppTab(tab)
@@ -68,17 +79,23 @@ export function IgMobileShell({
 
   return (
     <div className="max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 z-40 -mx-3 mb-3 flex items-center justify-between gap-2 border-b border-white/10 bg-[#0b1118]/95 px-3 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 md:hidden">
-        <MobileCreateSheet athlete={athlete} onGo={onGo} />
-        <div className="min-w-0 flex-1 text-center">
-          {showAccountSwitcher ? (
-            <MobileAccountSwitcher user={authUser} athletes={athletes} onGo={onGo} />
-          ) : (
-            <p className="truncate text-sm font-semibold tracking-tight">shapelab</p>
-          )}
+      <div className="sticky top-0 z-40 -mx-3 border-b border-white/10 bg-[#0b1118]/95 backdrop-blur-md sm:-mx-6 md:hidden">
+        <header className="flex items-center gap-1 px-3 py-2 sm:px-6">
+          <MobileNavDrawer tab={tab} role={navRole ?? authUser.role} ryan={ryan} kiosk={kiosk} admin={admin} onGo={onGo} />
+          <MobileCreateSheet athlete={athlete} onGo={onGo} />
+          <div className="min-w-0 flex-1 text-center">
+            {showAccountSwitcher ? (
+              <MobileAccountSwitcher user={authUser} athletes={athletes} onGo={onGo} />
+            ) : (
+              <p className="truncate text-sm font-semibold tracking-tight">shapelab</p>
+            )}
+          </div>
+          <NotifyBell athlete={athlete} settings={settings} onOpen={onGo} variant="ig" />
+        </header>
+        <div className="px-3 pb-2 sm:px-6">
+          <AppNav tab={tab} ryan={ryan} kiosk={kiosk} admin={admin} role={navRole ?? authUser.role} onGo={onGo} />
         </div>
-        <NotifyBell athlete={athlete} settings={settings} onOpen={onGo} variant="ig" />
-      </header>
+      </div>
 
       {children}
 

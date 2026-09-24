@@ -95,7 +95,7 @@ export function MobileAppSearch({
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex flex-col bg-[#0b1118] px-3 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          className="fixed inset-x-0 top-0 z-[45] flex flex-col bg-[#0b1118]/98 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:hidden"
           role="dialog"
           aria-label="Search"
         >
@@ -107,14 +107,15 @@ export function MobileAppSearch({
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search videos, shapes, homework, people…"
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                autoFocus
+                inputMode="search"
+                enterKeyHint="search"
               />
             </div>
             <button type="button" className="shrink-0 text-sm font-medium text-[var(--accent)]" onClick={() => setOpen(false)}>
               Cancel
             </button>
           </div>
-          <ul className="mt-2 flex-1 space-y-0.5 overflow-y-auto overscroll-contain">
+          <ul className="mt-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain">
             {hits.map((row) => (
               <li key={row.id}>
                 <button
