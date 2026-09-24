@@ -91,7 +91,7 @@ if [ -d .git ] && { [ -z "${GYM_MAC_BOOTED:-}" ] || ! calendar_ui_present; }; th
   STASHED=0
   PARK="$ROOT/.gym-park"
   mkdir -p "$PARK/data"
-  for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json; do
+  for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json roster-photos accounts.json sessions.json invites.json calendar.json; do
     if [ -e "$ROOT/data/$item" ]; then
       rm -rf "$PARK/data/$item"
       cp -a "$ROOT/data/$item" "$PARK/data/$item"

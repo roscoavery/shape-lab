@@ -36,16 +36,21 @@ fi
 
 PARK="$HOME/.shape-lab-gym-park"
 mkdir -p "$PARK/data"
-for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json; do
+# Keep the live gym file, including the admin login. Missing accounts.json
+# is what shows "create the first gym admin".
+for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json roster-photos accounts.json sessions.json invites.json audit.json calendar.json lessons.json; do
   if [ -e "$ROOT/data/$item" ]; then
     rm -rf "$PARK/data/$item"
     cp -a "$ROOT/data/$item" "$PARK/data/$item"
   fi
 done
 
+STASHED=0
 if [ -n "$(git status --porcelain -- data training 2>/dev/null || true)" ]; then
   echo "Parking gym data so roster.json cannot block the update…"
-  git stash push -u -m "boot-lace-data" -- data training || true
+  if git stash push -u -m "boot-lace-data" -- data training; then
+    STASHED=1
+  fi
 fi
 
 echo "Fetching ${BRANCH} from GitHub (this cannot land on Sort)…"
@@ -60,8 +65,12 @@ if ! git checkout -B "$BRANCH" FETCH_HEAD; then
   git checkout -B "$BRANCH" FETCH_HEAD
 fi
 
+if [ "$STASHED" = 1 ]; then
+  git stash pop || echo "Gym data is still in git stash / $PARK — keep the copies in data/ if git reports a conflict."
+fi
+
 mkdir -p "$ROOT/data"
-for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json; do
+for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json roster-photos accounts.json sessions.json invites.json audit.json calendar.json lessons.json; do
   if [ -d "$PARK/data/$item" ]; then
     mkdir -p "$ROOT/data/$item"
     cp -an "$PARK/data/$item/." "$ROOT/data/$item/" 2>/dev/null || true
