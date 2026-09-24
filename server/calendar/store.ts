@@ -65,6 +65,24 @@ export function calendarsForConnection(db: CalendarDb, connectionId: string): Co
   return db.connectedCalendars.filter((c) => c.connectionId === connectionId)
 }
 
+export function eventsForCoachInRange(
+  db: CalendarDb,
+  coachId: string,
+  startIso: string,
+  endIso: string,
+): CalendarEvent[] {
+  const start = Date.parse(startIso)
+  const end = Date.parse(endIso)
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return []
+  return db.events.filter((e) => {
+    if (e.coachId !== coachId || e.status === 'cancelled') return false
+    const evStart = Date.parse(e.startAt)
+    const evEnd = Date.parse(e.endAt || e.startAt)
+    if (!Number.isFinite(evStart)) return false
+    return evStart <= end && (Number.isFinite(evEnd) ? evEnd : evStart) >= start
+  })
+}
+
 export function eventsForCoachOnDay(
   db: CalendarDb,
   coachId: string,

@@ -20,7 +20,8 @@ import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
-import { TodayCalendarSection } from '../calendar/TodayCalendarSection'
+import { CalendarDesk, happeningNow } from '../calendar/CalendarDesk'
+import { fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
@@ -144,6 +145,7 @@ export function HomeDashboard({
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
   const [addQuery, setAddQuery] = useState('')
+  const [nowEventId, setNowEventId] = useState<string | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -156,6 +158,22 @@ export function HomeDashboard({
   }, [])
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeHiddenGyms(() => setHiddenTick((n) => n + 1)), [])
+  useEffect(() => {
+    if (!coach || !signedIn) return
+    if (!hasCalendarApiToken()) return
+    let cancelled = false
+    void fetchTodayEvents().then(({ events }) => {
+      if (cancelled) return
+      const now = happeningNow(events)
+      setNowEventId(now?.id ?? null)
+      if (now?.matchedAthleteId) {
+        setWithIds((prev) => (prev.length ? prev : [now.matchedAthleteId!]))
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [coach, signedIn?.id, refresh])
   const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
   const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const liveLesson = coach && signedIn ? findLiveLesson(signedIn.id) : null
@@ -508,7 +526,7 @@ export function HomeDashboard({
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      <TodayCalendarSection
+      <CalendarDesk
         coachId={signedIn.id}
         athletes={athletes}
         onStartLesson={onStartLesson}
@@ -641,7 +659,11 @@ export function HomeDashboard({
               }
               onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)
             }}
-            className="sl-card sl-left px-4 py-4"
+            className={
+              nowEventId && !liveClass && !liveLesson
+                ? 'sl-names-glow sl-left px-4 py-4'
+                : 'sl-card sl-left px-4 py-4'
+            }
           >
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Lesson
@@ -679,16 +701,22 @@ export function HomeDashboard({
           </button>
         </div>
         )}
-        {onOpenNamesTest && !activeGroup && (
+        {onOpenNamesTest && !activeGroup && !liveClass && !liveLesson && (
           <div className="mt-3">
             <NamesTestGlow
-              onClick={() =>
-                onOpenNamesTest(
-                  liveClass ? 'live' : undefined,
-                )
-              }
+              onClick={() => onOpenNamesTest()}
               hint="Every athlete on that list. The test keeps going until you get them all right, and leads with the names you miss most."
               meta="Class, camp, school, or your desk"
+            />
+          </div>
+        )}
+        {onShortcut && (liveClass || liveLesson || Boolean(activeGroup)) && (
+          <div className="mt-3">
+            <NamesTestGlow
+              title="New athlete / shape test"
+              hint="Someone new walked in, or you need pictures before names. Open the shape test from here."
+              meta="In session"
+              onClick={() => onShortcut('quiz')}
             />
           </div>
         )}
@@ -805,6 +833,14 @@ export function HomeDashboard({
             hiddenGyms={hiddenGyms}
             onHideGym={(gym) => {
               hideListedGym(gym)
+              if (onAthletesChange) {
+                onAthletesChange(
+                  athletes.map((a) => ({
+                    ...a,
+                    classGyms: (a.classGyms ?? []).filter((g) => g.toLowerCase() !== gym.toLowerCase()),
+                  })),
+                )
+              }
               if (gymScope.kind === 'gym' && gymScope.gym === gym) setGymScope({ kind: 'desk' })
             }}
             onUnhideGym={(gym) => unhideListedGym(gym)}
@@ -1192,7 +1228,7 @@ export function HomeDashboard({
         <TodayShortcuts
           onGo={onShortcut}
           showStation
-          showNames={Boolean(onOpenNamesTest) && !activeGroup}
+          showNames={Boolean(onOpenNamesTest) && !activeGroup && !liveClass && !liveLesson}
         />
       )}
 

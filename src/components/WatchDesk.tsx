@@ -10,6 +10,7 @@ import {
   type WatchEvent,
   type WatchSession,
 } from '../lib/watchDesk'
+import { CollapsibleSection } from './CollapsibleSection'
 
 type Props = {
   user: AuthSessionUser
@@ -89,8 +90,7 @@ export function WatchDesk({ user }: Props) {
         </p>
       </section>
 
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="text-lg font-semibold text-[var(--text)]">Signed in now</h3>
+      <CollapsibleSection title="Signed in now" hint="Live logins on this gym" defaultOpen={false}>
         {loading && <p className="mt-3 text-sm text-[var(--muted)]">Loading who is signed in…</p>}
         {!loading && sessions.length === 0 && (
           <p className="mt-3 text-sm text-[var(--muted)]">No live logins right now.</p>
@@ -137,11 +137,10 @@ export function WatchDesk({ user }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
 
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <CollapsibleSection title="Recent actions" hint="Sign-ins, links, office opens" defaultOpen={false}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-[var(--text)]">Recent actions</h3>
           <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
             <input
               type="checkbox"
@@ -183,7 +182,7 @@ export function WatchDesk({ user }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleSection>
 
       {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
       {saved && <p className="text-sm text-[var(--accent)]">{saved}</p>}

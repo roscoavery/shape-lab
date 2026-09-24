@@ -154,7 +154,11 @@ if [ -d .git ] && { [ -z "${GYM_MAC_BOOTED:-}" ] || ! calendar_ui_present; }; th
   if [ -d "$PARK/data/coach-blobs" ]; then
     cp -an "$PARK/data/coach-blobs/." "$ROOT/data/coach-blobs/" 2>/dev/null || true
   fi
-  for item in ig-stills.json coach-stills.json roster.json; do
+  if [ -d "$PARK/data/roster-photos" ]; then
+    mkdir -p "$ROOT/data/roster-photos"
+    cp -an "$PARK/data/roster-photos/." "$ROOT/data/roster-photos/" 2>/dev/null || true
+  fi
+  for item in ig-stills.json coach-stills.json roster.json accounts.json sessions.json invites.json calendar.json; do
     if [ -f "$PARK/data/$item" ] && [ ! -f "$ROOT/data/$item" ]; then
       cp -a "$PARK/data/$item" "$ROOT/data/$item"
     fi

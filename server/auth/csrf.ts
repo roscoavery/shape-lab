@@ -30,7 +30,8 @@ export function authWriteNeedsCsrf(method: string | undefined, path: string): bo
   if (
     path === '/api/auth/login' ||
     path === '/api/auth/bootstrap' ||
-    path === '/api/auth/invite'
+    path === '/api/auth/invite' ||
+    path === '/api/auth/register'
   ) {
     return false
   }

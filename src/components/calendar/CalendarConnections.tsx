@@ -31,7 +31,7 @@ export function CalendarConnections({ coach }: Props) {
   const [apiReady, setApiReady] = useState(false)
   const [email, setEmail] = useState('')
   const [appPassword, setAppPassword] = useState('')
-  const [eventFilter, setEventFilter] = useState<'all' | 'coaching_likely'>('coaching_likely')
+  const [eventFilter, setEventFilter] = useState<'all' | 'coaching_likely'>('all')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -93,7 +93,20 @@ export function CalendarConnections({ coach }: Props) {
         connection: result.connection,
         calendars: result.calendars,
       })
-      setMessage('iCloud connected. Choose calendars below, then Sync now.')
+      setMessage('iCloud connected. Calendars are on. Syncing…')
+      try {
+        await updateCalendarSelection(
+          result.calendars.map((c) => ({
+            providerCalendarId: c.providerCalendarId,
+            enabled: c.enabled,
+          })),
+          'all',
+        )
+        await syncCalendarNow()
+        setMessage('iCloud connected and synced. Open Today → Calendar to see events.')
+      } catch {
+        setMessage('Connected. Tap Sync now if Today is still empty.')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not connect to iCloud.')
     } finally {

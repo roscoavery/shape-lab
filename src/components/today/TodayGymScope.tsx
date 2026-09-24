@@ -142,7 +142,11 @@ export function TodayGymScope({
                     title={`Hide ${gym}`}
                     className="rounded-full px-1.5 py-1 text-xs font-bold text-[var(--bad)]"
                     onClick={() => {
-                      if (confirm(`Hide “${gym}” from Other gyms? Profiles stay. You can unhide it later.`)) {
+                      if (
+                        confirm(
+                          `Delete “${gym}” from Other gyms for good? It will not come back on this list. Profiles stay.`,
+                        )
+                      ) {
                         onHideGym(gym)
                       }
                     }}
@@ -220,7 +224,7 @@ export function TodayGymScope({
               onClick={() => {
                 if (
                   !confirm(
-                    `Delete “${activeEvent.name}”? That removes the group, not the athlete profiles.`,
+                    `Delete “${activeEvent.name}” for good? This school / camp / clinic will not come back. Athlete profiles stay.`,
                   )
                 ) {
                   return

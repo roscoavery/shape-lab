@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { createId } from '../../lib/storage'
 import type { AthleteSkillGoal, TrainingSurface } from '../../types'
+import { CollapsibleSection } from '../CollapsibleSection'
 import {
   SKILL_GOAL_CHOICES,
   SKILL_GOAL_GROUPS,
@@ -69,21 +71,73 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
   }
 
   return (
+    <CollapsibleSection
+      title={athleteFacing ? 'Hopes' : 'Skill hopes'}
+      hint={value.length ? `${value.length} on this profile` : 'Collapsed — open to add or edit'}
+      defaultOpen={false}
+    >
     <div className="space-y-3">
       <p className="rounded-xl bg-[#1a160c] px-3 py-2 text-sm leading-relaxed text-[#e8d9a8]">
         {SKILL_GOAL_DISCLAIMER}
       </p>
       {value.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5">
+        <ul className="space-y-2">
           {value.map((g) => (
-            <li key={g.id}>
-              <button
-                type="button"
-                onClick={() => onChange(value.filter((row) => row.id !== g.id))}
-                className="rounded-full border border-[#6ec8d6]/40 bg-[#102028] px-3 py-1 text-xs font-semibold"
-              >
-                {goalLine(g)} · remove
-              </button>
+            <li key={g.id} className="rounded-xl border border-[#6ec8d6]/30 bg-[#102028] px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">{goalLine(g)}</p>
+                <button
+                  type="button"
+                  onClick={() => onChange(value.filter((row) => row.id !== g.id))}
+                  className="text-[11px] text-[var(--muted)] underline"
+                >
+                  Remove
+                </button>
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--muted)]">Smaller pieces that get them there</p>
+              <ul className="mt-1 space-y-1">
+                {(g.steps ?? []).map((step) => (
+                  <li key={step.id} className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange(
+                          value.map((row) =>
+                            row.id === g.id
+                              ? {
+                                  ...row,
+                                  steps: (row.steps ?? []).map((s) =>
+                                    s.id === step.id ? { ...s, done: !s.done } : s,
+                                  ),
+                                }
+                              : row,
+                          ),
+                        )
+                      }
+                      className={`h-4 w-4 rounded border ${step.done ? 'bg-[var(--accent)]' : 'border-white/30'}`}
+                      aria-label={step.done ? 'Mark undone' : 'Mark done'}
+                    />
+                    <span className={step.done ? 'line-through opacity-60' : ''}>{step.label}</span>
+                  </li>
+                ))}
+              </ul>
+              <input
+                className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs"
+                placeholder="Add a sub-goal and press enter"
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return
+                  const label = e.currentTarget.value.trim()
+                  if (!label) return
+                  onChange(
+                    value.map((row) =>
+                      row.id === g.id
+                        ? { ...row, steps: [...(row.steps ?? []), { id: createId('stp'), label }] }
+                        : row,
+                    ),
+                  )
+                  e.currentTarget.value = ''
+                }}
+              />
             </li>
           ))}
         </ul>
@@ -165,5 +219,6 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
         </div>
       ))}
     </div>
+    </CollapsibleSection>
   )
 }

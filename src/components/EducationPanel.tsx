@@ -228,7 +228,7 @@ export function EducationPanel({
                 Learn
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
-                Pictures first. Names after. Study the body the way a gym sees it.
+                Pictures first. Names after. Learn the shapes the way a gym sees them.
               </p>
             </div>
             <NavChip active={view.kind === 'home'} onClick={goHome} label="Home" />
@@ -244,15 +244,28 @@ export function EducationPanel({
               <NavChip active={view.kind === 'ig'} onClick={() => setView({ kind: 'ig' })} label="IG shapes" />
               <NavChip active={view.kind === 'hits'} onClick={() => setView({ kind: 'hits' })} label="My shapes" />
               <NavChip
-                active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
+                active={
+                  (view.kind === 'quiz' && view.pool !== 'arm-positions') ||
+                  view.kind === 'shapeBody'
+                }
                 onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
-                label="Shape test 1"
+                label="Shape tests"
               />
-              <NavChip
-                active={view.kind === 'shapeBody'}
-                onClick={() => setView({ kind: 'shapeBody' })}
-                label="Shape test 2"
-              />
+              {((view.kind === 'quiz' && view.pool !== 'arm-positions') ||
+                view.kind === 'shapeBody') && (
+                <>
+                  <NavChip
+                    active={view.kind === 'quiz' && view.pool !== 'arm-positions'}
+                    onClick={() => setView({ kind: 'quiz', pool: 'pathway' })}
+                    label="1 · Name it"
+                  />
+                  <NavChip
+                    active={view.kind === 'shapeBody'}
+                    onClick={() => setView({ kind: 'shapeBody' })}
+                    label="2 · Think it through"
+                  />
+                </>
+              )}
             </ChipRow>
             <ChipRow label="Watch">
               <NavChip
@@ -813,7 +826,7 @@ function HomeView({
             Shape library
           </p>
           <h3 className="learn-serif mt-2 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--text)] sm:text-5xl">
-            Study the body
+            Shape library
           </h3>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
             {shapeCount} positions with coach stills. Hollow, lunge, and the
@@ -827,21 +840,21 @@ function HomeView({
 
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-          Tests
+          Shape tests
         </p>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <button type="button" onClick={onQuiz} className="learn-exam-ink">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Pictures</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Name it</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 1</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Name the still. Starting lunge, landing lunge, and mountain climber sit together.
             </p>
           </button>
           <button type="button" onClick={onShapeBody} className="learn-exam-ink">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Look closer</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Think it through</p>
             <h3 className="learn-serif mt-1 text-2xl font-semibold">Shape test 2</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Same stills, harder. Pick the lookalike, or name one detail on the picture.
+              The still is a hint. The question is why it works, and what would fail it.
             </p>
           </button>
           <button type="button" onClick={onMovements} className="learn-exam-ink">

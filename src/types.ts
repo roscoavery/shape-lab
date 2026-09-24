@@ -337,6 +337,7 @@ export type AthleteSkillGoal = {
   surface?: TrainingSurface
   setAt: string
   source?: 'intake' | 'coach'
+  steps?: { id: string; label: string; done?: boolean }[]
 }
 
 export type FavoriteColor =

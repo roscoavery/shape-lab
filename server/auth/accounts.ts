@@ -196,6 +196,18 @@ export async function changeAccountPassword(
   await writeFile(next)
 }
 
+export async function deleteAccount(accountId: string): Promise<void> {
+  const file = await readFile()
+  const target = file.accounts.find((row) => row.id === accountId)
+  if (!target) throw new Error('That account is gone.')
+  const remaining = file.accounts.filter((row) => row.id !== accountId)
+  const stillHasAdmin = remaining.some((row) => row.role === 'admin' || row.role === 'gymOwner')
+  if ((target.role === 'admin' || target.role === 'gymOwner') && !stillHasAdmin) {
+    throw new Error('Keep at least one gym admin account.')
+  }
+  await writeFile(remaining)
+}
+
 export async function updateAccount(
   accountId: string,
   patch: {

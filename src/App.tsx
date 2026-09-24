@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
+import { CollapsibleSection } from './components/CollapsibleSection'
 import { ConsentDesk } from './components/ConsentDesk'
 import { StillTagDesk } from './components/coach/StillTagDesk'
 import { WatchDesk } from './components/WatchDesk'
@@ -924,14 +925,14 @@ export default function App() {
           )}
           <button
             type="button"
-            className="mt-2 text-xs text-[var(--muted)] underline"
+            className="mt-3 text-[10px] text-[var(--muted)]/70 underline decoration-transparent hover:decoration-current"
             onClick={() => {
               void logoutSession().then(() => {
                 clearSignedInDesk()
               })
             }}
           >
-            Sign out {authUser.email}
+            Sign out
           </button>
         </div>
         <AppNav
@@ -1715,9 +1716,8 @@ export default function App() {
       {tab === 'watch' && !floorKiosk && <WatchDesk user={authUser} />}
 
       {tab === 'about' && (
-        <div className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[var(--muted)]">
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">What this is</h2>
+        <div className="mx-auto max-w-2xl space-y-3 text-sm leading-relaxed text-[var(--muted)]">
+          <CollapsibleSection title="What this is" hint="Free shape-coaching gym app">
             <p>
               shapelab is a free gymnastics shape-coaching app. Profiles, phones, and
               homework stay in the app on this gym link. Add a Blob store on the claimed
@@ -1727,11 +1727,8 @@ export default function App() {
               clips play through this signed-in gym — the app does not hand the
               browser a public file link.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
-              Classes and the gym feed
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Classes and the gym feed" hint="Boards, feed, who can post">
             <p className="mb-2">
               <strong className="text-[var(--text)]">Classes</strong> saves named drill
               collages (up to six gym URLs) with captions and A/B loops into your class
@@ -1751,9 +1748,8 @@ export default function App() {
               tab and <strong className="text-[var(--text)]">Coach</strong> stay hidden unless
               Ryan is unlocked.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Theme</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Theme" hint="Favorite color wash">
             <p className="mb-3">
               Default is your favorite color. Pick another build here if you want
               the whole app in a different wash.
@@ -1783,9 +1779,8 @@ export default function App() {
                 />
               ))}
             </div>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Reminders</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Reminders" hint="Homework, likes, high-fives">
             <p className="mb-3">
               Homework nudges, likes, follows, wins, and high-fives. Turn them off
               here or with the Reminders checkbox on camera screens.
@@ -1800,9 +1795,8 @@ export default function App() {
               />
               Notifications on
             </label>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Network</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Network" hint="Follow, message, coach lounge">
             <p>
               <strong className="text-[var(--text)]">Network</strong> is follow, message, and
               the coach lounge. Unlock a profile to follow someone on this gym, send a
@@ -1811,9 +1805,8 @@ export default function App() {
               box so Research can count what people argue about. Athletes can read the
               digest on Research; posting stays in the lounge.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Research</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Research" hint="Studies on this gym, not a census">
             <p>
               <strong className="text-[var(--text)]">Research</strong> uses the scientific
               method on this gym’s tumbling: a question, a hypothesis, a log, then counts.
@@ -1824,11 +1817,8 @@ export default function App() {
               threads by topic, who posted, and how often they wrote their reasoning.
               Unlock a profile to log studies; anyone can read findings.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
-              Learn without a camera
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Learn without a camera" hint="Shapes, tests, physics">
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Learn</strong> tab to study shapes
               (cues, criteria, reference photos) and the full task pathway before practicing.
@@ -1843,11 +1833,8 @@ export default function App() {
               angular momentum, moment of inertia, speeding and slowing rotation, the
               round-off to back handspring arm drop, and why layouts expose a weak set.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
-              Tasks 2 — class flow
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Tasks 2 — class flow" hint="Named sequences, stills, then counts">
             <p className="mb-2">
               <strong className="text-[var(--text)]">Tasks 2</strong> is the same shapes, run
               the way class runs: we name the sequence (LG LV HS LG), show the stills, then tell
@@ -1872,11 +1859,8 @@ export default function App() {
               over time lets you download the video and analysis, share a Story caption + clip to
               Instagram, or mark the run for Ryan on this device.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
-              Athlete Tasks pathway
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Athlete Tasks pathway" hint="Curriculum holds and sequences">
             <p className="mb-2">
               Open the <strong className="text-[var(--text)]">Tasks</strong> tab, pick an athlete,
               and work through the ordered curriculum. Standalone holds start at 5s and drop to 3s after
@@ -1890,11 +1874,8 @@ export default function App() {
               with the shape we are asking — a lever still for lever, a mountain climber still for
               mountain climber.
             </p>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">
-              How coaches edit scoring
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="How coaches edit scoring" hint="shapes.ts, curriculum, sequences">
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Open <code className="text-[var(--accent)]">src/config/shapes.ts</code>
@@ -1912,9 +1893,8 @@ export default function App() {
                 Sequences: edit <code className="text-[var(--accent)]">src/config/sequences.ts</code>
               </li>
             </ol>
-          </section>
-          <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-            <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">Roadmap hooks</h2>
+          </CollapsibleSection>
+          <CollapsibleSection title="Roadmap hooks" hint="What the architecture can grow into">
             <p className="mb-2">Architecture is ready to grow into:</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Cartwheel head/gaze and hand placement grading</li>
@@ -1926,7 +1906,7 @@ export default function App() {
               <li>Folders &amp; groups for athletes</li>
               <li>Progress sharing with parents or athletes</li>
             </ul>
-          </section>
+          </CollapsibleSection>
         </div>
       )}
     </div>

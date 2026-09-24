@@ -21,12 +21,12 @@ export function isLogToday(log: Pick<HomeworkLog, 'date'>, now = new Date()): bo
   return localDateKey(log.date) === todayDateKey(now)
 }
 
-/** Oldest first. */
+/** Newest first. */
 export function logsChrono(logs: HomeworkLog[]): HomeworkLog[] {
   return logs.slice().sort((a, b) => {
-    const byDay = localDateKey(a.date).localeCompare(localDateKey(b.date))
+    const byDay = localDateKey(b.date).localeCompare(localDateKey(a.date))
     if (byDay !== 0) return byDay
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
 }
 

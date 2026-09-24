@@ -67,18 +67,41 @@ export function SkillPathBuilder({
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
           <p className="text-sm leading-relaxed text-white/65">
-            Write the pieces that make a skill more likely. Mark what is
-            usually needed, what only helps, and what can come in another
-            order. Athletes will see this as short-term focus — not a promise
-            they throw the big skill today.
+            Pick one hope. Build only that path today — the pieces that make
+            it more likely. Do not try to edit every skill at once.
           </p>
           <input
             className="h-11 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-            placeholder="Find a skill"
+            placeholder="Find the one skill you are building today"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {listedHopes.length > 0 && (
+          {!openId && listedHopes.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6ec8d6]">
+                Start with one hope on the roster
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {listedHopes.slice(0, 8).map((hope) => (
+                  <button
+                    key={hope.key}
+                    type="button"
+                    onClick={() => {
+                      const match = listSkills().find(
+                        (s) => s.name.toLowerCase() === hope.label.toLowerCase(),
+                      )
+                      setOpenId(match?.id ?? null)
+                      setQuery(hope.label)
+                    }}
+                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
+                  >
+                    {hope.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {!openId && listedHopes.length > 0 && (
             <section className="rounded-2xl border border-[#6ec8d6]/35 bg-[#102028] p-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6ec8d6]">
                 Skills athletes listed as goals
@@ -123,7 +146,7 @@ export function SkillPathBuilder({
               setQuery('')
             }}
           />
-          {skills.map((skill) => (
+          {(openId ? skills.filter((s) => s.id === openId) : skills.slice(0, 8)).map((skill) => (
             <article key={skill.id} className="rounded-2xl border border-white/10 bg-[#0d161c] p-3">
               <button
                 type="button"

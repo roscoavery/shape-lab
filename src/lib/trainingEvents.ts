@@ -36,6 +36,7 @@ export type TrainingEventFile = {
   version: 1
   exportedAt: string
   events: TrainingEvent[]
+  removedEventIds?: string[]
 }
 
 const KEY = 'shape-lab.trainingEvents.v1'
@@ -47,6 +48,7 @@ function emptyFile(): TrainingEventFile {
     version: 1,
     exportedAt: '',
     events: [],
+    removedEventIds: [],
   }
 }
 
@@ -60,6 +62,7 @@ function read(): TrainingEventFile {
       ...emptyFile(),
       exportedAt: data.exportedAt ?? '',
       events: data.events.filter((e) => e && typeof e.id === 'string' && e.name),
+      removedEventIds: Array.isArray(data.removedEventIds) ? data.removedEventIds : [],
     }
   } catch {
     return emptyFile()
@@ -124,7 +127,11 @@ export function createTrainingEvent(opts: {
 
 export function deleteTrainingEvent(id: string) {
   const file = read()
-  write({ ...file, events: file.events.filter((e) => e.id !== id) })
+  write({
+    ...file,
+    events: file.events.filter((e) => e.id !== id),
+    removedEventIds: [...new Set([...(file.removedEventIds ?? []), id])],
+  })
 }
 
 export function setEventAthletes(id: string, athleteIds: string[]): TrainingEvent | null {
@@ -150,19 +157,22 @@ export async function hydrateTrainingEvents(): Promise<void> {
     const data = (await res.json()) as TrainingEventFile
     if (data?.kind !== 'shape-lab-training-events' || !Array.isArray(data.events)) return
     const local = read()
+    const removed = new Set([...(local.removedEventIds ?? []), ...((data.removedEventIds as string[] | undefined) ?? [])])
     const byId = new Map(local.events.map((e) => [e.id, e]))
     for (const row of data.events) {
-      if (!row?.id || !row.name) continue
+      if (!row?.id || !row.name || removed.has(row.id)) continue
       const keep = byId.get(row.id)
       if (!keep || (row.updatedAt || row.createdAt || '') >= (keep.updatedAt || keep.createdAt || '')) {
         byId.set(row.id, row)
       }
     }
+    for (const id of removed) byId.delete(id)
     write({
       kind: 'shape-lab-training-events',
       version: 1,
       exportedAt: new Date().toISOString(),
       events: [...byId.values()],
+      removedEventIds: [...removed],
     })
   } catch {
     /* offline */

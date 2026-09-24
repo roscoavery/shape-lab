@@ -37,4 +37,10 @@ export interface CalendarProvider {
   ): Promise<SyncResult>
 
   normalizeEvent(raw: unknown): NormalizedCalendarEvent | null
+
+  createEvent?(
+    credential: ICloudCredentialPayload,
+    calendar: ConnectedCalendar,
+    input: { title: string; startAt: string; endAt: string; location?: string },
+  ): Promise<NormalizedCalendarEvent>
 }

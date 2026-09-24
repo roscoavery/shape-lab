@@ -12,6 +12,7 @@ import {
   authenticateAccount,
   changeAccountPassword,
   createAccount,
+  deleteAccount,
   ensureBootstrapAdmin,
   findAccountById,
   hasAdminAccount,
@@ -331,7 +332,93 @@ export async function handleAuthRoutes(
       }
       return true
     }
-    sendJson(res, 405, { error: 'Use GET, POST, or PATCH' })
+    if (req.method === 'DELETE') {
+      let body: { id?: string } = {}
+      try {
+        body = JSON.parse(await readRequestBody(req)) as typeof body
+      } catch {
+        sendJson(res, 400, { error: 'Could not read that request.' })
+        return true
+      }
+      if (!body.id) {
+        sendJson(res, 400, { error: 'Which account?' })
+        return true
+      }
+      try {
+        await deleteAccount(body.id)
+        await destroySessionsForAccount(body.id)
+        await writeAudit('auth.account_delete', user, { detail: body.id })
+        sendJson(res, 200, { ok: true })
+      } catch (err) {
+        sendJson(res, 400, {
+          error: err instanceof Error ? err.message : 'Could not delete that account.',
+        })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, PATCH, or DELETE' })
+    return true
+  }
+
+  if (path === '/api/auth/register') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    if (!allowFirstAdmin() && (await hasAdminAccount())) {
+      /* gym computer or first-admin flag can take walk-up signups */
+    }
+    if (!allowFirstAdmin()) {
+      sendJson(res, 403, { error: 'Ask a gym admin for a sign-in link.' })
+      return true
+    }
+    let body: { email?: string; password?: string; displayName?: string; role?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const role = body.role === 'parent' || body.role === 'coach' ? body.role : 'athlete'
+    try {
+      const created = await createAccount({
+        email: body.email || '',
+        password: body.password || '',
+        role,
+        displayName: body.displayName || body.email || 'Account',
+      })
+      const session = await createSession(created.accountId)
+      setSessionCookie(req, res, session.id)
+      await writeAudit('auth.account_create', created, { detail: 'self-register' })
+      sendJson(res, 200, { authenticated: true, user: created, csrf: session.csrf })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not create that account.',
+      })
+    }
+    return true
+  }
+
+  if (path === '/api/auth/delete-self') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    try {
+      await deleteAccount(user.accountId)
+      await destroySessionsForAccount(user.accountId)
+      clearSessionCookie(req, res)
+      sendJson(res, 200, { ok: true })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not delete that account.',
+      })
+    }
     return true
   }
 

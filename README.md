@@ -561,7 +561,7 @@ Coaches connect **iCloud Calendar** from **More → Profiles** while unlocked as
 1. Copy `.env.example` to `.env` and set `CALENDAR_CREDENTIAL_KEY` (and `BLOB_READ_WRITE_TOKEN` if you use Blob locally).
 2. Ensure `data/calendar.json` exists (empty file ships in the repo).
 3. `npm run dev` — unlock a coach profile, open **More → Profiles → Calendar connections**, enter coach passcode, then connect iCloud.
-4. On **Today**, use **Sync now** or refresh the schedule section. Failed syncs do not block manual **Start lesson**.
+4. On **Today**, the **Calendar** month grid shows past and future events. Sync, unlock with the coach passcode if asked, and **New event** writes back to iCloud. A lesson that is happening now glows **Start lesson** and preselects the matched athlete. Failed syncs do not block manual **Start lesson**.
 
 ### Production (Vercel)
 

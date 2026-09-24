@@ -124,6 +124,8 @@ const API_PATHS = new Set([
   '/api/auth/logout',
   '/api/auth/bootstrap',
   '/api/auth/accounts',
+  '/api/auth/register',
+  '/api/auth/delete-self',
   '/api/auth/password',
   '/api/auth/kiosk',
   '/api/auth/invite',

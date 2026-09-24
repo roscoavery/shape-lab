@@ -94,6 +94,14 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
   if (!res.ok) throw new Error(data.error || 'Could not change that password.')
 }
 
+export async function deleteGymAccount(accountId: string): Promise<void> {
+  const res = await fetch('/api/auth/accounts', {
+    ...authWriteInit(JSON.stringify({ id: accountId })),
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error(await readError(res, 'Could not delete that account.'))
+}
+
 export async function adminResetPassword(accountId: string, newPassword: string): Promise<void> {
   const res = await fetch('/api/auth/password', {
     ...authWriteInit(JSON.stringify({ accountId, newPassword })),

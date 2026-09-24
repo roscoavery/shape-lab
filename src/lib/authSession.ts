@@ -141,6 +141,31 @@ export async function loginWithPassword(email: string, password: string): Promis
   return data
 }
 
+export async function registerAccount(
+  email: string,
+  password: string,
+  displayName: string,
+  role: 'athlete' | 'parent' | 'coach' = 'athlete',
+): Promise<AuthMeResponse> {
+  const res = await fetch('/api/auth/register', {
+    ...authWriteInit(JSON.stringify({ email, password, displayName, role })),
+    method: 'POST',
+  })
+  const data = (await res.json().catch(() => ({}))) as AuthMeResponse & { error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not create that account.')
+  }
+  rememberCsrf(data)
+  markSessionPresent()
+  return data
+}
+
+export async function deleteOwnAccount(): Promise<void> {
+  const res = await fetch('/api/auth/delete-self', { ...authWriteInit(), method: 'POST' })
+  const data = (await res.json().catch(() => ({}))) as { error?: string }
+  if (!res.ok) throw new Error(data.error || 'Could not delete that account.')
+}
+
 export async function bootstrapAdmin(
   email: string,
   password: string,

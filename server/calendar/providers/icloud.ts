@@ -165,6 +165,70 @@ export const icloudCalendarProvider: CalendarProvider = {
     if (!row.block || !row.providerCalendarId) return null
     return parseVeventToNormalized(row.block, row.providerCalendarId)
   },
+
+  async createEvent(credential, calendar, input) {
+    const client = await davClient(credential)
+    const uid = `${crypto.randomUUID()}@shapelab`
+    const ics = buildEventIcs({
+      uid,
+      title: input.title,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      location: input.location,
+    })
+    await client.createCalendarObject({
+      calendar: { url: calendar.providerCalendarId },
+      filename: `${uid}.ics`,
+      iCalString: ics,
+    })
+    return {
+      providerEventId: uid,
+      recurrenceInstanceKey: uid,
+      providerCalendarId: calendar.providerCalendarId,
+      title: input.title,
+      description: '',
+      startAt: new Date(input.startAt).toISOString(),
+      endAt: new Date(input.endAt).toISOString(),
+      timeZone: 'UTC',
+      location: input.location ?? '',
+      status: 'confirmed' as const,
+      lastModifiedAt: new Date().toISOString(),
+    }
+  },
+}
+
+function toIcsUtc(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`
+}
+
+function buildEventIcs(opts: {
+  uid: string
+  title: string
+  startAt: string
+  endAt: string
+  location?: string
+}): string {
+  const summary = opts.title.replace(/[\\;,\n]/g, ' ').trim() || 'Untitled'
+  const loc = (opts.location ?? '').replace(/[\\;,\n]/g, ' ').trim()
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Shape Lab//EN',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${opts.uid}`,
+    `DTSTAMP:${toIcsUtc(new Date().toISOString())}`,
+    `DTSTART:${toIcsUtc(opts.startAt)}`,
+    `DTEND:${toIcsUtc(opts.endAt)}`,
+    `SUMMARY:${summary}`,
+    loc ? `LOCATION:${loc}` : '',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+    .filter(Boolean)
+    .join('\r\n')
 }
 
 export function decodeCredential(json: string): ICloudCredentialPayload {

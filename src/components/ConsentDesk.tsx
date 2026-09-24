@@ -10,6 +10,7 @@ import { sessionIsAdmin, type AuthSessionUser } from '../lib/authSession'
 import { listStillTags, type StillTagRow } from '../lib/stillTags'
 import { getShape } from '../config/shapes'
 import { InfoHint } from './ui/InfoHint'
+import { CollapsibleSection } from './CollapsibleSection'
 
 const CONSENT_OPTIONS: { id: ConsentState; label: string }[] = [
   { id: 'unknown', label: 'Not asked' },
@@ -179,11 +180,12 @@ export function ConsentDesk({ user }: Props) {
         rows.map((row) => {
           const busy = busyId === row.id
           return (
-            <section
+            <CollapsibleSection
               key={row.id}
-              className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5"
+              title={row.name}
+              hint="Social flags, media, who can open the profile"
+              defaultOpen={false}
             >
-              <h3 className="text-lg font-semibold text-[var(--text)]">{row.name}</h3>
               {row.parentConsentAt && (
                 <p className="mt-1 text-xs text-[var(--muted)]">
                   Parent consent last marked {new Date(row.parentConsentAt).toLocaleString()}
@@ -290,7 +292,7 @@ export function ConsentDesk({ user }: Props) {
                   onChange={(showCoachNames) => save(row.id, { showCoachNames })}
                 />
               </div>
-            </section>
+            </CollapsibleSection>
           )
         })
       )}

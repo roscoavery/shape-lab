@@ -5,17 +5,20 @@ import {
   changeOwnPassword,
   createGymAccount,
   createSignInLink,
+  deleteGymAccount,
   listGymAccounts,
   patchGymAccount,
   type PublicAccount,
 } from '../lib/accountAdmin'
 import {
+  deleteOwnAccount,
   sessionIsAdmin,
   setFloorKiosk,
   fetchAuthMe,
   type AuthSessionUser,
   type SessionRole,
 } from '../lib/authSession'
+import { CollapsibleSection } from './CollapsibleSection'
 
 const ROLES: { id: SessionRole; label: string }[] = [
   { id: 'admin', label: 'Admin' },
@@ -75,7 +78,8 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <CollapsibleSection title="This login" hint={`${user.email} · ${user.role}`} defaultOpen={false}>
+      <section>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Signed in
         </p>
@@ -129,6 +133,23 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
         >
           Save new password
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (!confirm('Delete your own gym login? You will have to create a new account to sign in again. Profiles stay.')) {
+              return
+            }
+            setBusy(true)
+            void deleteOwnAccount()
+              .then(() => window.location.reload())
+              .catch((err) => setError(err instanceof Error ? err.message : 'Could not delete that account.'))
+              .finally(() => setBusy(false))
+          }}
+          className="mt-3 rounded-full border border-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 disabled:opacity-50"
+        >
+          Delete my account
+        </button>
         {onLock && (
           <>
             <p className="mt-4 text-sm leading-relaxed text-[var(--muted)]">
@@ -147,10 +168,11 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
           </>
         )}
       </section>
+      </CollapsibleSection>
 
       {admin && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <h2 className="text-xl font-semibold text-[var(--text)]">Floor iPad</h2>
+        <CollapsibleSection title="Floor iPad" hint="Shared gym iPad mode" defaultOpen={false}>
+        <section>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Use this when the shared gym iPad stays signed in. Class, homework,
             and lessons keep working. This browser cannot open contacts,
@@ -177,11 +199,12 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
             Use this iPad on the floor
           </button>
         </section>
+        </CollapsibleSection>
       )}
 
       {admin && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <h2 className="text-xl font-semibold text-[var(--text)]">Add a login</h2>
+        <CollapsibleSection title="Add a login" hint="Coach, parent, athlete, or gym owner" defaultOpen={false}>
+        <section>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Coaches only see athletes assigned to them. Parents only see the
             child you link. Athletes only see themselves. Leave the password
@@ -347,11 +370,12 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
             Create login
           </button>
         </section>
+        </CollapsibleSection>
       )}
 
       {admin && (
-        <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <h2 className="text-xl font-semibold text-[var(--text)]">Logins on this gym</h2>
+        <CollapsibleSection title="Logins on this gym" hint={`${accounts.length} account${accounts.length === 1 ? '' : 's'}`} defaultOpen={false}>
+        <section>
           {accounts.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--muted)]">No other accounts yet.</p>
           ) : (
@@ -374,6 +398,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock }: Props) {
             </ul>
           )}
         </section>
+        </CollapsibleSection>
       )}
 
       {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
@@ -537,6 +562,21 @@ function AccountRow({
         className="mt-2 rounded-full border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold"
       >
         Copy sign-in link
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          if (!confirm(`Delete ${account.displayName}'s login? Their athlete profile stays.`)) return
+          setBusy(true)
+          void deleteGymAccount(account.id)
+            .then(() => onSaved(`Deleted ${account.displayName}.`))
+            .catch((err) => onError(err instanceof Error ? err.message : 'Could not delete that account.'))
+            .finally(() => setBusy(false))
+        }}
+        className="mt-2 ml-2 rounded-full border border-red-900/60 px-3 py-2 text-xs font-semibold text-red-300"
+      >
+        Delete account
       </button>
       {mailEnabled && (
         <button

@@ -20,6 +20,7 @@ import { makeClassExtra } from '../../lib/classExercises'
 import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
+import { previousHoldToBeat } from '../../lib/holdBest'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { InfoHint } from '../ui/InfoHint'
 import { IconMark } from '../ui/IconAction'
@@ -534,6 +535,18 @@ export function ClassStopwatch({
             onStart={start}
             onStop={stop}
             onReset={reset}
+            beat={
+              selected[0]
+                ? previousHoldToBeat(
+                    selected[0],
+                    extraHoldId
+                      ? (activeExtra(extraHoldId)?.label ?? 'hold')
+                      : holdId === 'side_plank'
+                        ? `${CLASS_HOLD_DRILLS.find((d) => d.id === holdId)?.label ?? 'Side plank'} · ${side}`
+                        : (CLASS_HOLD_DRILLS.find((d) => d.id === holdId)?.label ?? 'hold'),
+                  )
+                : null
+            }
           />
           {logWho}
           <button
@@ -881,6 +894,7 @@ function HoldClock({
   onStart,
   onStop,
   onReset,
+  beat,
 }: {
   ms: number
   running: boolean
@@ -889,9 +903,19 @@ function HoldClock({
   onStart: () => void
   onStop: () => void
   onReset: () => void
+  beat?: { seconds: number; when: string } | null
 }) {
   return (
     <>
+      {beat ? (
+        <p className="text-center text-xs font-semibold uppercase tracking-wider text-[var(--warn)]">
+          Beat last · {formatSeconds(beat.seconds)}
+        </p>
+      ) : (
+        <p className="text-center text-xs text-white/45">
+          First hold on this drill becomes the mark to beat.
+        </p>
+      )}
       <p className="text-center font-mono text-5xl font-bold tabular-nums">
         {formatWatch(ms)}
       </p>

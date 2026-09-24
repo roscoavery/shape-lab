@@ -14,6 +14,7 @@ import {
   type ProfileKind,
 } from '../lib/profileRole'
 import { CalendarConnections } from './calendar/CalendarConnections'
+import { CollapsibleSection } from './CollapsibleSection'
 import {
   digitsOnlyPin,
   hashPasscode,
@@ -140,6 +141,8 @@ export function AthletePanel({
     setPhone(active?.phone ?? '')
     setParentPhone(active?.parentPhone ?? '')
     setDateOfBirth(active?.dateOfBirth ?? '')
+    setFirstName(active?.firstName ?? active?.name.split(/\s+/)[0] ?? '')
+    setLastName(active?.lastName ?? active?.name.split(/\s+/).slice(1).join(' ') ?? '')
     setLegacyPin('')
     setLegacyPinAgain('')
   }, [active?.id])
@@ -272,8 +275,19 @@ export function AthletePanel({
       profileRole(active) === 'parent'
         ? withLinkedAthletes(active, linkedIds, athletes)
         : active
+    const patchedName =
+      canSeeAllProfiles || isGymAdmin(viewer)
+        ? displayPersonName(firstName, lastName) || next.name
+        : next.name
     const patched = {
       ...next,
+      ...(canSeeAllProfiles || isGymAdmin(viewer)
+        ? {
+            firstName: firstName.trim() || next.firstName,
+            lastName: lastName.trim() || next.lastName,
+            name: patchedName,
+          }
+        : {}),
       instagramHandle,
       shapeLabHandle,
       gymName: nextGym,
@@ -716,6 +730,22 @@ export function AthletePanel({
               No snapshot on this profile yet. Add one on Today → My profile.
             </p>
           )}
+          {(canSeeAllProfiles || isGymAdmin(viewer)) && (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              <input
+                className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+          )}
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             placeholder="Email"
@@ -894,9 +924,14 @@ export function AthletePanel({
           </div>
         </div>
       )}
-      {active && isCoachProfile(active) && <CalendarConnections coach={active} />}
+      {active && isCoachProfile(active) && (
+        <CollapsibleSection title="Calendar connections" hint="iCloud · app-specific password" defaultOpen={false}>
+          <CalendarConnections coach={active} />
+        </CollapsibleSection>
+      )}
       {saved && <p className="mt-2 text-[11px] text-[var(--accent)]">{saved}</p>}
-      <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
+      <CollapsibleSection title="How profiles work" hint="Passcodes, roles, who can edit" defaultOpen={false}>
+      <p className="text-[11px] leading-snug text-[var(--muted)]">
         Each new profile sets a 4-digit passcode on Create. Unlock that profile
         on any phone link or browser to see homework, hold times, the video
         library, Classes collages, and the gym feed.         Pick <strong>Gym owner</strong>, <strong>Coach</strong>,{' '}
@@ -905,8 +940,9 @@ export function AthletePanel({
         Research, and keep their own Compare collections. They cannot edit Ryan’s
         gym collections, shape descriptions, or picture sizes.         This device stays signed in as the last profile until you tap
         Switch profile. Switching to a different passcode profile still asks
-        for that code. Creating the same name again selects the existing profile.
+        for that code.         Creating the same name again selects the existing profile.
       </p>
+      </CollapsibleSection>
     </div>
   )
 }

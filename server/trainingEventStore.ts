@@ -7,6 +7,7 @@ export type DiskTrainingEvents = {
   version: 1
   exportedAt: string
   events: unknown[]
+  removedEventIds?: string[]
 }
 
 const EMPTY: DiskTrainingEvents = {
@@ -24,6 +25,9 @@ export async function readTrainingEventsFile(): Promise<DiskTrainingEvents> {
     version: 1,
     exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
     events: Array.isArray(data.events) ? data.events : [],
+    removedEventIds: Array.isArray(data.removedEventIds)
+      ? data.removedEventIds.filter((id): id is string => typeof id === 'string')
+      : [],
   }
 }
 
@@ -49,19 +53,26 @@ function stamp(row: Record<string, unknown>): string {
 export async function writeTrainingEventsFile(raw: unknown): Promise<DiskTrainingEvents> {
   const body = raw && typeof raw === 'object' ? (raw as DiskTrainingEvents) : EMPTY
   const current = await readTrainingEventsFile()
+  const removed = new Set([
+    ...(current.removedEventIds ?? []),
+    ...(Array.isArray(body.removedEventIds) ? body.removedEventIds.filter((id): id is string => typeof id === 'string') : []),
+  ])
   const map = byId(current.events)
   for (const rawRow of Array.isArray(body.events) ? body.events : []) {
     if (!rawRow || typeof rawRow !== 'object') continue
     const row = rawRow as Record<string, unknown>
     if (typeof row.id !== 'string' || !row.id) continue
+    if (removed.has(row.id)) continue
     const keep = map.get(row.id)
     if (!keep || stamp(row).localeCompare(stamp(keep)) >= 0) map.set(row.id, row)
   }
+  for (const id of removed) map.delete(id)
   const next: DiskTrainingEvents = {
     kind: 'shape-lab-training-events',
     version: 1,
     exportedAt: new Date().toISOString(),
     events: [...map.values()],
+    removedEventIds: [...removed],
   }
   await writeJson(FILE, next)
   return next

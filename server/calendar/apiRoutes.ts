@@ -13,21 +13,23 @@ import {
   issueCalendarToken,
   verifyCoachPasscode,
 } from './coachAuth.ts'
-import { encryptSecret, hasCredentialKey, redactSecrets } from './crypto.ts'
+import { decryptSecret, encryptSecret, hasCredentialKey, redactSecrets } from './crypto.ts'
 import { normalizeAlias } from './matching.ts'
-import { icloudCalendarProvider } from './providers/icloud.ts'
+import { decodeCredential, icloudCalendarProvider } from './providers/icloud.ts'
 import { syncConnectionForCoach } from './sync.ts'
 import {
   addAlias,
   addLessonLink,
   calendarsForConnection,
   connectionForCoach,
+  eventsForCoachInRange,
   eventsForCoachOnDay,
   persistDb,
   readCalendarDb,
   removeConnectionData,
   saveCalendars,
   saveConnection,
+  upsertEvents,
   upsertManualMatch,
 } from './store.ts'
 import type {
@@ -181,7 +183,7 @@ export async function handleCalendarApi(
         encryptedCredential: encryptSecret(JSON.stringify(credential)),
         appleIdEmail: email,
         status: 'connected',
-        eventFilter: existing?.eventFilter ?? 'coaching_likely',
+        eventFilter: existing?.eventFilter ?? 'all',
         lastSuccessfulSyncAt: existing?.lastSuccessfulSyncAt ?? null,
         lastErrorCode: null,
         createdAt: existing?.createdAt ?? now,
@@ -294,6 +296,93 @@ export async function handleCalendarApi(
         lessonLinks: links.filter((l) => l.calendarEventId === e.id),
       })),
     })
+    return true
+  }
+
+  if (segments[0] === 'events' && req.method === 'GET' && segments.length === 1) {
+    const url = new URL(req.url ?? '/', 'http://local')
+    const from = url.searchParams.get('from') || new Date(Date.now() - 30 * 86400000).toISOString()
+    const to = url.searchParams.get('to') || new Date(Date.now() + 90 * 86400000).toISOString()
+    const db = await readCalendarDb()
+    const events = eventsForCoachInRange(db, coachId, from, to).sort((a, b) =>
+      a.startAt.localeCompare(b.startAt),
+    )
+    const links = db.lessonLinks.filter((l) => l.coachId === coachId)
+    sendJson(res, 200, {
+      events: events.map((e) => ({
+        ...e,
+        description: undefined,
+        lessonLinks: links.filter((l) => l.calendarEventId === e.id),
+      })),
+    })
+    return true
+  }
+
+  if (segments[0] === 'events' && req.method === 'POST' && segments.length === 1) {
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as {
+        title?: string
+        startAt?: string
+        endAt?: string
+        location?: string
+        providerCalendarId?: string
+      }
+      const title = body.title?.trim()
+      if (!title || !body.startAt || !body.endAt) {
+        sendJson(res, 400, { error: 'MISSING_FIELDS' })
+        return true
+      }
+      const db = await readCalendarDb()
+      const conn = connectionForCoach(db, coachId)
+      if (!conn) {
+        sendJson(res, 404, { error: 'NO_CONNECTION' })
+        return true
+      }
+      const calendars = calendarsForConnection(db, conn.id).filter((c) => c.enabled)
+      const calendar =
+        calendars.find((c) => c.providerCalendarId === body.providerCalendarId) ?? calendars[0]
+      if (!calendar) {
+        sendJson(res, 400, { error: 'NO_CALENDARS_SELECTED' })
+        return true
+      }
+      const credential = decodeCredential(decryptSecret(conn.encryptedCredential))
+      const created = await icloudCalendarProvider.createEvent?.(credential, calendar, {
+        title,
+        startAt: body.startAt,
+        endAt: body.endAt,
+        location: body.location,
+      })
+      if (!created) {
+        sendJson(res, 501, { error: 'CREATE_NOT_SUPPORTED' })
+        return true
+      }
+      const now = new Date().toISOString()
+      const row = {
+        id: newId('cev'),
+        coachId,
+        connectionId: conn.id,
+        providerCalendarId: created.providerCalendarId,
+        providerEventId: created.providerEventId,
+        recurrenceInstanceKey: created.recurrenceInstanceKey,
+        title: created.title,
+        description: created.description,
+        startAt: created.startAt,
+        endAt: created.endAt,
+        timeZone: created.timeZone,
+        location: created.location,
+        status: created.status,
+        lastModifiedAt: created.lastModifiedAt,
+        matchedAthleteId: null,
+        matchStatus: 'needs_athlete' as const,
+        matchConfidence: 0,
+        createdAt: now,
+        updatedAt: now,
+      }
+      await persistDb(upsertEvents(await readCalendarDb(), [row]))
+      sendJson(res, 200, { event: { ...row, description: undefined, lessonLinks: [] } })
+    } catch (err) {
+      sendJson(res, 502, { error: 'CREATE_FAILED', message: safeErrorMessage(err) })
+    }
     return true
   }
 

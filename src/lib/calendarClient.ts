@@ -34,16 +34,34 @@ export type TodayCalendarEvent = {
 }
 
 function storeToken(token: string) {
-  sessionStorage.setItem(TOKEN_KEY, token)
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    /* quota */
+  }
+  try {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    /* private */
+  }
 }
 
 export function clearCalendarToken() {
-  sessionStorage.removeItem(TOKEN_KEY)
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
 }
 
 function readToken(): string | null {
   try {
-    return sessionStorage.getItem(TOKEN_KEY)
+    return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY)
   } catch {
     return null
   }
@@ -128,6 +146,37 @@ export async function fetchTodayEvents(): Promise<{
   if (!res.ok) return { events: [], unauthorized: false }
   const data = (await res.json()) as { events?: TodayCalendarEvent[] }
   return { events: data.events ?? [], unauthorized: false }
+}
+
+export async function fetchCalendarRange(from: Date, to: Date): Promise<{
+  events: TodayCalendarEvent[]
+  unauthorized: boolean
+}> {
+  const res = await calendarFetch(
+    `/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
+  )
+  if (res.status === 401) return { events: [], unauthorized: true }
+  if (!res.ok) return { events: [], unauthorized: false }
+  const data = (await res.json()) as { events?: TodayCalendarEvent[] }
+  return { events: data.events ?? [], unauthorized: false }
+}
+
+export async function createCalendarEvent(input: {
+  title: string
+  startAt: string
+  endAt: string
+  location?: string
+  providerCalendarId?: string
+}): Promise<TodayCalendarEvent> {
+  const res = await calendarFetch('/events', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  const data = (await res.json()) as { event?: TodayCalendarEvent; error?: string; message?: string }
+  if (!res.ok || !data.event) {
+    throw new Error(data.message || data.error || 'Could not create that event.')
+  }
+  return data.event
 }
 
 export function hasCalendarApiToken(): boolean {
