@@ -6,13 +6,13 @@
 
 ## Recovery (no Cursor login)
 
+If the folder is already on Sort, `npm run gym:mac` will keep pulling Sort. Do not use that. Paste this instead (works from any folder):
+
 ```bash
-cd ~/shape-lab
-cp data/roster.json ~/Desktop/shape-lab-roster-backup.json 2>/dev/null
-npm run gym:mac
+curl -fsSL https://raw.githubusercontent.com/roscoavery/shape-lab/shape-lab-v4/scripts/boot-lace.sh | bash
 ```
 
-That fetch is `shape-lab-v4` (Lace) from GitHub, including iCloud calendar. Do **not** set `GYM_MAC_BOOTED=1` on the first run — that skip used to leave Lace without calendar.
+That fetch is `shape-lab-v4` (Lace) from GitHub, including iCloud calendar. It cannot check out `v2-rebuild`.
 
 After it is running: coach **Today** → **Today from calendar**. **More → Profiles → Calendar connections**.
 

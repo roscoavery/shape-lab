@@ -19,6 +19,10 @@ echo
 
 # Never v2-rebuild (Sort). Gym line is shape-lab-v4 (Lace).
 GYM_BRANCH="${GYM_BRANCH:-shape-lab-v4}"
+if [ "$GYM_BRANCH" = "v2-rebuild" ] || [ "$GYM_BRANCH" = "sort" ]; then
+  echo "Ignoring GYM_BRANCH=${GYM_BRANCH} (Sort). Using shape-lab-v4."
+  GYM_BRANCH="shape-lab-v4"
+fi
 GITHUB_GIT_URL="${GYM_GITHUB_URL:-https://github.com/roscoavery/shape-lab.git}"
 CLOUD_GIT_URL="${GYM_CLOUD_URL:-https://origin.cursor.com/git/ryan-williams/tmp-cedaa575ce67445f.git}"
 

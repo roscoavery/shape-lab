@@ -21,6 +21,7 @@
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
     "gym:recover": "bash scripts/recover-gym-v4.sh",
+    "gym:boot": "bash scripts/boot-lace.sh",
     "gym:lace": "bash scripts/mac-gym.sh",
     "gym:mac:v4": "GYM_BRANCH=shape-lab-v4 bash scripts/mac-gym.sh",
     "gym:token": "node scripts/set-tunnel-token.mjs",
