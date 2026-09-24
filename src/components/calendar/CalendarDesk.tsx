@@ -292,7 +292,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   )
 
   return (
-    <section className="min-w-0 max-w-full rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 sm:p-4">
+    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 sm:p-4">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Schedule</p>
@@ -948,7 +948,7 @@ function WeekTimeline({
   const height = hours.length * HOUR_PX
   return (
     <div
-      className={`mt-3 w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
+      className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
       style={fullHeight ? undefined : { maxHeight: 'min(24rem, 52dvh)' }}
     >
       <div className="min-w-[42rem]">
@@ -1040,7 +1040,7 @@ function DayTimeline({
   const laid = layoutTimedEvents(events)
   return (
     <div
-      className={`mt-3 w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
+      className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
       style={fullHeight ? undefined : { maxHeight: 'min(24rem, 52dvh)' }}
     >
       <p className="mb-2 text-sm text-[var(--muted)]">

@@ -35,6 +35,18 @@ body,
   overflow-x: hidden;
 }
 
+/* Wide tables and week grids scroll inside the phone; they must not stretch the page. */
+.phone-h-scroll {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  contain: inline-size;
+}
+
 /*
  * Android Chrome only. iPhone / iPad / laptop keep 100vh and default
  * input sizes so delay cam, Compare, and desktop layout stay the same.

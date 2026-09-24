@@ -13,6 +13,7 @@ export type NotifyKind =
   | 'share'
   | 'flex'
   | 'heart'
+  | 'lesson'
 
 export const NOTICE_EVENT = 'shape-lab:notice'
 

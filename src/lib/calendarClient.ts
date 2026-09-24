@@ -148,6 +148,33 @@ export async function disconnectCalendar() {
   clearCalendarToken()
 }
 
+export type AthleteCalendarEvent = {
+  id: string
+  title: string
+  startAt: string
+  endAt: string
+  location: string
+  matchedAthleteId: string | null
+  coachId: string
+  coachName: string
+}
+
+export async function fetchCalendarMine(
+  from: Date,
+  to: Date,
+  athleteId?: string,
+): Promise<AthleteCalendarEvent[]> {
+  const q = new URLSearchParams({
+    from: from.toISOString(),
+    to: to.toISOString(),
+  })
+  if (athleteId) q.set('athleteId', athleteId)
+  const res = await fetch(`/api/calendar/mine?${q}`, { credentials: 'same-origin' })
+  if (!res.ok) return []
+  const data = (await res.json()) as { events?: AthleteCalendarEvent[] }
+  return data.events ?? []
+}
+
 export async function fetchTodayEvents(): Promise<{
   events: TodayCalendarEvent[]
   unauthorized: boolean

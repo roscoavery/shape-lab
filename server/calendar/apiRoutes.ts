@@ -8,6 +8,7 @@ import { randomBytes } from 'node:crypto'
 function newId(prefix: string): string {
   return `${prefix}_${randomBytes(10).toString('hex')}`
 }
+import { userFromRequest } from '../auth/sessions.ts'
 import {
   authorizeCalendarRequest,
   issueCalendarToken,
@@ -98,6 +99,56 @@ export async function handleCalendarApi(
       })
     }
     sendJson(res, 200, { synced: results.length, results })
+    return true
+  }
+
+  if (segments[0] === 'mine' && req.method === 'GET' && segments.length === 1) {
+    const user = await userFromRequest(req)
+    if (!user || user.kiosk) {
+      sendJson(res, 401, { error: 'UNAUTHORIZED' })
+      return true
+    }
+    const roster = ((await readRosterFile()).athletes ?? []) as Athlete[]
+    const allowed = new Set<string>()
+    if (user.rosterProfileId) allowed.add(user.rosterProfileId)
+    for (const id of user.linkedAthleteIds ?? []) allowed.add(id)
+    const me = roster.find((a) => a.id === user.rosterProfileId)
+    if (me) {
+      for (const id of me.linkedAthleteIds ?? []) allowed.add(id)
+    }
+    const url = new URL(req.url ?? '/', 'http://local')
+    const asked = url.searchParams.get('athleteId')
+    if (asked && (user.role === 'admin' || user.role === 'gymOwner' || allowed.has(asked))) {
+      allowed.add(asked)
+    }
+    const from = Date.parse(url.searchParams.get('from') || new Date().toISOString())
+    const to = Date.parse(
+      url.searchParams.get('to') || new Date(Date.now() + 21 * 86400000).toISOString(),
+    )
+    const db = await readCalendarDb()
+    const events = db.events
+      .filter((e) => {
+        if (e.status === 'cancelled') return false
+        if (!e.matchedAthleteId || !allowed.has(e.matchedAthleteId)) return false
+        const start = Date.parse(e.startAt)
+        return Number.isFinite(start) && start >= from && start <= to
+      })
+      .sort((a, b) => a.startAt.localeCompare(b.startAt))
+    sendJson(res, 200, {
+      events: events.map((e) => {
+        const coach = roster.find((a) => a.id === e.coachId)
+        return {
+          id: e.id,
+          title: e.title,
+          startAt: e.startAt,
+          endAt: e.endAt,
+          location: e.location,
+          matchedAthleteId: e.matchedAthleteId,
+          coachId: e.coachId,
+          coachName: coach?.name || 'Coach',
+        }
+      }),
+    })
     return true
   }
 

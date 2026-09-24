@@ -18,8 +18,9 @@ export function isProfileKind(value: unknown): value is ProfileKind {
 
 export function profileRole(athlete: Athlete | null | undefined): ProfileKind {
   if (!athlete) return 'athlete'
+  if (isProfileKind(athlete.role)) return athlete.role
   if (isRyanAthlete(athlete)) return 'coach'
-  return isProfileKind(athlete.role) ? athlete.role : 'athlete'
+  return 'athlete'
 }
 
 /** Coaches and gym owners — Compare collections, lounge, class boards. */
@@ -41,6 +42,7 @@ export function canGiveHi5(viewer: Athlete | null | undefined): boolean {
 
 /** Ryan only — gym Compare library, shape copy, still crops, gym collages. */
 export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
+  if (athlete?.role === 'athlete' || athlete?.role === 'parent') return false
   return isRyanAthlete(athlete)
 }
 
@@ -60,7 +62,7 @@ export function canEditAthleteProfile(
 }
 
 export function roleLabel(athlete: Athlete | null | undefined): string {
-  if (isRyanAthlete(athlete)) return 'Gym admin'
+  if (isGymAdmin(athlete)) return 'Gym admin'
   const found = PROFILE_KINDS.find((k) => k.id === profileRole(athlete))
   return found?.label ?? 'Athlete'
 }

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import type { Athlete } from '../../types'
-import { loadAllHomework, loadHomeworkLogs, logProperHoldSeconds } from '../../lib/storage'
+import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
+import { HomeworkLogList } from '../homework/HomeworkLogList'
+import { AthleteDeskFeed } from './AthleteDeskFeed'
 
 type Props = {
   athlete: Athlete | null
@@ -50,6 +52,7 @@ export function AthleteHome({ athlete, onPractice, onProgress, onVideos }: Props
           </button>
         </div>
       </section>
+      <AthleteDeskFeed athlete={athlete} />
     </div>
   )
 }
@@ -69,16 +72,11 @@ export function AthleteProgress({ athlete }: Props) {
         <p className="mt-2 text-sm text-[var(--muted)]">Your holds and shape tests. Not anyone else’s.</p>
       </section>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="font-semibold">Recent holds</h3>
-        <ul className="mt-3 space-y-2 text-sm">
-          {logs.slice(0, 12).map((row) => (
-            <li key={row.id}>
-              {row.date.slice(0, 10)} · {row.sourceLabel || row.shapeId} ·{' '}
-              {Math.round(logProperHoldSeconds(row) || row.totalHoldSeconds)}s
-            </li>
-          ))}
-          {logs.length === 0 && <li className="text-[var(--muted)]">No holds logged yet.</li>}
-        </ul>
+        <h3 className="font-semibold">Hold logs</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Grouped by day so older work stays readable.</p>
+        <div className="mt-3">
+          <HomeworkLogList logs={logs} athlete={athlete} viewer={athlete} />
+        </div>
       </section>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h3 className="font-semibold">Shape tests</h3>

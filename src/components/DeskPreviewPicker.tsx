@@ -18,8 +18,8 @@ export function DeskPreviewPicker({ value, onChange, compact = false }: Props) {
             Look as
           </p>
           <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-            Stay on this gym login. Switch the desk so you can build parent, athlete, and gym-owner
-            screens without extra accounts.
+            Stay on this gym login. Switch between coach, gym-owner, parent, and athlete
+            desks without extra accounts.
           </p>
         </>
       )}

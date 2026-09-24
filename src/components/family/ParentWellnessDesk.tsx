@@ -168,7 +168,8 @@ export function ParentWellnessDesk({ accountId }: Props) {
       </section>
 
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="font-semibold">Guided exercises</h3>
+        <h3 className="font-semibold">Exercises</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Pick the ones you did. Nothing here is a guided session.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {WELLNESS_EXERCISES.map((row) => (
             <button

@@ -3,12 +3,13 @@
  * Does not change the real account. Local to this browser.
  */
 
-export type DeskPreview = 'home' | 'gymOwner' | 'parent' | 'athlete'
+export type DeskPreview = 'home' | 'coach' | 'gymOwner' | 'parent' | 'athlete'
 
 const KEY = 'shape-lab.deskPreview.v1'
 
 export const DESK_PREVIEW_OPTIONS: { id: DeskPreview; label: string }[] = [
   { id: 'home', label: 'Gym' },
+  { id: 'coach', label: 'Coach' },
   { id: 'gymOwner', label: 'Gym owner' },
   { id: 'parent', label: 'Parent' },
   { id: 'athlete', label: 'Athlete' },
@@ -17,7 +18,15 @@ export const DESK_PREVIEW_OPTIONS: { id: DeskPreview; label: string }[] = [
 export function loadDeskPreview(): DeskPreview {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw === 'gymOwner' || raw === 'parent' || raw === 'athlete' || raw === 'home') return raw
+    if (
+      raw === 'gymOwner' ||
+      raw === 'parent' ||
+      raw === 'athlete' ||
+      raw === 'home' ||
+      raw === 'coach'
+    ) {
+      return raw
+    }
   } catch {
     /* private mode */
   }

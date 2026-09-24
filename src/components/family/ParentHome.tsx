@@ -3,6 +3,7 @@ import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { getAgeFromDateOfBirth, birthdayNeeded } from '../../lib/age'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/parentEducation'
+import { AthleteDeskFeed } from './AthleteDeskFeed'
 
 type Props = {
   parent: Athlete
@@ -29,7 +30,7 @@ export function ParentHome({
     [child],
   )
   const logs = useMemo(
-    () => (child ? loadHomeworkLogs().filter((row) => row.athleteId === child.id).slice(0, 5) : []),
+    () => (child ? loadHomeworkLogs().filter((row) => row.athleteId === child.id) : []),
     [child],
   )
 
@@ -75,6 +76,7 @@ export function ParentHome({
       {child && (
         <>
           <ChildSnapshot child={child} homework={homework} logs={logs} />
+          <AthleteDeskFeed athlete={child} logs={logs} />
           {birthdayNeeded(child.dateOfBirth) && (
             <p className="rounded-xl border border-[#6ec8d6]/40 bg-[#6ec8d6]/10 px-4 py-3 text-sm">
               Birthday needed for {child.name}. It stays private and is used for age-appropriate

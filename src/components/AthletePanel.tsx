@@ -368,7 +368,7 @@ export function AthletePanel({
   )
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 overflow-x-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
         {active ? `${roleLabel(active)} profile` : 'Profile'}
       </p>

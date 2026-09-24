@@ -20,6 +20,7 @@ import {
 } from '../lib/gymBackup'
 import { roleLabel } from '../lib/profileRole'
 import { AthleteAvatar } from './AthleteAvatar'
+import { CollapsibleSection } from './CollapsibleSection'
 
 type PersistInfo = {
   mode: 'blob' | 'disk' | 'tmp'
@@ -179,13 +180,15 @@ export function GymRecords({ athletes, onAthletes }: Props) {
         </p>
       )}
 
-      <p className="mt-3 text-sm text-[var(--muted)]">
-        {athletes.length} profile{athletes.length === 1 ? '' : 's'}
-        {withPhone ? ` · ${withPhone} with a phone or email` : ''}
-      </p>
-
-      <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--panel-border)]">
-        <table className="min-w-full text-left text-sm">
+      <div className="mt-3">
+        <CollapsibleSection
+          title="Profile directory"
+          hint={`${athletes.length} profiles${withPhone ? ` · ${withPhone} with contact info` : ''}`}
+          defaultOpen={false}
+          inset
+        >
+        <div className="phone-h-scroll rounded-lg border border-[var(--panel-border)]">
+          <table className="min-w-[48rem] text-left text-sm">
           <thead className="bg-[#0d1218] text-[11px] uppercase tracking-wider text-[var(--muted)]">
             <tr>
               <th className="px-3 py-2 font-medium">Photo</th>
@@ -214,7 +217,9 @@ export function GymRecords({ athletes, onAthletes }: Props) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
+        </CollapsibleSection>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">

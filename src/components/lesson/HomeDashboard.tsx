@@ -109,6 +109,8 @@ type Props = {
   classSessionOpen?: boolean
   onOpenNamesTest?: (groupId?: string) => void
   onOpenSkillPaths?: () => void
+  /** When false, this desk is a coach login — not gym-admin. */
+  gymAdmin?: boolean
 }
 
 export function HomeDashboard({
@@ -126,8 +128,10 @@ export function HomeDashboard({
   classSessionOpen = false,
   onOpenNamesTest,
   onOpenSkillPaths,
+  gymAdmin: gymAdminProp,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
+  const gymAdmin = gymAdminProp ?? isGymAdmin(signedIn)
   const [withIds, setWithIds] = useState<string[]>([])
   const [editing, setEditing] = useState<LessonPlan | null>(null)
   const [refresh, setRefresh] = useState(0)
@@ -188,9 +192,9 @@ export function HomeDashboard({
   const events = useMemo(() => {
     void refresh
     const all = listTrainingEvents()
-    if (!signedIn || isGymAdmin(signedIn)) return all
+    if (!signedIn || gymAdmin) return all
     return all.filter((event) => event.coachIds.includes(signedIn.id))
-  }, [refresh, signedIn])
+  }, [refresh, signedIn, gymAdmin])
   const hiddenGyms = useMemo(() => {
     void hiddenTick
     return listHiddenGyms()
@@ -838,7 +842,7 @@ export function HomeDashboard({
             }}
             startKind={startKind}
             onStartKindConsumed={() => setStartKind(null)}
-            gymAdmin={isGymAdmin(signedIn)}
+            gymAdmin={gymAdmin}
             hiddenGyms={hiddenGyms}
             onHideGym={(gym) => {
               hideListedGym(gym)

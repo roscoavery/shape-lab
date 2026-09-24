@@ -881,7 +881,11 @@ export default function App() {
       ? { ...activeProfile, role: 'parent' }
       : activeProfile && deskPreview === 'athlete'
         ? { ...activeProfile, role: 'athlete' }
-        : activeProfile
+        : activeProfile && deskPreview === 'coach'
+          ? { ...activeProfile, role: 'coach' }
+          : activeProfile && deskPreview === 'gymOwner'
+            ? { ...activeProfile, role: 'gym_owner' }
+            : activeProfile
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
       ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
@@ -939,9 +943,9 @@ export default function App() {
     <FavoritesProvider>
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
-    <div className="mx-auto min-h-screen max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <div className="mx-auto min-h-screen min-w-0 max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
+      <header className="mb-4 flex min-w-0 max-w-full flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             shapelab
           </h1>
@@ -970,14 +974,16 @@ export default function App() {
             </div>
           )}
         </div>
-        <AppNav
-          tab={tab}
-          ryan={ryanEdit}
-          kiosk={floorKiosk}
-          admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
-          role={previewRole ?? authUser.role}
-          onGo={goTab}
-        />
+        <div className="min-w-0 max-w-full flex-1">
+          <AppNav
+            tab={tab}
+            ryan={ryanEdit}
+            kiosk={floorKiosk}
+            admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
+            role={previewRole ?? authUser.role}
+            onGo={goTab}
+          />
+        </div>
         <div className="ml-auto shrink-0">
           <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
         </div>
@@ -1067,7 +1073,8 @@ export default function App() {
             ) : (
               <HomeDashboard
                 athletes={athletes}
-                signedIn={activeProfile}
+                signedIn={previewProfile}
+                gymAdmin={deskPreview === 'home' && isGymAdmin(activeProfile)}
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
                 onOpenLesson={(session) => {
@@ -1440,12 +1447,12 @@ export default function App() {
           athleteName={athletes.find((a) => a.id === activeAthleteId)?.name ?? null}
           persistIgToApp={ryanEdit}
           onReferencesChange={setReferencePhotos}
-          signedIn={activeProfile}
+          signedIn={previewProfile}
           athletes={athletes}
           intent={learnIntent}
           onIntentConsumed={() => setLearnIntent(null)}
           onOpenNamesTest={
-            activeProfile && isCoachProfile(activeProfile)
+            previewProfile && isCoachProfile(previewProfile)
               ? (groupId) => {
                   setNamesQuizGroupId(groupId ?? 'desk')
                   setNamesQuizOpen(true)
@@ -1453,7 +1460,7 @@ export default function App() {
               : undefined
           }
           onOpenSkillPaths={
-            activeProfile && isCoachProfile(activeProfile)
+            previewProfile && isCoachProfile(previewProfile)
               ? () => setSkillPathsOpen(true)
               : undefined
           }
@@ -1716,7 +1723,7 @@ export default function App() {
       )}
 
       {tab === 'history' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="mx-auto grid min-w-0 max-w-3xl gap-4 overflow-x-hidden">
+        <div className="mx-auto grid min-w-0 max-w-3xl gap-4">
           {ryanEdit && <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />}
           <AthletePanel
             athletes={athletes}
