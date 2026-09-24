@@ -212,8 +212,16 @@ export function CoachStillGallery({
 
   const removeStill = async (id: string) => {
     if (!onPhotosChange) return
+    const label = id.startsWith('default_') ? 'shipped shape library still' : 'coach still'
+    if (
+      !confirm(
+        `Remove this ${label} from the gym library? This needs to be intentional — it will hide on every device.`,
+      )
+    ) {
+      return
+    }
     setFlash('Removing still…')
-    const remote = await hideCoachStill(id)
+    const remote = await hideCoachStill(id, { intentional: true })
     onPhotosChange(photos.filter((p) => p.id !== id))
     if (mainId === id) {
       const next = stills.find((p) => p.id !== id && !p.id.startsWith('default_')) ?? stills.find((p) => p.id !== id)

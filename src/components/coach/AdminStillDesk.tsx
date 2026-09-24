@@ -51,9 +51,10 @@ export function AdminStillDesk({ photos, onPhotosChange }: Props) {
   }
 
   const remove = async (id: string) => {
+    if (!confirm('Permanently hide this still from the shape library on every device?')) return
     setBusy(true)
     try {
-      const remote = await hideCoachStill(id)
+      const remote = await hideCoachStill(id, { intentional: true })
       onPhotosChange(photos.filter((p) => p.id !== id))
       if (selectedId === id) setSelectedId(null)
       say(remote.ok ? 'Deleted from this gym.' : remote.error ?? 'Could not delete that still.')

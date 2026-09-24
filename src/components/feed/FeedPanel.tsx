@@ -437,41 +437,59 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
             : 'No posts yet. A thought, a first hit of the day, or a class collage from Classes can live here.'}
         </p>
       ) : (
-        <ul className="space-y-4">
+        <ul className={wins ? 'divide-y divide-white/10 border-y border-white/10' : 'space-y-4'}>
           {visiblePosts.map((post) => {
             const author = authorOf(post.authorId)
             const taggedPeople = winSubjectIds(post)
               .map((id) => authorOf(id))
               .filter((a): a is Athlete => Boolean(a))
+            const when = new Date(post.createdAt)
+            const timeLabel = when.toLocaleString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
             return (
               <li
                 key={post.id}
-                className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
+                className={
+                  wins
+                    ? 'bg-[var(--panel)] px-3 py-4 sm:px-4'
+                    : 'overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]'
+                }
               >
-                <div className="flex items-center gap-2 px-4 py-3">
-                  <AthleteAvatar athlete={author} size="sm" />
-                  <RoleBadge athlete={author} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--text)]">
-                      {author ? (wins ? publicFeedName(author) : author.name) : 'Unknown profile'}
-                    </p>
-                    <p className="text-[11px] text-[var(--muted)]">
-                      {isPassPost(post)
-                        ? 'Pass · '
-                        : post.kind === 'collage'
-                        ? 'Shared a class collage · '
-                        : post.sharedByName
-                          ? `shared by ${post.sharedByName} · `
-                          : post.kind === 'text'
-                            ? 'Thought · '
-                            : ''}
-                      {new Date(post.createdAt).toLocaleString()}
-                      {taggedPeople.length > 0
-                        ? ` · with ${taggedPeople.map((a) => a.name).join(', ')}`
-                        : ''}
-                    </p>
+                <div className={`flex items-start gap-3 ${wins ? '' : 'items-center px-4 py-3'}`}>
+                  <AthleteAvatar athlete={author} size={wins ? 'md' : 'sm'} />
+                  {!wins && <RoleBadge athlete={author} />}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <p className="text-[15px] font-semibold leading-snug text-[var(--text)]">
+                        {author ? (wins ? publicFeedName(author) : author.name) : 'Unknown profile'}
+                      </p>
+                      {wins && (
+                        <p className="text-[13px] text-[var(--muted)]">{timeLabel}</p>
+                      )}
+                    </div>
+                    {!wins && (
+                      <p className="text-[11px] text-[var(--muted)]">
+                        {isPassPost(post)
+                          ? 'Pass · '
+                          : post.kind === 'collage'
+                            ? 'Shared a class collage · '
+                            : post.sharedByName
+                              ? `shared by ${post.sharedByName} · `
+                              : post.kind === 'text'
+                                ? 'Thought · '
+                                : ''}
+                        {timeLabel}
+                        {taggedPeople.length > 0
+                          ? ` · with ${taggedPeople.map((a) => a.name).join(', ')}`
+                          : ''}
+                      </p>
+                    )}
                   </div>
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
                     <AttachWinClip
                       post={post}
                       viewer={athlete}
@@ -522,13 +540,22 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                 ) : null}
                 {post.caption && (
                   <p
-                    className={`px-4 py-3 text-sm leading-relaxed text-[var(--text)] ${
-                      post.kind === 'text' || (!post.url && post.kind !== 'collage')
-                        ? 'text-base'
-                        : ''
+                    className={`leading-relaxed text-[var(--text)] ${
+                      wins
+                        ? 'mt-2 text-[15px]'
+                        : `px-4 py-3 text-sm ${
+                            post.kind === 'text' || (!post.url && post.kind !== 'collage')
+                              ? 'text-base'
+                              : ''
+                          }`
                     }`}
                   >
                     <MentionText text={post.caption} athletes={athletes} />
+                  </p>
+                )}
+                {wins && taggedPeople.length > 0 && (
+                  <p className="mt-2 text-[13px] text-[var(--muted)]">
+                    with {taggedPeople.map((a) => publicFeedName(a)).join(', ')}
                   </p>
                 )}
                 {athlete && (
@@ -538,9 +565,10 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                     athletes={athletes}
                     onPosts={setPosts}
                     onNotice={setNotice}
+                    compact={wins}
                   />
                 )}
-                {taggedPeople.length > 0 && (
+                {!wins && taggedPeople.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-4 pb-3">
                     {taggedPeople.map((a) => (
                       <button
@@ -549,7 +577,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                         onClick={() => viewProfile(a.id)}
                         className="rounded-full bg-[#0d1218] px-2 py-0.5 text-[11px] text-[var(--muted)]"
                       >
-                        {wins ? publicFeedName(a) : a.name}
+                        {a.name}
                       </button>
                     ))}
                   </div>
@@ -680,12 +708,14 @@ function WinReactBar({
   athletes,
   onPosts,
   onNotice,
+  compact = false,
 }: {
   post: FeedPost
   athlete: Athlete
   athletes: Athlete[]
   onPosts: (fn: (prev: FeedPost[]) => FeedPost[]) => void
   onNotice: (text: string | null) => void
+  compact?: boolean
 }) {
   const liked = (post.likes ?? []).includes(athlete.id)
   const reposted = (post.reposts ?? []).includes(athlete.id)
@@ -810,25 +840,37 @@ function WinReactBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
+    <div
+      className={`flex flex-wrap items-center gap-2 ${
+        compact ? 'mt-3 border-t border-white/8 pt-3' : 'gap-1 px-4 pb-3'
+      }`}
+    >
       <IconAction kind="like" label={liked ? 'Unlike' : 'Like'} on={liked} count={(post.likes ?? []).length} onClick={tapLike} />
       {athlete.id !== post.authorId && (
         <IconAction kind="repost" label={reposted ? 'On your profile' : 'Repost'} on={reposted} onClick={tapRepost} />
       )}
       {showHi5 && (
-        <button type="button" onClick={tapHi5} className={reactClass(hi5ed)} aria-label={hi5ed ? 'High-fived' : 'High five'}>
-          🙌
+        <button
+          type="button"
+          onClick={tapHi5}
+          className={reactClass(hi5ed)}
+          aria-label={hi5ed ? 'High-fived' : 'High five'}
+        >
+          <span className="text-base leading-none" aria-hidden>🙌</span>
+          <span className="sr-only">High five</span>
           {(post.hi5s ?? []).length > 0 ? ` ${(post.hi5s ?? []).length}` : ''}
         </button>
       )}
-      <button
-        type="button"
-        onClick={tapAllThree}
-        aria-label="Like, high-five, and repost"
-        className="rounded-full bg-[#f0b429] px-2.5 py-1 text-xs font-semibold text-[#2a1d08]"
-      >
-        ★
-      </button>
+      {!compact && (
+        <button
+          type="button"
+          onClick={tapAllThree}
+          aria-label="Like, high-five, and repost"
+          className="rounded-full bg-[#f0b429] px-2.5 py-1 text-xs font-semibold text-[#2a1d08]"
+        >
+          ★
+        </button>
+      )}
     </div>
   )
 }

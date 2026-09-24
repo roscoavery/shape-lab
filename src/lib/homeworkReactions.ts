@@ -10,7 +10,7 @@ export const HOMEWORK_REACTIONS: {
   label: string
   verb: string
 }[] = [
-  { kind: 'hi5', emoji: '', label: 'High five', verb: 'high-fived' },
+  { kind: 'hi5', emoji: '🙌', label: 'High five', verb: 'high-fived' },
   { kind: 'fist', emoji: '', label: 'Fist bump', verb: 'fist bumped' },
   { kind: 'flex', emoji: '💪', label: 'Flex', verb: 'flexed at' },
   { kind: 'like', emoji: '👍', label: 'Like', verb: 'liked' },

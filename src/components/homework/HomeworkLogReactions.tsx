@@ -60,7 +60,7 @@ export function HomeworkLogReactions({
                 </span>
               ) : (
                 <span className="absolute -bottom-1 -right-1 rounded bg-black/70 px-0.5 text-[8px] font-bold leading-none text-[var(--accent)]">
-                  {row.kind === 'hi5' ? '5' : '•'}
+                  {row.kind === 'hi5' ? '🙌' : '•'}
                 </span>
               )}
             </span>
@@ -81,7 +81,7 @@ export function HomeworkLogReactions({
                   : 'hover:bg-white/10'
               }`}
             >
-              {r.emoji || (r.kind === 'hi5' ? 'Hi-5' : r.kind === 'fist' ? 'Bump' : r.label)}
+              {r.emoji || (r.kind === 'hi5' ? '🙌' : r.kind === 'fist' ? 'Bump' : r.label)}
             </button>
           ))}
         </span>

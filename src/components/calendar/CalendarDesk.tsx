@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Athlete } from '../../types'
 import {
   authorizeCalendarApi,
@@ -18,6 +18,11 @@ import {
   mergeCalendarEvents,
   saveCalendarClipboard,
 } from '../../lib/calendarDisplay'
+import {
+  loadCalendarWeekColMin,
+  saveCalendarWeekColMin,
+  stepCalendarWeekColMin,
+} from '../../lib/calendarWeekPrefs'
 import { CalendarLayersSheet } from './CalendarLayersSheet'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
@@ -191,6 +196,14 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [syncBusy, setSyncBusy] = useState(false)
   const timelineHostRef = useRef<HTMLDivElement | null>(null)
   const [hourPx, setHourPx] = useState(HOUR_PX)
+  const [weekColMin, setWeekColMin] = useState(() => loadCalendarWeekColMin())
+  const weekScrollRef = useRef<HTMLDivElement | null>(null)
+
+  const bumpWeekZoom = (delta: number) => {
+    const next = stepCalendarWeekColMin(weekColMin, delta)
+    setWeekColMin(next)
+    saveCalendarWeekColMin(next)
+  }
 
   const roster = useMemo(
     () =>
@@ -249,6 +262,12 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (view !== 'week') return
+    const mq = window.matchMedia('(max-width: 767px)')
+    if (mq.matches) setFullScreen(true)
+  }, [view])
 
   useEffect(() => {
     if (!fullScreen) return
@@ -580,15 +599,42 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
       )}
 
       {view === 'week' && !fullScreen && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-xs text-[var(--muted)]">Pinch or use − / + to change day width.</p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className="rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-xs"
+              onClick={() => bumpWeekZoom(-1)}
+              aria-label="Narrower days"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-xs"
+              onClick={() => bumpWeekZoom(1)}
+              aria-label="Wider days"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+
+      {view === 'week' && !fullScreen && (
         <WeekTimeline
+          scrollRef={weekScrollRef}
           days={weekDays}
           hours={hours}
           hourPx={HOUR_PX}
+          dayColMin={weekColMin}
           events={displayEvents}
           selected={selected}
           openEventId={openEventId}
           onSelectDay={setSelected}
           onToggleEvent={(id) => setOpenEventId((cur) => (cur === id ? null : id))}
+          onZoom={bumpWeekZoom}
         />
       )}
 
@@ -624,6 +670,9 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
             activeLessonId={activeLessonId}
             onStart={startLesson}
             onPick={() => setPickEventId(openEvent.id)}
+            onDelete={
+              !openEvent.id.startsWith('shapelab-class:') ? () => deleteOpenEvent() : undefined
+            }
           />
         </div>
       )}
@@ -798,6 +847,27 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
               </h3>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {view === 'week' && (
+                <div className="flex items-center gap-1 rounded-full border border-[var(--panel-border)] px-1 py-0.5">
+                  <button
+                    type="button"
+                    className="px-2 text-xs"
+                    aria-label="Fit week on screen"
+                    onClick={() => {
+                      setWeekColMin(0)
+                      saveCalendarWeekColMin(0)
+                    }}
+                  >
+                    Fit
+                  </button>
+                  <button type="button" className="px-2 text-xs" onClick={() => bumpWeekZoom(-1)} aria-label="Narrower">
+                    −
+                  </button>
+                  <button type="button" className="px-2 text-xs" onClick={() => bumpWeekZoom(1)} aria-label="Wider">
+                    +
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 className="rounded-full border border-[var(--panel-border)] px-2 py-1 text-xs"
@@ -832,14 +902,17 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           <div ref={timelineHostRef} className="min-h-0 flex-1 overflow-hidden px-2">
             {view === 'week' ? (
               <WeekTimeline
+                scrollRef={weekScrollRef}
                 days={weekDays}
                 hours={hours}
                 hourPx={hourPx}
+                dayColMin={weekColMin}
                 events={displayEvents}
                 selected={selected}
                 openEventId={openEventId}
                 onSelectDay={setSelected}
                 onToggleEvent={(id) => setOpenEventId((cur) => (cur === id ? null : id))}
+                onZoom={bumpWeekZoom}
                 fullHeight
               />
             ) : (
@@ -864,6 +937,9 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                 activeLessonId={activeLessonId}
                 onStart={startLesson}
                 onPick={() => setPickEventId(openEvent.id)}
+                onDelete={
+                  !openEvent.id.startsWith('shapelab-class:') ? () => deleteOpenEvent() : undefined
+                }
               />
             </div>
           )}
@@ -986,6 +1062,7 @@ function EventPreview({
   activeLessonId,
   onStart,
   onPick,
+  onDelete,
   compact = false,
 }: {
   ev: TodayCalendarEvent
@@ -995,6 +1072,7 @@ function EventPreview({
   activeLessonId: string | null
   onStart: (ev: TodayCalendarEvent, athleteId: string) => void
   onPick: () => void
+  onDelete?: () => void
   compact?: boolean
 }) {
   const linked = ev.lessonLinks?.[0]
@@ -1065,6 +1143,15 @@ function EventPreview({
                 Select athlete
               </button>
             ))}
+          {onDelete && (
+            <button
+              type="button"
+              className="mt-2 rounded-md border border-red-400/40 px-2 py-1 text-[11px] font-semibold text-red-300"
+              onClick={onDelete}
+            >
+              Delete from iCloud
+            </button>
+          )}
         </div>
       )}
       {!open && (ev.notes?.trim() || ev.location) && (
@@ -1186,34 +1273,59 @@ function NowLine({ day, hours, hourPx }: { day: Date; hours: number[]; hourPx: n
 }
 
 function WeekTimeline({
+  scrollRef,
   days,
   hours,
   hourPx,
+  dayColMin,
   events,
   selected,
   openEventId,
   onSelectDay,
   onToggleEvent,
+  onZoom,
   fullHeight = false,
 }: {
+  scrollRef?: RefObject<HTMLDivElement | null>
   days: Date[]
   hours: number[]
   hourPx: number
+  dayColMin: number
   events: TodayCalendarEvent[]
   selected: Date
   openEventId: string | null
   onSelectDay: (d: Date) => void
   onToggleEvent: (id: string) => void
+  onZoom?: (delta: number) => void
   fullHeight?: boolean
 }) {
   const height = hours.length * hourPx
+  const colTemplate =
+    dayColMin > 0
+      ? `2.75rem repeat(7, minmax(${dayColMin}px, 1fr))`
+      : '2.75rem repeat(7, minmax(0, 1fr))'
+  const innerMinWidth = dayColMin > 0 ? dayColMin * 7 + 48 : undefined
+
+  useEffect(() => {
+    const el = scrollRef?.current
+    if (!el || !onZoom) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      onZoom(e.deltaY > 0 ? -1 : 1)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [scrollRef, onZoom])
+
   return (
     <div
-      className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
-      style={fullHeight ? undefined : { maxHeight: 'min(24rem, 52dvh)' }}
+      ref={scrollRef}
+      className={`phone-h-scroll mt-3 w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto ${fullHeight ? 'h-full' : ''}`}
+      style={fullHeight ? undefined : { maxHeight: 'min(28rem, 58dvh)' }}
     >
-      <div className="min-w-[42rem]">
-        <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
+      <div className="w-full" style={innerMinWidth ? { minWidth: innerMinWidth } : undefined}>
+        <div className="grid" style={{ gridTemplateColumns: colTemplate }}>
           <div className="sticky left-0 z-[3] bg-[var(--panel)]" />
           {days.map((day) => {
             const on = sameDay(day, selected)
@@ -1239,7 +1351,7 @@ function WeekTimeline({
             )
           })}
         </div>
-        <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-white/10">
+        <div className="grid border-b border-white/10" style={{ gridTemplateColumns: colTemplate }}>
           <p className="sticky left-0 z-[3] bg-[var(--panel)] pr-1 pt-1.5 text-right text-[9px] uppercase tracking-wider text-[var(--muted)]">
             All-day
           </p>
@@ -1252,7 +1364,7 @@ function WeekTimeline({
             />
           ))}
         </div>
-        <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
+        <div className="grid" style={{ gridTemplateColumns: colTemplate }}>
           <HourGutter hours={hours} height={height} hourPx={hourPx} />
           {days.map((day) => {
             const laid = layoutTimedEvents(

@@ -761,11 +761,21 @@ const MAX_IG_LOCAL = 2500
 const MAX_COACH_LOCAL = 2000
 const MAX_OTHER_LOCAL = 80
 
+function isProtectedLibraryStill(p: ReferencePhoto): boolean {
+  if (p.id.startsWith('default_')) return true
+  if (p.persistedToApp) return true
+  if (p.library === 'coach' && (p.id.startsWith('coach_') || p.id.startsWith('shipped_'))) return true
+  return false
+}
+
 export function capReferencePhotos(photos: ReferencePhoto[]): ReferencePhoto[] {
-  const ig = photos.filter((p) => p.library === 'ig')
-  const coach = photos.filter((p) => p.library === 'coach')
-  const other = photos.filter((p) => p.library !== 'ig' && p.library !== 'coach')
+  const protectedRows = photos.filter(isProtectedLibraryStill)
+  const protectedIds = new Set(protectedRows.map((p) => p.id))
+  const ig = photos.filter((p) => p.library === 'ig' && !protectedIds.has(p.id))
+  const coach = photos.filter((p) => p.library === 'coach' && !protectedIds.has(p.id))
+  const other = photos.filter((p) => p.library !== 'ig' && p.library !== 'coach' && !protectedIds.has(p.id))
   return [
+    ...protectedRows,
     ...ig.slice(0, MAX_IG_LOCAL),
     ...coach.slice(0, MAX_COACH_LOCAL),
     ...other.slice(0, MAX_OTHER_LOCAL),

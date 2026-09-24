@@ -9,12 +9,13 @@ import { setMainCoachStill } from './coachStillPrefs'
 import { fileToJpegBlob, blobToDataUrl } from './glossaryStore'
 import {
   forgetRemovedCoachStill,
+  isRemovedCoachStill,
   loadRemovedCoachStillIds,
   noteRemovedCoachStill,
   saveRemovedCoachStillIds,
   UNMATCHED_STILL_SHAPE,
 } from './removedCoachStills'
-import { emptyCoachStillSlot } from './shippedRefs'
+import { emptyCoachStillSlot, makeShippedPhotos, SHIPPED_FILES } from './shippedRefs'
 import { capReferencePhotos, createId, loadReferencePhotos, saveReferencePhotos, saveReferencePhoto } from './storage'
 import type { ReferencePhoto } from '../types'
 
@@ -237,7 +238,13 @@ export async function hydrateCoachStills(
   for (const photo of unsaved) {
     await persistCoachStillExtra(photo)
   }
-  return mergeCoachExtras(merged, file.extras)
+  const withShipped = recoverVanishedShippedStills(mergeCoachExtras(merged, file.extras))
+  const shippedUnion = [...makeShippedCoachExtras(), ...withShipped]
+  const byId = new Map<string, ReferencePhoto>()
+  for (const p of shippedUnion) {
+    if (!isRemovedCoachStill(p.id)) byId.set(p.id, p)
+  }
+  return capReferencePhotos([...byId.values()])
 }
 
 export async function persistCoachStillExtra(photo: ReferencePhoto): Promise<PersistStillResult> {
@@ -396,8 +403,30 @@ export async function reassignCoachStill(
   return { ...remote, photo: kept }
 }
 
+/** Re-show shipped curriculum stills that vanished from local storage (not intentional hides). */
+export function recoverVanishedShippedStills(photos: ReferencePhoto[]): ReferencePhoto[] {
+  const ids = new Set(photos.map((p) => p.id))
+  for (const shapeId of Object.keys(SHIPPED_FILES)) {
+    for (const p of makeShippedPhotos(shapeId)) {
+      if (!ids.has(p.id) && loadRemovedCoachStillIds().includes(p.id)) {
+        forgetRemovedCoachStill(p.id)
+      }
+    }
+  }
+  return photos
+}
+
 /** Hide an extra or an original shipped still. Tombstone stays on every device. */
-export async function hideCoachStill(id: string): Promise<PersistStillResult> {
+export async function hideCoachStill(
+  id: string,
+  opts?: { intentional?: boolean },
+): Promise<PersistStillResult> {
+  if (!opts?.intentional) {
+    return {
+      ok: false,
+      error: 'Removal cancelled — confirm you mean to remove this library still.',
+    }
+  }
   if (!id) return { ok: false, error: 'Still is missing.' }
   if (id.startsWith('default_')) {
     noteRemovedCoachStill(id)

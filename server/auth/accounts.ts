@@ -10,6 +10,8 @@ import { hashPassword, verifyPassword } from './passwords.ts'
 import { isAccountRole, clampMaxDevices, DEFAULT_MAX_DEVICES, type Account, type AccountRole, type AuthUser } from './types.ts'
 
 const FILE = 'data/accounts.json'
+const SNAPSHOT = 'data/.accounts-merge-snapshot.json'
+const PARK_FILE = '.gym-park/data/accounts.json'
 
 type AccountFile = {
   kind: 'shape-lab-accounts'
@@ -53,20 +55,58 @@ function asAccount(raw: unknown): Account | null {
   }
 }
 
+function mergeAccountRows(...lists: Account[][]): Account[] {
+  const byId = new Map<string, Account>()
+  const byEmail = new Map<string, Account>()
+  for (const list of lists) {
+    for (const row of list) {
+      if (!row) continue
+      const existing = byId.get(row.id) ?? byEmail.get(row.email)
+      if (!existing || row.updatedAt >= existing.updatedAt) {
+        byId.set(row.id, row)
+        byEmail.set(row.email, row)
+      }
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.email.localeCompare(b.email))
+}
+
 async function readFile(): Promise<AccountFile> {
   const stored = await readJson<AccountFile>(FILE, EMPTY)
-  if (!stored || stored.kind !== 'shape-lab-accounts' || !Array.isArray(stored.accounts)) {
-    return { ...EMPTY }
+  const snapshot = await readJson<AccountFile>(SNAPSHOT, EMPTY)
+  const parked = await readJson<AccountFile>(PARK_FILE, EMPTY)
+  const primary =
+    stored && stored.kind === 'shape-lab-accounts' && Array.isArray(stored.accounts)
+      ? stored.accounts.map(asAccount).filter((row): row is Account => Boolean(row))
+      : []
+  const fromSnapshot =
+    snapshot && snapshot.kind === 'shape-lab-accounts' && Array.isArray(snapshot.accounts)
+      ? snapshot.accounts.map(asAccount).filter((row): row is Account => Boolean(row))
+      : []
+  const fromPark =
+    parked && parked.kind === 'shape-lab-accounts' && Array.isArray(parked.accounts)
+      ? parked.accounts.map(asAccount).filter((row): row is Account => Boolean(row))
+      : []
+  const accounts = mergeAccountRows(primary, fromSnapshot, fromPark)
+  if (accounts.length > primary.length) {
+    await writeJson(FILE, { kind: 'shape-lab-accounts', version: 1, accounts })
   }
   return {
     kind: 'shape-lab-accounts',
     version: 1,
-    accounts: stored.accounts.map(asAccount).filter((row): row is Account => Boolean(row)),
+    accounts,
   }
 }
 
-async function writeFile(accounts: Account[]): Promise<AccountFile> {
-  const next: AccountFile = { kind: 'shape-lab-accounts', version: 1, accounts }
+async function writeFile(accounts: Account[], opts?: { replace?: boolean }): Promise<AccountFile> {
+  const prev = await readJson<AccountFile>(FILE, EMPTY)
+  const prevRows =
+    prev && prev.kind === 'shape-lab-accounts' && Array.isArray(prev.accounts)
+      ? prev.accounts.map(asAccount).filter((row): row is Account => Boolean(row))
+      : []
+  const merged = opts?.replace ? accounts : mergeAccountRows(accounts, prevRows)
+  const next: AccountFile = { kind: 'shape-lab-accounts', version: 1, accounts: merged }
+  await writeJson(SNAPSHOT, next)
   await writeJson(FILE, next)
   return next
 }
@@ -208,7 +248,7 @@ export async function deleteAccount(accountId: string): Promise<void> {
   if ((target.role === 'admin' || target.role === 'gymOwner') && !stillHasAdmin) {
     throw new Error('Keep at least one gym admin account.')
   }
-  await writeFile(remaining)
+  await writeFile(remaining, { replace: true })
 }
 
 export async function updateAccount(

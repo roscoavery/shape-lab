@@ -24,6 +24,7 @@ import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
 import { applyAppTheme, FAVORITE_COLORS } from './lib/profileTheme'
 import { AppNav } from './components/AppNav'
+import { IgMobileShell } from './components/mobile/IgMobileShell'
 import { CameraStage } from './components/CameraStage'
 import { CoachInbox } from './components/CoachInbox'
 import { CoachShapeLibrary } from './components/coach/CoachShapeLibrary'
@@ -944,7 +945,15 @@ export default function App() {
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
     <div className="mx-auto min-h-screen min-w-0 max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
-      <header className="mb-4 flex min-w-0 max-w-full flex-wrap items-start justify-between gap-3">
+      <IgMobileShell
+        tab={tab}
+        onGo={goTab}
+        authUser={authUser}
+        athlete={activeProfile}
+        athletes={athletes}
+        settings={settings}
+      >
+      <header className="mb-4 hidden min-w-0 max-w-full flex-wrap items-start justify-between gap-3 md:flex">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             shapelab
@@ -1984,6 +1993,7 @@ export default function App() {
       )}
 
       <ImproveNotesDock page={tab} />
+      </IgMobileShell>
     </div>
     {stationOpen && (
       <ClassStation
