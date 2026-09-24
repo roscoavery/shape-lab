@@ -35,12 +35,22 @@ export function SkillPathPreview({ goals, coachView = false }: Props) {
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
               Long-term hope
             </p>
-            <h4 className="mt-1 text-base font-bold">
-              {goal.label}
-              {goal.surface ? ` · ${surfaceLabel(goal.surface)}` : ''}
-            </h4>
+            <h4 className="mt-1 text-base font-bold">{goal.label}</h4>
+            {goal.surface ? (
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                This hope on {surfaceLabel(goal.surface)} — same skill, surface is the spec.
+              </p>
+            ) : null}
             {skill?.note && (
               <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">{skill.note}</p>
+            )}
+            {skill?.workWhere && skill.workWhere.length > 0 && (
+              <p className="mt-2 text-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Where to work it
+                </span>
+                <span className="mt-0.5 block">{skill.workWhere.join(' · ')}</span>
+              </p>
             )}
             {needs.length > 0 && (
               <ul className="mt-3 space-y-2">

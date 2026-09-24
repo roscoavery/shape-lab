@@ -88,6 +88,7 @@ import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
+import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
@@ -172,6 +173,7 @@ const API_PATHS = new Set([
   '/api/coach-classes',
   '/api/training-events',
   '/api/skill-paths',
+  '/api/improve-notes',
   '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-media',
@@ -1321,6 +1323,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeSkillPathsFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/improve-notes') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readImproveNotesFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeImproveNotesFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

@@ -526,17 +526,19 @@ export function HomeDashboard({
   }
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4">
+    <div className="mx-auto grid min-w-0 max-w-3xl gap-4 overflow-x-hidden">
       <CollapsibleSection
         title="Calendar"
         hint="Month, week, or day · collapsed until you need it"
         defaultOpen={false}
       >
+        <div className="min-w-0 max-w-full overflow-x-hidden">
         <CalendarDesk
           coachId={signedIn.id}
           athletes={athletes}
           onStartLesson={onStartLesson}
         />
+        </div>
       </CollapsibleSection>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1235,7 +1237,7 @@ export function HomeDashboard({
         <TodayShortcuts
           onGo={onShortcut}
           showStation
-          showNames={Boolean(onOpenNamesTest) && !activeGroup && !liveClass && !liveLesson}
+          showNames={false}
         />
       )}
 

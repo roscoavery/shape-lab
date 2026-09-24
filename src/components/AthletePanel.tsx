@@ -368,7 +368,7 @@ export function AthletePanel({
   )
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <div className="flex min-w-0 flex-col gap-2 overflow-x-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
         {active ? `${roleLabel(active)} profile` : 'Profile'}
       </p>
@@ -378,18 +378,20 @@ export function AthletePanel({
         </div>
       )}
       {canSeeAllProfiles && onViewProfile && !allowDelete && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <CollapsibleSection title="People on this gym" hint={`${athletes.length} profiles`} defaultOpen={false} inset>
+        <div className="mb-3 flex max-h-40 flex-wrap gap-2 overflow-y-auto">
           {athletes.map((a) => (
             <button
               key={a.id}
               type="button"
               onClick={() => onViewProfile(a.id)}
-              className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs"
+              className="max-w-full rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs"
             >
               <AthleteName athlete={a} size="xs" />
             </button>
           ))}
         </div>
+        </CollapsibleSection>
       )}
       {allowDelete && (
         <CollapsibleSection title="People on this gym" hint={`${listed.length} profiles`} defaultOpen={false} inset>

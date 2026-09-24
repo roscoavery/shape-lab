@@ -44,6 +44,8 @@ export type ParentJournalEntry = {
   id: string
   date: string
   body: string
+  worse?: string
+  helps?: string
 }
 
 export type ParentWellnessProfile = {

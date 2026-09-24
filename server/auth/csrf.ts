@@ -17,6 +17,7 @@ const GYM_WRITE_PATHS = new Set([
   '/api/coach-content',
   '/api/chalkboards',
   '/api/skill-paths',
+  '/api/improve-notes',
   '/api/training-events',
 ])
 

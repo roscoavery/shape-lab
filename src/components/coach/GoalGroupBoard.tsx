@@ -20,8 +20,7 @@ export function GoalGroupBoard({ athletes, onViewProfile, onOpenBuilder }: Props
           </p>
           <h4 className="mt-1 text-lg font-semibold">What they said they want</h4>
           <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-            Use this to put similar kids together for the hour. It is not a
-            promise they will throw that skill today.
+            Same skill stays one group even if someone named dead mat. The surface is a spec of that hope, not a different skill.
           </p>
         </div>
         {onOpenBuilder && (
@@ -39,30 +38,39 @@ export function GoalGroupBoard({ athletes, onViewProfile, onOpenBuilder }: Props
           <div key={group.key} className="rounded-xl bg-[#0d1218] p-3">
             <p className="text-sm font-bold">
               {group.label}
-              {group.surface ? ` · ${surfaceLabel(group.surface)}` : ''}
               <span className="ml-2 text-xs font-medium text-[var(--muted)]">
                 {group.athletes.length}
               </span>
             </p>
+            {group.surfaces.length > 0 && (
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                Specs named · {group.surfaces.map(surfaceLabel).join(', ')}
+              </p>
+            )}
             <ul className="mt-2 grid gap-1.5">
-              {group.athletes.map((a) => (
-                <li key={a.id}>
+              {group.athletes.map(({ athlete: a, surface }) => (
+                <li key={`${a.id}-${surface ?? 'any'}`}>
                   <button
                     type="button"
                     onClick={() => onViewProfile?.(a.id)}
                     className="flex w-full items-center justify-between gap-2 text-left text-sm"
                   >
-                    <AthleteName athlete={a} />
+                    <span className="min-w-0">
+                      <AthleteName athlete={a} />
+                      {surface ? (
+                        <span className="ml-1 text-xs text-[var(--muted)]">· {surfaceLabel(surface)}</span>
+                      ) : null}
+                    </span>
                     <span className="text-xs text-[var(--accent)]">View</span>
                   </button>
                 </li>
               ))}
             </ul>
-            {group.skillId && group.athletes[0]?.skillGoals && (
+            {group.skillId && group.athletes[0]?.athlete.skillGoals && (
               <div className="mt-3">
                 <SkillPathPreview
                   coachView
-                  goals={group.athletes[0].skillGoals.filter(
+                  goals={group.athletes[0].athlete.skillGoals.filter(
                     (g) => (g.skillId ?? g.label) && (g.skillId === group.skillId || g.label === group.label),
                   )}
                 />

@@ -40,6 +40,8 @@ export type ParentJournalEntry = {
   id: string
   date: string
   body: string
+  worse?: string
+  helps?: string
 }
 
 export type ParentWellnessProfile = {
@@ -103,7 +105,13 @@ function asJournal(row: unknown): ParentJournalEntry | null {
   if (!row || typeof row !== 'object') return null
   const r = row as Record<string, unknown>
   if (typeof r.id !== 'string' || typeof r.date !== 'string' || typeof r.body !== 'string') return null
-  return { id: r.id.slice(0, 80), date: r.date.slice(0, 40), body: r.body.trim().slice(0, 2000) }
+  return {
+    id: r.id.slice(0, 80),
+    date: r.date.slice(0, 40),
+    body: r.body.trim().slice(0, 2000),
+    worse: text(r.worse, 400) || undefined,
+    helps: text(r.helps, 400) || undefined,
+  }
 }
 
 export function emptyParentWellness(accountId: string): ParentWellnessProfile {

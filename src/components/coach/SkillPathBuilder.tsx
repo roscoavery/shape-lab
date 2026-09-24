@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Athlete, TrainingSurface } from '../../types'
 import {
   NEED_KIND_LABEL,
@@ -9,6 +9,7 @@ import {
   deleteSkill,
   getSkill,
   listSkills,
+  matchSkillExact,
   needLabel,
   needsForSkill,
   saveConditioning,
@@ -31,6 +32,16 @@ type Props = {
 
 const KINDS: SkillNeedKind[] = ['required', 'helpful', 'alt']
 
+type Step =
+  | 'pick'
+  | 'name'
+  | 'surface'
+  | 'where'
+  | 'subgoal'
+  | 'another'
+  | 'body'
+  | 'review'
+
 export function SkillPathBuilder({
   coachId,
   athletes = [],
@@ -38,12 +49,49 @@ export function SkillPathBuilder({
   startSkillId = null,
 }: Props) {
   const [tick, setTick] = useState(0)
-  const [query, setQuery] = useState('')
-  const [openId, setOpenId] = useState<string | null>(startSkillId)
   useEffect(() => subscribeSkillPaths(() => setTick((n) => n + 1)), [])
   void tick
-  const skills = useMemo(() => (query.trim() ? searchSkills(query) : listSkills()), [query, tick])
+
   const listedHopes = useMemo(() => unmatchedAthleteGoals(athletes), [athletes, tick])
+  const existingSkills = useMemo(() => listSkills(), [tick])
+
+  const [step, setStep] = useState<Step>(startSkillId ? 'review' : 'pick')
+  const [skillId, setSkillId] = useState<string | null>(startSkillId)
+  const [draftName, setDraftName] = useState('')
+  const [draftSurfaces, setDraftSurfaces] = useState<TrainingSurface[]>([])
+  const [whereDraft, setWhereDraft] = useState('')
+  const [subgoalDraft, setSubgoalDraft] = useState('')
+  const [subgoalKind, setSubgoalKind] = useState<SkillNeedKind>('helpful')
+  const [bodyDraft, setBodyDraft] = useState('')
+  const [pickQuery, setPickQuery] = useState('')
+
+  const skill = skillId ? getSkill(skillId) : null
+  const needs = skill ? needsForSkill(skill.id) : []
+  const cond = skill ? conditioningForSkill(skill.id) : []
+
+  const beginHope = (label: string, surfaces: TrainingSurface[] = []) => {
+    const match = matchSkillExact(label) ?? listSkills().find((s) => s.name.toLowerCase() === label.toLowerCase())
+    const saved = match ?? saveSkill({ name: label, coachId, surfaces })
+    setSkillId(saved.id)
+    setDraftName(saved.name)
+    setDraftSurfaces(saved.surfaces?.length ? saved.surfaces : surfaces)
+    setStep(match && (needsForSkill(saved.id).length > 0 || (saved.workWhere?.length ?? 0) > 0) ? 'review' : 'name')
+  }
+
+  const persistSkill = (patch: Partial<SkillDef> = {}) => {
+    if (!skillId) return
+    const live = getSkill(skillId)
+    if (!live) return
+    saveSkill({
+      id: skillId,
+      name: patch.name ?? draftName ?? live.name,
+      note: patch.note ?? live.note,
+      surfaces: patch.surfaces ?? draftSurfaces,
+      coachId,
+      powerDown: live.powerDown,
+      workWhere: patch.workWhere ?? live.workWhere,
+    })
+  }
 
   return (
     <div className="fixed inset-0 z-[85] flex flex-col bg-[#071018] text-[var(--text)]">
@@ -52,9 +100,7 @@ export function SkillPathBuilder({
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6ec8d6]">
             Skill paths
           </p>
-          <p className="text-sm text-white/60">
-            Prerequisites and body standards for bigger hopes
-          </p>
+          <p className="text-sm text-white/60">One question at a time</p>
         </div>
         <button
           type="button"
@@ -65,426 +111,448 @@ export function SkillPathBuilder({
         </button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
-        <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-          <p className="text-sm leading-relaxed text-white/65">
-            Pick one hope. Build only that path today — the pieces that make
-            it more likely. Do not try to edit every skill at once.
-          </p>
-          <input
-            className="h-11 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-            placeholder="Find the one skill you are building today"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {!openId && listedHopes.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6ec8d6]">
-                Start with one hope on the roster
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {listedHopes.slice(0, 8).map((hope) => (
+        <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
+          {step === 'pick' && (
+            <QuestionCard
+              prompt="Which hope are you building a path for?"
+              hint="Pick one listed hope, an existing skill, or type a new name. Dead mat is a spec of the same skill — not a second skill."
+            >
+              {listedHopes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6ec8d6]">
+                    Hopes on the roster
+                  </p>
+                  {listedHopes.map((hope) => (
+                    <button
+                      key={hope.key}
+                      type="button"
+                      onClick={() => beginHope(hope.label, hope.surfaces)}
+                      className="block w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-left"
+                    >
+                      <p className="text-sm font-bold">{hope.label}</p>
+                      <p className="mt-0.5 text-xs text-white/55">
+                        {hope.athletes.map((a) => a.name).join(', ')}
+                        {hope.surfaces.length
+                          ? ` · specs: ${hope.surfaces.map(surfaceLabel).join(', ')}`
+                          : ''}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input
+                className="h-12 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                placeholder="Search a skill already in the map"
+                value={pickQuery}
+                onChange={(e) => setPickQuery(e.target.value)}
+              />
+              {(pickQuery.trim() ? searchSkills(pickQuery) : existingSkills.slice(0, 6)).map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => {
+                    setSkillId(row.id)
+                    setDraftName(row.name)
+                    setDraftSurfaces(row.surfaces ?? [])
+                    setStep('review')
+                  }}
+                  className="block w-full rounded-xl bg-white/5 px-3 py-3 text-left text-sm font-semibold"
+                >
+                  {row.name}
+                </button>
+              ))}
+              <div className="flex gap-2">
+                <input
+                  className="h-12 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                  placeholder="Or type a new skill name"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && draftName.trim()) beginHope(draftName.trim())
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={!draftName.trim()}
+                  onClick={() => beginHope(draftName.trim())}
+                  className="rounded-lg bg-[#6ec8d6] px-4 text-sm font-bold text-[#061418] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </QuestionCard>
+          )}
+
+          {step === 'name' && skill && (
+            <QuestionCard
+              prompt={`Keep this name for the skill?`}
+              hint="Round-off handspring on dead mat is still round-off handspring. The surface is a spec of this hope."
+            >
+              <input
+                className="h-12 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+              />
+              <NavRow
+                back={() => setStep('pick')}
+                next={() => {
+                  persistSkill({ name: draftName })
+                  setStep('surface')
+                }}
+                nextLabel="That's the skill"
+              />
+            </QuestionCard>
+          )}
+
+          {step === 'surface' && skill && (
+            <QuestionCard
+              prompt="Did anyone name a surface for this hope?"
+              hint="Dead mat, tramp, spring floor — these specify the same skill. Skip if they did not say."
+            >
+              <div className="flex flex-wrap gap-1.5">
+                {TRAINING_SURFACES.map((row) => {
+                  const on = draftSurfaces.includes(row.id)
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() =>
+                        setDraftSurfaces((cur) =>
+                          on ? cur.filter((id) => id !== row.id) : [...cur, row.id],
+                        )
+                      }
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        on ? 'bg-[#6ec8d6] text-[#061418]' : 'border border-white/15'
+                      }`}
+                    >
+                      {row.short}
+                    </button>
+                  )
+                })}
+              </div>
+              <NavRow
+                back={() => setStep('name')}
+                next={() => {
+                  persistSkill({ surfaces: draftSurfaces })
+                  setStep('where')
+                }}
+                nextLabel="Next"
+                skip={() => {
+                  persistSkill({ surfaces: draftSurfaces })
+                  setStep('where')
+                }}
+              />
+            </QuestionCard>
+          )}
+
+          {step === 'where' && skill && (
+            <QuestionCard
+              prompt="Where should coaches work this?"
+              hint="Spot, tramp, dead mat, rod — whatever you want the next coach to see when this hope comes up again."
+            >
+              {(skill.workWhere ?? []).length > 0 && (
+                <ul className="space-y-1 text-sm">
+                  {skill.workWhere!.map((line) => (
+                    <li key={line} className="rounded-lg bg-black/30 px-3 py-2">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                className="h-12 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                placeholder="e.g. Dead mat first, then tramp"
+                value={whereDraft}
+                onChange={(e) => setWhereDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && whereDraft.trim()) {
+                    persistSkill({ workWhere: [...(skill.workWhere ?? []), whereDraft.trim()] })
+                    setWhereDraft('')
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={!whereDraft.trim()}
+                onClick={() => {
+                  persistSkill({ workWhere: [...(skill.workWhere ?? []), whereDraft.trim()] })
+                  setWhereDraft('')
+                }}
+                className="self-start rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold disabled:opacity-40"
+              >
+                Save this place
+              </button>
+              <NavRow back={() => setStep('surface')} next={() => setStep('subgoal')} nextLabel="Next" skip={() => setStep('subgoal')} />
+            </QuestionCard>
+          )}
+
+          {step === 'subgoal' && skill && (
+            <QuestionCard
+              prompt={`Name one piece that helps ${skill.name}.`}
+              hint="If this hope has been built before, the pieces already on file show below. Add only what is missing."
+            >
+              {needs.length > 0 && (
+                <ul className="space-y-2">
+                  {needs.map((need) => (
+                    <li key={need.id} className="rounded-xl bg-black/30 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6ec8d6]">
+                        {NEED_KIND_LABEL[need.kind]}
+                      </p>
+                      <p className="text-sm font-semibold">{needLabel(need)}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {KINDS.map((id) => (
                   <button
-                    key={hope.key}
+                    key={id}
                     type="button"
-                    onClick={() => {
-                      const match = listSkills().find(
-                        (s) => s.name.toLowerCase() === hope.label.toLowerCase(),
-                      )
-                      setOpenId(match?.id ?? null)
-                      setQuery(hope.label)
-                    }}
-                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
+                    onClick={() => setSubgoalKind(id)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      subgoalKind === id ? 'bg-[#6ec8d6] text-[#061418]' : 'border border-white/15'
+                    }`}
                   >
-                    {hope.label}
+                    {NEED_KIND_LABEL[id]}
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-          {!openId && listedHopes.length > 0 && (
-            <section className="rounded-2xl border border-[#6ec8d6]/35 bg-[#102028] p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6ec8d6]">
-                Skills athletes listed as goals
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-white/65">
-                These hopes are not in the pathway yet. They stay here until you
-                add them — they are not added automatically.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {listedHopes.map((row) => (
-                  <li
-                    key={row.key}
-                    className="rounded-xl border border-white/10 bg-black/25 px-3 py-2"
+              <input
+                className="h-12 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                placeholder="A prerequisite or helpful subgoal"
+                value={subgoalDraft}
+                onChange={(e) => setSubgoalDraft(e.target.value)}
+              />
+              {searchSkills(subgoalDraft)
+                .filter((s) => s.id !== skill.id)
+                .slice(0, 4)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      saveNeed({
+                        skillId: skill.id,
+                        needSkillId: s.id,
+                        kind: subgoalKind,
+                        order: Date.now() % 100000,
+                      })
+                      setSubgoalDraft('')
+                      setStep('another')
+                    }}
+                    className="block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm"
                   >
-                    <p className="text-sm font-bold">
+                    Use existing · {s.name}
+                  </button>
+                ))}
+              <NavRow
+                back={() => setStep('where')}
+                next={() => {
+                  if (subgoalDraft.trim()) {
+                    saveNeed({
+                      skillId: skill.id,
+                      label: subgoalDraft.trim(),
+                      kind: subgoalKind,
+                      order: Date.now() % 100000,
+                    })
+                    setSubgoalDraft('')
+                  }
+                  setStep('another')
+                }}
+                nextLabel={subgoalDraft.trim() ? 'Save this piece' : 'Skip'}
+              />
+            </QuestionCard>
+          )}
+
+          {step === 'another' && skill && (
+            <QuestionCard prompt="Add another piece for this hope?">
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('subgoal')}
+                  className="h-12 rounded-xl bg-[#6ec8d6] text-sm font-bold text-[#061418]"
+                >
+                  Yes — one more
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('body')}
+                  className="h-12 rounded-xl border border-white/15 text-sm font-semibold"
+                >
+                  That is enough
+                </button>
+              </div>
+            </QuestionCard>
+          )}
+
+          {step === 'body' && skill && (
+            <QuestionCard
+              prompt="Any body standard that helps this hope?"
+              hint="Hollow time, wall handstand, strength — skip if none."
+            >
+              {cond.length > 0 && (
+                <ul className="space-y-1 text-sm">
+                  {cond.map((row) => (
+                    <li key={row.id} className="rounded-lg bg-black/30 px-3 py-2">
                       {row.label}
-                      {row.surface ? ` · ${surfaceLabel(row.surface)}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                className="h-12 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                placeholder="Hollow arms up for 1 minute"
+                value={bodyDraft}
+                onChange={(e) => setBodyDraft(e.target.value)}
+              />
+              <NavRow
+                back={() => setStep('another')}
+                next={() => {
+                  if (bodyDraft.trim()) {
+                    saveConditioning({ skillId: skill.id, label: bodyDraft.trim(), kind: 'helpful' })
+                    setBodyDraft('')
+                  }
+                  setStep('review')
+                }}
+                nextLabel={bodyDraft.trim() ? 'Save and review' : 'Skip to review'}
+              />
+            </QuestionCard>
+          )}
+
+          {step === 'review' && skill && (
+            <QuestionCard
+              prompt={skill.name}
+              hint="This is the path on file. Next time someone lists this hope, these pieces show up — including on dead mat or any other surface."
+            >
+              {(skill.workWhere ?? []).length > 0 && (
+                <p className="text-sm">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6ec8d6]">
+                    Where to work it
+                  </span>
+                  <span className="mt-0.5 block">{skill.workWhere!.join(' · ')}</span>
+                </p>
+              )}
+              {skill.surfaces && skill.surfaces.length > 0 && (
+                <p className="text-sm text-white/70">
+                  Specs named · {skill.surfaces.map(surfaceLabel).join(', ')}
+                </p>
+              )}
+              <ul className="space-y-2">
+                {needs.map((need) => (
+                  <li key={need.id} className="rounded-xl bg-black/30 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6ec8d6]">
+                      {NEED_KIND_LABEL[need.kind]}
                     </p>
-                    <p className="mt-0.5 text-xs text-white/55">
-                      {row.athletes.map((a) => a.name).join(', ')}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const saved = saveSkill({ name: row.label, coachId })
-                        setOpenId(saved.id)
-                        setQuery('')
-                      }}
-                      className="mt-2 text-xs font-semibold text-[#6ec8d6]"
-                    >
-                      Add to pathway
+                    <p className="text-sm font-semibold">{needLabel(need)}</p>
+                    <button type="button" onClick={() => deleteNeed(need.id)} className="mt-1 text-xs text-[#e06b6b]">
+                      Remove
                     </button>
                   </li>
                 ))}
               </ul>
-            </section>
+              <ul className="space-y-1">
+                {cond.map((row) => (
+                  <li key={row.id} className="rounded-xl bg-black/30 px-3 py-2 text-sm">
+                    {row.label}
+                    <button
+                      type="button"
+                      onClick={() => deleteConditioning(row.id)}
+                      className="ml-2 text-xs text-[#e06b6b]"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('subgoal')}
+                  className="h-11 rounded-xl bg-[#6ec8d6] text-sm font-bold text-[#061418]"
+                >
+                  Add another piece
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSkillId(null)
+                    setDraftName('')
+                    setDraftSurfaces([])
+                    setStep('pick')
+                  }}
+                  className="h-11 rounded-xl border border-white/15 text-sm font-semibold"
+                >
+                  Build a different hope
+                </button>
+                <button type="button" onClick={onClose} className="text-sm text-white/55 underline">
+                  Done
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteSkill(skill.id)
+                    setSkillId(null)
+                    setStep('pick')
+                  }}
+                  className="text-xs text-[#e06b6b]"
+                >
+                  Delete this skill
+                </button>
+              </div>
+            </QuestionCard>
           )}
-          <NewSkillForm
-            coachId={coachId}
-            onSaved={(id) => {
-              setOpenId(id)
-              setQuery('')
-            }}
-          />
-          {(openId ? skills.filter((s) => s.id === openId) : skills.slice(0, 8)).map((skill) => (
-            <article key={skill.id} className="rounded-2xl border border-white/10 bg-[#0d161c] p-3">
-              <button
-                type="button"
-                onClick={() => setOpenId((cur) => (cur === skill.id ? null : skill.id))}
-                className="w-full text-left"
-              >
-                <p className="text-base font-bold">{skill.name}</p>
-                {skill.note && (
-                  <p className="mt-1 text-xs leading-relaxed text-white/55">{skill.note}</p>
-                )}
-              </button>
-              {openId === skill.id && <SkillEditor skill={skill} coachId={coachId} />}
-            </article>
-          ))}
         </div>
       </div>
     </div>
   )
 }
 
-function NewSkillForm({
-  coachId,
-  onSaved,
+function QuestionCard({
+  prompt,
+  hint,
+  children,
 }: {
-  coachId?: string
-  onSaved: (id: string) => void
+  prompt: string
+  hint?: string
+  children: ReactNode
 }) {
-  const [name, setName] = useState('')
   return (
-    <div className="rounded-2xl border border-dashed border-white/20 p-3">
-      <p className="text-sm font-semibold">Add a skill or goal</p>
-      <div className="mt-2 flex gap-2">
-        <input
-          className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-          placeholder="New skill name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && name.trim()) {
-              const row = saveSkill({ name, coachId })
-              setName('')
-              onSaved(row.id)
-            }
-          }}
-        />
-        <button
-          type="button"
-          disabled={!name.trim()}
-          onClick={() => {
-            const row = saveSkill({ name, coachId })
-            setName('')
-            onSaved(row.id)
-          }}
-          className="rounded-lg bg-[#6ec8d6] px-3 text-sm font-bold text-[#061418] disabled:opacity-40"
-        >
-          Add
-        </button>
-      </div>
-    </div>
+    <section className="rounded-2xl border border-white/10 bg-[#0d161c] p-4">
+      <h2 className="text-xl font-bold leading-snug">{prompt}</h2>
+      {hint && <p className="mt-2 text-sm leading-relaxed text-white/60">{hint}</p>}
+      <div className="mt-4 flex flex-col gap-3">{children}</div>
+    </section>
   )
 }
 
-function SkillEditor({ skill, coachId }: { skill: SkillDef; coachId?: string }) {
-  const [name, setName] = useState(skill.name)
-  const [note, setNote] = useState(skill.note ?? '')
-  const [surfaces, setSurfaces] = useState<TrainingSurface[]>(skill.surfaces ?? [])
-  const [powerText, setPowerText] = useState((skill.powerDown ?? []).map((s) => s.label).join('\n'))
-  const live = getSkill(skill.id) ?? skill
-  const needs = needsForSkill(live.id)
-  const cond = conditioningForSkill(live.id)
-
-  const persist = (patch: Partial<SkillDef> = {}) => {
-    saveSkill({
-      id: skill.id,
-      name: patch.name ?? name,
-      note: patch.note ?? note,
-      surfaces: patch.surfaces ?? surfaces,
-      coachId,
-      powerDown: (patch.powerDown ??
-        powerText
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((label, i) => ({
-            id: live.powerDown?.[i]?.id ?? `pd_${skill.id}_${i}`,
-            label,
-          }))),
-    })
-  }
-
+function NavRow({
+  back,
+  next,
+  nextLabel,
+  skip,
+}: {
+  back: () => void
+  next: () => void
+  nextLabel: string
+  skip?: () => void
+}) {
   return (
-    <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
-      <label className="block">
-        <span className="text-xs font-semibold text-white/55">Name</span>
-        <input
-          className="mt-1 h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => persist({ name })}
-        />
-      </label>
-      <label className="block">
-        <span className="text-xs font-semibold text-white/55">How coaches should read this</span>
-        <textarea
-          className="mt-1 min-h-[4.5rem] w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onBlur={() => persist({ note })}
-        />
-      </label>
-      <div>
-        <p className="text-xs font-semibold text-white/55">Typical surfaces</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {TRAINING_SURFACES.map((row) => {
-            const on = surfaces.includes(row.id)
-            return (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => {
-                  const next = on ? surfaces.filter((id) => id !== row.id) : [...surfaces, row.id]
-                  setSurfaces(next)
-                  persist({ surfaces: next })
-                }}
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  on ? 'bg-[#6ec8d6] text-[#061418]' : 'border border-white/15'
-                }`}
-              >
-                {row.short}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      <label className="block">
-        <span className="text-xs font-semibold text-white/55">
-          More power → less power (one step per line)
-        </span>
-        <textarea
-          className="mt-1 min-h-[6rem] w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
-          value={powerText}
-          onChange={(e) => setPowerText(e.target.value)}
-          onBlur={() => persist()}
-          placeholder="2-step hurdle&#10;Power hurdle&#10;Standing tuck"
-        />
-      </label>
-
-      <div>
-        <p className="text-sm font-semibold">Prerequisites</p>
-        <ul className="mt-2 space-y-2">
-          {needs.map((need) => (
-            <li key={need.id} className="rounded-xl bg-black/30 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6ec8d6]">
-                {NEED_KIND_LABEL[need.kind]}
-              </p>
-              <p className="text-sm font-semibold">{needLabel(need)}</p>
-              {need.note && <p className="text-xs text-white/55">{need.note}</p>}
-              <button
-                type="button"
-                onClick={() => deleteNeed(need.id)}
-                className="mt-1 text-xs text-[#e06b6b]"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <AddNeedForm skillId={skill.id} />
-      </div>
-
-      <div>
-        <p className="text-sm font-semibold">Body standards</p>
-        <ul className="mt-2 space-y-2">
-          {cond.map((row) => (
-            <li key={row.id} className="rounded-xl bg-black/30 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6ec8d6]">
-                {NEED_KIND_LABEL[row.kind]}
-              </p>
-              <p className="text-sm font-semibold">{row.label}</p>
-              <button
-                type="button"
-                onClick={() => deleteConditioning(row.id)}
-                className="mt-1 text-xs text-[#e06b6b]"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <AddConditionForm skillId={skill.id} />
-      </div>
-
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={back} className="rounded-lg px-3 py-2 text-sm text-white/60">
+        Back
+      </button>
       <button
         type="button"
-        onClick={() => deleteSkill(skill.id)}
-        className="text-xs font-semibold text-[#e06b6b]"
+        onClick={next}
+        className="rounded-lg bg-[#6ec8d6] px-4 py-2 text-sm font-bold text-[#061418]"
       >
-        Delete this skill
+        {nextLabel}
       </button>
-    </div>
-  )
-}
-
-function AddNeedForm({ skillId }: { skillId: string }) {
-  const [query, setQuery] = useState('')
-  const [note, setNote] = useState('')
-  const [kind, setKind] = useState<SkillNeedKind>('helpful')
-  const [surface, setSurface] = useState<TrainingSurface | ''>('')
-  const picks = searchSkills(query).filter((s) => s.id !== skillId).slice(0, 6)
-
-  const add = (needSkillId?: string, label?: string) => {
-    const text = (label || query).trim()
-    if (!needSkillId && !text) return
-    saveNeed({
-      skillId,
-      needSkillId,
-      label: needSkillId ? undefined : text,
-      kind,
-      note: note.trim() || undefined,
-      surfaces: surface ? [surface] : undefined,
-      order: Date.now() % 100000,
-    })
-    setQuery('')
-    setNote('')
-  }
-
-  return (
-    <div className="mt-2 space-y-2 rounded-xl border border-white/10 p-2">
-      <div className="flex flex-wrap gap-1.5">
-        {KINDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setKind(id)}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-              kind === id ? 'bg-[#6ec8d6] text-[#061418]' : 'border border-white/15'
-            }`}
-          >
-            {NEED_KIND_LABEL[id]}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => setSurface('')}
-          className={`rounded-full px-2 py-1 text-[11px] ${
-            !surface ? 'bg-white/15' : 'border border-white/10'
-          }`}
-        >
-          Any surface
-        </button>
-        {TRAINING_SURFACES.map((row) => (
-          <button
-            key={row.id}
-            type="button"
-            onClick={() => setSurface(row.id)}
-            className={`rounded-full px-2 py-1 text-[11px] ${
-              surface === row.id ? 'bg-white/15' : 'border border-white/10'
-            }`}
-          >
-            {row.short}
-          </button>
-        ))}
-      </div>
-      <input
-        className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-        placeholder="Search a skill, or type a new piece"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <input
-        className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-        placeholder="Note (optional)"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      {picks.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => add(s.id, s.name)}
-          className="block w-full rounded-lg bg-white/5 px-3 py-2 text-left text-sm"
-        >
-          {s.name}
-        </button>
-      ))}
-      {query.trim() && (
-        <button
-          type="button"
-          onClick={() => add(undefined, query.trim())}
-          className="text-xs font-semibold text-[#6ec8d6]"
-        >
-          Add “{query.trim()}” as a free-text piece
+      {skip && (
+        <button type="button" onClick={skip} className="text-sm text-white/50 underline">
+          Skip
         </button>
       )}
-    </div>
-  )
-}
-
-function AddConditionForm({ skillId }: { skillId: string }) {
-  const [label, setLabel] = useState('')
-  const [kind, setKind] = useState<SkillNeedKind>('helpful')
-  return (
-    <div className="mt-2 flex flex-col gap-2">
-      <div className="flex flex-wrap gap-1.5">
-        {KINDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setKind(id)}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-              kind === id ? 'bg-[#6ec8d6] text-[#061418]' : 'border border-white/15'
-            }`}
-          >
-            {NEED_KIND_LABEL[id]}
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-          placeholder="Hollow arms up for 1 minute"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-        <button
-          type="button"
-          disabled={!label.trim()}
-          onClick={() => {
-            saveConditioning({ skillId, label: label.trim(), kind })
-            setLabel('')
-          }}
-          className="rounded-lg bg-white/10 px-3 text-sm font-semibold disabled:opacity-40"
-        >
-          Add
-        </button>
-      </div>
     </div>
   )
 }

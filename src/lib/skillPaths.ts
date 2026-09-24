@@ -26,6 +26,8 @@ export type SkillDef = {
   note?: string
   surfaces?: TrainingSurface[]
   powerDown?: PowerDownStep[]
+  /** Coach suggestions for where to work this hope (spot, dead mat, tramp…). */
+  workWhere?: string[]
   createdAt: string
   updatedAt: string
   shipped?: boolean
@@ -241,6 +243,7 @@ export function saveSkill(input: {
   note?: string
   surfaces?: TrainingSurface[]
   powerDown?: PowerDownStep[]
+  workWhere?: string[]
 }): SkillDef {
   const file = readRaw()
   const now = new Date().toISOString()
@@ -253,6 +256,7 @@ export function saveSkill(input: {
     note: input.note?.trim() || undefined,
     surfaces: input.surfaces,
     powerDown: input.powerDown,
+    workWhere: input.workWhere ?? existing?.workWhere,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     shipped: existing?.shipped,
@@ -345,13 +349,13 @@ export function resolveGoalSkill(goal: AthleteSkillGoal): SkillDef | null {
 export type ListedAthleteGoal = {
   key: string
   label: string
-  surface?: TrainingSurface
-  athletes: { id: string; name: string }[]
+  surfaces: TrainingSurface[]
+  athletes: { id: string; name: string; surface?: TrainingSurface }[]
 }
 
 /**
  * Hopes athletes named that are not already a skill in the pathway.
- * Coaches see these on the skill-path desk. They are not auto-added.
+ * Surfaces (dead mat, tramp…) are specs of the same hope, not a second skill.
  */
 export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] {
   const map = new Map<string, ListedAthleteGoal>()
@@ -361,16 +365,17 @@ export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] 
       const label = goal.label.trim()
       if (!label) continue
       if (resolveGoalSkill(goal)) continue
-      const key = `${skillKey(label)}|${goal.surface ?? ''}`
+      const key = skillKey(label)
       const have = map.get(key)
-      const row = { id: a.id, name }
+      const row = { id: a.id, name, surface: goal.surface }
       if (have) {
-        if (!have.athletes.some((x) => x.id === a.id)) have.athletes.push(row)
+        if (!have.athletes.some((x) => x.id === a.id && x.surface === goal.surface)) have.athletes.push(row)
+        if (goal.surface && !have.surfaces.includes(goal.surface)) have.surfaces.push(goal.surface)
       } else {
         map.set(key, {
           key,
           label,
-          surface: goal.surface,
+          surfaces: goal.surface ? [goal.surface] : [],
           athletes: [row],
         })
       }
@@ -381,43 +386,52 @@ export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] 
 
 export { labelsMatch, skillKey }
 
+export type GoalAthlete = {
+  athlete: Athlete
+  surface?: TrainingSurface
+}
+
 export type GoalGroup = {
   key: string
   label: string
-  surface?: TrainingSurface
   skillId?: string
-  athletes: Athlete[]
+  surfaces: TrainingSurface[]
+  athletes: GoalAthlete[]
 }
 
 export function groupAthletesByGoal(athletes: Athlete[]): GoalGroup[] {
   const map = new Map<string, GoalGroup>()
-  const none: Athlete[] = []
+  const none: GoalAthlete[] = []
   for (const a of athletes) {
     const goals = a.skillGoals?.filter((g) => g.label.trim()) ?? []
     if (goals.length === 0) {
-      none.push(a)
+      none.push({ athlete: a })
       continue
     }
     for (const goal of goals) {
       const skill = resolveGoalSkill(goal)
-      const key = `${skill?.id ?? goal.label.toLowerCase()}|${goal.surface ?? ''}`
+      const key = skill?.id ?? skillKey(goal.label)
       const have = map.get(key)
+      const row: GoalAthlete = { athlete: a, surface: goal.surface }
       if (have) {
-        if (!have.athletes.some((row) => row.id === a.id)) have.athletes.push(a)
+        if (!have.athletes.some((x) => x.athlete.id === a.id && x.surface === goal.surface)) {
+          have.athletes.push(row)
+        }
+        if (goal.surface && !have.surfaces.includes(goal.surface)) have.surfaces.push(goal.surface)
       } else {
         map.set(key, {
           key,
           label: skill?.name ?? goal.label,
-          surface: goal.surface,
           skillId: skill?.id,
-          athletes: [a],
+          surfaces: goal.surface ? [goal.surface] : [],
+          athletes: [row],
         })
       }
     }
   }
   const groups = [...map.values()].sort((a, b) => a.label.localeCompare(b.label))
   if (none.length) {
-    groups.push({ key: 'none', label: 'Not said yet', athletes: none })
+    groups.push({ key: 'none', label: 'Not said yet', surfaces: [], athletes: none })
   }
   return groups
 }

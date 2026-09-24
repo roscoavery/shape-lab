@@ -51,6 +51,7 @@ import { NamesQuiz } from './components/coach/NamesQuiz'
 import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
+import { ImproveNotesDock } from './components/ImproveNotesDock'
 import { ParentEducationDesk, ParentHome } from './components/family/ParentHome'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
@@ -909,7 +910,7 @@ export default function App() {
     <FavoritesProvider>
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
-    <div className="mx-auto min-h-screen max-w-[90rem] px-3 py-4 sm:px-6">
+    <div className="mx-auto min-h-screen max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -970,7 +971,7 @@ export default function App() {
         />
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
+        <div className="grid min-w-0 gap-4 overflow-x-hidden xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
               <div className="grid gap-4">
@@ -1681,7 +1682,7 @@ export default function App() {
       )}
 
       {tab === 'history' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="mx-auto grid max-w-3xl gap-4">
+        <div className="mx-auto grid min-w-0 max-w-3xl gap-4 overflow-x-hidden">
           {ryanEdit && <GymRecords athletes={athletes} onAthletes={setAthleteRoster} />}
           <AthletePanel
             athletes={athletes}
@@ -1909,6 +1910,8 @@ export default function App() {
           </CollapsibleSection>
         </div>
       )}
+
+      <ImproveNotesDock page={tab} />
     </div>
     {stationOpen && (
       <ClassStation

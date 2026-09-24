@@ -9,6 +9,13 @@ import {
   type WellnessExerciseId,
 } from '../../lib/parentWellness'
 import { createId } from '../../lib/storage'
+import {
+  GREGER_VIDEOS,
+  GREGER_YOUTUBE,
+  NUTRITIONFACTS_HOME,
+  NUTRITIONFACTS_SEARCH,
+  searchNutritionFacts,
+} from '../../config/nutritionFacts'
 
 type Props = {
   accountId: string
@@ -22,6 +29,9 @@ export function ParentWellnessDesk({ accountId }: Props) {
   const [notes, setNotes] = useState('')
   const [exerciseId, setExerciseId] = useState<WellnessExerciseId>('glute_bridge')
   const [journal, setJournal] = useState('')
+  const [worse, setWorse] = useState('')
+  const [helps, setHelps] = useState('')
+  const [nutritionQ, setNutritionQ] = useState('')
 
   useEffect(() => {
     void loadParentWellness()
@@ -52,6 +62,8 @@ export function ParentWellnessDesk({ accountId }: Props) {
         <h2 className="mt-1 text-2xl font-semibold">Your notes</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Separate from My Athletes. Coaches who work with your child do not see this journal.
+          Use it to notice what makes pain worse and what actually helps recovery — food, rest,
+          a walk, skipping a drill.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">{WELLNESS_NOTICE}</p>
         <p className="mt-3 text-sm">Exercise days logged: {streak}</p>
@@ -94,6 +106,9 @@ export function ParentWellnessDesk({ accountId }: Props) {
 
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h3 className="font-semibold">Pain journal</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Write what flared, what you did, and whether it eased. Patterns show up faster than memory.
+        </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <label>
             <span className="text-[11px] uppercase text-[var(--muted)]">0–10</span>
@@ -115,7 +130,7 @@ export function ParentWellnessDesk({ accountId }: Props) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="What you felt, what you did"
+          placeholder="What you felt, what you did, what made it worse or better"
           className="mt-3 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           rows={3}
         />
@@ -146,6 +161,7 @@ export function ParentWellnessDesk({ accountId }: Props) {
           {profile.painEntries.slice(0, 8).map((row) => (
             <li key={row.id} className="text-[var(--muted)]">
               {row.date.slice(0, 10)} · {row.painLevel}/10 {row.location ? `· ${row.location}` : ''}
+              {row.notes ? ` · ${row.notes}` : ''}
             </li>
           ))}
         </ul>
@@ -193,32 +209,128 @@ export function ParentWellnessDesk({ accountId }: Props) {
       </section>
 
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <h3 className="font-semibold">Journal</h3>
+        <h3 className="font-semibold">Recovery journal</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Pain and recovery are easier to understand when you write what made things worse and
+          what helped. Use this alongside the pain log — not instead of a doctor when something
+          is new, severe, or lasting.
+        </p>
         <textarea
           value={journal}
           onChange={(e) => setJournal(e.target.value)}
+          placeholder="What happened today"
           className="mt-3 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          rows={4}
+          rows={3}
+        />
+        <textarea
+          value={worse}
+          onChange={(e) => setWorse(e.target.value)}
+          placeholder="What made it worse"
+          className="mt-2 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          rows={2}
+        />
+        <textarea
+          value={helps}
+          onChange={(e) => setHelps(e.target.value)}
+          placeholder="What helped"
+          className="mt-2 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          rows={2}
         />
         <button
           type="button"
           onClick={() => {
-            if (!journal.trim()) return
+            if (!journal.trim() && !worse.trim() && !helps.trim()) return
             persist({
               ...profile,
               updatedAt: new Date().toISOString(),
               journal: [
-                { id: createId('jnl'), date: new Date().toISOString(), body: journal.trim() },
+                {
+                  id: createId('jnl'),
+                  date: new Date().toISOString(),
+                  body: journal.trim() || 'Recovery note',
+                  worse: worse.trim() || undefined,
+                  helps: helps.trim() || undefined,
+                },
                 ...profile.journal,
               ].slice(0, 200),
             })
             setJournal('')
+            setWorse('')
+            setHelps('')
           }}
           className="mt-3 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[var(--on-accent)]"
         >
           Save journal
         </button>
+        <ul className="mt-4 space-y-2 text-sm">
+          {profile.journal.slice(0, 8).map((row) => (
+            <li key={row.id} className="rounded-lg bg-[#121820] px-3 py-2">
+              <p className="text-xs text-[var(--muted)]">{row.date.slice(0, 10)}</p>
+              <p>{row.body}</p>
+              {row.worse ? <p className="mt-1 text-xs text-[var(--muted)]">Worse · {row.worse}</p> : null}
+              {row.helps ? <p className="mt-1 text-xs text-[var(--muted)]">Helped · {row.helps}</p> : null}
+            </li>
+          ))}
+        </ul>
       </section>
+
+      <NutritionFactsAsk query={nutritionQ} onQuery={setNutritionQ} />
     </div>
+  )
+}
+
+function NutritionFactsAsk({ query, onQuery }: { query: string; onQuery: (v: string) => void }) {
+  const hits = searchNutritionFacts(query)
+  const searchUrl = `${NUTRITIONFACTS_SEARCH}${encodeURIComponent(query.trim() || 'protein')}`
+  return (
+    <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <h3 className="font-semibold">Nutrition questions</h3>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Answers here are short readings of public NutritionFacts.org topics and Dr. Michael
+        Greger videos — not medical advice, and not a substitute for your child&apos;s doctor.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+        <a href={NUTRITIONFACTS_HOME} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
+          NutritionFacts.org
+        </a>
+        <a href={GREGER_VIDEOS} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
+          Videos
+        </a>
+        <a href={GREGER_YOUTUBE} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
+          YouTube
+        </a>
+      </div>
+      <input
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+        placeholder="Ask about protein, dairy, sugar, sleep…"
+        className="mt-3 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+      />
+      <ul className="mt-3 space-y-3">
+        {hits.length === 0 ? (
+          <li className="text-sm text-[var(--muted)]">
+            Nothing in this short list matches. Search the source:{' '}
+            <a href={searchUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
+              nutritionfacts.org
+            </a>
+          </li>
+        ) : (
+          hits.map((card) => (
+            <li key={card.id} className="rounded-lg bg-[#121820] px-3 py-3">
+              <p className="text-sm font-semibold">{card.question}</p>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">{card.answer}</p>
+              <a
+                href={card.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs font-semibold text-[var(--accent)] underline"
+              >
+                {card.sourceLabel}
+              </a>
+            </li>
+          ))
+        )}
+      </ul>
+    </section>
   )
 }

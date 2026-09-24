@@ -26,7 +26,7 @@ import { InfoHint } from '../ui/InfoHint'
 import { IconMark } from '../ui/IconAction'
 import { AthleteSearchField } from './AthleteSearchField'
 
-type Mode = 'hold' | 'vups' | 'skill' | 'other' | `extra:${string}`
+type Mode = 'hold' | 'vups' | 'skill' | 'other' | 'catalog' | `extra:${string}`
 
 type HoldId = (typeof CLASS_HOLD_DRILLS)[number]['id']
 type HollowArms = 'down' | 'up'
@@ -45,7 +45,43 @@ const HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
   ],
   superman: [{ id: 'bird_dog', label: 'Bird dogs' }],
   side_plank: [{ id: 'on_knees', label: 'On knees' }],
+  wall_sit: [
+    { id: 'on_toes', label: 'On toes' },
+    { id: 'single_leg', label: 'Single leg' },
+  ],
+  calf_raise: [
+    { id: 'bent_knee', label: 'Bent knee' },
+    { id: 'single_left', label: 'Single left' },
+    { id: 'single_right', label: 'Single right' },
+  ],
+  glute_bridge: [{ id: 'single_leg', label: 'Single leg' }],
+  poliquin_step: [
+    { id: 'two_legs', label: 'Two legs' },
+    { id: 'assistance', label: 'Add assistance' },
+  ],
 }
+
+const CLOCK_PAGES = [
+  { id: 'holds', label: 'Holds' },
+  { id: 'core', label: 'V-ups' },
+  { id: 'legs', label: 'Legs' },
+  { id: 'knees', label: 'Knees' },
+] as const
+
+type CatalogPick = { id: string; label: string; track: 'hold' | 'reps' }
+
+const LEG_DRILLS: CatalogPick[] = [
+  { id: 'wall_sit', label: 'Wall sit', track: 'hold' },
+  { id: 'calf_raise', label: 'Calf raises', track: 'reps' },
+  { id: 'nordic_hamstring', label: 'Nordic hamstring curls', track: 'reps' },
+  { id: 'glute_bridge', label: 'Glute bridges', track: 'hold' },
+]
+
+const KNEE_DRILLS: CatalogPick[] = [
+  { id: 'slantboard_squat', label: 'Slantboard squats', track: 'reps' },
+  { id: 'poliquin_step', label: 'Poliquin steps', track: 'reps' },
+  { id: 'tib_raise', label: 'Tib raises', track: 'reps' },
+]
 
 type Props = {
   athletes: Athlete[]
@@ -101,7 +137,26 @@ export function ClassStopwatch({
   const [hollowArms, setHollowArms] = useState<HollowArms>('down')
   const [holdSpec, setHoldSpec] = useState<HoldSpec>(null)
   const [holdPage, setHoldPage] = useState(0)
+  const [catalogPick, setCatalogPick] = useState<CatalogPick | null>(null)
   const swipeX = useRef<number | null>(null)
+  const goPage = (next: number) => {
+    const p = Math.max(0, Math.min(CLOCK_PAGES.length - 1, next))
+    setHoldPage(p)
+    if (p === 0) {
+      setMode('hold')
+      setCatalogPick(null)
+    } else if (p === 1) {
+      setMode('vups')
+      setCatalogPick(null)
+    } else {
+      setMode('catalog')
+      setCatalogPick((cur) => {
+        const list = p === 2 ? LEG_DRILLS : KNEE_DRILLS
+        if (cur && list.some((d) => d.id === cur.id)) return cur
+        return null
+      })
+    }
+  }
   const [extraHoldId, setExtraHoldId] = useState<string | null>(null)
   const [side, setSide] = useState<'left' | 'right'>('left')
   const [selected, setSelected] = useState<string[]>(() => pool.map((a) => a.id))
@@ -364,6 +419,61 @@ export function ClassStopwatch({
     )
   }
 
+  const logCatalogPick = () => {
+    if (!catalogPick) {
+      setFlash('Pick an exercise on this page.')
+      return
+    }
+    if (selected.length === 0) {
+      setFlash('Pick at least one athlete.')
+      return
+    }
+    const specLabel = HOLD_SPECS[catalogPick.id]?.find((s) => s.id === holdSpec)?.label
+    const label = [catalogPick.label, specLabel].filter(Boolean).join(' · ')
+    if (catalogPick.track === 'hold') {
+      const secs = Number(manual || offer)
+      if (!Number.isFinite(secs) || secs <= 0) {
+        setFlash('Start and stop the clock, or type the seconds.')
+        return
+      }
+      const extra = makeClassExtra({
+        kind: 'catalog',
+        refId: catalogPick.id,
+        label,
+        trackMode: 'hold',
+      })
+      if (!extra) return
+      const n = logClassExtraForAthletes({
+        athleteIds: selected,
+        extra,
+        seconds: secs,
+        className,
+        meetingId: meeting?.id,
+      })
+      reset()
+      setFlash(`Logged ${label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
+      return
+    }
+    const nReps = Number(reps)
+    if (!Number.isFinite(nReps) || nReps <= 0) {
+      setFlash(`Enter how many ${catalogPick.label} they did.`)
+      return
+    }
+    const nSets = Number(sets)
+    const n = logClassRepsForAthletes({
+      athleteIds: selected,
+      catalogId: catalogPick.id,
+      sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
+      reps: nReps,
+      label,
+      className,
+      meetingId: meeting?.id,
+    })
+    setFlash(
+      `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
+    )
+  }
+
   const logSkill = async () => {
     const text = skillText.trim()
     if (!skillAthleteId || (!text && !skillFile)) {
@@ -435,7 +545,11 @@ export function ClassStopwatch({
             onClick={() => {
               setMode(id)
               setExtraHoldId(null)
-              if (id === 'vups') setRepsCatalog('v_up')
+              if (id === 'hold') goPage(0)
+              if (id === 'vups') {
+                setRepsCatalog('v_up')
+                goPage(1)
+              }
             }}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
@@ -472,6 +586,212 @@ export function ClassStopwatch({
         </div>
       )}
 
+      {(mode === 'hold' || mode === 'vups' || mode === 'catalog') && (
+        <div
+          className="overflow-hidden"
+          onTouchStart={(e) => {
+            swipeX.current = e.changedTouches[0]?.clientX ?? null
+          }}
+          onTouchEnd={(e) => {
+            const startX = swipeX.current
+            swipeX.current = null
+            const endX = e.changedTouches[0]?.clientX
+            if (startX == null || endX == null) return
+            const dx = endX - startX
+            if (dx < -40) goPage(holdPage + 1)
+            if (dx > 40) goPage(holdPage - 1)
+          }}
+          onPointerDown={(e) => {
+            if (e.pointerType === 'touch') return
+            swipeX.current = e.clientX
+          }}
+          onPointerUp={(e) => {
+            if (e.pointerType === 'touch') return
+            const startX = swipeX.current
+            swipeX.current = null
+            if (startX == null) return
+            const dx = e.clientX - startX
+            if (dx < -40) goPage(holdPage + 1)
+            if (dx > 40) goPage(holdPage - 1)
+          }}
+        >
+          <div
+            className="flex w-[400%] transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${holdPage * 25}%)` }}
+          >
+            <div className="w-1/4 px-0.5">
+              <div className="grid grid-cols-2 gap-2">
+                {CLASS_HOLD_DRILLS.map((d) =>
+                  d.id === 'side_plank' ? (
+                    <div key={d.id} className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8">
+                      {(['left', 'right'] as const).map((s) => {
+                        const on = !extraHoldId && holdId === 'side_plank' && side === s
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            aria-pressed={on}
+                            aria-label={s === 'left' ? 'Left side plank' : 'Right side plank'}
+                            onClick={() => {
+                              setHoldId('side_plank')
+                              setSide(s)
+                              setHoldSpec(null)
+                              setExtraHoldId(null)
+                              setMode('hold')
+                            }}
+                            className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
+                              s === 'right' ? 'border-l border-white/15' : ''
+                            } ${on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-white/90'}`}
+                          >
+                            {s === 'left' ? 'Left plank' : 'Right plank'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : d.id === 'hollow' ? (
+                    <div key={d.id} className="flex flex-col overflow-hidden rounded-xl bg-white/8">
+                      <p className="pt-1.5 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/70">
+                        Hollow
+                      </p>
+                      <div className="grid grid-cols-2">
+                        {(['down', 'up'] as const).map((arms) => {
+                          const on = !extraHoldId && holdId === 'hollow' && hollowArms === arms
+                          return (
+                            <button
+                              key={arms}
+                              type="button"
+                              aria-pressed={on}
+                              aria-label={arms === 'down' ? 'Hollow arms down' : 'Hollow arms up'}
+                              onClick={() => {
+                                setHoldId('hollow')
+                                setHollowArms(arms)
+                                setHoldSpec((cur) => (arms === 'up' && cur === 'curl_up' ? null : cur))
+                                setExtraHoldId(null)
+                                setMode('hold')
+                              }}
+                              className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
+                                arms === 'up' ? 'border-l border-white/15' : ''
+                              } ${on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-white/90'}`}
+                            >
+                              {arms === 'down' ? 'Arms down' : 'Arms up'}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => {
+                        setHoldId(d.id)
+                        setHoldSpec(null)
+                        setExtraHoldId(null)
+                        setMode('hold')
+                      }}
+                      className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                        !extraHoldId && holdId === d.id
+                          ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                          : 'bg-white/8'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+            <div className="w-1/4 px-0.5">
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ['pushup', 'Push-ups'],
+                  ['v_up', 'V-ups'],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      setRepsCatalog(id)
+                      setMode('vups')
+                      setExtraHoldId(null)
+                      setCatalogPick(null)
+                    }}
+                    className={`rounded-xl px-3 py-4 text-sm font-semibold ${
+                      mode === 'vups' && repsCatalog === id
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'bg-white/8'
+                    }`}
+                  >
+                    {label}
+                    <span className="mt-1 block text-[11px] font-medium text-white/55">Sets and reps</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="w-1/4 px-0.5">
+              <div className="grid grid-cols-2 gap-2">
+                {LEG_DRILLS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      setCatalogPick(d)
+                      setHoldSpec(null)
+                      setMode('catalog')
+                      setExtraHoldId(null)
+                    }}
+                    className={`rounded-xl px-3 py-3 text-sm font-semibold ${
+                      catalogPick?.id === d.id ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                    }`}
+                  >
+                    {d.label}
+                    <span className="mt-1 block text-[11px] font-medium text-white/55">
+                      {d.track === 'hold' ? 'Hold time' : 'Sets and reps'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="w-1/4 px-0.5">
+              <div className="grid grid-cols-2 gap-2">
+                {KNEE_DRILLS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      setCatalogPick(d)
+                      setHoldSpec(null)
+                      setMode('catalog')
+                      setExtraHoldId(null)
+                    }}
+                    className={`rounded-xl px-3 py-3 text-sm font-semibold ${
+                      catalogPick?.id === d.id ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                    }`}
+                  >
+                    {d.label}
+                    <span className="mt-1 block text-[11px] font-medium text-white/55">
+                      {d.track === 'hold' ? 'Hold time' : 'Sets and reps'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="mt-1.5 flex flex-wrap items-center justify-center gap-2 text-[10px] text-white/40">
+            {CLOCK_PAGES.map((p, i) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => goPage(i)}
+                className={holdPage === i ? 'text-[var(--accent)]' : ''}
+              >
+                {p.label}
+              </button>
+            ))}
+          </p>
+        </div>
+      )}
+
       {mode === 'hold' && (
         <>
           {floorMode && (
@@ -479,179 +799,29 @@ export function ClassStopwatch({
               Which hold are they doing?
             </p>
           )}
-          <div
-            className="overflow-hidden"
-            onTouchStart={(e) => {
-              swipeX.current = e.changedTouches[0]?.clientX ?? null
-            }}
-            onTouchEnd={(e) => {
-              const startX = swipeX.current
-              swipeX.current = null
-              const endX = e.changedTouches[0]?.clientX
-              if (startX == null || endX == null) return
-              const dx = endX - startX
-              if (dx < -40) setHoldPage(0)
-              if (dx > 40) setHoldPage(1)
-            }}
-            onPointerDown={(e) => {
-              if (e.pointerType === 'touch') return
-              swipeX.current = e.clientX
-            }}
-            onPointerUp={(e) => {
-              if (e.pointerType === 'touch') return
-              const startX = swipeX.current
-              swipeX.current = null
-              if (startX == null) return
-              const dx = e.clientX - startX
-              if (dx < -40) setHoldPage(0)
-              if (dx > 40) setHoldPage(1)
-            }}
-          >
-            {holdPage === 0 ? (
-          <div className="grid grid-cols-2 gap-2">
-            {CLASS_HOLD_DRILLS.map((d) =>
-              d.id === 'side_plank' ? (
-                <div
-                  key={d.id}
-                  className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8"
-                >
-                  {(['left', 'right'] as const).map((s) => {
-                    const on = !extraHoldId && holdId === 'side_plank' && side === s
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        aria-pressed={on}
-                        aria-label={s === 'left' ? 'Left side plank' : 'Right side plank'}
-                        onClick={() => {
-                          setHoldId('side_plank')
-                          setSide(s)
-                          setHoldSpec(null)
-                          setExtraHoldId(null)
-                        }}
-                        className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
-                          s === 'right' ? 'border-l border-white/15' : ''
-                        } ${
-                          on
-                            ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                            : 'text-white/90'
-                        }`}
-                      >
-                        {s === 'left' ? 'Left plank' : 'Right plank'}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : d.id === 'hollow' ? (
-                <div
-                  key={d.id}
-                  className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8"
-                >
-                  {(['down', 'up'] as const).map((arms) => {
-                    const on = !extraHoldId && holdId === 'hollow' && hollowArms === arms
-                    return (
-                      <button
-                        key={arms}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => {
-                          setHoldId('hollow')
-                          setHollowArms(arms)
-                          setHoldSpec(null)
-                          setExtraHoldId(null)
-                        }}
-                        className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
-                          arms === 'up' ? 'border-l border-white/15' : ''
-                        } ${
-                          on
-                            ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                            : 'text-white/90'
-                        }`}
-                      >
-                        {arms === 'down' ? 'Arms down' : 'Arms up'}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => {
-                    setHoldId(d.id)
-                    setHoldSpec(null)
-                    setExtraHoldId(null)
-                  }}
-                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                    !extraHoldId && holdId === d.id
-                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
-                      : 'bg-white/8'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ),
-            )}
-          </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRepsCatalog('pushup')
-                    setMode('vups')
-                    setExtraHoldId(null)
-                  }}
-                  className="rounded-xl bg-white/8 px-3 py-4 text-sm font-semibold"
-                >
-                  Push-ups
-                  <span className="mt-1 block text-[11px] font-medium text-white/55">Sets and reps</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRepsCatalog('v_up')
-                    setMode('vups')
-                    setExtraHoldId(null)
-                  }}
-                  className="rounded-xl bg-white/8 px-3 py-4 text-sm font-semibold"
-                >
-                  V-ups
-                  <span className="mt-1 block text-[11px] font-medium text-white/55">Sets and reps</span>
-                </button>
-              </div>
-            )}
-            <p className="mt-1.5 flex items-center justify-center gap-2 text-[10px] text-white/40">
-              <button type="button" onClick={() => setHoldPage(0)} className={holdPage === 0 ? 'text-[var(--accent)]' : ''}>
-                Holds
-              </button>
-              <span>·</span>
-              <button type="button" onClick={() => setHoldPage(1)} className={holdPage === 1 ? 'text-[var(--accent)]' : ''}>
-                More
-              </button>
-            </p>
-          </div>
           {!extraHoldId && HOLD_SPECS[holdId] && holdPage === 0 && (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
                 Variation · none selected
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {HOLD_SPECS[holdId]!.map((spec) => {
-                  const on = holdSpec === spec.id
-                  return (
-                    <button
-                      key={spec.id}
-                      type="button"
-                      onClick={() => setHoldSpec(on ? null : spec.id)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
-                      }`}
-                    >
-                      {spec.label}
-                    </button>
-                  )
-                })}
+                {HOLD_SPECS[holdId]!
+                  .filter((spec) => !(holdId === 'hollow' && hollowArms === 'up' && spec.id === 'curl_up'))
+                  .map((spec) => {
+                    const on = holdSpec === spec.id
+                    return (
+                      <button
+                        key={spec.id}
+                        type="button"
+                        onClick={() => setHoldSpec(on ? null : spec.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                          on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                        }`}
+                      >
+                        {spec.label}
+                      </button>
+                    )
+                  })}
               </div>
             </div>
           )}
@@ -878,6 +1048,88 @@ export function ClassStopwatch({
           >
             Log {repsCatalog === 'pushup' ? 'push-ups' : 'V-ups'} for selected
           </button>
+        </>
+      )}
+
+      {mode === 'catalog' && (
+        <>
+          {!catalogPick && (
+            <p className="text-sm text-white/60">Pick an exercise on this page, then log it.</p>
+          )}
+          {catalogPick && HOLD_SPECS[catalogPick.id] && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                Specify · none selected
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {HOLD_SPECS[catalogPick.id]!.map((spec) => {
+                  const on = holdSpec === spec.id
+                  return (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      onClick={() => setHoldSpec(on ? null : spec.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                      }`}
+                    >
+                      {spec.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {catalogPick?.track === 'hold' && (
+            <HoldClock
+              ms={ms}
+              running={running}
+              manual={manual}
+              onManual={setManual}
+              onStart={start}
+              onStop={stop}
+              onReset={reset}
+            />
+          )}
+          {catalogPick?.track === 'reps' && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Sets
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={sets}
+                  onChange={(e) => setSets(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Reps / set
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+                />
+              </label>
+            </div>
+          )}
+          {catalogPick && (
+            <>
+              {logWho}
+              <button
+                type="button"
+                onClick={logCatalogPick}
+                className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
+              >
+                Log {catalogPick.label}
+                {selected.length ? ` · ${selected.length}` : ''}
+              </button>
+            </>
+          )}
         </>
       )}
 
