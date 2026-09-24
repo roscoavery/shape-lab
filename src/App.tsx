@@ -79,6 +79,7 @@ import { UnlockAthleteModal } from './components/UnlockAthleteModal'
 import { VideoLibraryPanel } from './components/VideoLibraryPanel'
 import { ClassesPanel } from './components/classes/ClassesPanel'
 import { FeedPanel } from './components/feed/FeedPanel'
+import { StoryComposer } from './components/stories/StoryComposer'
 import { NetworkPanel } from './components/network/NetworkPanel'
 import { ResearchPanel } from './components/research/ResearchPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
@@ -214,6 +215,7 @@ export default function App() {
   const [stationOpen, setStationOpen] = useState(false)
   const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [storyComposerOpen, setStoryComposerOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
@@ -656,7 +658,13 @@ export default function App() {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (isRyanOnlyTab(id) && !ryan) return
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(id)) return
-    const role = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
+    const previewed: SessionRole | undefined =
+      sessionIsAdmin(authUser) && deskPreview !== 'home'
+        ? deskPreview === 'gymOwner'
+          ? 'gymOwner'
+          : deskPreview
+        : authUser?.role
+    const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
     if (authUser && !tabAllowedForNavRole(id, role, ryan)) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
@@ -958,6 +966,13 @@ export default function App() {
         kiosk={floorKiosk}
         admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
         navRole={previewRole ?? authUser.role}
+        deskPreview={deskPreview}
+        onOpenMyProfile={() => {
+          if (activeProfile) setProfileOpen(true)
+        }}
+        onStory={() => {
+          if (activeProfile) setStoryComposerOpen(true)
+        }}
       >
       <header className="mb-4 hidden min-w-0 max-w-full flex-wrap items-start justify-between gap-3 md:flex">
         <div className="min-w-0">
@@ -2044,6 +2059,14 @@ export default function App() {
           setLearnIntent('quiz')
           goTab('learn')
         }}
+      />
+    )}
+    {storyComposerOpen && activeProfile && (
+      <StoryComposer
+        athlete={activeProfile}
+        athletes={athletes}
+        onClose={() => setStoryComposerOpen(false)}
+        onPosted={() => setStoryComposerOpen(false)}
       />
     )}
     {profileOpen && activeProfile && (

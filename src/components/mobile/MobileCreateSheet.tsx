@@ -7,23 +7,29 @@ import { IgCreateIcon } from './IgNavIcons'
 type Props = {
   athlete: Athlete | null
   onGo: (tab: AppTab) => void
+  onStory?: () => void
 }
 
-const OPTIONS: { tab: AppTab; title: string; hint: string; glyph: string }[] = [
+const OPTIONS: { tab?: AppTab; title: string; hint: string; glyph: string; story?: boolean }[] = [
+  { story: true, title: 'Story', hint: '24h highlight for the gym', glyph: '◯' },
   { tab: 'wins', title: 'Win', hint: 'Little hit or first — Wins feed', glyph: '🙌' },
-  { tab: 'feed', title: 'Gym post', hint: 'Bigger share for the team feed', glyph: '📣' },
+  { tab: 'feed', title: 'Post', hint: 'Share on the main gym feed', glyph: '📣' },
   { tab: 'scroll', title: 'Pass / reel', hint: 'Reference clip or pass video', glyph: '▶' },
   { tab: 'homework', title: 'Homework log', hint: 'Log holds, reps, or drills', glyph: '✓' },
-  { tab: 'today', title: 'Today', hint: 'Class board, schedule, assignments', glyph: '📅' },
 ]
 
-export function MobileCreateSheet({ athlete, onGo }: Props) {
+export function MobileCreateSheet({ athlete, onGo, onStory }: Props) {
   const [open, setOpen] = useState(false)
 
-  const pick = (tab: AppTab) => {
+  const pick = (row: (typeof OPTIONS)[number]) => {
     setOpen(false)
-    saveTab(tab)
-    onGo(tab)
+    if (row.story) {
+      onStory?.()
+      return
+    }
+    if (!row.tab) return
+    saveTab(row.tab)
+    onGo(row.tab)
   }
 
   return (
@@ -54,11 +60,11 @@ export function MobileCreateSheet({ athlete, onGo }: Props) {
             </p>
             <ul className="mt-4 space-y-1">
               {OPTIONS.map((row) => (
-                <li key={row.tab}>
+                <li key={row.title}>
                   <button
                     type="button"
                     className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left active:bg-white/10"
-                    onClick={() => pick(row.tab)}
+                    onClick={() => pick(row)}
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-lg">
                       {row.glyph}

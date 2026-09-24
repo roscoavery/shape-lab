@@ -1223,8 +1223,8 @@ function EventChip({
         background: color,
       }}
     >
-      <span className="block truncate opacity-80">{formatStart(laid.ev.startAt)}</span>
-      <span className="block truncate">{laid.ev.title || 'Untitled'}</span>
+      <span className="block truncate font-semibold">{laid.ev.title || 'Untitled'}</span>
+      <span className="block truncate text-[10px] font-normal opacity-80">{formatStart(laid.ev.startAt)}</span>
     </button>
   )
 }
