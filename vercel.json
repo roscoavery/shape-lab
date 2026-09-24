@@ -11,5 +11,11 @@
       "includeFiles": "{data/**,src/config/compareLibrary.json}",
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/calendar/cron-sync",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

@@ -20,6 +20,7 @@ import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
+import { TodayCalendarSection } from '../calendar/TodayCalendarSection'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
@@ -92,7 +93,11 @@ type Props = {
   athletes: Athlete[]
   signedIn: Athlete | null
   onUnlock: (id: string) => void
-  onStartLesson: (athleteIds: string[], planId?: string | null) => void
+  onStartLesson: (
+    athleteIds: string[],
+    planId?: string | null,
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+  ) => void
   onOpenLesson?: (session: LessonSession) => void
   onShortcut?: (id: TodayShortcutId) => void
   onStartClass?: () => void
@@ -503,6 +508,11 @@ export function HomeDashboard({
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
+      <TodayCalendarSection
+        coachId={signedIn.id}
+        athletes={athletes}
+        onStartLesson={onStartLesson}
+      />
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>

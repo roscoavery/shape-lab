@@ -180,6 +180,17 @@ export function LessonWorkspace({
           {athleteName}
           <span className="font-normal text-[var(--muted)]"> with {coachName}</span>
         </h2>
+        {session.calendarTitle && session.calendarStartAt && (
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Calendar · {session.calendarTitle} ·{' '}
+            {new Date(session.calendarStartAt).toLocaleString(undefined, {
+              hour: 'numeric',
+              minute: '2-digit',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </p>
+        )}
         <p className="mt-1 text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
           Leave the app if you need to — this lesson stays open until you End lesson.

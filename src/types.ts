@@ -799,6 +799,11 @@ export type LessonSession = {
     blocks: LessonBlock[]
     extraExercises?: ClassExtraExercise[]
   }
+  /** Set when a lesson was started from a synced calendar event. */
+  calendarEventId?: string | null
+  calendarTitle?: string | null
+  calendarStartAt?: string | null
+  calendarEndAt?: string | null
 }
 
 export type CoachProgression = {

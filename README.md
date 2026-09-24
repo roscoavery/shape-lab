@@ -79,6 +79,7 @@ Sign in with the claim URL, then in the Vercel project connect [github.com/rosco
 | Variable | Required | What it does |
 | --- | --- | --- |
 | `BLOB_READ_WRITE_TOKEN` | **Yes for gym data** | Stores roster (profiles, photos, notes, homework + class-clock logs), Compare library, feed + Wins, stills, research, lessons, classes, and athlete/feed videos in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Claiming a temporary `*.vercel.app` link does **not** add this. Without it, new profiles stay on that phone and vanish from the server on a cold start. |
+| `CALENDAR_CREDENTIAL_KEY` | **Yes for iCloud calendar** | Server-side AES key for encrypting Apple app-specific passwords at rest (`data/calendar.json` or Blob). Never commit the real value. Generate with `openssl rand -base64 32`. |
 
 How to add it:
 
@@ -87,7 +88,7 @@ How to add it:
 3. Check **Add a read-write token env var to this connection**.
 4. Create, then redeploy **Production** on the same gym URL.
 
-No other secrets are required. Instagram resolve pretends to tap Continue on web (`ig_nrcb=1` + guest session), then reads the public GraphQL / permalink mp4. Cobalt and yt-dlp are extras; yt-dlp is not on Vercel.
+No other secrets are required for basic gym use. Instagram resolve pretends to tap Continue on web (`ig_nrcb=1` + guest session), then reads the public GraphQL / permalink mp4. Cobalt and yt-dlp are extras; yt-dlp is not on Vercel.
 
 Hobby plan upload cap is about **4.5 MB** per request — keep athlete/feed clips short on the public URL.
 
@@ -198,10 +199,10 @@ Do this **on the Mac**, not in Cursor cloud. Faces are already on Production, so
    ```bash
    git fetch origin shape-lab-v4
    git checkout shape-lab-v4
-   npm run gym:mac:v4
+   npm run gym:mac
    ```
 
-   Then open **https://gym.shapelab.win** and sign in (or create the first gym admin account). Look for **Lace build**. More → Accounts copies a sign-in link; email is off until SMTP is set. `npm run gym:mac` without `:v4` stays on the working V3 / `v2-rebuild` gym. Athlete files in `data/` stay on this Mac either way.
+   Then open **https://gym.shapelab.win** and sign in (or create the first gym admin account). Look for **Lace build**. More → Accounts copies a sign-in link; email is off until SMTP is set. **`npm run gym:mac` always updates this folder to `shape-lab-v4`** (latest gym line, including iCloud calendar). Athlete files in `data/` stay on this Mac either way.
 
    An iPad refresh does **not** pull GitHub. Safari keeps the last Class flow selected, so landing on Handstand Hold again is not proof the new code loaded. After each push: stop the gym window, then `npm run gym:mac` again. That script now parks gym data files (including IG / coach still JPEGs), resets this folder to GitHub `v2-rebuild`, reloads itself so the banner matches the files, and rebuilds the phone bundle. Dirty `data/` files will not block the update. The current stamp is **Sort build**. If you still see Firm, Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember, this window is still old. `/api/health` should include `"holdBuild":"sort"`.
 
@@ -544,6 +545,47 @@ src/
   App.tsx                main UI (Tasks + Coach are Ryan-only; Tasks 2 | Homework | Learn | Compare | Feed | Network | Research | Profiles | About)
 public/references/       optional default coach photos
 ```
+
+## iCloud calendar (coaches)
+
+Coaches connect **iCloud Calendar** from **More → Profiles** while unlocked as a coach profile. Shape Lab uses CalDAV with an **Apple app-specific password** — never your normal Apple ID password.
+
+### Apple app-specific password
+
+1. Sign in at [appleid.apple.com](https://appleid.apple.com).
+2. Open **Sign-In and Security** → **App-Specific Passwords** (or follow [Apple’s guide](https://support.apple.com/en-us/102654)).
+3. Generate a password labeled e.g. **Shape Lab** and paste it once into Calendar connections.
+
+### Local setup
+
+1. Copy `.env.example` to `.env` and set `CALENDAR_CREDENTIAL_KEY` (and `BLOB_READ_WRITE_TOKEN` if you use Blob locally).
+2. Ensure `data/calendar.json` exists (empty file ships in the repo).
+3. `npm run dev` — unlock a coach profile, open **More → Profiles → Calendar connections**, enter coach passcode, then connect iCloud.
+4. On **Today**, use **Sync now** or refresh the schedule section. Failed syncs do not block manual **Start lesson**.
+
+### Production (Vercel)
+
+1. Add `CALENDAR_CREDENTIAL_KEY` to Vercel environment variables (Production).
+2. Redeploy so `api/[[...path]].js` includes the calendar routes.
+3. CalDAV runs inside the serverless function (60s limit). For background sync, set `CALENDAR_CRON_SECRET` and schedule:
+
+```bash
+curl -X POST "https://YOUR_APP.vercel.app/api/calendar/cron-sync" \
+  -H "x-calendar-cron-secret: YOUR_SECRET"
+```
+
+On Vercel, add a Cron job (hourly) that hits that path with the header. Today also offers **Sync now** and a soft sync on refresh.
+
+### Tests
+
+```bash
+npm run test:calendar
+```
+
+### Follow-ups
+
+- **Google Calendar** via OAuth (provider stub only).
+- **Group lessons** (multiple athletes per calendar event) need schema/UI beyond single-athlete Start lesson.
 
 ## Tech stack
 

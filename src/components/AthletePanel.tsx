@@ -13,6 +13,7 @@ import {
   roleLabel,
   type ProfileKind,
 } from '../lib/profileRole'
+import { CalendarConnections } from './calendar/CalendarConnections'
 import {
   digitsOnlyPin,
   hashPasscode,
@@ -893,6 +894,7 @@ export function AthletePanel({
           </div>
         </div>
       )}
+      {active && isCoachProfile(active) && <CalendarConnections coach={active} />}
       {saved && <p className="mt-2 text-[11px] text-[var(--accent)]">{saved}</p>}
       <p className="mt-2 text-[11px] leading-snug text-[var(--muted)]">
         Each new profile sets a 4-digit passcode on Create. Unlock that profile

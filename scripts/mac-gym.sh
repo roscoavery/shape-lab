@@ -17,17 +17,77 @@ echo "Node $(node -v)   npm $(npm -v)"
 echo "Folder: $ROOT"
 echo
 
-GYM_BRANCH="${GYM_BRANCH:-v2-rebuild}"
+# Never v2-rebuild (Sort). Gym line is shape-lab-v4 (Lace).
+GYM_BRANCH="${GYM_BRANCH:-shape-lab-v4}"
+GITHUB_GIT_URL="${GYM_GITHUB_URL:-https://github.com/roscoavery/shape-lab.git}"
+CLOUD_GIT_URL="${GYM_CLOUD_URL:-https://origin.cursor.com/git/ryan-williams/tmp-cedaa575ce67445f.git}"
 
-if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
-  echo "Updating this Mac to GitHub ${GYM_BRANCH}. Gym names and clips stay on this computer."
-  git fetch origin "$GYM_BRANCH" 2>/dev/null || git fetch origin "$GYM_BRANCH" || true
-  git fetch github "$GYM_BRANCH" 2>/dev/null || true
+git_fetch_branch_from_url() {
+  local url="$1"
+  export GIT_TERMINAL_PROMPT=0
+  git -c credential.helper= fetch "$url" "$GYM_BRANCH" 2>/dev/null
+}
+
+git_verify_lace_build() {
+  if [ ! -f "$ROOT/src/lib/holdBuild.ts" ]; then
+    echo "ERROR: src/lib/holdBuild.ts missing — wrong checkout."
+    return 1
+  fi
+  if grep -q "Sort build" "$ROOT/src/lib/holdBuild.ts"; then
+    echo "ERROR: This folder is still on Sort (v2-rebuild). Gym phones will show the wrong app."
+    echo "Run:  bash scripts/recover-gym-v4.sh"
+    return 1
+  fi
+  if ! grep -q "Lace build" "$ROOT/src/lib/holdBuild.ts"; then
+    echo "WARNING: holdBuild stamp is not Lace — check src/lib/holdBuild.ts"
+  fi
+  return 0
+}
+
+calendar_ui_present() {
+  [ -f "$ROOT/src/components/calendar/CalendarConnections.tsx" ] &&
+    [ -f "$ROOT/src/components/calendar/TodayCalendarSection.tsx" ] &&
+    [ -f "$ROOT/server/calendar/apiRoutes.ts" ]
+}
+
+ensure_calendar_key() {
+  local env="$ROOT/.env"
+  if [ ! -f "$env" ] && [ -f "$ROOT/.env.example" ]; then
+    cp "$ROOT/.env.example" "$env"
+  fi
+  touch "$env"
+  local key=""
+  if command -v openssl >/dev/null 2>&1; then
+    key="$(openssl rand -base64 32 | tr -d '\n')"
+  else
+    key="$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")"
+  fi
+  if ! grep -q '^CALENDAR_CREDENTIAL_KEY=' "$env"; then
+    printf '\nCALENDAR_CREDENTIAL_KEY=%s\n' "$key" >> "$env"
+    echo "Wrote CALENDAR_CREDENTIAL_KEY to .env (local gym only)."
+  elif grep -q '^CALENDAR_CREDENTIAL_KEY=$' "$env"; then
+    if command -v sed >/dev/null 2>&1; then
+      sed -i.bak "s|^CALENDAR_CREDENTIAL_KEY=$|CALENDAR_CREDENTIAL_KEY=${key}|" "$env"
+      rm -f "${env}.bak"
+    else
+      printf '\nCALENDAR_CREDENTIAL_KEY=%s\n' "$key" >> "$env"
+    fi
+    echo "Filled empty CALENDAR_CREDENTIAL_KEY in .env."
+  fi
+}
+
+# Fetch unless this process already re-exec'd AND calendar is on disk.
+# GYM_MAC_BOOTED=1 used to skip the update — that left Lace without calendar.
+if [ -d .git ] && { [ -z "${GYM_MAC_BOOTED:-}" ] || ! calendar_ui_present; }; then
+  if ! calendar_ui_present; then
+    echo "Calendar files missing on this Mac. Pulling ${GYM_BRANCH} so Today / Profiles get iCloud."
+  fi
+  echo "Updating this Mac to ${GYM_BRANCH} (Lace V4 gym line). Local data/ stays here."
 
   STASHED=0
   PARK="$ROOT/.gym-park"
   mkdir -p "$PARK/data"
-  for item in ig-blobs coach-blobs ig-stills.json coach-stills.json; do
+  for item in ig-blobs coach-blobs ig-stills.json coach-stills.json roster.json; do
     if [ -e "$ROOT/data/$item" ]; then
       rm -rf "$PARK/data/$item"
       cp -a "$ROOT/data/$item" "$PARK/data/$item"
@@ -40,25 +100,42 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
     fi
   fi
 
-  git checkout "$GYM_BRANCH" 2>/dev/null || true
-  REMOTE_REF=""
-  if git rev-parse --verify "origin/${GYM_BRANCH}" >/dev/null 2>&1; then
-    REMOTE_REF="origin/${GYM_BRANCH}"
-  elif git rev-parse --verify "github/${GYM_BRANCH}" >/dev/null 2>&1; then
-    REMOTE_REF="github/${GYM_BRANCH}"
-  fi
-  if [ -n "$REMOTE_REF" ]; then
-    BEFORE="$(git rev-parse --short HEAD)"
-    git reset --hard "$REMOTE_REF"
-    AFTER="$(git rev-parse --short HEAD)"
-    echo "This Mac now matches ${REMOTE_REF}: $AFTER"
-    if [ "$BEFORE" != "$AFTER" ]; then
-      rm -f dist/index.html
-      echo "Forcing a new phone bundle ($BEFORE → $AFTER) so Safari cannot keep yesterday's files."
-    fi
+  FETCHED=0
+  if git_fetch_branch_from_url "$GITHUB_GIT_URL"; then
+    git checkout -B "$GYM_BRANCH" FETCH_HEAD
+    FETCHED=1
+    echo "Updated from GitHub (${GYM_BRANCH} at $(git rev-parse --short HEAD))."
+  elif git_fetch_branch_from_url "$CLOUD_GIT_URL"; then
+    git checkout -B "$GYM_BRANCH" FETCH_HEAD
+    FETCHED=1
+    echo "Updated from cloud (${GYM_BRANCH} at $(git rev-parse --short HEAD))."
   else
-    echo "WARNING: could not see ${GYM_BRANCH} on origin/github. Staying on $(git rev-parse --short HEAD)."
+    echo "GitHub/cloud fetch failed. Trying named remotes…"
+    for remote in github origin; do
+      if git remote get-url "$remote" >/dev/null 2>&1; then
+        export GIT_TERMINAL_PROMPT=0
+        if git -c credential.helper= fetch "$remote" "$GYM_BRANCH" 2>/dev/null; then
+          if git rev-parse --verify "${remote}/${GYM_BRANCH}" >/dev/null 2>&1; then
+            git checkout -B "$GYM_BRANCH" "${remote}/${GYM_BRANCH}"
+            FETCHED=1
+            echo "Updated from ${remote}/${GYM_BRANCH} at $(git rev-parse --short HEAD)."
+            break
+          fi
+        fi
+      fi
+    done
   fi
+
+  if [ "$FETCHED" = 0 ]; then
+    echo "ERROR: Could not download ${GYM_BRANCH}. Run:  bash scripts/recover-gym-v4.sh"
+    exit 1
+  fi
+
+  if ! git_verify_lace_build; then
+    exit 1
+  fi
+
+  rm -f dist/index.html
 
   if [ "$STASHED" = 1 ]; then
     if ! git stash pop; then
@@ -66,8 +143,6 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
     fi
   fi
 
-  # git stash -u skips gitignored JPEGs. Put parked stills back if the update
-  # left an empty ig-blobs / coach-blobs folder.
   mkdir -p "$ROOT/data/ig-blobs" "$ROOT/data/coach-blobs"
   if [ -d "$PARK/data/ig-blobs" ]; then
     cp -an "$PARK/data/ig-blobs/." "$ROOT/data/ig-blobs/" 2>/dev/null || true
@@ -75,29 +150,40 @@ if [ -d .git ] && [ -z "${GYM_MAC_BOOTED:-}" ]; then
   if [ -d "$PARK/data/coach-blobs" ]; then
     cp -an "$PARK/data/coach-blobs/." "$ROOT/data/coach-blobs/" 2>/dev/null || true
   fi
-  for item in ig-stills.json coach-stills.json; do
+  for item in ig-stills.json coach-stills.json roster.json; do
     if [ -f "$PARK/data/$item" ] && [ ! -f "$ROOT/data/$item" ]; then
       cp -a "$PARK/data/$item" "$ROOT/data/$item"
     fi
   done
 
+  if ! calendar_ui_present; then
+    echo "ERROR: ${GYM_BRANCH} still has no calendar UI after the update."
+    echo "GitHub shape-lab-v4 must include src/components/calendar/CalendarConnections.tsx."
+    exit 1
+  fi
+
   echo
   echo "============================================================"
-  echo "  KEYS BUILD   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
-  echo "  iPad must show a cyan chip that says Keys build (V4) or Sort build (V3)."
-  echo "  Firm, Print, Keep, Sweep, Path, Gleam, Sleet, Rime, Glaze, Frost, Ash, or Ember"
-  echo "  means this window is still old — Ctrl+C, then run npm run gym:mac again."
+  echo "  LACE GYM   $(git rev-parse --short HEAD)   $(git log -1 --pretty=%s)"
+  echo "  https://gym.shapelab.win should show Lace build (not Sort)."
+  echo "  Calendar: coach Today → Today from calendar"
+  echo "            More → Profiles → Calendar connections"
   echo "============================================================"
   echo
   echo "Reloading this script from the files that just landed…"
   exec env GYM_MAC_BOOTED=1 bash "$ROOT/scripts/mac-gym.sh"
 fi
 
+git_verify_lace_build || exit 1
+if ! calendar_ui_present; then
+  echo "ERROR: Calendar UI is still missing. Run this again without GYM_MAC_BOOTED."
+  exit 1
+fi
+
+ensure_calendar_key
 npm install
 echo
 
-# JPEGs that ship in git — copy onto this Mac so Learn cannot go blank
-# if Blob is paused or an iPad wiped its copy.
 mkdir -p "$ROOT/data/coach-blobs"
 node --input-type=module -e "
 import fs from 'node:fs'

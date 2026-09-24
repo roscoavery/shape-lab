@@ -282,6 +282,12 @@ export function startLessonSession(opts: {
   athleteIds?: string[]
   coachId: string
   planId?: string | null
+  calendar?: {
+    eventId: string
+    title: string
+    startAt: string
+    endAt: string
+  } | null
 }): LessonSession {
   const athleteIds = [...new Set((opts.athleteIds ?? [opts.athleteId]).filter((id): id is string => Boolean(id)))]
   const athleteId = athleteIds[0]
@@ -312,6 +318,10 @@ export function startLessonSession(opts: {
     notes: [],
     holds: [],
     planSnapshot: snapshotPlan(incomingPlan),
+    calendarEventId: opts.calendar?.eventId ?? null,
+    calendarTitle: opts.calendar?.title ?? null,
+    calendarStartAt: opts.calendar?.startAt ?? null,
+    calendarEndAt: opts.calendar?.endAt ?? null,
   }
   persist(loadLessonPlans(), [session, ...loadLessonSessions()])
   setActiveLessonId(session.id)

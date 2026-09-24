@@ -1,0 +1,385 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { sendJson } from '../instagramResolve.ts'
+import { readRequestBody } from '../libraryStore.ts'
+import { readRosterFile } from '../rosterStore.ts'
+import type { Athlete } from '../../src/types.ts'
+import { randomBytes } from 'node:crypto'
+
+function newId(prefix: string): string {
+  return `${prefix}_${randomBytes(10).toString('hex')}`
+}
+import {
+  authorizeCalendarRequest,
+  issueCalendarToken,
+  verifyCoachPasscode,
+} from './coachAuth.ts'
+import { encryptSecret, hasCredentialKey, redactSecrets } from './crypto.ts'
+import { normalizeAlias } from './matching.ts'
+import { icloudCalendarProvider } from './providers/icloud.ts'
+import { syncConnectionForCoach } from './sync.ts'
+import {
+  addAlias,
+  addLessonLink,
+  calendarsForConnection,
+  connectionForCoach,
+  eventsForCoachOnDay,
+  persistDb,
+  readCalendarDb,
+  removeConnectionData,
+  saveCalendars,
+  saveConnection,
+  upsertManualMatch,
+} from './store.ts'
+import type {
+  CalendarConnection,
+  ConnectedCalendar,
+  CalendarEventFilterMode,
+} from './types.ts'
+
+function safeErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : 'REQUEST_FAILED'
+  return redactSecrets(raw).slice(0, 200)
+}
+
+function publicConnection(c: CalendarConnection) {
+  return {
+    id: c.id,
+    provider: c.provider,
+    status: c.status,
+    appleIdEmail: c.appleIdEmail,
+    eventFilter: c.eventFilter,
+    lastSuccessfulSyncAt: c.lastSuccessfulSyncAt,
+    lastErrorCode: c.lastErrorCode,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  }
+}
+
+export async function handleCalendarApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  subpath: string,
+): Promise<boolean> {
+  const path = subpath.replace(/^\/+/, '')
+  const segments = path.split('/').filter(Boolean)
+
+  if (
+    segments[0] === 'cron-sync' &&
+    (req.method === 'POST' || req.method === 'GET') &&
+    segments.length === 1
+  ) {
+    const secret =
+      process.env.CALENDAR_CRON_SECRET?.trim() || process.env.CRON_SECRET?.trim() || ''
+    const headerSecret =
+      (typeof req.headers['x-calendar-cron-secret'] === 'string' &&
+        req.headers['x-calendar-cron-secret']) ||
+      ''
+    const bearer =
+      typeof req.headers.authorization === 'string' &&
+      req.headers.authorization.startsWith('Bearer ')
+        ? req.headers.authorization.slice(7).trim()
+        : ''
+    if (!secret || (headerSecret !== secret && bearer !== secret)) {
+      sendJson(res, 401, { error: 'UNAUTHORIZED' })
+      return true
+    }
+    const db = await readCalendarDb()
+    const roster = (await readRosterFile()).athletes as Athlete[]
+    const results: { connectionId: string; coachId: string; ok: boolean; code?: string }[] = []
+    for (const conn of db.connections.filter((c) => c.status !== 'disconnected')) {
+      const r = await syncConnectionForCoach(conn, roster)
+      results.push({
+        connectionId: conn.id,
+        coachId: conn.coachId,
+        ok: r.ok,
+        code: r.ok ? undefined : r.code,
+      })
+    }
+    sendJson(res, 200, { synced: results.length, results })
+    return true
+  }
+
+  if (segments[0] === 'auth' && req.method === 'POST' && segments.length === 1) {
+    if (!hasCredentialKey()) {
+      sendJson(res, 503, { error: 'CALENDAR_NOT_CONFIGURED' })
+      return true
+    }
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as {
+        coachId?: string
+        passcode?: string
+      }
+      if (!body.coachId || !body.passcode) {
+        sendJson(res, 400, { error: 'MISSING_FIELDS' })
+        return true
+      }
+      const verified = await verifyCoachPasscode(body.coachId, body.passcode)
+      if (!verified.ok) {
+        sendJson(res, 403, { error: verified.code })
+        return true
+      }
+      sendJson(res, 200, {
+        token: issueCalendarToken(body.coachId),
+        expiresInHours: 12,
+      })
+    } catch {
+      sendJson(res, 400, { error: 'BAD_REQUEST' })
+    }
+    return true
+  }
+
+  const auth = await authorizeCalendarRequest(req)
+  if ('error' in auth) {
+    sendJson(res, auth.status, { error: auth.error })
+    return true
+  }
+  const coachId = auth.coachId
+
+  if (segments[0] === 'status' && req.method === 'GET' && segments.length === 1) {
+    const db = await readCalendarDb()
+    const conn = connectionForCoach(db, coachId)
+    if (!conn) {
+      sendJson(res, 200, { connected: false })
+      return true
+    }
+    sendJson(res, 200, {
+      connected: true,
+      connection: publicConnection(conn),
+      calendars: calendarsForConnection(db, conn.id),
+    })
+    return true
+  }
+
+  if (segments[0] === 'connect' && req.method === 'POST' && segments.length === 1) {
+    if (!hasCredentialKey()) {
+      sendJson(res, 503, { error: 'CALENDAR_NOT_CONFIGURED' })
+      return true
+    }
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as {
+        appleIdEmail?: string
+        appSpecificPassword?: string
+        provider?: 'icloud'
+      }
+      const email = body.appleIdEmail?.trim()
+      const password = body.appSpecificPassword?.trim()
+      if (!email || !password) {
+        sendJson(res, 400, { error: 'MISSING_CREDENTIALS' })
+        return true
+      }
+      const credential = { appleIdEmail: email, appSpecificPassword: password }
+      await icloudCalendarProvider.validateConnection(credential)
+      const discovered = await icloudCalendarProvider.listCalendars(credential)
+
+      const db = await readCalendarDb()
+      const existing = connectionForCoach(db, coachId)
+      const now = new Date().toISOString()
+      const conn: CalendarConnection = {
+        id: existing?.id ?? newId('ccn'),
+        coachId,
+        provider: 'icloud',
+        encryptedCredential: encryptSecret(JSON.stringify(credential)),
+        appleIdEmail: email,
+        status: 'connected',
+        eventFilter: existing?.eventFilter ?? 'coaching_likely',
+        lastSuccessfulSyncAt: existing?.lastSuccessfulSyncAt ?? null,
+        lastErrorCode: null,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      }
+      await saveConnection(conn)
+
+      const selectedIds = new Set(
+        calendarsForConnection(db, conn.id)
+          .filter((c) => c.enabled)
+          .map((c) => c.providerCalendarId),
+      )
+      const rows: ConnectedCalendar[] = discovered.map((d) => ({
+        id: newId('cca'),
+        connectionId: conn.id,
+        providerCalendarId: d.providerCalendarId,
+        displayName: d.displayName,
+        enabled: selectedIds.size ? selectedIds.has(d.providerCalendarId) : true,
+        color: d.color ?? null,
+      }))
+      await saveCalendars(conn.id, rows)
+
+      sendJson(res, 200, {
+        connection: publicConnection(conn),
+        calendars: rows,
+      })
+    } catch (err) {
+      sendJson(res, 400, { error: 'CONNECT_FAILED', message: safeErrorMessage(err) })
+    }
+    return true
+  }
+
+  if (segments[0] === 'calendars' && req.method === 'PUT' && segments.length === 1) {
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as {
+        calendars?: { providerCalendarId: string; enabled: boolean }[]
+        eventFilter?: CalendarEventFilterMode
+      }
+      const db = await readCalendarDb()
+      const conn = connectionForCoach(db, coachId)
+      if (!conn || conn.coachId !== coachId) {
+        sendJson(res, 404, { error: 'NO_CONNECTION' })
+        return true
+      }
+      const current = calendarsForConnection(db, conn.id)
+      const patch = new Map(
+        (body.calendars ?? []).map((c) => [c.providerCalendarId, c.enabled]),
+      )
+      const next = current.map((c) => ({
+        ...c,
+        enabled: patch.has(c.providerCalendarId) ? Boolean(patch.get(c.providerCalendarId)) : c.enabled,
+      }))
+      await saveCalendars(conn.id, next)
+      if (body.eventFilter === 'all' || body.eventFilter === 'coaching_likely') {
+        const fresh = await readCalendarDb()
+        const updated = fresh.connections.map((c) =>
+          c.id === conn.id ? { ...c, eventFilter: body.eventFilter!, updatedAt: new Date().toISOString() } : c,
+        )
+        await persistDb({ ...fresh, connections: updated })
+      }
+      sendJson(res, 200, { ok: true })
+    } catch {
+      sendJson(res, 400, { error: 'BAD_REQUEST' })
+    }
+    return true
+  }
+
+  if (segments[0] === 'sync' && req.method === 'POST' && segments.length === 1) {
+    const db = await readCalendarDb()
+    const conn = connectionForCoach(db, coachId)
+    if (!conn) {
+      sendJson(res, 404, { error: 'NO_CONNECTION' })
+      return true
+    }
+    const roster = (await readRosterFile()).athletes as Athlete[]
+    const result = await syncConnectionForCoach(conn, roster)
+    if (!result.ok) {
+      sendJson(res, 502, { error: result.code })
+      return true
+    }
+    sendJson(res, 200, { ok: true })
+    return true
+  }
+
+  if (segments[0] === 'disconnect' && req.method === 'POST' && segments.length === 1) {
+    const db = await readCalendarDb()
+    const conn = connectionForCoach(db, coachId)
+    if (!conn) {
+      sendJson(res, 200, { ok: true })
+      return true
+    }
+    const next = removeConnectionData(db, conn.id, coachId)
+    await persistDb(next)
+    sendJson(res, 200, { ok: true })
+    return true
+  }
+
+  if (segments[0] === 'today' && req.method === 'GET' && segments.length === 1) {
+    const url = new URL(req.url ?? '/', 'http://local')
+    const tz = url.searchParams.get('tz') || 'UTC'
+    const db = await readCalendarDb()
+    const events = eventsForCoachOnDay(db, coachId, tz).sort((a, b) =>
+      a.startAt.localeCompare(b.startAt),
+    )
+    const links = db.lessonLinks.filter((l) => l.coachId === coachId)
+    sendJson(res, 200, {
+      events: events.map((e) => ({
+        ...e,
+        description: undefined,
+        lessonLinks: links.filter((l) => l.calendarEventId === e.id),
+      })),
+    })
+    return true
+  }
+
+  if (segments[0] === 'events' && segments.length >= 2) {
+    const eventId = segments[1]
+    if (req.method === 'POST' && segments[2] === 'match') {
+      try {
+        const body = JSON.parse(await readRequestBody(req)) as {
+          athleteId?: string
+          saveSeries?: boolean
+          saveTitle?: boolean
+        }
+        if (!body.athleteId) {
+          sendJson(res, 400, { error: 'MISSING_ATHLETE' })
+          return true
+        }
+        const db = await readCalendarDb()
+        const ev = db.events.find((e) => e.id === eventId && e.coachId === coachId)
+        if (!ev) {
+          sendJson(res, 404, { error: 'NOT_FOUND' })
+          return true
+        }
+        const seriesKey = ev.recurrenceInstanceKey.split('|')[0] ?? ev.providerEventId
+        await upsertManualMatch({
+          coachId,
+          eventId,
+          athleteId: body.athleteId,
+          saveSeries: Boolean(body.saveSeries),
+          saveTitle: Boolean(body.saveTitle),
+          seriesKey,
+          connectionId: ev.connectionId,
+          title: ev.title,
+        })
+        sendJson(res, 200, { ok: true })
+      } catch {
+        sendJson(res, 400, { error: 'BAD_REQUEST' })
+      }
+      return true
+    }
+  }
+
+  if (segments[0] === 'aliases' && req.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as { athleteId?: string; alias?: string }
+      if (!body.athleteId || !body.alias?.trim()) {
+        sendJson(res, 400, { error: 'MISSING_FIELDS' })
+        return true
+      }
+      const row = await addAlias(coachId, body.athleteId, body.alias)
+      sendJson(res, 200, { alias: { ...row, normalizedAlias: normalizeAlias(body.alias) } })
+    } catch {
+      sendJson(res, 400, { error: 'BAD_REQUEST' })
+    }
+    return true
+  }
+
+  if (segments[0] === 'lesson-link' && req.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(req)) as {
+        lessonId?: string
+        calendarEventId?: string
+        athleteId?: string
+      }
+      if (!body.lessonId || !body.calendarEventId || !body.athleteId) {
+        sendJson(res, 400, { error: 'MISSING_FIELDS' })
+        return true
+      }
+      const db = await readCalendarDb()
+      const ev = db.events.find((e) => e.id === body.calendarEventId && e.coachId === coachId)
+      if (!ev) {
+        sendJson(res, 404, { error: 'EVENT_NOT_FOUND' })
+        return true
+      }
+      const link = await addLessonLink({
+        lessonId: body.lessonId,
+        calendarEventId: body.calendarEventId,
+        athleteId: body.athleteId,
+        coachId,
+      })
+      sendJson(res, 200, { link })
+    } catch {
+      sendJson(res, 400, { error: 'BAD_REQUEST' })
+    }
+    return true
+  }
+
+  sendJson(res, 404, { error: 'NOT_FOUND' })
+  return true
+}

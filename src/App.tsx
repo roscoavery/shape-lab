@@ -128,6 +128,7 @@ import {
   lessonNameList,
 } from './lib/lessonStore'
 import { linkAthleteToCoach } from './lib/coachLink'
+import { linkLessonCalendarEvent } from './lib/calendarClient'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateSkillPaths } from './lib/skillPaths'
 import { hydrateChalkboards } from './lib/chalkboard'
@@ -647,15 +648,39 @@ export default function App() {
     setCompareFullTick((tick) => tick + 1)
   }
 
-  const startLesson = (athleteIds: string[], planId?: string | null) => {
+  const startLesson = (
+    athleteIds: string[],
+    planId?: string | null,
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+  ) => {
     const coach = athletes.find((a) => a.id === activeAthleteId) ?? null
     if (!coach || !isCoachProfile(coach)) return
     const ids = athleteIds.filter(Boolean)
     if (ids.length === 0) return
-    startLessonSession({ athleteIds: ids, coachId: coach.id, planId })
+    const primaryId = ids[0]!
+    const existing = getLessonSession(loadActiveLessonId())
+    if (
+      existing &&
+      !existing.endedAt &&
+      calendar?.eventId &&
+      existing.calendarEventId === calendar.eventId &&
+      ids.some((id) => lessonAthleteIds(existing).includes(id))
+    ) {
+      setLessonTick((n) => n + 1)
+      return
+    }
+    const session = startLessonSession({
+      athleteIds: ids,
+      coachId: coach.id,
+      planId,
+      calendar,
+    })
     let roster = athletes
     for (const id of ids) roster = linkAthleteToCoach(id, coach.id)
     setAthleteRoster(roster)
+    if (calendar?.eventId) {
+      void linkLessonCalendarEvent(session.id, calendar.eventId, primaryId)
+    }
     setLessonTick((n) => n + 1)
   }
 

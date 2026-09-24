@@ -116,6 +116,7 @@ import type { AuthUser } from './auth/types.ts'
 import { appendHoldLog } from './holdLog.ts'
 import { readParentWellness, writeParentWellness } from './parentWellnessStore.ts'
 import { patchStillTags, stillTagsForViewer } from './stillTags.ts'
+import { handleCalendarApi } from './calendar/apiRoutes.ts'
 
 const API_PATHS = new Set([
   '/api/auth/me',
@@ -235,6 +236,10 @@ export async function handleShapeLabApi(
 ): Promise<boolean> {
   const url = requestUrl(req)
   const path = apiPath(url.pathname)
+  if (path === '/api/calendar' || path.startsWith('/api/calendar/')) {
+    const sub = path.slice('/api/calendar'.length) || '/'
+    return await handleCalendarApi(req, res, sub)
+  }
   if (!API_PATHS.has(path)) return false
 
   if (path === '/api/health') {

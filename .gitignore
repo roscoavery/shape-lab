@@ -49,6 +49,7 @@ data/coach-classes.json
 data/revision.json
 data/roster-photos/
 data/roster.json
+data/calendar.json
 data/accounts.json
 data/sessions.json
 data/audit.json

@@ -20,18 +20,22 @@
     "gym:pull": "node scripts/pull-from-blob.mjs",
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
+    "gym:recover": "bash scripts/recover-gym-v4.sh",
+    "gym:lace": "bash scripts/mac-gym.sh",
     "gym:mac:v4": "GYM_BRANCH=shape-lab-v4 bash scripts/mac-gym.sh",
     "gym:token": "node scripts/set-tunnel-token.mjs",
     "gym:photos": "node scripts/restore-photos-from-backup.mjs",
     "gym:shapes": "node scripts/delete-gym-shape.mjs",
-    "gym:stills": "node scripts/restore-stills-from-blobs.mjs"
+    "gym:stills": "node scripts/restore-stills-from-blobs.mjs",
+    "test:calendar": "tsx --test server/calendar/*.test.ts"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",
     "@vercel/blob": "^2.8.0",
     "nodemailer": "^10.0.9",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tsdav": "^2.3.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -43,6 +47,7 @@
     "esbuild": "^0.28.2",
     "oxlint": "^1.79.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
