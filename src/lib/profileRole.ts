@@ -44,6 +44,11 @@ export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
   return isRyanAthlete(athlete)
 }
 
+/** Ryan or a gym owner — can fix names and phones on other profiles. */
+export function canAdminEditRoster(athlete: Athlete | null | undefined): boolean {
+  return isGymAdmin(athlete) || profileRole(athlete) === 'gym_owner'
+}
+
 /** Owner or gym admin. Signed-out visitors cannot edit anyone. */
 export function canEditAthleteProfile(
   viewer: Athlete | null | undefined,

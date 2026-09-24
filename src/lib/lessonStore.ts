@@ -287,6 +287,7 @@ export function startLessonSession(opts: {
     title: string
     startAt: string
     endAt: string
+    notes?: string | null
   } | null
 }): LessonSession {
   const athleteIds = [...new Set((opts.athleteIds ?? [opts.athleteId]).filter((id): id is string => Boolean(id)))]
@@ -297,12 +298,33 @@ export function startLessonSession(opts: {
   const incomingPlan = opts.planId ? getLessonPlan(opts.planId) : null
   const existing = findLiveLesson(opts.coachId, athleteIds)
   if (existing) {
+    const calendarNotes = existing.calendarNotes || opts.calendar?.notes?.trim() || null
     const next = {
       ...existing,
       planId: opts.planId ?? existing.planId,
       planSnapshot: incomingPlan
         ? snapshotPlan(incomingPlan)
         : existing.planSnapshot ?? snapshotPlan(getLessonPlan(existing.planId)),
+      calendarEventId: existing.calendarEventId ?? opts.calendar?.eventId ?? null,
+      calendarTitle: existing.calendarTitle ?? opts.calendar?.title ?? null,
+      calendarStartAt: existing.calendarStartAt ?? opts.calendar?.startAt ?? null,
+      calendarEndAt: existing.calendarEndAt ?? opts.calendar?.endAt ?? null,
+      calendarNotes,
+      notes:
+        calendarNotes && !existing.notes.some((n) => n.topicLabel === 'From calendar')
+          ? [
+              {
+                id: createId('lnt'),
+                text: calendarNotes.slice(0, 800),
+                createdAt: existing.startedAt,
+                context: 'general' as const,
+                audience: 'athlete' as const,
+                topicKind: 'custom' as const,
+                topicLabel: 'From calendar',
+              },
+              ...existing.notes,
+            ]
+          : existing.notes,
     }
     saveLessonSession(next)
     setActiveLessonId(next.id)
@@ -322,10 +344,25 @@ export function startLessonSession(opts: {
     calendarTitle: opts.calendar?.title ?? null,
     calendarStartAt: opts.calendar?.startAt ?? null,
     calendarEndAt: opts.calendar?.endAt ?? null,
+    calendarNotes: opts.calendar?.notes?.trim() || null,
   }
-  persist(loadLessonPlans(), [session, ...loadLessonSessions()])
+  const notes = session.calendarNotes
+    ? [
+        {
+          id: createId('lnt'),
+          text: session.calendarNotes.slice(0, 800),
+          createdAt: session.startedAt,
+          context: 'general' as const,
+          audience: 'athlete' as const,
+          topicKind: 'custom' as const,
+          topicLabel: 'From calendar',
+        },
+        ...session.notes,
+      ]
+    : session.notes
+  persist(loadLessonPlans(), [{ ...session, notes }, ...loadLessonSessions()])
   setActiveLessonId(session.id)
-  return session
+  return { ...session, notes }
 }
 
 export function saveLessonSession(session: LessonSession): LessonSession {

@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
 import { readRosterFile } from '../rosterStore.ts'
 import type { Athlete } from '../../src/types.ts'
+import { userFromRequest } from '../auth/sessions.ts'
+import { isAdminRole } from '../auth/types.ts'
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000
 const RYAN_PROFILE_ID = 'ath_ryan'
@@ -85,8 +87,22 @@ export async function authorizeCalendarRequest(
   req: IncomingMessage,
 ): Promise<{ coachId: string } | { error: string; status: number }> {
   const token = readBearerToken(req)
-  if (!token) return { error: 'UNAUTHORIZED', status: 401 }
-  const parsed = verifyCalendarToken(token)
-  if (!parsed) return { error: 'UNAUTHORIZED', status: 401 }
-  return { coachId: parsed.coachId }
+  if (token) {
+    const parsed = verifyCalendarToken(token)
+    if (parsed) return { coachId: parsed.coachId }
+  }
+  const user = await userFromRequest(req)
+  if (user && !user.kiosk && (user.role === 'coach' || isAdminRole(user.role))) {
+    if (user.rosterProfileId) return { coachId: user.rosterProfileId }
+    if (user.role === 'admin') return { coachId: RYAN_PROFILE_ID }
+    const roster = await readRosterFile()
+    const athletes = (roster.athletes ?? []) as Athlete[]
+    const byName = athletes.find(
+      (a) =>
+        (a.role === 'coach' || a.role === 'gym_owner' || a.id === RYAN_PROFILE_ID) &&
+        a.name.trim().toLowerCase() === user.displayName.trim().toLowerCase(),
+    )
+    if (byName) return { coachId: byName.id }
+  }
+  return { error: 'UNAUTHORIZED', status: 401 }
 }

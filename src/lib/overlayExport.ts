@@ -420,7 +420,14 @@ export async function saveHoldClipWithOverlay(opts: {
   skeletonWhenOneLine?: boolean
   saveSpeed?: number
   shapeId?: string
+  /** Save the recap file as-is. Overlay burn stays under Save options. */
+  skipOverlay?: boolean
 }): Promise<SaveVideoResult> {
+  if (opts.skipOverlay) {
+    const ext = extForVideoType(opts.source.type || opts.filename)
+    const name = opts.filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
+    return saveVideoToDevice(opts.source, name)
+  }
   const mode = opts.mode ?? 'auto'
   const mirror = opts.mirror !== false
   const layers: HoldSaveLayers = {

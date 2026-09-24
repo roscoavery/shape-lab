@@ -36,6 +36,7 @@ type Props = {
   fill?: boolean
   /** Lunge / lever recap uses this shape. Handstand stays default. */
   holdShapeId?: string
+  onSaveBusy?: (busy: boolean) => void
 }
 
 function layerChip(on: boolean): string {
@@ -60,6 +61,7 @@ export function HoldReplayPlayer({
   athleteId = null,
   fill = false,
   holdShapeId,
+  onSaveBusy,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -211,14 +213,15 @@ export function HoldReplayPlayer({
     videoReady,
   ])
 
-  const save = async () => {
+  const save = async (withOverlay: boolean) => {
     if (!blob) {
       setFlash('Clip is still loading — wait a moment, then tap Save again.')
       window.setTimeout(() => setFlash(null), 4000)
       return
     }
     setSaving(true)
-    setFlash('Writing the clip…')
+    onSaveBusy?.(true)
+    setFlash(withOverlay ? 'Writing the overlay clip… stay on this recap.' : 'Saving to Photos… recap stays open.')
     try {
       const result: SaveVideoResult = await saveHoldClipWithOverlay({
         source: blob,
@@ -237,16 +240,22 @@ export function HoldReplayPlayer({
         showClock,
         saveSpeed,
         shapeId: holdShapeId,
+        skipOverlay: !withOverlay,
         onProgress: (p) => {
           setFlash(`Writing the clip… ${Math.round(p * 100)}%`)
         },
       })
-      setFlash(saveResultMessage(result))
+      setFlash(
+        result === 'shared'
+          ? 'On the Photos sheet — pick Save Video. Come back here — this recap stays.'
+          : saveResultMessage(result),
+      )
     } catch {
       setFlash('Could not save that hold clip.')
     } finally {
       setSaving(false)
-      window.setTimeout(() => setFlash(null), 5000)
+      onSaveBusy?.(false)
+      window.setTimeout(() => setFlash(null), 6000)
     }
   }
 
@@ -310,7 +319,7 @@ export function HoldReplayPlayer({
         <button
           type="button"
           disabled={!blob || saving}
-          onClick={() => void save()}
+          onClick={() => void save(false)}
           className={`rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${HOLD_PINK_BTN}`}
         >
           {saving ? 'Writing clip…' : 'Save to Photos'}
@@ -455,6 +464,14 @@ export function HoldReplayPlayer({
               {showAngles ? 'Angles on' : 'Show angles'}
             </button>
           </div>
+          <button
+            type="button"
+            disabled={!blob || saving}
+            onClick={() => void save(true)}
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm disabled:opacity-50"
+          >
+            {saving ? 'Writing overlay…' : 'Save with overlay'}
+          </button>
         </div>
       </details>
       {flash && <p className={`mt-1 text-[11px] text-[var(--accent)] ${fill ? 'px-1' : ''}`}>{flash}</p>}

@@ -29,6 +29,23 @@ import { AthleteSearchField } from './AthleteSearchField'
 type Mode = 'hold' | 'vups' | 'skill' | 'other' | `extra:${string}`
 
 type HoldId = (typeof CLASS_HOLD_DRILLS)[number]['id']
+type HollowArms = 'down' | 'up'
+type HoldSpec = string | null
+
+const HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
+  hollow: [
+    { id: 'bent_knee', label: 'Bent-knee' },
+    { id: 'tucked', label: 'Tucked' },
+    { id: 'curl_up', label: 'Curl up' },
+  ],
+  wall_handstand: [
+    { id: 'tucked', label: 'Tucked' },
+    { id: 'l', label: 'L' },
+    { id: 'piked', label: 'Piked' },
+  ],
+  superman: [{ id: 'bird_dog', label: 'Bird dogs' }],
+  side_plank: [{ id: 'on_knees', label: 'On knees' }],
+}
 
 type Props = {
   athletes: Athlete[]
@@ -79,7 +96,12 @@ export function ClassStopwatch({
   const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
   const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
   const [mode, setMode] = useState<Mode>('hold')
+  const [repsCatalog, setRepsCatalog] = useState<'v_up' | 'pushup'>('v_up')
   const [holdId, setHoldId] = useState<HoldId>('hollow')
+  const [hollowArms, setHollowArms] = useState<HollowArms>('down')
+  const [holdSpec, setHoldSpec] = useState<HoldSpec>(null)
+  const [holdPage, setHoldPage] = useState(0)
+  const swipeX = useRef<number | null>(null)
   const [extraHoldId, setExtraHoldId] = useState<string | null>(null)
   const [side, setSide] = useState<'left' | 'right'>('left')
   const [selected, setSelected] = useState<string[]>(() => pool.map((a) => a.id))
@@ -217,8 +239,15 @@ export function ClassStopwatch({
     }
     const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
     if (!drill) return
-    const holdName =
-      drill.autoKey === 'side_plank' ? `${drill.label} · ${side}` : drill.label
+    const specLabel = HOLD_SPECS[holdId]?.find((s) => s.id === holdSpec)?.label
+    const holdName = [
+      drill.label,
+      drill.autoKey === 'hollow' ? (hollowArms === 'up' ? 'arms up' : 'arms down') : null,
+      drill.autoKey === 'side_plank' ? side : null,
+      specLabel,
+    ]
+      .filter(Boolean)
+      .join(' · ')
     const n = logClassHoldForAthletes({
       athleteIds: selected,
       autoKey: drill.autoKey,
@@ -311,8 +340,9 @@ export function ClassStopwatch({
 
   const logVups = () => {
     const nReps = Number(reps)
+    const label = repsCatalog === 'pushup' ? 'Push-ups' : 'V-ups'
     if (!Number.isFinite(nReps) || nReps <= 0) {
-      setFlash('Enter how many V-ups they did.')
+      setFlash(`Enter how many ${label} they did.`)
       return
     }
     if (selected.length === 0) {
@@ -322,15 +352,15 @@ export function ClassStopwatch({
     const nSets = Number(sets)
     const n = logClassRepsForAthletes({
       athleteIds: selected,
-      catalogId: 'v_up',
+      catalogId: repsCatalog,
       sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
       reps: nReps,
-      label: `V-ups · ${nReps} reps`,
+      label: `${label} · ${nReps} reps`,
       className,
       meetingId: meeting?.id,
     })
     setFlash(
-      `Logged ${nReps} V-up${nReps === 1 ? '' : 's'} for ${n} athlete${n === 1 ? '' : 's'}.`,
+      `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
     )
   }
 
@@ -405,6 +435,7 @@ export function ClassStopwatch({
             onClick={() => {
               setMode(id)
               setExtraHoldId(null)
+              if (id === 'vups') setRepsCatalog('v_up')
             }}
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
               mode === id
@@ -448,6 +479,35 @@ export function ClassStopwatch({
               Which hold are they doing?
             </p>
           )}
+          <div
+            className="overflow-hidden"
+            onTouchStart={(e) => {
+              swipeX.current = e.changedTouches[0]?.clientX ?? null
+            }}
+            onTouchEnd={(e) => {
+              const startX = swipeX.current
+              swipeX.current = null
+              const endX = e.changedTouches[0]?.clientX
+              if (startX == null || endX == null) return
+              const dx = endX - startX
+              if (dx < -40) setHoldPage(0)
+              if (dx > 40) setHoldPage(1)
+            }}
+            onPointerDown={(e) => {
+              if (e.pointerType === 'touch') return
+              swipeX.current = e.clientX
+            }}
+            onPointerUp={(e) => {
+              if (e.pointerType === 'touch') return
+              const startX = swipeX.current
+              swipeX.current = null
+              if (startX == null) return
+              const dx = e.clientX - startX
+              if (dx < -40) setHoldPage(0)
+              if (dx > 40) setHoldPage(1)
+            }}
+          >
+            {holdPage === 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {CLASS_HOLD_DRILLS.map((d) =>
               d.id === 'side_plank' ? (
@@ -466,6 +526,7 @@ export function ClassStopwatch({
                         onClick={() => {
                           setHoldId('side_plank')
                           setSide(s)
+                          setHoldSpec(null)
                           setExtraHoldId(null)
                         }}
                         className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
@@ -481,12 +542,44 @@ export function ClassStopwatch({
                     )
                   })}
                 </div>
+              ) : d.id === 'hollow' ? (
+                <div
+                  key={d.id}
+                  className="grid grid-cols-2 overflow-hidden rounded-xl bg-white/8"
+                >
+                  {(['down', 'up'] as const).map((arms) => {
+                    const on = !extraHoldId && holdId === 'hollow' && hollowArms === arms
+                    return (
+                      <button
+                        key={arms}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => {
+                          setHoldId('hollow')
+                          setHollowArms(arms)
+                          setHoldSpec(null)
+                          setExtraHoldId(null)
+                        }}
+                        className={`whitespace-nowrap px-1.5 py-2 text-xs font-semibold sm:px-3 sm:text-sm ${
+                          arms === 'up' ? 'border-l border-white/15' : ''
+                        } ${
+                          on
+                            ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                            : 'text-white/90'
+                        }`}
+                      >
+                        {arms === 'down' ? 'Arms down' : 'Arms up'}
+                      </button>
+                    )
+                  })}
+                </div>
               ) : (
                 <button
                   key={d.id}
                   type="button"
                   onClick={() => {
                     setHoldId(d.id)
+                    setHoldSpec(null)
                     setExtraHoldId(null)
                   }}
                   className={`rounded-xl px-3 py-2 text-sm font-semibold ${
@@ -500,6 +593,68 @@ export function ClassStopwatch({
               ),
             )}
           </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRepsCatalog('pushup')
+                    setMode('vups')
+                    setExtraHoldId(null)
+                  }}
+                  className="rounded-xl bg-white/8 px-3 py-4 text-sm font-semibold"
+                >
+                  Push-ups
+                  <span className="mt-1 block text-[11px] font-medium text-white/55">Sets and reps</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRepsCatalog('v_up')
+                    setMode('vups')
+                    setExtraHoldId(null)
+                  }}
+                  className="rounded-xl bg-white/8 px-3 py-4 text-sm font-semibold"
+                >
+                  V-ups
+                  <span className="mt-1 block text-[11px] font-medium text-white/55">Sets and reps</span>
+                </button>
+              </div>
+            )}
+            <p className="mt-1.5 flex items-center justify-center gap-2 text-[10px] text-white/40">
+              <button type="button" onClick={() => setHoldPage(0)} className={holdPage === 0 ? 'text-[var(--accent)]' : ''}>
+                Holds
+              </button>
+              <span>·</span>
+              <button type="button" onClick={() => setHoldPage(1)} className={holdPage === 1 ? 'text-[var(--accent)]' : ''}>
+                More
+              </button>
+            </p>
+          </div>
+          {!extraHoldId && HOLD_SPECS[holdId] && holdPage === 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                Variation · none selected
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {HOLD_SPECS[holdId]!.map((spec) => {
+                  const on = holdSpec === spec.id
+                  return (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      onClick={() => setHoldSpec(on ? null : spec.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
+                      }`}
+                    >
+                      {spec.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           {extraHolds.length > 0 && (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
@@ -689,7 +844,7 @@ export function ClassStopwatch({
       {mode === 'vups' && (
         <>
           <p className="text-sm text-white/60">
-            V-up counts change by class. Type the number this group just did.
+            {(repsCatalog === 'pushup' ? 'Push-up' : 'V-up')} counts change by class. Type the number this group just did.
           </p>
           <div className="grid grid-cols-2 gap-2">
           <label className="block text-sm">
@@ -721,7 +876,7 @@ export function ClassStopwatch({
             onClick={logVups}
             className="h-12 rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)]"
           >
-            Log V-ups for selected
+            Log {repsCatalog === 'pushup' ? 'push-ups' : 'V-ups'} for selected
           </button>
         </>
       )}

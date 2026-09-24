@@ -5,8 +5,9 @@ function newId(prefix: string): string {
   return `${prefix}_${randomBytes(10).toString('hex')}`
 }
 import { decryptSecret } from './crypto.ts'
-import { coachingLikelyTitle, matchEventToAthlete } from './matching.ts'
+import { coachingLikelyTitle, extractContactBits, extractUnmatchedPersonName, matchEventToAthlete, unescapeCalendarText } from './matching.ts'
 import { decodeCredential, icloudCalendarProvider } from './providers/icloud.ts'
+import { appendCalendarAthlete } from '../rosterStore.ts'
 import {
   getSyncState,
   persistDb,
@@ -80,8 +81,17 @@ export async function syncConnectionForCoach(
     for (const norm of result.events) {
       if (!passesFilter(norm.title, connection.eventFilter)) continue
       const seriesKey = norm.recurrenceInstanceKey.split('|')[0] ?? norm.providerEventId
+      const existing = db.events.find(
+        (e) =>
+          e.connectionId === connection.id &&
+          e.providerCalendarId === norm.providerCalendarId &&
+          e.providerEventId === norm.providerEventId &&
+          e.recurrenceInstanceKey === norm.recurrenceInstanceKey,
+      )
+
       const match = matchEventToAthlete({
         title: norm.title,
+        description: norm.description,
         seriesKey,
         connectionId: connection.id,
         coachAthletes: roster,
@@ -90,13 +100,42 @@ export async function syncConnectionForCoach(
         titleMappings: db.titleMappings.filter((m) => m.coachId === connection.coachId),
       })
 
-      const existing = db.events.find(
-        (e) =>
-          e.connectionId === connection.id &&
-          e.providerCalendarId === norm.providerCalendarId &&
-          e.providerEventId === norm.providerEventId &&
-          e.recurrenceInstanceKey === norm.recurrenceInstanceKey,
-      )
+      let athleteId = existing?.matchedAthleteId ?? match.athleteId
+      let matchStatus = existing?.matchedAthleteId ? 'matched' : match.matchStatus
+      let matchConfidence = existing?.matchedAthleteId ? 1 : match.matchConfidence
+
+      if (!athleteId && matchStatus === 'needs_athlete') {
+        const person = extractUnmatchedPersonName(norm.title, norm.description, coachAthleteList)
+        if (person) {
+          const id = `ath_cal_${randomBytes(8).toString('hex')}`
+          const contact = extractContactBits(`${norm.title}\n${norm.description}`)
+          const note = unescapeCalendarText(norm.description)
+          const saved = await appendCalendarAthlete({
+            id,
+            name: person.fullName,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            createdByCoachId: connection.coachId,
+            ...(contact.email ? { email: contact.email } : {}),
+            ...(contact.phone ? { phone: contact.phone } : {}),
+            ...(note ? { notes: note.slice(0, 800) } : {}),
+          })
+          const stub = {
+            id: saved.id,
+            name: person.fullName,
+            firstName: person.firstName,
+            lastName: person.lastName,
+            createdAt: now,
+            role: 'athlete' as const,
+            createdFromCalendar: true,
+            needsOnboarding: true,
+          }
+          if (!roster.some((a) => a.id === saved.id)) roster.push(stub as Athlete)
+          athleteId = saved.id
+          matchStatus = 'matched'
+          matchConfidence = 0.85
+        }
+      }
 
       mapped.push({
         id: existing?.id ?? newId('cev'),
@@ -113,9 +152,9 @@ export async function syncConnectionForCoach(
         location: norm.location,
         status: norm.status,
         lastModifiedAt: norm.lastModifiedAt,
-        matchedAthleteId: existing?.matchedAthleteId ?? match.athleteId,
-        matchStatus: existing?.matchedAthleteId ? 'matched' : match.matchStatus,
-        matchConfidence: existing?.matchedAthleteId ? 1 : match.matchConfidence,
+        matchedAthleteId: athleteId,
+        matchStatus,
+        matchConfidence,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
       })

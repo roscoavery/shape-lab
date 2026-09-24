@@ -388,6 +388,7 @@ export function Tasks2Panel({
   const holdDoneRef = useRef(false)
   const flushedHoldRef = useRef<Promise<Blob | null> | null>(null)
   const holdPersistRef = useRef<{ reportId: string; logId: string | null } | null>(null)
+  const savingHoldRef = useRef(false)
   const [holdLogged, setHoldLogged] = useState(true)
   const [holdClipPending, setHoldClipPending] = useState(false)
   const [holdDay, setHoldDay] = useState<{ session: number; today: number } | null>(null)
@@ -1654,6 +1655,9 @@ export function Tasks2Panel({
   }
 
   const keepToPhotos = async () => {
+    savingHoldRef.current = true
+    setFlash('Saving to Photos… recap stays open.')
+    try {
     const clip = hitsAsk?.blob && hitsAsk.blob.type.startsWith('video') ? hitsAsk : deviceSave
     if (clip && 'filename' in clip) {
       const clipId = hitsAsk?.id ?? report?.replayCaptureId
@@ -1666,8 +1670,13 @@ export function Tasks2Panel({
         recordedWallSec: report?.recordedWallSec,
         filename: clip.filename,
         clipId,
+        skipOverlay: true,
       })
-      setFlash(saveResultMessage(result))
+      setFlash(
+        result === 'shared'
+          ? 'On the Photos sheet — pick Save Video. This recap stays here.'
+          : saveResultMessage(result),
+      )
     }
     for (const extra of extraHoldBlobs()) {
       const ext = extra.blob.type.includes('mp4') ? 'mp4' : 'webm'
@@ -1676,8 +1685,13 @@ export function Tasks2Panel({
     for (const still of pendingStillsRef.current) {
       await saveImageToDevice(still.blob, `${still.shapeName.replace(/\s+/g, '-')}.jpg`)
     }
-    dumpPendingMedia()
-    window.setTimeout(() => setFlash(null), 5000)
+    setHitsAsk(null)
+    setDeviceSave(null)
+    pendingStillsRef.current = []
+    } finally {
+      savingHoldRef.current = false
+      window.setTimeout(() => setFlash(null), 5000)
+    }
   }
 
   const keepToLibrary = async () => {
@@ -1876,6 +1890,8 @@ export function Tasks2Panel({
         window.setTimeout(() => setFlash(null), 3500)
         return
       }
+      savingHoldRef.current = true
+      setFlash('Saving to Photos… recap stays open.')
       const hold = report.holdAttempts?.find((h) => h.clipId === clipId)
       try {
         const result = await saveHoldClipWithOverlay({
@@ -1886,10 +1902,17 @@ export function Tasks2Panel({
           recordedWallSec: report.recordedWallSec,
           filename: videoFileName(report, file.type || 'video/mp4', index),
           clipId,
+          skipOverlay: true,
         })
-        setFlash(saveResultMessage(result))
+        setFlash(
+          result === 'shared'
+            ? 'On the Photos sheet — pick Save Video. This recap stays here.'
+            : saveResultMessage(result),
+        )
       } catch {
         setFlash('Could not save that hold clip.')
+      } finally {
+        savingHoldRef.current = false
       }
       window.setTimeout(() => setFlash(null), 5000)
     },
@@ -1913,6 +1936,14 @@ export function Tasks2Panel({
   useEffect(() => {
     if (phase !== 'replay' && phase !== 'review') return
     const onPop = () => {
+      if (savingHoldRef.current) {
+        try {
+          window.history.pushState({ shapeLab: 'hold-review' }, '')
+        } catch {
+          /* ignore */
+        }
+        return
+      }
       if (phase === 'replay') {
         if (seq.mode === 'hs-hold' || report?.holdAttempts?.length) closeHoldWatch()
         else {
@@ -2558,9 +2589,9 @@ export function Tasks2Panel({
                     {formatSeconds(report.sessionHoldSeconds ?? sessionHoldTotal(report.holdAttempts))}
                     {holdDay && holdDay.today > 0 ? ` · Today ${formatSeconds(holdDay.today)}` : ''}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-white/60">
-                    Recap starts at the beginning. Save options are under the clip.
-                  </p>
+      <p className="mt-0.5 text-[12px] text-white/60">
+        Recap starts at the beginning. Save to Photos keeps you here.
+      </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
                   <button
@@ -2615,6 +2646,9 @@ export function Tasks2Panel({
                       report.holdAttempts?.find((h) => h.clipId === activeClipId)?.index,
                     )}
                     athleteId={athleteId}
+                    onSaveBusy={(busy) => {
+                      savingHoldRef.current = busy
+                    }}
                   />
                 ) : holdClipPending ? (
                   <p className="flex h-full items-center justify-center px-6 text-center text-sm text-[#ff4d9a]">

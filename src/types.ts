@@ -223,6 +223,9 @@ export type Athlete = {
   worksWithCoachIds?: string[]
   /** Coach signed in when this profile was created. */
   createdByCoachId?: string
+  /** Stub built from an iCloud event. Still needs new-athlete onboarding. */
+  createdFromCalendar?: boolean
+  needsOnboarding?: boolean
   /**
    * When true, anyone at the gym can open this profile. Missing or false =
    * private: only the athlete, their parents, and coaches who work with them
@@ -805,6 +808,8 @@ export type LessonSession = {
   calendarTitle?: string | null
   calendarStartAt?: string | null
   calendarEndAt?: string | null
+  /** Notes copied from the iCloud event when the lesson started. */
+  calendarNotes?: string | null
 }
 
 export type CoachProgression = {

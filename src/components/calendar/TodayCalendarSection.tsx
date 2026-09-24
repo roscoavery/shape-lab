@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import {
   authorizeCalendarApi,
+  authorizeCalendarFromSession,
   fetchTodayEvents,
   hasCalendarApiToken,
   matchCalendarEvent,
@@ -17,7 +18,7 @@ type Props = {
   onStartLesson: (
     athleteIds: string[],
     planId?: string | null,
-    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
   ) => void
 }
 
@@ -50,18 +51,39 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
   const refresh = useCallback(async () => {
     try {
       setLoadError(false)
+      if (!hasCalendarApiToken()) {
+        const ok = await authorizeCalendarFromSession()
+        if (!ok) {
+          const { unauthorized } = await fetchTodayEvents()
+          if (unauthorized) {
+            setNeedsAuth(true)
+            return
+          }
+        }
+      }
       try {
         await syncCalendarNow()
       } catch {
         /* cached events still shown */
       }
       const { events: rows, unauthorized } = await fetchTodayEvents()
-      setNeedsAuth(unauthorized && !hasCalendarApiToken())
+      if (unauthorized) {
+        const ok = await authorizeCalendarFromSession()
+        if (ok) {
+          const retry = await fetchTodayEvents()
+          setNeedsAuth(false)
+          setEvents(retry.events)
+          return
+        }
+        setNeedsAuth(true)
+        setEvents([])
+        return
+      }
+      setNeedsAuth(false)
       setEvents(rows)
     } catch {
       setLoadError(true)
       setEvents([])
-      setNeedsAuth(false)
     }
   }, [])
 
@@ -104,6 +126,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                 title: ev.title,
                 startAt: ev.startAt,
                 endAt: ev.endAt,
+                notes: ev.notes ?? null,
               })
             }
           >
@@ -124,6 +147,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
               title: ev.title,
               startAt: ev.startAt,
               endAt: ev.endAt,
+              notes: ev.notes ?? null,
             })
           }
         >
@@ -220,6 +244,11 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                       : 'Coaching event'}
                 {ev.location ? ` · ${ev.location}` : ''}
               </p>
+                {ev.notes?.trim() ? (
+                  <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-[var(--text)]/80">
+                    {ev.notes.trim()}
+                  </p>
+                ) : null}
             </div>
             {renderActions(ev)}
           </li>
@@ -253,6 +282,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                             title: pickEvent.title,
                             startAt: pickEvent.startAt,
                             endAt: pickEvent.endAt,
+                            notes: pickEvent.notes ?? null,
                           })
                         }
                       })

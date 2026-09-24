@@ -304,3 +304,47 @@ export async function writeRosterFile(data: unknown): Promise<DiskRoster> {
   })
   return saved
 }
+
+export async function appendCalendarAthlete(athlete: {
+  id: string
+  name: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  createdByCoachId: string
+  notes?: string
+}): Promise<{ id: string; created: boolean }> {
+  const stored = await readRawRoster()
+  const athletes = Array.isArray(stored.athletes) ? [...stored.athletes] : []
+  const existing = athletes.find((row) => {
+    if (!row || typeof row !== 'object') return false
+    const a = row as { id?: string; name?: string }
+    return a.id === athlete.id || (a.name || '').trim().toLowerCase() === athlete.name.trim().toLowerCase()
+  }) as { id?: string } | undefined
+  if (existing?.id) return { id: existing.id, created: false }
+  const now = new Date().toISOString()
+  athletes.push({
+    id: athlete.id,
+    name: athlete.name,
+    firstName: athlete.firstName,
+    lastName: athlete.lastName,
+    role: 'athlete',
+    createdAt: now,
+    updatedAt: now,
+    createdByCoachId: athlete.createdByCoachId,
+    worksWithCoachIds: [athlete.createdByCoachId],
+    createdFromCalendar: true,
+    needsOnboarding: true,
+    profilePublic: false,
+    ...(athlete.email ? { email: athlete.email } : {}),
+    ...(athlete.phone ? { phone: athlete.phone } : {}),
+    ...(athlete.notes ? { notes: athlete.notes } : {}),
+  })
+  await writeJson(FILE, {
+    ...stored,
+    athletes,
+    exportedAt: now,
+  })
+  return { id: athlete.id, created: true }
+}

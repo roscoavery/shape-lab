@@ -130,6 +130,20 @@ export async function handleCalendarApi(
     return true
   }
 
+  if (segments[0] === 'auth-session' && req.method === 'POST' && segments.length === 1) {
+    const sessionAuth = await authorizeCalendarRequest(req)
+    if ('error' in sessionAuth) {
+      sendJson(res, sessionAuth.status, { error: sessionAuth.error })
+      return true
+    }
+    sendJson(res, 200, {
+      token: issueCalendarToken(sessionAuth.coachId),
+      coachId: sessionAuth.coachId,
+      expiresInHours: 12,
+    })
+    return true
+  }
+
   const auth = await authorizeCalendarRequest(req)
   if ('error' in auth) {
     sendJson(res, auth.status, { error: auth.error })
@@ -292,7 +306,7 @@ export async function handleCalendarApi(
     sendJson(res, 200, {
       events: events.map((e) => ({
         ...e,
-        description: undefined,
+        notes: e.description || '',
         lessonLinks: links.filter((l) => l.calendarEventId === e.id),
       })),
     })
@@ -311,7 +325,7 @@ export async function handleCalendarApi(
     sendJson(res, 200, {
       events: events.map((e) => ({
         ...e,
-        description: undefined,
+        notes: e.description || '',
         lessonLinks: links.filter((l) => l.calendarEventId === e.id),
       })),
     })

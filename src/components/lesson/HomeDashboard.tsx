@@ -21,7 +21,7 @@ import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { CalendarDesk, happeningNow } from '../calendar/CalendarDesk'
-import { fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
+import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
@@ -97,7 +97,7 @@ type Props = {
   onStartLesson: (
     athleteIds: string[],
     planId?: string | null,
-    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
   ) => void
   onOpenLesson?: (session: LessonSession) => void
   onShortcut?: (id: TodayShortcutId) => void
@@ -160,16 +160,17 @@ export function HomeDashboard({
   useEffect(() => subscribeHiddenGyms(() => setHiddenTick((n) => n + 1)), [])
   useEffect(() => {
     if (!coach || !signedIn) return
-    if (!hasCalendarApiToken()) return
     let cancelled = false
-    void fetchTodayEvents().then(({ events }) => {
+    void (async () => {
+      if (!hasCalendarApiToken()) await authorizeCalendarFromSession()
+      const { events } = await fetchTodayEvents()
       if (cancelled) return
       const now = happeningNow(events)
       setNowEventId(now?.id ?? null)
       if (now?.matchedAthleteId) {
         setWithIds((prev) => (prev.length ? prev : [now.matchedAthleteId!]))
       }
-    })
+    })()
     return () => {
       cancelled = true
     }
@@ -526,11 +527,17 @@ export function HomeDashboard({
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      <CalendarDesk
-        coachId={signedIn.id}
-        athletes={athletes}
-        onStartLesson={onStartLesson}
-      />
+      <CollapsibleSection
+        title="Calendar"
+        hint="Month, week, or day · collapsed until you need it"
+        defaultOpen={false}
+      >
+        <CalendarDesk
+          coachId={signedIn.id}
+          athletes={athletes}
+          onStartLesson={onStartLesson}
+        />
+      </CollapsibleSection>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>

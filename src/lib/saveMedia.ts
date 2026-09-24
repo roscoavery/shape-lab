@@ -148,6 +148,11 @@ async function shareFile(file: File): Promise<boolean> {
     share: (data: ShareData) => Promise<void>
   }
   if (typeof nav.share !== 'function') return false
+  try {
+    window.history.pushState({ shapeLab: 'save-media' }, '')
+  } catch {
+    /* ignore */
+  }
   const data: ShareData = { files: [file] }
   if (typeof nav.canShare === 'function') {
     try {
@@ -196,17 +201,24 @@ export async function saveVideoToDevice(
 ): Promise<SaveVideoResult> {
   if (!blob || blob.size < 32) return 'failed'
   const type = blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm')
-  const file = new File([blob], filename, { type })
+  const name = filename.replace(/\.(webm|mp4|mov)$/i, '') + (extForVideoType(type) === 'mp4' ? '.mp4' : '.webm')
+  const file = new File([blob], name, { type: type.includes('mp4') ? 'video/mp4' : type })
 
-  if (prefersShareSave()) {
-    if (await shareFile(file)) return 'shared'
+  if (!prefersShareSave()) {
+    try {
+      triggerAnchorDownload(blob, name)
+      return 'downloaded'
+    } catch {
+      if (await shareFile(file)) return 'shared'
+      return 'failed'
+    }
   }
 
+  if (await shareFile(file)) return 'shared'
   try {
-    triggerAnchorDownload(blob, filename)
+    triggerAnchorDownload(blob, name)
     return 'downloaded'
   } catch {
-    if (await shareFile(file)) return 'shared'
     return 'failed'
   }
 }
@@ -214,15 +226,15 @@ export async function saveVideoToDevice(
 export function saveResultMessage(result: SaveVideoResult, kind: 'video' | 'pack' = 'video'): string {
   if (result === 'shared') {
     return isAppleMobile()
-      ? 'Share sheet opened — tap Save Video (Photos) or Save to Files.'
+      ? 'On the Photos sheet — pick Save Video. This recap stays open.'
       : isAndroid()
-        ? 'Share sheet opened — save the video to Gallery or Files.'
-        : 'Share sheet opened — save the video to Photos or Files.'
+        ? 'Save the video to Gallery. This recap stays open.'
+        : 'Save the video to Photos or Files. This recap stays open.'
   }
   if (result === 'downloaded') {
     return kind === 'pack'
       ? 'Downloaded to this device.'
-      : 'Downloading to this device…'
+      : 'Saved to this device. Recap is still here.'
   }
   return 'Could not save that clip. Keep the tab open and try Save again.'
 }

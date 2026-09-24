@@ -81,7 +81,6 @@ export function AthletePanel({
   onViewProfile,
   viewer = null,
 }: Props) {
-  const [newProfileOpen, setNewProfileOpen] = useState(false)
   const [name, setName] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -276,12 +275,12 @@ export function AthletePanel({
         ? withLinkedAthletes(active, linkedIds, athletes)
         : active
     const patchedName =
-      canSeeAllProfiles || isGymAdmin(viewer)
+      canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner'
         ? displayPersonName(firstName, lastName) || next.name
         : next.name
     const patched = {
       ...next,
-      ...(canSeeAllProfiles || isGymAdmin(viewer)
+      ...(canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner'
         ? {
             firstName: firstName.trim() || next.firstName,
             lastName: lastName.trim() || next.lastName,
@@ -369,7 +368,7 @@ export function AthletePanel({
   )
 
   return (
-    <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">
         {active ? `${roleLabel(active)} profile` : 'Profile'}
       </p>
@@ -393,6 +392,7 @@ export function AthletePanel({
         </div>
       )}
       {allowDelete && (
+        <CollapsibleSection title="People on this gym" hint={`${listed.length} profiles`} defaultOpen={false} inset>
         <ul className="mb-3 max-h-[min(50vh,22rem)] space-y-1 overflow-y-auto">
           {listed.map((a) => (
             <li
@@ -421,7 +421,6 @@ export function AthletePanel({
             </li>
           ))}
         </ul>
-      )}
       {pendingDelete && (
         <DeleteProfileAsk
           athlete={pendingDelete}
@@ -453,8 +452,26 @@ export function AthletePanel({
           )
         })}
       </select>
+        </CollapsibleSection>
+      )}
 
       {active && (
+        <CollapsibleSection
+          title={active.name}
+          hint={
+            active.needsOnboarding || active.createdFromCalendar
+              ? 'Calendar stub · still needs onboarding'
+              : roleLabel(active)
+          }
+          defaultOpen={false}
+          inset
+        >
+        {(active.needsOnboarding || active.createdFromCalendar) && (
+          <p className="mb-2 rounded-lg bg-[#102820] px-3 py-2 text-xs text-[var(--accent)]">
+            Created from a calendar lesson. New-athlete onboarding still needs the rest of
+            their info.
+          </p>
+        )}
         <div className="mb-3">
           <AthleteProfileCard
             athlete={active}
@@ -479,19 +496,12 @@ export function AthletePanel({
             }
           />
         </div>
+        </CollapsibleSection>
       )}
 
       {canCreateProfiles && (
-        <>
-      <button
-        type="button"
-        aria-expanded={newProfileOpen}
-        onClick={() => setNewProfileOpen((open) => !open)}
-        className="mb-2 rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--text)]"
-      >
-        {newProfileOpen ? 'Hide new profile form' : 'New profile'}
-      </button>
-      {newProfileOpen && <div className="flex flex-col gap-2">
+        <CollapsibleSection title="New profile" hint="Name, email, phone, passcode" defaultOpen={false} inset>
+      <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-2">
           {PROFILE_KINDS.map((kind) => (
             <button
@@ -672,12 +682,13 @@ export function AthletePanel({
           </div>
         )}
         <p className="text-[11px] leading-snug text-[var(--muted)]">{roleHint(newRole)}</p>
-      </div>}
-        </>
+      </div>
+        </CollapsibleSection>
       )}
 
       {active && canEditActive && !active.passcodeHash && (
-        <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
+        <CollapsibleSection title="Set a passcode" hint={`${active.name} does not have one yet`} defaultOpen={false} inset>
+        <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <p className="text-[11px] font-semibold text-[var(--text)]">
             {active.name} does not have a passcode yet
           </p>
@@ -697,10 +708,12 @@ export function AthletePanel({
             </button>
           </div>
         </div>
+        </CollapsibleSection>
       )}
 
       {active && lastShapeTest(active) && (
-        <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+        <CollapsibleSection title="Shape tests" hint={formatQuizScore(lastShapeTest(active)!)} defaultOpen={false} inset>
+        <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Shape tests
           </p>
@@ -713,10 +726,17 @@ export function AthletePanel({
             </p>
           )}
         </div>
+        </CollapsibleSection>
       )}
 
       {active && canEditActive && (
-        <div className="mt-3 flex flex-col gap-2">
+        <CollapsibleSection
+          title="Profile details"
+          hint="Name, phone, gym, handles"
+          defaultOpen={false}
+          inset
+        >
+        <div className="mt-1 flex flex-col gap-2">
           {active.photoDataUrl ? (
             <div className="flex items-center gap-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-2">
               <AthleteAvatar athlete={active} size="lg" />
@@ -730,7 +750,7 @@ export function AthletePanel({
               No snapshot on this profile yet. Add one on Today → My profile.
             </p>
           )}
-          {(canSeeAllProfiles || isGymAdmin(viewer)) && (
+          {(canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner') && (
             <div className="grid grid-cols-2 gap-2">
               <input
                 className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
@@ -923,14 +943,15 @@ export function AthletePanel({
             </button>
           </div>
         </div>
+        </CollapsibleSection>
       )}
       {active && isCoachProfile(active) && (
-        <CollapsibleSection title="Calendar connections" hint="iCloud · app-specific password" defaultOpen={false}>
+        <CollapsibleSection title="Calendar connections" hint="iCloud · app-specific password" defaultOpen={false} inset>
           <CalendarConnections coach={active} />
         </CollapsibleSection>
       )}
       {saved && <p className="mt-2 text-[11px] text-[var(--accent)]">{saved}</p>}
-      <CollapsibleSection title="How profiles work" hint="Passcodes, roles, who can edit" defaultOpen={false}>
+      <CollapsibleSection title="How profiles work" hint="Passcodes, roles, who can edit" defaultOpen={false} inset>
       <p className="text-[11px] leading-snug text-[var(--muted)]">
         Each new profile sets a 4-digit passcode on Create. Unlock that profile
         on any phone link or browser to see homework, hold times, the video

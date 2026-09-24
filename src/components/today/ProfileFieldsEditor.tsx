@@ -49,6 +49,8 @@ type Props = {
   onChange: (next: Athlete) => void
   showPhoto?: boolean
   athletes?: Athlete[]
+  adminEdit?: boolean
+  contactOnly?: boolean
 }
 
 /** Owner-only edits for photo and intake answers. Same fields as the shape-test line. */
@@ -57,11 +59,63 @@ export function ProfileFieldsEditor({
   onChange,
   showPhoto = true,
   athletes = [],
+  adminEdit = false,
+  contactOnly = false,
 }: Props) {
   const patch = (next: Partial<Athlete>) => onChange({ ...athlete, ...next })
 
   return (
     <div className="flex flex-col gap-6">
+      {adminEdit && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Name and phone</h3>
+          <p className="text-xs text-[var(--muted)]">Gym admin can fix the name and phone on this profile.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+              placeholder="First name"
+              value={athlete.firstName ?? ''}
+              onChange={(e) => {
+                const firstName = e.target.value
+                const lastName = athlete.lastName ?? ''
+                patch({
+                  firstName,
+                  name: `${firstName} ${lastName}`.trim() || athlete.name,
+                })
+              }}
+            />
+            <input
+              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+              placeholder="Last name"
+              value={athlete.lastName ?? ''}
+              onChange={(e) => {
+                const lastName = e.target.value
+                const firstName = athlete.firstName ?? ''
+                patch({
+                  lastName,
+                  name: `${firstName} ${lastName}`.trim() || athlete.name,
+                })
+              }}
+            />
+          </div>
+          <input
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+            placeholder="Phone"
+            inputMode="tel"
+            value={athlete.phone ?? ''}
+            onChange={(e) => patch({ phone: e.target.value })}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
+            placeholder="Parent phone"
+            inputMode="tel"
+            value={athlete.parentPhone ?? ''}
+            onChange={(e) => patch({ parentPhone: e.target.value })}
+          />
+        </section>
+      )}
+      {!contactOnly && (
+      <>
       {profileRole(athlete) === 'athlete' && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">
@@ -290,6 +344,8 @@ export function ProfileFieldsEditor({
           ))}
         </div>
       </section>
+      </>
+      )}
     </div>
   )
 }

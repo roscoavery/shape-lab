@@ -652,7 +652,7 @@ export default function App() {
   const startLesson = (
     athleteIds: string[],
     planId?: string | null,
-    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
   ) => {
     const coach = athletes.find((a) => a.id === activeAthleteId) ?? null
     if (!coach || !isCoachProfile(coach)) return

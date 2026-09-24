@@ -239,7 +239,7 @@ export function EducationPanel({
               <NavChip
                 active={view.kind === 'shapes' || view.kind === 'shape'}
                 onClick={goShapes}
-                label="Shape library"
+                label="Library"
               />
               <NavChip active={view.kind === 'ig'} onClick={() => setView({ kind: 'ig' })} label="IG shapes" />
               <NavChip active={view.kind === 'hits'} onClick={() => setView({ kind: 'hits' })} label="My shapes" />
@@ -823,7 +823,7 @@ function HomeView({
         </div>
         <div className="px-5 py-5 sm:px-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
-            Shape library
+            Positions
           </p>
           <h3 className="learn-serif mt-2 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--text)] sm:text-5xl">
             Shape library

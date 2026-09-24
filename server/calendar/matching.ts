@@ -27,8 +27,72 @@ export function athleteFullName(a: Athlete): string {
   return a.name.trim()
 }
 
+const SKIP_NAME_TOKENS = new Set([
+  'lesson',
+  'private',
+  'tumble',
+  'tumbling',
+  'gym',
+  'coach',
+  'coaching',
+  'athlete',
+  'student',
+  'training',
+  'camp',
+  'class',
+  'with',
+  'from',
+  'for',
+  'and',
+  'the',
+  'clinic',
+  'school',
+  'parent',
+  'mom',
+  'dad',
+  'bring',
+  'grips',
+  'please',
+  'thanks',
+  'thank',
+  'after',
+  'before',
+  'phone',
+  'email',
+  'years',
+  'year',
+  'old',
+  'age',
+  'see',
+  'call',
+  'text',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+  'missed',
+  'reschedule',
+  'cancel',
+  'cancelled',
+  'confirmed',
+  'new',
+  'kid',
+  'child',
+  'high',
+  'bar',
+  'floor',
+  'beam',
+  'vault',
+  'about',
+  'notes',
+])
+
 export type MatchInput = {
   title: string
+  description?: string
   seriesKey: string
   connectionId: string
   coachAthletes: Athlete[]
@@ -65,12 +129,75 @@ function uniqueFirstNameMatches(titleNorm: string, athletes: Athlete[]): Athlete
   const full = normalizePersonName(athleteFullName(only))
   if (titleNorm === full) return [only]
   if (titleNorm === first) return [only]
-  if (titleNorm.startsWith(`${first} `)) return [only]
+  const rest = tokens.slice(1)
+  if (rest.length === 0) return [only]
+  if (rest.every((t) => SKIP_NAME_TOKENS.has(t))) return [only]
   return []
+}
+
+export function unescapeCalendarText(input: string): string {
+  return input
+    .replace(/\\n/gi, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\')
+}
+
+function haystackOf(input: Pick<MatchInput, 'title' | 'description'>): string {
+  return normalizeAlias(`${input.title}\n${unescapeCalendarText(input.description ?? '')}`)
+}
+
+function fullNameHits(hay: string, athletes: Athlete[]): Athlete[] {
+  const hits: Athlete[] = []
+  for (const a of athletes) {
+    const full = normalizePersonName(athleteFullName(a))
+    if (full.split(/\s+/).length < 2) continue
+    const re = new RegExp(`(?:^|\\s)${full}(?:\\s|$)`)
+    if (re.test(hay) || hay === full) hits.push(a)
+  }
+  return hits
+}
+
+export function extractContactBits(text: string): { phone?: string; email?: string } {
+  const raw = unescapeCalendarText(text)
+  const email = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]
+  const phone = raw.match(/\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]*)\d{3}[-.\s]?\d{4}\b/)?.[0]
+  return {
+    ...(email ? { email: email.trim() } : {}),
+    ...(phone ? { phone: phone.replace(/\s+/g, ' ').trim() } : {}),
+  }
+}
+
+/** One First Last in event notes that is not already on the gym roster. Title is ignored — parents often put their own name there. */
+export function extractUnmatchedPersonName(
+  _title: string,
+  description: string,
+  athletes: Athlete[],
+): { firstName: string; lastName: string; fullName: string } | null {
+  const raw = unescapeCalendarText(description).trim()
+  if (!raw) return null
+  const found = new Map<string, { firstName: string; lastName: string }>()
+  const re = /\b([A-Za-z][A-Za-z'-]{1,24})\s+([A-Za-z][A-Za-z'-]{1,24})\b/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(raw))) {
+    const first = m[1]!.replace(/^./, (c) => c.toUpperCase())
+    const last = m[2]!.replace(/^./, (c) => c.toUpperCase())
+    if (SKIP_NAME_TOKENS.has(first.toLowerCase()) || SKIP_NAME_TOKENS.has(last.toLowerCase())) {
+      re.lastIndex = m.index + m[1]!.length
+      continue
+    }
+    const full = normalizePersonName(`${first} ${last}`)
+    if (athletes.some((a) => normalizePersonName(athleteFullName(a)) === full)) continue
+    found.set(full, { firstName: first, lastName: last })
+  }
+  if (found.size !== 1) return null
+  const parts = [...found.values()][0]!
+  return { firstName: parts.firstName, lastName: parts.lastName, fullName: `${parts.firstName} ${parts.lastName}` }
 }
 
 export function matchEventToAthlete(input: MatchInput): MatchResult {
   const titleNorm = normalizeAlias(input.title)
+  const hay = haystackOf(input)
 
   const series = input.seriesMappings.find(
     (m) => m.connectionId === input.connectionId && m.seriesKey === input.seriesKey,
@@ -82,6 +209,24 @@ export function matchEventToAthlete(input: MatchInput): MatchResult {
   const titleMap = input.titleMappings.find((m) => m.normalizedTitle === titleNorm)
   if (titleMap) {
     return { athleteId: titleMap.athleteId, matchStatus: 'matched', matchConfidence: 0.95 }
+  }
+
+  const notesHay = normalizeAlias(unescapeCalendarText(input.description ?? ''))
+  const namedInNotes = notesHay ? fullNameHits(notesHay, input.coachAthletes) : []
+  if (namedInNotes.length === 1) {
+    return {
+      athleteId: namedInNotes[0]!.id,
+      matchStatus: 'matched',
+      matchConfidence: 0.93,
+    }
+  }
+  if (namedInNotes.length > 1) {
+    return {
+      athleteId: null,
+      matchStatus: 'ambiguous',
+      matchConfidence: 0,
+      ambiguousAthleteIds: namedInNotes.map((a) => a.id),
+    }
   }
 
   const exactName = input.coachAthletes.filter(
@@ -113,6 +258,23 @@ export function matchEventToAthlete(input: MatchInput): MatchResult {
       matchStatus: 'ambiguous',
       matchConfidence: 0,
       ambiguousAthleteIds: aliasHit.map((a) => a.athleteId),
+    }
+  }
+
+  const named = fullNameHits(hay, input.coachAthletes)
+  if (named.length === 1) {
+    return {
+      athleteId: named[0]!.id,
+      matchStatus: 'matched',
+      matchConfidence: 0.92,
+    }
+  }
+  if (named.length > 1) {
+    return {
+      athleteId: null,
+      matchStatus: 'ambiguous',
+      matchConfidence: 0,
+      ambiguousAthleteIds: named.map((a) => a.id),
     }
   }
 

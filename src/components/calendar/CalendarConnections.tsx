@@ -4,6 +4,7 @@ import { isCoachProfile } from '../../lib/profileRole'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import {
   authorizeCalendarApi,
+  authorizeCalendarFromSession,
   connectICloud,
   disconnectCalendar,
   fetchCalendarStatus,
@@ -29,6 +30,7 @@ export function CalendarConnections({ coach }: Props) {
   const [loading, setLoading] = useState(true)
   const [coachPasscode, setCoachPasscode] = useState('')
   const [apiReady, setApiReady] = useState(false)
+  const [sessionTried, setSessionTried] = useState(false)
   const [email, setEmail] = useState('')
   const [appPassword, setAppPassword] = useState('')
   const [eventFilter, setEventFilter] = useState<'all' | 'coaching_likely'>('all')
@@ -49,6 +51,14 @@ export function CalendarConnections({ coach }: Props) {
       setLoading(false)
     }
   }, [apiReady])
+
+  useEffect(() => {
+    void authorizeCalendarFromSession().then((ok) => {
+      if (ok) setApiReady(true)
+      else setLoading(false)
+      setSessionTried(true)
+    })
+  }, [])
 
   useEffect(() => {
     void refresh()
@@ -173,7 +183,7 @@ export function CalendarConnections({ coach }: Props) {
         normal Apple Account password. Credentials stay on the server and are encrypted at rest.
       </p>
 
-      {!apiReady && (
+      {!apiReady && sessionTried && (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex flex-1 flex-col gap-1 text-sm">
             Coach passcode (unlock calendar API)

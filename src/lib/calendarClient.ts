@@ -1,3 +1,5 @@
+import { withCsrfHeaders } from './authSession'
+
 const TOKEN_KEY = 'shape-lab.calendarApiToken.v1'
 
 export type CalendarConnectionView = {
@@ -30,6 +32,7 @@ export type TodayCalendarEvent = {
   matchedAthleteId: string | null
   matchStatus: string
   providerCalendarId: string
+  notes?: string
   lessonLinks: { lessonId: string; athleteId: string }[]
 }
 
@@ -69,10 +72,19 @@ function readToken(): string | null {
 
 async function calendarFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = readToken()
-  const headers = new Headers(init.headers)
+  const headers = withCsrfHeaders(init.headers)
   headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  return fetch(`/api/calendar${path}`, { ...init, headers })
+  return fetch(`/api/calendar${path}`, { ...init, headers, credentials: 'same-origin' })
+}
+
+export async function authorizeCalendarFromSession(): Promise<boolean> {
+  const res = await calendarFetch('/auth-session', { method: 'POST' })
+  if (!res.ok) return false
+  const data = (await res.json()) as { token?: string }
+  if (!data.token) return false
+  storeToken(data.token)
+  return true
 }
 
 export async function authorizeCalendarApi(coachId: string, passcode: string): Promise<boolean> {

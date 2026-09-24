@@ -191,6 +191,16 @@ export function LessonWorkspace({
             })}
           </p>
         )}
+        {session.calendarNotes && (
+          <div className="mt-2 rounded-lg bg-[#121820] px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              From the calendar
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
+              {session.calendarNotes}
+            </p>
+          </div>
+        )}
         <p className="mt-1 text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
           Leave the app if you need to — this lesson stays open until you End lesson.

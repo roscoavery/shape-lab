@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import {
   authorizeCalendarApi,
+  authorizeCalendarFromSession,
   createCalendarEvent,
   fetchCalendarRange,
   hasCalendarApiToken,
@@ -18,12 +19,22 @@ type Props = {
   onStartLesson: (
     athleteIds: string[],
     planId?: string | null,
-    calendar?: { eventId: string; title: string; startAt: string; endAt: string },
+    calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
   ) => void
 }
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+function startOfWeek(d: Date) {
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  next.setDate(next.getDate() - next.getDay())
+  return next
+}
+
+function addDays(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 }
 
 function endOfMonth(d: Date) {
@@ -54,9 +65,11 @@ export function happeningNow(events: TodayCalendarEvent[], now = new Date()): To
 export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [selected, setSelected] = useState(() => new Date())
+  const [view, setView] = useState<'month' | 'week' | 'day'>('month')
   const [events, setEvents] = useState<TodayCalendarEvent[]>([])
   const [loadError, setLoadError] = useState(false)
   const [needsAuth, setNeedsAuth] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
   const [passcode, setPasscode] = useState('')
   const [pickEventId, setPickEventId] = useState<string | null>(null)
   const [saveSeries, setSaveSeries] = useState(false)
@@ -81,6 +94,16 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const refresh = useCallback(async () => {
     try {
       setLoadError(false)
+      if (!hasCalendarApiToken()) {
+        const ok = await authorizeCalendarFromSession()
+        if (!ok) {
+          const { unauthorized } = await fetchCalendarRange(new Date(), new Date())
+          if (unauthorized) {
+            setNeedsAuth(true)
+            return
+          }
+        }
+      }
       try {
         await syncCalendarNow()
       } catch {
@@ -90,11 +113,25 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
       from.setDate(from.getDate() - 7)
       const to = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 7)
       const { events: rows, unauthorized } = await fetchCalendarRange(from, to)
-      setNeedsAuth(unauthorized && !hasCalendarApiToken())
+      if (unauthorized) {
+        const ok = await authorizeCalendarFromSession()
+        if (ok) {
+          const retry = await fetchCalendarRange(from, to)
+          setNeedsAuth(false)
+          setEvents(retry.events)
+          return
+        }
+        setNeedsAuth(true)
+        setEvents([])
+        return
+      }
+      setNeedsAuth(false)
       setEvents(rows)
     } catch {
       setLoadError(true)
       setEvents([])
+    } finally {
+      setAuthChecked(true)
     }
   }, [cursor])
 
@@ -132,6 +169,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
       title: ev.title,
       startAt: ev.startAt,
       endAt: ev.endAt,
+      notes: ev.notes ?? null,
     })
   }
 
@@ -143,20 +181,56 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           <h3 className="text-lg font-semibold">Calendar</h3>
         </div>
         <div className="flex items-center gap-2">
+          {(['month', 'week', 'day'] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setView(id)}
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                view === id ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'border border-[var(--panel-border)]'
+              }`}
+            >
+              {id[0]!.toUpperCase() + id.slice(1)}
+            </button>
+          ))}
           <button
             type="button"
             className="rounded-full border border-[var(--panel-border)] px-2 py-1 text-xs"
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            onClick={() => {
+              if (view === 'month') setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))
+              else if (view === 'week') {
+                const next = addDays(selected, -7)
+                setSelected(next)
+                setCursor(startOfMonth(next))
+              } else {
+                const next = addDays(selected, -1)
+                setSelected(next)
+                setCursor(startOfMonth(next))
+              }
+            }}
           >
             ←
           </button>
           <p className="min-w-[8rem] text-center text-sm font-semibold">
-            {cursor.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+            {view === 'month'
+              ? cursor.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+              : selected.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </p>
           <button
             type="button"
             className="rounded-full border border-[var(--panel-border)] px-2 py-1 text-xs"
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            onClick={() => {
+              if (view === 'month') setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))
+              else if (view === 'week') {
+                const next = addDays(selected, 7)
+                setSelected(next)
+                setCursor(startOfMonth(next))
+              } else {
+                const next = addDays(selected, 1)
+                setSelected(next)
+                setCursor(startOfMonth(next))
+              }
+            }}
           >
             →
           </button>
@@ -166,7 +240,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
         </div>
       </div>
 
-      {needsAuth && (
+      {needsAuth && authChecked && (
         <div className="mt-3 flex flex-col gap-2 rounded-lg bg-[#121820] p-3 sm:flex-row sm:items-end">
           <label className="flex flex-1 flex-col gap-1 text-sm">
             Coach passcode to load calendar
@@ -202,13 +276,18 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
         <p className="mt-2 text-sm text-[var(--muted)]">Calendar could not load. Your lesson roster still works below.</p>
       )}
 
+      {view !== 'day' && (
+      <>
       <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-[var(--muted)]">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
       <div className="mt-1 grid grid-cols-7 gap-1">
-        {days.map((day) => {
+        {(view === 'week'
+          ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(selected), i))
+          : days
+        ).map((day) => {
           const count = events.filter((ev) => sameDay(new Date(ev.startAt), day)).length
           const on = sameDay(day, selected)
           const today = sameDay(day, new Date())
@@ -232,6 +311,8 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
           )
         })}
       </div>
+      </>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-semibold">
@@ -350,6 +431,11 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                         : 'Event'}
                   {ev.location ? ` · ${ev.location}` : ''}
                 </p>
+                {ev.notes?.trim() ? (
+                  <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-[var(--text)]/80">
+                    {ev.notes.trim()}
+                  </p>
+                ) : null}
               </div>
               {ev.matchedAthleteId ? (
                 <button

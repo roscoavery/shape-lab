@@ -15,6 +15,7 @@ import {
   canGiveHi5,
   isAthleteProfile,
   isCoachProfile,
+  canAdminEditRoster,
   canEditAthleteProfile,
   isGymAdmin,
   profileRole,
@@ -329,11 +330,12 @@ export function AthleteProfileCard({
       {first && (
         <p className="text-base font-medium italic leading-snug text-[var(--text)]">“{first}”</p>
       )}
-      {(athlete.skillGoals?.length || (coach && onAthleteChange && isAthleteProfile(athlete))) && (
-        <section className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+              {(athlete.skillGoals?.length || (coach && onAthleteChange && isAthleteProfile(athlete))) && (
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
             Working towards
-          </p>
+            <span className="ml-2 text-xs font-medium text-[var(--muted)]">long-term hope</span>
+          </summary>
           <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">
             A long-term hope. Not a request for today.
           </p>
@@ -351,7 +353,7 @@ export function AthleteProfileCard({
               />
             </div>
           )}
-        </section>
+        </details>
       )}
       {facts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -421,10 +423,29 @@ export function AthleteProfileCard({
               athlete={athlete}
               athletes={athletes}
               onChange={onAthleteChange}
+              adminEdit={canAdminEditRoster(viewer)}
             />
             </div>
           )}
         </div>
+      )}
+      {!canEditProfile && canAdminEditRoster(viewer) && onAthleteChange && (
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Admin · name and phone
+            <span className="ml-2 text-xs font-medium text-[var(--muted)]">fix this profile</span>
+          </summary>
+          <div className="mt-3">
+            <ProfileFieldsEditor
+              athlete={athlete}
+              athletes={athletes}
+              onChange={onAthleteChange}
+              adminEdit
+              contactOnly
+              showPhoto={false}
+            />
+          </div>
+        </details>
       )}
       {isCoachProfile(viewer) && isAthleteProfile(athlete) && (
         <CoachHoldEntry athlete={athlete} viewer={viewer} />
