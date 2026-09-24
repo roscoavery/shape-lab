@@ -47,9 +47,16 @@ export function useHoldTimer(
   return { totalHoldSeconds, qualityHoldSeconds, reset }
 }
 
+/** Stopwatch holds round up to the nearest 0.01s for logs and display. */
+export function roundHoldSecondsUp(s: number): number {
+  if (!Number.isFinite(s) || s <= 0) return 0
+  return Math.ceil(s * 100) / 100
+}
+
 export function formatSeconds(s: number): string {
-  const m = Math.floor(s / 60)
-  const sec = s - m * 60
-  if (m > 0) return `${m}:${sec.toFixed(1).padStart(4, '0')}`
-  return `${sec.toFixed(1)}s`
+  const r = roundHoldSecondsUp(s)
+  const m = Math.floor(r / 60)
+  const sec = r - m * 60
+  if (m > 0) return `${m}:${sec.toFixed(2).padStart(5, '0')}`
+  return `${sec.toFixed(2)}s`
 }

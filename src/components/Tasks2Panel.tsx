@@ -26,12 +26,14 @@ import {
 } from '../lib/captureStore'
 import { videoFileName } from '../lib/flowShare'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
+import { roundHoldSecondsUp } from '../hooks/useHoldTimer'
 import {
   attachHoldClips,
   formatSeconds,
   runHandstandHoldSession,
   type HoldTick,
 } from '../lib/handstandHold'
+import { CollapsibleSection } from './CollapsibleSection'
 import { runQualityHoldSession } from '../lib/qualityHold'
 import { saveHoldClipWithOverlay } from '../lib/overlayExport'
 import {
@@ -365,8 +367,11 @@ export function Tasks2Panel({
   const [overlayStream, setOverlayStream] = useState<MediaStream | null>(null)
   const [holdTick, setHoldTick] = useState<HoldTick | null>(null)
   const [holdWall, setHoldWall] = useState(false)
+  const [holdWallStyle, setHoldWallStyle] = useState<'walk' | 'kick'>('walk')
   const holdWallRef = useRef(false)
+  const holdWallStyleRef = useRef<'walk' | 'kick'>('walk')
   holdWallRef.current = holdWall
+  holdWallStyleRef.current = holdWallStyle
   const [holdLunge, setHoldLunge] = useState<'start' | 'land'>('start')
   const holdLungeRef = useRef<'start' | 'land'>('start')
   holdLungeRef.current = holdLunge
@@ -817,7 +822,8 @@ export function Tasks2Panel({
       }
 
       const longestIdx = raw.reduce(
-        (best, a, i) => (a.holdSeconds > raw[best]!.holdSeconds ? i : best),
+        (best, a, i) =>
+          roundHoldSecondsUp(a.holdSeconds) > roundHoldSecondsUp(raw[best]!.holdSeconds) ? i : best,
         0,
       )
       const holdShapeId =
@@ -834,6 +840,7 @@ export function Tasks2Panel({
 
       for (let i = 0; i < raw.length; i++) {
         const a = raw[i]!
+        const holdSec = roundHoldSecondsUp(a.holdSeconds)
         const highlighted = i === longestIdx
         const clipId = createId('clip')
         if (a.poseTrack.length) {
@@ -868,7 +875,7 @@ export function Tasks2Panel({
             atSec: a.playheadSec,
             url: URL.createObjectURL(a.snapshotBlob),
             rep: i + 1,
-            holdSeconds: a.holdSeconds,
+            holdSeconds: holdSec,
             clipId,
             marker: 'playhead',
           })
@@ -876,7 +883,7 @@ export function Tasks2Panel({
 
         holds.push({
           index: i + 1,
-          holdSeconds: a.holdSeconds,
+          holdSeconds: holdSec,
           livePeak,
           cues,
           clipId,
@@ -1157,7 +1164,9 @@ export function Tasks2Panel({
             seqRun.mode === 'quality-hold'
               ? 'Get into the shape when you are ready. Hold as long as you can. Tap Done when you are finished.'
               : holdWallRef.current
-                ? 'Kick to a wall handstand when you are ready. Hold as long as you can. Tap Done when you are finished.'
+                ? holdWallStyleRef.current === 'walk'
+                  ? 'Walk your feet up the wall — chest faces the wall. Hold as long as you can. Tap Done when finished.'
+                  : 'Kick toward the wall into your handstand when you are ready. Hold as long as you can. Tap Done when finished.'
                 : 'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
           )
           let rolling = false
@@ -2221,9 +2230,37 @@ export function Tasks2Panel({
             >
               Wall
             </button>
-            <p className="w-full text-[12px] text-[var(--muted)]">
+            {holdWall && (
+              <div className="flex w-full flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHoldWallStyle('walk')}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    holdWallStyle === 'walk'
+                      ? `${HOLD_PINK_BTN}`
+                      : 'border border-white/15 text-[var(--muted)]'
+                  }`}
+                >
+                  Chest to wall (walk up)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHoldWallStyle('kick')}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    holdWallStyle === 'kick'
+                      ? `${HOLD_PINK_BTN}`
+                      : 'border border-white/15 text-[var(--muted)]'
+                  }`}
+                >
+                  Kick toward wall
+                </button>
+              </div>
+            )}
+            <p className="w-full text-sm leading-snug text-[var(--text)]/80">
               {holdWall
-                ? 'Logs a wall handstand hold. Same clock — kick up against the wall.'
+                ? holdWallStyle === 'walk'
+                  ? 'Preferred: belly faces the wall — walk feet up, then hold. Same stopwatch.'
+                  : 'Kick up toward the wall, then hold. Same stopwatch.'
                 : 'Logs a freestanding handstand hold.'}
             </p>
           </div>
@@ -3029,13 +3066,14 @@ export function Tasks2Panel({
       )}
 
       {history.length > 0 && phase !== 'replay' && (
-        <div className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Progress on {seq.nickname}
-          </p>
-          <p className="mb-2 text-[11px] text-[var(--muted)]">
-            Watch the grades climb over time. Open a run, or download the video and written
-            analysis to keep or post.
+        <CollapsibleSection
+          title={`Progress on ${seq.nickname}`}
+          hint={`${history.length} saved run${history.length === 1 ? '' : 's'}`}
+          defaultOpen={false}
+          inset
+        >
+          <p className="mb-2 text-sm text-[var(--text)]/75">
+            Watch hold times or grades climb. Open a run, or download the video and notes.
           </p>
           <ul className="space-y-2">
             {history.slice(0, 8).map((h) => {
@@ -3085,7 +3123,7 @@ export function Tasks2Panel({
               )
             })}
           </ul>
-        </div>
+        </CollapsibleSection>
       )}
     </section>
     </>

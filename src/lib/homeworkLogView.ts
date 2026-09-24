@@ -49,3 +49,18 @@ export function viewerOwnsHomeworkLog(
 ): boolean {
   return Boolean(viewer && viewer.id === log.athleteId)
 }
+
+/** Athlete, their parent desk, or a linked coach may fix a mistaken log. */
+export function canEditHomeworkLog(
+  viewer: Athlete | null | undefined,
+  athlete: Athlete | null | undefined,
+  log: Pick<HomeworkLog, 'athleteId'>,
+): boolean {
+  if (!viewer) return false
+  if (viewer.id === log.athleteId) return true
+  if (athlete && log.athleteId === athlete.id) {
+    if (profileRole(viewer) === 'parent') return true
+    if (isCoachProfile(viewer) && canSeePrivateCoaching(viewer, athlete)) return true
+  }
+  return false
+}

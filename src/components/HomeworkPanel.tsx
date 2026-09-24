@@ -49,7 +49,7 @@ import { PastHoldLogForm } from './homework/PastHoldLogForm'
 import { alreadyHasCatalog, catalogIdsForBackPain, shouldEncourageSlowReps } from '../lib/backCare'
 import { buildHomeworkItem, ensureHomeworkForPick } from '../lib/homeworkAssign'
 import { ExerciseSetLog, OTHER_EXERCISE } from './homework/ExerciseSetLog'
-import { formatSeconds, useHoldTimer } from '../hooks/useHoldTimer'
+import { formatSeconds, roundHoldSecondsUp, useHoldTimer } from '../hooks/useHoldTimer'
 import { useSpeechCoach } from '../hooks/useSpeechCoach'
 import { CoachStillGallery } from './ReferenceStill'
 import {
@@ -945,8 +945,8 @@ export function HomeworkPanel({
       shapeId: activeItem.shapeId,
       date: new Date().toISOString(),
       method: 'camera',
-      totalHoldSeconds: Number(hold.totalHoldSeconds.toFixed(2)),
-      properHoldSeconds: Number(properHoldSeconds.toFixed(2)),
+      totalHoldSeconds: roundHoldSecondsUp(hold.totalHoldSeconds),
+      properHoldSeconds: roundHoldSecondsUp(properHoldSeconds),
       formStandard: standard,
       breakdowns: [...breakdownsRef.current],
       score: score.overall,
@@ -991,7 +991,7 @@ export function HomeworkPanel({
     const secs = watchAccRef.current / 1000
     setWatchMs(watchAccRef.current)
     setWatchOffer(secs)
-    setManualSeconds(String(Math.round(secs * 10) / 10))
+    setManualSeconds(String(roundHoldSecondsUp(secs)))
     if (!manualItemId && visibleItems[0]) setManualItemId(visibleItems[0].id)
   }
 
@@ -1022,7 +1022,7 @@ export function HomeworkPanel({
         ? new Date().toISOString()
         : when.toISOString(),
       method: 'manual',
-      totalHoldSeconds: Number(secs.toFixed(2)),
+      totalHoldSeconds: roundHoldSecondsUp(secs),
       score: 0,
       ...(isPlank && manualSide !== 'both' ? { side: manualSide } : {}),
       ...(manualInLesson
@@ -1156,7 +1156,7 @@ export function HomeworkPanel({
           : input.holdSeconds && !input.reps
             ? 'hold'
             : 'reps',
-      totalHoldSeconds: input.holdSeconds ?? 0,
+      totalHoldSeconds: input.holdSeconds ? roundHoldSecondsUp(input.holdSeconds) : 0,
       reps: input.reps || undefined,
       sets: input.sets && input.sets > 1 ? input.sets : undefined,
       qualityReps: input.qualityReps || undefined,

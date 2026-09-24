@@ -3,6 +3,7 @@
  * Does not require the athlete to be signed in.
  */
 
+import { roundHoldSecondsUp } from '../hooks/useHoldTimer'
 import type { HomeworkLog } from '../types'
 import { markedFetch } from './authSession'
 import { CLASS_HOLD_DRILLS, ensureCatalogHomework } from './classSessionLog'
@@ -90,7 +91,7 @@ export function logCoachHoldLocal(draft: CoachHoldDraft): HomeworkLog | null {
     date: performedIso(draft.performedAt),
     loggedAt: now,
     method: 'manual',
-    totalHoldSeconds: Number(draft.seconds.toFixed(2)),
+    totalHoldSeconds: roundHoldSecondsUp(draft.seconds),
     score: 0,
     loggedByRole: draft.source ?? 'coach',
     ...(draft.lessonId ? { loggedFrom: 'lesson' as const, lessonId: draft.lessonId } : {}),

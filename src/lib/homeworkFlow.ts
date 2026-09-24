@@ -16,6 +16,7 @@ import {
   sequenceHomeworkShapeId,
 } from './homeworkLabel'
 import { addHomeworkItem, addHomeworkLog, createId, loadAllHomework } from './storage'
+import { roundHoldSecondsUp } from '../hooks/useHoldTimer'
 import { sessionHoldTotal } from './holdDay'
 
 export { lemonHomeworkFromCheck } from './lemonHomework'
@@ -108,7 +109,9 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
     reps,
     ...(sets ? { sets } : {}),
     ...(incomplete ? { incomplete: true } : {}),
-    totalHoldSeconds: sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0,
+    totalHoldSeconds: roundHoldSecondsUp(
+      sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0,
+    ),
     score: overallFlowScore(report),
     sourceLabel: incomplete
       ? `${report.nickname} · attempt · ${reps} of ${plannedSets}×${plannedReps ?? '?'}`

@@ -11,6 +11,11 @@ const CATALOG: Record<string, { shapeId: string; catalogId: string; label: strin
   wall_handstand: { shapeId: 'wall_handstand', catalogId: 'wall_handstand', label: 'Handstand hold' },
 }
 
+function roundHoldSecondsUp(s: number): number {
+  if (!Number.isFinite(s) || s <= 0) return 0
+  return Math.ceil(s * 100) / 100
+}
+
 function performedIso(raw: unknown): string {
   if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw}T12:00:00.000Z`
   if (typeof raw === 'string') {

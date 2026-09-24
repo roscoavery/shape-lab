@@ -5,6 +5,7 @@
 import { getCatalogItem } from '../config/homeworkCatalog'
 import { buildHomeworkItem } from './homeworkAssign'
 import { customHomeworkShapeId } from './homeworkLabel'
+import { roundHoldSecondsUp } from '../hooks/useHoldTimer'
 import {
   addHomeworkItem,
   addHomeworkLog,
@@ -106,7 +107,7 @@ export function logClassHoldForAthletes(opts: {
       loggedByRole: 'coach',
       method: 'manual',
       kind: 'hold',
-      totalHoldSeconds: Number(opts.seconds.toFixed(2)),
+      totalHoldSeconds: roundHoldSecondsUp(opts.seconds),
       score: 0,
       loggedFrom: 'class',
       sourceLabel,
@@ -252,7 +253,7 @@ export function logClassExtraForAthletes(opts: {
       date: new Date().toISOString(),
       method: 'manual',
       kind: hold ? 'hold' : 'reps',
-      totalHoldSeconds: hold ? Number((opts.seconds ?? 0).toFixed(2)) : 0,
+      totalHoldSeconds: hold ? roundHoldSecondsUp(opts.seconds ?? 0) : 0,
       ...(hold ? {} : { reps: opts.reps, ...(sets ? { sets } : {}) }),
       score: 0,
       loggedFrom: 'class',

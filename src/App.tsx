@@ -87,7 +87,7 @@ import { ProfilePeekProvider } from './components/ProfilePeekContext'
 import type { IgCropDraft } from './components/compare/IgStillContext'
 import { IgStillProvider } from './components/compare/IgStillContext'
 import { SHAPES } from './config/shapes'
-import { useHoldTimer } from './hooks/useHoldTimer'
+import { roundHoldSecondsUp, useHoldTimer } from './hooks/useHoldTimer'
 import { usePoseCamera } from './hooks/usePoseCamera'
 import { scoreShape } from './lib/scoring'
 import {
@@ -763,8 +763,8 @@ export default function App() {
         label: c.label,
         score: c.score,
       })),
-      totalHoldSeconds: Number(hold.totalHoldSeconds.toFixed(2)),
-      qualityHoldSeconds: Number(hold.qualityHoldSeconds.toFixed(2)),
+      totalHoldSeconds: roundHoldSecondsUp(hold.totalHoldSeconds),
+      qualityHoldSeconds: roundHoldSecondsUp(hold.qualityHoldSeconds),
       mainCorrection: score.mainCorrection,
       savedAt: new Date().toISOString(),
     }

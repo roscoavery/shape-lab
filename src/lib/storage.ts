@@ -430,7 +430,8 @@ export const AUTO_HOMEWORK_DEFS: {
     autoKey: 'wall_handstand',
     shapeId: 'wall_handstand',
     targetSeconds: 30,
-    notes: 'Stomach-to-wall preferred. Same body standards as freestanding.',
+    notes:
+      'Wall handstand: walk feet up chest-to-wall (preferred) or kick toward the wall. Same body standards as freestanding.',
   },
 ]
 

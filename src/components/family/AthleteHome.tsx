@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
-import { loadHomeworkLogs } from '../../lib/storage'
+import { ensureAutoHomework, loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
@@ -53,10 +53,18 @@ export function AthleteHome({
 }
 
 export function AthleteProgress({ athlete }: Props) {
-  const logs = useMemo(
-    () => (athlete ? loadHomeworkLogs().filter((row) => row.athleteId === athlete.id) : []),
+  const [logs, setLogs] = useState(() =>
+    athlete ? loadHomeworkLogs().filter((row) => row.athleteId === athlete.id) : [],
+  )
+  const items = useMemo(
+    () => (athlete ? ensureAutoHomework(athlete.id) : []),
     [athlete],
   )
+  useEffect(() => {
+    if (athlete) {
+      setLogs(loadHomeworkLogs().filter((row) => row.athleteId === athlete.id))
+    }
+  }, [athlete])
   const tests = athlete?.shapeTests ?? []
   if (!athlete) return null
   return (
@@ -70,7 +78,16 @@ export function AthleteProgress({ athlete }: Props) {
         <h3 className="font-semibold">Hold logs</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">Grouped by day so older work stays readable.</p>
         <div className="mt-3">
-          <HomeworkLogList logs={logs} athlete={athlete} viewer={athlete} />
+          <HomeworkLogList
+            logs={logs}
+            items={items}
+            athlete={athlete}
+            viewer={athlete}
+            onLogsChange={() =>
+              athlete &&
+              setLogs(loadHomeworkLogs().filter((row) => row.athleteId === athlete.id))
+            }
+          />
         </div>
       </section>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">

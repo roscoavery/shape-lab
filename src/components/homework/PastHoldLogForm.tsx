@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
+import { roundHoldSecondsUp } from '../../hooks/useHoldTimer'
 import { addHomeworkLog, createId, ensureAutoHomework, loadAllHomework } from '../../lib/storage'
 import { homeworkTitle } from '../../lib/homeworkLabel'
 
@@ -49,7 +50,7 @@ export function PastHoldLogForm({ athlete, items, onLogged, coach }: Props) {
       shapeId: item.shapeId,
       date: Number.isNaN(when.getTime()) ? new Date().toISOString() : when.toISOString(),
       method: 'manual',
-      totalHoldSeconds: Number.isFinite(hold) && hold > 0 ? Number(hold.toFixed(2)) : 0,
+      totalHoldSeconds: Number.isFinite(hold) && hold > 0 ? roundHoldSecondsUp(hold) : 0,
       score: 0,
       ...(Number.isFinite(counted) && counted > 0 ? { kind: 'reps' as const, reps: counted } : { kind: 'hold' as const }),
       loggedFrom: inLesson ? 'lesson' : undefined,

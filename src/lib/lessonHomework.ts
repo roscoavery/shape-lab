@@ -1,3 +1,4 @@
+import { roundHoldSecondsUp } from '../hooks/useHoldTimer'
 import { catalogShapeId, getCatalogItem } from '../config/homeworkCatalog'
 import { getShape } from '../config/shapes'
 import type { ClassExtraExercise, HomeworkItem, HomeworkLog } from '../types'
@@ -64,9 +65,9 @@ export function logLessonHoldOnAthleteHomework(args: {
     loggedAt: new Date().toISOString(),
     loggedByRole: 'coach',
     method: args.method,
-    totalHoldSeconds: Number(args.totalHoldSeconds.toFixed(2)),
+    totalHoldSeconds: roundHoldSecondsUp(args.totalHoldSeconds),
     ...(args.method === 'camera'
-      ? { properHoldSeconds: Number(args.properHoldSeconds.toFixed(2)) }
+      ? { properHoldSeconds: roundHoldSecondsUp(args.properHoldSeconds) }
       : {}),
     score: args.score,
     loggedFrom: 'lesson',
