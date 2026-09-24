@@ -39,10 +39,21 @@ Free, browser-based gymnastics coaching prototype. Uses your device camera and *
 ```bash
 npm install
 cp .env.example .env   # set SHAPE_LAB_BOOTSTRAP_ADMIN_EMAIL / PASSWORD
-npm run dev
+npm run dev            # Vite only (UI). Uses port 43127, or the next free port.
 ```
 
-Then open **http://127.0.0.1:43127** on your computer.
+Then open **http://127.0.0.1:43127** (or the port Vite prints).
+
+### Mac gym (phones + iCloud + `data/` on disk)
+
+```bash
+npm install
+npm start              # same as npm run gym — gate on 43127, production build when possible
+```
+
+Or double-click **`Start-Gym.command`** in Finder. If `npm run build` fails, run `npm install` again, then `npm run build` — both must pass before phones rely on the static build.
+
+`GYM_DEV=1 npm start` uses Vite on **43128** behind the gate when you are actively editing UI.
 
 Allow camera permission when the browser asks. Click **Start camera**.
 
