@@ -21,6 +21,7 @@ import {
 } from '../lib/authSession'
 import { CollapsibleSection } from './CollapsibleSection'
 import { DeskPreviewPicker } from './DeskPreviewPicker'
+import { DeskMessagesEditor } from './DeskMessagesEditor'
 import { type DeskPreview } from '../lib/deskPreview'
 
 const ROLES: { id: SessionRole; label: string }[] = [
@@ -455,6 +456,8 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
         </section>
         </CollapsibleSection>
       )}
+
+      <DeskMessagesEditor admin={admin} />
 
       {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
       {saved && <p className="text-sm text-[var(--accent)]">{saved}</p>}

@@ -183,7 +183,7 @@ export function pageLabel(page: string): string {
     learn: 'Learn',
     homework: 'Homework',
     history: 'Profiles',
-    wellness: 'My Wellness',
+    wellness: 'Body care',
     tasks2: 'Class flows',
     compare: 'Videos',
     more: 'More',

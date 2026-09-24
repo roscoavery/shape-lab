@@ -188,6 +188,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     trackMode: 'reps',
     audience: 'class',
     targetReps: 8,
+    allowWeight: true,
     notes: 'Heels on the slant. Sit between the heels. Knee travel is the point.',
     cues: [
       'Chest stays tall.',
@@ -225,6 +226,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     trackMode: 'reps',
     audience: 'class',
     targetReps: 8,
+    allowWeight: true,
     notes:
       'Rear-foot split squat. Optional elevated front foot. Front-foot height runs from flat ground up to just above the knee.',
     cues: [

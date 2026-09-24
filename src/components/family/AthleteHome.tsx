@@ -3,15 +3,23 @@ import type { Athlete } from '../../types'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
+import { DeskMessageCarousel } from './DeskMessageCarousel'
 
 type Props = {
   athlete: Athlete | null
 }
 
-export function AthleteHome({ athlete, onPractice, onProgress, onVideos }: Props & {
+export function AthleteHome({
+  athlete,
+  onPractice,
+  onProgress,
+  onVideos,
+  onQuickLog,
+}: Props & {
   onPractice: () => void
   onProgress: () => void
   onVideos: () => void
+  onQuickLog?: () => void
 }) {
   const homework = useMemo(
     () => (athlete ? loadAllHomework().filter((row) => row.athleteId === athlete.id).slice(0, 6) : []),
@@ -44,6 +52,11 @@ export function AthleteHome({ athlete, onPractice, onProgress, onVideos }: Props
           <button type="button" onClick={onPractice} className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-sm font-bold text-[var(--on-accent)]">
             Practice
           </button>
+          {onQuickLog && (
+            <button type="button" onClick={onQuickLog} className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
+              Class clock
+            </button>
+          )}
           <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
             Progress
           </button>
@@ -52,6 +65,7 @@ export function AthleteHome({ athlete, onPractice, onProgress, onVideos }: Props
           </button>
         </div>
       </section>
+      <DeskMessageCarousel audience="athlete" surface="home" />
       <AthleteDeskFeed athlete={athlete} />
     </div>
   )

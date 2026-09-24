@@ -40,7 +40,7 @@ const PARENT_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'today', label: 'Home' },
   { id: 'family', label: 'My Athletes' },
   { id: 'learn', label: 'Learn' },
-  { id: 'wellness', label: 'My Wellness' },
+  { id: 'wellness', label: 'Body care' },
   { id: 'more', label: 'Settings' },
 ]
 
@@ -72,6 +72,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
   practice: [
     { id: 'tasks2', label: 'Class flows' },
     { id: 'homework', label: 'Homework' },
+    { id: 'classclock', label: 'Class clock' },
     { id: 'warmup', label: 'Warm-up' },
     { id: 'tasks', label: 'Hold & body work' },
     { id: 'coach', label: 'Live scoring' },
@@ -101,7 +102,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'about', label: 'About' },
   ],
   family: [{ id: 'history', label: 'My Athletes' }],
-  wellness: [{ id: 'wellness', label: 'My Wellness' }],
+  wellness: [{ id: 'wellness', label: 'Body care' }],
   progress: [{ id: 'progress', label: 'Progress' }],
 }
 
@@ -134,6 +135,8 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
       return 'wellness'
     case 'progress':
       return 'progress'
+    case 'classclock':
+      return 'practice'
     default:
       return 'more'
   }
@@ -164,7 +167,8 @@ export function subnavForSection(
       if (section === 'learn') return item.id === 'learn'
     }
     if (role === 'athlete') {
-      if (section === 'practice') return item.id === 'homework' || item.id === 'tasks2'
+      if (section === 'practice')
+        return item.id === 'homework' || item.id === 'tasks2' || item.id === 'classclock'
       if (section === 'videos') return item.id === 'compare'
       if (section === 'learn') return item.id === 'learn'
       if (section === 'more') return item.id === 'history' || item.id === 'about'
@@ -176,6 +180,7 @@ export function subnavForSection(
       if (section === 'more') return false
     }
     if (role === 'coach' && (item.id === 'watch' || item.id === 'stills')) return false
+    if (item.id === 'classclock' && role !== 'athlete') return false
     return true
   })
 }
@@ -215,7 +220,8 @@ export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean):
       tab === 'learn' ||
       tab === 'history' ||
       tab === 'about' ||
-      tab === 'wins'
+      tab === 'wins' ||
+      tab === 'classclock'
     )
   }
   if (role === 'kiosk') {

@@ -49,9 +49,11 @@ import {
   isDeletableGymLibraryShape,
   subscribeCoachContent,
 } from '../lib/coachContentStore'
-import { isCoachProfile } from '../lib/profileRole'
+import { isCoachProfile, profileRole } from '../lib/profileRole'
 import { AddGymShapeForm } from './AddGymShapeForm'
 import { CollapsibleSection } from './CollapsibleSection'
+import { NutritionFactsBrowse } from './learn/NutritionFactsBrowse'
+import { DeskMessageCarousel } from './family/DeskMessageCarousel'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShapeExplorer } from './learn/ShapeExplorer'
@@ -81,6 +83,7 @@ type EduView =
   | { kind: 'progression' }
   | { kind: 'athleteProgress' }
   | { kind: 'coachStudy' }
+  | { kind: 'nutrition' }
 
 export type LearnIntent = 'shapes' | 'quiz' | 'scroll' | 'names'
 
@@ -344,27 +347,46 @@ export function EducationPanel({
       )}
 
       {view.kind === 'home' && surface === 'learn' && (
-        <HomeView
-          shapeCount={catalog.length}
-          onShapes={goShapes}
-          onQuiz={() => setView({ kind: 'quiz', pool: 'pathway' })}
-          onShapeBody={() => setView({ kind: 'shapeBody' })}
-          onMovements={() => setView({ kind: 'movementsQuiz' })}
-          onHits={() => setView({ kind: 'hits' })}
-          onIg={() => setView({ kind: 'ig' })}
-          onScroll={() => setView({ kind: 'scroll' })}
-          onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
-          onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
-          onNamesTest={onOpenNamesTest}
-          onSkillPaths={onOpenSkillPaths}
-          onPathways={goPathways}
-          onGlossary={() => setView({ kind: 'glossary' })}
-          onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
-          igCount={listIgStills(referencePhotos).length}
-          referencePhotos={referencePhotos}
-          shapes={catalog}
-          coach={coach}
-        />
+        <>
+          {!coach && (
+            <DeskMessageCarousel
+              audience={signedIn && profileRole(signedIn) === 'parent' ? 'parent' : 'athlete'}
+              surface="learn"
+              className="mb-4"
+            />
+          )}
+          <HomeView
+            shapeCount={catalog.length}
+            onShapes={goShapes}
+            onQuiz={() => setView({ kind: 'quiz', pool: 'pathway' })}
+            onShapeBody={() => setView({ kind: 'shapeBody' })}
+            onMovements={() => setView({ kind: 'movementsQuiz' })}
+            onHits={() => setView({ kind: 'hits' })}
+            onIg={() => setView({ kind: 'ig' })}
+            onScroll={() => setView({ kind: 'scroll' })}
+            onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
+            onNutrition={coach ? undefined : () => setView({ kind: 'nutrition' })}
+            onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
+            onNamesTest={onOpenNamesTest}
+            onSkillPaths={onOpenSkillPaths}
+            onPathways={goPathways}
+            onGlossary={() => setView({ kind: 'glossary' })}
+            onArmQuiz={() => setView({ kind: 'quiz', pool: 'arm-positions' })}
+            igCount={listIgStills(referencePhotos).length}
+            referencePhotos={referencePhotos}
+            shapes={catalog}
+            coach={coach}
+          />
+        </>
+      )}
+
+      {view.kind === 'nutrition' && (
+        <div className="space-y-4">
+          <button type="button" onClick={goHome} className="text-sm font-semibold text-[var(--accent)]">
+            ← Learn home
+          </button>
+          <NutritionFactsBrowse />
+        </div>
       )}
 
       {view.kind === 'shapes' && (
@@ -756,6 +778,7 @@ function HomeView({
   onIg,
   onScroll,
   onAthleteProgress,
+  onNutrition,
   onCoachStudy,
   onNamesTest,
   onSkillPaths,
@@ -776,6 +799,7 @@ function HomeView({
   onIg: () => void
   onScroll: () => void
   onAthleteProgress: () => void
+  onNutrition?: () => void
   onCoachStudy?: () => void
   onNamesTest?: (groupId?: string) => void
   onSkillPaths?: () => void
@@ -884,6 +908,18 @@ function HomeView({
           </p>
         </button>
       </div>
+
+      {onNutrition && (
+        <button type="button" onClick={onNutrition} className="learn-tile w-full p-5 text-left">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
+            Nutrition
+          </p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">NutritionFacts.org</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Search protein, dairy, sleep, and more — short summaries with links to the source.
+          </p>
+        </button>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <button type="button" onClick={onIg} className="learn-tile p-4">

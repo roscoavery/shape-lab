@@ -130,6 +130,7 @@ export function logClassRepsForAthletes(opts: {
   label: string
   className?: string
   meetingId?: string
+  weightLb?: number
 }): number {
   let n = 0
   const sets = opts.sets && opts.sets > 1 ? opts.sets : undefined
@@ -156,6 +157,9 @@ export function logClassRepsForAthletes(opts: {
       sourceLabel,
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
+      ...(opts.weightLb != null && Number.isFinite(opts.weightLb) && opts.weightLb > 0
+        ? { weightLb: opts.weightLb }
+        : {}),
     }
     addHomeworkLog(log)
     n += 1
@@ -224,6 +228,7 @@ export function logClassExtraForAthletes(opts: {
   sets?: number
   className?: string
   meetingId?: string
+  weightLb?: number
 }): number {
   let n = 0
   const hold = opts.extra.trackMode === 'hold'
@@ -255,6 +260,9 @@ export function logClassExtraForAthletes(opts: {
       trackMode: opts.extra.trackMode,
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
+      ...(opts.weightLb != null && Number.isFinite(opts.weightLb) && opts.weightLb > 0
+        ? { weightLb: opts.weightLb }
+        : {}),
     }
     addHomeworkLog(log)
     n += 1

@@ -21,6 +21,7 @@ const ADMIN_WRITE_PATHS = new Set([
   '/api/still-crops',
   '/api/research',
   '/api/coach-stills',
+  '/api/desk-messages',
 ])
 
 const COACH_WRITE_PATHS = new Set([

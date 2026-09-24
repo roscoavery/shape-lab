@@ -4,6 +4,8 @@ import { getAgeFromDateOfBirth, birthdayNeeded } from '../../lib/age'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/parentEducation'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
+import { DeskMessageCarousel } from './DeskMessageCarousel'
+import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
 
 type Props = {
   parent: Athlete
@@ -64,6 +66,8 @@ export function ParentHome({
         )}
       </section>
 
+      <DeskMessageCarousel audience="parent" surface="home" />
+
       {!child && (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           <p className="text-sm text-[var(--muted)]">
@@ -96,7 +100,7 @@ export function ParentHome({
           <p className="mt-1 font-semibold">{PARENT_EDUCATION[0]?.title}</p>
         </button>
         <button type="button" onClick={onOpenWellness} className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left">
-          <p className="text-xs uppercase tracking-wider text-[var(--accent)]">My Wellness</p>
+          <p className="text-xs uppercase tracking-wider text-[var(--accent)]">Body care</p>
           <p className="mt-1 font-semibold">Your notes — not your child’s</p>
         </button>
       </section>
@@ -142,7 +146,9 @@ export function ParentEducationDesk() {
   const [open, setOpen] = useState<string | null>(PARENT_EDUCATION[0]?.id ?? null)
   const article = PARENT_EDUCATION.find((row) => row.id === open) ?? PARENT_EDUCATION[0]
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="mx-auto grid max-w-3xl gap-4">
+      <DeskMessageCarousel audience="parent" surface="learn" />
+    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
       <nav className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
         <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           For parents
@@ -184,6 +190,8 @@ export function ParentEducationDesk() {
           </div>
         </article>
       )}
+    </div>
+      <NutritionFactsBrowse />
     </div>
   )
 }

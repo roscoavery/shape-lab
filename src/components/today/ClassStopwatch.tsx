@@ -33,6 +33,29 @@ type HollowArms = 'down' | 'up'
 type HoldSpec = string | null
 
 const FRONT_FOOT_MAX = 10
+const MULTI_SPEC_CATALOG = new Set(['calf_raise', 'poliquin_step'])
+const WEIGHT_CATALOG = new Set(['split_squat', 'slantboard_squat', 'glute_bridge'])
+
+function parseWeightLb(raw: string): number | undefined {
+  const n = Number(raw.trim())
+  if (!Number.isFinite(n) || n <= 0) return undefined
+  return Math.round(n * 10) / 10
+}
+
+function specLabelsFor(
+  exerciseId: string,
+  holdSpec: HoldSpec,
+  holdSpecs: string[],
+): string | null {
+  const options = HOLD_SPECS[exerciseId]
+  if (!options?.length) return null
+  const ids = MULTI_SPEC_CATALOG.has(exerciseId) ? holdSpecs : holdSpec ? [holdSpec] : []
+  if (!ids.length) return null
+  return ids
+    .map((id) => options.find((s) => s.id === id)?.label)
+    .filter(Boolean)
+    .join(' · ')
+}
 
 function frontFootHeightLabel(n: number): string {
   if (n <= 0) return 'flat ground'
@@ -83,14 +106,21 @@ const CLOCK_PAGES = [
   { id: 'knees', label: 'Knees' },
 ] as const
 
-type CatalogPick = { id: string; label: string; track: 'hold' | 'reps' }
+type CatalogTrack = 'hold' | 'reps' | 'hold_or_reps'
+type CatalogPick = { id: string; label: string; track: CatalogTrack }
 
 const LEG_DRILLS: CatalogPick[] = [
   { id: 'wall_sit', label: 'Wall sit', track: 'hold' },
   { id: 'calf_raise', label: 'Calf raises', track: 'reps' },
   { id: 'nordic_hamstring', label: 'Nordic hamstring curls', track: 'reps' },
-  { id: 'glute_bridge', label: 'Glute bridges', track: 'hold' },
+  { id: 'glute_bridge', label: 'Glute bridges', track: 'hold_or_reps' },
 ]
+
+function catalogTrackHint(track: CatalogTrack): string {
+  if (track === 'hold') return 'Hold time'
+  if (track === 'reps') return 'Sets and reps'
+  return 'Hold or reps'
+}
 
 const KNEE_DRILLS: CatalogPick[] = [
   { id: 'slantboard_squat', label: 'Slantboard squats', track: 'reps' },
@@ -152,6 +182,9 @@ export function ClassStopwatch({
   const [holdId, setHoldId] = useState<HoldId>('hollow')
   const [hollowArms, setHollowArms] = useState<HollowArms>('down')
   const [holdSpec, setHoldSpec] = useState<HoldSpec>(null)
+  const [holdSpecs, setHoldSpecs] = useState<string[]>([])
+  const [catalogTrackPick, setCatalogTrackPick] = useState<'hold' | 'reps'>('hold')
+  const [weightLb, setWeightLb] = useState('')
   const [frontFootHeight, setFrontFootHeight] = useState(0)
   const [holdPage, setHoldPage] = useState(0)
   const [catalogPick, setCatalogPick] = useState<CatalogPick | null>(null)
@@ -197,6 +230,14 @@ export function ClassStopwatch({
   const accRef = useRef(0)
 
   const logPool = classOpen ? pool : extraPicks
+  const catalogTrack =
+    catalogPick?.track === 'hold_or_reps'
+      ? catalogTrackPick
+      : catalogPick?.track === 'hold'
+        ? 'hold'
+        : catalogPick?.track === 'reps'
+          ? 'reps'
+          : null
 
   useEffect(() => {
     if (classOpen) {
@@ -207,6 +248,13 @@ export function ClassStopwatch({
     }
     setSelected(extraPicks.map((a) => a.id))
   }, [classOpen, pool.map((a) => a.id).join('|'), extraPicks.map((a) => a.id).join('|')])
+
+  useEffect(() => {
+    if (!floorMode || !signedIn) return
+    if (candidates?.length === 1 && candidates[0].id === signedIn.id) {
+      setExtraPicks([signedIn])
+    }
+  }, [floorMode, signedIn, candidates])
 
   useEffect(() => {
     if (!running) return
@@ -447,10 +495,14 @@ export function ClassStopwatch({
       setFlash('Pick at least one athlete.')
       return
     }
-    const specLabel = HOLD_SPECS[catalogPick.id]?.find((s) => s.id === holdSpec)?.label
+    const track =
+      catalogPick.track === 'hold_or_reps' ? catalogTrackPick : catalogPick.track
+    const specLabel = specLabelsFor(catalogPick.id, holdSpec, holdSpecs)
     const heightLabel = catalogPick.id === 'split_squat' ? frontFootHeightLabel(frontFootHeight) : null
-    const label = [catalogPick.label, specLabel, heightLabel].filter(Boolean).join(' · ')
-    if (catalogPick.track === 'hold') {
+    const weight = parseWeightLb(weightLb)
+    const weightLabel = weight != null ? `${weight} lb` : null
+    const label = [catalogPick.label, specLabel, heightLabel, weightLabel].filter(Boolean).join(' · ')
+    if (track === 'hold') {
       const secs = Number(manual || offer)
       if (!Number.isFinite(secs) || secs <= 0) {
         setFlash('Start and stop the clock, or type the seconds.')
@@ -469,6 +521,7 @@ export function ClassStopwatch({
         seconds: secs,
         className,
         meetingId: meeting?.id,
+        weightLb: weight,
       })
       reset()
       setFlash(`Logged ${label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
@@ -488,6 +541,7 @@ export function ClassStopwatch({
       label,
       className,
       meetingId: meeting?.id,
+      weightLb: weight,
     })
     setFlash(
       `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
@@ -768,6 +822,9 @@ export function ClassStopwatch({
                     onClick={() => {
                       setCatalogPick(d)
                       setHoldSpec(null)
+                      setHoldSpecs([])
+                      setWeightLb('')
+                      if (d.track === 'hold_or_reps') setCatalogTrackPick('hold')
                       setMode('catalog')
                       setExtraHoldId(null)
                     }}
@@ -777,7 +834,7 @@ export function ClassStopwatch({
                   >
                     {d.label}
                     <span className="mt-1 block text-[11px] font-medium text-white/55">
-                      {d.track === 'hold' ? 'Hold time' : 'Sets and reps'}
+                      {catalogTrackHint(d.track)}
                     </span>
                   </button>
                 ))}
@@ -792,6 +849,9 @@ export function ClassStopwatch({
                     onClick={() => {
                       setCatalogPick(d)
                       setHoldSpec(null)
+                      setHoldSpecs([])
+                      setWeightLb('')
+                      if (d.track === 'hold_or_reps') setCatalogTrackPick('hold')
                       setMode('catalog')
                       setExtraHoldId(null)
                     }}
@@ -801,7 +861,7 @@ export function ClassStopwatch({
                   >
                     {d.label}
                     <span className="mt-1 block text-[11px] font-medium text-white/55">
-                      {d.track === 'hold' ? 'Hold time' : 'Sets and reps'}
+                      {catalogTrackHint(d.track)}
                     </span>
                   </button>
                 ))}
@@ -1111,19 +1171,60 @@ export function ClassStopwatch({
           {!catalogPick && (
             <p className="text-sm text-white/60">Pick an exercise on this page, then log it.</p>
           )}
+          {catalogPick?.track === 'hold_or_reps' && (
+            <div className="flex flex-wrap gap-2">
+              {(['hold', 'reps'] as const).map((pick) => (
+                <button
+                  key={pick}
+                  type="button"
+                  onClick={() => setCatalogTrackPick(pick)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    catalogTrackPick === pick
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'bg-white/8'
+                  }`}
+                >
+                  {pick === 'hold' ? 'Hold time' : 'Sets and reps'}
+                </button>
+              ))}
+            </div>
+          )}
           {catalogPick && HOLD_SPECS[catalogPick.id] && (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
-                Specify · none selected
+                {MULTI_SPEC_CATALOG.has(catalogPick.id)
+                  ? 'Specify · pick any that apply'
+                  : 'Specify · none selected'}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {HOLD_SPECS[catalogPick.id]!.map((spec) => {
-                  const on = holdSpec === spec.id
+                  const on = MULTI_SPEC_CATALOG.has(catalogPick.id)
+                    ? holdSpecs.includes(spec.id)
+                    : holdSpec === spec.id
                   return (
                     <button
                       key={spec.id}
                       type="button"
-                      onClick={() => setHoldSpec(on ? null : spec.id)}
+                      onClick={() => {
+                        if (MULTI_SPEC_CATALOG.has(catalogPick.id)) {
+                          setHoldSpecs((prev) => {
+                            if (
+                              catalogPick.id === 'calf_raise' &&
+                              (spec.id === 'single_left' || spec.id === 'single_right')
+                            ) {
+                              const without = prev.filter(
+                                (x) => x !== 'single_left' && x !== 'single_right',
+                              )
+                              return prev.includes(spec.id) ? without : [...without, spec.id]
+                            }
+                            return prev.includes(spec.id)
+                              ? prev.filter((x) => x !== spec.id)
+                              : [...prev, spec.id]
+                          })
+                          return
+                        }
+                        setHoldSpec(on ? null : spec.id)
+                      }}
                       className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                         on ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-white/8'
                       }`}
@@ -1134,6 +1235,20 @@ export function ClassStopwatch({
                 })}
               </div>
             </div>
+          )}
+          {catalogPick && WEIGHT_CATALOG.has(catalogPick.id) && (
+            <label className="block text-sm">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                Weight (lb) · optional
+              </span>
+              <input
+                inputMode="decimal"
+                value={weightLb}
+                onChange={(e) => setWeightLb(e.target.value)}
+                placeholder="e.g. 25"
+                className="h-12 w-full max-w-xs rounded-xl border border-white/10 bg-black/30 px-3 text-lg"
+              />
+            </label>
           )}
           {catalogPick?.id === 'split_squat' && (
             <div className="flex items-center gap-4 rounded-xl bg-white/8 px-3 py-3">
@@ -1160,7 +1275,7 @@ export function ClassStopwatch({
               </p>
             </div>
           )}
-          {catalogPick?.track === 'hold' && (
+          {catalogTrack === 'hold' && (
             <HoldClock
               ms={ms}
               running={running}
@@ -1171,7 +1286,7 @@ export function ClassStopwatch({
               onReset={reset}
             />
           )}
-          {catalogPick?.track === 'reps' && (
+          {catalogTrack === 'reps' && (
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-sm">
                 <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">

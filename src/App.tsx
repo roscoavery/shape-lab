@@ -1006,6 +1006,7 @@ export default function App() {
         <AthleteHome
           athlete={previewProfile}
           onPractice={() => goTab('homework')}
+          onQuickLog={() => goTab('classclock')}
           onProgress={() => goTab('progress')}
           onVideos={() => goTab('compare')}
         />
@@ -1690,6 +1691,28 @@ export default function App() {
 
       {tab === 'progress' && (
         <AthleteProgress athlete={homeworkAthlete ?? activeProfile} />
+      )}
+
+      {tab === 'classclock' && deskRole === 'athlete' && previewProfile && (
+        <div className="mx-auto max-w-2xl">
+          <section className="mb-4 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Class clock
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">Quick homework log</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Pick a hold or rep drill, run the timer, and log it on your profile — same clock coaches
+              use in class.
+            </p>
+          </section>
+          <ClassStopwatch
+            athletes={athletes}
+            signedIn={previewProfile}
+            embed
+            floorMode
+            candidates={[previewProfile]}
+          />
+        </div>
       )}
 
       {tab === 'history' && deskRole === 'parent' && (

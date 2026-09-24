@@ -89,6 +89,7 @@ import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.t
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore.ts'
+import { readDeskMessagesFile, writeDeskMessagesFile } from './deskMessagesStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
@@ -175,6 +176,7 @@ const API_PATHS = new Set([
   '/api/training-events',
   '/api/skill-paths',
   '/api/improve-notes',
+  '/api/desk-messages',
   '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-media',
@@ -1337,6 +1339,24 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeImproveNotesFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/desk-messages') {
+    if (req.method === 'GET') {
+      const file = await readDeskMessagesFile()
+      sendJson(res, 200, { kind: file.kind, messages: file.messages })
+      return true
+    }
+    if (req.method === 'PUT') {
+      if (!isAdmin(viewer)) {
+        sendJson(res, 403, { error: 'Desk messages are limited to gym admin.' })
+        return true
+      }
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeDeskMessagesFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
