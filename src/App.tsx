@@ -951,7 +951,9 @@ export default function App() {
         authUser={authUser}
         athlete={activeProfile}
         athletes={athletes}
+        activeAthleteId={activeAthleteId}
         settings={settings}
+        onViewProfile={openProfile}
       >
       <header className="mb-4 hidden min-w-0 max-w-full flex-wrap items-start justify-between gap-3 md:flex">
         <div className="min-w-0">
@@ -1618,6 +1620,7 @@ export default function App() {
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
           onViewProfile={openProfile}
+          initialPage="messages"
         />
       )}
 

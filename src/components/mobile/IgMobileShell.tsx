@@ -8,6 +8,7 @@ import type { AppSettings } from '../../types'
 import { MobileCreateSheet } from './MobileCreateSheet'
 import { MobileAppSearch } from './MobileAppSearch'
 import { MobileAccountSwitcher } from './MobileAccountSwitcher'
+import { IgHomeIcon, IgMessagesIcon, IgReelsIcon } from './IgNavIcons'
 
 type ShellTab = 'home' | 'reels' | 'messages' | 'search' | 'profile'
 
@@ -42,7 +43,9 @@ type Props = {
   authUser: AuthSessionUser
   athlete: Athlete | null
   athletes: Athlete[]
+  activeAthleteId: string | null
   settings: AppSettings
+  onViewProfile?: (id: string) => void
   children: ReactNode
 }
 
@@ -52,11 +55,16 @@ export function IgMobileShell({
   authUser,
   athlete,
   athletes,
+  activeAthleteId,
   settings,
+  onViewProfile,
   children,
 }: Props) {
   const active = shellTabForAppTab(tab)
   const showAccountSwitcher = tab === 'network'
+
+  const navBtn = (on: boolean) =>
+    on ? 'text-[var(--text)]' : 'text-[var(--muted)]'
 
   return (
     <div className="max-md:pb-[calc(4.25rem+env(safe-area-inset-bottom))]">
@@ -66,59 +74,74 @@ export function IgMobileShell({
           {showAccountSwitcher ? (
             <MobileAccountSwitcher user={authUser} athletes={athletes} onGo={onGo} />
           ) : (
-            <p className="truncate text-sm font-semibold">shapelab</p>
+            <p className="truncate text-sm font-semibold tracking-tight">shapelab</p>
           )}
         </div>
-        <NotifyBell athlete={athlete} settings={settings} onOpen={onGo} />
+        <NotifyBell athlete={athlete} settings={settings} onOpen={onGo} variant="ig" />
       </header>
 
       {children}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-lg items-stretch justify-between gap-1 border-t border-white/10 bg-[#0a1014]/95 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-lg items-stretch justify-between gap-0 border-t border-white/10 bg-[#0a1014]/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md md:hidden"
         aria-label="App"
       >
-        {(
-          [
-            ['home', 'Home', '⌂'],
-            ['reels', 'Passes', '▶'],
-            ['messages', 'Messages', '✉'],
-            ['search', 'Search', '⌕'],
-            ['profile', 'Profile', '◎'],
-          ] as const
-        ).map(([id, label, icon]) => {
-          const on = active === id
-          if (id === 'search') {
-            return (
-              <MobileAppSearch
-                key={id}
-                label={label}
-                icon={icon}
-                athletes={athletes}
-                onGo={onGo}
-              />
-            )
-          }
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-label={label}
-              aria-current={on ? 'page' : undefined}
-              onClick={() => onGo(appTabForShell(id))}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${
-                on ? 'text-[var(--text)]' : 'text-[var(--muted)]'
-              }`}
-            >
-              {id === 'profile' && athlete ? (
-                <AthleteAvatar athlete={athlete} size="xs" className="h-6 w-6 ring-1 ring-white/20" />
-              ) : (
-                <span className="text-lg leading-none">{icon}</span>
-              )}
-              <span>{label}</span>
-            </button>
-          )
-        })}
+        <button
+          type="button"
+          aria-label="Home"
+          aria-current={active === 'home' ? 'page' : undefined}
+          onClick={() => onGo(appTabForShell('home'))}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${navBtn(active === 'home')}`}
+        >
+          <IgHomeIcon className="h-6 w-6" filled={active === 'home'} />
+          <span>Home</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Passes"
+          aria-current={active === 'reels' ? 'page' : undefined}
+          onClick={() => onGo(appTabForShell('reels'))}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${navBtn(active === 'reels')}`}
+        >
+          <IgReelsIcon className="h-6 w-6" filled={active === 'reels'} />
+          <span>Passes</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Messages"
+          aria-current={active === 'messages' ? 'page' : undefined}
+          onClick={() => onGo(appTabForShell('messages'))}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${navBtn(active === 'messages')}`}
+        >
+          <IgMessagesIcon className="h-6 w-6" filled={active === 'messages'} />
+          <span>Messages</span>
+        </button>
+        <MobileAppSearch
+          label="Search"
+          athletes={athletes}
+          authUser={authUser}
+          activeAthleteId={activeAthleteId}
+          onGo={onGo}
+          onViewProfile={onViewProfile}
+        />
+        <button
+          type="button"
+          aria-label="Profile"
+          aria-current={active === 'profile' ? 'page' : undefined}
+          onClick={() => onGo(appTabForShell('profile'))}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium ${navBtn(active === 'profile')}`}
+        >
+          {athlete ? (
+            <AthleteAvatar
+              athlete={athlete}
+              size="xs"
+              className={`h-6 w-6 ${active === 'profile' ? 'ring-2 ring-[var(--text)]' : 'ring-1 ring-white/20'}`}
+            />
+          ) : (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs">◎</span>
+          )}
+          <span>Profile</span>
+        </button>
       </nav>
     </div>
   )

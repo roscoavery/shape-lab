@@ -187,7 +187,10 @@ if [ -d .git ] && { [ -z "${GYM_MAC_BOOTED:-}" ] || ! calendar_ui_present; }; th
   fi
 
   if [ "$FETCHED" = 0 ]; then
-    echo "ERROR: Could not download ${GYM_BRANCH}. Run:  bash scripts/recover-gym-v4.sh"
+    echo "ERROR: Could not download ${GYM_BRANCH}."
+    echo "If git said 'needs merge', run once:  npm run heal:git"
+    echo "Then:  npm run gym:mac"
+    echo "Or:  bash scripts/recover-gym-v4.sh"
     exit 1
   fi
 

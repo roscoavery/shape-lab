@@ -15,16 +15,19 @@ import { HOMEWORK_REACTIONS, reactToHomeworkLog, reactionOnLog } from '../lib/ho
 import { playGestureBurst } from '../lib/gestureBurst'
 import { loadHomeworkLogs } from '../lib/storage'
 import { isCoachProfile } from '../lib/profileRole'
+import { IgHeartOutlineIcon } from './mobile/IgNavIcons'
 
 type Props = {
   athlete: Athlete | null
   settings: AppSettings
   onOpen: (tab: AppTab) => void
+  /** Instagram-style heart outline on mobile header */
+  variant?: 'default' | 'ig'
 }
 
 const NUDGE_KEY = 'shape-lab.hw-nudge.v1'
 
-export function NotifyBell({ athlete, settings, onOpen }: Props) {
+export function NotifyBell({ athlete, settings, onOpen, variant = 'default' }: Props) {
   const [open, setOpen] = useState(false)
   const [list, setList] = useState<GymNotice[]>([])
   const [logTick, setLogTick] = useState(0)
@@ -153,19 +156,35 @@ export function NotifyBell({ athlete, settings, onOpen }: Props) {
     <div className="relative shrink-0">
       <button
         type="button"
+        aria-label={unread > 0 ? `Activity, ${unread} unread` : 'Activity'}
         onClick={() => {
           setOpen((v) => !v)
           if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
             void Notification.requestPermission()
           }
         }}
-        className="relative rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold"
+        className={
+          variant === 'ig'
+            ? 'relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--text)]'
+            : 'relative rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold'
+        }
       >
-        Alerts
-        {unread > 0 && (
-          <span className="ml-1 rounded-full bg-[var(--accent)] px-1.5 text-[10px] font-bold text-[var(--on-accent)]">
-            {unread}
-          </span>
+        {variant === 'ig' ? (
+          <>
+            <IgHeartOutlineIcon className="h-6 w-6" />
+            {unread > 0 && (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#ff3040] ring-2 ring-[#0b1118]" />
+            )}
+          </>
+        ) : (
+          <>
+            Alerts
+            {unread > 0 && (
+              <span className="ml-1 rounded-full bg-[var(--accent)] px-1.5 text-[10px] font-bold text-[var(--on-accent)]">
+                {unread}
+              </span>
+            )}
+          </>
         )}
       </button>
       {open &&

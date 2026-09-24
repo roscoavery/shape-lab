@@ -18,6 +18,8 @@ import type { Athlete } from '../../types'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { postedByFromUrl } from '../../lib/socialUrls'
 import { StoryRail } from '../stories/StoryRail'
+import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
+import { isSameReferenceUrl } from '../../lib/clipStore'
 
 type Props = {
   athlete?: Athlete | null
@@ -63,6 +65,19 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   useEffect(() => {
     setActive(0)
   }, [query, onlyFavorites, visible.length])
+
+  useEffect(() => {
+    const jump = takeMobileSearchJump('clip')
+    if (!jump || jump.kind !== 'clip') return
+    setOnlyFavorites(false)
+    setQuery('')
+    const idx = clips.findIndex((c) => isSameReferenceUrl(c.url, jump.url))
+    if (idx >= 0) {
+      setActive(idx)
+      return
+    }
+    if (jump.label) setQuery(jump.label)
+  }, [clips])
 
   useEffect(() => {
     const root = rootRef.current

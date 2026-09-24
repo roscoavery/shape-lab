@@ -1,51 +1,83 @@
 import { useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { AppTab } from '../../lib/storage'
-import { APP_TABS, saveTab } from '../../lib/storage'
-
-const QUICK: { tab: AppTab; label: string; words: string }[] = [
-  { tab: 'today', label: 'Today', words: 'today home class schedule' },
-  { tab: 'homework', label: 'Homework', words: 'homework holds drills' },
-  { tab: 'tasks2', label: 'Class flows', words: 'flows tasks sequence' },
-  { tab: 'wins', label: 'Wins', words: 'wins feed accomplishments' },
-  { tab: 'feed', label: 'Gym feed', words: 'feed post gym' },
-  { tab: 'scroll', label: 'Reference reels', words: 'reels scroll compare reference' },
-  { tab: 'compare', label: 'Compare', words: 'compare video delay' },
-  { tab: 'learn', label: 'Shape library', words: 'learn shapes library' },
-  { tab: 'network', label: 'Messages', words: 'messages network dm' },
-  { tab: 'history', label: 'Profiles', words: 'profile athletes roster' },
-  { tab: 'accounts', label: 'Accounts', words: 'accounts login' },
-  { tab: 'classclock', label: 'Class clock', words: 'clock class stopwatch' },
-]
+import { saveTab } from '../../lib/storage'
+import { searchAppIndex, type AppSearchHit } from '../../lib/appSearchIndex'
+import { useGymLibrary } from '../../lib/gymLibrary'
+import { navRoleFromSession, type NavRole } from '../../lib/appNav'
+import type { AuthSessionUser } from '../../lib/authSession'
+import { sessionIsKiosk } from '../../lib/authSession'
+import { isRyanAthlete } from '../../lib/ryanProfile'
+import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
+import { IgSearchIcon } from './IgNavIcons'
 
 type Props = {
   label: string
-  icon: string
   athletes: Athlete[]
+  authUser: AuthSessionUser
+  activeAthleteId: string | null
   onGo: (tab: AppTab) => void
+  onViewProfile?: (id: string) => void
 }
 
-export function MobileAppSearch({ label, icon, athletes, onGo }: Props) {
+function hitIcon(kind: AppSearchHit['kind']): string {
+  switch (kind) {
+    case 'clip':
+      return '▶'
+    case 'shape':
+      return '◇'
+    case 'homework':
+      return '✓'
+    case 'person':
+      return '◎'
+    case 'feature':
+      return '•'
+    default:
+      return '•'
+  }
+}
+
+export function MobileAppSearch({
+  label,
+  athletes,
+  authUser,
+  activeAthleteId,
+  onGo,
+  onViewProfile,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
+  const { clips } = useGymLibrary()
 
-  const hits = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    if (!needle) return QUICK.slice(0, 8)
-    const people = athletes
-      .filter((a) => a.name.toLowerCase().includes(needle))
-      .slice(0, 6)
-      .map((a) => ({ tab: 'history' as AppTab, label: a.name, words: a.id }))
-    const places = QUICK.filter(
-      (row) =>
-        row.label.toLowerCase().includes(needle) || row.words.toLowerCase().includes(needle),
-    )
-    return [...people, ...places].slice(0, 12)
-  }, [q, athletes])
+  const role: NavRole = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
+  const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
 
-  const go = (tab: AppTab) => {
-    saveTab(tab)
-    onGo(tab)
+  const hits = useMemo(
+    () => searchAppIndex(q, { athletes, clips, role, ryan, limit: 28 }),
+    [q, athletes, clips, role, ryan],
+  )
+
+  const activate = (hit: AppSearchHit) => {
+    if (hit.kind === 'shape' && hit.shapeId) {
+      stashMobileSearchJump({ kind: 'shape', shapeId: hit.shapeId })
+      saveTab('learn')
+      onGo('learn')
+    } else if (hit.kind === 'clip' && hit.clipUrl) {
+      stashMobileSearchJump({ kind: 'clip', url: hit.clipUrl, label: hit.title })
+      saveTab('scroll')
+      onGo('scroll')
+    } else if (hit.kind === 'homework' && hit.catalogId) {
+      stashMobileSearchJump({ kind: 'homework', catalogId: hit.catalogId })
+      saveTab('homework')
+      onGo('homework')
+    } else if (hit.kind === 'person' && hit.athleteId) {
+      onViewProfile?.(hit.athleteId)
+      saveTab('history')
+      onGo('history')
+    } else {
+      saveTab(hit.tab)
+      onGo(hit.tab)
+    }
     setOpen(false)
     setQ('')
   }
@@ -58,46 +90,56 @@ export function MobileAppSearch({ label, icon, athletes, onGo }: Props) {
         className="flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-medium text-[var(--muted)]"
         onClick={() => setOpen(true)}
       >
-        <span className="text-lg leading-none">{icon}</span>
+        <IgSearchIcon className="h-6 w-6" />
         <span>{label}</span>
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex flex-col bg-[#0b1118] p-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          className="fixed inset-0 z-[80] flex flex-col bg-[#0b1118] px-3 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
           role="dialog"
           aria-label="Search"
         >
-          <div className="flex items-center gap-2">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search people, wins, homework…"
-              className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm"
-              autoFocus
-            />
-            <button type="button" className="text-sm text-[var(--accent)]" onClick={() => setOpen(false)}>
-              Done
+          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
+              <IgSearchIcon className="h-5 w-5 shrink-0 text-[var(--muted)]" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search videos, shapes, homework, people…"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                autoFocus
+              />
+            </div>
+            <button type="button" className="shrink-0 text-sm font-medium text-[var(--accent)]" onClick={() => setOpen(false)}>
+              Cancel
             </button>
           </div>
-          <ul className="mt-4 space-y-1 overflow-y-auto">
-            {hits.map((row, i) => (
-              <li key={`${row.tab}-${row.label}-${i}`}>
+          <ul className="mt-2 flex-1 space-y-0.5 overflow-y-auto overscroll-contain">
+            {hits.map((row) => (
+              <li key={row.id}>
                 <button
                   type="button"
-                  className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-white/5"
-                  onClick={() => go(row.tab)}
+                  className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-white/5 active:bg-white/10"
+                  onClick={() => activate(row)}
                 >
-                  {row.label}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm">
+                    {hitIcon(row.kind)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{row.title}</span>
+                    {row.subtitle ? (
+                      <span className="block truncate text-xs text-[var(--muted)]">{row.subtitle}</span>
+                    ) : null}
+                  </span>
                 </button>
               </li>
             ))}
-            {hits.length === 0 && (
-              <li className="px-3 py-6 text-center text-sm text-[var(--muted)]">No matches.</li>
+            {hits.length === 0 && q.trim() && (
+              <li className="px-3 py-10 text-center text-sm text-[var(--muted)]">
+                No matches for &ldquo;{q.trim()}&rdquo;
+              </li>
             )}
           </ul>
-          <p className="mt-2 text-[10px] text-[var(--muted)]">
-            Tabs: {APP_TABS.slice(0, 6).join(', ')}…
-          </p>
         </div>
       )}
     </>

@@ -47,10 +47,12 @@ type Props = {
   athletes: Athlete[]
   athlete: Athlete | null
   onViewProfile?: (id: string) => void
+  /** Mobile inbox tab opens here first (Instagram-style). */
+  initialPage?: Page
 }
 
-export function NetworkPanel({ athletes, athlete, onViewProfile }: Props) {
-  const [page, setPage] = useState<Page>('people')
+export function NetworkPanel({ athletes, athlete, onViewProfile, initialPage = 'messages' }: Props) {
+  const [page, setPage] = useState<Page>(initialPage)
   const [social, setSocial] = useState<SocialFile | null>(null)
   const [discuss, setDiscuss] = useState<DiscussFile | null>(null)
   const [error, setError] = useState<string | null>(null)

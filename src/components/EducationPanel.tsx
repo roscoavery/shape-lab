@@ -61,6 +61,7 @@ import { ShareReference } from './share/ShareReference'
 import { shapeStillDraft } from '../lib/shareReference'
 import type { Athlete, ReferencePhoto, ShapeDef, ShapeTestRecord } from '../types'
 import type { QuizTaker } from './learn/QuizWho'
+import { takeMobileSearchJump } from '../lib/mobileSearchNav'
 
 type EduView =
   | { kind: 'home' }
@@ -155,6 +156,12 @@ export function EducationPanel({
     if (intent === 'names') onOpenNamesTest?.()
     onIntentConsumed?.()
   }, [intent, onIntentConsumed, onOpenNamesTest])
+
+  useEffect(() => {
+    const jump = takeMobileSearchJump('shape')
+    if (!jump || jump.kind !== 'shape') return
+    if (getShape(jump.shapeId)) setView({ kind: 'shape', shapeId: jump.shapeId })
+  }, [])
 
   useEffect(() => {
     if (!athleteId) {
