@@ -103,8 +103,67 @@ export function IgMobileShell({
     onGo(id)
   }
 
+  const navItems = [
+    {
+      id: 'home',
+      label: 'Home',
+      active: active === 'home',
+      onClick: () => go('today'),
+      icon: <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />,
+    },
+    {
+      id: 'discover',
+      label: 'Discover',
+      active: discoverOn,
+      onClick: () => {
+        setMobileSearch(false)
+        onCloseProfile?.()
+        setDiscoverOpen(true)
+      },
+      icon: <IgReelsIcon className="h-7 w-7" filled={discoverOn} />,
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      active: active === 'messages',
+      onClick: () => go('network'),
+      icon: <IgMessagesIcon className="h-7 w-7" filled={active === 'messages'} />,
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      active: active === 'search',
+      onClick: () => {
+        setDiscoverOpen(false)
+        onCloseProfile?.()
+        setMobileSearch(true)
+      },
+      icon: <IgSearchIcon className="h-7 w-7" />,
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      active: active === 'profile',
+      onClick: () => {
+        setMobileSearch(false)
+        onOpenMyProfile?.()
+      },
+      icon: athlete ? (
+        <AthleteAvatar
+          athlete={athlete}
+          size="xs"
+          className={`h-7 w-7 ring-1 ${active === 'profile' ? 'ring-[var(--text)]' : 'ring-white/25'}`}
+        />
+      ) : (
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">
+          ◎
+        </span>
+      ),
+    },
+  ]
+
   return (
-    <div className="max-md:pb-[calc(3.25rem+env(safe-area-inset-bottom))]">
+    <div className="max-md:pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pl-[76px] xl:pl-60">
       <div className="sticky top-0 z-40 -mx-3 border-b border-white/10 bg-[#0b1118] sm:-mx-6 md:hidden">
         <header className="flex items-center gap-0 px-2 py-1.5 sm:px-4">
           <MobileNavDrawer
@@ -176,70 +235,54 @@ export function IgMobileShell({
         className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-lg items-center justify-between border-t border-white/10 bg-[#0a1014] px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 md:hidden"
         aria-label="App"
       >
-        <button
-          type="button"
-          aria-label="Home"
-          aria-current={active === 'home' ? 'page' : undefined}
-          onClick={() => go('today')}
-          className={`${navIconBtn} ${navBtn(active === 'home')}`}
-        >
-          <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />
-        </button>
-        <button
-          type="button"
-          aria-label="Discover"
-          aria-current={discoverOn ? 'page' : undefined}
-          onClick={() => {
-            setMobileSearch(false)
-            onCloseProfile?.()
-            setDiscoverOpen(true)
-          }}
-          className={`${navIconBtn} ${navBtn(discoverOn)}`}
-        >
-          <IgReelsIcon className="h-7 w-7" filled={discoverOn} />
-        </button>
-        <button
-          type="button"
-          aria-label="Messages"
-          aria-current={active === 'messages' ? 'page' : undefined}
-          onClick={() => go('network')}
-          className={`${navIconBtn} ${navBtn(active === 'messages')}`}
-        >
-          <IgMessagesIcon className="h-7 w-7" filled={active === 'messages'} />
-        </button>
-        <button
-          type="button"
-          aria-label="Search"
-          aria-current={active === 'search' ? 'page' : undefined}
-          onClick={() => {
-            setDiscoverOpen(false)
-            onCloseProfile?.()
-            setMobileSearch(true)
-          }}
-          className={`${navIconBtn} ${navBtn(active === 'search')}`}
-        >
-          <IgSearchIcon className="h-7 w-7" />
-        </button>
-        <button
-          type="button"
-          aria-label="My profile"
-          aria-current={active === 'profile' ? 'page' : undefined}
-          onClick={() => {
-            setMobileSearch(false)
-            onOpenMyProfile?.()
-          }}
-          className={navIconBtn}
-        >
-          {athlete ? (
-            <AthleteAvatar
-              athlete={athlete}
-              size="xs"
-              className={`h-7 w-7 ring-1 ${active === 'profile' ? 'ring-[var(--text)]' : 'ring-white/25'}`}
-            />
-          ) : (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">◎</span>
-          )}
-        </button>
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-label={item.label}
+            aria-current={item.active ? 'page' : undefined}
+            onClick={item.onClick}
+            className={`${navIconBtn} ${navBtn(item.active)}`}
+          >
+            {item.icon}
+          </button>
+        ))}
+      </nav>
+
+      {/* Tablet / desktop: the same five destinations docked left, Instagram-style.
+          Icon-only on md, icon + label on xl. */}
+      <nav
+        className="fixed inset-y-0 left-0 z-50 hidden w-[76px] flex-col border-r border-white/10 bg-[#0a1014] px-2 py-5 md:flex xl:w-60"
+        aria-label="App"
+      >
+        <div className="flex items-center justify-center xl:justify-start xl:px-4">
+          <img src="/favicon.svg" alt="" aria-hidden className="h-9 w-9 xl:hidden" />
+          <p className="hidden text-[22px] font-bold tracking-tight text-[var(--text)] xl:block">
+            shapelab
+          </p>
+        </div>
+        <div className="mt-8 flex flex-col gap-1.5">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
+              title={item.label}
+              onClick={item.onClick}
+              className={`flex min-h-[52px] items-center justify-center gap-4 rounded-xl px-3 transition-colors xl:justify-start ${
+                item.active
+                  ? 'text-[var(--text)]'
+                  : 'text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]'
+              }`}
+            >
+              {item.icon}
+              <span className={`hidden text-[15px] xl:inline ${item.active ? 'font-bold' : ''}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </div>
       </nav>
     </div>
   )
