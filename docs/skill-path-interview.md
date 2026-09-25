@@ -219,3 +219,27 @@ just recklessly throw our body into a skill. "Execute or perform or do" are bett
 ways to say it.
 
 Thats a few, im sure there are more.
+
+## Q7: Double back — what has to be in place
+
+They need a back tuck at shoulder/head level. They should be able to over rotate a
+back tuck to their backs on something at their shoulder level to realistically hit
+the double back. Some tips and tricks are to increase rotation speed by using cowboy
+tuck with knees apart. And when first trying it, to not trust their instinct. Over
+rotating these is way better than under rotating them. On the first attempts, you
+may think you know where you are and you will have the instinct to let out and
+land. Trust me, your instinct is probably wrong and if you let out on the first
+ones, youll under rotate and could neck it. Just stay in it and try to over flip
+the first one even when you think youve done 2 flips.
+
+## Q8: Triple full — what has to be in place
+
+We need a high double with time to let out and slow the twist before landing. We
+should finish the second twist not long after the half way point in the flip. The
+more twist you want, the deeper the blocking angle needs to be. The more twist per
+flip we want, the more height per flip we need. We cannot set and wait on the take
+off for a triple full like we can for a single or some doubles. Dont stand up and
+reach for the sky then twist. The twist arm will be moving down while the rebound
+is pushing up. Adding a twist to the beginning of a double was easier for me than
+adding a third twist to the end of a double. You need a strong double full with
+plenty of time to open and land for this to work.

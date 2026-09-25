@@ -20,18 +20,27 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   {
     id: 'double-back',
     skill: 'Double back',
-    needs: ['A layout you can trust with your eyes closed', 'Enough height that the second flip never feels rushed'],
+    needs: [
+      'A back tuck at shoulder/head level',
+      'Be able to over-rotate a back tuck to your back on something at shoulder level',
+    ],
     canBend: [],
-    ask: 'Ask your coach whether your single layout has the height and shape control a double needs. If the single is low, the double is not next.',
-    ryanNote: 'Top of the path. Highest level skill Ryan teaches toward.',
+    ask: 'Ask your coach whether your back tuck is high enough to over-rotate to your back on something at shoulder level. If not, the double is not next.',
+    ryanNote:
+      'Increase rotation speed with a cowboy tuck, knees apart. When first trying it, do not trust your instinct. Over-rotating is way better than under-rotating. On the first attempts you will think you know where you are and want to let out and land. Your instinct is probably wrong. If you let out early you will under-rotate and could neck it. Stay in it and try to over-flip the first one even when you think you have done two flips.',
   },
   {
     id: 'triple-full',
     skill: 'Triple full',
-    needs: ['A full that finishes with time to spare', 'Twist that starts late and stays tight (11 to 1 o\u2019clock)'],
+    needs: [
+      'A high double full with plenty of time to open and land',
+      'Finish the second twist not long after the halfway point of the flip',
+      'A deeper blocking angle than a double: more twist per flip needs more height per flip',
+    ],
     canBend: [],
-    ask: 'Ask your coach if your double full is finishing early with shape to spare. Triples come from twist efficiency, not from trying harder.',
-    ryanNote: 'Top of the path alongside double backs.',
+    ask: 'Ask your coach whether your double full finishes the second twist early with time to let out and slow the twist before landing. If the double is rushed, the triple is not next.',
+    ryanNote:
+      'You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one.',
   },
   {
     id: 'full',
