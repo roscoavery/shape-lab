@@ -406,3 +406,15 @@ athletes they work with, leading to more long term growth and less set backs. Ca
 you get a full without a good layout? Yes... BUT.. athletes often get injured in
 the process and/or stuck with a mediocre full and then have a hard time fixing it
 later which is why I do not recommend skipping GOOD LAYS. Play the long game!"
+
+### Q12e: Tumble doc / Dee twist timing video
+
+Ryan's YouTube short from Camp Tumble Smart session 2, 2024. His description, in
+his words:
+
+"tumble doc and dee at camp tumble smart session 2 2024.. coach ryan records the
+interaction and deep dive with dee giving visual references of Alvin's corrections.
+
+dee didnt like how the full twisting layout felt when done correctly if that says
+anything.. but we all liked how it looked at the end and this really highlights how
+unnatural proper technique can feel even for the most advanced athletes."

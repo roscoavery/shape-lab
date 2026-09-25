@@ -87,6 +87,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Understanding twisting during saltos — the physics behind the arm drop.',
     },
     {
+      who: 'Tumble Doc & Tumbling Dee',
+      url: 'https://youtube.com/shorts/6Jf85Laetg0',
+      watchFor: 'Twist timing deep dive from Camp Tumble Smart — proper technique feeling unnatural even for advanced athletes.',
+    },
+    {
       who: 'Coach Ryan Williams',
       url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
       watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
