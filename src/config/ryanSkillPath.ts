@@ -21,8 +21,8 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     id: 'double-back',
     skill: 'Double back',
     needs: [
-      'A back tuck at shoulder/head level',
-      'Be able to over-rotate a back tuck to your back on something at shoulder level',
+      'A back tuck high enough that their back reaches shoulder/head height (a building block, not a listed skill)',
+      'The test: over-rotate that tuck to their back on a shoulder-level mat. Shoulder level alone is not always enough.',
       'A high and straight full with time to open and land',
     ],
     canBend: [
@@ -45,6 +45,16 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     ask: 'Ask your coach whether your double full finishes the second twist early with time to let out and slow the twist before landing. If the double is rushed, the triple is not next.',
     ryanNote:
       'You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one.',
+  },
+  {
+    id: 'double-full',
+    skill: 'Double full',
+    needs: [
+      'A strong back full, straight, with time to open up and land',
+      'A front rudi (1.5 twist)',
+    ],
+    canBend: [],
+    ask: 'Ask your coach whether your single full is straight with time to spare at the end. The double needs that time.',
   },
   {
     id: 'full',

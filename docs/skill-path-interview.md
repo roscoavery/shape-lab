@@ -251,3 +251,15 @@ Also for a triple full, things that help are back 2.5 and front 2.5.
 For a double, it helps to have a back 1.5 and a front 1.5. Or at least a front 1.5
 goes a super long way. A high and straight full with time to open and land is
 essential for a back double.
+
+## Q9: Double full — what has to be in place
+
+They need a strong back full straight with time to open up and land. And a front
+rudi (1.5 twist).
+
+## Q10: The shoulder-level back tuck — drill or just bigger
+
+It doesnt have to be a listed skill, but a building block for double backs. It is
+a back tuck high enough to where their back is at or above shoulder/head height.
+Shoulder level isnt always enough. Over rotating it to their back on a shoulder
+level mat is.
