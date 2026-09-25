@@ -6,6 +6,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# The gym Mac is the source of truth: disk mode, always. Without this the
+# server flips between disk and Blob depending on the shell environment,
+# and each mode reads a different copy of the library — which looks exactly
+# like work being "lost". Blob stays as a backup via `npm run gym:push`.
+export GYM_HOME=1
+
 # Live gym JSON and blobs on this Mac always win over git during updates.
 gym_snapshot_live_data() {
   local park="$ROOT/.gym-park"

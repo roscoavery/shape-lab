@@ -32,6 +32,58 @@ function canWrite(dir: string): boolean {
   }
 }
 
+/**
+ * Library files whose every change is snapshotted before it is overwritten.
+ * Ryan's rule: shape-library work is never lost unless intentionally deleted.
+ * Snapshots land in data/history/<file>/<timestamp>.json (latest 30 kept)
+ * plus a data/history/journal.jsonl line per change. History must never
+ * break a write, so everything here is best-effort and disk-only.
+ */
+const HISTORY_FILES = new Set([
+  'data/coach-stills.json',
+  'data/still-crops.json',
+  'data/coach-content.json',
+  'data/learn-notes.json',
+  'data/shape-copy.json',
+])
+
+function snapshotHistory(rel: string): void {
+  if (!HISTORY_FILES.has(rel)) return
+  try {
+    let previous: string | null = null
+    const cached = mem.get(rel)
+    if (cached) {
+      previous = cached.toString('utf8')
+    } else {
+      try {
+        previous = fs.readFileSync(diskPath(rel), 'utf8')
+      } catch {
+        previous = null
+      }
+    }
+    if (!previous) return
+    const safe = rel.replace(/[^a-z0-9]+/gi, '_')
+    const dir = diskPath(path.join('data', 'history', safe))
+    fs.mkdirSync(dir, { recursive: true })
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    fs.writeFileSync(path.join(dir, `${stamp}.json`), previous)
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort()
+    for (const f of files.slice(0, Math.max(0, files.length - 30))) {
+      try {
+        fs.unlinkSync(path.join(dir, f))
+      } catch {
+        /* keep going */
+      }
+    }
+    fs.appendFileSync(
+      diskPath(path.join('data', 'history', 'journal.jsonl')),
+      JSON.stringify({ ts: new Date().toISOString(), file: rel, bytes: previous.length }) + '\n',
+    )
+  } catch {
+    /* history is a safety net, never a blocker */
+  }
+}
+
 function homeGymDisk(): boolean {
   const flag = (process.env.GYM_HOME || '').trim().toLowerCase()
   return flag === '1' || flag === 'true' || flag === 'yes'
@@ -196,6 +248,8 @@ function assertDurableWrite(): void {
 
 export async function writeText(rel: string, text: string): Promise<void> {
   assertDurableWrite()
+  // Snapshot the previous version of library files before it is replaced.
+  snapshotHistory(rel)
   const buf = Buffer.from(text, 'utf8')
   mem.set(rel, buf)
   if (useBlob()) {

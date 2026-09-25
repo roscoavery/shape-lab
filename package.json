@@ -19,6 +19,7 @@
     "gym": "node scripts/gym-home.mjs",
     "gym:dev": "GYM_DEV=1 node scripts/gym-home.mjs",
     "gym:pull": "node scripts/pull-from-blob.mjs",
+    "gym:push": "node scripts/push-to-blob.mjs",
     "gym:up": "node scripts/gym-up.mjs",
     "gym:mac": "bash scripts/mac-gym.sh",
     "mac": "bash scripts/mac-gym.sh",

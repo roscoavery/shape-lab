@@ -111,6 +111,23 @@ const hasBlob = await blobSetup()
 console.log(
   `Blob store: ${hasBlob ? ok('connected — blob locations checked') : warn('no token found — blob locations NOT checked')}`,
 )
+console.log(
+  `Gym mode env: GYM_HOME=${process.env.GYM_HOME || '(unset)'}  ` +
+    `-> server will run in ${process.env.GYM_HOME === '1' || (process.env.GYM_HOME || '').toLowerCase() === 'true' ? ok('DISK') : warn('BLOB')} mode`,
+)
+
+/** What the running gym server actually serves (its live truth, not the disk files). */
+async function serverJson(apiPath) {
+  for (const base of ['http://127.0.0.1:43127', 'http://localhost:43127']) {
+    try {
+      const res = await fetch(base + apiPath, { signal: AbortSignal.timeout(3000) })
+      if (res.ok) return await res.json()
+    } catch {
+      /* server not running */
+    }
+  }
+  return null
+}
 
 console.log(h('A. Shipped stills (live in git — cannot be lost)'))
 console.log(`  ${ok(`${shippedFiles.length} files`)} in public/learn/coach-stills/`)
@@ -181,14 +198,47 @@ for (const [stillId, info] of expected) {
 if (expected.size === 0) console.log('  (no uploaded stills in any registry copy)')
 
 console.log(h('D. Orphan JPEGs (on disk, not linked to any shape)'))
-const orphans = [...localBlobs].filter((id) => !expected.has(id) && !shippedIds.has(id) && !goneStill.has(id))
+const localBlobIds = new Set(listJpegs(join(ROOT, 'data', 'coach-blobs')).map(idOf))
+const orphans = [...localBlobIds].filter((id) => !expected.has(id) && !shippedIds.has(id))
 if (orphans.length === 0) {
   console.log('  none')
 } else {
-  for (const id of orphans) console.log(`  ${warn('ORPHAN')}: data/coach-blobs/${id}.jpg — tell Ryan which shape it belongs to`)
+  for (const id of orphans) {
+    const trashed = goneStill.has(id)
+    console.log(
+      `  ${trashed ? warn('IN TRASH') : warn('ORPHAN')}: data/coach-blobs/${id}.jpg — ` +
+        (trashed
+          ? 'photo still on disk, registry entry deleted — restorable'
+          : 'tell Ryan which shape it belongs to'),
+    )
+  }
 }
 const igBlobs = listJpegs(join(ROOT, 'data', 'ig-blobs'))
 if (igBlobs.length) console.log(`  (${igBlobs.length} JPEGs in data/ig-blobs/ — Instagram stills)`)
+
+console.log(h('F. Full registry dump — main map, extras, trash'))
+const dumpMain = localStills?.main ?? blobStills?.main ?? {}
+console.log('  main (shape -> still):')
+for (const [shapeId, stillId] of Object.entries(dumpMain)) {
+  const hasJpeg = localBlobIds.has(String(stillId)) || parkBlobs.has(String(stillId))
+  console.log(`    ${shapeId} -> ${stillId} ${hasJpeg ? ok('[jpeg ok]') : bad('[JPEG MISSING]')}`)
+}
+if (Object.keys(dumpMain).length === 0) console.log('    (empty)')
+console.log('  extras:')
+for (const row of reg.extras) {
+  const hasJpeg = localBlobIds.has(row.id) || parkBlobs.has(row.id)
+  console.log(`    ${row.id} [${row.shapeId}] "${row.label || ''}" ${hasJpeg ? ok('[jpeg ok]') : bad('[JPEG MISSING]')}`)
+}
+if (reg.extras.length === 0) console.log('    (none)')
+console.log('  trash (removedCoachStillIds):')
+if (goneStill.size === 0) console.log('    (empty)')
+for (const id of goneStill) {
+  const hasJpeg = localBlobIds.has(id)
+  console.log(`    ${id} ${hasJpeg ? warn('[photo on disk — restorable]') : '[no photo on disk]'}`)
+}
+console.log('  hidden gym shapes (removedGymShapeIds):')
+if (gone.size === 0) console.log('    (none)')
+for (const id of gone) console.log(`    ${id} (${shapeName(id)})`)
 
 console.log(h('E. Still crops (data/still-crops.json)'))
 const localCrops = readJson(join(ROOT, 'data', 'still-crops.json'))
@@ -205,4 +255,32 @@ if (missing) lines.push(`${missing} still(s) are gone from every store — re-up
 if (orphans.length) lines.push(`${orphans.length} orphan photo(s) need a shape assignment`)
 if (!lines.length) lines.push('Everything the library expects is present or recoverable.')
 for (const l of lines) console.log(`  • ${l}`)
+
+console.log(h('G. LIVE SERVER TRUTH (what the app actually sees right now)'))
+const srvCrops = await serverJson('/api/still-crops')
+const srvStills = await serverJson('/api/coach-stills')
+if (!srvCrops && !srvStills) {
+  console.log(`  ${warn('gym server is not running')} — start it with npm run gym:mac, then re-run this audit`)
+} else {
+  if (srvCrops) {
+    const n = Object.keys(srvCrops.crops ?? {}).length
+    const same = srvCrops.updatedAt === (localCrops?.updatedAt ?? null)
+    console.log(
+      `  still-crops: server has ${n} crops, updated ${srvCrops.updatedAt || '?'} ` +
+        (same ? ok('(matches disk)') : warn('(DIFFERS from disk — server is the live truth)')),
+    )
+  }
+  if (srvStills) {
+    const ex = srvStills.extras ?? []
+    const mn = Object.keys(srvStills.main ?? {}).length
+    const rm = (srvStills.removedCoachStillIds ?? []).length
+    console.log(`  coach-stills: server has ${ex.length} extras, ${mn} main mappings, ${rm} in trash`)
+    const diskIds = new Set((localStills?.extras ?? []).map((e) => e.id))
+    const onlyOnServer = ex.filter((e) => e?.id && !diskIds.has(e.id))
+    for (const e of onlyOnServer.slice(0, 20)) {
+      console.log(`    ${ok('ONLY ON SERVER')}: ${e.id} [${e.shapeId}] "${e.label || ''}"`)
+    }
+    if (onlyOnServer.length > 20) console.log(`    …and ${onlyOnServer.length - 20} more`)
+  }
+}
 console.log('')
