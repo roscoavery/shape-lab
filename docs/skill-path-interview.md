@@ -243,3 +243,11 @@ reach for the sky then twist. The twist arm will be moving down while the reboun
 is pushing up. Adding a twist to the beginning of a double was easier for me than
 adding a third twist to the end of a double. You need a strong double full with
 plenty of time to open and land for this to work.
+
+## Q7b/Q8b: What else helps (follow-up)
+
+Also for a triple full, things that help are back 2.5 and front 2.5.
+
+For a double, it helps to have a back 1.5 and a front 1.5. Or at least a front 1.5
+goes a super long way. A high and straight full with time to open and land is
+essential for a back double.

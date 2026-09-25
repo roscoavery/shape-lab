@@ -23,8 +23,11 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     needs: [
       'A back tuck at shoulder/head level',
       'Be able to over-rotate a back tuck to your back on something at shoulder level',
+      'A high and straight full with time to open and land',
     ],
-    canBend: [],
+    canBend: [
+      'A back 1.5 and a front 1.5 help. At least a front 1.5 goes a super long way.',
+    ],
     ask: 'Ask your coach whether your back tuck is high enough to over-rotate to your back on something at shoulder level. If not, the double is not next.',
     ryanNote:
       'Increase rotation speed with a cowboy tuck, knees apart. When first trying it, do not trust your instinct. Over-rotating is way better than under-rotating. On the first attempts you will think you know where you are and want to let out and land. Your instinct is probably wrong. If you let out early you will under-rotate and could neck it. Stay in it and try to over-flip the first one even when you think you have done two flips.',
@@ -38,6 +41,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'A deeper blocking angle than a double: more twist per flip needs more height per flip',
     ],
     canBend: [],
+    canBend: ['Back 2.5 and front 2.5 help build toward it.'],
     ask: 'Ask your coach whether your double full finishes the second twist early with time to let out and slow the twist before landing. If the double is rushed, the triple is not next.',
     ryanNote:
       'You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one.',
