@@ -89,6 +89,21 @@ function homeGymDisk(): boolean {
   return flag === '1' || flag === 'true' || flag === 'yes'
 }
 
+/**
+ * Gym Mac auto-backup: every disk write is also mirrored to Blob when a token
+ * is available, so uploads are backed up automatically without manual gym:push.
+ * Disk stays the source of truth; the blob mirror is best-effort and never
+ * breaks a save.
+ */
+async function mirrorToBlob(rel: string, body: string | Buffer, contentType: string): Promise<void> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) return
+  try {
+    await writeBlob(rel, body, contentType)
+  } catch {
+    /* disk write already succeeded; blob is backup only */
+  }
+}
+
 /** Home PC with GYM_HOME=1 — phones hit this computer, not Blob. */
 export function isHomeGym(): boolean {
   return homeGymDisk()
@@ -258,6 +273,7 @@ export async function writeText(rel: string, text: string): Promise<void> {
     const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
     fs.mkdirSync(path.dirname(dest), { recursive: true })
     fs.writeFileSync(dest, text)
+    await mirrorToBlob(rel, text, 'application/json')
   }
   await touchRevision(rel)
 }
@@ -325,6 +341,7 @@ export async function writeBin(rel: string, buf: Buffer, contentType: string): P
   const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.writeFileSync(dest, buf)
+  await mirrorToBlob(rel, buf, contentType)
 }
 
 /** Instructional Instagram copies only. Athlete / feed / story bytes use writeBin. */
@@ -348,6 +365,7 @@ export async function writePublicBin(
   const dest = canWrite(path.dirname(diskPath(rel))) ? diskPath(rel) : tmpPath(rel)
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.writeFileSync(dest, buf)
+  await mirrorToBlob(rel, buf, contentType)
   return null
 }
 
