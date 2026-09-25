@@ -31,6 +31,7 @@
     "gym:photos": "node scripts/restore-photos-from-backup.mjs",
     "gym:shapes": "node scripts/delete-gym-shape.mjs",
     "gym:stills": "node scripts/restore-stills-from-blobs.mjs",
+    "gym:audit": "node scripts/audit-stills.mjs",
     "test:calendar": "tsx --test server/calendar/*.test.ts"
   },
   "dependencies": {

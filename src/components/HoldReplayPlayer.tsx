@@ -7,13 +7,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatSeconds, holdMediaWindow } from '../lib/handstandHold'
 import {
+  burnedOverlayKey,
+  burnOverlayVideo,
   clampSaveSpeed,
+  getBurnedOverlay,
   paintHoldOverlay,
+  rememberBurnedOverlay,
   saveHoldClipWithOverlay,
   saveSpeedLabel,
 } from '../lib/overlayExport'
 import { mediaStretch, recapPlaybackRate, type PoseTrack } from '../lib/poseTrack'
-import { saveResultMessage, type SaveVideoResult } from '../lib/saveMedia'
+import { saveResultMessage, shareFileOnly, type SaveVideoResult } from '../lib/saveMedia'
 import { uploadAthleteVideo } from '../lib/athleteVideoStore'
 import { HOLD_PINK_BTN } from '../lib/holdBuild'
 import { saveJointDrawMode, type JointDrawMode } from '../lib/skeleton'
@@ -79,6 +83,91 @@ export function HoldReplayPlayer({
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
+  /** Quick save: burn the overlay at the full clip length with the current
+   *  save settings, then share to Photos without leaving the recap.
+   *  iOS needs a fresh tap gesture for the share sheet, so after a long burn
+   *  the button becomes a "tap to share" retry instead of navigating away. */
+  const [quickState, setQuickState] = useState<'idle' | 'burning' | 'ready' | 'sharing'>('idle')
+
+  const quickSave = async () => {
+    if (!blob) {
+      setFlash('Clip is still loading — wait a moment, then tap Save again.')
+      window.setTimeout(() => setFlash(null), 4000)
+      return
+    }
+    if (quickState === 'burning' || quickState === 'sharing') return
+    const layers = {
+      showScore,
+      showSkeleton,
+      showClock,
+      showAngles,
+      skeletonWhenOneLine,
+    }
+    const key = burnedOverlayKey(clipId, mode, mirror !== false, layers, saveSpeed, true)
+    const cached = getBurnedOverlay(key)
+    // Fresh tap + already-burned clip: the share sheet gets a live gesture.
+    if (cached && quickState !== 'burning') {
+      setQuickState('sharing')
+      onSaveBusy?.(true)
+      try {
+        if (await shareFileOnly(cached, filename)) {
+          setQuickState('idle')
+          setFlash('On the Photos sheet — pick Save Video. This recap stays here.')
+        } else {
+          setQuickState('ready')
+          setFlash('Could not open the share sheet — tap again to retry.')
+        }
+      } finally {
+        onSaveBusy?.(false)
+        window.setTimeout(() => setFlash(null), 6000)
+      }
+      return
+    }
+    setQuickState('burning')
+    setSaving(true)
+    onSaveBusy?.(true)
+    setFlash('Writing the overlay at full clip length… stay on this recap.')
+    try {
+      const out = await burnOverlayVideo({
+        source: blob,
+        track,
+        mode,
+        mirror,
+        holdSeconds,
+        clockOffsetSec,
+        recordedWallSec,
+        showSkeleton,
+        showAngles,
+        showScore,
+        showClock,
+        skeletonWhenOneLine,
+        saveSpeed,
+        shapeId: holdShapeId,
+        fullLength: true,
+        onProgress: (p) => {
+          setFlash(`Writing the overlay… ${Math.round(p * 100)}%`)
+        },
+      })
+      rememberBurnedOverlay(key, out)
+      // The burn ate the tap gesture, so the sheet may refuse to open here.
+      // If it does, the button flips to a one-tap share retry — the recap
+      // never navigates away.
+      if (await shareFileOnly(out, filename)) {
+        setQuickState('idle')
+        setFlash('On the Photos sheet — pick Save Video. This recap stays here.')
+      } else {
+        setQuickState('ready')
+        setFlash('Clip is ready — tap Save video again to open the share sheet.')
+      }
+    } catch {
+      setQuickState('idle')
+      setFlash('Could not write that clip.')
+    } finally {
+      setSaving(false)
+      onSaveBusy?.(false)
+      window.setTimeout(() => setFlash(null), 6000)
+    }
+  }
 
   useEffect(() => {
     saveJointDrawMode(mode)
@@ -318,12 +407,29 @@ export function HoldReplayPlayer({
       <div className={`mt-2 flex flex-wrap items-center gap-2 ${fill ? 'px-1' : ''}`}>
         <button
           type="button"
+          disabled={!blob || quickState === 'burning' || quickState === 'sharing'}
+          onClick={() => void quickSave()}
+          className={`rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50 ${HOLD_PINK_BTN}`}
+        >
+          {quickState === 'burning'
+            ? 'Writing clip…'
+            : quickState === 'sharing'
+              ? 'Opening share sheet…'
+              : quickState === 'ready'
+                ? 'Tap to share video'
+                : 'Save video'}
+        </button>
+        <button
+          type="button"
           disabled={!blob || saving}
           onClick={() => void save(false)}
-          className={`rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${HOLD_PINK_BTN}`}
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold disabled:opacity-50"
         >
-          {saving ? 'Writing clip…' : 'Save to Photos'}
+          {saving ? 'Writing clip…' : 'Save raw clip'}
         </button>
+        <p className={`w-full text-[11px] text-[var(--muted)] ${fill ? 'px-1' : ''}`}>
+          Save video burns the overlay with your save settings at the full clip length — the recap stays open.
+        </p>
         {athleteId && (
           <button
             type="button"

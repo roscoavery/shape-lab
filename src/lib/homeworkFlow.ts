@@ -80,6 +80,22 @@ export function ensureSequenceHomework(
   return item
 }
 
+/** A handstand kick counts as "hit" when the snapshot grade clears the app's
+ *  own "bad" band (see scoreColor: below 50 reads as a miss, not a handstand). */
+export const MC_HS_HIT_MIN_SCORE = 50
+/** Assumed hold per hit handstand in MC HS 5 reps — the snapshots are grades,
+ *  not timed holds, so each hit counts ~1.5s. */
+export const MC_HS_ASSUMED_HOLD_SEC = 1.5
+export const MC_HS_PLANNED_REPS = 5
+
+/** How many of the 5 handstand kicks were actually hit (not assumed — counted
+ *  from the recap snapshots). */
+export function mcHsHits(report: Pick<FlowRunReport, 'steps'>): number {
+  return report.steps.filter(
+    (s) => s.shapeId === 'handstand' && s.rep != null && (s.overall ?? 0) >= MC_HS_HIT_MIN_SCORE,
+  ).length
+}
+
 /** Write a homework log when any class-flow run finishes. */
 export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | null {
   if (!report.athleteId || report.athleteId === 'none') return null
@@ -90,14 +106,21 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
     items.find((h) => flowIdForHomeworkItem(h) === report.sequenceId) ??
     ensureSequenceHomework(report.athleteId, report.sequenceId, report.sequenceName)
   const incomplete = report.incomplete === true
-  const reps = incomplete
-    ? Math.max(0, Math.floor(report.chosenReps ?? 0))
-    : report.chosenReps && report.chosenReps > 0
-      ? report.chosenReps
-      : 1
+  const isMcHs5 = report.sequenceId === 'flow_mc_hs_5reps' && !incomplete
+  const mcHits = isMcHs5 ? mcHsHits(report) : 0
+  const reps = isMcHs5
+    ? mcHits
+    : incomplete
+      ? Math.max(0, Math.floor(report.chosenReps ?? 0))
+      : report.chosenReps && report.chosenReps > 0
+        ? report.chosenReps
+        : 1
   const sets = !incomplete && report.chosenSets && report.chosenSets > 1 ? report.chosenSets : undefined
   const plannedSets = report.plannedSets ?? report.chosenSets ?? 1
   const plannedReps = report.plannedReps ?? (incomplete ? undefined : report.chosenReps)
+  const holdSeconds = isMcHs5
+    ? roundHoldSecondsUp(mcHits * MC_HS_ASSUMED_HOLD_SEC)
+    : roundHoldSecondsUp(sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0)
   const log: HomeworkLog = {
     id: createId('hwlog'),
     athleteId: report.athleteId,
@@ -109,15 +132,15 @@ export function logHomeworkSequenceRun(report: FlowRunReport): HomeworkLog | nul
     reps,
     ...(sets ? { sets } : {}),
     ...(incomplete ? { incomplete: true } : {}),
-    totalHoldSeconds: roundHoldSecondsUp(
-      sessionHoldTotal(report.holdAttempts) || report.bestHoldSeconds || 0,
-    ),
+    totalHoldSeconds: holdSeconds,
     score: overallFlowScore(report),
-    sourceLabel: incomplete
-      ? `${report.nickname} · attempt · ${reps} of ${plannedSets}×${plannedReps ?? '?'}`
-      : sets
-        ? `${report.nickname} · ${sets}×${reps}`
-        : `${report.nickname} · ${reps} run${reps === 1 ? '' : 's'}`,
+    sourceLabel: isMcHs5
+      ? `${report.nickname} · ${mcHits} of ${MC_HS_PLANNED_REPS} handstands × ~${MC_HS_ASSUMED_HOLD_SEC}s`
+      : incomplete
+        ? `${report.nickname} · attempt · ${reps} of ${plannedSets}×${plannedReps ?? '?'}`
+        : sets
+          ? `${report.nickname} · ${sets}×${reps}`
+          : `${report.nickname} · ${reps} run${reps === 1 ? '' : 's'}`,
   }
   addHomeworkLog(log)
   return log

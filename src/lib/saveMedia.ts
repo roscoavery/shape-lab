@@ -215,12 +215,28 @@ export async function saveVideoToDevice(
   }
 
   if (await shareFile(file)) return 'shared'
+  // On iOS an anchor "download" of a video navigates the tab to the raw file
+  // and destroys the recap — never take that path. The caller shows a retry
+  // tap instead so the share sheet gets a fresh user gesture.
+  if (isAppleMobile()) return 'failed'
   try {
     triggerAnchorDownload(blob, name)
     return 'downloaded'
   } catch {
     return 'failed'
   }
+}
+
+/** Share-sheet only — never falls back to an anchor download. Use after a long
+ *  render (overlay burn) where the tap gesture is gone: the caller keeps the
+ *  blob and lets the user tap again so iOS gets a fresh gesture. Returns true
+ *  when the sheet opened (or the user cancelled it). */
+export async function shareFileOnly(blob: Blob, filename: string): Promise<boolean> {
+  if (!blob || blob.size < 32) return false
+  const type = blob.type || (filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm')
+  const name = filename.replace(/\.(webm|mp4|mov)$/i, '') + (extForVideoType(type) === 'mp4' ? '.mp4' : '.webm')
+  const file = new File([blob], name, { type: type.includes('mp4') ? 'video/mp4' : type })
+  return shareFile(file)
 }
 
 export function saveResultMessage(result: SaveVideoResult, kind: 'video' | 'pack' = 'video'): string {

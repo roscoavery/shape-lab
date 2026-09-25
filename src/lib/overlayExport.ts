@@ -71,6 +71,7 @@ export function burnedOverlayKey(
   mirror: boolean,
   layers: HoldSaveLayers = DEFAULT_HOLD_SAVE_LAYERS,
   saveSpeed = 1,
+  fullLength = false,
 ): string | null {
   if (!clipId) return null
   const speed = clampSaveSpeed(saveSpeed)
@@ -84,6 +85,7 @@ export function burnedOverlayKey(
     layers.showClock ? 'cl1' : 'cl0',
     layers.skeletonWhenOneLine ? '1ln1' : '1ln0',
     `spd${speed}`,
+    fullLength ? 'full1' : 'full0',
   ].join(':')
 }
 
@@ -281,6 +283,8 @@ export type BurnOverlayOpts = {
   video?: HTMLVideoElement | null
   canvas?: HTMLCanvasElement | null
   shapeId?: string
+  /** Burn across the whole clip instead of trimming to the hold window. */
+  fullLength?: boolean
 }
 
 export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
@@ -321,7 +325,9 @@ export async function burnOverlayVideo(opts: BurnOverlayOpts): Promise<Blob> {
     opts.recordedWallSec,
   )
   const saveSpeed = clampSaveSpeed(opts.saveSpeed ?? 1)
-  const win = holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration, stretch)
+  const win = opts.fullLength
+    ? { start: 0, end: duration }
+    : holdMediaWindow(opts.clockOffsetSec, opts.holdSeconds, duration, stretch)
   // Overlay still uses currentTime → track time. Only the file play rate changes.
   const wantedRate = savePlaybackRate(stretch, saveSpeed)
   video.muted = true
@@ -422,6 +428,8 @@ export async function saveHoldClipWithOverlay(opts: {
   shapeId?: string
   /** Save the recap file as-is. Overlay burn stays under Save options. */
   skipOverlay?: boolean
+  /** Burn the overlay across the whole clip, not just the hold window. */
+  fullLength?: boolean
 }): Promise<SaveVideoResult> {
   if (opts.skipOverlay) {
     const ext = extForVideoType(opts.source.type || opts.filename)
@@ -460,7 +468,7 @@ export async function saveHoldClipWithOverlay(opts: {
       return saveVideoToDevice(opts.source, name)
     }
   }
-  const key = burnedOverlayKey(opts.clipId, mode, mirror, layers, saveSpeed)
+  const key = burnedOverlayKey(opts.clipId, mode, mirror, layers, saveSpeed, opts.fullLength === true)
   let out = getBurnedOverlay(key)
   if (!out) {
     out = await burnOverlayVideo({
@@ -479,6 +487,7 @@ export async function saveHoldClipWithOverlay(opts: {
       saveSpeed,
       onProgress: opts.onProgress,
       shapeId: opts.shapeId,
+      fullLength: opts.fullLength,
     })
     rememberBurnedOverlay(key, out)
   }

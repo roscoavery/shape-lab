@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { homeworkTitle } from '../../lib/homeworkLabel'
+import { flowIdForHomeworkItem } from '../../lib/homeworkFlow'
 import {
   canEditHomeworkLog,
   canReactToHomeworkLog,
@@ -373,6 +374,10 @@ function LogCard({
   const sets = log.sets && log.sets > 1 ? log.sets : 0
   const reps = log.reps ?? 0
   const isRepLog = reps > 0 && holdSecs === 0
+  /** One run, one card: reps AND hold time together (handstand/lever/lunge
+   *  challenges, MC HS 5 reps). */
+  const paired = reps > 0 && holdSecs > 0
+  const isMcHs = !!item && flowIdForHomeworkItem(item) === 'flow_mc_hs_5reps'
 
   if (editing) {
     return (
@@ -422,7 +427,8 @@ function LogCard({
             </p>
           )}
         </div>
-        {/* Hero stat: exercise + hold are the eye-catchers */}
+        {/* Hero stat: exercise + hold are the eye-catchers.
+            Paired logs (reps + hold in one run) show both together. */}
         <div className="shrink-0 text-right">
           {isRepLog ? (
             <>
@@ -433,6 +439,32 @@ function LogCard({
                 {sets > 0 ? `${sets} × ${reps}` : `${reps}`}
               </p>
               {sets === 0 && <p className="text-[11px] text-[var(--text)]/55">reps</p>}
+            </>
+          ) : paired && isMcHs ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text)]/50">
+                Handstands
+              </p>
+              <p className="text-2xl font-extrabold tabular-nums text-[#e0b872]">
+                {reps}
+                <span className="text-base font-bold text-[var(--text)]/50">/5</span>
+              </p>
+              <p className="text-[11px] font-semibold tabular-nums text-[#8fbf6a]">
+                ≈{formatSeconds(holdSecs)} hold
+              </p>
+            </>
+          ) : paired ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text)]/50">
+                Hold
+              </p>
+              <p className="text-2xl font-extrabold tabular-nums text-[#8fbf6a]">
+                {formatSeconds(holdSecs)}
+              </p>
+              <p className="text-[11px] font-semibold text-[var(--text)]/60">
+                {sets > 0 ? `${sets} × ` : ''}
+                {reps} attempt{reps === 1 ? '' : 's'}
+              </p>
             </>
           ) : holdSecs > 0 ? (
             <>
