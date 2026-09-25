@@ -239,7 +239,8 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                     compact
                     quiet
                     shareChrome={false}
-                    markup={false}
+                    markup
+                    markupSwipeSafe
                     postedBy={clip.postedBy || postedByFromUrl(clip.url)}
                     onPostedBy={(handle) => rememberHandle(clip.url, handle)}
                   />

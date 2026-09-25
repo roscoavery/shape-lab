@@ -1224,7 +1224,7 @@ export function ReferencePane({
           hudCorner={hudCorner}
           bare={pip}
           compact={Boolean(viewer)}
-          markup={!viewer && !pip}
+          markup={!pip}
         />
       ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
@@ -1249,7 +1249,7 @@ export function ReferencePane({
           bare={pip}
           compact={Boolean(viewer)}
           quiet={Boolean(viewer)}
-          markup={!viewer && !pip}
+          markup={!pip}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1262,7 +1262,7 @@ export function ReferencePane({
           hudCorner={hudCorner}
           bare={pip}
           compact={Boolean(viewer)}
-          markup={!viewer && !pip}
+          markup={!pip}
         />
       ) : (
         <div
