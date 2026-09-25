@@ -107,6 +107,11 @@ const bad = (s) => `\x1b[31m${s}\x1b[0m`
 const warn = (s) => `\x1b[33m${s}\x1b[0m`
 const h = (s) => `\n\x1b[1m${s}\x1b[0m`
 
+const hasBlob = await blobSetup()
+console.log(
+  `Blob store: ${hasBlob ? ok('connected — blob locations checked') : warn('no token found — blob locations NOT checked')}`,
+)
+
 console.log(h('A. Shipped stills (live in git — cannot be lost)'))
 console.log(`  ${ok(`${shippedFiles.length} files`)} in public/learn/coach-stills/`)
 const shippedIds = new Set(shippedFiles.map(idOf))
@@ -114,7 +119,6 @@ const shippedIds = new Set(shippedFiles.map(idOf))
 console.log(h('B. Gym shapes hidden by tombstone (removedGymShapeIds)'))
 const localContent = readJson(join(ROOT, 'data', 'coach-content.json'))
 const localGone = new Set(localContent?.removedGymShapeIds ?? [])
-const hasBlob = await blobSetup()
 const blobContent = hasBlob ? await blobJson('data/coach-content.json') : null
 const blobGone = new Set(blobContent?.removedGymShapeIds ?? [])
 const gone = new Set([...localGone, ...blobGone])
