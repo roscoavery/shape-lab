@@ -33,6 +33,7 @@ import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import { CoachInterview } from './components/coach/CoachInterview'
+import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
@@ -953,6 +954,7 @@ export default function App() {
     <FavoritesProvider>
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
+    <VersionCheck />
     <div className="mx-auto min-h-screen min-w-0 max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
       <IgMobileShell
         tab={tab}

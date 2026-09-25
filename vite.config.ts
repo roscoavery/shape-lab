@@ -2,11 +2,23 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { instagramResolvePlugin } from './server/igPlugin.ts'
+import { execSync } from 'node:child_process'
+
+function gymSha(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim() || 'dev'
+  } catch {
+    return 'dev'
+  }
+}
 
 // Shape Lab — local gymnastics coaching prototype
 // Default port 43127 avoids clashing with common 3000/5173 setups.
 export default defineConfig({
   plugins: [react(), tailwindcss(), instagramResolvePlugin()],
+  define: {
+    __GYM_SHA__: JSON.stringify(gymSha()),
+  },
   // iPad Air 2 tops out at iOS 15 / Safari 15. Default Vite 8 targets skip that.
   build: {
     target: ['es2020', 'safari15'],
