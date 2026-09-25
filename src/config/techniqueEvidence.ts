@@ -87,6 +87,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Understanding twisting during saltos — the physics behind the arm drop.',
     },
     {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+      watchFor: 'When is it time to twist? The layout standards that make a full a realistic goal.',
+    },
+    {
       who: 'Ari (athlete)',
       url: 'https://www.instagram.com/reel/DKcgyPLO9Hz/',
       watchFor: "Ari's full — the finished product of the arm-drop process.",

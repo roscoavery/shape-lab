@@ -364,3 +364,45 @@ Ryan's complete arm-drop progression for teaching a full, in his words:
   saltos" (Hardy Fink, Fred Yeadon). "Found this recently which reinforced how I
   understood it but gave me an even better understanding."
 - "ASYMMETRICAL ARM MOVEMENT" biomechanics video, 2:27 (source unidentified)
+
+### Q12c: Arm-drop progression videos (Ryan's cues)
+
+Ryan's coaching cues for each step, in his words:
+
+- Step 1, lay to belly: the prerequisite. Consistent 3/4 flip to belly, 5 good
+  reps, before any arm drop.
+- Step 2, half to back: "she drops the twist arm down to about shoulder level
+  when she gets upside down. the cue is to tell them to wait until they are about
+  to land on their belly then drop and squeeze. twist arm drops. non twist arm
+  squeezes into head. it should be pretty late at the beginning of the 5 reps and
+  get earlier and earlier until its at the upside down point."
+- Step 3, full to belly with arm drop: "athlete drops one arm down and keeps the
+  other squeezing into ear. she opens the twist arm back up as she finishes to
+  untilt herself."
+- Step 4, sequential arm drop (both arms): "this one was a sequential arm drop.
+  she didnt drop them past shoulders but was supposed to drop past shoulder level.
+  whats cool is that even without dropping the twist arm past shoulder level, she
+  was able to use the second arm drop to give the second half turn and open both
+  arms back up to untilt."
+- Physics reference: excerpt from the Fred Yeadon / FIG Academy twisting video
+  showing the whole process with computer simulation.
+
+### Q12d: When is it time to twist (Ryan's TikTok)
+
+From Ryan's @coachryanwilliams TikTok on full prerequisites, in his words:
+
+"Good fulls start with good layouts! Working fulls without meeting clear standards
+on prerequisites commonly leads to athletes getting injured and/or stuck on future
+progressions. If you're an athlete and want to get a full, use this layout as a
+reference to match and your full will be a VERY realistic goal if you can match it
+even just 90%. When is it time to twist? - Layout has solid blocking angle to
+convert traveling momentum to height. - Layout hits a shape deadline at 3 o'clock
+(first quarter of flip). - Sets layout with head in. - Layout has adequate rotation
+to maintain open hips all the way through. (No piking) Miss these key points and
+you risk - forced dorsiflexion ankle injuries from under rotated fulls. - never
+moving on to doubles - getting stuck working fulls - knee injuries from twisting
+while landing. Coaches who understand this can responsibly prevent injuries for
+athletes they work with, leading to more long term growth and less set backs. Can
+you get a full without a good layout? Yes... BUT.. athletes often get injured in
+the process and/or stuck with a mediocre full and then have a hard time fixing it
+later which is why I do not recommend skipping GOOD LAYS. Play the long game!"
