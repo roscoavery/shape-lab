@@ -65,6 +65,28 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Rebound to candle — the layout drill that builds the shape.',
     },
   ],
+  full: [
+    {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/Cejgj-XvIGK/',
+      watchFor: 'Layout plus arm drop — the same late-twist process Ryan teaches.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DX-Djomu04L/',
+      watchFor: 'Athletes waiting to twist before 1 o’clock — late twist in action.',
+    },
+    {
+      who: 'David Morris (Olympic medallist)',
+      url: 'https://youtu.be/v4ar1ZmLps',
+      watchFor: 'How to do a GOOD backfull — the tutorial Ryan has taught from for years.',
+    },
+    {
+      who: 'FIG Academy (Hardy Fink, Fred Yeadon)',
+      url: 'https://youtu.be/_fNX-5XGKog',
+      watchFor: 'Understanding twisting during saltos — the physics behind the arm drop.',
+    },
+  ],
   basics: [
     {
       who: 'Kyoko',

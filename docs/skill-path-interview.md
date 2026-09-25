@@ -281,3 +281,86 @@ plenty of full references in the reference library. Wants to add: a tumble docto
 video talking about fulls, and a tumbling dee video doing 2 different fulls, plus
 a video that goes deep on progressions. (He could not drop the tumble doc vid in
 chat; still needed.)
+
+## Q12: Sarah Price chat extraction (screenshots, 2026-09-25)
+
+Ryan's coaching notes on layout to full, pulled from his Messenger chat with Sarah
+Price (Aug 12). Saved here so the content is preserved without referencing the chat
+in the app.
+
+### On the layout feeding the full
+- "You could stand up higher if you hit a deeper angle with the feet behind almost
+  like you'd be going for a gainer."
+- "The better the layout, the better the full can be."
+- "I spend a lot of time refining tucks and layouts with athletes who can already
+  twist so they can continue to master all the prereq skills which leads to also
+  improving the twisting skills."
+- He has "a couple good layout analysis videos" to send when an athlete wants to
+  get super picky.
+
+### On fear of twisting (superman drill vs arm drop)
+- "The superman drill method can work for a lot of athletes but causes most people
+  to feel like the layout and the full are two totally different feeling skills."
+- "The layout plus the arm drop really bridges the gap in a way where the gradual
+  exposure to twisting via arm movements makes it less scary bc you're familiar
+  with the layout already so when you introduce the small movements that cause it
+  to tilt and twist, it sort of happens automatically and you have complete control
+  over the skill."
+
+### Video links from the chat
+- https://www.instagram.com/reel/DX-Djomu04L/ — "a couple athletes in this vid
+  that wait to twist so well"
+- https://www.instagram.com/reel/Cejgj-XvIGK/ — "another good vid of the same
+  process I use" (layout plus arm drop)
+- His own reel @coachryanwilliams — "Want your layout to look..." (SET, head stays
+  in, open shoulders, ribs stay in, body position ARCH)
+- "Just some twisting..." reel by @lclmroman
+- TikTok "(Tumbling Sensei) Coach Ryan" (URL cut off in screenshot)
+- "ASYMMETRICAL ARM MOVEMENT" biomechanics video, 2:27 (source unidentified)
+- "Block (feet behind)" video
+
+### Context notes
+- Tumble doctor talked about waiting to twist at the second session of the first
+  year of Camp Tumble Smart. Tumbling Dee and Dom from soco were there.
+- Sarah was working through fear of twisting; Ryan's approach kept her in her
+  familiar layout while introducing twist gradually.
+
+### Q12b: Full progression, step by step (recovered from clean screenshots)
+
+Ryan's complete arm-drop progression for teaching a full, in his words:
+
+- "There's a handful of athletes I taught this fulls to using this process so
+  you have a reference of how it may look in the end."
+- Step 1: "Master the 3/4 flip layout to belly with at least 5 good reps before
+  doing the arm drop. Make 100% sure you're consistent on 3/4 flip no more no
+  less every time. It can hurt your back if you land on the belly with too much
+  flip so just make sure that is solid and consistent first and use a pit pillow
+  if you have access to one!"
+- Step 2: "When you add the arm drop, the key is to be rigid and do not think
+  about twisting. Hit a lay to belly and right before you land, drop your right
+  arm and squeeze your left arm up against your left ear. You'll feel the tilt
+  and it might automatically flip you to your back. If it doesn't work, you're
+  either not staying straight enough or not being rigid enough when you drop the
+  arm. Master that with at least 5 consistent good reps before moving on."
+- Step 3: "Drop the arm a little further down and do it just a little earlier.
+  Still late like on the way down but earlier than the previous step. Closer to
+  the mid point. Master that 5 consistent good reps before moving on."
+- Step 4: "Do the same 3/4 flip lay to belly and drop the right the same distance
+  and then left arm right after. The timing of the arms might start going closer
+  together which is fine as long as you're hitting that twist plane. Master this
+  5 consistent good reps before moving on. Work on making the twist happen
+  between 11&1 the best you can."
+- Step 5: "Add the handspring or round off into the same motion and set a layout
+  that will flip all the way to the feet instead of 3/4. Make sure you're lay is
+  straight and not whippy or pikey."
+- Step 6: "Do the full and land on feet. Congrats you've got the full by yourself!
+  Send me a vid!"
+
+### More video links from the chat
+- https://youtu.be/v4ar1ZmLps — "Tutorial: How to do a GOOD Backfull - with
+  Olympic Medallist David Morris" (@AerialSkier). "This dude explains it well and
+  Ive used my understanding of this vid to teach fulls for years."
+- https://youtu.be/_fNX-5XGKog — FIG Academy "Understanding twisting during
+  saltos" (Hardy Fink, Fred Yeadon). "Found this recently which reinforced how I
+  understood it but gave me an even better understanding."
+- "ASYMMETRICAL ARM MOVEMENT" biomechanics video, 2:27 (source unidentified)
