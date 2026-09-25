@@ -175,6 +175,43 @@ export async function fetchCalendarMine(
   return data.events ?? []
 }
 
+/**
+ * iCal (ICS) TEXT fields escape newlines as \n, commas as \,, semicolons as
+ * \;, and backslashes as \\. CalDAV servers hand us the raw escaped form,
+ * so unescape it once at ingestion. Strings without escape sequences pass
+ * through untouched.
+ */
+export function unescapeIcalText(s: string): string {
+  if (!s || !s.includes('\\')) return s
+  let out = ''
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '\\' && i + 1 < s.length) {
+      const n = s[i + 1]
+      if (n === 'n' || n === 'N') {
+        out += '\n'
+        i += 1
+      } else if (n === ',' || n === ';' || n === '\\') {
+        out += n
+        i += 1
+      } else {
+        out += c
+      }
+    } else {
+      out += c
+    }
+  }
+  return out
+}
+
+function cleanCalendarEvent(ev: TodayCalendarEvent): TodayCalendarEvent {
+  return {
+    ...ev,
+    location: unescapeIcalText(ev.location ?? ''),
+    notes: ev.notes ? unescapeIcalText(ev.notes) : ev.notes,
+  }
+}
+
 export async function fetchTodayEvents(): Promise<{
   events: TodayCalendarEvent[]
   unauthorized: boolean
@@ -184,7 +221,7 @@ export async function fetchTodayEvents(): Promise<{
   if (res.status === 401) return { events: [], unauthorized: true }
   if (!res.ok) return { events: [], unauthorized: false }
   const data = (await res.json()) as { events?: TodayCalendarEvent[] }
-  return { events: data.events ?? [], unauthorized: false }
+  return { events: (data.events ?? []).map(cleanCalendarEvent), unauthorized: false }
 }
 
 export async function fetchCalendarRange(from: Date, to: Date): Promise<{
@@ -197,7 +234,7 @@ export async function fetchCalendarRange(from: Date, to: Date): Promise<{
   if (res.status === 401) return { events: [], unauthorized: true }
   if (!res.ok) return { events: [], unauthorized: false }
   const data = (await res.json()) as { events?: TodayCalendarEvent[] }
-  return { events: data.events ?? [], unauthorized: false }
+  return { events: (data.events ?? []).map(cleanCalendarEvent), unauthorized: false }
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<void> {

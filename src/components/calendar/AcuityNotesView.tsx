@@ -91,6 +91,11 @@ export function AcuityNotesView({
             )}
           </Row>
         )}
+        {parsed.certificateCode && (
+          <Row label="Certificate">
+            <span className="font-mono text-[13px]">{parsed.certificateCode}</span>
+          </Row>
+        )}
       </div>
 
       {parsed.skills.length > 0 && (

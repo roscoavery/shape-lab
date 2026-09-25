@@ -12,6 +12,7 @@ export type AcuityNotes = {
   email?: string
   price?: string
   paidOnline?: string
+  certificateCode?: string
   location?: string
   tumblerName?: string
   tumblerAge?: string
@@ -24,7 +25,7 @@ export type AcuityNotes = {
 const SECTION_UNDERLINE = /^={3,}\s*$/
 const URL_LINE = /^\s*https?:\/\//i
 const BOILERPLATE_LINE =
-  /please use acuity scheduling|upload tumbling videos here/i
+  /please use acuity scheduling|upload tumbling videos here|created by acuity|^acuityid\s*=/i
 
 function parseKeyValue(line: string): { key: string; value: string } | null {
   if (URL_LINE.test(line)) return null
@@ -101,6 +102,9 @@ export function parseAcuityNotes(notes: string): AcuityNotes | null {
       case 'paid online':
         out.paidOnline = kv.value || out.paidOnline
         break
+      case 'certificate code':
+        out.certificateCode = kv.value || out.certificateCode
+        break
       default:
         break // "Calendar: ..." and anything else is noise for the coach
     }
@@ -170,6 +174,13 @@ export function parseAcuityNotes(notes: string): AcuityNotes | null {
   }
 
   if (infoParts.length > 0) out.athleteInfo = infoParts.join('\n\n')
+
+  // The age field sometimes holds a last name instead of an age ("Ava" /
+  // "Hiriart"). An age without any digit is really part of the name.
+  if (out.tumblerAge && !/\d/.test(out.tumblerAge)) {
+    out.tumblerName = [out.tumblerName, out.tumblerAge].filter(Boolean).join(' ')
+    delete out.tumblerAge
+  }
 
   const meaningful =
     out.tumblerName ||
