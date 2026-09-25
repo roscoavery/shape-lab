@@ -163,3 +163,59 @@ something many athletes and coaches do not understand.
 ## Q4: Top of the path
 
 The highest level skills I'd touch on are double backs and triple fulls.
+
+## Q5: Stuck point — has RO-BHS, can't get the tuck
+
+They need a round off series that meets these standards: feet in front 3 times,
+accelerates without getting shorter on second and third handspring, carries power
+long and fast, and athlete can stand into a strong hollow shape for a rebound out
+of one, 2 or 3. They also need to get a good tuck on the trampoline from a passe
+fall round off and/or as a stand alone tuck from bounces with arms up. They will be
+able to get the skill if they have those things.
+
+## Q6: Conventional cues replaced
+
+I almost never say snap down. I dont think we should be teaching handstand snapdowns
+to lower level athletes. I think this is one of the main places where bad rebound
+habits start: body segmentation, bending and jumping, breaking shapes starts with
+those for lower level athletes. I am not completely against it. Like theres a side
+of my mind that doesnt want to be so rigid with perfect technique for lower level
+athletes who we have to accept are in approximation phase but i also dont think that
+means we should teach approximate techniques just because thats what we expect from
+them. I think you can teach good habits and be patient with approximation at the
+same time. Handstand snapdown rebounds when done correctly by higher level athletes
+working blocking skills can be super beneficial.
+
+"Drive your toes!" is another one i dont like to use. We want hips to come up too.
+Driving toes alone often leads to piking in my experience.
+
+"Dont be scared" usually doesnt help when athletes are struggling with fear.
+
+"Get your chin in" on handsprings is not my favorite. "Cover the ears and look
+through your hands" is much better imo.
+
+"Chin to chest" i really have steered away from this over the last few years. For
+handspring, tucks, really anything. I have never done a tumbling skill with my chin
+on my chest and i think the idea of saying chin to chest to help an athlete get
+their head in makes sense but ive found that the chin to chest cue is independent
+from what the thoracic spine does. Neutral head position with chin slightly down and
+a rounded thoracic spine is what i aim for for back tucks. I cannot even imagine
+doing a back handspring with my chin on my chest. Coach Lain is one of my favorite
+coaches and says it a lot but i think that is one big one where i disagree.
+
+"Big rebound" out of round offs: id much rather a smaller amount of airtime on the
+rebound post round off/handspring with the right shapes. I say "tight zombie at the
+end" or cues for the zombie like arms in front or armpits in front of the toes or
+stand into the springs.
+
+"Sit" for handsprings is something Coach Lain has voiced reasons not to use and i
+agree. "Bend" is better. Then "lean" is another Coach Lain has voiced reasons to not
+use and i agree. Its semantics. "Fall" is better. We arent putting our weight on
+another object so lean isnt it. We arent putting our weight onto an object for our
+butt to sit on so "bend" makes more sense.
+
+"Throw it" is another one Coach Lain has gone against. Its almost encouraging to
+just recklessly throw our body into a skill. "Execute or perform or do" are better
+ways to say it.
+
+Thats a few, im sure there are more.
