@@ -4,6 +4,8 @@
  * Top-down: peak skills first, foundations last.
  */
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
+import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
+import { InstagramEmbed } from '../compare/InstagramEmbed'
 
 const STEP_COLORS = ['#2e7d4f', '#6a4fa3', '#d9732b', '#c93a3a']
 
@@ -11,6 +13,30 @@ function Label({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[11px] font-extrabold uppercase tracking-widest opacity-70">
       {children}
+    </div>
+  )
+}
+
+function ProofStrip({ evidenceKey }: { evidenceKey: string }) {
+  const videos = TECHNIQUE_EVIDENCE[evidenceKey]
+  if (!videos || videos.length === 0) return null
+  return (
+    <div>
+      <Label>The proof</Label>
+      <p className="mt-1 text-xs opacity-70">
+        Not just Ryan's word. Watch who else teaches it this way.
+      </p>
+      <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
+        {videos.map((v) => (
+          <div key={v.url} className="w-40 shrink-0">
+            <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
+              <InstagramEmbed url={v.url} compact bare quiet />
+            </div>
+            <div className="mt-1 text-xs font-bold">{v.who}</div>
+            <div className="text-[11px] opacity-70">{v.watchFor}</div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -62,6 +88,7 @@ export function SkillPathCards() {
                     <Label>Ask your coach</Label>
                     <p className="mt-1 text-sm italic">{step.ask}</p>
                   </div>
+                  <ProofStrip evidenceKey={step.id} />
                   {step.ryanNote && (
                     <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
                       Ryan: {step.ryanNote}
@@ -92,6 +119,9 @@ export function SkillPathCards() {
                 {cue.sayThis}
               </div>
               <p className="mt-2 text-sm opacity-85">{cue.why}</p>
+              <div className="mt-3">
+                <ProofStrip evidenceKey={cue.id} />
+              </div>
             </article>
           ))}
         </div>
