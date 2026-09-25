@@ -86,6 +86,29 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section. His arm-drop method: master a consistent 3/4 layout to belly (5 good reps, pit pillow if you have one), then add the arm drop late — drop the right arm, squeeze the left against the ear, stay rigid and do not think about twisting. Move the drop a little earlier and deeper, then both arms, working the twist into 11 to 1. Then add the handspring or round off and take the layout all the way to the feet.',
   },
   {
+    id: 'back-half',
+    track: 'running',
+    skill: 'Back layout with half to feet',
+    needs: [
+      'A front layout',
+      'A back half to back',
+    ],
+    canBend: [],
+    ask: 'Ask your coach whether your front layout and back half to back are solid enough to take the half to your feet.',
+  },
+  {
+    id: 'barani',
+    track: 'running',
+    skill: 'Front barani (front layout half)',
+    needs: [
+      'Late twisting progressions — never train it off how a round off feels',
+      'A front pike helps more than a front layout (more cat twist, more twist speed)',
+    ],
+    canBend: [],
+    ask: 'Ask your coach to teach your barani with late twisting, not like a round off with no hands. How it is trained decides your whole front twisting future.',
+    ryanNote: 'This is not a no-handed round off. Train it like one and you twist the wrong way for front twisting and build the wrong mechanics for everything after. The chain: barani leads to front full, front full helps back 1.5 and leads to rudi, rudi helps back dubs. Full entrance plus wrapping for a rudi gives a double. Double entrance plus wrapping for a front 2.5 (Randi) gives a triple full.',
+  },
+  {
     id: 'layout',
     track: 'running',
     skill: 'Layout',
@@ -115,7 +138,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     id: 'ro-bhs-series',
     track: 'running',
     skill: 'Round off back handspring series',
-    needs: ['A strong round off before touching it'],
+    needs: ['A strong round off before touching it', 'Build it as round off 2, then round off 3 — a strong 2 leads to a strong 3'],
     canBend: [
       'Athletes can show a useful round off while the cartwheel is still rough. Ryan has watched athletes build a decent series while still spending five minutes on cartwheels at the start of the lesson.',
     ],
@@ -130,16 +153,21 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'Round off back handsprings can come before a standing handspring is independent. More power makes it easier to hold the right shapes, then you work down to less power. Most of Ryan\u2019s athletes get a nice running handspring on floor while the standing one still lives on trampoline, and the standing one ends up stronger for it.',
     ],
     ask: 'Ask your coach whether your round off is strong enough to connect. That is the only gate here.',
-    ryanNote: 'We get round off handsprings from a passe fall and the standing handsprings get stronger.',
+    ryanNote: 'We get round off handsprings from a passe fall and the standing handsprings get stronger. During approximation and acquisition, teach a strong round off back handspring zombie shape falling down to a pike hollow arch shape — the athlete learns to carry momentum backwards into a connection drill before acquiring the round off back handspring. A strong round off is required for this to work. Plenty of athletes can flip by themselves but lack the shaping and round off to build a handspring that becomes a series. Training it right from the start drastically increases what they can get later. Cheer tryouts rush this: athletes chase the handspring without a mental grasp of how it works or the physical feeling of the shapes it was designed around.',
   },
   {
     id: 'round-off',
     track: 'running',
     skill: 'Round off',
-    needs: ['Cartwheel work stays in the lesson', 'Eyes down, arms horizontal out of it'],
+    needs: [
+      'Strong cartwheel step-in to zombie shape or C shape',
+      'Strong round off from a passe fall — tumbling should build power, not use it',
+      'Strong lunge lever handstand, cartwheels, and cartwheel step-in zombie mastery before training it on hard surfaces',
+      'Strong hollow and handstand shapes',
+    ],
     canBend: [],
     ask: 'Ask your coach to watch your eyes and arms out of the round off. Eyes down and arms carrying back beat arms up and eyes up for everything that connects after it.',
-    ryanNote: 'Teach arms horizontal out of round offs and back handsprings to carry momentum backwards until the series is strong. Then teach the block: feet slightly behind on a soft mat, eyes forward, stack and redirect up. Round off into a lightning bolt shape builds habits Ryan has to rework; zombie is the landing shape.',
+    ryanNote: 'One of the hardest skills to explain and one of the most commonly trained wrong because it is so complex. It is the biggest bottleneck between foundational tumbling and higher skills — train it intentionally, on a soft surface early, without skipping the prerequisites. It takes a moment of standing on one arm to really flow right. Teach arms horizontal out of round offs and back handsprings to carry momentum backwards until the series is strong. Then teach the block: feet slightly behind on a soft mat, eyes forward, stack and redirect up. Round off into a lightning bolt shape builds habits Ryan has to rework; zombie is the landing shape.',
   },
   {
     id: 'standing-full',
@@ -161,7 +189,6 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     canBend: ['The best standing tucks come from properly trained running tucks. Athletes who learned the standing tuck first are the ones who tend to get stuck moving to layouts.'],
     ask: 'Ask your coach if your running tuck is solid before pouring time into the standing one.',
   },
-  {
   {
     id: 'standing-bhs',
     track: 'standing',

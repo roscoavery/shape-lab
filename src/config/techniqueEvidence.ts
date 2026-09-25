@@ -17,6 +17,13 @@ export interface ProofVideo {
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   // Skill path steps
+  'back-tuck': [
+    {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/DHL_hfEuRYi/',
+      watchFor: 'His whole take on the back tuck — the prerequisite standard for layouts.',
+    },
+  ],
   'round-off': [
     {
       who: 'Elliot Helms',

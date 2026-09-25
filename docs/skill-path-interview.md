@@ -449,3 +449,57 @@ that).. cart fulls help with standing fulls. cart tucks help with standing tucks
 same thing with a standing handspring full or a handspring tuck. working down
 gradually from. More power to less is a way of progressing a skill to a more
 difficult form from running to standing."
+
+### Q15: Below the full — back half, barani, and the RO foundation
+
+Ryan's words:
+
+"for back half to feet, it helps a lot to have a front layout and a back half to
+back.
+
+for a front barani. There is a lot we need to talk about with how this affects the
+rest of your twisting journey if trained correctly vs incorrectly. we do not want
+to train a barani off of the way a round off feels. it is not a no handed roundoff.
+It should be taught with late twisting progressions. the barani leads to a front
+full. the front full helps with a back 1.5. the front full leads to a rudi. the rudi
+helps with back dubs. the full entrance plus wrapping for a rudi gives you a double.
+a double entrance plus wrapping for a front 2.5 (Randi) gives you a triple full. if
+we train the barani like a round off with no hands. we are not only likely to train
+twisting the wrong way for front twisting, but it teaches the barani in a way that
+uses the wrong mechanics for using it as a building block for higher level twisting
+progresssions.
+
+the front pike is more helpful for baranies and higher level twisting than a front
+layout in my opinion because you can use more cat twist and get a lot of twist speed..
+
+the back layout prerequisites are a good back tuck.. i can drop an ig link that has
+my whole take on it. https://www.instagram.com/reel/DHL_hfEuRYi/
+
+a strong round off series has been explained already. a strong round off 2 leads to
+a strong round off 3. a strong round off back handspring zombie shape falling down
+to a pike hollow arch shape is a progression i teach during round off back handspring
+approximation and acquisition phase. so the athlete learns to carry momentum backwards
+into a connection drill before they acquire the round off back handspring. a strong
+round off is required for this to really work. a lot of athletes can flip by themsleves
+but dont have the shaping or the round off required to acquire a round off back
+handspring that can move onto a series. this is one of those things where training it
+right from the start can drastically increase the athletes ability to get higher
+level skills later down the road.. one of the most common problems i see in an
+athlete's tumbling journey.. cheer tryouts often create drive for athletes to rush
+the handspring when the athlete doesnt have a mental grasp on how the skill works or
+the physical feeling of the shapes required for the skill to work how it was designed
+to.
+
+the round off is one of the hardest to explain skills i think we can go over. but the
+skill prerequisites would be, strong cartwhee step in to zombie shape or c shape.
+elliot cartwheel step in can be shown with this. we want athletes to have a strong
+round off from a passe fall to ensure that their tumbling builds power rather than
+using power. the round off is one of the most common skills to be improperly trained
+because it is so complex. this is one of the biggest bottle necks for athletes to get
+from foundational tumbling movements to higher level skills. train this intentionally
+and onto a soft surface in the early stages without skipping a strong lunge lever
+handstand, cartwheels and cartwheel step in zombie mastery. you really want to have
+strong hollow and handstand shapes. it may be considered super difficult due to the
+fact that it requires a moment of standing on one arm to really get it to flow just
+right.. there are several round off references and drills you can associate with this
+skill that are located in the reference library."
