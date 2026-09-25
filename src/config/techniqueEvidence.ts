@@ -26,6 +26,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'round-off': [
     {
+      who: 'Elliot Helms (Cirque du Soleil)',
+      url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',
+      watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',
+    },
+    {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DX5usxfpoZ-/',
       watchFor: 'Round off sweep through to hollow — arms carry, eyes down.',
