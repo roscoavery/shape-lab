@@ -13,6 +13,9 @@ export interface ProofVideo {
   url: string
   /** What to watch for, in one line. */
   watchFor: string
+  /** Optional A/B loop points in seconds — only this segment plays. */
+  startAt?: number
+  endAt?: number
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -78,6 +81,21 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'ro-bhs': [
     {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/DZNL4ZRGlyA/',
+      watchFor: 'Round off rebound to flat back — essential for a good handspring.',
+    },
+    {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/DXrVfNqk2B3/',
+      watchFor: 'Grab block and throw it back — the connection drill.',
+    },
+    {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/Dba2VNTmvaX/',
+      watchFor: 'Round off handspring rebound to candle.',
+    },
+    {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
       watchFor: 'Handspring rebound punch tuck — the rebound recycles momentum.',
@@ -89,6 +107,16 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
   ],
   'ro-bhs-series': [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DbpyloMstn8/',
+      watchFor: 'Round off series — what a strong series looks like.',
+    },
+    {
+      who: 'lifegymnastics',
+      url: 'https://www.instagram.com/reel/DS11zngAWb7/',
+      watchFor: 'Handspring series on track.',
+    },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DYEj-LloNIO/',
