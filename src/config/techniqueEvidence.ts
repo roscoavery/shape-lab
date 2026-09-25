@@ -31,6 +31,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',
     },
     {
+      who: 'Elliot Helms (Cirque du Soleil)',
+      url: 'https://www.instagram.com/reel/DdU7SFiv_E2/',
+      watchFor: 'Round off progression.',
+    },
+    {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DX5usxfpoZ-/',
       watchFor: 'Round off sweep through to hollow — arms carry, eyes down.',
