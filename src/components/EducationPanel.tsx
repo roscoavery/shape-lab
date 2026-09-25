@@ -23,6 +23,7 @@ import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
+import { SkillPathCards } from './learn/SkillPathCards'
 import { customShapeId, groupIgStillsByShape, igStillDisplayName, igStillsForShape, listIgStills } from '../lib/igStills'
 import { HScrollRow } from './HScrollRow'
 import { deleteReferencePhoto } from '../lib/storage'
@@ -83,6 +84,7 @@ type EduView =
   | { kind: 'anatomy' }
   | { kind: 'progression' }
   | { kind: 'athleteProgress' }
+  | { kind: 'skillPath' }
   | { kind: 'coachStudy' }
   | { kind: 'nutrition' }
 
@@ -288,6 +290,11 @@ export function EducationPanel({
                 onClick={() => setView({ kind: 'athleteProgress' })}
                 label="How skills grow"
               />
+              <NavChip
+                active={view.kind === 'skillPath'}
+                onClick={() => setView({ kind: 'skillPath' })}
+                label="Skill path"
+              />
             </ChipRow>
             {coach && (
               <ChipRow label="Coaches">
@@ -460,6 +467,12 @@ export function EducationPanel({
             lessons={ATHLETE_PROGRESSION_LESSONS}
             heading="How skills grow"
           />
+        </PanelErrorBoundary>
+      )}
+
+      {view.kind === 'skillPath' && (
+        <PanelErrorBoundary label="Skill path">
+          <SkillPathCards />
         </PanelErrorBoundary>
       )}
 
