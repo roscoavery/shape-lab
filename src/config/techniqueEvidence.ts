@@ -41,9 +41,9 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Round off reference — the finish shape Ryan teaches.',
     },
     {
-      who: 'Reference',
+      who: '@hangtimetnt',
       url: 'https://www.instagram.com/reel/DZncc7BxFWY/',
-      watchFor: 'Passe round off to zombie — the landing shape, not lightning bolt.',
+      watchFor: 'Passe fall round off to zombie — the hangtime reference. The landing shape, not lightning bolt.',
     },
     {
       who: 'Reference',
