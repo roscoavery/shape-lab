@@ -7,11 +7,12 @@ function gym(
   name: string,
   bodyPosition: string,
   scoreShapeId?: string,
+  description?: string,
 ): GymLibraryShape {
   return {
     id,
     name,
-    description: '',
+    description: description ?? '',
     bodyPosition,
     category: 'hold',
     ...(scoreShapeId ? { scoreShapeId } : {}),
@@ -32,7 +33,7 @@ export const SHIPPED_GYM_SHAPES: GymLibraryShape[] = [
   gym('gym_front_support', 'Front support', 'Straight-body plank on the hands.'),
   gym('gym_side_support', 'Side support', 'Side plank on one hand or forearm.', 'side_plank'),
   gym('gym_back_support', 'Back support', 'Reverse plank, hips high, belly up.'),
-  gym('gym_lightning_bolt', 'Lightning bolt', 'Pike fold on the hands, hips high.'),
+  gym('gym_lightning_bolt', 'Lightning bolt', 'Start feet together open shoulders. Bend the knees and tilt the chest forward without breaking the line from the hips to the hands.', undefined, 'Useful for intro to back handspring deconstruction process. Not a good position to land a round off.'),
   gym('gym_tucked_handstand', 'Tucked handstand', 'Handstand with both knees tucked.', 'handstand'),
   gym('gym_piked_handstand', 'Piked handstand', 'Handstand with a pike fold.', 'handstand'),
   gym('gym_l_handstand', 'L handstand', 'Handstand with one leg vertical and one on a block or wall.', 'handstand'),
