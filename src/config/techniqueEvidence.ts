@@ -92,6 +92,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
     },
     {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/coachryanwilliams/reel/DKZ21GGu4l_/',
+      watchFor: 'The same layout analysis on trampoline track — match this layout and the full process goes smooth.',
+    },
+    {
       who: 'Ari (athlete)',
       url: 'https://www.instagram.com/reel/DKcgyPLO9Hz/',
       watchFor: "Ari's full — the finished product of the arm-drop process.",
