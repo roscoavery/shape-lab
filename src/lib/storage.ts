@@ -512,13 +512,14 @@ function remapOrphanHomeworkLogs(before: HomeworkItem[], after: HomeworkItem[]) 
   const from = new Map(before.map((i) => [i.id, homeworkDedupeKey(i)]))
   const logs = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
   let changed = false
+  const now = new Date().toISOString()
   const next = logs.map((l) => {
     if (kept.has(l.homeworkId)) return l
     const key = from.get(l.homeworkId)
     const id = key ? dest.get(key) : undefined
     if (!id) return l
     changed = true
-    return { ...l, homeworkId: id }
+    return { ...l, homeworkId: id, updatedAt: now }
   })
   if (changed) writeJson(HOMEWORK_LOGS_KEY, next)
 }
@@ -705,12 +706,13 @@ export function saveHomeworkLogs(logs: HomeworkLog[]) {
 /** Newest first; capped at 1000 entries across all athletes. */
 export function addHomeworkLog(log: HomeworkLog): void {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
-  all.unshift(log)
+  const stamped: HomeworkLog = log.updatedAt ? log : { ...log, updatedAt: new Date().toISOString() }
+  all.unshift(stamped)
   writeJson(HOMEWORK_LOGS_KEY, all.slice(0, 1000))
   emitHomework()
   pushRosterSoon()
   void import('./coachLink')
-    .then((m) => m.notifyCoachesOfHomeworkLog(log))
+    .then((m) => m.notifyCoachesOfHomeworkLog(stamped))
     .catch(() => {})
 }
 
@@ -720,9 +722,10 @@ export function patchHomeworkLog(
 ): HomeworkLog | null {
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
   let found: HomeworkLog | null = null
+  const now = new Date().toISOString()
   const next = all.map((row) => {
     if (row.id !== id) return row
-    found = { ...row, ...patch, id: row.id }
+    found = { ...row, ...patch, id: row.id, updatedAt: now }
     return found
   })
   if (!found) return null

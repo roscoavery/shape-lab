@@ -378,6 +378,7 @@ export function copyClassWorkToAthlete(opts: {
 export function relabelClassMeetingLogs(meetingId: string, className: string): number {
   const all = loadHomeworkLogs()
   let n = 0
+  const now = new Date().toISOString()
   const next = all.map((log) => {
     if (log.classMeetingId !== meetingId) return log
     n += 1
@@ -386,6 +387,7 @@ export function relabelClassMeetingLogs(meetingId: string, className: string): n
       ...log,
       className,
       sourceLabel: base ? `${base} (${className})` : classLabel(log.kind || 'class', className),
+      updatedAt: now,
     }
   })
   if (n > 0) saveHomeworkLogs(next)

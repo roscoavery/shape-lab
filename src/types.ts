@@ -732,6 +732,11 @@ export type HomeworkLog = {
   className?: string
   /** Coach acknowledgements — athlete sees their photo + emoji on this log. */
   reactions?: HomeworkLogReaction[]
+  /**
+   * Last edit time (ISO). Bumped on every patch so sync merges keep the
+   * freshest edit instead of letting a stale server copy revert it.
+   */
+  updatedAt?: string
 }
 
 /**

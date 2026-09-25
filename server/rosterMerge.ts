@@ -229,6 +229,11 @@ function dropRemovedRows(list: unknown[], ids: string[]): unknown[] {
   })
 }
 
+function updatedAtOf(row: Record<string, unknown>): string {
+  const v = row.updatedAt
+  return typeof v === 'string' ? v : ''
+}
+
 function mergeHomeworkLogs(local: unknown[], remote: unknown[], cap: number): unknown[] {
   const map = new Map<string, Record<string, unknown>>()
   let i = 0
@@ -240,9 +245,14 @@ function mergeHomeworkLogs(local: unknown[], remote: unknown[], cap: number): un
       map.set(id, row)
       continue
     }
+    // Same log edited on both sides: the freshest edit wins. A stale server
+    // copy must not revert a local edit that has not been pushed yet.
+    // (Ties — e.g. legacy rows with no updatedAt — keep the old remote-wins.)
+    const [older, newer] =
+      updatedAtOf(row) >= updatedAtOf(prev) ? [prev, row] : [row, prev]
     map.set(id, {
-      ...prev,
-      ...row,
+      ...older,
+      ...newer,
       reactions: mergeReactions(prev.reactions, row.reactions),
     })
   }

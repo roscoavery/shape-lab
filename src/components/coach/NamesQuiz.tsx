@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
 import {
@@ -71,8 +71,17 @@ export function NamesQuiz({
   const [faceFor, setFaceFor] = useState<string | null>(null)
   const [statTick, setStatTick] = useState(0)
 
+  // Apply the preferred group once per quiz opening. Without this guard the
+  // effect re-runs every time the group list recomputes (each gym data
+  // refresh) and clobbers the group the coach just picked.
+  const appliedPreferred = useRef<string | null>(null)
   useEffect(() => {
-    if (preferredGroupId && groups.some((g) => g.id === preferredGroupId)) {
+    if (
+      preferredGroupId &&
+      preferredGroupId !== appliedPreferred.current &&
+      groups.some((g) => g.id === preferredGroupId)
+    ) {
+      appliedPreferred.current = preferredGroupId
       setGroupId(preferredGroupId)
     }
   }, [preferredGroupId, groups])
