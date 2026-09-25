@@ -89,7 +89,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
-      watchFor: 'When is it time to twist? The layout standards that make a full a realistic goal.',
+      watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
     },
     {
       who: 'Ari (athlete)',
