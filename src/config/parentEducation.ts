@@ -1,17 +1,16 @@
 /**
- * Parent education cards. Add articles here — the Learn page renders this list.
- * Copy supports Shape Lab coaching: fundamentals, quiet quality holds, patience.
+ * Parent Guide — Ryan's coaching voice for parents.
+ *
+ * This is the single editable source for parent education copy. Each article
+ * is a short readable page. Edit titles, summaries, and body paragraphs here.
+ *
+ * The previous placeholder articles are archived (not rendered) at
+ * docs/parent-learn-topics-archive.md so their topics are not lost.
+ *
+ * Style: plainspoken, no em-dashes, no filler. A coach talking to a parent.
  */
 
-export type ParentEducationCategory =
-  | 'progress'
-  | 'fundamentals'
-  | 'strength'
-  | 'practice'
-  | 'confidence'
-  | 'class'
-  | 'health'
-  | 'support'
+export type ParentEducationCategory = 'guide'
 
 export type ParentEducationArticle = {
   id: string
@@ -22,186 +21,133 @@ export type ParentEducationArticle = {
 }
 
 export const PARENT_EDUCATION_CATEGORIES: { id: ParentEducationCategory; label: string }[] = [
-  { id: 'progress', label: 'Understanding Progress' },
-  { id: 'fundamentals', label: 'Why Fundamentals Matter' },
-  { id: 'strength', label: 'Strength vs Skill' },
-  { id: 'practice', label: 'Practice Frequency' },
-  { id: 'confidence', label: 'Fear and Confidence' },
-  { id: 'class', label: 'Choosing the Right Class' },
-  { id: 'health', label: 'Rest and Recovery' },
-  { id: 'support', label: 'How to Help Without Over-Coaching' },
+  { id: 'guide', label: 'Parent Guide' },
 ]
 
 export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
-    id: 'understanding-progress',
-    category: 'progress',
-    title: 'Understanding Progress',
-    summary: 'Holds, shape tests, and homework logs are snapshots — not a race.',
+    id: 'what-progress-looks-like',
+    category: 'guide',
+    title: 'What Progress Looks Like',
+    summary: 'A new skill is one moment in a longer process.',
     body: [
-      'Progress in Shape Lab is quiet quality time in a shape, not a highlight clip.',
-      'A shorter hold with better lines is often the real step forward.',
-      'Plateaus are normal. The next skill usually waits on a basic that is not automatic yet.',
+      'Landing a new skill is exciting. It is also one moment in a longer process. Before that landing, your athlete learned shapes, built strength, figured out timing, and practiced pieces with support. After that landing, there is still work to do. Control and consistency come next.',
+      'Our goal is athletes who understand their skills and can use them with confidence. We celebrate the first landing. We also celebrate the quieter improvements that help future skills grow.',
+      'Try asking: "What felt more controlled today?" Or: "What did you understand better?"',
+      'Things you might notice: better body positions, steadier basics, improved control, your athlete explaining a correction in their own words, or confidence with a smaller step.',
     ],
   },
   {
-    id: 'why-fundamentals',
-    category: 'fundamentals',
-    title: 'Why Perfect Basics Matter',
-    summary: 'Hollow, arch, and handstand lines show up in every later skill.',
+    id: 'why-still-working-on-basics',
+    category: 'guide',
+    title: 'Lesson 1: Why Are We Still Working on Basics?',
+    summary: 'Handstands, hollows, lunges, and landings show up inside harder skills.',
     body: [
-      'Tumbling skills are built from a few body shapes. If hollow and arch are noisy, later skills stay noisy.',
-      'Repetitions of the same basic are not busywork. They are how the body learns to hold still under fatigue.',
+      'A handstand, hollow shape, lunge, lever, or strong landing can look simple next to a flip. But these positions appear throughout harder skills. When an athlete can recognize and control them, the coach has more to build on.',
+      'Repeating a basic does not mean starting over. Sometimes a small change in a familiar movement gives the athlete the missing piece for a skill they have been chasing.',
+      'That is perfection before progression. We build the shapes first, in order, so the skill has something solid to stand on.',
+      'Try asking: "Show me what changed in your handstand today."',
     ],
   },
   {
-    id: 'strength-vs-skill',
-    category: 'strength',
-    title: 'Strength vs Skill',
-    summary: 'Strong is not the same as skilled. Both matter; they train differently.',
+    id: 'doing-it-once-vs-owning-it',
+    category: 'guide',
+    title: 'Lesson 2: Doing It Once and Owning It',
+    summary: 'Four stages of learning a skill, from first idea to true ownership.',
     body: [
-      'Strength work (holds, shapes, conditioning) makes the body able to do the skill.',
-      'Skill work is timing and pattern. More tumbling volume does not replace missing strength in a shape.',
+      'Skills move through four stages. They do not always move in a straight line.',
+      'Introduction. The athlete learns the idea, the key shapes, and watches demonstrations. The coach builds understanding and trust.',
+      'Approximation. The athlete works on drills, modified versions, supported attempts, and pieces of the movement.',
+      'Acquisition. The athlete performs the skill in a controlled practice setting and builds more reliable technique and control.',
+      'Mastery. The athlete performs the skill confidently and consistently across appropriate settings, with greater independence.',
+      'A first landing deserves celebration. It does not automatically mean the athlete is ready to perform the skill anywhere, connect it to another skill, or move to the next class.',
+      'An athlete\u2019s needs can change after time away, a growth spurt, an injury, or a loss of confidence.',
+      'Try asking: "That was a great first landing. What are you working on to make it feel consistent?"',
     ],
   },
   {
-    id: 'practice-frequency',
-    category: 'practice',
-    title: 'Practice Frequency',
-    summary: 'Short, regular homework beats rare long sessions.',
+    id: 'why-not-just-try-the-skill',
+    category: 'guide',
+    title: 'Lesson 3: Why Doesn\u2019t the Coach Just Let Them Try It?',
+    summary: 'A drill targets the piece that needs work. More full attempts is not always better practice.',
     body: [
-      'Assigned homework is the work to do between classes. A few quality minutes most days beats one exhausted weekend.',
-      'If something hurts in a new way, stop and tell the coach. Soreness from work is not the same as injury pain.',
+      'Attempting the full skill can be useful when the athlete is ready for that attempt. A coach may choose a drill because one part needs attention first: the entry, the body shape, the strength, the timing, the orientation, the landing, or the confidence.',
+      'More full attempts do not automatically make better practice. Quality repetitions of the right step can do more than repeating the same error at full speed.',
+      'You deserve a specific explanation. For example: "We are improving the handstand position so they can push through their shoulders more consistently in the handspring."',
+      'Try asking the coach: "Which piece are you building right now, and what would readiness for the next step look like?"',
     ],
   },
   {
-    id: 'fear-confidence',
-    category: 'confidence',
-    title: 'Fear and Confidence',
-    summary: 'Confidence comes from a shape the athlete already owns.',
+    id: 'small-habits-big-skills',
+    category: 'guide',
+    title: 'Lesson 4: Small Habits Build Big Skills',
+    summary: 'A long term goal gives direction. A short term habit gives this week a job.',
     body: [
-      'Moving up a skill before the basic is quiet often makes fear worse, not better.',
-      'Celebrate the hold that looked boring and correct. That is the one that unlocks the next skill.',
+      '"Get a back handspring" is an outcome. "Practice the assigned shapes with attention and apply one correction at a time" describes actions the athlete can actually work on. The coach decides which practice is appropriate and where it can be done safely.',
+      'Consistency matters. So do rest, enjoyment, and a healthy relationship with the sport. Homework is a tool for learning, not a test of anyone\u2019s worth.',
+      'That is progress, not perfection. The mindset is steady work on the right things, not a perfect streak.',
+      'Try asking: "What is one small thing you are working on this week?"',
     ],
   },
   {
-    id: 'when-to-move-up',
-    category: 'class',
-    title: 'When to Move Up a Class',
-    summary: 'Class placement follows what the athlete can do on a tired day.',
+    id: 'time-to-move-up',
+    category: 'guide',
+    title: 'Lesson 5: How Do We Know It Is Time to Move Up?',
+    summary: 'A class name or one landed skill cannot tell the whole story.',
     body: [
-      'Coaches look at shapes, not just the hardest skill an athlete has landed once.',
-      'Ask the coach before pushing a move-up. Wanting a harder class is not the same as being ready for it.',
+      'A coach considers prerequisite skills, quality, consistency, control, the ability to use corrections, and how the athlete handles the demands of the next class. The useful question is: "What does this athlete need to succeed in that environment?"',
+      'When a move up is delayed, the coach should be able to explain the athlete\u2019s strengths, the specific criteria they are still building, and how the current class supports that work.',
+      'RYAN: list your class move-up criteria here. What two or three things must an athlete show before moving to the next class? Replace this paragraph with your actual standards.',
+      'Try asking the coach: "Which two or three things would show they are ready for the next class?"',
     ],
   },
   {
-    id: 'rest-recovery',
-    category: 'health',
-    title: 'Rest and Recovery',
-    summary: 'Sleep and rest days are part of training.',
+    id: 'when-a-skill-feels-scary',
+    category: 'guide',
+    title: 'Lesson 6: When a Skill Suddenly Feels Scary',
+    summary: 'Fear can show up with new skills or old ones. It is information, not failure.',
     body: [
-      'Growth, strength, and skill all need recovery. More training is not always more progress.',
-      'This app does not diagnose injury. Lasting or worsening pain belongs with a healthcare professional.',
+      'Fear can appear while learning something new. An athlete can also become hesitant with a skill they have done before. Their body, confidence, or circumstances may have changed. Pressure to perform can make the moment heavier.',
+      'A coach can return to a manageable version, rebuild technical understanding, and help the athlete collect small successes. The goal is to rebuild confidence and trust in the skill.',
+      'Parents can help by listening, acknowledging the feeling, and keeping support steady whether the athlete performs the skill that day or not.',
+      'Try asking: "What smaller step felt manageable today?"',
     ],
   },
   {
-    id: 'help-without-overcoaching',
-    category: 'support',
-    title: 'How to Help Without Over-Coaching',
-    summary: 'Parents help most by protecting sleep, food, and the homework list.',
+    id: 'what-to-praise',
+    category: 'guide',
+    title: 'Lesson 7: What Should I Praise After Practice?',
+    summary: 'If every conversation starts with "Did you get it?", landing can feel like the only thing that counts.',
     body: [
-      'One cue from a parent on the sideline is plenty. The coach already has a plan for that skill.',
-      'Ask “what did you work on?” instead of “why didn’t you do the skill?” After class, the athlete is tired.',
+      'Notice effort with a direction: applying a correction, practicing with control, speaking up when something feels wrong, or returning to a challenge after a break. Celebrate the exciting skills too.',
+      'An athlete\u2019s value and a parent\u2019s support should never depend on one performance.',
+      'Try these swaps. Instead of "Did you get your tuck?" ask "What got better about your tuck work?"',
+      'Instead of "Why didn\u2019t they let you try it?" ask "What is the coach helping you build first?"',
+      'Instead of "When are you moving up?" ask "What are you working on to be ready?"',
+      'Instead of "You used to be able to do that" ask "What smaller step felt good today?"',
     ],
   },
   {
-    id: 'skill-progressions',
-    category: 'fundamentals',
-    title: 'Skill Progressions',
-    summary: 'Each skill sits on a quieter version of a simpler shape.',
+    id: 'plateaus-are-information',
+    category: 'guide',
+    title: 'Lesson 8: Plateaus Are Information',
+    summary: 'A stall gives the coach a reason to look closer, not to push harder.',
     body: [
-      'A progression is not a skip list. Coaches look for the shape that still looks clean when the athlete is tired.',
-      'If a skill is stalled, the missing piece is usually an earlier hold, not more of the hard skill.',
+      'An athlete can practice regularly and seem to stay in the same place for a while. That gives the coach a reason to look more closely. Which part is improving? Which part keeps limiting the skill? Have strength, coordination, confidence, or circumstances changed?',
+      'A plateau should lead to a more specific plan, not endless unchanged attempts. Parents can support that plan by noticing smaller milestones and asking for an update when they cannot tell what the athlete is working toward.',
+      'Try asking the coach: "What have you noticed, and what are we changing in the plan?"',
     ],
   },
   {
-    id: 'flexibility-mobility',
-    category: 'strength',
-    title: 'Flexibility and Mobility',
-    summary: 'Range of motion supports shapes. Forcing splits is not the same as owning a line.',
+    id: 'choosing-a-class',
+    category: 'guide',
+    title: 'Lesson 9: Choosing a Class That Serves the Athlete',
+    summary: 'The best class depends on what the athlete needs right now.',
     body: [
-      'Mobility work should feel like quality time in a position, not a contest to go farther today.',
-      'Pain that is sharp, lingering, or new in a joint is a stop-and-tell-the-coach signal.',
-    ],
-  },
-  {
-    id: 'why-reps-matter',
-    category: 'practice',
-    title: 'Why Repetitions Matter',
-    summary: 'Quiet repeats of the same basic teach the body what to do under fatigue.',
-    body: [
-      'Homework repeats are how a shape becomes automatic. Automatic shapes show up in tumbling without thinking.',
-      'A few quality holds beat a pile of sloppy ones.',
-    ],
-  },
-  {
-    id: 'injury-prevention',
-    category: 'health',
-    title: 'Injury Prevention',
-    summary: 'Sleep, load, and honest pain reporting matter more than a gadget.',
-    body: [
-      'This app does not diagnose or treat injury. It can help a parent notice patterns and talk to the coach.',
-      'Persistent, severe, worsening, neurologic, traumatic, or otherwise concerning symptoms belong with a healthcare professional.',
-    ],
-  },
-  {
-    id: 'what-coaches-look-for',
-    category: 'class',
-    title: 'What Coaches Look For',
-    summary: 'Lines, stillness, and basics on a tired day — not the hardest skill landed once.',
-    body: [
-      'A coach would rather see a quiet hollow than a messy skill that only works on a good day.',
-      'Ask what to practice at home instead of asking when they will move up.',
-    ],
-  },
-  {
-    id: 'common-misunderstandings',
-    category: 'support',
-    title: 'Common Parent Misunderstandings',
-    summary: 'More tumbling is not always more progress.',
-    body: [
-      'Sitting a skill out can be training. Rest and fundamentals are not punishment.',
-      'Comparing kids by the hardest skill they have posted online skips the work that actually lasts.',
-    ],
-  },
-  {
-    id: 'goal-setting',
-    category: 'progress',
-    title: 'Goal Setting',
-    summary: 'Useful goals name a shape and a quality, not a date for a skill.',
-    body: [
-      '“Still hollow for 20 quiet seconds” is a better home goal than “back tuck by next month.”',
-      'The coach sets class goals. Home goals should match the homework list.',
-    ],
-  },
-  {
-    id: 'understanding-plateaus',
-    category: 'progress',
-    title: 'Understanding Plateaus',
-    summary: 'A stall usually means a basic is not automatic yet.',
-    body: [
-      'Plateaus are normal. The next skill is often waiting on a hold that still gets noisy under fatigue.',
-      'Keep the homework. Changing the whole plan every week restarts the clock.',
-    ],
-  },
-  {
-    id: 'why-some-skills-take-longer',
-    category: 'progress',
-    title: 'Why Some Skills Take Longer Than Others',
-    summary: 'Different bodies, different missing basics — not a ranking of talent.',
-    body: [
-      'Two athletes in the same class can need different amounts of time on the same skill. That is expected.',
-      'The Shape Lab record is the hold and the shape test, not a race against another family.',
+      'A class with many repetitions can be fun and useful for an athlete practicing skills they are ready to repeat. Another athlete may benefit more from targeted drills, technical feedback, and time to build prerequisites.',
+      'Parents should know each class\u2019s purpose, entry expectations, what practice looks like, and how coaches evaluate progress. A faster class is not automatically better or worse for every athlete.',
+      'Try asking: "What kind of practice would help my athlete most right now?"',
+      'Celebrate the skill. Build the habits that make it last.',
     ],
   },
 ]

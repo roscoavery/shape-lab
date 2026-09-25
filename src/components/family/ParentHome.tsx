@@ -155,7 +155,7 @@ export function ParentEducationDesk() {
           For parents
         </p>
         <p className="mt-2 px-2 text-xs leading-relaxed text-[var(--muted)]">
-          Placeholder copy. Ryan will rewrite these from his coaching. Do not treat holds as the whole sport.
+          How to support your athlete for the long run, in Ryan&apos;s words.
         </p>
         {PARENT_EDUCATION_CATEGORIES.map((cat) => (
           <div key={cat.id} className="mt-3">
@@ -178,9 +178,7 @@ export function ParentEducationDesk() {
       {article && (
         <article className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           <p className="rounded-lg bg-[#102028] px-3 py-2 text-xs leading-relaxed text-[var(--accent)]">
-            These articles are a scaffold so the sections exist. The writing is not Ryan&apos;s
-            coaching yet — holds are one tool, not everything. He will replace this with real copy
-            (or a source pack) later.
+            Written for parents, in the coach&apos;s own words.
           </p>
           <p className="mt-3 text-xs uppercase tracking-wider text-[var(--accent)]">{article.summary}</p>
           <h2 className="mt-2 text-2xl font-semibold">{article.title}</h2>
