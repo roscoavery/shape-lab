@@ -32,6 +32,7 @@ import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
+import { CoachInterview } from './components/coach/CoachInterview'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
@@ -1479,6 +1480,11 @@ export default function App() {
       {tab === 'warmup' && <WarmupPanel signedIn={activeProfile} />}
 
       {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk />}
+      {tab === 'learn' && deskRole !== 'parent' && ryanEdit && (
+        <div className="mb-4">
+          <CoachInterview />
+        </div>
+      )}
       {tab === 'learn' && deskRole !== 'parent' && (
         <EducationPanel
           key={deskRole}

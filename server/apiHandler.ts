@@ -60,6 +60,7 @@ import { readResearchFile, writeResearchFile } from './researchStore.ts'
 import { readSocialFile, toggleFollowOnDisk, writeSocialFile } from './socialStore.ts'
 import { readDiscussFile, writeDiscussFile } from './discussStore.ts'
 import { readLearnNotesFile, writeLearnNotesFile } from './learnNotesStore.ts'
+import { readCoachInterviewFile, writeCoachInterviewFile } from './coachInterviewStore.ts'
 import {
   addIgStillFromBody,
   deleteIgStill,
@@ -156,6 +157,7 @@ const API_PATHS = new Set([
   '/api/ig-still-file',
   '/api/shape-copy',
   '/api/learn-notes',
+  '/api/coach-interview',
   '/api/coach-stills',
   '/api/coach-still-file',
   '/api/still-crops',
@@ -445,6 +447,20 @@ export async function handleShapeLabApi(
         return true
       }
       sendJson(res, 403, { error: 'Bulk photo replace is limited to one authorized athlete at a time.' })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-interview') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachInterviewFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      const saved = await writeCoachInterviewFile(JSON.parse(body))
+      sendJson(res, 200, saved)
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
