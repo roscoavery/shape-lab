@@ -57,8 +57,10 @@ gym_unstick_git_for_data() {
       esac
     done <<< "$conflicts"
   fi
-  git reset HEAD -- data training 2>/dev/null || true
-  git checkout -- data training 2>/dev/null || true
+  # NOTE: we deliberately do NOT `git checkout -- data training` here.
+  # Those files are Ryan's live gym data (crops, descriptions, logs).
+  # The fetch block snapshots data/ before the force-checkout and restores
+  # it after; discarding it here would revert his work on every restart.
   git update-index --refresh 2>/dev/null || true
 }
 

@@ -7,6 +7,7 @@ import {
   isLogToday,
   localDateKey,
   logsChrono,
+  todayDateKey,
   viewerOwnsHomeworkLog,
 } from '../../lib/homeworkLogView'
 import { dayHeading } from '../../lib/familySchedule'
@@ -35,6 +36,90 @@ function exerciseLabel(log: HomeworkLog, item?: HomeworkItem): string {
   return log.shapeId.replace(/^catalog_/, '').replace(/_/g, ' ')
 }
 
+/** Consecutive days with at least one log, ending today (or yesterday if today is empty). */
+function dayStreak(logs: HomeworkLog[]): number {
+  const days = new Set(logs.map((l) => localDateKey(l.date)))
+  if (days.size === 0) return 0
+  const cursor = new Date()
+  if (!days.has(todayDateKey(cursor))) cursor.setDate(cursor.getDate() - 1)
+  let streak = 0
+  for (;;) {
+    const key = todayDateKey(cursor)
+    if (!days.has(key)) break
+    streak += 1
+    cursor.setDate(cursor.getDate() - 1)
+    if (streak > 365) break
+  }
+  return streak
+}
+
+function weekWindow(now: Date, weeksBack: number): { start: Date; end: Date } {
+  const end = new Date(now)
+  end.setDate(end.getDate() - weeksBack * 7)
+  const start = new Date(end)
+  start.setDate(start.getDate() - 7)
+  return { start, end }
+}
+
+function encouragement(logs: HomeworkLog[]): { headline: string; sub: string } | null {
+  if (logs.length === 0) return null
+  const streak = dayStreak(logs)
+  const now = new Date()
+  const thisWk = weekWindow(now, 0)
+  const lastWk = weekWindow(now, 1)
+  const inWin = (w: { start: Date; end: Date }) =>
+    logs.filter((l) => {
+      const t = new Date(l.date).getTime()
+      return t >= w.start.getTime() && t < w.end.getTime()
+    })
+  const thisLogs = inWin(thisWk)
+  const lastLogs = inWin(lastWk)
+  const holdOf = (rows: HomeworkLog[]) => rows.reduce((s, l) => s + (l.totalHoldSeconds || 0), 0)
+  const improving = thisLogs.length > 0 && holdOf(thisLogs) >= holdOf(lastLogs) * 1.2
+
+  if (streak >= 7)
+    return {
+      headline: `🔥 ${streak}-day streak`,
+      sub: 'A full week of showing up — that is how skills get built.',
+    }
+  if (streak >= 3)
+    return {
+      headline: `🔥 ${streak} days in a row`,
+      sub: improving
+        ? 'And more mat time than last week. The work is working.'
+        : 'Consistency is the whole game. Keep it rolling.',
+    }
+  if (streak === 2)
+    return { headline: 'Two days running', sub: 'Nice rhythm — one more makes a streak.' }
+  if (improving)
+    return {
+      headline: 'Trending up 📈',
+      sub: 'More training time than last week. Progress loves company.',
+    }
+  if (dayStreak(logs) === 1)
+    return { headline: 'Logged today ✅', sub: 'Every hold counts. See you tomorrow?' }
+  return { headline: 'Welcome back', sub: 'One session today restarts the streak.' }
+}
+
+/** Previous best (before today) per exercise label, for "new best" badges. */
+function previousBests(
+  logs: HomeworkLog[],
+  items: HomeworkItem[],
+): Map<string, { hold: number; reps: number }> {
+  const best = new Map<string, { hold: number; reps: number }>()
+  for (const log of logs) {
+    if (isLogToday(log)) continue
+    const label = exerciseLabel(log, items.find((row) => row.id === log.homeworkId))
+    const cur = best.get(label) ?? { hold: 0, reps: 0 }
+    const reps = (log.sets && log.sets > 1 ? log.sets : 1) * (log.reps ?? 0)
+    best.set(label, {
+      hold: Math.max(cur.hold, log.totalHoldSeconds || 0),
+      reps: Math.max(cur.reps, reps),
+    })
+  }
+  return best
+}
+
 export function HomeworkLogList({
   logs,
   items = [],
@@ -50,7 +135,6 @@ export function HomeworkLogList({
   )
   const [groupMode, setGroupMode] = useState<GroupMode>('day')
   const [query, setQuery] = useState('')
-  const [exerciseFilter, setExerciseFilter] = useState<string>('all')
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -58,36 +142,29 @@ export function HomeworkLogList({
   const today = chrono.filter((log) => isLogToday(log))
   const scoped = scope === 'today' ? today : chrono
 
-  const exerciseOptions = useMemo(() => {
-    const names = new Set<string>()
-    for (const log of scoped) {
-      const item = items.find((row) => row.id === log.homeworkId)
-      names.add(exerciseLabel(log, item))
-    }
-    return [...names].sort((a, b) => a.localeCompare(b))
-  }, [scoped, items])
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+    if (!q) return scoped
     return scoped.filter((log) => {
       const item = items.find((row) => row.id === log.homeworkId)
       const label = exerciseLabel(log, item)
-      if (exerciseFilter !== 'all' && label !== exerciseFilter) return false
-      if (!q) return true
       const hay = `${label} ${log.journal ?? ''} ${log.sourceLabel ?? ''}`.toLowerCase()
       return hay.includes(q)
     })
-  }, [scoped, items, query, exerciseFilter])
+  }, [scoped, items, query])
 
   const groups = useMemo(() => {
-    if (groupMode === 'day') return groupByDay(filtered)
+    if (groupMode === 'day') return groupByDay(filtered, items)
     return groupByExercise(filtered, items)
   }, [filtered, groupMode, items])
 
+  const pep = useMemo(() => encouragement(chrono), [chrono])
+  const bests = useMemo(() => previousBests(chrono, items), [chrono, items])
+
   return (
-    <div className="rounded-xl border border-[var(--panel-border)] bg-[#0d1614] p-4">
+    <div className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Your logs</p>
+        <p className="text-sm font-bold text-[var(--text)]">Training log</p>
         <div className="flex rounded-full bg-black/30 p-0.5">
           {(
             [
@@ -99,7 +176,7 @@ export function HomeworkLogList({
               key={id}
               type="button"
               onClick={() => setScope(id)}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 scope === id ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--text)]/70'
               }`}
             >
@@ -109,24 +186,21 @@ export function HomeworkLogList({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      {pep && (
+        <div className="mt-3 rounded-xl border border-amber-200/20 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-4 py-3">
+          <p className="text-sm font-bold text-[var(--text)]">{pep.headline}</p>
+          <p className="mt-0.5 text-xs text-[var(--text)]/70">{pep.sub}</p>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search exercise or notes…"
-          className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0a1210] px-3 py-2 text-sm text-[var(--text)]"
+          className="min-w-0 flex-1 rounded-xl border border-[var(--panel-border)] bg-[#0a1210] px-3 py-2 text-sm text-[var(--text)]"
         />
-        <select
-          value={exerciseFilter}
-          onChange={(e) => setExerciseFilter(e.target.value)}
-          className="rounded-lg border border-[var(--panel-border)] bg-[#0a1210] px-3 py-2 text-sm"
-        >
-          <option value="all">All exercises</option>
-          {exerciseOptions.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
-        <div className="flex rounded-full bg-black/30 p-0.5">
+        <div className="flex shrink-0 rounded-full bg-black/30 p-0.5">
           {(
             [
               ['day', 'By day'],
@@ -137,7 +211,7 @@ export function HomeworkLogList({
               key={id}
               type="button"
               onClick={() => setGroupMode(id)}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 groupMode === id ? 'bg-white/15 text-[var(--text)]' : 'text-[var(--text)]/60'
               }`}
             >
@@ -148,31 +222,29 @@ export function HomeworkLogList({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--text)]/70">
-          {scope === 'today'
-            ? 'Nothing logged today. Start the stopwatch or train a drill, then it shows here.'
-            : 'No logs match. Try another filter or search.'}
-        </p>
+        <div className="mt-6 rounded-xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center">
+          <p className="text-sm font-semibold text-[var(--text)]">
+            {chrono.length === 0 ? 'No training logged yet' : 'Nothing matches'}
+          </p>
+          <p className="mx-auto mt-1 max-w-xs text-xs text-[var(--text)]/65">
+            {chrono.length === 0
+              ? 'Log your first hold or set and it will show up here — streaks start with one session.'
+              : 'Try a different search, or switch between Today and All.'}
+          </p>
+        </div>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-5">
           {groups.map((group) => (
-            <section
-              key={group.key}
-              className="overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[#0a1210]"
-            >
-              <p className="border-b border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm font-semibold text-[#6ec8d6]">
-                {group.heading}
-              </p>
-              <div className="hidden grid-cols-[4.5rem_minmax(0,1.4fr)_4.5rem_3rem_3rem] gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--text)]/75 sm:grid">
-                <span>Time</span>
-                <span>Exercise</span>
-                <span className="text-[#8fbf6a]">Hold</span>
-                <span className="text-[#c49ae0]">Sets</span>
-                <span className="text-[#e0b872]">Reps</span>
+            <section key={group.key}>
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+                <p className="text-sm font-bold text-[#6ec8d6]">{group.heading}</p>
+                {group.summary && (
+                  <p className="text-xs text-[var(--text)]/55">{group.summary}</p>
+                )}
               </div>
-              <ul className="divide-y divide-[var(--panel-border)]">
+              <ul className="space-y-2">
                 {group.logs.map((log) => (
-                  <LogRow
+                  <LogCard
                     key={log.id}
                     log={log}
                     item={items.find((row) => row.id === log.homeworkId)}
@@ -182,6 +254,7 @@ export function HomeworkLogList({
                     athletes={athletes}
                     showTitles={showTitles}
                     showDate={groupMode === 'exercise'}
+                    isNewBest={isNewBest(log, items, bests)}
                     confirmId={confirmId}
                     editingId={editingId}
                     onConfirm={setConfirmId}
@@ -199,7 +272,30 @@ export function HomeworkLogList({
   )
 }
 
-function groupByDay(logs: HomeworkLog[]): { key: string; heading: string; logs: HomeworkLog[] }[] {
+function isNewBest(
+  log: HomeworkLog,
+  items: HomeworkItem[],
+  bests: Map<string, { hold: number; reps: number }>,
+): boolean {
+  if (!isLogToday(log)) return false
+  const label = exerciseLabel(log, items.find((row) => row.id === log.homeworkId))
+  const prev = bests.get(label)
+  if (!prev) return log.totalHoldSeconds > 0 || (log.reps ?? 0) > 0
+  if (log.totalHoldSeconds > 0) return log.totalHoldSeconds > prev.hold && prev.hold > 0
+  const reps = (log.sets && log.sets > 1 ? log.sets : 1) * (log.reps ?? 0)
+  return reps > prev.reps && prev.reps > 0
+}
+
+type Group = { key: string; heading: string; summary: string; logs: HomeworkLog[] }
+
+function groupSummary(logs: HomeworkLog[]): string {
+  const hold = logs.reduce((s, l) => s + (l.totalHoldSeconds || 0), 0)
+  const parts = [`${logs.length} session${logs.length === 1 ? '' : 's'}`]
+  if (hold > 0) parts.push(`${formatSeconds(hold)} total hold`)
+  return parts.join(' · ')
+}
+
+function groupByDay(logs: HomeworkLog[], items: HomeworkItem[]): Group[] {
   const map = new Map<string, HomeworkLog[]>()
   const order: string[] = []
   for (const log of logs) {
@@ -210,38 +306,31 @@ function groupByDay(logs: HomeworkLog[]): { key: string; heading: string; logs: 
     }
     map.get(day)!.push(log)
   }
-  return order.map((day) => ({
-    key: day,
-    heading: dayHeading(day),
-    logs: map.get(day)!,
-  }))
+  return order.map((day) => {
+    const rows = map.get(day)!
+    return { key: day, heading: dayHeading(day), summary: groupSummary(rows), logs: rows }
+  })
 }
 
-function groupByExercise(
-  logs: HomeworkLog[],
-  items: HomeworkItem[],
-): { key: string; heading: string; logs: HomeworkLog[] }[] {
+function groupByExercise(logs: HomeworkLog[], items: HomeworkItem[]): Group[] {
   const map = new Map<string, HomeworkLog[]>()
-  const order: string[] = []
   for (const log of logs) {
     const item = items.find((row) => row.id === log.homeworkId)
     const label = exerciseLabel(log, item)
-    if (!map.has(label)) {
-      map.set(label, [])
-      order.push(label)
-    }
+    if (!map.has(label)) map.set(label, [])
     map.get(label)!.push(log)
   }
-  return order
-    .sort((a, b) => a.localeCompare(b))
-    .map((label) => ({
-      key: label,
-      heading: label,
-      logs: map.get(label)!,
-    }))
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([label, rows]) => {
+      const best = Math.max(...rows.map((l) => l.totalHoldSeconds || 0))
+      const summary =
+        best > 0 ? `${groupSummary(rows)} · best ${formatSeconds(best)}` : groupSummary(rows)
+      return { key: label, heading: label, summary, logs: rows }
+    })
 }
 
-function LogRow({
+function LogCard({
   log,
   item,
   items,
@@ -250,6 +339,7 @@ function LogRow({
   athletes,
   showTitles,
   showDate,
+  isNewBest,
   confirmId,
   editingId,
   onConfirm,
@@ -265,6 +355,7 @@ function LogRow({
   athletes: Athlete[]
   showTitles: boolean
   showDate: boolean
+  isNewBest: boolean
   confirmId: string | null
   editingId: string | null
   onConfirm: (id: string | null) => void
@@ -274,19 +365,18 @@ function LogRow({
 }) {
   const todayLog = isLogToday(log)
   const proper = logProperHoldSeconds(log)
-  const isManual = log.method === 'manual'
   const label = exerciseLabel(log, item)
   const canEdit = canEditHomeworkLog(viewer, athlete, log)
   const editing = editingId === log.id
 
-  const holdDisplay =
-    log.totalHoldSeconds > 0 ? formatSeconds(log.totalHoldSeconds) : log.journal ? '—' : '—'
-  const setsDisplay = log.sets && log.sets > 1 ? String(log.sets) : log.reps ? '1' : '—'
-  const repsDisplay = log.reps ? String(log.reps) : '—'
+  const holdSecs = log.totalHoldSeconds || 0
+  const sets = log.sets && log.sets > 1 ? log.sets : 0
+  const reps = log.reps ?? 0
+  const isRepLog = reps > 0 && holdSecs === 0
 
   if (editing) {
     return (
-      <li className="px-3 py-3">
+      <li className="rounded-xl border border-[var(--panel-border)] bg-[#0a1210] px-3 py-3">
         <EditLogForm
           log={log}
           items={items}
@@ -301,40 +391,82 @@ function LogRow({
     )
   }
 
+  const meta: string[] = []
+  meta.push(
+    new Date(log.date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+  )
+  if (showDate) meta.push(dayHeading(localDateKey(log.date)))
+  if (log.side) meta.push(log.side === 'left' ? 'Left side' : 'Right side')
+  if (log.loggedFrom === 'lesson') meta.push(log.coachName ? `Lesson · ${log.coachName}` : 'Lesson')
+  else if (log.loggedFrom === 'class') meta.push(log.sourceLabel ?? 'In class')
+  else if (log.kind === 'sequence' && log.sourceLabel) meta.push(log.sourceLabel)
+  if (log.method === 'manual') meta.push('Manual entry')
+
   return (
-    <li className={`px-3 py-2.5 ${todayLog ? 'bg-[#102820]/40' : ''}`}>
-      <div className="grid grid-cols-1 gap-1 sm:grid-cols-[4.5rem_minmax(0,1.4fr)_4.5rem_3rem_3rem] sm:items-center sm:gap-2">
-        <span className="text-sm font-medium tabular-nums text-[#6ec8d6]">
-          {new Date(log.date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-          {showDate && (
-            <span className="mt-0.5 block text-[10px] font-normal text-[var(--text)]/55">
-              {dayHeading(localDateKey(log.date))}
-            </span>
+    <li
+      className={`rounded-xl border px-3.5 py-3 ${
+        todayLog
+          ? 'border-[var(--accent)]/30 bg-[#10261f]'
+          : 'border-[var(--panel-border)] bg-[#0a1210]'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {showTitles && (
+            <p className="text-[15px] font-bold leading-snug text-[var(--text)]">{label}</p>
           )}
-        </span>
-        {showTitles ? (
-          <span className="text-sm font-semibold leading-snug text-[var(--text)]">
-            {label}
-            {log.side ? ` · ${log.side === 'left' ? 'Left' : 'Right'}` : ''}
-            {badgeRow(log)}
-          </span>
-        ) : (
-          <span className="text-sm text-[var(--text)]">{badgeRow(log)}</span>
-        )}
-        <span className="text-sm font-semibold tabular-nums text-[#8fbf6a]">{holdDisplay}</span>
-        <span className="text-sm font-semibold tabular-nums text-[#c49ae0]">{setsDisplay}</span>
-        <span className="text-sm font-semibold tabular-nums text-[#e0b872]">{repsDisplay}</span>
+          <p className="mt-0.5 text-xs text-[var(--text)]/55">{meta.join(' · ')}</p>
+          {isNewBest && (
+            <p className="mt-1.5 inline-block rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+              🎉 New best!
+            </p>
+          )}
+        </div>
+        {/* Hero stat: exercise + hold are the eye-catchers */}
+        <div className="shrink-0 text-right">
+          {isRepLog ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text)]/50">
+                Sets × Reps
+              </p>
+              <p className="text-2xl font-extrabold tabular-nums text-[#e0b872]">
+                {sets > 0 ? `${sets} × ${reps}` : `${reps}`}
+              </p>
+              {sets === 0 && <p className="text-[11px] text-[var(--text)]/55">reps</p>}
+            </>
+          ) : holdSecs > 0 ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text)]/50">
+                Hold
+              </p>
+              <p className="text-2xl font-extrabold tabular-nums text-[#8fbf6a]">
+                {formatSeconds(holdSecs)}
+              </p>
+              {sets > 0 && (
+                <p className="text-[11px] font-semibold text-[var(--text)]/60">{sets} sets</p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs italic text-[var(--text)]/50">journal</p>
+          )}
+        </div>
       </div>
-      {!isManual && log.totalHoldSeconds > 0 && (
-        <div className="mt-1 sm:pl-[4.5rem]">
-          <HoldProperTimes total={log.totalHoldSeconds} proper={proper} className="text-xs" />
+
+      {!isRepLog && holdSecs > 0 && log.method !== 'manual' && (
+        <div className="mt-1.5">
+          <HoldProperTimes total={holdSecs} proper={proper} className="text-xs" />
         </div>
       )}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+
+      {log.journal?.trim() && (
+        <p className="mt-1.5 text-xs leading-relaxed text-[var(--text)]/70">{log.journal.trim()}</p>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         {canEdit && (
           <button
             type="button"
-            className="text-xs font-semibold text-[var(--accent)] underline"
+            className="text-xs font-semibold text-[var(--accent)]"
             onClick={() => onEdit(log.id)}
           >
             Edit
@@ -364,7 +496,7 @@ function LogRow({
           ) : (
             <button
               type="button"
-              className="text-xs text-[var(--text)]/70 underline"
+              className="text-xs text-[var(--text)]/60"
               onClick={() => onConfirm(log.id)}
             >
               Remove
@@ -381,22 +513,6 @@ function LogRow({
         />
       )}
     </li>
-  )
-}
-
-function badgeRow(log: HomeworkLog) {
-  const parts: string[] = []
-  if (log.loggedFrom === 'lesson') {
-    parts.push(log.coachName ? `Lesson · ${log.coachName}` : 'Lesson')
-  } else if (log.loggedFrom === 'class') {
-    parts.push(log.sourceLabel ?? 'In class')
-  } else if (log.kind === 'sequence' && log.sourceLabel) {
-    parts.push(log.sourceLabel)
-  }
-  if (log.method === 'manual') parts.push('Manual')
-  if (!parts.length) return null
-  return (
-    <span className="mt-0.5 block text-xs font-normal text-[var(--text)]/60">{parts.join(' · ')}</span>
   )
 }
 

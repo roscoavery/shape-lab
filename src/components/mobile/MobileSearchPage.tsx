@@ -79,7 +79,7 @@ export function MobileSearchPage({
   }
 
   return (
-    <div className="flex min-h-[50vh] flex-col md:hidden">
+    <div className="mx-auto flex min-h-[50vh] w-full max-w-2xl flex-col">
       <div className="flex items-center gap-2 border-b border-white/10 pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5">
           <IgSearchIcon className="h-5 w-5 shrink-0 text-[var(--muted)]" />
