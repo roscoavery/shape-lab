@@ -59,9 +59,14 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   {
     id: 'full',
     skill: 'Full twisting layout',
-    needs: ['A strong layout first'],
-    canBend: ['Ryan sometimes bends this if the layout is close or the athlete already has the skill, but it messes with what he is trying to build.'],
-    ask: 'Ask your coach whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.',
+    needs: [
+      'A strong layout first. Non-negotiable.',
+      'Twist timing: commonly taught 11 to 1, but 10 to 12 may be better — the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land',
+    ],
+    canBend: ['Ryan sometimes bends the strong-layout rule if it is close or the athlete already has the skill, but it messes with what he is trying to build.'],
+    ask: 'Ask your coach about your twist timing and whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.',
+    ryanNote:
+      'Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section.',
   },
   {
     id: 'layout',

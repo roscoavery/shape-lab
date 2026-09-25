@@ -263,3 +263,21 @@ It doesnt have to be a listed skill, but a building block for double backs. It i
 a back tuck high enough to where their back is at or above shoulder/head height.
 Shoulder level isnt always enough. Over rotating it to their back on a shoulder
 level mat is.
+
+## Q11: Full twisting layout — the full picture
+
+A strong layout is essential for a full twisting layout. The twist timing is
+commonly taught between 11 and 1, but i think that between 10 and 12 might be
+better since the half turn can spot the ground and allow the athlete to not feel
+as lost. That still gives time to maximize the set before the twist and plenty of
+time to stay hollow and land.
+
+Teaching progression: lay to belly, half to back, and full to belly before having
+the athlete attempt a full to feet. I sometimes use opposite side spotting to
+preserve the set and bridge the gap between a spotted half and a spotted full.
+
+Twist mechanics can be referenced from the physics in tumbling section. There are
+plenty of full references in the reference library. Wants to add: a tumble doctor
+video talking about fulls, and a tumbling dee video doing 2 different fulls, plus
+a video that goes deep on progressions. (He could not drop the tumble doc vid in
+chat; still needed.)
