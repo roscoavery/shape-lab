@@ -65,6 +65,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DbTk2FQTXCw/',
       watchFor: 'Round off drills.',
     },
+    {
+      who: 'Roman',
+      url: 'https://www.instagram.com/reel/DblQlGDxaOU/',
+      watchFor: 'Cartwheel hand placement drill.',
+    },
   ],
   'ro-bhs': [
     {
