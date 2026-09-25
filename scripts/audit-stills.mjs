@@ -111,9 +111,15 @@ const hasBlob = await blobSetup()
 console.log(
   `Blob store: ${hasBlob ? ok('connected — blob locations checked') : warn('no token found — blob locations NOT checked')}`,
 )
+const gymHomeSet =
+  process.env.GYM_HOME === '1' || (process.env.GYM_HOME || '').toLowerCase() === 'true'
+const blobTokenPresent = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)
+// Mirror server/persist.ts: GYM_HOME pins disk; otherwise blob only when a token exists,
+// and the server falls back to disk when there is no token.
+const persistMode = gymHomeSet || !blobTokenPresent ? 'DISK' : 'BLOB'
 console.log(
   `Gym mode env: GYM_HOME=${process.env.GYM_HOME || '(unset)'}  ` +
-    `-> server will run in ${process.env.GYM_HOME === '1' || (process.env.GYM_HOME || '').toLowerCase() === 'true' ? ok('DISK') : warn('BLOB')} mode`,
+    `-> server runs in ${persistMode === 'DISK' ? ok('DISK (this Mac is the library)') : warn('BLOB (cloud)')} mode`,
 )
 
 /** What the running gym server actually serves (its live truth, not the disk files). */
@@ -214,7 +220,53 @@ if (orphans.length === 0) {
   }
 }
 const igBlobs = listJpegs(join(ROOT, 'data', 'ig-blobs'))
-if (igBlobs.length) console.log(`  (${igBlobs.length} JPEGs in data/ig-blobs/ — Instagram stills)`)
+if (igBlobs.length) {
+  console.log(`  (${igBlobs.length} JPEGs in data/ig-blobs/ — Instagram stills)`)
+  for (const f of igBlobs.slice(0, 20)) console.log(`    ig: ${f}`)
+}
+
+// Contact sheet: one HTML page showing every unidentified photo (orphans + IG stills)
+// so Ryan can visually identify them and say which shape each belongs to.
+{
+  const cards = []
+  for (const id of orphans) {
+    cards.push({
+      src: `coach-blobs/${id}.jpg`,
+      title: id,
+      sub: goneStill.has(id) ? 'IN TRASH — restorable' : 'ORPHAN — which shape?',
+    })
+  }
+  for (const f of igBlobs) {
+    cards.push({ src: `ig-blobs/${f}`, title: f, sub: 'Instagram still' })
+  }
+  if (cards.length) {
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+    const html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>ShapeLab — unidentified stills</title>' +
+      '<style>body{font-family:system-ui;background:#111;color:#eee;padding:24px}' +
+      '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}' +
+      '.card{background:#1c1c1c;border-radius:12px;padding:12px}' +
+      '.card img{width:100%;border-radius:8px;display:block;background:#000}' +
+      '.t{font-weight:700;margin:8px 0 2px;word-break:break-all;font-size:13px}' +
+      '.s{color:#aaa;font-size:12px}</style></head><body>' +
+      `<h1>Unidentified stills (${cards.length})</h1>` +
+      '<p>Tell Ermith the filename + which shape each photo belongs to.</p><div class="grid">' +
+      cards
+        .map(
+          (c) =>
+            `<div class="card"><img src="${esc(c.src)}" loading="lazy"><div class="t">${esc(c.title)}</div><div class="s">${esc(c.sub)}</div></div>`,
+        )
+        .join('') +
+      '</div></body></html>'
+    const outPath = join(ROOT, 'data', 'still-audit-contactsheet.html')
+    try {
+      fs.writeFileSync(outPath, html)
+      console.log(`\n  ${ok('Contact sheet')}: open data/still-audit-contactsheet.html in a browser to SEE these ${cards.length} photos`)
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 console.log(h('F. Full registry dump — main map, extras, trash'))
 const dumpMain = localStills?.main ?? blobStills?.main ?? {}
