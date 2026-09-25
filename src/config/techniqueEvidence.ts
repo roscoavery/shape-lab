@@ -86,6 +86,36 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://youtu.be/_fNX-5XGKog',
       watchFor: 'Understanding twisting during saltos — the physics behind the arm drop.',
     },
+    {
+      who: 'Ari (athlete)',
+      url: 'https://www.instagram.com/reel/DKcgyPLO9Hz/',
+      watchFor: "Ari's full — the finished product of the arm-drop process.",
+    },
+    {
+      who: 'Taylor (athlete)',
+      url: 'https://www.instagram.com/reel/DJ4nzBlPZgo/',
+      watchFor: "Taylor's full — the finished product of the arm-drop process.",
+    },
+    {
+      who: 'Qynn (athlete)',
+      url: 'https://www.instagram.com/reel/DKKowaRveYb/',
+      watchFor: "Qynn's full — the finished product of the arm-drop process.",
+    },
+    {
+      who: 'Preslee (athlete)',
+      url: 'https://www.instagram.com/reel/C_TbJcaPALz/',
+      watchFor: "Preslee's full twisting layout.",
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/C9m_0vDOooA/',
+      watchFor: 'Opposite-side spotting on Preslee — preserving the set through the twist.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/C9aXPgMP7Lk/',
+      watchFor: 'Opposite-side spotting on Rylie — preserving the set through the twist.',
+    },
   ],
   basics: [
     {
