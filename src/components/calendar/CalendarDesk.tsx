@@ -24,6 +24,8 @@ import {
   stepCalendarWeekColMin,
 } from '../../lib/calendarWeekPrefs'
 import { CalendarLayersSheet } from './CalendarLayersSheet'
+import { AcuityNotesView } from './AcuityNotesView'
+import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 
@@ -1070,6 +1072,14 @@ function NotesBlock({ notes }: { notes: string }) {
   )
 }
 
+/** Renders Acuity Scheduling lesson notes as a structured card when they
+ *  match that format; otherwise falls back to the plain notes block. */
+function SmartNotes({ notes }: { notes: string }) {
+  const parsed = useMemo(() => parseAcuityNotes(notes), [notes])
+  if (parsed) return <AcuityNotesView parsed={parsed} rawNotes={notes} />
+  return <NotesBlock notes={notes} />
+}
+
 function EventPreview({
   ev,
   open,
@@ -1137,7 +1147,7 @@ function EventPreview({
           {compact && <p>{matchLine}</p>}
           {ev.location ? <p>Where · {ev.location}</p> : null}
           {ev.notes?.trim() ? (
-            <NotesBlock notes={ev.notes} />
+            <SmartNotes notes={ev.notes} />
           ) : (
             <p>No notes on this event.</p>
           )}
