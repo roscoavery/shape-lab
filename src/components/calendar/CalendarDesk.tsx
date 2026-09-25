@@ -264,12 +264,6 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   }, [refresh])
 
   useEffect(() => {
-    if (view !== 'week') return
-    const mq = window.matchMedia('(max-width: 767px)')
-    if (mq.matches) setFullScreen(true)
-  }, [view])
-
-  useEffect(() => {
     if (!fullScreen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFullScreen(false)
@@ -832,7 +826,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
       )}
 
       {fullScreen && (view === 'week' || view === 'day') && (
-        <div className="fixed inset-0 z-[70] flex flex-col bg-[#0b1118] text-[var(--text)]">
+        <div className="fixed inset-x-0 top-0 z-[70] flex h-[100dvh] flex-col bg-[#0b1118] text-[var(--text)]">
           <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
             <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Calendar</p>
