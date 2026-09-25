@@ -45,6 +45,26 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DZncc7BxFWY/',
       watchFor: 'Passe round off to zombie — the landing shape, not lightning bolt.',
     },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DXUO3W0ji9x/',
+      watchFor: 'Round off drills.',
+    },
+    {
+      who: 'Coach Dan',
+      url: 'https://www.instagram.com/reel/DH2ksuzIJ-3/',
+      watchFor: 'Drills for round offs and handsprings.',
+    },
+    {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/DIOjOH4TagD/',
+      watchFor: 'Round off deconstruction — the pieces inside the skill.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DbTk2FQTXCw/',
+      watchFor: 'Round off drills.',
+    },
   ],
   'ro-bhs': [
     {

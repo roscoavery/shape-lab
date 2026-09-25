@@ -257,6 +257,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'Meet the athlete where they are: growth spurts, surgeries, and comebacks all scale further down than average',
       'Straight arm handstand forward rolls (builds tolerance for unnatural corrections, teaches the hips to stay open when hollow is needed)',
       'Handstand to candle with open hips (translates to arch-to-hollow in handsprings and layout sets)',
+      'Handstands and handstand shoulder taps — the building blocks for cartwheels',
       'Hollow holds, handstands on the wall, cartwheels, trampoline air awareness where available',
     ],
     canBend: ['Some kids have trampolined all their life and some have never been on one. The starting point moves. The scaling in the app exists for this.'],

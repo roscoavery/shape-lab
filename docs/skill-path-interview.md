@@ -503,3 +503,28 @@ strong hollow and handstand shapes. it may be considered super difficult due to 
 fact that it requires a moment of standing on one arm to really get it to flow just
 right.. there are several round off references and drills you can associate with this
 skill that are located in the reference library."
+
+### Q16: Shapes as building blocks + the writing analogy (for parents)
+
+Ryan's words:
+
+"handstands and hanstand shoulder taps become building blocks for cartwheels and
+the rest of the shapes in the shape library become building blocks for other
+tumbling skills.
+
+i like to explain to parents that learning to tumble can be like learning how to
+write. you learn how to draw each letter before learning how to write words. you
+learn how to write with intention on the details of the letters before eventually
+flowing with faster handwriting. the way we teach in shapes is very much the same.
+at some point you stop thinking about how to hit the shapes and they just become
+second nature and they flow through you as you set your intention onto a desired
+movement. this understanding can be one of the biggest and most important ways of
+opening people up to what shape lab has to offer. i want to get a video of high
+level tumbling/gymnastics coaches saying 'learn your shapes' as a testimonial for
+shapelab.. and have a compilation video that sparks interest and uses their authority
+to pull people into this app.."
+
+Note: the writing analogy is parent-guide material — how Ryan explains ShapeLab's
+value to parents. The "learn your shapes" coach compilation is a future project:
+collect clips of high-level coaches saying it, cut into a testimonial video for
+the app.
