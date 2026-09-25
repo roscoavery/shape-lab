@@ -472,7 +472,7 @@ export function EducationPanel({
 
       {view.kind === 'skillPath' && (
         <PanelErrorBoundary label="Skill path">
-          <SkillPathCards />
+          <SkillPathCards coach={coach} />
         </PanelErrorBoundary>
       )}
 

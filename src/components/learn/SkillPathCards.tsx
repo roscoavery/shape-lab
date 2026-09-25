@@ -3,6 +3,7 @@
  * four-levels infographic: a header, labeled blocks, no walls of text.
  * Top-down: peak skills first, foundations last.
  */
+import { useState } from 'react'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -17,9 +18,53 @@ function Label({ children }: { children: React.ReactNode }) {
   )
 }
 
-function ProofStrip({ evidenceKey }: { evidenceKey: string }) {
+function fmtLoopTime(s: number) {
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+/**
+ * Coach-set A/B loop overrides for proof videos, keyed by video URL.
+ * The config's startAt/endAt are the defaults; a coach's in-app tweak
+ * wins until cleared. Tell Ryan's assistant the values to make them permanent.
+ */
+const PROOF_LOOP_KEY = 'shape-lab.proofLoops.v1'
+
+type ProofLoop = { a: number | null; b: number | null }
+
+function loadProofLoops(): Record<string, ProofLoop> {
+  try {
+    const raw = localStorage.getItem(PROOF_LOOP_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, ProofLoop>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolean }) {
   const videos = TECHNIQUE_EVIDENCE[evidenceKey]
+  const [loopEditUrl, setLoopEditUrl] = useState<string | null>(null)
+  const [overrides, setOverrides] = useState<Record<string, ProofLoop>>(loadProofLoops)
   if (!videos || videos.length === 0) return null
+
+  const handleAbChange =
+    (url: string) => (a: number | null, b: number | null) => {
+      setOverrides((prev) => {
+        const next = { ...prev }
+        if (a == null && b == null) delete next[url]
+        else next[url] = { a, b }
+        try {
+          localStorage.setItem(PROOF_LOOP_KEY, JSON.stringify(next))
+        } catch {
+          /* quota */
+        }
+        return next
+      })
+    }
+
   return (
     <div>
       <Label>The proof</Label>
@@ -27,21 +72,67 @@ function ProofStrip({ evidenceKey }: { evidenceKey: string }) {
         Not just Ryan's word. Watch who else teaches it this way.
       </p>
       <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
-        {videos.map((v) => (
-          <div key={v.url} className="w-40 shrink-0">
-            <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
-              <InstagramEmbed url={v.url} compact bare quiet />
+        {videos.map((v) => {
+          const override = overrides[v.url]
+          const loopA = override?.a ?? v.startAt ?? null
+          const loopB = override?.b ?? v.endAt ?? null
+          const editing = coach && loopEditUrl === v.url
+          return (
+            <div key={v.url} className="w-40 shrink-0">
+              {editing ? (
+                <div className="rounded-xl bg-black p-1">
+                  <InstagramEmbed
+                    url={v.url}
+                    compact
+                    loopA={loopA}
+                    loopB={loopB}
+                    onAbChange={handleAbChange(v.url)}
+                  />
+                </div>
+              ) : (
+                <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
+                  <InstagramEmbed
+                    url={v.url}
+                    compact
+                    bare
+                    quiet
+                    loopA={loopA}
+                    loopB={loopB}
+                  />
+                </div>
+              )}
+              <div className="mt-1 text-xs font-bold">{v.who}</div>
+              <div className="text-[11px] opacity-70">{v.watchFor}</div>
+              {(loopA != null || loopB != null) && !editing && (
+                <div className="text-[10px] opacity-60">
+                  Loops {loopA != null ? fmtLoopTime(loopA) : '0:00'}–
+                  {loopB != null ? fmtLoopTime(loopB) : 'end'}
+                </div>
+              )}
+              {editing && (loopA != null || loopB != null) && (
+                <div className="text-[10px] opacity-60">
+                  A/B {loopA != null ? fmtLoopTime(loopA) : '—'} –{' '}
+                  {loopB != null ? fmtLoopTime(loopB) : '—'}
+                </div>
+              )}
+              {coach && (
+                <button
+                  type="button"
+                  onClick={() => setLoopEditUrl(editing ? null : v.url)}
+                  className="mt-1 text-[11px] font-bold text-emerald-400"
+                >
+                  {editing ? 'Done' : 'Set loop'}
+                </button>
+              )}
             </div>
-            <div className="mt-1 text-xs font-bold">{v.who}</div>
-            <div className="text-[11px] opacity-70">{v.watchFor}</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-export function SkillPathCards() {
+export function SkillPathCards({ coach = false }: { coach?: boolean }) {
   return (
     <div className="space-y-8">
       <section>
@@ -88,7 +179,7 @@ export function SkillPathCards() {
                     <Label>Ask your coach</Label>
                     <p className="mt-1 text-sm italic">{step.ask}</p>
                   </div>
-                  <ProofStrip evidenceKey={step.id} />
+                  <ProofStrip evidenceKey={step.id} coach={coach} />
                   {step.ryanNote && (
                     <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
                       Ryan: {step.ryanNote}
@@ -120,7 +211,7 @@ export function SkillPathCards() {
               </div>
               <p className="mt-2 text-sm opacity-85">{cue.why}</p>
               <div className="mt-3">
-                <ProofStrip evidenceKey={cue.id} />
+                <ProofStrip evidenceKey={cue.id} coach={coach} />
               </div>
             </article>
           ))}
