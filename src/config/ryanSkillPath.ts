@@ -2,14 +2,25 @@
  * Ryan's skill path — top-down draft from his interview answers (2026-09-25).
  * Organized, not rewritten. He corrects this; nothing here is final until he says so.
  *
+ * Three tracks: running tumbling, standing tumbling, and walking tumbling
+ * (cartwheels, walkovers, cart skills) in the middle.
+ *
+ * The connecting principle, in his words: "working down gradually from more
+ * power to less is a way of progressing a skill to a more difficult form
+ * from running to standing." Cart fulls build standing fulls. Cart tucks
+ * build standing tucks.
+ *
  * Shape: each step names the skill, what it NEEDS (rules he never breaks),
  * what can BEND (strategic exceptions), and the ASK line (what an athlete
  * should ask their coach to work on, and why).
  */
 
+export type SkillTrack = 'running' | 'standing' | 'walking' | 'foundation'
+
 export interface SkillPathStep {
   id: string
   skill: string
+  track: SkillTrack
   needs: string[]
   canBend: string[]
   ask: string
@@ -19,6 +30,7 @@ export interface SkillPathStep {
 export const RYAN_SKILL_PATH: SkillPathStep[] = [
   {
     id: 'double-back',
+    track: 'running',
     skill: 'Double back',
     needs: [
       'A back tuck high enough that their back reaches shoulder/head height (a building block, not a listed skill)',
@@ -34,6 +46,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'triple-full',
+    track: 'running',
     skill: 'Triple full',
     needs: [
       'A high double full with plenty of time to open and land',
@@ -48,6 +61,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'double-full',
+    track: 'running',
     skill: 'Double full',
     needs: [
       'A strong back full, straight, with time to open up and land',
@@ -58,6 +72,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'full',
+    track: 'running',
     skill: 'Full twisting layout',
     needs: [
       'A strong layout first. Non-negotiable.',
@@ -72,6 +87,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'layout',
+    track: 'running',
     skill: 'Layout',
     needs: [
       'Proper hollow hold with arms up, at least 20 seconds (Ryan wants a minute before expecting it on spring floor)',
@@ -83,6 +99,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'back-tuck',
+    track: 'running',
     skill: 'Round off back handspring back tuck',
     needs: [
       'A strong round off series first',
@@ -96,6 +113,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'ro-bhs-series',
+    track: 'running',
     skill: 'Round off back handspring series',
     needs: ['A strong round off before touching it'],
     canBend: [
@@ -105,6 +123,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'ro-bhs',
+    track: 'running',
     skill: 'Round off back handspring',
     needs: ['A strong round off'],
     canBend: [
@@ -115,6 +134,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
   },
   {
     id: 'round-off',
+    track: 'running',
     skill: 'Round off',
     needs: ['Cartwheel work stays in the lesson', 'Eyes down, arms horizontal out of it'],
     canBend: [],
@@ -122,28 +142,89 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     ryanNote: 'Teach arms horizontal out of round offs and back handsprings to carry momentum backwards until the series is strong. Then teach the block: feet slightly behind on a soft mat, eyes forward, stack and redirect up. Round off into a lightning bolt shape builds habits Ryan has to rework; zombie is the landing shape.',
   },
   {
-    id: 'standing-bhs',
-    skill: 'Standing back handspring',
-    needs: ['Open hips and a real hollow, not a bent one'],
-    canBend: ['Often arrives after the running handspring, not before. That is normal in Ryan\u2019s gym.'],
-    ask: 'Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps.',
+    id: 'standing-full',
+    track: 'standing',
+    skill: 'Standing full',
+    needs: [
+      'A strong standing tuck first',
+      'Cart fulls help build toward this — more power first, then work down to less',
+    ],
+    canBend: [],
+    ask: 'Ask your coach whether your standing tuck and cart full are solid enough to start twisting from standing.',
+    ryanNote: 'Top of the standing track. Working down from more power to less is how a skill progresses to a more difficult form from running to standing.',
   },
   {
     id: 'standing-tuck',
+    track: 'standing',
     skill: 'Standing back tuck',
     needs: ['A tuck shape that opens to a landing with arms up'],
     canBend: ['The best standing tucks come from properly trained running tucks. Athletes who learned the standing tuck first are the ones who tend to get stuck moving to layouts.'],
     ask: 'Ask your coach if your running tuck is solid before pouring time into the standing one.',
   },
   {
+  {
+    id: 'standing-bhs',
+    track: 'standing',
+    skill: 'Standing back handspring',
+    needs: ['Open hips and a real hollow, not a bent one'],
+    canBend: ['Often arrives after the running handspring, not before. That is normal in Ryan\u2019s gym.'],
+    ask: 'Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps.',
+  },
+  {
     id: 'back-walkover',
+    track: 'standing',
     skill: 'Back walkover',
     needs: ['A back bend. Never without it.'],
     canBend: [],
     ask: 'Ask your coach to check your back bend first. No bend, no walkover, no debate.',
   },
   {
+    id: 'cart-full',
+    track: 'walking',
+    skill: 'Cart full',
+    needs: ['A solid cartwheel and a layout you can twist out of'],
+    canBend: [],
+    ask: 'Ask your coach whether your cartwheel is clean enough to add a full. Cart fulls are the bridge to standing fulls.',
+    ryanNote: 'Walking tumbling lives between running and standing. Cart fulls help with standing fulls — more power first, then work down to less.',
+  },
+  {
+    id: 'cart-dub',
+    track: 'walking',
+    skill: 'Cart double full',
+    needs: ['A strong cart full first'],
+    canBend: [],
+    ask: 'Ask your coach if your cart full has the height and control for a second twist.',
+  },
+  {
+    id: 'cart-tuck',
+    track: 'walking',
+    skill: 'Cart tuck',
+    needs: ['A solid cartwheel'],
+    canBend: [],
+    ask: 'Ask your coach whether your cartwheel is clean enough to tuck out of. Cart tucks are the bridge to standing tucks.',
+    ryanNote: 'Cart tucks help with standing tucks — more power first, then work down to less.',
+  },
+  {
+    id: 'cartwheel-handspring',
+    track: 'walking',
+    skill: 'Cartwheel handspring',
+    needs: ['A solid cartwheel and a handspring you can land clean'],
+    canBend: [],
+    ask: 'Ask your coach to watch your cartwheel entry. The handspring only works if the cartwheel sets it up.',
+    ryanNote: 'Same idea as a standing handspring tuck or handspring full — the walking version builds the standing one.',
+  },
+  {
+    id: 'front-walkover',
+    track: 'walking',
+    skill: 'Front walkover',
+    needs: ['A bridge and the shoulder flexibility to go over clean'],
+    canBend: [],
+    ask: 'Ask your coach to check your bridge first, same as the back walkover.',
+    ryanNote: 'Front and back walkovers and cartwheels are walking tumbling — the middle ground between running and standing.',
+  },
+  {
     id: 'basics',
+    track: 'foundation',
     skill: 'Foundations',
     needs: [
       'Meet the athlete where they are: growth spurts, surgeries, and comebacks all scale further down than average',

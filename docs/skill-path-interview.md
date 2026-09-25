@@ -422,3 +422,30 @@ unnatural proper technique can feel even for the most advanced athletes."
 ### Q13: Helpers for the full
 
 "for fulls, front halves (barani) can be helpful and so can back halves"
+
+### Q14: The full path order (running, standing, walking tumbling)
+
+Ryan's complete top-down order, in his words:
+
+"i think a back half can be another one.. same with front half (barani)..
+
+then layouts.
+
+then tucks.
+
+then the round off back handspring series
+
+then round off back hanspring
+
+then the round off.
+
+and for standing.. standing full, down to standing tucks. standing series, standing
+handspring. back walkovers. backbends. bridges. shapes.
+
+somewhere in the middle of running tumbling and standing tumbling is skills like
+cartwheel handsprings, cart tucks, cart fulls, cart dubs.. front and back walkovers
+and cartwheels are like this walking tumbling (i think it makes sense to be called
+that).. cart fulls help with standing fulls. cart tucks help with standing tucks.
+same thing with a standing handspring full or a handspring tuck. working down
+gradually from. More power to less is a way of progressing a skill to a more
+difficult form from running to standing."
