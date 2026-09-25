@@ -299,7 +299,16 @@ export async function hydrateCoachContent(): Promise<void> {
       return
     }
     const removedWarmupIds = mergeIdLists(local.removedWarmupIds, data.removedWarmupIds)
-    const removedGymShapeIds = mergeIdLists(local.removedGymShapeIds, data.removedGymShapeIds)
+    // A tombstone only hides a shape the server no longer has. If the server's
+    // gym library contains the shape (restored), the local tombstone is stale
+    // and must be dropped — otherwise a restored shape stays hidden forever
+    // and the client re-pushes the tombstone on every hydrate.
+    const serverGymIds = new Set(
+      (data.gymLibrary ?? []).map((s) => s?.id).filter((id): id is string => Boolean(id)),
+    )
+    const removedGymShapeIds = mergeIdLists(local.removedGymShapeIds, data.removedGymShapeIds).filter(
+      (id) => !serverGymIds.has(id),
+    )
     persist(
       {
         kind: 'shape-lab-coach-content',
