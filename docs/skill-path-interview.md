@@ -418,3 +418,7 @@ interaction and deep dive with dee giving visual references of Alvin's correctio
 dee didnt like how the full twisting layout felt when done correctly if that says
 anything.. but we all liked how it looked at the end and this really highlights how
 unnatural proper technique can feel even for the most advanced athletes."
+
+### Q13: Helpers for the full
+
+"for fulls, front halves (barani) can be helpful and so can back halves"

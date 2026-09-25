@@ -63,6 +63,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'A strong layout first. Non-negotiable.',
       'Layout standards before twisting: solid blocking angle to convert travel to height; shape deadline at 3 o’clock (first quarter of flip); set with head in; enough rotation to keep hips open all the way through (no piking)',
       'Twist timing: commonly taught 11 to 1, but 10 to 12 may be better — the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land',
+      'Front halves (barani) and back halves can both help build toward a full',
     ],
     canBend: ['Ryan sometimes bends the strong-layout rule if it is close or the athlete already has the skill, but it messes with what he is trying to build.'],
     ask: 'Ask your coach about your twist timing and whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.',
