@@ -23,13 +23,13 @@ export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
   return (
     <MobilePortal>
     <div
-      className="fixed inset-0 z-[220] flex items-end justify-center bg-black/70 md:hidden"
+      className="fixed inset-0 z-[45] flex items-end justify-center bg-black/70 md:hidden"
       role="dialog"
       aria-label="Discover"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-t-2xl border border-white/10 bg-[#121820] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2"
+        className="w-full max-w-lg rounded-t-2xl border border-white/10 bg-[#121820] px-4 pb-[max(4.5rem,calc(env(safe-area-inset-bottom)+4rem))] pt-2"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />

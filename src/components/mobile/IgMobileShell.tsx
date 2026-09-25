@@ -43,6 +43,9 @@ type Props = {
   settings: AppSettings
   onViewProfile?: (id: string) => void
   onOpenMyProfile?: () => void
+  /** When the profile overlay is open, the bottom nav stays visible and highlights the avatar. */
+  profileActive?: boolean
+  onCloseProfile?: () => void
   onStory?: () => void
   onDeskPreview: (next: DeskPreview) => void
   onSignOut?: () => void
@@ -64,6 +67,8 @@ export function IgMobileShell({
   settings,
   onViewProfile,
   onOpenMyProfile,
+  profileActive = false,
+  onCloseProfile,
   onStory,
   onDeskPreview,
   onSignOut,
@@ -77,7 +82,8 @@ export function IgMobileShell({
   const [mobileSearch, setMobileSearch] = useState(false)
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [sectionPillsVisible, setSectionPillsVisible] = useState(false)
-  const active = shellTabForAppTab(tab, mobileSearch)
+  const active = profileActive ? 'profile' : shellTabForAppTab(tab, mobileSearch)
+  const discoverOn = discoverOpen || active === 'reels'
   const loginAdmin = sessionIsAdmin(authUser)
   const previewing = loginAdmin && deskPreview !== 'home'
 
@@ -92,6 +98,8 @@ export function IgMobileShell({
 
   const go = (id: AppTab) => {
     setMobileSearch(false)
+    setDiscoverOpen(false)
+    onCloseProfile?.()
     onGo(id)
   }
 
@@ -180,14 +188,15 @@ export function IgMobileShell({
         <button
           type="button"
           aria-label="Discover"
-          aria-current={active === 'reels' ? 'page' : undefined}
+          aria-current={discoverOn ? 'page' : undefined}
           onClick={() => {
             setMobileSearch(false)
+            onCloseProfile?.()
             setDiscoverOpen(true)
           }}
-          className={`${navIconBtn} ${navBtn(active === 'reels')}`}
+          className={`${navIconBtn} ${navBtn(discoverOn)}`}
         >
-          <IgReelsIcon className="h-7 w-7" filled={active === 'reels'} />
+          <IgReelsIcon className="h-7 w-7" filled={discoverOn} />
         </button>
         <button
           type="button"
@@ -202,7 +211,11 @@ export function IgMobileShell({
           type="button"
           aria-label="Search"
           aria-current={active === 'search' ? 'page' : undefined}
-          onClick={() => setMobileSearch(true)}
+          onClick={() => {
+            setDiscoverOpen(false)
+            onCloseProfile?.()
+            setMobileSearch(true)
+          }}
           className={`${navIconBtn} ${navBtn(active === 'search')}`}
         >
           <IgSearchIcon className="h-7 w-7" />

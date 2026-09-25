@@ -1048,6 +1048,28 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   )
 }
 
+function NotesBlock({ notes }: { notes: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const clean = useMemo(() => notes.replace(/\n{3,}/g, '\n\n').trim(), [notes])
+  const long = clean.split('\n').length > 4 || clean.length > 280
+  return (
+    <div className="min-w-0">
+      <p className={`whitespace-pre-wrap text-[var(--text)]/85 ${expanded ? '' : 'line-clamp-4'}`}>
+        {clean}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1 text-[11px] font-semibold text-[var(--accent)]"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function EventPreview({
   ev,
   open,
@@ -1115,7 +1137,7 @@ function EventPreview({
           {compact && <p>{matchLine}</p>}
           {ev.location ? <p>Where · {ev.location}</p> : null}
           {ev.notes?.trim() ? (
-            <p className="whitespace-pre-wrap text-[var(--text)]/85">{ev.notes.trim()}</p>
+            <NotesBlock notes={ev.notes} />
           ) : (
             <p>No notes on this event.</p>
           )}

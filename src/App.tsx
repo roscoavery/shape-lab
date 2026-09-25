@@ -976,6 +976,8 @@ export default function App() {
         onOpenMyProfile={() => {
           if (activeProfile) setProfileOpen(true)
         }}
+        profileActive={profileOpen}
+        onCloseProfile={() => setProfileOpen(false)}
         onStory={() => {
           if (activeProfile) setStoryComposerOpen(true)
         }}

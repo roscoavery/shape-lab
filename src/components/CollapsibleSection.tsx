@@ -33,8 +33,8 @@ export function CollapsibleSection({
     <section
       className={
         inset
-          ? 'rounded-xl bg-[#0d1218]/80'
-          : 'rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]'
+          ? 'min-w-0 rounded-xl bg-[#0d1218]/80'
+          : 'min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]'
       }
     >
       <button

@@ -451,7 +451,7 @@ export function AthleteProfileCard({
         <CoachHoldEntry athlete={athlete} viewer={viewer} />
       )}
       {storySheet && own && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:items-center">
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121820] p-3">
             <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
               Your story
@@ -805,7 +805,7 @@ export function AthleteProfileCard({
 
   if (variant === 'overlay') {
     return (
-      <div className="fixed inset-0 z-[85] flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden text-[var(--text)]" style={shellStyle}>
+      <div className="fixed inset-0 z-[45] flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden text-[var(--text)]" style={shellStyle}>
         <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--profile-accent)' }}>
             {own ? 'My profile' : handle}
@@ -821,7 +821,7 @@ export function AthleteProfileCard({
           )}
         </header>
         <div
-          className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] [touch-action:pan-y]"
+          className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))] [touch-action:pan-y]"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {page}
