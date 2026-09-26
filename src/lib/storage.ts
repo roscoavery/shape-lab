@@ -524,6 +524,83 @@ function remapOrphanHomeworkLogs(before: HomeworkItem[], after: HomeworkItem[]) 
   if (changed) writeJson(HOMEWORK_LOGS_KEY, next)
 }
 
+const HOLD_CHALLENGE_DEDUP_KEY = 'shape-lab.migrated.holdChallengeDedup.v1'
+/** Sequence homework whose run IS the rep: handstand / lever / lunge holds. */
+const HOLD_CHALLENGE_SEQ_SHAPES = new Set([
+  'seq:flow_hs_hold_challenge',
+  'seq:flow_lever_hold',
+  'seq:flow_lunge_hold',
+])
+/** Two logs count as the same run when their timestamps are this close. */
+const HOLD_CHALLENGE_PAIR_WINDOW_MS = 3 * 60 * 1000
+
+/**
+ * One-time cleanup (Sep 2026): before the log-pairing fix, hold-challenge
+ * runs wrote a hold log AND a separate rep-only log for the same run. The
+ * run is the rep, so the rep-only copy is redundant. Fold its reps into the
+ * sibling hold log and soft-delete the duplicate. Only touches rep-only
+ * camera logs that have a sibling hold log within 3 minutes; orphans and
+ * manual entries are left alone.
+ */
+function dedupeHoldChallengeLogs(items: HomeworkItem[]): void {
+  try {
+    if (localStorage.getItem(HOLD_CHALLENGE_DEDUP_KEY)) return
+  } catch {
+    return
+  }
+  const markDone = () => {
+    try {
+      localStorage.setItem(HOLD_CHALLENGE_DEDUP_KEY, '1')
+    } catch {}
+  }
+  const challengeItemIds = new Set(
+    items.filter((i) => i && HOLD_CHALLENGE_SEQ_SHAPES.has(i.shapeId)).map((i) => i.id),
+  )
+  if (challengeItemIds.size === 0) {
+    markDone()
+    return
+  }
+  const gone = new Set(loadRemovedHomeworkLogIds())
+  const logs = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+  let merged = 0
+  for (const repLog of logs) {
+    if (!repLog || gone.has(repLog.id)) continue
+    if (!challengeItemIds.has(repLog.homeworkId)) continue
+    if (repLog.kind !== 'sequence') continue
+    if (repLog.method === 'manual') continue
+    const reps = repLog.reps ?? 0
+    if (reps <= 0) continue
+    if ((repLog.totalHoldSeconds ?? 0) > 0) continue
+    const repTime = Date.parse(repLog.date)
+    if (!Number.isFinite(repTime)) continue
+    let best: HomeworkLog | null = null
+    let bestDelta = HOLD_CHALLENGE_PAIR_WINDOW_MS
+    for (const holdLog of logs) {
+      if (!holdLog || holdLog.id === repLog.id || gone.has(holdLog.id)) continue
+      if (holdLog.athleteId !== repLog.athleteId) continue
+      if (holdLog.homeworkId !== repLog.homeworkId) continue
+      if ((holdLog.totalHoldSeconds ?? 0) <= 0) continue
+      const holdTime = Date.parse(holdLog.date)
+      if (!Number.isFinite(holdTime)) continue
+      const delta = Math.abs(holdTime - repTime)
+      if (delta <= bestDelta) {
+        best = holdLog
+        bestDelta = delta
+      }
+    }
+    if (!best) continue
+    const holdReps = best.reps ?? 0
+    if (reps > holdReps) best.reps = reps
+    noteRemovedHomeworkLog(repLog.id)
+    merged += 1
+  }
+  if (merged > 0) {
+    writeJson(HOMEWORK_LOGS_KEY, logs.slice(0, 1000))
+    pushRosterSoon()
+  }
+  markDone()
+}
+
 export function loadAllHomework(): HomeworkItem[] {
   const gone = new Set(loadRemovedHomeworkIds())
   const items = readJson<HomeworkItem[]>(HOMEWORK_KEY, []).filter((h) => h && !gone.has(h.id))
@@ -542,6 +619,7 @@ export function loadAllHomework(): HomeworkItem[] {
     }
   }
   const deduped = filterDismissedHomework(dedupeHomeworkItems(items))
+  dedupeHoldChallengeLogs(deduped)
   if (changed || deduped.length !== items.length) {
     remapOrphanHomeworkLogs(items, deduped)
     writeJson(HOMEWORK_KEY, deduped)
