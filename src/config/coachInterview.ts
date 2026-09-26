@@ -200,10 +200,6 @@ export const COACH_INTERVIEW: InterviewSection[] = [
           'When an athlete plateaus, what is your process for figuring out what is actually stuck?',
       },
       {
-        id: 'plateau-parent',
-        question: 'What do you tell the parent of an athlete who has been in the same place for a while?',
-      },
-      {
         id: 'plateau-story',
         question: 'Tell me about a plateau that taught you something. What was stuck, and what unlocked it?',
       },
