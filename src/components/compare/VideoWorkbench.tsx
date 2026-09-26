@@ -14,7 +14,6 @@ import { HudCircle, IconHide, IconShow } from './CompareHud'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 import { useFavoritesOptional } from '../../lib/favorites'
 import { reelObjectFit } from '../../lib/reelFit'
-import { noteUserPause, noteUserPlay, registerCenterPlay } from '../../lib/videoCoordinator'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -47,9 +46,9 @@ type Props = {
   bare?: boolean
   /** When set, play only while true (doom-scroll / collage). */
   active?: boolean
-  /** Opt into center-play coordination: only the video closest to the middle
-   *  of the screen plays. The coordinator owns play/pause. */
-  centerPlay?: boolean
+  /** Simple visibility autoplay: play when >=60% on screen, pause otherwise.
+   * Use instead of autoPlay for scrollable lists. */
+  playWhenVisible?: boolean
   /** Transport overlays the picture (hide/show). Defaults on in fullscreen. */
   overlayChrome?: boolean
   /** Start with the transport HUD open. Chalkboard defaults this off. */
@@ -134,7 +133,7 @@ function VideoWorkbenchInner({
   onSaveToDrill,
   onSaveToCollection,
   onError,
-  centerPlay = false,
+  playWhenVisible = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -197,28 +196,32 @@ function VideoWorkbenchInner({
     setPointB((p) => p ?? stored.b)
   }, [stored, loopA, loopB])
 
-  // Center-play coordination: the coordinator owns play/pause.
   useEffect(() => {
-    if (!centerPlay) return
     const v = videoRef.current
     if (!v) return
-    v.muted = true
-    const unregister = registerCenterPlay(v)
-    const onPlay = () => noteUserPlay(v)
-    const onPause = () => noteUserPause(v)
-    v.addEventListener('play', onPlay)
-    v.addEventListener('pause', onPause)
-    return () => {
-      v.removeEventListener('play', onPlay)
-      v.removeEventListener('pause', onPause)
-      unregister()
+    if (playWhenVisible) {
+      // Visibility owns playback; skip the kick autoplay.
+      v.muted = true
+      const wantPlayRef = { current: false }
+      const tryPlay = () => {
+        if (wantPlayRef.current && v.paused) v.play().catch(() => {})
+      }
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          wantPlayRef.current = entry.isIntersecting && entry.intersectionRatio >= 0.6
+          if (wantPlayRef.current) tryPlay()
+          else if (!v.paused) v.pause()
+        },
+        { threshold: [0, 0.6, 1] },
+      )
+      io.observe(v)
+      // If play() fails because the video isn't ready, retry when it can play.
+      v.addEventListener('canplay', tryPlay)
+      return () => {
+        io.disconnect()
+        v.removeEventListener('canplay', tryPlay)
+      }
     }
-  }, [centerPlay, src])
-
-  useEffect(() => {
-    const v = videoRef.current
-    if (!v) return
-    if (centerPlay) return // coordinator owns playback
     const shouldPlay = active === true || (active === undefined && autoPlay)
     if (!shouldPlay) {
       if (active === false) v.pause()

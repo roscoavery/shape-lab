@@ -193,8 +193,8 @@ type Props = {
   smartFit?: boolean
   /** Gym-hosted mp4 so we do not need Instagram to play this clip. */
   savedUrl?: string
-  /** Only the video closest to the middle of the screen plays. */
-  centerPlay?: boolean
+  /** Play when >=60% visible, pause otherwise (for scrollable lists). */
+  playWhenVisible?: boolean
 }
 
 export function InstagramEmbed({
@@ -220,7 +220,7 @@ export function InstagramEmbed({
   fit,
   smartFit,
   savedUrl,
-  centerPlay = false,
+  playWhenVisible = false,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -669,8 +669,8 @@ export function InstagramEmbed({
       <VideoWorkbench
         src={src}
         allowAbLoop
-        autoPlay={active !== false}
-        centerPlay={centerPlay}
+        autoPlay={playWhenVisible ? false : active !== false}
+        playWhenVisible={playWhenVisible}
         fill={fill}
         objectFit={fit ?? (fill ? 'cover' : 'contain')}
         smartFit={smartFit ?? (fill && !fit)}

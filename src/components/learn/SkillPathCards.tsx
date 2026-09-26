@@ -4,7 +4,6 @@
  * Top-down: peak skills first, foundations last.
  */
 import { useEffect, useRef, useState } from 'react'
-import { noteUserPause, noteUserPlay, registerCenterPlay } from '../../lib/videoCoordinator'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -19,7 +18,7 @@ function isLocalVideo(url: string): boolean {
 
 /** Native player for local video files, with A/B loop support. */
 /** Native player for local video files, with A/B loop support.
- * Plays only when closest to the middle of the screen (see videoCoordinator). */
+ * Plays when mostly on screen, pauses when scrolled away. Simple and dumb. */
 function LocalVideo({
   url,
   loopA,
@@ -34,15 +33,23 @@ function LocalVideo({
   useEffect(() => {
     const v = ref.current
     if (!v) return
-    const unregister = registerCenterPlay(v)
-    const onPlay = () => noteUserPlay(v)
-    const onPause = () => noteUserPause(v)
-    v.addEventListener('play', onPlay)
-    v.addEventListener('pause', onPause)
+    const wantPlayRef = { current: false }
+    const tryPlay = () => {
+      if (wantPlayRef.current && v.paused) v.play().catch(() => {})
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        wantPlayRef.current = entry.isIntersecting && entry.intersectionRatio >= 0.6
+        if (wantPlayRef.current) tryPlay()
+        else if (!v.paused) v.pause()
+      },
+      { threshold: [0, 0.6, 1] },
+    )
+    io.observe(v)
+    v.addEventListener('canplay', tryPlay)
     return () => {
-      v.removeEventListener('play', onPlay)
-      v.removeEventListener('pause', onPause)
-      unregister()
+      io.disconnect()
+      v.removeEventListener('canplay', tryPlay)
     }
   }, [url])
 
@@ -207,7 +214,6 @@ function ProofStrip({
 
   const videos = [...baseVideos, ...adminVideos]
   const adminUrls = new Set(adminVideos.map((v) => v.url))
-  if (videos.length === 0) return null
 
   const saveAdminVideos = async (next: ProofVideo[]) => {
     setAdminVideos(next)
@@ -297,7 +303,7 @@ function ProofStrip({
                     <InstagramEmbed
                       url={v.url}
                       compact
-                      centerPlay
+                      playWhenVisible
                       loopA={loopA}
                       loopB={loopB}
                       onAbChange={handleAbChange(v.url)}
@@ -314,7 +320,7 @@ function ProofStrip({
                       compact
                       bare
                       quiet
-                      centerPlay
+                      playWhenVisible
                       loopA={loopA}
                       loopB={loopB}
                     />
