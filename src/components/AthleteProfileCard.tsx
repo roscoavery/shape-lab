@@ -53,7 +53,8 @@ import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
 import { SkillGoalPicker } from './coach/SkillGoalPicker'
-import { SkillPathPreview } from './coach/SkillPathPreview'
+import { GoalPathView } from './coach/GoalPathView'
+import { SKILL_GOAL_COACH_NOTE } from '../lib/skillPaths'
 import { NoteAudiencePicker } from './lesson/NoteAudiencePicker'
 import { noteAudienceLabel, type NoteAudience } from '../lib/noteAudience'
 import { CoachAthleteActivity } from './CoachAthleteActivity'
@@ -340,8 +341,30 @@ export function AthleteProfileCard({
             A long-term hope. Not a request for today.
           </p>
           {athlete.skillGoals && athlete.skillGoals.length > 0 && (
-            <div className="mt-2">
-              <SkillPathPreview goals={athlete.skillGoals} coachView={coach} />
+            <div className="mt-2 space-y-2">
+              {coach && (
+                <p className="text-xs leading-relaxed text-[var(--muted)]">
+                  {SKILL_GOAL_COACH_NOTE}
+                </p>
+              )}
+              {athlete.skillGoals.map((g, idx) => (
+                <GoalPathView
+                  key={g.id}
+                  goal={g}
+                  defaultOpen={idx === 0}
+                  onGoalChange={
+                    onAthleteChange
+                      ? (next) =>
+                          onAthleteChange({
+                            ...athlete,
+                            skillGoals: (athlete.skillGoals ?? []).map((row) =>
+                              row.id === g.id ? next : row,
+                            ),
+                          })
+                      : undefined
+                  }
+                />
+              ))}
             </div>
           )}
           {coach && onAthleteChange && isAthleteProfile(athlete) && (

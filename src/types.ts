@@ -364,6 +364,8 @@ export type AthleteSkillGoal = {
   setAt: string
   source?: 'intake' | 'coach'
   steps?: { id: string; label: string; done?: boolean }[]
+  /** Phase 4: keys of auto-assembled path items the athlete has checked off. */
+  pathDone?: string[]
 }
 
 export type FavoriteColor =
