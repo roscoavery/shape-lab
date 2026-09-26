@@ -77,18 +77,18 @@ function SCurveCard({ card }: { card: ConceptCard }) {
     <div>
       <svg viewBox="0 0 600 180" className="w-full" role="img" aria-label="S-curve of progress">
         <path
-          d="M 20 150 C 120 150, 140 150, 200 140 S 300 60, 380 55 S 520 90, 580 110"
+          d="M 20 150 C 100 150, 140 145, 190 120 C 240 95, 260 60, 320 45 C 380 30, 460 30, 580 35"
           fill="none"
           stroke="var(--accent)"
           strokeWidth="4"
           strokeLinecap="round"
         />
-        <circle cx="110" cy="148" r="7" fill="#8b99a3" />
-        <circle cx="290" cy="95" r="7" fill="#2e7d4f" />
-        <circle cx="480" cy="88" r="7" fill="#d9732b" />
-        <text x="110" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">flat start</text>
-        <text x="290" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">takeoff</text>
-        <text x="480" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">plateau</text>
+        <circle cx="110" cy="148" r="7" fill="#2e7d4f" />
+        <circle cx="280" cy="72" r="7" fill="#2e7d4f" />
+        <circle cx="480" cy="32" r="7" fill="#d9732b" />
+        <text x="110" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">compounding</text>
+        <text x="280" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">takeoff</text>
+        <text x="480" y="172" textAnchor="middle" fontSize="12" fill="currentColor" opacity="0.7">shrinking pocket</text>
       </svg>
       <div className="mt-2 grid gap-3 md:grid-cols-3">
         {d.phases.map((p) => (

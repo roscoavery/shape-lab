@@ -60,19 +60,19 @@ export const CONCEPT_CARDS: ConceptCard[] = [
   {
     id: 's-curve',
     title: 'The S-curve of progress',
-    subtitle: 'Basics compound like interest. At the top, the progression pocket shrinks.',
+    subtitle: 'Progress compounds like interest — exponential growth until the pocket shrinks.',
     kind: 'scurve',
     data: {
       phases: [
         {
           name: 'Compounding',
           color: '#2e7d4f',
-          text: 'Consistent effort plus small wins stacks like compounded interest. The better the basics get, the more progress each rep buys.',
+          text: 'Consistent effort plus small wins stacks like compounded interest. The better the basics get, the more progress each rep buys. Growth is invisible at first.',
         },
         {
           name: 'The takeoff',
           color: '#2e7d4f',
-          text: 'Fundamentals click. Skills that felt impossible start working. Progress feels fast because the foundation was built rep by rep.',
+          text: 'Basics click and progress goes exponential. Skills that felt impossible start working. This is the steep part of the curve.',
         },
         {
           name: 'The shrinking pocket',
