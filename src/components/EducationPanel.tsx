@@ -489,7 +489,7 @@ export function EducationPanel({
 
       {view.kind === 'skillPath' && (
         <PanelErrorBoundary label="Skill path">
-          <SkillPathCards coach={coach} />
+          <SkillPathCards coach={coach} canEdit={persistIgToApp} />
         </PanelErrorBoundary>
       )}
 

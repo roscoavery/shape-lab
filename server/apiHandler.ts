@@ -2,6 +2,8 @@
  * Shared gym API used by Vite middleware (local) and the Vercel function.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { writeFile } from 'node:fs/promises'
+import { join, normalize, sep } from 'node:path'
 import {
   isResolvableVideoUrl,
   cacheResolvedIgMedia,
@@ -122,6 +124,7 @@ import { patchStillTags, stillTagsForViewer } from './stillTags.ts'
 import { handleCalendarApi } from './calendar/apiRoutes.ts'
 
 const API_PATHS = new Set([
+  '/api/admin/video-replace',
   '/api/auth/me',
   '/api/auth/login',
   '/api/auth/logout',
@@ -302,6 +305,60 @@ export async function handleShapeLabApi(
     if (!(await sendIgStillFile(id, res))) {
       sendJson(res, 404, { error: 'Still file not found' })
     }
+    return true
+  }
+  if (path === '/api/admin/video-replace') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const target = url.searchParams.get('target') ?? ''
+    // Only allow replacing files inside public/videos/.
+    const clean = normalize(target).replace(/\\/g, '/')
+    if (!clean.startsWith('/videos/') || clean.includes('..') || clean.endsWith('/')) {
+      sendJson(res, 400, { error: 'Invalid target path' })
+      return true
+    }
+    const ext = clean.slice(clean.lastIndexOf('.')).toLowerCase()
+    if (!['.mp4', '.mov', '.webm'].includes(ext)) {
+      sendJson(res, 400, { error: 'Only mp4, mov, or webm files can be replaced' })
+      return true
+    }
+    const chunks: Buffer[] = []
+    let bytes = 0
+    const MAX_VIDEO = 100 * 1024 * 1024
+    try {
+      for await (const chunk of req) {
+        bytes += chunk.length
+        if (bytes > MAX_VIDEO) {
+          sendJson(res, 413, { error: 'Video too large (max 100MB)' })
+          return true
+        }
+        chunks.push(chunk)
+      }
+    } catch {
+      sendJson(res, 400, { error: 'Failed to read upload' })
+      return true
+    }
+    const data = Buffer.concat(chunks)
+    if (data.length === 0) {
+      sendJson(res, 400, { error: 'Empty upload' })
+      return true
+    }
+    const dest = join(process.cwd(), 'public', clean)
+    // Double-check the resolved path stays inside public/videos.
+    const videosDir = join(process.cwd(), 'public', 'videos') + sep
+    if (!dest.startsWith(videosDir)) {
+      sendJson(res, 400, { error: 'Invalid target path' })
+      return true
+    }
+    try {
+      await writeFile(dest, data)
+    } catch {
+      sendJson(res, 500, { error: 'Could not save the video file' })
+      return true
+    }
+    sendJson(res, 200, { ok: true, path: clean, bytes: data.length })
     return true
   }
   if (path === '/api/persist') {

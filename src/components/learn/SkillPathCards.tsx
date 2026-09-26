@@ -7,6 +7,7 @@ import { useRef, useState } from 'react'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
+import { VideoTrimmer } from './VideoTrimmer'
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -80,10 +81,20 @@ function loadProofLoops(): Record<string, ProofLoop> {
   }
 }
 
-function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolean }) {
+function ProofStrip({
+  evidenceKey,
+  coach,
+  canEdit,
+}: {
+  evidenceKey: string
+  coach: boolean
+  canEdit: boolean
+}) {
   const videos = TECHNIQUE_EVIDENCE[evidenceKey]
   const [loopEditUrl, setLoopEditUrl] = useState<string | null>(null)
   const [overrides, setOverrides] = useState<Record<string, ProofLoop>>(loadProofLoops)
+  const [trimUrl, setTrimUrl] = useState<string | null>(null)
+  const [bustMap, setBustMap] = useState<Record<string, number>>({})
   if (!videos || videos.length === 0) return null
 
   const handleAbChange =
@@ -114,6 +125,8 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
           const loopB = override?.b ?? v.endAt ?? null
           const editing = coach && loopEditUrl === v.url
           const local = isLocalVideo(v.url)
+          const bust = bustMap[v.url]
+          const playUrl = bust ? `${v.url}?t=${bust}` : v.url
           return (
             <div key={v.url} className="w-64 shrink-0">
               {editing && !local ? (
@@ -129,7 +142,7 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
               ) : (
                 <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
                   {local ? (
-                    <LocalVideo url={v.url} loopA={loopA} loopB={loopB} />
+                    <LocalVideo url={playUrl} loopA={loopA} loopB={loopB} />
                   ) : (
                     <InstagramEmbed
                       url={v.url}
@@ -165,15 +178,34 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
                   {editing ? 'Done' : 'Set loop'}
                 </button>
               )}
+              {canEdit && local && (
+                <button
+                  type="button"
+                  onClick={() => setTrimUrl(v.url)}
+                  className="mt-1 ml-2 text-[11px] font-bold text-amber-400"
+                >
+                  Trim
+                </button>
+              )}
             </div>
           )
         })}
       </div>
+      {trimUrl && (
+        <VideoTrimmer
+          src={bustMap[trimUrl] ? `${trimUrl}?t=${bustMap[trimUrl]}` : trimUrl}
+          label={videos.find((v) => v.url === trimUrl)?.who ?? 'Video'}
+          onClose={() => setTrimUrl(null)}
+          onSaved={() => {
+            setBustMap((prev) => ({ ...prev, [trimUrl]: Date.now() }))
+          }}
+        />
+      )}
     </div>
   )
 }
 
-export function SkillPathCards({ coach = false }: { coach?: boolean }) {
+export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boolean; canEdit?: boolean }) {
   return (
     <div className="space-y-8">
       <section>
@@ -220,7 +252,7 @@ export function SkillPathCards({ coach = false }: { coach?: boolean }) {
                     <Label>Ask your coach</Label>
                     <p className="mt-1 text-sm italic">{step.ask}</p>
                   </div>
-                  <ProofStrip evidenceKey={step.id} coach={coach} />
+                  <ProofStrip evidenceKey={step.id} coach={coach} canEdit={canEdit} />
                   {step.ryanNote && (
                     <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
                       Ryan: {step.ryanNote}
@@ -252,7 +284,7 @@ export function SkillPathCards({ coach = false }: { coach?: boolean }) {
               </div>
               <p className="mt-2 text-sm opacity-85">{cue.why}</p>
               <div className="mt-3">
-                <ProofStrip evidenceKey={cue.id} coach={coach} />
+                <ProofStrip evidenceKey={cue.id} coach={coach} canEdit={canEdit} />
               </div>
             </article>
           ))}
