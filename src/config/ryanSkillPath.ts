@@ -59,17 +59,6 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one.',
   },
   {
-    id: 'double-full',
-    track: 'running',
-    skill: 'Double full',
-    needs: [
-      'A strong back full, straight, with time to open up and land',
-      'A front rudi (1.5 twist)',
-    ],
-    canBend: [],
-    ask: 'Ask your coach whether your single full is straight with time to spare at the end. The double needs that time.',
-  },
-  {
     id: 'full',
     track: 'running',
     skill: 'Full twisting layout',
