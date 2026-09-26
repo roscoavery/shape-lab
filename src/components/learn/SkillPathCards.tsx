@@ -425,29 +425,60 @@ export function ProofStrip({
 }
 
 export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boolean; canEdit?: boolean }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const isOpen = (id: string) => showAll || openId === id
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-xl font-extrabold">The skill path, top down</h2>
-        <p className="mt-1 text-sm opacity-80">
-          Built from the top: the peak skills first, then what each one needs
-          underneath it. Everybody starts in a different place. Find where you
-          are and work down to what is missing.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-extrabold">The skill path, top down</h2>
+            <p className="mt-1 text-sm opacity-80">
+              Built from the top: the peak skills first, then what each one needs
+              underneath it. Everybody starts in a different place. Find where you
+              are and work down to what is missing.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (showAll) {
+                setShowAll(false)
+                setOpenId(null)
+              } else {
+                setShowAll(true)
+              }
+            }}
+            className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-bold text-white/80"
+          >
+            {showAll ? 'Hide all' : 'Show all'}
+          </button>
+        </div>
         <div className="mt-4 space-y-4">
           {RYAN_SKILL_PATH.map((step, i) => {
             const color = STEP_COLORS[i % STEP_COLORS.length]
+            const open = isOpen(step.id)
             return (
               <article
                 key={step.id}
                 className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
               >
-                <header
-                  className="px-4 py-3 text-base font-extrabold text-white"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAll(false)
+                    setOpenId((prev) => (prev === step.id ? null : step.id))
+                  }}
+                  className="w-full px-4 py-3 text-left text-base font-extrabold text-white"
                   style={{ backgroundColor: color }}
                 >
-                  {step.skill}
-                </header>
+                  <span className="flex items-center justify-between">
+                    {step.skill}
+                    <span className="text-sm opacity-70">{open ? '−' : '+'}</span>
+                  </span>
+                </button>
+                {open && (
                 <div className="space-y-4 p-4">
                   <div>
                     <Label>Needs</Label>
@@ -478,6 +509,7 @@ export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boo
                     </p>
                   )}
                 </div>
+                )}
               </article>
             )
           })}

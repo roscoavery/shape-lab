@@ -303,11 +303,20 @@ function CardBody({ card }: { card: ConceptCard }) {
   }
 }
 
-function ConceptSection({ card, canEdit }: { card: ConceptCard; canEdit: boolean }) {
-  const [open, setOpen] = useState(false)
+function ConceptSection({
+  card,
+  canEdit,
+  open,
+  onToggle,
+}: {
+  card: ConceptCard
+  canEdit: boolean
+  open: boolean
+  onToggle: () => void
+}) {
   return (
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 sm:p-6">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="w-full text-left">
+      <button type="button" onClick={onToggle} className="w-full text-left">
         <h3 className="text-xl font-black">{card.title}</h3>
         <p className="mt-1 text-sm opacity-70">{card.subtitle}</p>
         <span className="mt-2 inline-block text-sm opacity-50">{open ? '− show less' : '+ open the visual'}</span>
@@ -325,6 +334,9 @@ function ConceptSection({ card, canEdit }: { card: ConceptCard; canEdit: boolean
 }
 
 export function ConceptCards({ canEdit = false }: { canEdit?: boolean }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const isOpen = (id: string) => showAll || openId === id
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="text-center">
@@ -332,9 +344,32 @@ export function ConceptCards({ canEdit = false }: { canEdit?: boolean }) {
         <p className="mt-2 text-sm opacity-70">
           The ideas behind the coaching, each as a picture instead of a paragraph.
         </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (showAll) {
+              setShowAll(false)
+              setOpenId(null)
+            } else {
+              setShowAll(true)
+            }
+          }}
+          className="mt-3 rounded-lg bg-neutral-800 px-4 py-2 text-xs font-bold text-white/80"
+        >
+          {showAll ? 'Hide all' : 'Show all'}
+        </button>
       </div>
       {CONCEPT_CARDS.map((card) => (
-        <ConceptSection key={card.id} card={card} canEdit={canEdit} />
+        <ConceptSection
+          key={card.id}
+          card={card}
+          canEdit={canEdit}
+          open={isOpen(card.id)}
+          onToggle={() => {
+            setShowAll(false)
+            setOpenId((prev) => (prev === card.id ? null : card.id))
+          }}
+        />
       ))}
     </div>
   )

@@ -7,6 +7,8 @@ import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { ProgressionLevels } from '../learn/ProgressionLevels'
+import { ConceptCards } from '../learn/ConceptCards'
 
 type Props = {
   parent: Athlete
@@ -203,6 +205,12 @@ export function ParentEducationDesk() {
         </article>
       )}
     </div>
+      <CollapsibleSection title="The 4 levels of progression" hint="How skills build" defaultOpen={false}>
+        <ProgressionLevels />
+      </CollapsibleSection>
+      <CollapsibleSection title="Coaching concepts" hint="The ideas behind the coaching" defaultOpen={false}>
+        <ConceptCards />
+      </CollapsibleSection>
       <CollapsibleSection title="Nutrition questions" hint="NutritionFacts.org" defaultOpen={false}>
         <NutritionFactsBrowse compact />
       </CollapsibleSection>
