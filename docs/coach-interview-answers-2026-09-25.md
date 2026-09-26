@@ -116,3 +116,8 @@ the most important thing for progress is a relentless pursuit of understanding. 
 this is a mindset that encourages athletes to celebrate the small wins. Not prioritizing focus on leveling up rather than perfecting the skills they have. Perfection before progression does not contradict "progress, not perfection" the two mindsets can be held simultaneously. one is an order of operations, and one is a mindset. We dont skip the prerequisites that still need work and say "progress not perfection"…  and use that as a reason to stop striving to master the basics.
 
 ---
+## one-small-thing (added 2026-09-25 ~20:06, via chat)
+
+This depends on the athlete. I would look at what they need work on and base my answer off of that. Athletes generally can always improve their understanding of a skill by watching references.  Staying on top of some amount of conditioning and building up their hollow hold times, doing some extra work on core exercises or maybe i send them an arch to hollow exercise they can do for their back handsprings. sometimes i send a video that explains how twisting works.. Like most things, the answer is that it depends on the athlete.
+
+---
