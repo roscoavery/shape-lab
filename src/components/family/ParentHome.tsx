@@ -182,9 +182,22 @@ export function ParentEducationDesk() {
           </p>
           <p className="mt-3 text-xs uppercase tracking-wider text-[var(--accent)]">{article.summary}</p>
           <h2 className="mt-2 text-2xl font-semibold">{article.title}</h2>
-          <div className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--text)]">
-            {article.body.map((p) => (
-              <p key={p}>{p}</p>
+          <div className="mt-4 text-sm leading-relaxed text-[var(--text)]">
+            {article.intro.map((p) => (
+              <p key={p} className="mb-3">{p}</p>
+            ))}
+            {article.qa.map((item) => (
+              <div key={item.question} className="mb-5">
+                <p className="border-l-2 border-[var(--accent)] pl-3 text-xs italic leading-relaxed text-[var(--muted)]">
+                  <span className="font-semibold not-italic uppercase tracking-wider text-[var(--accent)]">Question </span>
+                  {item.question}
+                </p>
+                <div className="mt-2 space-y-3">
+                  {item.answer.map((p) => (
+                    <p key={p}>{p}</p>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </article>
