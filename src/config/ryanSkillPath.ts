@@ -173,6 +173,8 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     skill: 'Standing full',
     needs: [
       'A strong standing tuck first',
+      'An open tuck shape',
+      'A back tuck up to a knee-high surface',
       'Cart fulls help build toward this — more power first, then work down to less',
     ],
     canBend: [],
@@ -183,8 +185,8 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     id: 'standing-tuck',
     track: 'standing',
     skill: 'Standing back tuck',
-    needs: ['A tuck shape that opens to a landing with arms up'],
-    canBend: ['The best standing tucks come from properly trained running tucks. Athletes who learned the standing tuck first are the ones who tend to get stuck moving to layouts.'],
+    needs: ['A trampoline back tuck or a running tuck'],
+    canBend: ['Work down from more power to less: trampoline or running tuck, then cartwheel tucks, then the standing tuck. Athletes who learned the standing tuck first are the ones who tend to get stuck moving to layouts.'],
     ask: 'Ask your coach if your running tuck is solid before pouring time into the standing one.',
   },
   {
@@ -204,6 +206,14 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     ask: 'Ask your coach to check your back bend first. No bend, no walkover, no debate.',
   },
   {
+    id: 'cart-dub',
+    track: 'walking',
+    skill: 'Cart double full',
+    needs: ['A strong cart full first'],
+    canBend: [],
+    ask: 'Ask your coach if your cart full has the height and control for a second twist.',
+  },
+  {
     id: 'cart-full',
     track: 'walking',
     skill: 'Cart full',
@@ -211,14 +221,6 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     canBend: [],
     ask: 'Ask your coach whether your cartwheel is clean enough to add a full. Cart fulls are the bridge to standing fulls.',
     ryanNote: 'Walking tumbling lives between running and standing. Cart fulls help with standing fulls — more power first, then work down to less.',
-  },
-  {
-    id: 'cart-dub',
-    track: 'walking',
-    skill: 'Cart double full',
-    needs: ['A strong cart full first'],
-    canBend: [],
-    ask: 'Ask your coach if your cart full has the height and control for a second twist.',
   },
   {
     id: 'cart-tuck',
