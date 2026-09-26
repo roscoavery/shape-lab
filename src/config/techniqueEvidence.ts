@@ -137,11 +137,6 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   full: [
     {
-      who: 'Coach Ryan Williams',
-      url: 'https://www.instagram.com/reel/Cejgj-XvIGK/',
-      watchFor: 'Layout plus arm drop — the same late-twist process Ryan teaches.',
-    },
-    {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DX-Djomu04L/',
       watchFor: 'Athletes waiting to twist before 1 o’clock — late twist in action.',

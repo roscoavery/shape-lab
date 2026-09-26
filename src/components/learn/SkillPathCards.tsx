@@ -78,7 +78,7 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
           const loopB = override?.b ?? v.endAt ?? null
           const editing = coach && loopEditUrl === v.url
           return (
-            <div key={v.url} className="w-40 shrink-0">
+            <div key={v.url} className="w-64 shrink-0">
               {editing ? (
                 <div className="rounded-xl bg-black p-1">
                   <InstagramEmbed
