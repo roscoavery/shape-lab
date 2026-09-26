@@ -180,10 +180,12 @@ function LocalLoopEditor({
 
 export function ProofStrip({
   evidenceKey,
+  matchName,
   coach,
   canEdit,
 }: {
   evidenceKey: string
+  matchName?: string
   coach: boolean
   canEdit: boolean
 }) {
@@ -193,6 +195,8 @@ export function ProofStrip({
   const [overrides, setOverrides] = useState<Record<string, ProofLoop>>(loadProofLoops)
   const [trimUrl, setTrimUrl] = useState<string | null>(null)
   const [bustMap, setBustMap] = useState<Record<string, number>>({})
+  const [refMatches, setRefMatches] = useState<ProofVideo[]>([])
+  const [showRefs, setShowRefs] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [hiddenUrls, setHiddenUrls] = useState<string[]>([])
 
@@ -225,6 +229,43 @@ export function ProofStrip({
   const hiddenSet = new Set(hiddenUrls)
   const videos = [...baseVideos.filter((v) => !hiddenSet.has(v.url)), ...adminVideos]
   const adminUrls = new Set(adminVideos.map((v) => v.url))
+  const pinnedUrls = new Set(videos.map((v) => v.url))
+
+  // Layer 2: auto-match reference library videos whose keywords mention this skill.
+  useEffect(() => {
+    if (!matchName) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const { getCollections } = await import('../../lib/clipStore')
+        const collections = await getCollections()
+        const name = matchName.toLowerCase()
+        const out: ProofVideo[] = []
+        const seen = new Set<string>()
+        for (const col of collections) {
+          for (const item of col.items ?? []) {
+            const url = item.savedUrl || item.url
+            if (!url || seen.has(url) || pinnedUrls.has(url)) continue
+            const kws = (item.keywords ?? []).map((k) => k.toLowerCase())
+            const matched = kws.some((kw) => kw && (kw.includes(name) || name.includes(kw)))
+            if (!matched) continue
+            seen.add(url)
+            out.push({
+              url,
+              who: item.postedBy || col.name || 'Reference library',
+              watchFor: item.name || '',
+            })
+          }
+        }
+        if (!cancelled) setRefMatches(out)
+      } catch {
+        /* IndexedDB unavailable */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [matchName, evidenceKey])
 
   const saveAdminVideos = async (next: ProofVideo[]) => {
     setAdminVideos(next)
@@ -403,6 +444,52 @@ export function ProofStrip({
           )
         })}
       </div>
+      {refMatches.length > 0 && (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowRefs((s) => !s)}
+            className="flex w-full items-center justify-between rounded-lg bg-neutral-800/60 px-3 py-2 text-left"
+          >
+            <span className="text-xs font-bold text-white/80">
+              More from the reference library ({refMatches.length})
+            </span>
+            <span className="text-xs text-white/40">{showRefs ? '▾' : '▸'}</span>
+          </button>
+          {showRefs && (
+            <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
+              {refMatches.map((v) => {
+                const local = isLocalVideo(v.url)
+                return (
+                  <div key={v.url} className="w-48 shrink-0">
+                    <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
+                      {local ? (
+                        <LocalVideo url={v.url} loopA={null} loopB={null} />
+                      ) : (
+                        <InstagramEmbed url={v.url} compact bare quiet playWhenVisible />
+                      )}
+                    </div>
+                    <div className="mt-1 truncate text-xs font-bold">{v.who}</div>
+                    <div className="truncate text-[11px] opacity-70">{v.watchFor}</div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void saveAdminVideos([...adminVideos, v])
+                          setRefMatches((prev) => prev.filter((x) => x.url !== v.url))
+                        }}
+                        className="mt-1 text-[11px] font-bold text-emerald-400"
+                      >
+                        Pin to top
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {trimUrl && (
         <VideoTrimmer
           src={bustMap[trimUrl] ? `${trimUrl}?t=${bustMap[trimUrl]}` : trimUrl}
@@ -502,7 +589,7 @@ export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boo
                     <Label>Ask your coach</Label>
                     <p className="mt-1 text-sm italic">{step.ask}</p>
                   </div>
-                  <ProofStrip evidenceKey={step.id} coach={coach} canEdit={canEdit} />
+                  <ProofStrip evidenceKey={step.id} matchName={step.skill} coach={coach} canEdit={canEdit} />
                   {step.ryanNote && (
                     <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
                       Ryan: {step.ryanNote}
@@ -535,7 +622,7 @@ export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boo
               </div>
               <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
               <div className="mt-3">
-                <ProofStrip evidenceKey={cue.id} coach={coach} canEdit={canEdit} />
+                <ProofStrip evidenceKey={cue.id} matchName={cue.sayThis} coach={coach} canEdit={canEdit} />
               </div>
             </article>
           ))}
