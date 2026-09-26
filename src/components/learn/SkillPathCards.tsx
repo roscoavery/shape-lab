@@ -396,6 +396,7 @@ export function ProofStrip({
                       loopA={loopA}
                       loopB={loopB}
                       fit="cover"
+                      fill
                     />
                   )}
                 </div>
