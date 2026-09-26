@@ -22,6 +22,8 @@ export type HomeworkCatalogItem = {
   trackMode: HomeworkTrackMode
   targetReps?: number
   targetSeconds?: number
+  /** Athlete-facing standard line for two-phase drills, e.g. "Work toward 2:00 holds, then 30 reps". Overrides the default "Work toward Xs per hold" text. */
+  standardLabel?: string
   allowWeight?: boolean
   grips?: boolean
   wristPrep?: boolean
@@ -119,14 +121,15 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     trackMode: 'hold_or_reps',
     audience: 'care',
     targetSeconds: 120,
-    targetReps: 8,
+    targetReps: 30,
+    standardLabel: 'Work toward 2:00 holds, then 30 full-range reps',
     allowWeight: true,
     notes:
-      'Build tissue tolerance without chasing pain. Do not start reps until you can hold 2 minutes with no pain. If you cannot get on the machine, stay off a few days, then ease back in from a slight arch toward a straight body.',
+      'The iso hold standard is 2 minutes before moving to reps. Once you can hold 2 minutes with no flare, start reps — the standard eventually becomes 30 full-range reps. Build tissue tolerance without chasing pain. If you cannot get on the machine, stay off a few days, then ease back in from a slight arch toward a straight body.',
     cues: [
       'Goal: expose the back to what it can handle today, then stop.',
-      'Iso hold first. Two pain-free minutes unlocks slow, tiny-range reps.',
-      'Reps are slow. Minimal range. No bouncing.',
+      'Iso hold first. Two flare-free minutes unlocks slow, full-range reps.',
+      'Reps are slow. No bouncing.',
       'If it hurts, that is information — write it in the journal and do less, not more.',
     ],
   },
@@ -135,11 +138,12 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     name: 'Glute bridges',
     trackMode: 'hold_or_reps',
     audience: 'all',
-    targetSeconds: 30,
-    targetReps: 10,
+    targetSeconds: 60,
+    targetReps: 30,
+    standardLabel: 'Work toward 30 reps, then a 1:00 hold',
     allowWeight: true,
     notes:
-      'Feet planted, ribs quiet, squeeze the glutes to lift. Holds or slow reps. A light weight on the hips is optional. Single-leg is a later spec, not the default.',
+      'Reps come before the iso standard here. Push for 30 reps, then push for a minute hold. Training guide: a 10 to 15-second hold at the top of a bridge is the core stability test — if you can hold it cleanly with no low back arching, no pelvis tilting, and no hamstrings cramping, your glutes are awake and ready for reps. A solid 30-second hold with perfect form is the endurance standard before advanced variations like single-leg bridges or weighted hip thrusts.',
     cues: [
       'Drive through the heels. Do not crank the low back.',
       'Pause at the top of a quality rep.',

@@ -55,6 +55,7 @@ type Row = {
   done: number
   goal: number
   targetSeconds?: number
+  standardLabel?: string
 }
 
 export function AthleteHomeworkGuide({
@@ -73,13 +74,16 @@ export function AthleteHomeworkGuide({
       .map((item) => {
         const hold = isHoldItem(item)
         const autoDef = AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === item.autoKey)
+        // The card shows the current standard, not a stale value baked into the item.
+        const cat = item.catalogId ? getCatalogItem(item.catalogId) : null
         return {
           item,
           label: friendlyHomeworkLabel(item),
           hold,
           done: hold ? sessionsThisWeek(logs, item.id) : 0,
           goal: hold ? WEEKLY_HOLD_GOAL : 0,
-          targetSeconds: autoDef?.targetSeconds ?? item.targetSeconds,
+          targetSeconds: autoDef?.targetSeconds ?? cat?.targetSeconds ?? item.targetSeconds,
+          standardLabel: cat?.standardLabel,
         }
       })
       .sort((a, b) => {
@@ -111,7 +115,9 @@ export function AthleteHomeworkGuide({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-[var(--text)]">{row.label}</p>
-                  {row.targetSeconds ? (
+                  {row.standardLabel ? (
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">{row.standardLabel}</p>
+                  ) : row.targetSeconds ? (
                     <p className="mt-0.5 text-xs text-[var(--muted)]">
                       Work toward {row.targetSeconds}s per hold
                     </p>

@@ -415,23 +415,23 @@ export const AUTO_HOMEWORK_DEFS: {
   {
     autoKey: 'superman',
     shapeId: 'superman',
-    targetSeconds: 30,
+    targetSeconds: 60,
     notes:
-      'Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength. Work 30s toward a minute.',
+      'Chin stays up with straight arms behind the ears. Straight knees off of the ground. Feet and ankles together. Open-shoulder angle; posterior-chain strength. Work toward a full minute.',
   },
   {
     autoKey: 'side_plank',
     shapeId: 'side_plank',
-    targetSeconds: 30,
+    targetSeconds: 60,
     notes:
-      'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Work 30s toward a minute.',
+      'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Guide: beginner 15–30s per side, intermediate 30–45s, advanced 45–60s, elite 60s+.',
   },
   {
     autoKey: 'wall_handstand',
     shapeId: 'wall_handstand',
-    targetSeconds: 30,
+    targetSeconds: 60,
     notes:
-      'Wall handstand: walk feet up chest-to-wall (preferred) or kick toward the wall. Same body standards as freestanding.',
+      'Wall handstand: walk feet up chest-to-wall (preferred) or kick toward the wall. Same body standards as freestanding. Work toward a full minute.',
   },
 ]
 
@@ -615,7 +615,6 @@ export function ensureAutoHomework(athleteId: string): HomeworkItem[] {
   }
   for (const item of next) {
     if (item.source !== 'auto') continue
-    if (item.autoKey !== 'hollow' && item.autoKey !== 'superman') continue
     const def = AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === item.autoKey)
     if (def && item.notes !== def.notes) {
       item.notes = def.notes
