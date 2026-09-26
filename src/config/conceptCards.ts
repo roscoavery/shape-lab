@@ -108,7 +108,7 @@ export const CONCEPT_CARDS: ConceptCard[] = [
         },
       ],
       takeaway:
-        'Landing it once or even 3 times should be celebrated but does not equal having the skill.',
+        'Landing a skill 3 times in one practice does not ensure permanent acquisition or indicate mastery.',
     },
   },
   {
@@ -134,27 +134,27 @@ export const CONCEPT_CARDS: ConceptCard[] = [
   {
     id: 'five-vs-twenty',
     title: '5 clean reps vs 20 thrown reps',
-    subtitle: 'Reps are not equal. Quality writes the pattern; quantity writes whatever you repeated.',
+    subtitle: 'Practice doesn\u2019t make perfect. Perfect practice makes perfect.',
     kind: 'versus',
     data: {
       left: {
-        name: '5 clean reps',
+        name: '5 clean, intentional reps',
         color: '#2e7d4f',
         points: [
-          'Every rep reinforces the right shape',
-          'Builds the pattern the skill needs',
-          'Athlete leaves better than they arrived',
+          'Breaks the skill down in class',
+          'Every rep is intentional',
+          'Builds habits that serve the athlete',
           'Slow today, fast in three months',
         ],
       },
       right: {
-        name: '20 thrown reps',
+        name: '15-20 thrown reps',
         color: '#c93a3a',
         points: [
-          'Every rep reinforces the wrong shape',
-          'Builds a pattern that must be unlearned',
-          'Athlete leaves tired, not better',
-          'Fast today, stuck in six months',
+          'Focused on getting it alone',
+          'Repeats the wrong motion over and over',
+          'Builds habits that don\u2019t serve them',
+          'Takes longer to correct than to teach right the first time',
         ],
       },
       takeaway: 'Do not count reps. Make reps count.',
@@ -172,7 +172,8 @@ export const CONCEPT_CARDS: ConceptCard[] = [
         name: 'Rushing looks fast',
         color: '#c93a3a',
         points: [
-          'Skip the round off, go straight to the tuck',
+          'Skip the series, straight to tucks',
+          'Skip the round off, go straight to handsprings',
           'New skill this month',
           'Stuck on the series for a year',
           'Relearn the basics you skipped, now with bad habits',
