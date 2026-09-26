@@ -22,7 +22,7 @@ type Props = {
   clip: ClipToCopy
   editor: OrganizeEditor
   gymAdmin?: boolean
-  variant?: 'row' | 'feed' | 'reel'
+  variant?: 'row' | 'feed' | 'reel' | 'icon'
   onCopied?: (message: string) => void
 }
 
@@ -135,11 +135,13 @@ export function ClipOrganizeMenu({
   }
 
   const btn =
-    variant === 'reel'
-      ? 'rounded-full bg-white/14 px-3 py-1.5 text-[11px] font-semibold text-white'
-      : variant === 'feed'
-        ? 'rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white'
-        : 'rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
+    variant === 'icon'
+      ? 'flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent)] hover:bg-white/10'
+      : variant === 'reel'
+        ? 'rounded-full bg-white/14 px-3 py-1.5 text-[11px] font-semibold text-white'
+        : variant === 'feed'
+          ? 'rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white'
+          : 'rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]'
 
   const lockTitle = locked
     ? 'Unlock a coach profile to add this clip to a collection or collage.'
@@ -261,16 +263,19 @@ export function ClipOrganizeMenu({
     <div className="relative shrink-0">
       <div
         className={`flex ${
-          variant === 'reel'
-            ? 'flex-col items-stretch gap-2'
-            : variant === 'feed'
-              ? 'flex-wrap items-center gap-2'
-              : 'flex-wrap items-center gap-0.5'
+          variant === 'icon'
+            ? 'items-center gap-1'
+            : variant === 'reel'
+              ? 'flex-col items-stretch gap-2'
+              : variant === 'feed'
+                ? 'flex-wrap items-center gap-2'
+                : 'flex-wrap items-center gap-0.5'
         }`}
       >
         <button
           type="button"
           title={lockTitle ?? 'Copy this clip into a collection you can edit'}
+          aria-label={lockTitle ?? 'Save to a collection'}
           disabled={locked && variant === 'row'}
           onClick={(e) => {
             e.stopPropagation()
@@ -283,12 +288,13 @@ export function ClipOrganizeMenu({
           }}
           className={btn}
         >
-          {variant === 'feed' ? 'Add to collection' : 'Collect'}
+          {variant === 'icon' ? <BookmarkIcon /> : variant === 'feed' ? 'Add to collection' : 'Collect'}
         </button>
         {clip.url ? (
           <button
             type="button"
             title={lockTitle ?? 'Put this clip on a class collage'}
+            aria-label={lockTitle ?? 'Add to a class collage'}
             disabled={locked && variant === 'row'}
             onClick={(e) => {
               e.stopPropagation()
@@ -301,11 +307,32 @@ export function ClipOrganizeMenu({
             }}
             className={btn}
           >
-            {variant === 'feed' ? 'Add to collage' : 'Collage'}
+            {variant === 'icon' ? <CollageIcon /> : variant === 'feed' ? 'Add to collage' : 'Collage'}
           </button>
         ) : null}
       </div>
       {sheet}
     </div>
+  )
+}
+
+/** Instagram-style save/bookmark icon. */
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.2L5 21V4a1 1 0 0 1 1-1z" />
+    </svg>
+  )
+}
+
+/** Collage icon: 2x2 grid with a plus in the last cell. */
+function CollageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1.5" />
+      <path d="M17 13.5v7M13.5 17h7" />
+    </svg>
   )
 }

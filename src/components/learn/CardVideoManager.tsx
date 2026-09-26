@@ -151,7 +151,7 @@ export function AddCardVideoModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-neutral-900 p-4 sm:rounded-2xl"
+        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl bg-neutral-900 p-4 [-webkit-overflow-scrolling:touch] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -332,7 +332,7 @@ export function AddToSkillCardModal({
           </div>
         ) : (
           <>
-            <div className="mx-auto mb-3 aspect-[9/16] max-w-[200px] overflow-hidden rounded-xl bg-black">
+            <div className="mx-auto mb-3 aspect-[9/16] max-w-[120px] overflow-hidden rounded-xl bg-black">
               {local ? (
                 <video src={video.url} controls playsInline preload="metadata" className="h-full w-full object-contain" />
               ) : (

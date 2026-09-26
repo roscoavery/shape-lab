@@ -306,7 +306,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                       }
                     />
                     <ClipOrganizeMenu
-                    variant="feed"
+                    variant="icon"
                     clip={{
                       name: clip.name,
                       url: clip.url,
