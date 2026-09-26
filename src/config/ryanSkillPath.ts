@@ -29,13 +29,12 @@ export interface SkillPathStep {
 
 export const RYAN_SKILL_PATH: SkillPathStep[] = [
   {
-    id: 'double-full',
+    id: 'double-back',
     track: 'running',
-    skill: 'Double full',
+    skill: 'Double back',
     needs: [
       'A back tuck high enough that their back reaches shoulder/head height (a building block, not a listed skill)',
       'The test: over-rotate that tuck to their back on a shoulder-level mat. Shoulder level alone is not always enough.',
-      'A high and straight full with time to open and land',
     ],
     canBend: [
       'A back 1.5 and a front 1.5 help. At least a front 1.5 goes a super long way.',
@@ -43,6 +42,17 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     ask: 'Ask your coach whether your back tuck is high enough to over-rotate to your back on something at shoulder level. If not, the double is not next.',
     ryanNote:
       'Increase rotation speed with a cowboy tuck, knees apart. When first trying it, do not trust your instinct. Over-rotating is way better than under-rotating. On the first attempts you will think you know where you are and want to let out and land. Your instinct is probably wrong. If you let out early you will under-rotate and could neck it. Stay in it and try to over-flip the first one even when you think you have done two flips.',
+  },
+  {
+    id: 'double-full',
+    track: 'running',
+    skill: 'Double full',
+    needs: [
+      'A high and straight full with time to open and land',
+      'A front rudi (1.5 twist)',
+    ],
+    canBend: [],
+    ask: 'Ask your coach whether your single full is straight with time to spare at the end. The double needs that time.',
   },
   {
     id: 'triple-full',
