@@ -52,6 +52,7 @@ Anything marked "—" merged cleanly with no judgment calls.
 - Guide steps: 21 → all mapped above
 - Added per Ryan 2026-09-26 (no guide card yet, placed near relatives): front tuck, front layout, side aerial, front aerial, back aerial
 - Added per Ryan 2026-09-26 (aerial prerequisites): cartwheel, one-arm cartwheel, dive cartwheel, back handspring step out, back 1.5
+- Added in Phase 3 (prerequisite of front layout per Ryan 2026-09-26): front pike
 - Punch front merged into front tuck (they are the same skill)
 
 ## Prerequisite relationships (captured 2026-09-26, to be structured in Phase 3)

@@ -5,6 +5,15 @@
 
 import { createId } from './storage'
 import { gymWriteFetch } from './gymWritePace'
+import {
+  clearRegistryOverrides,
+  getRegistrySkill,
+  matchRegistrySkill,
+  setRegistryOverride,
+  type RegistryOverride,
+  type UnifiedSkill,
+  type UnifiedSkillTrack,
+} from './skillRegistry'
 import { labelsMatch, skillKey, type SkillGoalChoice } from '../config/skillGoalCatalog'
 import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS } from '../config/skillPathSeed'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
@@ -31,6 +40,17 @@ export type SkillDef = {
   createdAt: string
   updatedAt: string
   shipped?: boolean
+  /**
+   * Phase 3: device-edited guide prose, merged over the unified registry seed
+   * at read time via syncRegistryOverrides(). Ryan edits these in the skill
+   * editor; the repo seed stays the canonical source until edited here.
+   */
+  guideNeeds?: string[]
+  canBend?: string[]
+  ask?: string
+  ryanNote?: string
+  /** Phase 3: device-edited track override for a registry skill. */
+  track?: UnifiedSkillTrack
 }
 
 export type SkillNeed = {
@@ -151,6 +171,7 @@ function read(): SkillPathFile {
 function write(file: SkillPathFile) {
   const next = { ...file, exportedAt: new Date().toISOString() }
   localStorage.setItem(KEY, JSON.stringify(next))
+  syncRegistryOverrides()
   for (const cb of listeners) cb()
   void gymWriteFetch('/api/skill-paths', {
     method: 'PUT',
@@ -158,6 +179,35 @@ function write(file: SkillPathFile) {
     body: JSON.stringify(next),
   }).catch(() => {})
 }
+
+/**
+ * Phase 3: push device-edited fields (aliases, track, guide prose) for
+ * registry skills into the unified registry, so the guide cards, picker,
+ * and search see Ryan's edits without any caller changing. Reads the raw
+ * device file only — shipped seed rows must never override the registry,
+ * since the registry supersedes them.
+ */
+export function syncRegistryOverrides(): void {
+  try {
+    clearRegistryOverrides()
+    for (const s of readRaw().skills) {
+      if (!s?.id || !getRegistrySkill(s.id)) continue
+      const o: RegistryOverride = {}
+      if (s.aliases !== undefined) o.aliases = s.aliases
+      if (s.track !== undefined) o.track = s.track
+      if (s.guideNeeds !== undefined) o.guideNeeds = s.guideNeeds
+      if (s.canBend !== undefined) o.canBend = s.canBend
+      if (s.ask !== undefined) o.ask = s.ask
+      if (s.ryanNote !== undefined) o.ryanNote = s.ryanNote
+      if (Object.keys(o).length > 0) setRegistryOverride(s.id, o)
+    }
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+// Prime the registry with any device edits saved by earlier sessions.
+syncRegistryOverrides()
 
 export function subscribeSkillPaths(cb: () => void): () => void {
   listeners.add(cb)
@@ -175,6 +225,65 @@ export function listSkills(): SkillDef[] {
 export function getSkill(id: string | null | undefined): SkillDef | null {
   if (!id) return null
   return read().skills.find((s) => s.id === id) ?? null
+}
+
+/**
+ * Phase 3: the editor's view of one skill. `registry` is the unified
+ * record (with device overrides merged); `local` is the device SkillDef
+ * row carrying workWhere/surfaces/powerDown/coach note, if any.
+ */
+export type EditableSkill = {
+  registry: UnifiedSkill
+  local: SkillDef | null
+  needs: SkillNeed[]
+  conditioning: ConditioningNeed[]
+}
+
+export function getEditableSkill(id: string | null | undefined): EditableSkill | null {
+  const registry = getRegistrySkill(id)
+  if (!registry) return null
+  return {
+    registry,
+    local: getSkill(registry.id),
+    needs: needsForSkill(registry.id),
+    conditioning: conditioningForSkill(registry.id),
+  }
+}
+
+/**
+ * Phase 3: drop the device's local edits for a registry skill (aliases,
+ * track, guide prose, workWhere…) without touching its needs or
+ * conditioning, and without tombstoning the registry id. The skill falls
+ * back to the repo seed.
+ */
+export function clearSkillEdits(id: string): void {
+  const file = readRaw()
+  if (!file.skills.some((s) => s.id === id)) return
+  write({ ...file, skills: file.skills.filter((s) => s.id !== id) })
+}
+
+/**
+ * Phase 3: link an unmatched athlete-typed hope to a registry skill by
+ * stamping the matching goals' skillId. Additive only — goals that
+ * already resolve are untouched. Returns a new athlete array; the caller
+ * persists it (saveAthletes).
+ */
+export function linkHopeToSkill(
+  hopeKey: string,
+  skillId: string,
+  athletes: Athlete[],
+): Athlete[] {
+  if (!hopeKey || !getRegistrySkill(skillId)) return athletes
+  return athletes.map((a) => {
+    if (!a || !Array.isArray(a.skillGoals) || a.skillGoals.length === 0) return a
+    let changed = false
+    const skillGoals = a.skillGoals.map((g) => {
+      if (!g || g.skillId || skillKey(g.label ?? '') !== hopeKey) return g
+      changed = true
+      return { ...g, skillId }
+    })
+    return changed ? { ...a, skillGoals } : a
+  })
 }
 
 export function surfaceLabel(id: TrainingSurface | null | undefined): string {
@@ -232,7 +341,14 @@ export function conditioningForSkill(skillId: string): ConditioningNeed[] {
 
 export function needLabel(need: SkillNeed): string {
   if (need.label?.trim()) return need.label.trim()
-  return getSkill(need.needSkillId)?.name ?? 'Untitled piece'
+  if (need.needSkillId) {
+    return (
+      getRegistrySkill(need.needSkillId)?.name ??
+      getSkill(need.needSkillId)?.name ??
+      'Untitled piece'
+    )
+  }
+  return 'Untitled piece'
 }
 
 export function saveSkill(input: {
@@ -244,19 +360,31 @@ export function saveSkill(input: {
   surfaces?: TrainingSurface[]
   powerDown?: PowerDownStep[]
   workWhere?: string[]
+  guideNeeds?: string[]
+  canBend?: string[]
+  ask?: string
+  ryanNote?: string
+  track?: UnifiedSkillTrack
 }): SkillDef {
   const file = readRaw()
   const now = new Date().toISOString()
   const existing = input.id ? file.skills.find((s) => s.id === input.id) : null
+  const cleanList = (xs: string[] | undefined) =>
+    xs?.map((a) => a.trim()).filter(Boolean)
   const row: SkillDef = {
     id: existing?.id ?? input.id ?? createId('skl'),
     name: input.name.trim(),
-    aliases: input.aliases?.map((a) => a.trim()).filter(Boolean),
-    coachId: input.coachId,
-    note: input.note?.trim() || undefined,
-    surfaces: input.surfaces,
-    powerDown: input.powerDown,
+    aliases: input.aliases !== undefined ? cleanList(input.aliases) : existing?.aliases,
+    coachId: input.coachId ?? existing?.coachId,
+    note: input.note !== undefined ? input.note.trim() || undefined : existing?.note,
+    surfaces: input.surfaces ?? existing?.surfaces,
+    powerDown: input.powerDown ?? existing?.powerDown,
     workWhere: input.workWhere ?? existing?.workWhere,
+    guideNeeds: input.guideNeeds !== undefined ? cleanList(input.guideNeeds) : existing?.guideNeeds,
+    canBend: input.canBend !== undefined ? cleanList(input.canBend) : existing?.canBend,
+    ask: input.ask !== undefined ? input.ask.trim() || undefined : existing?.ask,
+    ryanNote: input.ryanNote !== undefined ? input.ryanNote.trim() || undefined : existing?.ryanNote,
+    track: input.track ?? existing?.track,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     shipped: existing?.shipped,
@@ -342,8 +470,52 @@ export function goalLine(goal: AthleteSkillGoal): string {
   return surface ? `${goal.label} · ${surface}` : goal.label
 }
 
-export function resolveGoalSkill(goal: AthleteSkillGoal): SkillDef | null {
-  return getSkill(goal.skillId) ?? matchSkillExact(goal.label)
+/**
+ * Phase 3: what a goal resolves to for display. Prefers the unified
+ * registry (so Phase-1-stamped skillIds resolve even with no local
+ * SkillDef row), falls back to the legacy pathway store, then to an
+ * exact label match. Callers only need id/name plus the coach-facing
+ * SkillDef fields.
+ */
+export type ResolvedGoalSkill = {
+  id: string
+  name: string
+  note?: string
+  workWhere?: string[]
+  powerDown?: PowerDownStep[]
+  surfaces?: TrainingSurface[]
+}
+
+export function resolveGoalSkill(goal: AthleteSkillGoal): ResolvedGoalSkill | null {
+  const id = goal.skillId?.trim()
+  if (id) {
+    const reg = getRegistrySkill(id)
+    const def = getSkill(id)
+    if (reg || def) {
+      return {
+        id,
+        name: reg?.name ?? def?.name ?? goal.label,
+        note: def?.note,
+        workWhere: def?.workWhere,
+        powerDown: def?.powerDown,
+        surfaces: def?.surfaces,
+      }
+    }
+  }
+  const def = matchSkillExact(goal.label)
+  if (def) {
+    return {
+      id: def.id,
+      name: def.name,
+      note: def.note,
+      workWhere: def.workWhere,
+      powerDown: def.powerDown,
+      surfaces: def.surfaces,
+    }
+  }
+  const reg = matchRegistrySkill(goal.label)
+  if (reg) return { id: reg.id, name: reg.name }
+  return null
 }
 
 export type ListedAthleteGoal = {

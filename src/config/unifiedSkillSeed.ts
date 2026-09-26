@@ -538,6 +538,14 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "running"
   },
   {
+    "id": "skl_front_pike",
+    "name": "Front pike",
+    "aliases": [
+      "front pike"
+    ],
+    "track": "running"
+  },
+  {
     "id": "skl_side_aerial",
     "name": "Side aerial",
     "aliases": [
