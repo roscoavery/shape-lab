@@ -128,3 +128,7 @@ This depends on the athlete and the skill level and class that they are in. Not 
 this question could maybe get more tailored to skill specific classes but then again we have a skill pathway for that..
 
 ---
+
+## delayed-move-up (saved 20:17 CDT, commit pending)
+
+Coach lain said this one best.. "sometimes where an athlete wants to be is not where an athlete needs to be."  for teams, we want to put the aces in their places.  for progression, we need to be in a class best suited for where they are in their tumbling journey. For this to not be troubling for athletes and parents, its helpful to be reminded that all we can do is what is within our control. We cant control how fast we pick up on the techniques given to us by our coaches. Coaches cant control how fast an athlete progresses. We just stay true to the process, put our best foot forward(not literally.. for my right handed left tumblers) and do everything within our control to maximize what we take from practice with effort, pursuit of understanding, celebrating progress and staying patient.
