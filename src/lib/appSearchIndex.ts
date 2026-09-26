@@ -222,7 +222,7 @@ export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] 
     })
   }
   // Popular homework drills — tap to open.
-  const hwNames = ['Candlestick drills', 'Hollow hold', 'Handstand forward roll', 'Bridge push-ups', 'V-ups']
+  const hwNames = ['Candlestick drills', 'Hollow', 'Wall handstand', 'Bridge push-ups', 'V-ups']
   for (const item of HOMEWORK_CATALOG) {
     if (!hwNames.some((n) => item.name.toLowerCase().includes(n.toLowerCase()))) continue
     out.push({
