@@ -22,6 +22,7 @@ import { FloorKioskBar } from './components/FloorKioskBar'
 import { AuthLoginScreen } from './components/AuthLoginScreen'
 import { GymBootScreen } from './components/GymBootScreen'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from './lib/holdBuild'
+import { stashMobileSearchJump } from './lib/mobileSearchNav'
 import { applyAppTheme, FAVORITE_COLORS } from './lib/profileTheme'
 import { AppNav } from './components/AppNav'
 import { IgMobileShell } from './components/mobile/IgMobileShell'
@@ -1129,6 +1130,10 @@ export default function App() {
                   setNamesQuizOpen(true)
                 }}
                 onOpenSkillPaths={() => setSkillPathsOpen(true)}
+                onOpenSkillPathGuide={() => {
+                  stashMobileSearchJump({ kind: 'skillPath' })
+                  goTab('learn')
+                }}
                 classSessionOpen={classSessionOpen}
                 onViewProfile={openProfile}
                 onAthletesChange={setAthleteRoster}

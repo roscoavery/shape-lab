@@ -109,6 +109,7 @@ type Props = {
   classSessionOpen?: boolean
   onOpenNamesTest?: (groupId?: string) => void
   onOpenSkillPaths?: () => void
+  onOpenSkillPathGuide?: () => void
   /** When false, this desk is a coach login — not gym-admin. */
   gymAdmin?: boolean
 }
@@ -128,6 +129,7 @@ export function HomeDashboard({
   classSessionOpen = false,
   onOpenNamesTest,
   onOpenSkillPaths,
+  onOpenSkillPathGuide,
   gymAdmin: gymAdminProp,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
@@ -689,6 +691,18 @@ export function HomeDashboard({
             </span>
           </button>
         </div>
+        )}
+        {onOpenSkillPathGuide && (
+          <button
+            type="button"
+            onClick={onOpenSkillPathGuide}
+            className="sl-skill-glow sl-left mt-2 px-4 py-4 w-full"
+          >
+            <span className="block text-sm font-bold text-white text-left">Skill path guide</span>
+            <span className="text-xs text-white/70 text-left block">
+              What each skill needs, what can bend, what to ask your coach
+            </span>
+          </button>
         )}
         {!activeGroup && (
         <div className="mt-2 grid grid-cols-2 gap-2">
