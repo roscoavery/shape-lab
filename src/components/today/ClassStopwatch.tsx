@@ -20,7 +20,8 @@ import { makeClassExtra } from '../../lib/classExercises'
 import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { formatSeconds } from '../../hooks/useHoldTimer'
-import { previousHoldToBeat } from '../../lib/holdBest'
+import { holdLastAndBest } from '../../lib/holdBest'
+import { AUTO_HOMEWORK_DEFS } from '../../lib/storage'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { InfoHint } from '../ui/InfoHint'
 import { IconMark } from '../ui/IconAction'
@@ -953,14 +954,25 @@ export function ClassStopwatch({
             onReset={reset}
             beat={
               selected[0]
-                ? previousHoldToBeat(
-                    selected[0],
-                    extraHoldId
-                      ? (activeExtra(extraHoldId)?.label ?? 'hold')
+                ? (() => {
+                    const extra = extraHoldId ? activeExtra(extraHoldId) : undefined
+                    const label = extra
+                      ? (extra.label ?? 'hold')
                       : holdId === 'side_plank'
                         ? `${CLASS_HOLD_DRILLS.find((d) => d.id === holdId)?.label ?? 'Side plank'} · ${side}`
-                        : (CLASS_HOLD_DRILLS.find((d) => d.id === holdId)?.label ?? 'hold'),
-                  )
+                        : (CLASS_HOLD_DRILLS.find((d) => d.id === holdId)?.label ?? 'hold')
+                    const shapeId = extra
+                      ? extra.kind === 'shape'
+                        ? (extra.refId ?? null)
+                        : null
+                      : (AUTO_HOMEWORK_DEFS.find((d) => d.autoKey === holdId)?.shapeId ?? null)
+                    return holdLastAndBest(selected[0], {
+                      shapeId,
+                      label,
+                      side: holdId === 'side_plank' && !extra ? side : null,
+                      excludeClassMeetingId: meeting?.id,
+                    })
+                  })()
                 : null
             }
           />
@@ -1505,13 +1517,20 @@ function HoldClock({
   onStart: () => void
   onStop: () => void
   onReset: () => void
-  beat?: { seconds: number; when: string } | null
+  beat?: { last: { seconds: number; when: string } | null; best: { seconds: number; when: string } | null } | null
 }) {
   return (
     <>
-      {beat ? (
+      {beat?.last ? (
         <p className="text-center text-xs font-semibold uppercase tracking-wider text-[var(--warn)]">
-          Beat last · {formatSeconds(beat.seconds)}
+          Beat last · {formatSeconds(beat.last.seconds)}
+          {beat.best && beat.best.seconds > beat.last.seconds + 0.05
+            ? ` · PR ${formatSeconds(beat.best.seconds)}`
+            : ''}
+        </p>
+      ) : beat?.best ? (
+        <p className="text-center text-xs font-semibold uppercase tracking-wider text-[var(--warn)]">
+          PR · {formatSeconds(beat.best.seconds)}
         </p>
       ) : (
         <p className="text-center text-xs text-white/45">

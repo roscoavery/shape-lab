@@ -397,6 +397,7 @@ export function ProofStrip({
                       loopB={loopB}
                       fit="contain"
                       fill
+                      posterFirst
                     />
                   )}
                 </div>
@@ -535,6 +536,45 @@ export function SkillPathCards({
     }, 150)
     return () => clearTimeout(t)
   }, [focusSkillId])
+
+  // Cue up proof videos while the guide is open: resolve the Instagram
+  // manifests in the background (no video bytes yet) so opening a card
+  // starts playback fast. YouTube / TikTok load on tap; local files need nothing.
+  useEffect(() => {
+    let cancelled = false
+    const warm = () => {
+      if (cancelled) return
+      void (async () => {
+        try {
+          const { prefetchInstagram } = await import('../../lib/igCache')
+          const { socialPlatform } = await import('../../lib/socialUrls')
+          const seen = new Set<string>()
+          const urls: string[] = []
+          for (const step of RYAN_SKILL_PATH) {
+            for (const v of TECHNIQUE_EVIDENCE[step.id] ?? []) {
+              if (!v.url || seen.has(v.url)) continue
+              seen.add(v.url)
+              if (v.url.startsWith('/')) continue
+              if (socialPlatform(v.url) !== 'instagram') continue
+              urls.push(v.url)
+            }
+          }
+          for (const url of urls) {
+            if (cancelled) break
+            await prefetchInstagram(url, url, { download: false }).catch(() => {})
+          }
+        } catch {
+          /* warmup only — the player shows the real error if a clip fails */
+        }
+      })()
+    }
+    // Let the guide paint first; warm during idle time.
+    const t = setTimeout(warm, 1200)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [])
   return (
     <div className="space-y-8">
       <section>

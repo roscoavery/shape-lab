@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
     instagramSlideIndex,
   isTikTokUrl,
@@ -17,6 +18,7 @@ import {
   socialProfileUrl,
   urlWithIgSlide,
   youtubeEmbedSrc,
+  youtubeVideoId,
 } from '../../lib/socialUrls'
 import {
   asPlayableBlob,
@@ -195,6 +197,12 @@ type Props = {
   savedUrl?: string
   /** Play when >=60% visible, pause otherwise (for scrollable lists). */
   playWhenVisible?: boolean
+  /**
+   * YouTube / TikTok: render a tap-to-play poster instead of a live iframe.
+   * Tapping opens the video in a dismissable fullscreen overlay. Keeps heavy
+   * third-party embeds from blowing up inline layouts (notably on iPad).
+   */
+  posterFirst?: boolean
 }
 
 export function InstagramEmbed({
@@ -221,6 +229,7 @@ export function InstagramEmbed({
   smartFit,
   savedUrl,
   playWhenVisible = false,
+  posterFirst = false,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -237,6 +246,7 @@ export function InstagramEmbed({
   const [saved, setSaved] = useState(false)
   const [quotaWarn, setQuotaWarn] = useState(false)
   const [retry, setRetry] = useState(0)
+  const [expandedExternal, setExpandedExternal] = useState(false)
   const retriedRef = useRef(false)
   const [resolvedBy, setResolvedBy] = useState<string | null>(null)
   const onPostedByRef = useRef(onPostedBy)
@@ -254,6 +264,7 @@ export function InstagramEmbed({
     setSlide(instagramSlideIndex(url))
     retriedRef.current = false
     skipHostedRef.current = false
+    setExpandedExternal(false)
   }, [url])
 
   useEffect(() => {
@@ -552,6 +563,34 @@ export function InstagramEmbed({
   // resolving needed, and they work on iOS where scraping often fails.
   const ytSrc = youtubeEmbedSrc(url)
   if (ytSrc) {
+    if (posterFirst) {
+      return (
+        <>
+          <ExternalPoster
+            platform="youtube"
+            thumbnailUrl={
+              youtubeVideoId(url) ? `https://i.ytimg.com/vi/${youtubeVideoId(url)}/hqdefault.jpg` : null
+            }
+            fill={fill}
+            onPlay={() => setExpandedExternal(true)}
+          />
+          {expandedExternal &&
+            typeof document !== 'undefined' &&
+            createPortal(
+              <ExternalOverlay title="YouTube video" onClose={() => setExpandedExternal(false)}>
+                <iframe
+                  src={ytSrc}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  title="YouTube video"
+                />
+              </ExternalOverlay>,
+              document.body,
+            )}
+        </>
+      )
+    }
     return (
       <div className={fill ? 'h-full min-h-0 bg-black' : 'relative aspect-video w-full overflow-hidden rounded-lg bg-black'}>
         <iframe
@@ -591,6 +630,32 @@ export function InstagramEmbed({
   if ((error || !src) && !src) {
     // TikTok resolving often fails on iOS — fall back to TikTok's own embed.
     if (ttSrc) {
+      if (posterFirst) {
+        return (
+          <>
+            <ExternalPoster
+              platform="tiktok"
+              thumbnailUrl={null}
+              fill={fill}
+              onPlay={() => setExpandedExternal(true)}
+            />
+            {expandedExternal &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <ExternalOverlay title="TikTok video" onClose={() => setExpandedExternal(false)}>
+                  <iframe
+                    src={ttSrc}
+                    className="h-full w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    title="TikTok video"
+                  />
+                </ExternalOverlay>,
+                document.body,
+              )}
+          </>
+        )
+      }
       return (
         <div className={fill ? 'h-full min-h-0 bg-black' : 'relative aspect-[9/16] w-full overflow-hidden rounded-lg bg-black'}>
           <iframe
@@ -763,5 +828,97 @@ function ClipFitImage({
           : 'max-h-[420px] w-full rounded-lg object-contain'
       }
     />
+  )
+}
+
+/**
+ * Tap-to-play poster for YouTube / TikTok. Keeps the heavy third-party iframe
+ * out of inline layouts until the coach actually wants to watch.
+ */
+function ExternalPoster({
+  platform,
+  thumbnailUrl,
+  fill,
+  onPlay,
+}: {
+  platform: 'youtube' | 'tiktok'
+  thumbnailUrl: string | null
+  fill: boolean
+  onPlay: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onPlay()
+      }}
+      aria-label={`Play ${platform} video`}
+      className={`group relative block overflow-hidden bg-neutral-900 ${
+        fill ? 'h-full min-h-0 w-full' : 'aspect-video w-full rounded-lg'
+      }`}
+    >
+      {thumbnailUrl ? (
+        <img src={thumbnailUrl} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-4xl font-black tracking-tight text-white/25">
+            {platform === 'tiktok' ? 'TikTok' : 'YouTube'}
+          </span>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/30 transition group-hover:bg-black/20" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg transition group-hover:scale-105">
+          <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 text-black" fill="currentColor" aria-hidden>
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </span>
+      </div>
+      <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
+        {platform === 'tiktok' ? 'TikTok' : 'YouTube'}
+      </span>
+    </button>
+  )
+}
+
+/** Dismissable fullscreen overlay for an external (YouTube / TikTok) iframe. */
+function ExternalOverlay({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[500] flex flex-col bg-black/95"
+      role="dialog"
+      aria-label={title}
+      onClick={onClose}
+    >
+      <div className="flex items-center justify-between p-3">
+        <span className="text-sm font-semibold text-white/80">{title}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          aria-label="Close video"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl font-bold text-white"
+        >
+          ✕
+        </button>
+      </div>
+      <div
+        className="min-h-0 flex-1 px-2 pb-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto h-full max-w-3xl overflow-hidden rounded-xl bg-black">{children}</div>
+      </div>
+    </div>
   )
 }
