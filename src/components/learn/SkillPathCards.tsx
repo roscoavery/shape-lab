@@ -640,9 +640,6 @@ export function SkillPathCards({
                 {cue.sayThis}
               </div>
               <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
-              <div className="mt-3">
-                <ProofStrip evidenceKey={cue.id} matchName={cue.sayThis} coach={coach} canEdit={canEdit} />
-              </div>
             </article>
           ))}
         </div>
