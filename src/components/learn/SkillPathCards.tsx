@@ -4,12 +4,59 @@
  * Top-down: peak skills first, foundations last.
  */
 import { useEffect, useRef, useState } from 'react'
-import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
+import { RYAN_CUE_SWAPS } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
+import {
+  TRACK_LABELS,
+  getRegistrySkillByGuideId,
+  guidelessSkills,
+  type UnifiedSkill,
+  type UnifiedSkillTrack,
+} from '../../lib/skillRegistry'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
 import { markedFetch } from '../../lib/authSession'
+
+/**
+ * Guide display order, top-down: peak skills first, foundations last.
+ * (Preserved from the original RYAN_SKILL_PATH order; front-walkover moved
+ * next to back-walkover per Ryan 2026-09-26.) Cards read their content from
+ * the unified registry via these guide ids.
+ */
+const GUIDE_ORDER = [
+  'double-back',
+  'triple-full',
+  'double-full',
+  'full',
+  'back-half',
+  'barani',
+  'layout',
+  'back-tuck',
+  'ro-bhs-series',
+  'ro-bhs',
+  'round-off',
+  'standing-full',
+  'standing-tuck',
+  'standing-bhs',
+  'back-walkover',
+  'front-walkover',
+  'cart-dub',
+  'cart-full',
+  'cart-tuck',
+  'cartwheel-handspring',
+  'basics',
+]
+
+/** Registry records for the guide cards, in display order. */
+function guideSteps(): UnifiedSkill[] {
+  const out: UnifiedSkill[] = []
+  for (const guideId of GUIDE_ORDER) {
+    const skill = getRegistrySkillByGuideId(guideId)
+    if (skill) out.push(skill)
+  }
+  return out
+}
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -514,6 +561,58 @@ export function ProofStrip({
   )
 }
 
+/**
+ * Compact rows for registry skills that don't have a guide card yet.
+ * Shows Ryan what's missing so he can fill them in (Phase 3 builder).
+ */
+function GuidePlaceholders() {
+  const missing = guidelessSkills()
+  if (missing.length === 0) return null
+  const byTrack = new Map<UnifiedSkillTrack, UnifiedSkill[]>()
+  for (const skill of missing) {
+    const list = byTrack.get(skill.track) ?? []
+    list.push(skill)
+    byTrack.set(skill.track, list)
+  }
+  const tracks = [...byTrack.keys()].sort(
+    (a, b) =>
+      ['running', 'standing', 'walking', 'foundation'].indexOf(a) -
+      ['running', 'standing', 'walking', 'foundation'].indexOf(b),
+  )
+  return (
+    <section>
+      <h2 className="text-xl font-extrabold">Waiting for a guide</h2>
+      <p className="mt-1 text-sm opacity-80">
+        These skills are in the registry but don't have a guide card yet.
+      </p>
+      <div className="mt-4 space-y-4">
+        {tracks.map((track) => (
+          <div key={track}>
+            <div className="text-[11px] font-extrabold uppercase tracking-widest opacity-70">
+              {TRACK_LABELS[track]}
+            </div>
+            <div className="mt-2 space-y-2">
+              {(byTrack.get(track) ?? [])
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((skill) => (
+                  <div
+                    key={skill.id}
+                    className="flex items-center justify-between rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-2.5"
+                  >
+                    <span className="text-sm font-bold">{skill.name}</span>
+                    <span className="rounded-full bg-neutral-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                      guide coming
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function SkillPathCards({
   coach = false,
   canEdit = false,
@@ -550,8 +649,8 @@ export function SkillPathCards({
           const { socialPlatform } = await import('../../lib/socialUrls')
           const seen = new Set<string>()
           const urls: string[] = []
-          for (const step of RYAN_SKILL_PATH) {
-            for (const v of TECHNIQUE_EVIDENCE[step.id] ?? []) {
+          for (const guideId of GUIDE_ORDER) {
+            for (const v of TECHNIQUE_EVIDENCE[guideId] ?? []) {
               if (!v.url || seen.has(v.url)) continue
               seen.add(v.url)
               if (v.url.startsWith('/')) continue
@@ -603,26 +702,29 @@ export function SkillPathCards({
           </button>
         </div>
         <div className="mt-4 space-y-4">
-          {RYAN_SKILL_PATH.map((step, i) => {
+          {guideSteps().map((skill, i) => {
+            const guideId = skill.guideId!
             const color = STEP_COLORS[i % STEP_COLORS.length]
-            const open = isOpen(step.id)
+            const open = isOpen(guideId)
+            const needs = skill.guideNeeds ?? []
+            const canBend = skill.canBend ?? []
             return (
               <article
-                key={step.id}
-                id={`skill-card-${step.id}`}
+                key={guideId}
+                id={`skill-card-${guideId}`}
                 className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
               >
                 <button
                   type="button"
                   onClick={() => {
                     setShowAll(false)
-                    setOpenId((prev) => (prev === step.id ? null : step.id))
+                    setOpenId((prev) => (prev === guideId ? null : guideId))
                   }}
                   className="w-full px-4 py-3 text-left text-base font-extrabold text-white"
                   style={{ backgroundColor: color }}
                 >
                   <span className="flex items-center justify-between">
-                    {step.skill}
+                    {skill.name}
                     <span className="text-sm opacity-70">{open ? '−' : '+'}</span>
                   </span>
                 </button>
@@ -631,16 +733,16 @@ export function SkillPathCards({
                   <div>
                     <Label>Needs</Label>
                     <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                      {step.needs.map((n) => (
+                      {needs.map((n) => (
                         <li key={n}>{n}</li>
                       ))}
                     </ul>
                   </div>
-                  {step.canBend.length > 0 && (
+                  {canBend.length > 0 && (
                     <div className="rounded-xl bg-[var(--panel-border)]/20 p-3">
                       <Label>Can bend</Label>
                       <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                        {step.canBend.map((b) => (
+                        {canBend.map((b) => (
                           <li key={b}>{b}</li>
                         ))}
                       </ul>
@@ -648,12 +750,12 @@ export function SkillPathCards({
                   )}
                   <div>
                     <Label>Ask your coach</Label>
-                    <p className="mt-1 text-sm italic">{step.ask}</p>
+                    <p className="mt-1 text-sm italic">{skill.ask}</p>
                   </div>
-                  <ProofStrip evidenceKey={step.id} matchName={step.skill} coach={coach} canEdit={canEdit} />
-                  {step.ryanNote && (
+                  <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
+                  {skill.ryanNote && (
                     <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
-                      Ryan: {step.ryanNote}
+                      Ryan: {skill.ryanNote}
                     </p>
                   )}
                 </div>
@@ -663,6 +765,8 @@ export function SkillPathCards({
           })}
         </div>
       </section>
+
+      <GuidePlaceholders />
 
       <section>
         <h2 className="text-xl font-extrabold">Verbal cues to reconsider</h2>

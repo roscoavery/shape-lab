@@ -57,6 +57,30 @@ export function getRegistrySkill(id: string | undefined | null): UnifiedSkill | 
   return BY_ID.get(id) ?? null
 }
 
+const BY_GUIDE_ID = new Map<string, UnifiedSkill>()
+for (const skill of ALL_SKILLS) {
+  if (skill.guideId) BY_GUIDE_ID.set(skill.guideId, skill)
+}
+
+/**
+ * Look up a unified skill by its guide card id (the kebab-case
+ * ryanSkillPath step id). Returns null when no guide card exists yet.
+ */
+export function getRegistrySkillByGuideId(guideId: string | undefined | null): UnifiedSkill | null {
+  if (!guideId) return null
+  return BY_GUIDE_ID.get(guideId) ?? null
+}
+
+/** All registry skills that have a guide card, keyed by guide id. */
+export function guideSkills(): UnifiedSkill[] {
+  return ALL_SKILLS.filter((s) => s.guideId)
+}
+
+/** Registry skills with no guide card yet — shown as placeholders in the guide. */
+export function guidelessSkills(): UnifiedSkill[] {
+  return ALL_SKILLS.filter((s) => !s.guideId)
+}
+
 /**
  * Exact normalized match of a label against skill names + aliases.
  * Used by the one-time goal migration and the picker's custom-text path.
