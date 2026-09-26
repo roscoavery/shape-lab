@@ -393,6 +393,9 @@ export function EducationPanel({
             onIg={() => setView({ kind: 'ig' })}
             onScroll={() => setView({ kind: 'scroll' })}
             onAthleteProgress={() => setView({ kind: 'athleteProgress' })}
+            onSkillPath={() => setView({ kind: 'skillPath' })}
+            onProgressionLevels={() => setView({ kind: 'progressionLevels' })}
+            onConcepts={() => setView({ kind: 'concepts' })}
             onNutrition={() => setView({ kind: 'nutrition' })}
             onCoachStudy={coach ? () => setView({ kind: 'coachStudy' }) : undefined}
             onNamesTest={onOpenNamesTest}
@@ -824,6 +827,9 @@ function HomeView({
   onIg,
   onScroll,
   onAthleteProgress,
+  onSkillPath,
+  onProgressionLevels,
+  onConcepts,
   onNutrition,
   onCoachStudy,
   onNamesTest,
@@ -845,6 +851,9 @@ function HomeView({
   onIg: () => void
   onScroll: () => void
   onAthleteProgress: () => void
+  onSkillPath: () => void
+  onProgressionLevels: () => void
+  onConcepts: () => void
   onNutrition?: () => void
   onCoachStudy?: () => void
   onNamesTest?: (groupId?: string) => void
@@ -951,6 +960,27 @@ function HomeView({
           <p className="mt-2 font-serif text-2xl text-[var(--accent)]">I · II · III · IV</p>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.
+          </p>
+        </button>
+        <button type="button" onClick={onSkillPath} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Path guide</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            The skill path, top down. What each skill needs underneath it, what can bend, and what to ask your coach.
+          </p>
+        </button>
+        <button type="button" onClick={onProgressionLevels} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">4 levels</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            The four levels of progression. Where you are and what it takes to move up.
+          </p>
+        </button>
+        <button type="button" onClick={onConcepts} className="learn-tile p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Concepts</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            The ideas behind the training. Two gears, the S-curve, control, and why slow is fast.
           </p>
         </button>
       </div>

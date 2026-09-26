@@ -29,9 +29,9 @@ export interface SkillPathStep {
 
 export const RYAN_SKILL_PATH: SkillPathStep[] = [
   {
-    id: 'double-back',
+    id: 'double-full',
     track: 'running',
-    skill: 'Double back',
+    skill: 'Double full',
     needs: [
       'A back tuck high enough that their back reaches shoulder/head height (a building block, not a listed skill)',
       'The test: over-rotate that tuck to their back on a shoulder-level mat. Shoulder level alone is not always enough.',
