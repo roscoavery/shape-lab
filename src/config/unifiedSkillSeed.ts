@@ -283,7 +283,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "aliases": [
       "back walk over"
     ],
-    "track": "standing",
+    "track": "walking",
     "guideNeeds": [
       "A back bend. Never without it."
     ],
@@ -434,8 +434,11 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   {
     "id": "skl_barani",
     "guideId": "barani",
-    "name": "Front barani (front layout half)",
-    "aliases": [],
+    "name": "Front half",
+    "aliases": [
+      "barani",
+      "front barani"
+    ],
     "track": "running",
     "guideNeeds": [
       "Late twisting progressions — never train it off how a round off feels",
