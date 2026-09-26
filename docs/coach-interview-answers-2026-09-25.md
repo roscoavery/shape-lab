@@ -190,3 +190,7 @@ They should not be choosing the class, someone with expertise in the progression
 ## class-purpose — What is the purpose of a tumbling class from your perspective? (Ryan, 2026-09-25)
 
 To shape young people into being more mentally resilient, hardworking, goal driven, patient with the process, and to consistently put in effort into things they enjoy, develop a sense of value in productivity, gain skills they can contribute to a team, learn to face adversities and to perservere when things are tough. We learn to face fears, to stay focused when the process isnt always gratifying.. there are so many life lessons that tumbling can be good for building on an athliete as a person. Ulitimately, people do it because it is fun and thrilling to do things that can be dangerous in a controlled way.
+
+## faster-not-better — What should a parent understand about why their athlete isn't learning faster? (Ryan, 2026-09-25)
+
+Understanding that tumbling skills commonly take several years for athletes is important. Parents should know that. Coaches should know that. Athletes should know that. Gym owners should know that. It is not uncommon for it to take upwards of 3 years for an athlete to get a back handspring. some skills can take longer for some athletes than it does for other athletes. The biggest thing I can come back to here is that the outcomes are less important than our habits and consistent efforts, determination, pursuit of understanding, and patience. We do our best and forget the rest!
