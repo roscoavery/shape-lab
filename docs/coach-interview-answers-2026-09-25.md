@@ -100,3 +100,14 @@ Sometimes, if an athlete has trained it correctly, built the right habits and ha
 
 ---
 
+## useful-homework (added 2026-09-25 ~19:56, via chat)
+
+Tumbling homework should always be something the athlete does because they are striving to improve, not because their parents make them do it. My hope is that as a coach, I tell the athletes why they need to work what they need to work well enough to the point they want to do it intrinsically on their own.  Useful homework is anything the athlete can do outside of classes/practice/lessons that will build up their tumbling. They could be doing intentional reps on the trampoline at home, practing cartwheels, lunge lever handstnds, studying shapes, watching reference videos, watching videos of their own tumbling, doing strength training, wall handstands.. drills you can do at home or even just intentionally focusing on the skill and thinking about how to improve it.
+
+---
+
+## determination-note (extra, added 2026-09-25 ~19:56 — Ryan: "this info may live in another place")
+
+the most important thing for progress is a relentless pursuit of understanding. DETERMINATION will get you anywhere you want to be and if you are determined enought to improve, you will improve. That is one of the of the biggest life lessons that comes with tumbling and gymnastics for sure.  the importance of consistent effort, celebrating small goals, a relentless pursuit of understanding, and overall pure determination.
+
+---
