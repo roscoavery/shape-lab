@@ -60,27 +60,27 @@ export const CONCEPT_CARDS: ConceptCard[] = [
   {
     id: 's-curve',
     title: 'The S-curve of progress',
-    subtitle: 'Effort compounds like interest. The flat start is not failure.',
+    subtitle: 'Basics compound like interest. At the top, the progression pocket shrinks.',
     kind: 'scurve',
     data: {
       phases: [
         {
-          name: 'The flat start',
-          color: '#8b99a3',
-          text: 'Weeks of drilling basics with little to show. This is where most athletes quit. The effort is compounding invisibly.',
+          name: 'Compounding',
+          color: '#2e7d4f',
+          text: 'Consistent effort plus small wins stacks like compounded interest. The better the basics get, the more progress each rep buys.',
         },
         {
           name: 'The takeoff',
           color: '#2e7d4f',
-          text: 'Basics click into place. Skills that felt impossible start working. Progress feels fast because the foundation was built.',
+          text: 'Fundamentals click. Skills that felt impossible start working. Progress feels fast because the foundation was built rep by rep.',
         },
         {
-          name: 'The plateau',
+          name: 'The shrinking pocket',
           color: '#d9732b',
-          text: 'Growth slows. This is not the end — it is the next flat start. Plateaus are information, not verdicts.',
+          text: 'At a high level, progress can only be small things. Adding a half turn to a triple full is much harder than adding a half twist to a layout. Small wins are exactly what to aim for.',
         },
       ],
-      takeaway: 'Do not judge the process by the flat parts. Judge it by what the flat parts are building.',
+      takeaway: 'Teach athletes that small wins are the target. When they focus on those kinds of wins and appreciate them, the curve keeps climbing.',
     },
   },
   {
