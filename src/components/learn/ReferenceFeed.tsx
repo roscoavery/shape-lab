@@ -20,6 +20,7 @@ import { postedByFromUrl } from '../../lib/socialUrls'
 import { StoryRail } from '../stories/StoryRail'
 import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
+import { AddToSkillCardModal } from './CardVideoManager'
 
 type Props = {
   athlete?: Athlete | null
@@ -35,6 +36,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const [flash, setFlash] = useState<string | null>(null)
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
+  const [addToCardClip, setAddToCardClip] = useState<{ url: string; who: string; watchFor: string } | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const editor = {
@@ -293,6 +295,21 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                       variant="reel"
                       draft={clipShareDraft(clip.name, clip.url)}
                     />
+                    {isGymAdmin(athlete) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAddToCardClip({
+                            url: clip.url,
+                            who: clip.postedBy || 'Reference library',
+                            watchFor: clip.name,
+                          })
+                        }
+                        className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white/80"
+                      >
+                        + Skill card
+                      </button>
+                    )}
                     <ClipOrganizeMenu
                     variant="feed"
                     clip={{
@@ -335,6 +352,9 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           onCopied={setFlash}
         />
       ) : null}
+      {addToCardClip && (
+        <AddToSkillCardModal video={addToCardClip} onClose={() => setAddToCardClip(null)} />
+      )}
     </div>
   )
 }

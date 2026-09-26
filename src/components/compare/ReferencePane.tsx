@@ -64,6 +64,7 @@ import { prefetchNeighborClips } from '../../lib/igCache'
 import { VideoWorkbench } from './VideoWorkbench'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { AddToSkillCardModal } from '../learn/CardVideoManager'
 import { ShareReference } from '../share/ShareReference'
 import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
@@ -127,6 +128,7 @@ export function ReferencePane({
   const [searchQuery, setSearchQuery] = useState('')
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [addToCardItem, setAddToCardItem] = useState<{ url: string; who: string; watchFor: string } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
@@ -1133,6 +1135,22 @@ export function ReferencePane({
                 draft={clipShareDraft(item.name, item.url, item.trimStart, item.trimEnd)}
               />
             )}
+            {item.url && gymEditor && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAddToCardItem({
+                    url: item.savedUrl || item.url!,
+                    who: item.postedBy || 'Reference library',
+                    watchFor: item.name,
+                  })
+                }
+                className="rounded px-1.5 text-xs font-semibold text-[var(--muted)] hover:text-white"
+                title="Add to a skill-path card"
+              >
+                + Card
+              </button>
+            )}
           </>
         )}
         {canDeleteItem(item, opts.collection) && (
@@ -1986,6 +2004,9 @@ export function ReferencePane({
           <option key={s} value={s} />
         ))}
       </datalist>
+      {addToCardItem && (
+        <AddToSkillCardModal video={addToCardItem} onClose={() => setAddToCardItem(null)} />
+      )}
     </section>
   )
 }
