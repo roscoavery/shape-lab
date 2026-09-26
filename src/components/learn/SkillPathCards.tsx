@@ -3,7 +3,7 @@
  * four-levels infographic: a header, labeled blocks, no walls of text.
  * Top-down: peak skills first, foundations last.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
