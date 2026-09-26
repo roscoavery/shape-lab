@@ -6,9 +6,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { noteUserPause, noteUserPlay, registerCenterPlay } from '../../lib/videoCoordinator'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
-import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
+import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
+import { AddCardVideoModal } from './CardVideoManager'
+import { markedFetch } from '../../lib/authSession'
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -178,12 +180,58 @@ function ProofStrip({
   coach: boolean
   canEdit: boolean
 }) {
-  const videos = TECHNIQUE_EVIDENCE[evidenceKey]
+  const baseVideos = TECHNIQUE_EVIDENCE[evidenceKey] ?? []
+  const [adminVideos, setAdminVideos] = useState<ProofVideo[]>([])
   const [loopEditUrl, setLoopEditUrl] = useState<string | null>(null)
   const [overrides, setOverrides] = useState<Record<string, ProofLoop>>(loadProofLoops)
   const [trimUrl, setTrimUrl] = useState<string | null>(null)
   const [bustMap, setBustMap] = useState<Record<string, number>>({})
-  if (!videos || videos.length === 0) return null
+  const [showAddModal, setShowAddModal] = useState(false)
+
+  // Load admin-added videos for this card.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/skill-card-videos')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => {
+        if (!cancelled && data && typeof data === 'object') {
+          const list = (data as Record<string, ProofVideo[]>)[evidenceKey]
+          if (Array.isArray(list)) setAdminVideos(list)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [evidenceKey])
+
+  const videos = [...baseVideos, ...adminVideos]
+  const adminUrls = new Set(adminVideos.map((v) => v.url))
+  if (videos.length === 0) return null
+
+  const saveAdminVideos = async (next: ProofVideo[]) => {
+    setAdminVideos(next)
+    try {
+      const current = await fetch('/api/skill-card-videos').then((r) => (r.ok ? r.json() : {}))
+      const data = { ...(current as Record<string, ProofVideo[]>), [evidenceKey]: next }
+      await markedFetch('/api/admin/skill-card-videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    } catch {
+      /* keep local state; will retry next change */
+    }
+  }
+
+  const handleAddVideo = (video: ProofVideo) => {
+    void saveAdminVideos([...adminVideos, video])
+    setShowAddModal(false)
+  }
+
+  const handleRemoveVideo = (url: string) => {
+    void saveAdminVideos(adminVideos.filter((v) => v.url !== url))
+  }
 
   const handleAbChange =
     (url: string) => (a: number | null, b: number | null) => {
@@ -198,13 +246,32 @@ function ProofStrip({
         }
         return next
       })
+      // If an admin sets loop points on an admin-added video, save them as
+      // the default for everyone.
+      if (canEdit && adminUrls.has(url)) {
+        const next = adminVideos.map((v) =>
+          v.url === url ? { ...v, startAt: a ?? undefined, endAt: b ?? undefined } : v,
+        )
+        void saveAdminVideos(next)
+      }
     }
 
   return (
     <div>
-      <Label>The proof</Label>
+      <div className="flex items-center justify-between">
+        <Label>The proof</Label>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-bold text-emerald-400"
+          >
+            + Add video
+          </button>
+        )}
+      </div>
       <p className="mt-1 text-xs opacity-70">
-        Not just Ryan's word. Watch who else teaches it this way.
+        Watch it taught and done.
       </p>
       <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
         {videos.map((v) => {
@@ -286,6 +353,15 @@ function ProofStrip({
                   Trim
                 </button>
               )}
+              {canEdit && adminUrls.has(v.url) && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveVideo(v.url)}
+                  className="mt-1 ml-2 text-[11px] font-bold text-red-400"
+                >
+                  Remove
+                </button>
+              )}
             </div>
           )
         })}
@@ -298,6 +374,13 @@ function ProofStrip({
           onSaved={() => {
             setBustMap((prev) => ({ ...prev, [trimUrl]: Date.now() }))
           }}
+        />
+      )}
+      {showAddModal && (
+        <AddCardVideoModal
+          existingUrls={new Set(videos.map((v) => v.url))}
+          onAdd={handleAddVideo}
+          onClose={() => setShowAddModal(false)}
         />
       )}
     </div>

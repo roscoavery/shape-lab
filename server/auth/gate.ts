@@ -15,6 +15,8 @@ import type { AuthUser } from './types.ts'
 /** Instructional / gym-tool writes limited to admin. */
 const ADMIN_WRITE_PATHS = new Set([
   '/api/admin/video-replace',
+  '/api/admin/video-upload',
+  '/api/admin/skill-card-videos',
   '/api/contacts',
   '/api/contacts.csv',
   '/api/library',

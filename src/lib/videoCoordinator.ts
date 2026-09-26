@@ -73,12 +73,37 @@ function update() {
   for (const el of entries.keys()) {
     if (el === target) {
       if (el.paused && el.getAttribute('src')) {
-        el.play().catch(() => {})
+        playWithRetry(el)
       }
     } else if (!el.paused) {
       el.pause()
     }
   }
+}
+
+/**
+ * play() often fails if the video hasn't buffered enough yet (especially
+ * Instagram-hosted files). Retry on canplay so the center video actually
+ * starts instead of staying paused forever.
+ */
+const retrying = new WeakSet<HTMLVideoElement>()
+function playWithRetry(el: HTMLVideoElement) {
+  el.play().catch(() => {
+    if (retrying.has(el)) return
+    retrying.add(el)
+    const onCanPlay = () => {
+      el.removeEventListener('canplay', onCanPlay)
+      retrying.delete(el)
+      // Only retry if this video is still the intended target.
+      scheduleUpdate()
+    }
+    el.addEventListener('canplay', onCanPlay)
+    // Give up after 10s so we don't leak listeners.
+    setTimeout(() => {
+      el.removeEventListener('canplay', onCanPlay)
+      retrying.delete(el)
+    }, 10000)
+  })
 }
 
 function ensureObserver() {

@@ -125,6 +125,9 @@ import { handleCalendarApi } from './calendar/apiRoutes.ts'
 
 const API_PATHS = new Set([
   '/api/admin/video-replace',
+  '/api/admin/video-upload',
+  '/api/admin/skill-card-videos',
+  '/api/skill-card-videos',
   '/api/auth/me',
   '/api/auth/login',
   '/api/auth/logout',
@@ -370,6 +373,109 @@ export async function handleShapeLabApi(
       /* dist mirror is best-effort; public/ is the source of truth */
     }
     sendJson(res, 200, { ok: true, path: clean, bytes: data.length })
+    return true
+  }
+  if (path === '/api/admin/video-upload') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const name = url.searchParams.get('name') ?? ''
+    // Sanitize: basename only, safe chars, must have a video extension.
+    const base = name.split('/').pop()?.split('\\').pop() ?? ''
+    const safe = base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
+    const ext = safe.slice(safe.lastIndexOf('.')).toLowerCase()
+    if (!['.mp4', '.mov', '.webm'].includes(ext) || safe.length < 5) {
+      sendJson(res, 400, { error: 'Upload an mp4, mov, or webm file' })
+      return true
+    }
+    const chunks: Buffer[] = []
+    let bytes = 0
+    const MAX_VIDEO = 100 * 1024 * 1024
+    try {
+      for await (const chunk of req) {
+        bytes += chunk.length
+        if (bytes > MAX_VIDEO) {
+          sendJson(res, 413, { error: 'Video too large (max 100MB)' })
+          return true
+        }
+        chunks.push(chunk)
+      }
+    } catch {
+      sendJson(res, 400, { error: 'Failed to read upload' })
+      return true
+    }
+    const data = Buffer.concat(chunks)
+    if (data.length === 0) {
+      sendJson(res, 400, { error: 'Empty upload' })
+      return true
+    }
+    // Avoid collisions: append a timestamp if the name is taken.
+    const { mkdir } = await import('node:fs/promises')
+    const videosDir = join(process.cwd(), 'public', 'videos', 'uploads')
+    await mkdir(videosDir, { recursive: true })
+    let finalName = safe
+    let dest = join(videosDir, finalName)
+    const { existsSync } = await import('node:fs')
+    if (existsSync(dest)) {
+      const stem = safe.slice(0, safe.lastIndexOf('.'))
+      finalName = `${stem}-${Date.now()}${ext}`
+      dest = join(videosDir, finalName)
+    }
+    try {
+      await writeFile(dest, data)
+    } catch {
+      sendJson(res, 500, { error: 'Could not save the video file' })
+      return true
+    }
+    // Mirror to dist/ so the running server serves it immediately.
+    try {
+      const { dirname } = await import('node:path')
+      const distDest = join(process.cwd(), 'dist', 'videos', 'uploads', finalName)
+      await mkdir(dirname(distDest), { recursive: true })
+      await writeFile(distDest, data)
+    } catch {
+      /* best-effort */
+    }
+    sendJson(res, 200, { ok: true, url: `/videos/uploads/${finalName}`, bytes: data.length })
+    return true
+  }
+  if (path === '/api/skill-card-videos' || path === '/api/admin/skill-card-videos') {
+    const { readFile, writeFile: wf } = await import('node:fs/promises')
+    const storePath = join(process.cwd(), 'data', 'skill-card-videos.json')
+    if (req.method === 'GET') {
+      try {
+        const raw = await readFile(storePath, 'utf8')
+        sendJson(res, 200, JSON.parse(raw))
+      } catch {
+        sendJson(res, 200, {})
+      }
+      return true
+    }
+    if (req.method !== 'POST' || path !== '/api/admin/skill-card-videos') {
+      sendJson(res, 405, { error: 'Use POST to the admin path' })
+      return true
+    }
+    let body = ''
+    try {
+      for await (const chunk of req) {
+        body += chunk
+        if (body.length > 1024 * 1024) break
+      }
+    } catch {
+      sendJson(res, 400, { error: 'Failed to read body' })
+      return true
+    }
+    try {
+      const parsed = JSON.parse(body)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('bad shape')
+      }
+      await wf(storePath, JSON.stringify(parsed, null, 2))
+      sendJson(res, 200, { ok: true })
+    } catch {
+      sendJson(res, 400, { error: 'Invalid data' })
+    }
     return true
   }
   if (path === '/api/persist') {
