@@ -194,6 +194,7 @@ function ProofStrip({
   const [trimUrl, setTrimUrl] = useState<string | null>(null)
   const [bustMap, setBustMap] = useState<Record<string, number>>({})
   const [showAddModal, setShowAddModal] = useState(false)
+  const [hiddenUrls, setHiddenUrls] = useState<string[]>([])
 
   // Load admin-added videos for this card.
   useEffect(() => {
@@ -207,12 +208,22 @@ function ProofStrip({
         }
       })
       .catch(() => {})
+    fetch('/api/skill-card-hidden')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => {
+        if (!cancelled && data && typeof data === 'object') {
+          const list = (data as Record<string, string[]>)[evidenceKey]
+          if (Array.isArray(list)) setHiddenUrls(list)
+        }
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [evidenceKey])
 
-  const videos = [...baseVideos, ...adminVideos]
+  const hiddenSet = new Set(hiddenUrls)
+  const videos = [...baseVideos.filter((v) => !hiddenSet.has(v.url)), ...adminVideos]
   const adminUrls = new Set(adminVideos.map((v) => v.url))
 
   const saveAdminVideos = async (next: ProofVideo[]) => {
@@ -236,7 +247,27 @@ function ProofStrip({
   }
 
   const handleRemoveVideo = (url: string) => {
-    void saveAdminVideos(adminVideos.filter((v) => v.url !== url))
+    if (adminUrls.has(url)) {
+      // Admin-added: delete it.
+      void saveAdminVideos(adminVideos.filter((v) => v.url !== url))
+    } else {
+      // Built-in: hide it (reversible — re-add via the library picker).
+      const next = [...hiddenUrls, url]
+      setHiddenUrls(next)
+      void (async () => {
+        try {
+          const current = await fetch('/api/skill-card-hidden').then((r) => (r.ok ? r.json() : {}))
+          const data = { ...(current as Record<string, string[]>), [evidenceKey]: next }
+          await markedFetch('/api/admin/skill-card-hidden', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          })
+        } catch {
+          /* keep local state; will retry next change */
+        }
+      })()
+    }
   }
 
   const handleAbChange =
@@ -359,7 +390,7 @@ function ProofStrip({
                   Trim
                 </button>
               )}
-              {canEdit && adminUrls.has(v.url) && (
+              {canEdit && (
                 <button
                   type="button"
                   onClick={() => handleRemoveVideo(v.url)}
