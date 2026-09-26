@@ -12,12 +12,21 @@ function gymSha(): string {
   }
 }
 
+function gymBuildNumber(): string {
+  try {
+    return execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim() || '0'
+  } catch {
+    return '0'
+  }
+}
+
 // Shape Lab — local gymnastics coaching prototype
 // Default port 43127 avoids clashing with common 3000/5173 setups.
 export default defineConfig({
   plugins: [react(), tailwindcss(), instagramResolvePlugin()],
   define: {
     __GYM_SHA__: JSON.stringify(gymSha()),
+    __GYM_BUILD_NUM__: JSON.stringify(gymBuildNumber()),
   },
   // iPad Air 2 tops out at iOS 15 / Safari 15. Default Vite 8 targets skip that.
   build: {

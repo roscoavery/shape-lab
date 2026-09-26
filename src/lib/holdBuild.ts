@@ -1,13 +1,13 @@
 /** Visible hold-challenge stamp. Change this when you need to prove a new gym build. */
 export const HOLD_BUILD = 'Lace'
 export const HOLD_BUILD_SLUG = 'lace'
-declare const __GYM_SHA__: string
-const GYM_SHORT_SHA =
-  typeof __GYM_SHA__ === 'string' && __GYM_SHA__.length >= 7
-    ? __GYM_SHA__.slice(0, 7).toLowerCase()
+declare const __GYM_BUILD_NUM__: string
+const GYM_BUILD_NUM =
+  typeof __GYM_BUILD_NUM__ === 'string' && __GYM_BUILD_NUM__.length > 0
+    ? __GYM_BUILD_NUM__
     : 'dev'
-/** Unique per build — the short git SHA proves you're on the latest. */
-export const HOLD_BUILD_LABEL = `Gym build ${GYM_SHORT_SHA}`
+/** Unique per build — a plain number that goes up every time, so you know you're on the latest. */
+export const HOLD_BUILD_LABEL = `Gym build ${GYM_BUILD_NUM}`
 /** Drawn on recap / saved clips — not the stamp name. */
 export const HOLD_HUD_LABEL = 'shapelab'
 export const HOLD_PINK = '#6ec8d6'
