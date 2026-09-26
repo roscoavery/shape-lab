@@ -43,21 +43,6 @@ function updateLocalVideoPlayback() {
   }
 }
 
-// If the user taps play on one, pause the rest.
-if (typeof document !== 'undefined') {
-  document.addEventListener(
-    'play',
-    (e) => {
-      const target = e.target as HTMLVideoElement | null
-      if (!target || target.tagName !== 'VIDEO') return
-      document.querySelectorAll('video').forEach((v) => {
-        if (v !== target && !v.paused) v.pause()
-      })
-    },
-    true,
-  )
-}
-
 function LocalVideo({
   url,
   loopA,
