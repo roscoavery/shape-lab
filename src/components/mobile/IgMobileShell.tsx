@@ -18,11 +18,11 @@ import { stashDiscoverTarget, type DiscoverTarget } from '../../lib/mobileDiscov
 
 type ShellTab = 'home' | 'reels' | 'messages' | 'search' | 'profile'
 
-function shellTabForAppTab(tab: AppTab, mobileSearch: boolean): ShellTab {
+function shellTabForAppTab(tab: AppTab, mobileSearch: boolean, isOwner = false): ShellTab {
   if (mobileSearch) return 'search'
   if (tab === 'network') return 'messages'
   if (tab === 'scroll' || tab === 'feed' || tab === 'wins' || tab === 'compare') return 'reels'
-  if (tab === 'today') return 'home'
+  if (tab === 'today' || (isOwner && tab === 'owner')) return 'home'
   return 'home'
 }
 
@@ -85,7 +85,7 @@ export function IgMobileShell({
   const [mobileSearch, setMobileSearch] = useState(false)
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [sectionPillsVisible, setSectionPillsVisible] = useState(false)
-  const active = profileActive ? 'profile' : shellTabForAppTab(tab, mobileSearch)
+  const active = profileActive ? 'profile' : shellTabForAppTab(tab, mobileSearch, isOwner)
   const discoverOn = discoverOpen || active === 'reels'
   const loginAdmin = sessionIsAdmin(authUser)
   const previewing = loginAdmin && deskPreview !== 'home'
@@ -111,7 +111,7 @@ export function IgMobileShell({
       id: 'home',
       label: 'Home',
       active: active === 'home',
-      onClick: () => go('today'),
+      onClick: () => go(isOwner ? 'owner' : 'today'),
       icon: <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />,
     },
     {
