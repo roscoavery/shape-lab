@@ -25,6 +25,7 @@ import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
 import { SkillPathCards } from './learn/SkillPathCards'
 import { ProgressionLevels } from './learn/ProgressionLevels'
+import { ConceptCards } from './learn/ConceptCards'
 import { customShapeId, groupIgStillsByShape, igStillDisplayName, igStillsForShape, listIgStills } from '../lib/igStills'
 import { HScrollRow } from './HScrollRow'
 import { deleteReferencePhoto } from '../lib/storage'
@@ -87,6 +88,7 @@ type EduView =
   | { kind: 'athleteProgress' }
   | { kind: 'skillPath' }
   | { kind: 'progressionLevels' }
+  | { kind: 'concepts' }
   | { kind: 'coachStudy' }
   | { kind: 'nutrition' }
 
@@ -302,6 +304,11 @@ export function EducationPanel({
                 onClick={() => setView({ kind: 'progressionLevels' })}
                 label="4 levels"
               />
+              <NavChip
+                active={view.kind === 'concepts'}
+                onClick={() => setView({ kind: 'concepts' })}
+                label="Concepts"
+              />
             </ChipRow>
             {coach && (
               <ChipRow label="Coaches">
@@ -486,6 +493,12 @@ export function EducationPanel({
       {view.kind === 'progressionLevels' && (
         <PanelErrorBoundary label="4 levels">
           <ProgressionLevels />
+        </PanelErrorBoundary>
+      )}
+
+      {view.kind === 'concepts' && (
+        <PanelErrorBoundary label="Concepts">
+          <ConceptCards />
         </PanelErrorBoundary>
       )}
 
