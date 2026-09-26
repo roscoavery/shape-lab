@@ -13,15 +13,38 @@ export function CoachInterview() {
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string | null>(COACH_INTERVIEW[0]?.lessonId ?? null)
   const [reviewMode, setReviewMode] = useState(false)
 
   useEffect(() => {
     pullCoachInterview().then((a) => {
+      // If the server has nothing, check for a local backup (unsaved work).
+      if (Object.keys(a).length === 0) {
+        try {
+          const backup = localStorage.getItem('shape-lab-interview-backup')
+          if (backup) {
+            const parsed = JSON.parse(backup)
+            if (parsed && typeof parsed === 'object') {
+              setAnswers(parsed)
+              setLoaded(true)
+              return
+            }
+          }
+        } catch {}
+      }
       setAnswers(a)
       setLoaded(true)
     })
   }, [])
+
+  // Always keep a local backup so unsaved work is never lost.
+  useEffect(() => {
+    if (!loaded) return
+    try {
+      localStorage.setItem('shape-lab-interview-backup', JSON.stringify(answers))
+    } catch {}
+  }, [answers, loaded])
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((t) => t.trim().length > 0).length,
@@ -30,9 +53,20 @@ export function CoachInterview() {
 
   const save = async () => {
     setSaving(true)
+    setSaveError(null)
     const ok = await pushCoachInterview(answers)
     setSaving(false)
-    if (ok) setSavedAt(new Date().toLocaleTimeString())
+    if (ok) {
+      setSavedAt(new Date().toLocaleTimeString())
+      // Clear the local backup once the server has it.
+      try {
+        localStorage.removeItem('shape-lab-interview-backup')
+      } catch {}
+    } else {
+      setSaveError(
+        'Could not reach the gym computer. Your answers are backed up on this device — they will not be lost. Check your connection and try again.',
+      )
+    }
   }
 
   if (!loaded) {
@@ -129,6 +163,11 @@ export function CoachInterview() {
           </button>
           {savedAt && <p className="self-center text-xs text-[var(--muted)]">Saved {savedAt}</p>}
         </div>
+        {saveError && (
+          <p className="mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">
+            {saveError}
+          </p>
+        )}
       </div>
 
       {COACH_INTERVIEW.map((section) => {
@@ -195,6 +234,11 @@ export function CoachInterview() {
         </button>
         {savedAt && <p className="self-center text-xs text-[var(--muted)]">Saved {savedAt}</p>}
       </div>
+      {saveError && (
+        <p className="mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">
+          {saveError}
+        </p>
+      )}
     </div>
   )
 }
