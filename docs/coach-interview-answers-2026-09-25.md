@@ -182,3 +182,7 @@ I was stuck on kick fulls for a while.. what helped me unlock it were these thre
 ---
 
 Note: removed the plateau-parent question from the interview (~22:33 CDT) — Ryan folded that answer into plateau-process. Also removed the better-question question (~22:05). Interview now has 28 questions.
+
+## choosing-class (2026-09-25 ~22:51 CDT)
+
+They should not be choosing the class, someone with expertise in the progression used at that gym should evaluate their tumbling and then put them in the right place for them to learn what they need to learn. For maximizing safety, technique and likelihood of complimenting longterm progression, I would personally say that parents should look for environments that offer skill deconstruction, encourage patience with progression, focus on strong  prerequsites, and use gymnastics, tnt or powertumbling progressions.
