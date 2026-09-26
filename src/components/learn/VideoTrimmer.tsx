@@ -86,13 +86,18 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
     }
     setStatus('trimming')
     setProgress(0)
+    // iOS Safari does not support video.captureStream(), so we draw the video
+    // to a canvas and capture the canvas stream instead (supported on iOS 15+).
+    const canvas = document.createElement('canvas')
+    let audioCtx: AudioContext | null = null
+    let rafId = 0
     try {
-      // Hidden worker video: seek to start, play, capture.
       const worker = document.createElement('video')
-      worker.src = src
-      worker.muted = true
+      worker.src = src.split('?')[0]
+      worker.muted = false
       worker.playsInline = true
       worker.preload = 'auto'
+      worker.crossOrigin = 'anonymous'
       await new Promise<void>((resolve, reject) => {
         const to = setTimeout(() => reject(new Error('Video took too long to load.')), 15000)
         worker.onloadedmetadata = () => {
@@ -104,6 +109,13 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
           reject(new Error('Could not load the video.'))
         }
       })
+      const vw = worker.videoWidth || 720
+      const vh = worker.videoHeight || 1280
+      canvas.width = vw
+      canvas.height = vh
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Could not set up video capture.')
+
       worker.currentTime = start
       await new Promise<void>((resolve, reject) => {
         const to = setTimeout(() => reject(new Error('Seek timed out.')), 8000)
@@ -115,9 +127,30 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
         worker.addEventListener('seeked', onSeek)
       })
 
-      const stream = (worker as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.()
-      if (!stream) throw new Error('This browser cannot capture video for trimming.')
-      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 10_000_000 })
+      const canvasStream = (canvas as HTMLCanvasElement & { captureStream?: (fps: number) => MediaStream }).captureStream?.(30)
+      if (!canvasStream) throw new Error('This browser cannot capture video for trimming.')
+
+      // Route the video's audio into the recording when possible (silent trim).
+      let audioTrack: MediaStreamTrack | null = null
+      try {
+        const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+        if (AC) {
+          audioCtx = new AC()
+          await audioCtx.resume().catch(() => {})
+          const srcNode = audioCtx.createMediaElementSource(worker)
+          const dest = audioCtx.createMediaStreamDestination()
+          srcNode.connect(dest)
+          audioTrack = dest.stream.getAudioTracks()[0] ?? null
+        }
+      } catch {
+        /* audio capture unavailable; record video only */
+      }
+      const mixed = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...(audioTrack ? [audioTrack] : []),
+      ])
+
+      const rec = new MediaRecorder(mixed, { mimeType: mime, videoBitsPerSecond: 10_000_000 })
       const chunks: Blob[] = []
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data)
@@ -125,6 +158,15 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
       const stopped = new Promise<void>((resolve) => {
         rec.onstop = () => resolve()
       })
+
+      // Paint frames to the canvas while recording.
+      const paint = () => {
+        if (worker.readyState >= 2) {
+          ctx.drawImage(worker, 0, 0, vw, vh)
+        }
+        rafId = requestAnimationFrame(paint)
+      }
+      paint()
       rec.start(250)
       await worker.play()
 
@@ -144,7 +186,9 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
       })
       rec.stop()
       worker.pause()
+      cancelAnimationFrame(rafId)
       await stopped
+      await audioCtx?.close().catch(() => {})
 
       const type = mime.includes('mp4') ? 'video/mp4' : 'video/webm'
       const blob = new Blob(chunks, { type })
@@ -163,6 +207,8 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
       setStatus('done')
       onSaved()
     } catch (e) {
+      cancelAnimationFrame(rafId)
+      await audioCtx?.close().catch(() => {})
       setError(e instanceof Error ? e.message : 'Trim failed.')
       setStatus('error')
     }

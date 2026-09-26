@@ -15,6 +15,7 @@ function isLocalVideo(url: string): boolean {
 }
 
 /** Native player for local video files, with A/B loop support. */
+/** Native player for local video files, with A/B loop support. Autoplays (muted) and loops while on screen. */
 function LocalVideo({
   url,
   loopA,
@@ -25,12 +26,34 @@ function LocalVideo({
   loopB: number | null
 }) {
   const ref = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const v = ref.current
+    if (!v) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            v.play().catch(() => {})
+          } else {
+            v.pause()
+          }
+        }
+      },
+      { threshold: 0.4 },
+    )
+    io.observe(v)
+    return () => io.disconnect()
+  }, [url])
+
   return (
     <video
       ref={ref}
       src={url}
       controls
       playsInline
+      muted
+      loop={loopA == null && loopB == null}
       preload="metadata"
       className="h-full w-full object-contain"
       onTimeUpdate={(e) => {
