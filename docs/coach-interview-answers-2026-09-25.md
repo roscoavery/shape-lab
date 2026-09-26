@@ -168,3 +168,17 @@ This depends on the athlete, like most things. It depends on how they seem emoti
 ## plateau-process (saved 2026-09-25 ~22:31 CDT)
 
 > Sometimes an athlete can plateu when their physical capabilites are the limit. Sometimes its that an athlete just needs a new approach.. sometimes they may not be stuck, they could just be in the middle of the process where things can feel slow. The fact that progress is not linear means that days that aren't as good are not setbacks.. just part of the process. You dont have to figure out if youre stuck.. you really just need to stay consistent with effort, pursuit of understanding and doing what is in your control and eventually the skill will happen if its going to happen. there are some athletes that just dont get the handspring despite working on it for several years. But most athletes that work on it for several years and really seem like it might not happen, do get the handspring eventually atleast on a trampoline.. Its amazing to see those athletes just keep going and end up getting the skill because they stayed consistent.
+
+## plateau-story (2026-09-25 ~22:40 CDT)
+
+I was stuck on kick fulls for a while.. what helped me unlock it were these three things..
+
+1. Realizing that the proper way to learning/doing the skill was going to involve resisting my natural instinct. I could not for the life of me understand aerial (late) twisting.. you have to really convince yourself you are not going to twist.. and resisting the urge to contact twist when thats what youre used to for regular fulls.. super hard.
+
+2. References videos.. along with a relentless pursuit of understanding, watching a slow mo video over an over of the skill I was learning helped so much with understanding the physical motion required.
+
+3..alternating between prerequisites and the skill I was aiming for. I did 5 kick lays for every 1 kick full attempt for a WHILE... before i really could hit a kick full with a late twist. This workd for a lot of skills.. go back and forth between the building blocks and the actual skill and it helps bridge the gap between the movements.
+
+---
+
+Note: removed the plateau-parent question from the interview (~22:33 CDT) — Ryan folded that answer into plateau-process. Also removed the better-question question (~22:05). Interview now has 28 questions.
