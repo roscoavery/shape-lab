@@ -310,7 +310,7 @@ function ProofStrip({
       <p className="mt-1 text-xs opacity-70">
         Watch it taught and done.
       </p>
-      <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
+      <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
         {videos.map((v) => {
           const override = overrides[v.url]
           const loopA = override?.a ?? v.startAt ?? null
@@ -485,23 +485,23 @@ export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boo
       </section>
 
       <section>
-        <h2 className="text-xl font-extrabold">Cues Ryan uses instead</h2>
+        <h2 className="text-xl font-extrabold">Verbal cues to reconsider</h2>
         <p className="mt-1 text-sm opacity-80">
-          Common cues he throws out, what he says instead, and why.
+          Common cues worth rethinking, what to try instead, and why.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {RYAN_CUE_SWAPS.map((cue) => (
             <article
               key={cue.id}
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+              className="min-w-0 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
             >
-              <div className="text-sm font-bold text-red-400 line-through opacity-80">
+              <div className="text-sm font-bold text-red-400 line-through opacity-80 break-words">
                 {cue.insteadOf}
               </div>
-              <div className="mt-1 text-base font-extrabold text-emerald-400">
+              <div className="mt-1 text-base font-extrabold text-emerald-400 break-words">
                 {cue.sayThis}
               </div>
-              <p className="mt-2 text-sm opacity-85">{cue.why}</p>
+              <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
               <div className="mt-3">
                 <ProofStrip evidenceKey={cue.id} coach={coach} canEdit={canEdit} />
               </div>
