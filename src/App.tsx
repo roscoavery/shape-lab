@@ -1483,9 +1483,14 @@ export default function App() {
 
       {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk />}
       {tab === 'learn' && deskRole !== 'parent' && ryanEdit && (
-        <div className="mb-4">
-          <CoachInterview />
-        </div>
+        <details className="mb-4 rounded-xl border border-white/10 bg-white/5">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-white/80">
+            Coach interview · 28 answers
+          </summary>
+          <div className="px-4 pb-4">
+            <CoachInterview />
+          </div>
+        </details>
       )}
       {tab === 'learn' && deskRole !== 'parent' && (
         <EducationPanel
