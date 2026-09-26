@@ -1,6 +1,7 @@
 import type { AppTab } from '../../lib/storage'
 import { profileRole, roleLabel } from '../../lib/profileRole'
 import type { Athlete, AthleteTaskProgress, AttemptRecord } from '../../types'
+import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 
 type Props = {
   athletes: Athlete[]
@@ -179,6 +180,19 @@ export function TodayDashboard({
           <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
             <h3 className="text-lg font-semibold text-[var(--text)]">Quick tools</h3>
             <div className="mt-3 grid gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  stashMobileSearchJump({ kind: 'skillPath' })
+                  onGo('learn')
+                }}
+                className="sl-skill-glow sl-left px-4 py-4"
+              >
+                <span className="block text-sm font-bold text-white">Skill path guide</span>
+                <span className="text-xs text-white/70">
+                  What each skill needs, what can bend, what to ask your coach
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => onGo('compare')}

@@ -176,6 +176,11 @@ export function EducationPanel({
     setView({ kind: 'skillPath' })
     setFocusSkillId(jump.skillId)
   }, [])
+  useEffect(() => {
+    const jump = takeMobileSearchJump('skillPath')
+    if (!jump || jump.kind !== 'skillPath') return
+    setView({ kind: 'skillPath' })
+  }, [])
 
   useEffect(() => {
     if (!athleteId) {

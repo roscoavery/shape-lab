@@ -321,6 +321,39 @@ button {
     box-shadow: 0 0 0 2px #8ad8e4, 0 0 28px rgba(110, 200, 214, 0.55);
   }
 }
+@keyframes sl-skill-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px #b48ce8, 0 0 16px rgba(150, 110, 220, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #c9a8f0, 0 0 28px rgba(150, 110, 220, 0.6);
+  }
+}
+.sl-skill-glow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #b48ce8;
+  border-radius: 1.1rem;
+  background: #1a1428;
+  color: #e8eef2;
+  animation: sl-skill-pulse 2.4s ease-in-out infinite;
+}
+.sl-skill-glow::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #b48ce8;
+}
 .sl-names-glow {
   display: block;
   width: 100%;

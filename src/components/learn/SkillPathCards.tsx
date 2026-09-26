@@ -62,7 +62,7 @@ function LocalVideo({
       muted
       loop={loopA == null && loopB == null}
       preload="metadata"
-      className="h-full w-full object-contain"
+      className="h-full w-full object-cover"
       onTimeUpdate={(e) => {
         const v = e.currentTarget
         if (loopA != null && v.currentTime < loopA) v.currentTime = loopA
@@ -395,6 +395,7 @@ export function ProofStrip({
                       playWhenVisible
                       loopA={loopA}
                       loopB={loopB}
+                      fit="cover"
                     />
                   )}
                 </div>

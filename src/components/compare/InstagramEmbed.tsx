@@ -657,7 +657,12 @@ export function InstagramEmbed({
   const player =
     kind === 'image' && src ? (
       <div className={fill ? 'relative h-full min-h-0 bg-black' : 'relative'}>
-        <ClipFitImage src={src} fill={fill} contain={(fit ?? (fill ? 'cover' : 'contain')) === 'contain'} />
+        <ClipFitImage
+          src={src}
+          fill={fill}
+          contain={(fit ?? (fill ? 'cover' : 'contain')) === 'contain'}
+          lockCover={fit === 'cover'}
+        />
         {hudCorner ? (
           <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
             {hudCorner}
@@ -731,20 +736,30 @@ export function InstagramEmbed({
   )
 }
 
-function ClipFitImage({ src, fill, contain }: { src: string; fill: boolean; contain: boolean }) {
+function ClipFitImage({
+  src,
+  fill,
+  contain,
+  lockCover,
+}: {
+  src: string
+  fill: boolean
+  contain: boolean
+  lockCover?: boolean
+}) {
   const [auto, setAuto] = useState<'cover' | 'contain'>(contain ? 'contain' : 'cover')
   return (
     <img
       src={src}
       alt=""
       onLoad={(e) => {
-        if (contain) return
+        if (contain || lockCover) return
         const img = e.currentTarget
         setAuto(reelObjectFit(img.naturalWidth, img.naturalHeight))
       }}
       className={
         fill
-          ? `h-full w-full ${contain || auto === 'contain' ? 'object-contain' : 'object-cover'}`
+          ? `h-full w-full ${contain || (!lockCover && auto === 'contain') ? 'object-contain' : 'object-cover'}`
           : 'max-h-[420px] w-full rounded-lg object-contain'
       }
     />
