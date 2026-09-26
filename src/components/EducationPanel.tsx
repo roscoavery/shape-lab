@@ -297,7 +297,7 @@ export function EducationPanel({
               <NavChip
                 active={view.kind === 'skillPath'}
                 onClick={() => setView({ kind: 'skillPath' })}
-                label="Skill path"
+                label="Path guide"
               />
               <NavChip
                 active={view.kind === 'progressionLevels'}
