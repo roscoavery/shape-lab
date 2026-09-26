@@ -4,7 +4,8 @@
  * in Learn so it's never just Coach Ryan's word against a disagreeing coach.
  * Add entries here; the SkillPathCards component renders them.
  *
- * Keys match ids in ryanSkillPath.ts (skill steps) and cue swap ids.
+ * Keys match guide ids in the unified skill registry (src/lib/skillRegistry.ts)
+ * and cue swap ids.
  */
 
 export interface ProofVideo {

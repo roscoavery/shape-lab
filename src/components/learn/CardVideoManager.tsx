@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
-import { RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
+import { guideSkillsInOrder } from '../../lib/skillRegistry'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -273,7 +273,7 @@ export function AddToSkillCardModal({
   video: { url: string; who: string; watchFor: string }
   onClose: () => void
 }) {
-  const [skillId, setSkillId] = useState(RYAN_SKILL_PATH[0]?.id ?? '')
+  const [skillId, setSkillId] = useState(guideSkillsInOrder()[0]?.guideId ?? '')
   const [loopA, setLoopA] = useState('')
   const [loopB, setLoopB] = useState('')
   const [saving, setSaving] = useState(false)
@@ -320,7 +320,7 @@ export function AddToSkillCardModal({
           <div className="py-6 text-center">
             <p className="text-base font-bold text-emerald-400">Added ✓</p>
             <p className="mt-1 text-sm text-white/60">
-              {RYAN_SKILL_PATH.find((s) => s.id === skillId)?.skill}
+              {guideSkillsInOrder().find((s) => s.guideId === skillId)?.name}
             </p>
             <button
               type="button"
@@ -347,9 +347,9 @@ export function AddToSkillCardModal({
               onChange={(e) => setSkillId(e.target.value)}
               className="mb-3 w-full rounded-lg bg-neutral-800 px-3 py-2.5 text-sm text-white"
             >
-              {RYAN_SKILL_PATH.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.skill}
+              {guideSkillsInOrder().map((s) => (
+                <option key={s.guideId} value={s.guideId}>
+                  {s.name}
                 </option>
               ))}
             </select>

@@ -9,12 +9,12 @@ import {
   clearRegistryOverrides,
   getRegistrySkill,
   matchRegistrySkill,
+  normalizeSkillText,
   setRegistryOverride,
   type RegistryOverride,
   type UnifiedSkill,
   type UnifiedSkillTrack,
 } from './skillRegistry'
-import { labelsMatch, skillKey, type SkillGoalChoice } from '../config/skillGoalCatalog'
 import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS } from '../config/skillPathSeed'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
 import { givenName } from './classStation'
@@ -278,7 +278,7 @@ export function linkHopeToSkill(
     if (!a || !Array.isArray(a.skillGoals) || a.skillGoals.length === 0) return a
     let changed = false
     const skillGoals = a.skillGoals.map((g) => {
-      if (!g || g.skillId || skillKey(g.label ?? '') !== hopeKey) return g
+      if (!g || g.skillId || normalizeSkillText(g.label ?? '') !== hopeKey) return g
       changed = true
       return { ...g, skillId }
     })
@@ -301,12 +301,12 @@ export function searchSkills(query: string): SkillDef[] {
 }
 
 function skillKeys(skill: Pick<SkillDef, 'name' | 'aliases'>): string[] {
-  return [skillKey(skill.name), ...(skill.aliases ?? []).map(skillKey)].filter(Boolean)
+  return [normalizeSkillText(skill.name), ...(skill.aliases ?? []).map(normalizeSkillText)].filter(Boolean)
 }
 
 /** Exact name or alias, ignoring punctuation. Does not substring-match drills. */
 export function matchSkillExact(label: string, extraNames: string[] = []): SkillDef | null {
-  const wanted = [label, ...extraNames].map(skillKey).filter(Boolean)
+  const wanted = [label, ...extraNames].map(normalizeSkillText).filter(Boolean)
   if (wanted.length === 0) return null
   const want = new Set(wanted)
   return (
@@ -321,11 +321,6 @@ export function matchSkillExact(label: string, extraNames: string[] = []): Skill
  */
 export function matchSkill(label: string): SkillDef | null {
   return matchSkillExact(label)
-}
-
-export function matchCatalogChoice(choice: SkillGoalChoice, typedLabel?: string): SkillDef | null {
-  if (choice.other) return matchSkillExact(typedLabel ?? '')
-  return matchSkillExact(choice.label, choice.matchNames ?? [])
 }
 
 export function needsForSkill(skillId: string, surface?: TrainingSurface | null): SkillNeed[] {
@@ -443,28 +438,6 @@ export function deleteConditioning(id: string) {
   write({ ...file, conditioning: file.conditioning.filter((c) => c.id !== id) })
 }
 
-export function makeSkillGoal(input: {
-  skillId?: string
-  label?: string
-  surface?: TrainingSurface
-  source?: AthleteSkillGoal['source']
-  matchNames?: string[]
-}): AthleteSkillGoal | null {
-  const skill = input.skillId
-    ? getSkill(input.skillId)
-    : matchSkillExact(input.label ?? '', input.matchNames ?? [])
-  const label = (input.label || skill?.name || '').trim()
-  if (!label) return null
-  return {
-    id: createId('goal'),
-    skillId: skill?.id,
-    label,
-    surface: input.surface,
-    setAt: new Date().toISOString(),
-    source: input.source ?? 'intake',
-  }
-}
-
 export function goalLine(goal: AthleteSkillGoal): string {
   const surface = surfaceLabel(goal.surface)
   return surface ? `${goal.label} · ${surface}` : goal.label
@@ -537,7 +510,7 @@ export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] 
       const label = goal.label.trim()
       if (!label) continue
       if (resolveGoalSkill(goal)) continue
-      const key = skillKey(label)
+      const key = normalizeSkillText(label)
       const have = map.get(key)
       const row = { id: a.id, name, surface: goal.surface }
       if (have) {
@@ -555,8 +528,6 @@ export function unmatchedAthleteGoals(athletes: Athlete[]): ListedAthleteGoal[] 
   }
   return [...map.values()].sort((a, b) => a.label.localeCompare(b.label))
 }
-
-export { labelsMatch, skillKey }
 
 export type GoalAthlete = {
   athlete: Athlete
@@ -582,7 +553,7 @@ export function groupAthletesByGoal(athletes: Athlete[]): GoalGroup[] {
     }
     for (const goal of goals) {
       const skill = resolveGoalSkill(goal)
-      const key = skill?.id ?? skillKey(goal.label)
+      const key = skill?.id ?? normalizeSkillText(goal.label)
       const have = map.get(key)
       const row: GoalAthlete = { athlete: a, surface: goal.surface }
       if (have) {

@@ -65,7 +65,7 @@ for (const skill of ALL_SKILLS) {
 
 /**
  * Look up a unified skill by its guide card id (the kebab-case
- * ryanSkillPath step id). Returns null when no guide card exists yet.
+ * guide step id). Returns null when no guide card exists yet.
  */
 export function getRegistrySkillByGuideId(guideId: string | undefined | null): UnifiedSkill | null {
   if (!guideId) return null
@@ -76,6 +76,45 @@ export function getRegistrySkillByGuideId(guideId: string | undefined | null): U
 /** All registry skills that have a guide card, keyed by guide id. */
 export function guideSkills(): UnifiedSkill[] {
   return ALL_SKILLS.filter((s) => s.guideId).map(applyOverride)
+}
+
+/**
+ * Guide display order, top-down: peak skills first, foundations last.
+ * (Preserved from the original guide order; front-walkover moved
+ * next to back-walkover per Ryan 2026-09-26.)
+ */
+export const GUIDE_ORDER = [
+  'double-back',
+  'triple-full',
+  'double-full',
+  'full',
+  'back-half',
+  'barani',
+  'layout',
+  'back-tuck',
+  'ro-bhs-series',
+  'ro-bhs',
+  'round-off',
+  'standing-full',
+  'standing-tuck',
+  'standing-bhs',
+  'back-walkover',
+  'front-walkover',
+  'cart-dub',
+  'cart-full',
+  'cart-tuck',
+  'cartwheel-handspring',
+  'basics',
+]
+
+/** Registry records for the guide cards, in display order. */
+export function guideSkillsInOrder(): UnifiedSkill[] {
+  const out: UnifiedSkill[] = []
+  for (const guideId of GUIDE_ORDER) {
+    const skill = getRegistrySkillByGuideId(guideId)
+    if (skill) out.push(skill)
+  }
+  return out
 }
 
 /** Registry skills with no guide card yet — shown as placeholders in the guide. */

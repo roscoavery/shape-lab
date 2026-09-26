@@ -4,11 +4,12 @@
  * Top-down: peak skills first, foundations last.
  */
 import { useEffect, useRef, useState } from 'react'
-import { RYAN_CUE_SWAPS } from '../../config/ryanSkillPath'
+import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
 import {
+  GUIDE_ORDER,
   TRACK_LABELS,
-  getRegistrySkillByGuideId,
+  guideSkillsInOrder,
   guidelessSkills,
   type UnifiedSkill,
   type UnifiedSkillTrack,
@@ -18,44 +19,9 @@ import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
 import { markedFetch } from '../../lib/authSession'
 
-/**
- * Guide display order, top-down: peak skills first, foundations last.
- * (Preserved from the original RYAN_SKILL_PATH order; front-walkover moved
- * next to back-walkover per Ryan 2026-09-26.) Cards read their content from
- * the unified registry via these guide ids.
- */
-const GUIDE_ORDER = [
-  'double-back',
-  'triple-full',
-  'double-full',
-  'full',
-  'back-half',
-  'barani',
-  'layout',
-  'back-tuck',
-  'ro-bhs-series',
-  'ro-bhs',
-  'round-off',
-  'standing-full',
-  'standing-tuck',
-  'standing-bhs',
-  'back-walkover',
-  'front-walkover',
-  'cart-dub',
-  'cart-full',
-  'cart-tuck',
-  'cartwheel-handspring',
-  'basics',
-]
-
 /** Registry records for the guide cards, in display order. */
 function guideSteps(): UnifiedSkill[] {
-  const out: UnifiedSkill[] = []
-  for (const guideId of GUIDE_ORDER) {
-    const skill = getRegistrySkillByGuideId(guideId)
-    if (skill) out.push(skill)
-  }
-  return out
+  return guideSkillsInOrder()
 }
 
 /** True for local video files (public/videos/...) vs social embeds. */

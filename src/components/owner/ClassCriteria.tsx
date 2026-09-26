@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Athlete, HomeworkLog } from '../../types'
 import { profileRole } from '../../lib/profileRole'
 import { loadHomeworkLogs } from '../../lib/storage'
-import { RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
+import { getRegistrySkillByGuideId, guideSkillsInOrder } from '../../lib/skillRegistry'
 import { listFeedPosts, postOnChannel, winSubjectIds, type FeedPost } from '../../lib/feedPosts'
 import {
   deleteGymLevel,
@@ -30,8 +30,8 @@ function requirementSignal(
   logs: HomeworkLog[],
   winCaptions: string[],
 ): boolean {
-  const step = req.skillStepId ? RYAN_SKILL_PATH.find((s) => s.id === req.skillStepId) : undefined
-  const needles = [req.label, step?.skill].filter(Boolean).map((s) => s!.toLowerCase())
+  const step = req.skillStepId ? getRegistrySkillByGuideId(req.skillStepId) : undefined
+  const needles = [req.label, step?.name].filter(Boolean).map((s) => s!.toLowerCase())
   if (needles.length === 0) return false
   const haystacks: string[] = []
   for (const log of logs) {
@@ -104,9 +104,9 @@ function LevelEditor({
                 onChange={(e) => setReq(req.id, { skillStepId: e.target.value || undefined })}
               >
                 <option value="">Tie to a skill-path step (optional)…</option>
-                {RYAN_SKILL_PATH.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.skill}
+                {guideSkillsInOrder().map((s) => (
+                  <option key={s.guideId} value={s.guideId}>
+                    {s.name}
                   </option>
                 ))}
               </select>

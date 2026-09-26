@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { profileRole } from '../../lib/profileRole'
-import { RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
+import { getRegistrySkillByGuideId, guideSkillsInOrder } from '../../lib/skillRegistry'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import {
   assignOnboardingTrack,
@@ -139,14 +139,14 @@ function TrackEditor({
                   className={`${inputCls} mt-2`}
                   value={item.refId ?? ''}
                   onChange={(e) => {
-                    const step = RYAN_SKILL_PATH.find((s) => s.id === e.target.value)
-                    setItem(item.id, { refId: step?.id, label: step ? step.skill : '' })
+                    const skill = getRegistrySkillByGuideId(e.target.value)
+                    setItem(item.id, { refId: skill?.guideId, label: skill ? skill.name : '' })
                   }}
                 >
                   <option value="">Pick a skill-path step…</option>
-                  {RYAN_SKILL_PATH.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.skill}
+                  {guideSkillsInOrder().map((s) => (
+                    <option key={s.guideId} value={s.guideId}>
+                      {s.name}
                     </option>
                   ))}
                 </select>

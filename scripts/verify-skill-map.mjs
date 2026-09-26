@@ -1,14 +1,17 @@
 /**
- * Verify the Phase 0 unified skill mapping.
+ * Verify the unified skill registry's internal consistency.
  *
- * Loads the three source configs plus src/config/unifiedSkillSeed.ts and checks:
- *  - every non-"Other" catalog choice is claimed by exactly one unified record
- *  - every seed skill id has exactly one unified record
- *  - every guide step id is claimed by exactly one unified record
- *  - no duplicate ids / guideIds / catalogIds / normalized names / normalized aliases
- *  - guide prose (guideNeeds, canBend, ask, ryanNote) is verbatim vs ryanSkillPath.ts
+ * (Rewritten for Phase 5 of the skill-path merge: the old source configs
+ *  skillGoalCatalog.ts and ryanSkillPath.ts are gone. This script now checks
+ *  the unified seed against itself and the live progression seed.)
+ *
+ * Loads src/config/unifiedSkillSeed.ts, src/config/skillPathSeed.ts,
+ * src/config/skillCues.ts and checks:
+ *  - no duplicate ids / guideIds / normalized names / normalized aliases
+ *  - every GUIDE_ORDER id resolves to a record with a guide card
  *  - records without a guide card carry no prose fields
- *  - cue-swap ids are not present (they are separate content)
+ *  - cue-swap ids are not present in the registry
+ *  - shipped needs/conditioning reference valid registry skill ids
  *
  * Exit 0 when clean, 1 on any conflict.
  *
@@ -27,52 +30,25 @@ const entry = join(dir, 'entry.ts')
 writeFileSync(
   entry,
   [
-    `export { SKILL_GOAL_CHOICES } from '${ROOT}/src/config/skillGoalCatalog'`,
-    `export { SHIPPED_SKILLS } from '${ROOT}/src/config/skillPathSeed'`,
-    `export { RYAN_SKILL_PATH, RYAN_CUE_SWAPS } from '${ROOT}/src/config/ryanSkillPath'`,
     `export { UNIFIED_SKILL_SEED } from '${ROOT}/src/config/unifiedSkillSeed'`,
+    `export { SHIPPED_SKILLS, SHIPPED_NEEDS, SHIPPED_CONDITIONING } from '${ROOT}/src/config/skillPathSeed'`,
+    `export { RYAN_CUE_SWAPS } from '${ROOT}/src/config/skillCues'`,
+    `export { GUIDE_ORDER } from '${ROOT}/src/lib/skillRegistry'`,
   ].join('\n'),
 )
 const bundle = join(dir, 'bundle.mjs')
 execFileSync(ESBUILD, [entry, '--bundle', '--format=esm', '--platform=node', `--outfile=${bundle}`, '--log-level=error'])
 
-const { SKILL_GOAL_CHOICES, SHIPPED_SKILLS, RYAN_SKILL_PATH, RYAN_CUE_SWAPS, UNIFIED_SKILL_SEED } =
+const { UNIFIED_SKILL_SEED, SHIPPED_SKILLS, SHIPPED_NEEDS, SHIPPED_CONDITIONING, RYAN_CUE_SWAPS, GUIDE_ORDER } =
   await import(bundle)
 
 const failures = []
-const warnings = []
 const fail = (msg) => failures.push(msg)
 const norm = (s) => s.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()
 
-// ---- 1. catalog coverage ----
-for (const c of SKILL_GOAL_CHOICES) {
-  if (c.other) continue
-  const claimants = UNIFIED_SKILL_SEED.filter((r) => r.catalogId === c.id)
-  if (claimants.length === 0) fail(`catalog choice unmapped: ${c.id} ("${c.label}")`)
-  if (claimants.length > 1) fail(`catalog choice claimed twice: ${c.id} by ${claimants.map((r) => r.id).join(', ')}`)
-}
-// every catalogId on a record must exist
-for (const r of UNIFIED_SKILL_SEED) {
-  if (r.catalogId && !SKILL_GOAL_CHOICES.some((c) => c.id === r.catalogId)) {
-    fail(`record ${r.id} references unknown catalogId ${r.catalogId}`)
-  }
-}
+const byId = new Map(UNIFIED_SKILL_SEED.map((r) => [r.id, r]))
 
-// ---- 2. seed coverage ----
-for (const s of SHIPPED_SKILLS) {
-  const claimants = UNIFIED_SKILL_SEED.filter((r) => r.id === s.id)
-  if (claimants.length === 0) fail(`seed skill unmapped: ${s.id} ("${s.name}")`)
-  if (claimants.length > 1) fail(`seed id claimed twice: ${s.id}`)
-}
-
-// ---- 3. guide coverage ----
-for (const g of RYAN_SKILL_PATH) {
-  const claimants = UNIFIED_SKILL_SEED.filter((r) => r.guideId === g.id)
-  if (claimants.length === 0) fail(`guide step unmapped: ${g.id} ("${g.skill}")`)
-  if (claimants.length > 1) fail(`guide id claimed twice: ${g.id} by ${claimants.map((r) => r.id).join(', ')}`)
-}
-
-// ---- 4. duplicates / collisions ----
+// ---- 1. duplicates / collisions ----
 const seen = new Map()
 const checkDup = (kind, key, owner) => {
   if (!key) return
@@ -83,49 +59,58 @@ const aliasOwners = new Map()
 for (const r of UNIFIED_SKILL_SEED) {
   checkDup('id', r.id, r.id)
   checkDup('guideId', r.guideId, r.id)
-  checkDup('catalogId', r.catalogId, r.id)
   checkDup('name', norm(r.name), r.id)
   for (const a of r.aliases ?? []) {
     const k = norm(a)
     if (aliasOwners.has(k)) fail(`alias collision: "${a}" on ${r.id} already claimed by ${aliasOwners.get(k)}`)
     else aliasOwners.set(k, r.id)
-    // an alias must not equal another record's normalized name
     const nameOwner = UNIFIED_SKILL_SEED.find((o) => o.id !== r.id && norm(o.name) === k)
     if (nameOwner) fail(`alias "${a}" on ${r.id} collides with name of ${nameOwner.id}`)
   }
 }
 
-// ---- 5. prose verbatim ----
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+// ---- 2. guide order resolves ----
+const byGuideId = new Map()
+for (const r of UNIFIED_SKILL_SEED) if (r.guideId) byGuideId.set(r.guideId, r)
+for (const gid of GUIDE_ORDER) {
+  if (!byGuideId.has(gid)) fail(`GUIDE_ORDER id "${gid}" has no registry record`)
+}
+
+// ---- 3. records without a guide card carry no prose ----
 for (const r of UNIFIED_SKILL_SEED) {
-  const g = RYAN_SKILL_PATH.find((s) => s.id === r.guideId)
-  if (g) {
-    if (!eq(r.guideNeeds, g.needs)) fail(`prose mismatch guideNeeds on ${r.id}`)
-    if (!eq(r.canBend, g.canBend)) fail(`prose mismatch canBend on ${r.id}`)
-    if (!eq(r.ask, g.ask)) fail(`prose mismatch ask on ${r.id}`)
-    if ((r.ryanNote ?? undefined) !== (g.ryanNote ?? undefined)) fail(`prose mismatch ryanNote on ${r.id}`)
-  } else {
+  if (!r.guideId) {
     for (const f of ['guideNeeds', 'canBend', 'ask', 'ryanNote']) {
       if (r[f] !== undefined) fail(`record ${r.id} has no guide card but carries ${f}`)
     }
   }
 }
 
-// ---- 6. cue swaps excluded ----
+// ---- 4. cue swaps excluded ----
 const cueIds = new Set(RYAN_CUE_SWAPS.map((c) => c.id))
 for (const r of UNIFIED_SKILL_SEED) {
   if (cueIds.has(r.guideId) || cueIds.has(r.id)) fail(`cue swap leaked into registry: ${r.id}`)
 }
 
+// ---- 5. shipped progression data references valid skills ----
+for (const s of SHIPPED_SKILLS) {
+  if (!byId.has(s.id)) fail(`shipped seed skill ${s.id} has no registry record`)
+}
+for (const n of SHIPPED_NEEDS) {
+  if (!byId.has(n.skillId)) fail(`shipped need ${n.id} references unknown skill ${n.skillId}`)
+  if (n.needSkillId && !byId.has(n.needSkillId)) fail(`shipped need ${n.id} references unknown needSkill ${n.needSkillId}`)
+}
+for (const c of SHIPPED_CONDITIONING) {
+  if (!byId.has(c.skillId)) fail(`shipped conditioning ${c.id} references unknown skill ${c.skillId}`)
+}
+
 // ---- report ----
 console.log(`records: ${UNIFIED_SKILL_SEED.length}`)
-console.log(`catalog choices mapped: ${SKILL_GOAL_CHOICES.filter((c) => !c.other).length}/${SKILL_GOAL_CHOICES.filter((c) => !c.other).length}`)
-console.log(`seed skills mapped: ${SHIPPED_SKILLS.length}/${SHIPPED_SKILLS.length}`)
-console.log(`guide steps mapped: ${RYAN_SKILL_PATH.length}/${RYAN_SKILL_PATH.length}`)
-if (warnings.length) console.log('warnings:\n' + warnings.map((w) => '  - ' + w).join('\n'))
+console.log(`guide cards: ${byGuideId.size}`)
+console.log(`guide order entries: ${GUIDE_ORDER.length}`)
+console.log(`shipped needs: ${SHIPPED_NEEDS.length}, shipped conditioning: ${SHIPPED_CONDITIONING.length}`)
 if (failures.length) {
   console.log('FAILURES:')
   for (const f of failures) console.log('  - ' + f)
   process.exit(1)
 }
-console.log('OK: mapping is clean')
+console.log('OK: registry is clean')

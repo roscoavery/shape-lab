@@ -1,6 +1,6 @@
 import { allLibraryShapes } from '../config/shapes'
 import { HOMEWORK_CATALOG } from '../config/homeworkCatalog'
-import { RYAN_SKILL_PATH } from '../config/ryanSkillPath'
+import { guideSkillsInOrder } from './skillRegistry'
 import { SECTION_SUBNAV, type NavRole } from './appNav'
 import type { AppTab } from './storage'
 import type { Athlete } from '../types'
@@ -192,18 +192,19 @@ function peopleHits(needle: string, athletes: Athlete[]): AppSearchHit[] {
 
 function skillHits(needle: string): AppSearchHit[] {
   const out: AppSearchHit[] = []
-  for (const step of RYAN_SKILL_PATH) {
-    const blob = `${step.skill} ${step.ask} ${step.needs.join(' ')} ${step.ryanNote ?? ''}`
-    const score = Math.max(tokenScore(step.skill, needle), tokenScore(blob, needle))
+  for (const skill of guideSkillsInOrder()) {
+    const guideId = skill.guideId ?? skill.id
+    const blob = `${skill.name} ${skill.ask ?? ''} ${(skill.guideNeeds ?? []).join(' ')} ${skill.ryanNote ?? ''}`
+    const score = Math.max(tokenScore(skill.name, needle), tokenScore(blob, needle))
     if (score <= 0) continue
     out.push({
-      id: `skill:${step.id}`,
+      id: `skill:${guideId}`,
       kind: 'skill',
-      title: step.skill,
+      title: skill.name,
       subtitle: 'Skill path',
       tab: 'learn',
       score,
-      skillId: step.id,
+      skillId: guideId,
     })
   }
   return out

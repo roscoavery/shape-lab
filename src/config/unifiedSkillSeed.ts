@@ -1,21 +1,16 @@
 /**
- * Unified skill registry seed — Phase 0 of the skill-path merge (2026-09-26).
+ * Unified skill registry seed — the single source of truth for skill identity.
  *
- * One record per skill, merging three previously separate models:
- *  - athlete goal catalog  (src/config/skillGoalCatalog.ts)
- *  - coach progression data (src/config/skillPathSeed.ts)
- *  - Learn guide cards      (src/config/ryanSkillPath.ts)
- *
- * GENERATED FILE. Do not hand-edit. Regenerate with /tmp/skillmap/gen-unified.mjs
- * (or the equivalent generator) after the mapping table is corrected.
+ * One record per skill. The old separate models (goal catalog, progression
+ * seed, guide cards) were merged here during the 2026-09-26 skill-path merge.
  *
  * ID rules: skl_* ids are stable and reused from the progression seed where one
  * existed. guideId preserves every existing reference (technique evidence keys,
- * owner onboarding track items, class criteria, search deep-links). RYAN_CUE_SWAPS
- * is separate content and is intentionally NOT part of this file.
+ * owner onboarding track items, class criteria, search deep-links). Cue swaps
+ * live in src/config/skillCues.ts and are intentionally NOT part of this file.
  *
- * Guide prose (guideNeeds / canBend / ask / ryanNote) is copied verbatim from
- * ryanSkillPath.ts — organized, never rewritten.
+ * Guide prose (guideNeeds / canBend / ask / ryanNote) is Ryan's, copied verbatim
+ * from the original guide — organized, never rewritten.
  */
 
 export type UnifiedSkillTrack = 'running' | 'standing' | 'walking' | 'foundation'
@@ -23,7 +18,7 @@ export type UnifiedSkillTrack = 'running' | 'standing' | 'walking' | 'foundation
 export interface UnifiedSkill {
   /** Stable skl_* id. Reused from the progression seed where one existed. */
   id: string
-  /** ryanSkillPath step id, present only when a guide card exists. */
+  /** Guide card id (kebab-case), present only when a guide card exists. */
   guideId?: string
   /** SKILL_GOAL_CHOICES id, present only when an athlete-facing choice maps here. */
   catalogId?: string
@@ -31,7 +26,7 @@ export interface UnifiedSkill {
   /** Merged from seed aliases + catalog matchNames + catalog label. */
   aliases: string[]
   track: UnifiedSkillTrack
-  /** Guide prose, verbatim from ryanSkillPath.ts. Absent until a guide card exists. */
+  /** Guide prose, Ryan's verbatim. Absent until a guide card exists. */
   guideNeeds?: string[]
   canBend?: string[]
   ask?: string
