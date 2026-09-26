@@ -190,7 +190,7 @@ export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] 
   const tabs: AppTab[] =
     role === 'parent'
       ? ['today', 'homework', 'learn', 'wins', 'network', 'history']
-      : ['today', 'scroll', 'homework', 'wins', 'tasks2', 'learn', 'compare', 'network']
+      : ['today', 'scroll', 'homework', 'wins', 'tasks2', 'learn', 'compare', 'network', 'drills', 'coachlib', 'research', 'wellness', 'progress']
   const out: AppSearchHit[] = []
   for (const tab of tabs) {
     if ((tab === 'tasks' || tab === 'coach' || tab === 'drills') && !ryan) continue
@@ -205,6 +205,34 @@ export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] 
       subtitle: 'Suggested',
       tab,
       score: 1,
+    })
+  }
+  // Popular shapes — tap to open in the shape library.
+  const shapeNames = ['Handstand', 'Tuck', 'Hollow (arms up)', 'Tight arch', 'Pike (zombie arms)', 'Candlestick', 'Bridge', 'Lunge']
+  for (const s of allLibraryShapes()) {
+    if (!shapeNames.includes(s.name)) continue
+    out.push({
+      id: `shape:${s.id}`,
+      kind: 'shape',
+      title: s.name,
+      subtitle: 'Shape library · Suggested',
+      tab: 'learn',
+      score: 0.9,
+      shapeId: s.id,
+    })
+  }
+  // Popular homework drills — tap to open.
+  const hwNames = ['Candlestick drills', 'Hollow hold', 'Handstand forward roll', 'Bridge push-ups', 'V-ups']
+  for (const item of HOMEWORK_CATALOG) {
+    if (!hwNames.some((n) => item.name.toLowerCase().includes(n.toLowerCase()))) continue
+    out.push({
+      id: `hw:${item.id}`,
+      kind: 'homework',
+      title: item.name,
+      subtitle: 'Homework · Suggested',
+      tab: 'homework',
+      score: 0.8,
+      catalogId: item.id,
     })
   }
   return out
