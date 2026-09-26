@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { markedFetch } from '../../lib/authSession'
 
 type Props = {
   src: string
@@ -195,7 +196,7 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
       if (blob.size === 0) throw new Error('The trimmed clip came out empty.')
 
       setStatus('uploading')
-      const res = await fetch(`/api/admin/video-replace?target=${encodeURIComponent(src.split('?')[0])}`, {
+      const res = await markedFetch(`/api/admin/video-replace?target=${encodeURIComponent(src.split('?')[0])}`, {
         method: 'POST',
         headers: { 'Content-Type': type },
         body: blob,

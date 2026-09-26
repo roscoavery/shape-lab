@@ -15,7 +15,49 @@ function isLocalVideo(url: string): boolean {
 }
 
 /** Native player for local video files, with A/B loop support. */
-/** Native player for local video files, with A/B loop support. Autoplays (muted) and loops while on screen. */
+/** Native player for local video files, with A/B loop support.
+ * Autoplays (muted) only when it is the most-visible video on screen —
+ * one playing at a time so they don't all fight each other. */
+const visibleLocalVideos = new Map<HTMLVideoElement, number>()
+
+function updateLocalVideoPlayback() {
+  let best: HTMLVideoElement | null = null
+  let bestRatio = 0.45
+  for (const [v, ratio] of visibleLocalVideos) {
+    if (!v.isConnected) {
+      visibleLocalVideos.delete(v)
+      continue
+    }
+    if (ratio > bestRatio) {
+      bestRatio = ratio
+      best = v
+    }
+  }
+  for (const [v] of visibleLocalVideos) {
+    if (!v.isConnected) continue
+    if (v === best) {
+      if (v.paused) v.play().catch(() => {})
+    } else if (!v.paused) {
+      v.pause()
+    }
+  }
+}
+
+// If the user taps play on one, pause the rest.
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'play',
+    (e) => {
+      const target = e.target as HTMLVideoElement | null
+      if (!target || target.tagName !== 'VIDEO') return
+      document.querySelectorAll('video').forEach((v) => {
+        if (v !== target && !v.paused) v.pause()
+      })
+    },
+    true,
+  )
+}
+
 function LocalVideo({
   url,
   loopA,
@@ -34,16 +76,20 @@ function LocalVideo({
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            v.play().catch(() => {})
+            visibleLocalVideos.set(v, e.intersectionRatio)
           } else {
-            v.pause()
+            visibleLocalVideos.delete(v)
           }
         }
+        updateLocalVideoPlayback()
       },
-      { threshold: 0.4 },
+      { threshold: [0, 0.25, 0.5, 0.75, 1] },
     )
     io.observe(v)
-    return () => io.disconnect()
+    return () => {
+      io.disconnect()
+      visibleLocalVideos.delete(v)
+    }
   }, [url])
 
   return (
