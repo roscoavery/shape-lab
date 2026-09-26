@@ -4,6 +4,7 @@
  * Top-down: peak skills first, foundations last.
  */
 import { useEffect, useRef, useState } from 'react'
+import { noteUserPause, noteUserPlay, registerCenterPlay } from '../../lib/videoCoordinator'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -16,33 +17,7 @@ function isLocalVideo(url: string): boolean {
 
 /** Native player for local video files, with A/B loop support. */
 /** Native player for local video files, with A/B loop support.
- * Autoplays (muted) only when it is the most-visible video on screen —
- * one playing at a time so they don't all fight each other. */
-const visibleLocalVideos = new Map<HTMLVideoElement, number>()
-
-function updateLocalVideoPlayback() {
-  let best: HTMLVideoElement | null = null
-  let bestRatio = 0.45
-  for (const [v, ratio] of visibleLocalVideos) {
-    if (!v.isConnected) {
-      visibleLocalVideos.delete(v)
-      continue
-    }
-    if (ratio > bestRatio) {
-      bestRatio = ratio
-      best = v
-    }
-  }
-  for (const [v] of visibleLocalVideos) {
-    if (!v.isConnected) continue
-    if (v === best) {
-      if (v.paused) v.play().catch(() => {})
-    } else if (!v.paused) {
-      v.pause()
-    }
-  }
-}
-
+ * Plays only when closest to the middle of the screen (see videoCoordinator). */
 function LocalVideo({
   url,
   loopA,
@@ -57,23 +32,15 @@ function LocalVideo({
   useEffect(() => {
     const v = ref.current
     if (!v) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            visibleLocalVideos.set(v, e.intersectionRatio)
-          } else {
-            visibleLocalVideos.delete(v)
-          }
-        }
-        updateLocalVideoPlayback()
-      },
-      { threshold: [0, 0.25, 0.5, 0.75, 1] },
-    )
-    io.observe(v)
+    const unregister = registerCenterPlay(v)
+    const onPlay = () => noteUserPlay(v)
+    const onPause = () => noteUserPause(v)
+    v.addEventListener('play', onPlay)
+    v.addEventListener('pause', onPause)
     return () => {
-      io.disconnect()
-      visibleLocalVideos.delete(v)
+      v.removeEventListener('play', onPlay)
+      v.removeEventListener('pause', onPause)
+      unregister()
     }
   }, [url])
 
@@ -263,6 +230,7 @@ function ProofStrip({
                     <InstagramEmbed
                       url={v.url}
                       compact
+                      centerPlay
                       loopA={loopA}
                       loopB={loopB}
                       onAbChange={handleAbChange(v.url)}
@@ -279,6 +247,7 @@ function ProofStrip({
                       compact
                       bare
                       quiet
+                      centerPlay
                       loopA={loopA}
                       loopB={loopB}
                     />

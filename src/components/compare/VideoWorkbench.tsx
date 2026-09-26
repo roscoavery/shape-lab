@@ -14,6 +14,7 @@ import { HudCircle, IconHide, IconShow } from './CompareHud'
 import { useClipLoopsOptional, MAX_LOOP_PRESETS } from '../../lib/clipLoops'
 import { useFavoritesOptional } from '../../lib/favorites'
 import { reelObjectFit } from '../../lib/reelFit'
+import { noteUserPause, noteUserPlay, registerCenterPlay } from '../../lib/videoCoordinator'
 
 const SPEEDS = [0.25, 0.5, 1] as const
 
@@ -46,6 +47,9 @@ type Props = {
   bare?: boolean
   /** When set, play only while true (doom-scroll / collage). */
   active?: boolean
+  /** Opt into center-play coordination: only the video closest to the middle
+   *  of the screen plays. The coordinator owns play/pause. */
+  centerPlay?: boolean
   /** Transport overlays the picture (hide/show). Defaults on in fullscreen. */
   overlayChrome?: boolean
   /** Start with the transport HUD open. Chalkboard defaults this off. */
@@ -130,6 +134,7 @@ function VideoWorkbenchInner({
   onSaveToDrill,
   onSaveToCollection,
   onError,
+  centerPlay = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const fixingDurationRef = useRef(false)
@@ -192,9 +197,28 @@ function VideoWorkbenchInner({
     setPointB((p) => p ?? stored.b)
   }, [stored, loopA, loopB])
 
+  // Center-play coordination: the coordinator owns play/pause.
+  useEffect(() => {
+    if (!centerPlay) return
+    const v = videoRef.current
+    if (!v) return
+    v.muted = true
+    const unregister = registerCenterPlay(v)
+    const onPlay = () => noteUserPlay(v)
+    const onPause = () => noteUserPause(v)
+    v.addEventListener('play', onPlay)
+    v.addEventListener('pause', onPause)
+    return () => {
+      v.removeEventListener('play', onPlay)
+      v.removeEventListener('pause', onPause)
+      unregister()
+    }
+  }, [centerPlay, src])
+
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
+    if (centerPlay) return // coordinator owns playback
     const shouldPlay = active === true || (active === undefined && autoPlay)
     if (!shouldPlay) {
       if (active === false) v.pause()

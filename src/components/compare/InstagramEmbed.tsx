@@ -193,6 +193,8 @@ type Props = {
   smartFit?: boolean
   /** Gym-hosted mp4 so we do not need Instagram to play this clip. */
   savedUrl?: string
+  /** Only the video closest to the middle of the screen plays. */
+  centerPlay?: boolean
 }
 
 export function InstagramEmbed({
@@ -218,6 +220,7 @@ export function InstagramEmbed({
   fit,
   smartFit,
   savedUrl,
+  centerPlay = false,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -667,6 +670,7 @@ export function InstagramEmbed({
         src={src}
         allowAbLoop
         autoPlay={active !== false}
+        centerPlay={centerPlay}
         fill={fill}
         objectFit={fit ?? (fill ? 'cover' : 'contain')}
         smartFit={smartFit ?? (fill && !fit)}
