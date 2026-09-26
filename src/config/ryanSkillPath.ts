@@ -53,7 +53,6 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'Finish the second twist not long after the halfway point of the flip',
       'A deeper blocking angle than a double: more twist per flip needs more height per flip',
     ],
-    canBend: [],
     canBend: ['Back 2.5 and front 2.5 help build toward it.'],
     ask: 'Ask your coach whether your double full finishes the second twist early with time to let out and slow the twist before landing. If the double is rushed, the triple is not next.',
     ryanNote:

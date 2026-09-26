@@ -13,6 +13,10 @@
 
 export type ParentEducationCategory = 'guide'
 
+export const PARENT_EDUCATION_CATEGORIES: { id: ParentEducationCategory; label: string }[] = [
+  { id: 'guide', label: 'Parent Guide' },
+]
+
 export type ParentEducationArticle = {
   id: string
   category: ParentEducationCategory

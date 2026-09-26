@@ -296,7 +296,7 @@ function groupSummary(logs: HomeworkLog[]): string {
   return parts.join(' · ')
 }
 
-function groupByDay(logs: HomeworkLog[], items: HomeworkItem[]): Group[] {
+function groupByDay(logs: HomeworkLog[], _items: HomeworkItem[]): Group[] {
   const map = new Map<string, HomeworkLog[]>()
   const order: string[] = []
   for (const log of logs) {

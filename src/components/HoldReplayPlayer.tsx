@@ -106,7 +106,7 @@ export function HoldReplayPlayer({
     const key = burnedOverlayKey(clipId, mode, mirror !== false, layers, saveSpeed, true)
     const cached = getBurnedOverlay(key)
     // Fresh tap + already-burned clip: the share sheet gets a live gesture.
-    if (cached && quickState !== 'burning') {
+    if (cached && (quickState === 'idle' || quickState === 'ready')) {
       setQuickState('sharing')
       onSaveBusy?.(true)
       try {
