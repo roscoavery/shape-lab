@@ -53,6 +53,72 @@ export function MobileSearchPage({
     [q, athletes, clips, role, ryan],
   )
 
+  const SUGGESTIONS: { label: string; items: string[] }[] = [
+    {
+      label: 'Skills',
+      items: [
+        'Standing back tuck',
+        'Standing full',
+        'Full twisting layout',
+        'Layout',
+        'Round off',
+        'Round off back handspring',
+        'Back walkover',
+        'Cartwheel',
+        'Double back',
+        'Front tuck',
+      ],
+    },
+    {
+      label: 'Concepts',
+      items: [
+        'Fast is slow',
+        '5 clean vs 20 thrown',
+        'Landing vs owning',
+        'Perfection before progression',
+        'S-curve',
+        'What is in our control',
+      ],
+    },
+    {
+      label: 'Shapes',
+      items: [
+        'Hollow',
+        'Arch',
+        'Handstand',
+        'Tuck',
+        'Pike',
+        'Layout shape',
+        'C shape',
+        'Bridge',
+      ],
+    },
+    {
+      label: 'Drills & homework',
+      items: [
+        'Candlestick',
+        'Hollow hold',
+        'Handstand forward roll',
+        'Back extension',
+        'V-ups',
+        'Bridge push-ups',
+        'Wall sit',
+      ],
+    },
+    {
+      label: 'Features',
+      items: [
+        'Delay cam',
+        'Compare videos',
+        'Skill path',
+        'Reference videos',
+        'Shape library',
+        'Homework',
+        'Class clock',
+      ],
+    },
+  ]
+
   const activate = (hit: AppSearchHit) => {
     if (hit.kind === 'shape' && hit.shapeId) {
       stashMobileSearchJump({ kind: 'shape', shapeId: hit.shapeId })
@@ -96,6 +162,30 @@ export function MobileSearchPage({
           Done
         </button>
       </div>
+      {!q.trim() && (
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain py-4 pb-8">
+          {SUGGESTIONS.map((group) => (
+            <div key={group.label}>
+              <p className="px-1 text-[11px] font-extrabold uppercase tracking-widest text-[var(--muted)]">
+                {group.label}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {group.items.map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => setQ(term)}
+                    className="rounded-full bg-white/8 px-3.5 py-2 text-sm font-medium text-white/90 active:bg-white/20"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {q.trim() ? (
       <ul className="mt-3 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pb-2">
         {hits.map((row) => (
           <li key={row.id}>
@@ -122,6 +212,7 @@ export function MobileSearchPage({
           </li>
         )}
       </ul>
+      ) : null}
     </div>
   )
 }
