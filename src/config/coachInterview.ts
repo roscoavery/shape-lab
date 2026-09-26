@@ -184,10 +184,6 @@ export const COACH_INTERVIEW: InterviewSection[] = [
         question: 'What should a parent say in the car ride home? What should they not say?',
       },
       {
-        id: 'better-question',
-        question: 'What is a question you wish parents would ask instead of "did you get it?"',
-      },
-      {
         id: 'worth-beyond-performance',
         question: 'How do you keep an athlete’s sense of worth separate from whether they landed something that day?',
       },
