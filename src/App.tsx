@@ -193,6 +193,16 @@ import type {
   ReferencePhoto,
   ShapeDef,
 } from './types'
+import { OwnerDashboard } from './components/owner/OwnerDashboard'
+
+/**
+ * Effective gym-owner view: the active profile's role is gym_owner, or a
+ * gym admin is previewing the gym-owner desk. Gates the Owner tab.
+ */
+function isOwnerView(activeProfile: Athlete | null, deskPreview: DeskPreview): boolean {
+  if (activeProfile && deskPreview === 'gymOwner') return true
+  return profileRole(activeProfile) === 'gym_owner'
+}
 
 export default function App() {
   const camera = usePoseCamera()
@@ -621,7 +631,8 @@ export default function App() {
           : deskPreview
         : authUser?.role
     const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
-    if (authUser && !tabAllowedForNavRole(tab, role, ryan)) setTab('today')
+    const ownerView = isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview)
+    if (authUser && !tabAllowedForNavRole(tab, role, ryan, ownerView)) setTab('today')
   }, [athletes, activeAthleteId, tab, authUser, deskPreview])
 
   useEffect(
@@ -668,7 +679,7 @@ export default function App() {
           : deskPreview
         : authUser?.role
     const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
-    if (authUser && !tabAllowedForNavRole(id, role, ryan)) return
+    if (authUser && !tabAllowedForNavRole(id, role, ryan, isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview))) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -898,6 +909,7 @@ export default function App() {
           : activeProfile && deskPreview === 'gymOwner'
             ? { ...activeProfile, role: 'gym_owner' }
             : activeProfile
+  const ownerView = isOwnerView(activeProfile, deskPreview)
   const homeworkAthleteId =
     activeProfile && profileRole(activeProfile) === 'parent'
       ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
@@ -971,6 +983,7 @@ export default function App() {
         admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
         navRole={previewRole ?? authUser.role}
         deskPreview={deskPreview}
+        isOwner={ownerView}
         onDeskPreview={chooseDeskPreview}
         onSignOut={() => {
           void logoutSession().then(() => {
@@ -1023,6 +1036,7 @@ export default function App() {
             kiosk={floorKiosk}
             admin={sessionIsAdmin(authUser) && deskPreview === 'home'}
             role={previewRole ?? authUser.role}
+            isOwner={ownerView}
             onGo={goTab}
           />
         </div>
@@ -1835,6 +1849,10 @@ export default function App() {
           deskPreview={deskPreview}
           onDeskPreview={chooseDeskPreview}
         />
+      )}
+
+      {tab === 'owner' && ownerView && activeProfile && (
+        <OwnerDashboard owner={activeProfile} athletes={athletes} />
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}

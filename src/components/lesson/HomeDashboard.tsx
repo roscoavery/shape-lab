@@ -77,6 +77,9 @@ import {
   subscribeHiddenGyms,
   unhideListedGym,
 } from '../../lib/hiddenGyms'
+import { CoachOnboardingCard } from '../owner/CoachOnboardingCard'
+import { CoachClassesCard } from '../owner/CoachClassesCard'
+import { StaffNewsCard } from '../owner/StaffNewsCard'
 
 function coachRecapSessions(coachId: string, athletes: Athlete[]): LessonSession[] {
   const seen = new Set<string>()
@@ -474,6 +477,13 @@ export function HomeDashboard({
           >
             <ChalkboardPanel viewer={signedIn} onToday embed />
           </TodayDock>
+        )}
+        {profileRole(signedIn) === 'coach' && signedIn && (
+          <>
+            <CoachClassesCard coachId={signedIn.id} />
+            <CoachOnboardingCard coachId={signedIn.id} />
+            <StaffNewsCard />
+          </>
         )}
         {onShortcut && (
           <TodayDock

@@ -54,6 +54,8 @@ type Props = {
   admin?: boolean
   navRole?: SessionRole
   deskPreview?: DeskPreview
+  /** profileRole(activeProfile) === 'gym_owner' — gates the Owner section. */
+  isOwner?: boolean
   children: ReactNode
 }
 
@@ -77,6 +79,7 @@ export function IgMobileShell({
   admin = false,
   navRole,
   deskPreview = 'home',
+  isOwner = false,
   children,
 }: Props) {
   const [mobileSearch, setMobileSearch] = useState(false)
@@ -179,6 +182,7 @@ export function IgMobileShell({
             onGo={go}
             onDeskPreview={onDeskPreview}
             onSignOut={onSignOut}
+            isOwner={isOwner}
           />
           <MobileCreateSheet athlete={athlete} onGo={go} onStory={onStory} />
           <div className="min-w-0 flex-1 text-center">
@@ -210,6 +214,7 @@ export function IgMobileShell({
               kiosk={kiosk}
               admin={admin}
               role={navRole ?? authUser.role}
+              isOwner={isOwner}
               onGo={go}
             />
           </div>

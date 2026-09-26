@@ -27,6 +27,8 @@ type Props = {
   onGo: (tab: AppTab) => void
   onDeskPreview?: (next: DeskPreview) => void
   onSignOut?: () => void
+  /** profileRole(activeProfile) === 'gym_owner' — gates the Owner section. */
+  isOwner?: boolean
 }
 
 const PREVIEW_LABEL: Record<DeskPreview, string> = {
@@ -50,10 +52,11 @@ export function MobileNavDrawer({
   onGo,
   onDeskPreview,
   onSignOut,
+  isOwner = false,
 }: Props) {
   const [open, setOpen] = useState(false)
   const navRole = navRoleFromSession(role, kiosk)
-  const sections = sectionsForNavRole(navRole)
+  const sections = sectionsForNavRole(navRole, isOwner)
   const currentSection = sectionForTab(tab, navRole)
   const gymAdmin = sessionIsAdmin(authUser)
   const previewing = gymAdmin && deskPreview !== 'home'
@@ -109,7 +112,7 @@ export function MobileNavDrawer({
 
               <nav className="mt-4 space-y-4" aria-label="Sections">
                 {sections.map((section) => {
-                  const items = subnavForSection(section.id, ryan, kiosk, admin, navRole)
+                  const items = subnavForSection(section.id, ryan, kiosk, admin, navRole, isOwner)
                   const active = currentSection === section.id
                   return (
                     <div key={section.id}>
@@ -119,7 +122,7 @@ export function MobileNavDrawer({
                         {section.label}
                       </p>
                       <ul className="mt-1 overflow-hidden rounded-2xl border border-white/10">
-                        {(items.length ? items : [{ id: defaultTabForSection(section.id, ryan, kiosk, admin, navRole), label: section.label }]).map((item, i) => (
+                        {(items.length ? items : [{ id: defaultTabForSection(section.id, ryan, kiosk, admin, navRole, isOwner), label: section.label }]).map((item, i) => (
                           <li key={item.id} className={i > 0 ? 'border-t border-white/10' : undefined}>
                             <button
                               type="button"

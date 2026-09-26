@@ -12,6 +12,7 @@ export type AppSection =
   | 'family'
   | 'wellness'
   | 'progress'
+  | 'owner'
 
 export type NavRole = 'admin' | 'coach' | 'athlete' | 'parent' | 'kiosk'
 
@@ -63,10 +64,14 @@ const KIOSK_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'learn', label: 'Shapes' },
 ]
 
-export function sectionsForNavRole(role: NavRole): { id: AppSection; label: string }[] {
+export function sectionsForNavRole(
+  role: NavRole,
+  isOwner = false,
+): { id: AppSection; label: string }[] {
   if (role === 'parent') return PARENT_SECTIONS
   if (role === 'athlete') return ATHLETE_SECTIONS
   if (role === 'kiosk') return KIOSK_SECTIONS
+  if (isOwner) return [...APP_SECTIONS, { id: 'owner' as AppSection, label: 'Owner' }]
   return APP_SECTIONS
 }
 
@@ -109,6 +114,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
   family: [{ id: 'history', label: 'My Athletes' }],
   wellness: [{ id: 'wellness', label: 'Body care' }],
   progress: [{ id: 'progress', label: 'Progress' }],
+  owner: [{ id: 'owner', label: 'Dashboard' }],
 }
 
 export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection {
@@ -146,6 +152,8 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
       return 'progress'
     case 'classclock':
       return 'practice'
+    case 'owner':
+      return 'owner'
     default:
       return 'more'
   }
@@ -165,12 +173,14 @@ export function subnavForSection(
   kiosk = false,
   admin = false,
   role: NavRole = admin ? 'admin' : 'coach',
+  isOwner = false,
 ) {
   const items = SECTION_SUBNAV[section] ?? []
   return items.filter((item) => {
     if (!ryan && isRyanOnlyTab(item.id)) return false
     if (kiosk && isOfficeOnlyTab(item.id)) return false
     if (!admin && isAdminOnlyTab(item.id)) return false
+    if (item.id === 'owner' && !isOwner) return false
     if (role === 'parent') {
       if (section === 'more') return item.id === 'consent' || item.id === 'accounts' || item.id === 'about'
       if (section === 'learn') return item.id === 'learn'
@@ -205,11 +215,13 @@ export function defaultTabForSection(
   kiosk = false,
   admin = false,
   role: NavRole = admin ? 'admin' : 'coach',
+  isOwner = false,
 ): AppTab {
-  return subnavForSection(section, ryan, kiosk, admin, role)[0]?.id ?? 'today'
+  return subnavForSection(section, ryan, kiosk, admin, role, isOwner)[0]?.id ?? 'today'
 }
 
-export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean): boolean {
+export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean, isOwner = false): boolean {
+  if (tab === 'owner') return isOwner
   if (isRyanOnlyTab(tab) && !ryan && role !== 'admin') return false
   if (role === 'kiosk' && isOfficeOnlyTab(tab)) return false
   if (role === 'parent') {

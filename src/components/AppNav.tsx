@@ -15,14 +15,16 @@ type Props = {
   kiosk?: boolean
   admin?: boolean
   role?: SessionRole
+  /** profileRole(activeProfile) === 'gym_owner' — gates the Owner section. */
+  isOwner?: boolean
   onGo: (id: AppTab) => void
 }
 
-export function AppNav({ tab, ryan, kiosk = false, admin = false, role, onGo }: Props) {
+export function AppNav({ tab, ryan, kiosk = false, admin = false, role, isOwner = false, onGo }: Props) {
   const navRole: NavRole = navRoleFromSession(role, kiosk)
   const section = sectionForTab(tab, navRole)
-  const sections = sectionsForNavRole(navRole)
-  const subnav = subnavForSection(section, ryan, kiosk, admin, navRole)
+  const sections = sectionsForNavRole(navRole, isOwner)
+  const subnav = subnavForSection(section, ryan, kiosk, admin, navRole, isOwner)
   const showSubnav = subnav.length > 1 || (navRole !== 'parent' && navRole !== 'athlete' && section === 'more')
 
   return (
@@ -38,7 +40,7 @@ export function AppNav({ tab, ryan, kiosk = false, admin = false, role, onGo }: 
             aria-current={section === item.id ? 'page' : undefined}
             onClick={() => {
               if (section === item.id) return
-              onGo(defaultTabForSection(item.id, ryan, kiosk, admin, navRole))
+              onGo(defaultTabForSection(item.id, ryan, kiosk, admin, navRole, isOwner))
             }}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm transition ${
               section === item.id

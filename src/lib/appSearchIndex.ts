@@ -56,6 +56,7 @@ const FEATURE_WORDS: Record<AppTab, string> = {
   wellness: 'body care wellness recovery',
   progress: 'progress tracking levels',
   classclock: 'class clock stopwatch timer',
+  owner: 'owner gym owner dashboard onboarding staff levels classes criteria',
 }
 
 function tokenScore(hay: string, needle: string): number {
