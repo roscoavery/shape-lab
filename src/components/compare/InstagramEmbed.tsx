@@ -9,11 +9,14 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import {
     instagramSlideIndex,
+  isTikTokUrl,
   postedByFromUrl,
+  socialEmbedSrc,
   socialOpenLabel,
   socialPlatform,
   socialProfileUrl,
   urlWithIgSlide,
+  youtubeEmbedSrc,
 } from '../../lib/socialUrls'
 import {
   asPlayableBlob,
@@ -542,6 +545,24 @@ export function InstagramEmbed({
     go(safeSlide + (dx < 0 ? 1 : -1))
   }
 
+  // YouTube and TikTok play best in their official embed iframes — no
+  // resolving needed, and they work on iOS where scraping often fails.
+  const ytSrc = youtubeEmbedSrc(url)
+  if (ytSrc) {
+    return (
+      <div className={fill ? 'h-full min-h-0 bg-black' : 'relative aspect-video w-full overflow-hidden rounded-lg bg-black'}>
+        <iframe
+          src={ytSrc}
+          className="absolute inset-0 h-full w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          title="YouTube video"
+        />
+      </div>
+    )
+  }
+  const ttSrc = isTikTokUrl(url) ? socialEmbedSrc(url) : null
+
   if (!platform) {
     return (
       <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">
@@ -565,6 +586,20 @@ export function InstagramEmbed({
   }
 
   if ((error || !src) && !src) {
+    // TikTok resolving often fails on iOS — fall back to TikTok's own embed.
+    if (ttSrc) {
+      return (
+        <div className={fill ? 'h-full min-h-0 bg-black' : 'relative aspect-[9/16] w-full overflow-hidden rounded-lg bg-black'}>
+          <iframe
+            src={ttSrc}
+            className="absolute inset-0 h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            title="TikTok video"
+          />
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col gap-2">
         <p className="rounded-lg border border-[var(--bad)]/40 bg-[#2a1518] px-3 py-2 text-sm text-[var(--bad)]">

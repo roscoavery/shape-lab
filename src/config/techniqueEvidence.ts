@@ -153,7 +153,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
     {
       who: 'Step 4 — Sequential arm drop',
-      url: '/videos/arm-drop-progression/step4-sequential-arm-drop.mov',
+      url: '/videos/arm-drop-progression/step4-sequential-arm-drop.mp4',
       watchFor: 'Both arms drop in sequence. The second arm drop gives the second half turn, then both arms open back up to untilt.',
     },
     {
