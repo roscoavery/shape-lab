@@ -111,3 +111,8 @@ Tumbling homework should always be something the athlete does because they are s
 the most important thing for progress is a relentless pursuit of understanding. DETERMINATION will get you anywhere you want to be and if you are determined enought to improve, you will improve. That is one of the of the biggest life lessons that comes with tumbling and gymnastics for sure.  the importance of consistent effort, celebrating small goals, a relentless pursuit of understanding, and overall pure determination.
 
 ---
+## progress-not-perfection (added 2026-09-25 ~20:01, via chat)
+
+this is a mindset that encourages athletes to celebrate the small wins. Not prioritizing focus on leveling up rather than perfecting the skills they have. Perfection before progression does not contradict "progress, not perfection" the two mindsets can be held simultaneously. one is an order of operations, and one is a mindset. We dont skip the prerequisites that still need work and say "progress not perfection"…  and use that as a reason to stop striving to master the basics.
+
+---
