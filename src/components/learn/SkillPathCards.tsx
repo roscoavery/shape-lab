@@ -150,6 +150,73 @@ function loadProofLoops(): Record<string, ProofLoop> {
   }
 }
 
+/** Loop-point editor for local videos: scrub the video, tap to set start/end. */
+function LocalLoopEditor({
+  url,
+  loopA,
+  loopB,
+  onAbChange,
+}: {
+  url: string
+  loopA: number | null
+  loopB: number | null
+  onAbChange: (a: number | null, b: number | null) => void
+}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [now, setNow] = useState(0)
+  const setStart = () => {
+    const t = ref.current?.currentTime ?? 0
+    onAbChange(t, loopB != null && loopB > t ? loopB : null)
+  }
+  const setEnd = () => {
+    const t = ref.current?.currentTime ?? 0
+    onAbChange(loopA != null && loopA < t ? loopA : null, t)
+  }
+  return (
+    <div className="rounded-xl bg-black p-1">
+      <video
+        ref={ref}
+        src={url}
+        controls
+        playsInline
+        preload="metadata"
+        className="aspect-[9/16] w-full rounded-lg object-contain"
+        onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
+      />
+      <div className="flex items-center gap-2 px-1 py-2">
+        <button
+          type="button"
+          onClick={setStart}
+          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+        >
+          Set start
+        </button>
+        <button
+          type="button"
+          onClick={setEnd}
+          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+        >
+          Set end
+        </button>
+        {(loopA != null || loopB != null) && (
+          <button
+            type="button"
+            onClick={() => onAbChange(null, null)}
+            className="rounded-lg px-2 py-1.5 text-xs font-bold text-red-400"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="px-2 pb-2 text-[11px] text-white/70">
+        {loopA != null || loopB != null
+          ? `Loops ${loopA != null ? fmtLoopTime(loopA) : '0:00'} – ${loopB != null ? fmtLoopTime(loopB) : 'end'}`
+          : `Scrub to the moment, then tap Set start / Set end. Now: ${fmtLoopTime(now)}`}
+      </div>
+    </div>
+  )
+}
+
 function ProofStrip({
   evidenceKey,
   coach,
@@ -198,16 +265,25 @@ function ProofStrip({
           const playUrl = bust ? `${v.url}?t=${bust}` : v.url
           return (
             <div key={v.url} className="w-64 shrink-0">
-              {editing && !local ? (
-                <div className="rounded-xl bg-black p-1">
-                  <InstagramEmbed
-                    url={v.url}
-                    compact
+              {editing ? (
+                local ? (
+                  <LocalLoopEditor
+                    url={playUrl}
                     loopA={loopA}
                     loopB={loopB}
                     onAbChange={handleAbChange(v.url)}
                   />
-                </div>
+                ) : (
+                  <div className="rounded-xl bg-black p-1">
+                    <InstagramEmbed
+                      url={v.url}
+                      compact
+                      loopA={loopA}
+                      loopB={loopB}
+                      onAbChange={handleAbChange(v.url)}
+                    />
+                  </div>
+                )
               ) : (
                 <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
                   {local ? (

@@ -358,6 +358,17 @@ export async function handleShapeLabApi(
       sendJson(res, 500, { error: 'Could not save the video file' })
       return true
     }
+    // The running server serves static files from dist/, not public/ — mirror
+    // the trimmed file there too so it takes effect without a rebuild.
+    try {
+      const { mkdir } = await import('node:fs/promises')
+      const { dirname } = await import('node:path')
+      const distDest = join(process.cwd(), 'dist', clean)
+      await mkdir(dirname(distDest), { recursive: true })
+      await writeFile(distDest, data)
+    } catch {
+      /* dist mirror is best-effort; public/ is the source of truth */
+    }
     sendJson(res, 200, { ok: true, path: clean, bytes: data.length })
     return true
   }
