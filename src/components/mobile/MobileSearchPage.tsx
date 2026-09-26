@@ -117,6 +117,55 @@ export function MobileSearchPage({
         'Class clock',
       ],
     },
+    {
+      label: 'Technique cues',
+      items: [
+        'Eyes down',
+        'Tight zombie',
+        'Rebound',
+        'Block',
+        'Hollow hold',
+        'Late twist',
+        'Arms down',
+        'Chest up',
+      ],
+    },
+    {
+      label: 'More skills',
+      items: [
+        'Back handspring',
+        'Front handspring',
+        'Back tuck',
+        'Front tuck',
+        'Aerial',
+        'Round off tuck',
+        'Whip',
+        'Punch front',
+      ],
+    },
+    {
+      label: 'For parents',
+      items: [
+        'What progress looks like',
+        'Move-up criteria',
+        'Fear',
+        'Practice at home',
+        'Perfection before progression',
+        'Talking to your athlete',
+      ],
+    },
+    {
+      label: 'Wellness',
+      items: [
+        'Sleep',
+        'Recovery',
+        'Nutrition',
+        'Beets',
+        'Protein',
+        'Hydration',
+        'Sore muscles',
+      ],
+    },
   ]
 
   const activate = (hit: AppSearchHit) => {
