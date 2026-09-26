@@ -178,7 +178,7 @@ function LocalLoopEditor({
   )
 }
 
-function ProofStrip({
+export function ProofStrip({
   evidenceKey,
   coach,
   canEdit,

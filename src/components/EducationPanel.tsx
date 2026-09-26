@@ -501,7 +501,7 @@ export function EducationPanel({
 
       {view.kind === 'concepts' && (
         <PanelErrorBoundary label="Concepts">
-          <ConceptCards />
+          <ConceptCards canEdit={persistIgToApp} />
         </PanelErrorBoundary>
       )}
 

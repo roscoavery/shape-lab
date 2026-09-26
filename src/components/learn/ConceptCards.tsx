@@ -5,6 +5,7 @@
  */
 import { useState } from 'react'
 import { CONCEPT_CARDS, type ConceptCard } from '../../config/conceptCards'
+import { ProofStrip } from './SkillPathCards'
 
 function Label({ children, color }: { children: React.ReactNode; color?: string }) {
   return (
@@ -302,7 +303,7 @@ function CardBody({ card }: { card: ConceptCard }) {
   }
 }
 
-function ConceptSection({ card }: { card: ConceptCard }) {
+function ConceptSection({ card, canEdit }: { card: ConceptCard; canEdit: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 sm:p-6">
@@ -314,13 +315,16 @@ function ConceptSection({ card }: { card: ConceptCard }) {
       {open && (
         <div className="mt-5">
           <CardBody card={card} />
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <ProofStrip evidenceKey={`concept-${card.id}`} coach={false} canEdit={canEdit} />
+          </div>
         </div>
       )}
     </section>
   )
 }
 
-export function ConceptCards() {
+export function ConceptCards({ canEdit = false }: { canEdit?: boolean }) {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="text-center">
@@ -330,7 +334,7 @@ export function ConceptCards() {
         </p>
       </div>
       {CONCEPT_CARDS.map((card) => (
-        <ConceptSection key={card.id} card={card} />
+        <ConceptSection key={card.id} card={card} canEdit={canEdit} />
       ))}
     </div>
   )
