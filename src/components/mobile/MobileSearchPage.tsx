@@ -30,6 +30,8 @@ function hitIcon(kind: AppSearchHit['kind']): string {
       return '✓'
     case 'person':
       return '◎'
+    case 'skill':
+      return '★'
     default:
       return '•'
   }
@@ -71,6 +73,10 @@ export function MobileSearchPage({
       onViewProfile?.(hit.athleteId)
       saveTab('history')
       onGo('history')
+    } else if (hit.kind === 'skill' && hit.skillId) {
+      stashMobileSearchJump({ kind: 'skill', skillId: hit.skillId })
+      saveTab('learn')
+      onGo('learn')
     } else {
       saveTab(hit.tab)
       onGo(hit.tab)

@@ -1,5 +1,6 @@
 import { allLibraryShapes } from '../config/shapes'
 import { HOMEWORK_CATALOG } from '../config/homeworkCatalog'
+import { RYAN_SKILL_PATH } from '../config/ryanSkillPath'
 import { SECTION_SUBNAV, type NavRole } from './appNav'
 import type { AppTab } from './storage'
 import type { Athlete } from '../types'
@@ -13,6 +14,7 @@ export type AppSearchHitKind =
   | 'clip'
   | 'person'
   | 'collection'
+  | 'skill'
 
 export type AppSearchHit = {
   id: string
@@ -25,6 +27,7 @@ export type AppSearchHit = {
   clipUrl?: string
   catalogId?: string
   athleteId?: string
+  skillId?: string
 }
 
 const FEATURE_WORDS: Record<AppTab, string> = {
@@ -186,6 +189,25 @@ function peopleHits(needle: string, athletes: Athlete[]): AppSearchHit[] {
   return out
 }
 
+function skillHits(needle: string): AppSearchHit[] {
+  const out: AppSearchHit[] = []
+  for (const step of RYAN_SKILL_PATH) {
+    const blob = `${step.skill} ${step.ask} ${step.needs.join(' ')} ${step.ryanNote ?? ''}`
+    const score = Math.max(tokenScore(step.skill, needle), tokenScore(blob, needle))
+    if (score <= 0) continue
+    out.push({
+      id: `skill:${step.id}`,
+      kind: 'skill',
+      title: step.skill,
+      subtitle: 'Skill path',
+      tab: 'learn',
+      score,
+      skillId: step.id,
+    })
+  }
+  return out
+}
+
 export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] {
   const tabs: AppTab[] =
     role === 'parent'
@@ -257,6 +279,7 @@ export function searchAppIndex(
     ...homeworkHits(needle),
     ...clipHits(needle, opts.clips),
     ...peopleHits(needle, opts.athletes),
+    ...skillHits(needle),
   ]
   merged.sort((a, b) => b.score - a.score)
   const limit = opts.limit ?? 24

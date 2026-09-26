@@ -10,6 +10,7 @@ export type MobileSearchJump =
   | { kind: 'homework'; catalogId: string }
   | { kind: 'profile'; athleteId: string }
   | { kind: 'networkThread'; threadId: string }
+  | { kind: 'skill'; skillId: string }
 
 export function stashMobileSearchJump(jump: MobileSearchJump): void {
   try {

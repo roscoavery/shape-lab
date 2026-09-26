@@ -169,6 +169,14 @@ export function EducationPanel({
     if (getShape(jump.shapeId)) setView({ kind: 'shape', shapeId: jump.shapeId })
   }, [])
 
+  const [focusSkillId, setFocusSkillId] = useState<string | null>(null)
+  useEffect(() => {
+    const jump = takeMobileSearchJump('skill')
+    if (!jump || jump.kind !== 'skill') return
+    setView({ kind: 'skillPath' })
+    setFocusSkillId(jump.skillId)
+  }, [])
+
   useEffect(() => {
     if (!athleteId) {
       setHits([])
@@ -489,7 +497,7 @@ export function EducationPanel({
 
       {view.kind === 'skillPath' && (
         <PanelErrorBoundary label="Skill path">
-          <SkillPathCards coach={coach} canEdit={persistIgToApp} />
+          <SkillPathCards coach={coach} canEdit={persistIgToApp} focusSkillId={focusSkillId} />
         </PanelErrorBoundary>
       )}
 
@@ -963,8 +971,8 @@ function HomeView({
           </p>
         </button>
         <button type="button" onClick={onSkillPath} className="learn-tile p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
-          <h3 className="learn-serif mt-1 text-2xl font-semibold">Skills</h3>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Skills</p>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Path guide</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
             The skill path, top down. What each skill needs underneath it, what can bend, and what to ask your coach.
           </p>

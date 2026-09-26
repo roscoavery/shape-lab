@@ -511,10 +511,28 @@ export function ProofStrip({
   )
 }
 
-export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boolean; canEdit?: boolean }) {
-  const [openId, setOpenId] = useState<string | null>(null)
+export function SkillPathCards({
+  coach = false,
+  canEdit = false,
+  focusSkillId,
+}: {
+  coach?: boolean
+  canEdit?: boolean
+  focusSkillId?: string | null
+}) {
+  const [openId, setOpenId] = useState<string | null>(focusSkillId ?? null)
   const [showAll, setShowAll] = useState(false)
   const isOpen = (id: string) => showAll || openId === id
+
+  // Scroll to the focused skill when deep-linked from search.
+  useEffect(() => {
+    if (!focusSkillId) return
+    setOpenId(focusSkillId)
+    const t = setTimeout(() => {
+      document.getElementById(`skill-card-${focusSkillId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [focusSkillId])
   return (
     <div className="space-y-8">
       <section>
@@ -549,6 +567,7 @@ export function SkillPathCards({ coach = false, canEdit = false }: { coach?: boo
             return (
               <article
                 key={step.id}
+                id={`skill-card-${step.id}`}
                 className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
               >
                 <button
