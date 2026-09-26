@@ -186,3 +186,7 @@ Note: removed the plateau-parent question from the interview (~22:33 CDT) — Ry
 ## choosing-class (2026-09-25 ~22:51 CDT)
 
 They should not be choosing the class, someone with expertise in the progression used at that gym should evaluate their tumbling and then put them in the right place for them to learn what they need to learn. For maximizing safety, technique and likelihood of complimenting longterm progression, I would personally say that parents should look for environments that offer skill deconstruction, encourage patience with progression, focus on strong  prerequsites, and use gymnastics, tnt or powertumbling progressions.
+
+## class-purpose — What is the purpose of a tumbling class from your perspective? (Ryan, 2026-09-25)
+
+To shape young people into being more mentally resilient, hardworking, goal driven, patient with the process, and to consistently put in effort into things they enjoy, develop a sense of value in productivity, gain skills they can contribute to a team, learn to face adversities and to perservere when things are tough. We learn to face fears, to stay focused when the process isnt always gratifying.. there are so many life lessons that tumbling can be good for building on an athliete as a person. Ulitimately, people do it because it is fun and thrilling to do things that can be dangerous in a controlled way.
