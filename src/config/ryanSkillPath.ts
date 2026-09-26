@@ -44,17 +44,6 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
       'Increase rotation speed with a cowboy tuck, knees apart. When first trying it, do not trust your instinct. Over-rotating is way better than under-rotating. On the first attempts you will think you know where you are and want to let out and land. Your instinct is probably wrong. If you let out early you will under-rotate and could neck it. Stay in it and try to over-flip the first one even when you think you have done two flips.',
   },
   {
-    id: 'double-full',
-    track: 'running',
-    skill: 'Double full',
-    needs: [
-      'A high and straight full with time to open and land',
-      'A front rudi (1.5 twist)',
-    ],
-    canBend: [],
-    ask: 'Ask your coach whether your single full is straight with time to spare at the end. The double needs that time.',
-  },
-  {
     id: 'triple-full',
     track: 'running',
     skill: 'Triple full',
@@ -67,6 +56,17 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     ask: 'Ask your coach whether your double full finishes the second twist early with time to let out and slow the twist before landing. If the double is rushed, the triple is not next.',
     ryanNote:
       'You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one.',
+  },
+  {
+    id: 'double-full',
+    track: 'running',
+    skill: 'Double full',
+    needs: [
+      'A high and straight full with time to open and land',
+      'A front rudi (1.5 twist)',
+    ],
+    canBend: [],
+    ask: 'Ask your coach whether your single full is straight with time to spare at the end. The double needs that time.',
   },
   {
     id: 'full',
