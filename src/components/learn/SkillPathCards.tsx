@@ -62,7 +62,7 @@ function LocalVideo({
       muted
       loop={loopA == null && loopB == null}
       preload="metadata"
-      className="h-full w-full object-cover"
+      className="h-full w-full object-contain"
       onTimeUpdate={(e) => {
         const v = e.currentTarget
         if (loopA != null && v.currentTime < loopA) v.currentTime = loopA
@@ -383,7 +383,7 @@ export function ProofStrip({
                   </div>
                 )
               ) : (
-                <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
+                <div className="aspect-square overflow-hidden rounded-xl bg-black">
                   {local ? (
                     <LocalVideo url={playUrl} loopA={loopA} loopB={loopB} />
                   ) : (
@@ -395,7 +395,7 @@ export function ProofStrip({
                       playWhenVisible
                       loopA={loopA}
                       loopB={loopB}
-                      fit="cover"
+                      fit="contain"
                       fill
                     />
                   )}
