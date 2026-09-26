@@ -294,22 +294,17 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                     <ShareReference
                       variant="reel"
                       draft={clipShareDraft(clip.name, clip.url)}
+                      onAddToSkillCard={
+                        isGymAdmin(athlete)
+                          ? () =>
+                              setAddToCardClip({
+                                url: clip.url,
+                                who: clip.postedBy || 'Reference library',
+                                watchFor: clip.name,
+                              })
+                          : undefined
+                      }
                     />
-                    {isGymAdmin(athlete) && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAddToCardClip({
-                            url: clip.url,
-                            who: clip.postedBy || 'Reference library',
-                            watchFor: clip.name,
-                          })
-                        }
-                        className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white/80"
-                      >
-                        + Skill card
-                      </button>
-                    )}
                     <ClipOrganizeMenu
                     variant="feed"
                     clip={{

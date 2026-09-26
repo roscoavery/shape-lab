@@ -1098,20 +1098,22 @@ export function ReferencePane({
             <button
               type="button"
               onClick={() => startRename(item)}
-              className="rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/10 hover:text-[var(--text)]"
               title="Rename this reference"
+              aria-label="Rename"
             >
-              Rename
+              ✎
             </button>
             )}
             {canEditCollection(opts.collection) && (
             <button
               type="button"
               onClick={() => startTags(item)}
-              className="rounded px-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/10 hover:text-[var(--text)]"
               title="Add shape keywords so you can search every clip with this shape"
+              aria-label="Tags"
             >
-              Tags
+              #
             </button>
             )}
             {!opts.quiet && canEditLibrary && (
@@ -1133,23 +1135,17 @@ export function ReferencePane({
               <ShareReference
                 variant="row"
                 draft={clipShareDraft(item.name, item.url, item.trimStart, item.trimEnd)}
-              />
-            )}
-            {item.url && gymEditor && (
-              <button
-                type="button"
-                onClick={() =>
-                  setAddToCardItem({
-                    url: item.savedUrl || item.url!,
-                    who: item.postedBy || 'Reference library',
-                    watchFor: item.name,
-                  })
+                onAddToSkillCard={
+                  gymEditor
+                    ? () =>
+                        setAddToCardItem({
+                          url: item.savedUrl || item.url!,
+                          who: item.postedBy || 'Reference library',
+                          watchFor: item.name,
+                        })
+                    : undefined
                 }
-                className="rounded px-1.5 text-xs font-semibold text-[var(--muted)] hover:text-white"
-                title="Add to a skill-path card"
-              >
-                + Card
-              </button>
+              />
             )}
           </>
         )}
@@ -1157,10 +1153,11 @@ export function ReferencePane({
         <button
           type="button"
           onClick={() => void removeItem(item, opts.collection)}
-          className="rounded px-1.5 text-xs font-semibold text-[var(--muted)] hover:text-[var(--bad)]"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/10 hover:text-[var(--bad)]"
           title={gymEditor ? 'Remove from the gym library' : 'Remove a clip you added'}
+          aria-label="Delete"
         >
-          Delete
+          🗑
         </button>
         )}
       </li>

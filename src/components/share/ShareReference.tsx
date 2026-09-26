@@ -26,6 +26,8 @@ type Props = {
   viewer?: Athlete | null
   variant?: Variant
   className?: string
+  /** When set (admin), the sheet offers "Add to skill card". */
+  onAddToSkillCard?: () => void
 }
 
 export function ShareReference({
@@ -34,6 +36,7 @@ export function ShareReference({
   viewer: viewerProp,
   variant = 'button',
   className = '',
+  onAddToSkillCard,
 }: Props) {
   const { viewer: ctxViewer, athletes } = useClipEditor()
   const viewer = viewerProp ?? ctxViewer
@@ -56,13 +59,24 @@ export function ShareReference({
   const coachesOnly = people.filter((a) => isCoachProfile(a))
 
   const story = variant === 'story'
+  const iconOnly = variant === 'row' || variant === 'reel' || variant === 'compact'
   const btnClass = story
     ? 'flex flex-col items-center gap-0.5 text-white'
-    : variant === 'reel'
-      ? 'rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-black shadow-lg'
-      : variant === 'compact' || variant === 'row'
-        ? 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px] font-semibold text-[var(--accent)]'
-        : 'rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-1.5 text-xs font-semibold text-[var(--accent)]'
+    : iconOnly
+      ? 'flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent)] hover:bg-white/10'
+      : variant === 'button'
+        ? 'rounded-lg border border-[var(--accent)]/40 bg-[#102820] px-3 py-1.5 text-xs font-semibold text-[var(--accent)]'
+        : 'rounded-md border border-[var(--panel-border)] px-2 py-1 text-[11px] font-semibold text-[var(--accent)]'
+
+  const copyLink = async () => {
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setNote('Link copied — paste it in a text.')
+    } catch {
+      setNote('Could not copy. Long-press the link instead.')
+    }
+  }
 
   const sendTo = async (to: Athlete) => {
     if (!viewer || !url) {
@@ -192,6 +206,28 @@ export function ShareReference({
                 >
                   Close
                 </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="rounded-xl bg-white/10 px-3 py-2.5 text-sm font-bold text-white"
+                >
+                  ⧉ Copy link
+                </button>
+                {onAddToSkillCard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      onAddToSkillCard()
+                    }}
+                    className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white"
+                  >
+                    + Skill card
+                  </button>
+                )}
               </div>
 
               {!viewer ? (
@@ -339,6 +375,8 @@ export function ShareReference({
             </span>
             <span className="text-[10px] font-medium tracking-wide">Share</span>
           </>
+        ) : iconOnly ? (
+          <ShareIcon />
         ) : (
           'Share'
         )}
@@ -353,6 +391,17 @@ function SharePlaneIcon() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M22 2 11.4 12.6" />
       <path d="M22 2 15 22l-3.6-8.4L3 10.2 22 2z" />
+    </svg>
+  )
+}
+
+/** Standard iOS-style share icon: square with arrow pointing up. */
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 3v12" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
     </svg>
   )
 }
