@@ -297,7 +297,7 @@ export function EducationPanel({
               <NavChip
                 active={view.kind === 'skillPath'}
                 onClick={() => setView({ kind: 'skillPath' })}
-                label="Path guide"
+                label="Skills"
               />
               <NavChip
                 active={view.kind === 'progressionLevels'}
@@ -964,7 +964,7 @@ function HomeView({
         </button>
         <button type="button" onClick={onSkillPath} className="learn-tile p-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
-          <h3 className="learn-serif mt-1 text-2xl font-semibold">Path guide</h3>
+          <h3 className="learn-serif mt-1 text-2xl font-semibold">Skills</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
             The skill path, top down. What each skill needs underneath it, what can bend, and what to ask your coach.
           </p>
