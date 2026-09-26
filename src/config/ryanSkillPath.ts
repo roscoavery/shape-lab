@@ -90,6 +90,7 @@ export const RYAN_SKILL_PATH: SkillPathStep[] = [
     needs: [
       'A front layout',
       'A back half to back',
+      'A solid back layout',
     ],
     canBend: [],
     ask: 'Ask your coach whether your front layout and back half to back are solid enough to take the half to your feet.',
