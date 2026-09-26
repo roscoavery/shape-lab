@@ -137,6 +137,41 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   full: [
     {
+      who: 'Step 1 — Lay to belly',
+      url: '/videos/arm-drop-progression/step1-lay-to-belly.mp4',
+      watchFor: 'The first step. Layout to belly — learn the shape before any twist.',
+    },
+    {
+      who: 'Step 2 — Half to back',
+      url: '/videos/arm-drop-progression/step2-half-to-back.mp4',
+      watchFor: 'Twist arm drops to shoulder level when upside down. Wait until about to land on the belly, then drop and squeeze. Twist arm drops, non-twist arm squeezes into the head.',
+    },
+    {
+      who: 'Step 3 — Full to belly',
+      url: '/videos/arm-drop-progression/step3-full-to-belly-arm-drop.mp4',
+      watchFor: 'Athlete drops one arm down and keeps the other squeezing into the ear. She opens the twist arm back up as she finishes to untilt herself.',
+    },
+    {
+      who: 'Step 4 — Sequential arm drop',
+      url: '/videos/arm-drop-progression/step4-sequential-arm-drop.mov',
+      watchFor: 'Both arms drop in sequence. The second arm drop gives the second half turn, then both arms open back up to untilt.',
+    },
+    {
+      who: 'Why it works — twisting physics',
+      url: '/videos/arm-drop-progression/yeadon-twisting-simulation.mp4',
+      watchFor: 'Computer simulation of the whole twisting process. The physics behind the arm drop.',
+    },
+    {
+      who: 'Emory (athlete)',
+      url: '/videos/arm-drop-progression/emory-full.mp4',
+      watchFor: 'Finished full — the end of the progression.',
+    },
+    {
+      who: 'Addy (athlete)',
+      url: '/videos/arm-drop-progression/addy-full.mp4',
+      watchFor: 'Finished full — the end of the progression.',
+    },
+    {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/Cejgj-XvIGK/',
       watchFor: 'Layout plus arm drop — the same late-twist process.',

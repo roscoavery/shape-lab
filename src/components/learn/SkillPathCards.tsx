@@ -3,10 +3,46 @@
  * four-levels infographic: a header, labeled blocks, no walls of text.
  * Top-down: peak skills first, foundations last.
  */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { RYAN_CUE_SWAPS, RYAN_SKILL_PATH } from '../../config/ryanSkillPath'
 import { TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
+
+/** True for local video files (public/videos/...) vs social embeds. */
+function isLocalVideo(url: string): boolean {
+  return /\.(mp4|mov|webm)(\?|#|$)/i.test(url)
+}
+
+/** Native player for local video files, with A/B loop support. */
+function LocalVideo({
+  url,
+  loopA,
+  loopB,
+}: {
+  url: string
+  loopA: number | null
+  loopB: number | null
+}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  return (
+    <video
+      ref={ref}
+      src={url}
+      controls
+      playsInline
+      preload="metadata"
+      className="h-full w-full object-contain"
+      onTimeUpdate={(e) => {
+        const v = e.currentTarget
+        if (loopA != null && v.currentTime < loopA) v.currentTime = loopA
+        if (loopB != null && v.currentTime >= loopB) {
+          v.currentTime = loopA ?? 0
+          v.play().catch(() => {})
+        }
+      }}
+    />
+  )
+}
 
 const STEP_COLORS = ['#2e7d4f', '#6a4fa3', '#d9732b', '#c93a3a']
 
@@ -77,9 +113,10 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
           const loopA = override?.a ?? v.startAt ?? null
           const loopB = override?.b ?? v.endAt ?? null
           const editing = coach && loopEditUrl === v.url
+          const local = isLocalVideo(v.url)
           return (
             <div key={v.url} className="w-64 shrink-0">
-              {editing ? (
+              {editing && !local ? (
                 <div className="rounded-xl bg-black p-1">
                   <InstagramEmbed
                     url={v.url}
@@ -91,14 +128,18 @@ function ProofStrip({ evidenceKey, coach }: { evidenceKey: string; coach: boolea
                 </div>
               ) : (
                 <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
-                  <InstagramEmbed
-                    url={v.url}
-                    compact
-                    bare
-                    quiet
-                    loopA={loopA}
-                    loopB={loopB}
-                  />
+                  {local ? (
+                    <LocalVideo url={v.url} loopA={loopA} loopB={loopB} />
+                  ) : (
+                    <InstagramEmbed
+                      url={v.url}
+                      compact
+                      bare
+                      quiet
+                      loopA={loopA}
+                      loopB={loopB}
+                    />
+                  )}
                 </div>
               )}
               <div className="mt-1 text-xs font-bold">{v.who}</div>
