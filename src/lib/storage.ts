@@ -22,6 +22,7 @@ import type {
 import { dismissHomeworkKey, loadDismissedHomeworkKeys, undismissHomeworkKey } from './careStore'
 import { catalogIdFromShape } from '../config/homeworkCatalog'
 import { withDefaultGym } from '../config/gyms'
+import { migrateGoalSkillIds } from './skillRegistry'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
 const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
@@ -70,12 +71,48 @@ export function loadAthletes(): Athlete[] {
   // This tab’s in-memory roster is the source of truth — localStorage may
   // have dropped photos or a smaller snapshot when the phone hit quota.
   if (memoryAthletes && memoryAthletes.length > 0) {
-    if (memoryAthletes.length >= stored.length) return memoryAthletes.map(withDefaultGym)
+    if (memoryAthletes.length >= stored.length) return migrateGoalSkillIdsOnce(memoryAthletes.map(withDefaultGym))
     const byId = new Map(stored.map((a) => [a.id, a]))
     for (const a of memoryAthletes) byId.set(a.id, a)
-    return [...byId.values()].map(withDefaultGym)
+    return migrateGoalSkillIdsOnce([...byId.values()].map(withDefaultGym))
   }
-  return stored.map(withDefaultGym)
+  return migrateGoalSkillIdsOnce(stored.map(withDefaultGym))
+}
+
+const GOAL_SKILL_ID_MIGRATION_KEY = 'shape-lab.migrated.goalSkillIds.v1'
+
+/**
+ * One-time migration (Phase 1, Sep 2026): stamp missing skillIds on athlete
+ * goals by resolving their labels against the unified skill registry.
+ * Additive only — goals that don't resolve stay exactly as they are,
+ * as custom text with no guide. Idempotent: re-running stamps nothing new.
+ */
+function migrateGoalSkillIdsOnce(athletes: Athlete[]): Athlete[] {
+  try {
+    if (localStorage.getItem(GOAL_SKILL_ID_MIGRATION_KEY)) return athletes
+  } catch {
+    return athletes
+  }
+  const markDone = () => {
+    try {
+      localStorage.setItem(GOAL_SKILL_ID_MIGRATION_KEY, '1')
+    } catch {}
+  }
+  const { athletes: next, log } = migrateGoalSkillIds(athletes)
+  if (log.stamped > 0) {
+    try {
+      writeJson(ATHLETES_KEY, next)
+    } catch {}
+    if (memoryAthletes && memoryAthletes.length > 0) {
+      memoryAthletes = next
+    }
+    pushRosterSoon()
+  }
+  try {
+    console.info(`[goal-migration] stamped ${log.stamped} goal skillIds`, log.lines)
+  } catch {}
+  markDone()
+  return next
 }
 
 export function saveAthletes(athletes: Athlete[]) {

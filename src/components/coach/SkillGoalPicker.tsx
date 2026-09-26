@@ -1,19 +1,20 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createId } from '../../lib/storage'
 import type { AthleteSkillGoal, TrainingSurface } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
 import {
-  SKILL_GOAL_CHOICES,
-  SKILL_GOAL_GROUPS,
-  type SkillGoalChoice,
-  type SkillGoalGroupId,
-} from '../../config/skillGoalCatalog'
+  makeRegistrySkillGoal,
+  matchRegistrySkill,
+  searchSkills,
+  TRACK_LABELS,
+  TRACK_ORDER,
+  type SkillSearchHit,
+  type UnifiedSkill,
+} from '../../lib/skillRegistry'
 import {
   SKILL_GOAL_DISCLAIMER,
   TRAINING_SURFACES,
   goalLine,
-  makeSkillGoal,
-  matchCatalogChoice,
 } from '../../lib/skillPaths'
 
 type Props = {
@@ -24,50 +25,85 @@ type Props = {
 
 export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props) {
   const [surface, setSurface] = useState<TrainingSurface | ''>('')
-  const [otherGroup, setOtherGroup] = useState<SkillGoalGroupId | null>(null)
-  const [otherText, setOtherText] = useState('')
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const addGoal = (label: string, skillId?: string, matchNames?: string[]) => {
-    const goal = makeSkillGoal({
-      skillId,
-      label,
-      matchNames,
-      surface: surface || undefined,
-      source: athleteFacing ? 'intake' : 'coach',
-    })
-    if (!goal) return
-    if (
-      value.some(
-        (g) =>
-          g.label.toLowerCase() === goal.label.toLowerCase() && g.surface === goal.surface,
-      )
-    ) {
-      return
-    }
+  const isDuplicate = (label: string) =>
+    value.some(
+      (g) => g.label.toLowerCase() === label.toLowerCase() && g.surface === (surface || undefined),
+    )
+
+  const addGoal = (goal: AthleteSkillGoal) => {
+    if (isDuplicate(goal.label)) return
     onChange([...value, goal])
   }
 
-  const pick = (choice: SkillGoalChoice) => {
-    if (choice.other) {
-      setOtherGroup(choice.group)
-      setOtherText('')
-      return
-    }
-    const skill = matchCatalogChoice(choice)
-    addGoal(choice.label, skill?.id, choice.matchNames)
-    setOtherGroup(null)
+  const addSkill = (skill: UnifiedSkill) => {
+    addGoal(
+      makeRegistrySkillGoal(skill, {
+        createId,
+        surface: surface || undefined,
+        source: athleteFacing ? 'intake' : 'coach',
+      }),
+    )
+    setQuery('')
+    setOpen(false)
+    setHighlight(0)
+    inputRef.current?.focus()
   }
 
-  const addOther = () => {
-    const label = otherText.trim()
-    if (!label || !otherGroup) return
-    const skill = matchCatalogChoice(
-      SKILL_GOAL_CHOICES.find((c) => c.group === otherGroup && c.other)!,
+  /** Free-text path: resolve against the registry first; truly custom hopes stay guideless. */
+  const addCustom = (rawLabel: string) => {
+    const label = rawLabel.trim()
+    if (!label || isDuplicate(label)) return
+    const skill = matchRegistrySkill(label)
+    if (skill) {
+      addSkill(skill)
+      return
+    }
+    addGoal({
+      id: createId('goal'),
       label,
+      surface: surface || undefined,
+      setAt: new Date().toISOString(),
+      source: athleteFacing ? 'intake' : 'coach',
+    })
+    setQuery('')
+    setOpen(false)
+    setHighlight(0)
+    inputRef.current?.focus()
+  }
+
+  const hits: SkillSearchHit[] = useMemo(() => {
+    const trimmed = query.trim()
+    if (!trimmed) return []
+    return searchSkills(trimmed).filter(
+      (h) =>
+        !value.some(
+          (g) =>
+            g.label.toLowerCase() === h.skill.name.toLowerCase() &&
+            g.surface === (surface || undefined),
+        ),
     )
-    addGoal(label, skill?.id)
-    setOtherText('')
-    setOtherGroup(null)
+  }, [query, value, surface])
+
+  const grouped = useMemo(() => {
+    const groups: { track: (typeof TRACK_ORDER)[number]; hits: SkillSearchHit[] }[] = []
+    for (const track of TRACK_ORDER) {
+      const trackHits = hits.filter((h) => h.skill.track === track)
+      if (trackHits.length > 0) groups.push({ track, hits: trackHits })
+    }
+    return groups
+  }, [hits])
+
+  // Flat list for keyboard navigation: suggestions first, then the custom row.
+  const flatCount = hits.length + 1
+
+  const commitHighlight = () => {
+    if (highlight < hits.length) addSkill(hits[highlight].skill)
+    else addCustom(query)
   }
 
   return (
@@ -161,63 +197,98 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
           </button>
         ))}
       </div>
-      {SKILL_GOAL_GROUPS.map((group) => (
-        <div key={group.id}>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6ec8d6]">
-            {group.title}
-          </p>
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-            {SKILL_GOAL_CHOICES.filter((row) => row.group === group.id).map((choice) => {
-              const selected = value.some(
-                (g) =>
-                  g.label.toLowerCase() === choice.label.toLowerCase() &&
-                  g.surface === (surface || undefined),
-              )
-              return (
-                <button
-                  key={choice.id}
-                  type="button"
-                  onClick={() => pick(choice)}
-                  className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold ${
-                    selected
-                      ? 'border-[#6ec8d6] bg-[#102028] text-[#d7f6fb]'
-                      : choice.other
-                        ? 'border-dashed border-white/25 bg-black/20'
-                        : 'border-white/10 bg-black/25'
-                  }`}
-                >
-                  {choice.other ? 'Other… write it' : choice.label}
-                </button>
-              )
-            })}
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        Add a hope
+      </p>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          className="h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
+          placeholder="Type a skill — back tuck, aerial, handstand…"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+            setHighlight(0)
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => {
+            // Delay so suggestion clicks land before the list closes.
+            setTimeout(() => setOpen(false), 150)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setHighlight((h) => Math.min(h + 1, flatCount - 1))
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setHighlight((h) => Math.max(h - 1, 0))
+            } else if (e.key === 'Enter') {
+              e.preventDefault()
+              if (query.trim()) commitHighlight()
+            } else if (e.key === 'Escape') {
+              setOpen(false)
+            }
+          }}
+        />
+        {open && query.trim() && (
+          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-[var(--panel-border)] bg-[#0d1218] shadow-xl">
+            {grouped.map(({ track, hits: trackHits }) => (
+              <div key={track}>
+                <p className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6ec8d6]">
+                  {TRACK_LABELS[track]}
+                </p>
+                {trackHits.map((hit) => {
+                  const flatIdx = hits.indexOf(hit)
+                  return (
+                    <button
+                      key={hit.skill.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => addSkill(hit.skill)}
+                      onMouseEnter={() => setHighlight(flatIdx)}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                        highlight === flatIdx ? 'bg-white/10' : ''
+                      }`}
+                    >
+                      <span className="font-semibold">{hit.skill.name}</span>
+                      {!hit.skill.guideId && (
+                        <span className="shrink-0 rounded-full border border-white/20 px-2 py-0.5 text-[10px] text-[var(--muted)]">
+                          no guide yet
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+            {hits.length === 0 && (
+              <p className="px-3 py-2 text-xs text-[var(--muted)]">
+                No matching skill — add it as a custom hope below.
+              </p>
+            )}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => addCustom(query)}
+              onMouseEnter={() => setHighlight(hits.length)}
+              className={`flex w-full items-center justify-between gap-2 border-t border-dashed border-white/25 px-3 py-2.5 text-left text-sm ${
+                highlight === hits.length ? 'bg-white/10' : ''
+              }`}
+            >
+              <span>
+                Add <span className="font-semibold">“{query.trim()}”</span> as a custom hope
+              </span>
+              <span className="shrink-0 rounded-full border border-white/20 px-2 py-0.5 text-[10px] text-[var(--muted)]">
+                no guide
+              </span>
+            </button>
           </div>
-          {otherGroup === group.id && (
-            <div className="mt-2 flex gap-2">
-              <input
-                className="h-11 min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
-                placeholder={`Name the ${group.title.toLowerCase()} skill`}
-                value={otherText}
-                autoFocus
-                onChange={(e) => setOtherText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addOther()
-                  }
-                }}
-              />
-              <button
-                type="button"
-                disabled={!otherText.trim()}
-                onClick={addOther}
-                className="rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
-              >
-                Add
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+        )}
+      </div>
+      <p className="text-[11px] text-[var(--muted)]">
+        Picking a skill links it to its progression guide. Custom hopes stay as written.
+      </p>
     </div>
     </CollapsibleSection>
   )
