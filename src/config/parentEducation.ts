@@ -49,7 +49,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
     title: "What Progress Looks Like",
     summary: "Progress is not linear.",
     intro: [
-      "the most important thing for progress is a relentless pursuit of understanding. DETERMINATION will get you anywhere you want to be and if you are determined enought to improve, you will improve. That is one of the of the biggest life lessons that comes with tumbling and gymnastics for sure.  the importance of consistent effort, celebrating small goals, a relentless pursuit of understanding, and overall pure determination.",
+      "One of the biggest things that leads to athlete's progress is an intrinsic pursuit of understanding. DETERMINATION and relentless pursuit of understanding.. That is one of the of the many important lessons that come with tumbling and gymnastics. The importance of consistent effort, celebrating small wins, a persistant drive for understanding, and overall pure determination.",
     ],
     qa: [
       {
