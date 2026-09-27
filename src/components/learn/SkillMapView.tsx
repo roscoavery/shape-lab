@@ -45,11 +45,11 @@ const VIEW_OPTIONS: { id: MapViewMode; label: string }[] = [
 function loadMapTheme(): MapTheme {
   try {
     const v = localStorage.getItem(MAP_THEME_KEY)
-    if (v === 'midnight' || v === 'paper' || v === 'ember') return v
+    if (v === 'neon' || v === 'midnight' || v === 'paper' || v === 'ember') return v
   } catch {
     /* storage unavailable — fall through to default */
   }
-  return 'neon'
+  return 'ember'
 }
 function loadMapView(): MapViewMode {
   try {
@@ -770,7 +770,7 @@ const ROWS: MapRow[] = [
       { skillId: 'skl_standing_bhs_series', label: 'Standing series', col: '1 / 3' },
       { skillId: 'skl_front_tuck', label: 'Front tuck', col: '3 / 4' },
       { skillId: 'skl_bounders', label: 'Bounders', col: '4 / 5' },
-      { skillId: 'skl_cart_hs_step_out', label: 'Cartwheel 2 back handsprings', col: '5 / 7' },
+      { skillId: 'skl_cart_hs_step_out', label: 'Cartwheel 2 BHS', col: '5 / 7' },
       { skillId: 'skl_ro_bhs_series', label: 'RO series', col: '7 / 9' },
     ],
   },
@@ -881,6 +881,13 @@ const ZONE_ACCENT_DARK: Record<ZoneName, string> = {
   Light: '#0369a1',
 }
 const ZONES_TOP_DOWN: ZoneName[] = ['Expert', 'Heavy', 'Hard', 'Intermediate', 'Light']
+/** Per-skill zone overrides — Ryan's calibration calls these Light. */
+const ZONE_OVERRIDE: Record<string, ZoneName> = {
+  skl_straddle_bwd_roll: 'Light',
+  skl_forward_roll: 'Light',
+  skl_backward_roll: 'Light',
+  skl_round_off_to_knees: 'Light',
+}
 /** Band order for the Levels view — easiest first. */
 const BAND_ORDER: ZoneName[] = ['Light', 'Intermediate', 'Hard', 'Heavy', 'Expert', 'Legend']
 
@@ -913,14 +920,14 @@ function getSkillEntries(): SkillEntry[] {
           skillId: t.skillId,
           label: t.label,
           family: FAMILY_BY_SKILL[t.skillId] ?? 'foundations',
-          zone,
+          zone: ZONE_OVERRIDE[t.skillId] ?? zone,
           kind: 'main',
         })
     })
     ROLLS_ROWS.forEach((row, ri) => {
       const zone = ZONES_TOP_DOWN[Math.min(4, Math.floor((ri / ROLLS_ROWS.length) * 5))]
       for (const t of row.tiles)
-        out.push({ skillId: t.skillId, label: t.label, family: 'rolls', zone, kind: 'roll' })
+        out.push({ skillId: t.skillId, label: t.label, family: 'rolls', zone: ZONE_OVERRIDE[t.skillId] ?? zone, kind: 'roll' })
     })
     skillEntries = out.filter((e) => getRegistrySkill(e.skillId))
   }
