@@ -108,6 +108,20 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "ryanNote": "Top of the standing track. Working down from more power to less is how a skill progresses to a more difficult form from running to standing."
   },
   {
+    "id": "skl_jumps_to_full",
+    "name": "Jumps to full",
+    "aliases": [
+      "jump to full"
+    ],
+    "track": "standing"
+  },
+  {
+    "id": "skl_standing_straight_leg_full",
+    "name": "Standing straight leg full",
+    "aliases": [],
+    "track": "standing"
+  },
+  {
     "id": "skl_layout",
     "guideId": "layout",
     "catalogId": "run_ro_hs_layout",

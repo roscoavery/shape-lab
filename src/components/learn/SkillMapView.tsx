@@ -294,6 +294,9 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_standing_full: 'standing',
   skl_standing_tuck_up_8: 'standing',
   skl_standing_tuck_up_16: 'standing',
+  skl_jumps_to_full: 'standing',
+  skl_standing_double: 'standing',
+  skl_standing_straight_leg_full: 'standing',
   skl_double_back: 'doubleback',
   // forwards family (orange)
   skl_handstand: 'forwards',
@@ -374,16 +377,18 @@ const ROLLS_ROWS: MapRow[] = [
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
 const ROWS: MapRow[] = [
   {
-    // R12 — triples (double back sits between the triples)
+    // R12 — triples, each above its 2.5; standing straight leg full tops the standing column
     tiles: [
-      { skillId: 'skl_front_triple', label: 'Front triple', col: '2 / 4' },
-      { skillId: 'skl_double_back', label: 'Double back', col: '4 / 6' },
-      { skillId: 'skl_triple_full', label: 'Back triple', col: '6 / 8' },
+      { skillId: 'skl_standing_straight_leg_full', label: 'Standing straight leg full', col: '1 / 3' },
+      { skillId: 'skl_front_triple', label: 'Front triple', col: '3 / 5' },
+      { skillId: 'skl_double_back', label: 'Double back', col: '5 / 7' },
+      { skillId: 'skl_triple_full', label: 'Back triple', col: '7 / 9' },
     ],
   },
   {
     // R11 — 2.5 level: each stacks above its double full
     tiles: [
+      { skillId: 'skl_jumps_to_full', label: 'Jumps to full', col: '1 / 3' },
       { skillId: 'skl_front_25', label: 'Front 2.5', col: '3 / 5' },
       { skillId: 'skl_kick_2', label: 'Kick double full', col: '5 / 7' },
       { skillId: 'skl_back_25', label: 'Back 2.5', col: '7 / 9' },
@@ -503,8 +508,9 @@ const BEYOND_ROWS: MapRow[] = [
   {
     // quad row
     tiles: [
-      { skillId: 'skl_back_quad', label: 'Back quad', col: '3 / 5' },
-      { skillId: 'skl_miller', label: 'Miller', col: '5 / 7' },
+      { skillId: 'skl_standing_double', label: 'Standing double', col: '2 / 4' },
+      { skillId: 'skl_back_quad', label: 'Back quad', col: '4 / 6' },
+      { skillId: 'skl_miller', label: 'Miller', col: '6 / 8' },
     ],
   },
   {
