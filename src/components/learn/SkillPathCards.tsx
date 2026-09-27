@@ -9,20 +9,16 @@ import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvide
 import {
   GUIDE_ORDER,
   TRACK_LABELS,
-  guideSkillsInOrder,
+  getRegistrySkillByGuideId,
   guidelessSkills,
   type UnifiedSkill,
   type UnifiedSkillTrack,
 } from '../../lib/skillRegistry'
+import { SkillMapView } from './SkillMapView'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
 import { markedFetch } from '../../lib/authSession'
-
-/** Registry records for the guide cards, in display order. */
-function guideSteps(): UnifiedSkill[] {
-  return guideSkillsInOrder()
-}
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -89,6 +85,12 @@ function LocalVideo({
 }
 
 const STEP_COLORS = ['#2e7d4f', '#6a4fa3', '#d9732b', '#c93a3a']
+
+/** Card header color for a guide card, cycling the same palette as the old list. */
+export function guideCardColor(guideId: string): string {
+  const i = GUIDE_ORDER.indexOf(guideId)
+  return STEP_COLORS[(i < 0 ? 0 : i) % STEP_COLORS.length]
+}
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -528,10 +530,64 @@ export function ProofStrip({
 }
 
 /**
+ * The inside of a guide card (needs / can-bend / ask / proof / Ryan's note).
+ * Exported so the skill map modal can show the exact same card UI.
+ */
+export function SkillGuideCardContent({
+  skill,
+  color,
+  coach,
+  canEdit,
+}: {
+  skill: UnifiedSkill
+  color: string
+  coach: boolean
+  canEdit: boolean
+}) {
+  const guideId = skill.guideId!
+  const needs = skill.guideNeeds ?? []
+  const canBend = skill.canBend ?? []
+  return (
+    <div className="space-y-4 p-4">
+      <div>
+        <Label>Needs</Label>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+          {needs.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      </div>
+      {canBend.length > 0 && (
+        <div className="rounded-xl bg-[var(--panel-border)]/20 p-3">
+          <Label>Can bend</Label>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+            {canBend.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div>
+        <Label>Ask your coach</Label>
+        <p className="mt-1 text-sm italic">{skill.ask}</p>
+      </div>
+      <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
+      {skill.ryanNote && (
+        <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
+          Ryan: {skill.ryanNote}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
  * Compact rows for registry skills that don't have a guide card yet.
  * Shows Ryan what's missing so he can fill them in (Phase 3 builder).
+ * Collapsed by default — useful, but not what people come to the guide for.
  */
 function GuidePlaceholders() {
+  const [open, setOpen] = useState(false)
   const missing = guidelessSkills()
   if (missing.length === 0) return null
   const byTrack = new Map<UnifiedSkillTrack, UnifiedSkill[]>()
@@ -547,10 +603,21 @@ function GuidePlaceholders() {
   )
   return (
     <section>
-      <h2 className="text-xl font-extrabold">Waiting for a guide</h2>
-      <p className="mt-1 text-sm opacity-80">
-        These skills are in the registry but don't have a guide card yet.
-      </p>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
+      >
+        <span>
+          <span className="block text-base font-extrabold">Waiting for a guide</span>
+          <span className="mt-0.5 block text-xs opacity-70">
+            {missing.length} skills in the registry without a guide card yet
+          </span>
+        </span>
+        <span className="text-lg opacity-60" aria-hidden>{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
       <div className="mt-4 space-y-4">
         {tracks.map((track) => (
           <div key={track}>
@@ -575,6 +642,51 @@ function GuidePlaceholders() {
           </div>
         ))}
       </div>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Verbal cue swaps. Collapsed by default — useful, but not what people come
+ * to the guide for.
+ */
+function CueSwaps() {
+  const [open, setOpen] = useState(false)
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
+      >
+        <span>
+          <span className="block text-base font-extrabold">Verbal cues to reconsider</span>
+          <span className="mt-0.5 block text-xs opacity-70">
+            Common cues worth rethinking, what to try instead, and why
+          </span>
+        </span>
+        <span className="text-lg opacity-60" aria-hidden>{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {RYAN_CUE_SWAPS.map((cue) => (
+            <article
+              key={cue.id}
+              className="min-w-0 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+            >
+              <div className="text-sm font-bold text-red-400 line-through opacity-80 break-words">
+                {cue.insteadOf}
+              </div>
+              <div className="mt-1 text-base font-extrabold text-emerald-400 break-words">
+                {cue.sayThis}
+              </div>
+              <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -588,19 +700,26 @@ export function SkillPathCards({
   canEdit?: boolean
   focusSkillId?: string | null
 }) {
-  const [openId, setOpenId] = useState<string | null>(focusSkillId ?? null)
-  const [showAll, setShowAll] = useState(false)
-  const isOpen = (id: string) => showAll || openId === id
+  const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
+    getRegistrySkillByGuideId(focusSkillId),
+  )
 
-  // Scroll to the focused skill when deep-linked from search.
+  // Deep-linked from search: open the skill's card in the modal.
   useEffect(() => {
     if (!focusSkillId) return
-    setOpenId(focusSkillId)
-    const t = setTimeout(() => {
-      document.getElementById(`skill-card-${focusSkillId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 150)
-    return () => clearTimeout(t)
+    const skill = getRegistrySkillByGuideId(focusSkillId)
+    if (skill) setModalSkill(skill)
   }, [focusSkillId])
+
+  // Close the modal on Escape.
+  useEffect(() => {
+    if (!modalSkill) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setModalSkill(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [modalSkill])
 
   // Cue up proof videos while the guide is open: resolve the Instagram
   // manifests in the background (no video bytes yet) so opening a card
@@ -643,119 +762,78 @@ export function SkillPathCards({
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-extrabold">The skill path, top down</h2>
-            <p className="mt-1 text-sm opacity-80">
-              Built from the top: the peak skills first, then what each one needs
-              underneath it. Everybody starts in a different place. Find where you
-              are and work down to what is missing.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (showAll) {
-                setShowAll(false)
-                setOpenId(null)
-              } else {
-                setShowAll(true)
-              }
-            }}
-            className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-bold text-white/80"
-          >
-            {showAll ? 'Hide all' : 'Show all'}
-          </button>
+        <div>
+          <h2 className="text-xl font-extrabold">The skill map</h2>
+          <p className="mt-1 text-sm opacity-80">
+            Foundations at the bottom, harder skills higher up. Tap any tile to
+            open its guide card.
+          </p>
         </div>
-        <div className="mt-4 space-y-4">
-          {guideSteps().map((skill, i) => {
-            const guideId = skill.guideId!
-            const color = STEP_COLORS[i % STEP_COLORS.length]
-            const open = isOpen(guideId)
-            const needs = skill.guideNeeds ?? []
-            const canBend = skill.canBend ?? []
-            return (
-              <article
-                key={guideId}
-                id={`skill-card-${guideId}`}
-                className="overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)]"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAll(false)
-                    setOpenId((prev) => (prev === guideId ? null : guideId))
-                  }}
-                  className="w-full px-4 py-3 text-left text-base font-extrabold text-white"
-                  style={{ backgroundColor: color }}
-                >
-                  <span className="flex items-center justify-between">
-                    {skill.name}
-                    <span className="text-sm opacity-70">{open ? '−' : '+'}</span>
-                  </span>
-                </button>
-                {open && (
-                <div className="space-y-4 p-4">
-                  <div>
-                    <Label>Needs</Label>
-                    <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                      {needs.map((n) => (
-                        <li key={n}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  {canBend.length > 0 && (
-                    <div className="rounded-xl bg-[var(--panel-border)]/20 p-3">
-                      <Label>Can bend</Label>
-                      <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                        {canBend.map((b) => (
-                          <li key={b}>{b}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <div>
-                    <Label>Ask your coach</Label>
-                    <p className="mt-1 text-sm italic">{skill.ask}</p>
-                  </div>
-                  <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
-                  {skill.ryanNote && (
-                    <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
-                      Ryan: {skill.ryanNote}
-                    </p>
-                  )}
-                </div>
-                )}
-              </article>
-            )
-          })}
+        <div className="mt-4">
+          <SkillMapView onTileTap={setModalSkill} />
         </div>
       </section>
 
       <GuidePlaceholders />
 
-      <section>
-        <h2 className="text-xl font-extrabold">Verbal cues to reconsider</h2>
-        <p className="mt-1 text-sm opacity-80">
-          Common cues worth rethinking, what to try instead, and why.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {RYAN_CUE_SWAPS.map((cue) => (
+      <CueSwaps />
+
+      {modalSkill && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+          onClick={() => setModalSkill(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={modalSkill.name}
+        >
+          <div
+            className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-[var(--panel)] sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <article
-              key={cue.id}
-              className="min-w-0 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+              id={modalSkill.guideId ? `skill-card-${modalSkill.guideId}` : undefined}
+              className="overflow-hidden"
             >
-              <div className="text-sm font-bold text-red-400 line-through opacity-80 break-words">
-                {cue.insteadOf}
+              <div
+                className="flex items-center justify-between px-4 py-3 text-base font-extrabold text-white"
+                style={{
+                  backgroundColor: modalSkill.guideId
+                    ? guideCardColor(modalSkill.guideId)
+                    : '#3a3f45',
+                }}
+              >
+                <span>{modalSkill.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setModalSkill(null)}
+                  aria-label="Close"
+                  className="rounded-full bg-black/25 px-3 py-1 text-sm font-bold"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="mt-1 text-base font-extrabold text-emerald-400 break-words">
-                {cue.sayThis}
-              </div>
-              <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
+              {modalSkill.guideId ? (
+                <SkillGuideCardContent
+                  skill={modalSkill}
+                  color={guideCardColor(modalSkill.guideId)}
+                  coach={coach}
+                  canEdit={canEdit}
+                />
+              ) : (
+                <div className="space-y-3 p-4">
+                  <span className="inline-block rounded-full bg-neutral-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                    guide coming
+                  </span>
+                  <p className="text-sm opacity-80">
+                    This skill is on the map but its guide card isn't written
+                    yet.
+                  </p>
+                </div>
+              )}
             </article>
-          ))}
+          </div>
         </div>
-      </section>
+      )}
     </div>
   )
 }

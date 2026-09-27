@@ -330,7 +330,10 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "aliases": [
       "round-off handspring double full",
       "RO BHS double full",
-      "Ro hs double full"
+      "Ro hs double full",
+      "back double full",
+      "back 2",
+      "back dub"
     ],
     "track": "running",
     "guideNeeds": [
@@ -399,7 +402,11 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "id": "skl_triple_full",
     "guideId": "triple-full",
     "name": "Triple full",
-    "aliases": [],
+    "aliases": [
+      "back triple full",
+      "back triple",
+      "back 3"
+    ],
     "track": "running",
     "guideNeeds": [
       "A high double full with plenty of time to open and land",
@@ -608,5 +615,116 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "back one and a half"
     ],
     "track": "running"
+  },
+  {
+    "id": "skl_front_full",
+    "name": "Front full",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_back_full",
+    "name": "Back full",
+    "aliases": [
+      "back full twisting layout"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_15",
+    "name": "Front 1.5 (Rudi)",
+    "aliases": [
+      "rudi",
+      "front rudi"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_2",
+    "name": "Front double full",
+    "aliases": [
+      "front 2",
+      "front dub"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_back_25",
+    "name": "Back 2.5",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_25",
+    "name": "Front 2.5 (Randi)",
+    "aliases": [
+      "randi",
+      "front randi"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_triple",
+    "name": "Front triple full",
+    "aliases": [
+      "front triple",
+      "front 3"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_35",
+    "name": "Front 3.5 (Adolph)",
+    "aliases": [
+      "adolph",
+      "front adolph"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_back_35",
+    "name": "Back 3.5",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_back_quad",
+    "name": "Back quad",
+    "aliases": [
+      "quad"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_full_in",
+    "name": "Full in",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_full_full",
+    "name": "Full full",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_miller",
+    "name": "Miller",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_killer",
+    "name": "Killer",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_cartwheel_step_in",
+    "name": "Cartwheel step in",
+    "aliases": [
+      "cartwheel step-in"
+    ],
+    "track": "walking"
   }
 ]
