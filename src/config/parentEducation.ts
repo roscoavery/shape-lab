@@ -112,6 +112,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         answerKey: "perfection-before-progression",
         answer: [
           "This is an order of operation. Nothing is ever perfect.. the expression is a reminder to walk before you run. Set your standards high with prerequisites and your higher level skills will be easier to learn and achieve. Both tumble doc (Alvin Davis) and coach sahil (addicted to tumbling) have this philosophy written publicly.",
+          "There's a wabi-sabi saying I like: \"nothing is ever perfect, nothing is ever finished, and nothing lasts forever.\"",
         ],
       },
     ],
