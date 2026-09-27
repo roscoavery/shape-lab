@@ -102,6 +102,8 @@ type Props = {
   onReferencesChange: (photos: ReferencePhoto[]) => void
   signedIn?: Athlete | null
   athletes?: Athlete[]
+  /** Athletes on the live class roster — their goal paths light up on the skill map. */
+  classAthletes?: Athlete[]
   intent?: LearnIntent | null
   onIntentConsumed?: () => void
   presetQuizTaker?: { firstName: string; lastName: string; athleteId?: string } | null
@@ -128,6 +130,7 @@ export function EducationPanel({
   onReferencesChange,
   signedIn = null,
   athletes = [],
+  classAthletes = [],
   intent = null,
   onIntentConsumed,
   presetQuizTaker = null,
@@ -502,7 +505,7 @@ export function EducationPanel({
 
       {view.kind === 'skillPath' && (
         <PanelErrorBoundary label="Skill path">
-          <SkillPathCards coach={coach} canEdit={persistIgToApp} focusSkillId={focusSkillId} viewer={signedIn} />
+          <SkillPathCards coach={coach} canEdit={persistIgToApp} focusSkillId={focusSkillId} viewer={signedIn} classAthletes={classAthletes} activeAthlete={athletes.find((a) => a.id === athleteId) ?? null} />
         </PanelErrorBoundary>
       )}
 

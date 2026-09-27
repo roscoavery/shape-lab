@@ -101,15 +101,17 @@ function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
   return dist
 }
 
-/** Layered luminous box-shadow in the family color, fading with distance. */
+/** Layered luminous box-shadow in the family color, fading with distance.
+ * Steep ramp: the goal (0) is unmistakably the destination, and each step
+ * down the chain is visibly dimmer so the lit trail reads at a glance. */
 function glowShadow(rgb: string, distance: number): string {
   const specs = [
-    { a1: 0.95, b1: 14, s1: 3, a2: 0.5, b2: 34, s2: 8 }, // 0 — the hope, brightest
-    { a1: 0.75, b1: 11, s1: 2, a2: 0.35, b2: 26, s2: 6 }, // 1
-    { a1: 0.55, b1: 9, s1: 2, a2: 0.25, b2: 20, s2: 5 }, // 2
-    { a1: 0.38, b1: 7, s1: 1, a2: 0.16, b2: 15, s2: 4 }, // 3
-    { a1: 0.24, b1: 5, s1: 1, a2: 0.1, b2: 11, s2: 3 }, // 4
-    { a1: 0.14, b1: 4, s1: 0, a2: 0.06, b2: 8, s2: 2 }, // 5 — faint shimmer
+    { a1: 1.0, b1: 20, s1: 5, a2: 0.7, b2: 48, s2: 12 }, // 0 — the destination, brightest
+    { a1: 0.9, b1: 15, s1: 4, a2: 0.5, b2: 34, s2: 8 }, // 1 — strong, on the trail
+    { a1: 0.68, b1: 12, s1: 3, a2: 0.34, b2: 26, s2: 6 }, // 2 — clearly lit
+    { a1: 0.42, b1: 9, s1: 2, a2: 0.2, b2: 18, s2: 4 }, // 3
+    { a1: 0.24, b1: 6, s1: 1, a2: 0.11, b2: 12, s2: 3 }, // 4
+    { a1: 0.12, b1: 4, s1: 0, a2: 0.05, b2: 8, s2: 2 }, // 5 — faint shimmer
   ]
   const s = specs[Math.min(distance, MAX_GLOW_DISTANCE)]
   return (
@@ -434,7 +436,11 @@ function Tile({
   const borderColor = isBanner
     ? 'rgba(251,191,36,0.55)'
     : glowing
-      ? `rgba(${rgb},0.85)`
+      ? glowDist === 0
+        ? `rgba(${rgb},1)` // destination — full-strength border
+        : glowDist <= 2
+          ? `rgba(${rgb},0.95)` // on the trail — near-full so the path reads continuous
+          : `rgba(${rgb},0.7)`
       : featured
         ? `rgba(${rgb},0.75)`
         : style.border
@@ -598,20 +604,58 @@ function Legend() {
 export function SkillMapView({
   onTileTap,
   viewer = null,
+  classAthletes = [],
+  activeAthlete = null,
 }: {
   onTileTap: (skill: UnifiedSkill) => void
   /** Signed-in viewer. Glow only renders for athlete-role viewers with goals. */
   viewer?: Athlete | null
+  /** Athletes on the live class roster — their goal paths light up too. */
+  classAthletes?: Athlete[]
+  /** Active athlete (from athleteId) — their goal path lights up too. */
+  activeAthlete?: Athlete | null
 }) {
   const [beyondOpen, setBeyondOpen] = useState(false)
-  // Guiding light: null when no athlete is signed in, the viewer isn't an
-  // athlete, or they have no goals — the map renders exactly as before.
+  // Guiding light: null when no athlete is signed in, no active athlete, and
+  // no class roster — the map renders exactly as before. Otherwise the union
+  // of everyone's goals lights up (shortest distance wins across athletes).
+  const glowAthletes = useMemo(() => {
+    const seen = new Set<string>()
+    const out: Athlete[] = []
+    const add = (a: Athlete | null | undefined) => {
+      if (a && isAthleteProfile(a) && !seen.has(a.id)) {
+        seen.add(a.id)
+        out.push(a)
+      }
+    }
+    add(viewer)
+    add(activeAthlete)
+    for (const a of classAthletes) add(a)
+    return out
+  }, [viewer, activeAthlete, classAthletes])
+  const glowNames = useMemo(
+    () =>
+      glowAthletes
+        .filter((a) => (a.skillGoals ?? []).some((g) => g.skillId?.trim()))
+        .map((a) => a.name.trim().split(/\s+/)[0])
+        .filter(Boolean),
+    [glowAthletes],
+  )
+  // Class case: roster athletes with goals are lighting the path (not just the viewer).
+  const classGlow = useMemo(
+    () =>
+      classAthletes.some(
+        (a) =>
+          isAthleteProfile(a) &&
+          (a.skillGoals ?? []).some((g) => g.skillId?.trim()),
+      ),
+    [classAthletes],
+  )
   const glowMap = useMemo(() => {
-    if (!viewer || !isAthleteProfile(viewer)) return null
-    const goals = (viewer.skillGoals ?? []).filter((g) => g.skillId?.trim())
+    const goals = glowAthletes.flatMap((a) => a.skillGoals ?? []).filter((g) => g.skillId?.trim())
     if (!goals.length) return null
     return buildGlowMap(goals)
-  }, [viewer])
+  }, [glowAthletes])
   return (
     <div className="space-y-2.5">
       {/* Pulse keyframes for the goal tile (distance 0). Brightness-only so it
@@ -633,8 +677,11 @@ export function SkillMapView({
 
       {glowMap && (
         <p className="text-center text-[11px] font-semibold text-white/55">
-          <span aria-hidden>✦ </span>Your goals light the way — follow the glow
-          upward<span aria-hidden> ✦</span>
+          <span aria-hidden>✦ </span>
+          {classGlow
+            ? `Lighting the way for ${glowNames.slice(0, 3).join(', ')}${glowNames.length > 3 ? ' and others' : ''}`
+            : 'Your goals light the way — follow the glow upward'}
+          <span aria-hidden> ✦</span>
         </p>
       )}
 

@@ -697,12 +697,18 @@ export function SkillPathCards({
   canEdit = false,
   focusSkillId,
   viewer = null,
+  classAthletes = [],
+  activeAthlete = null,
 }: {
   coach?: boolean
   canEdit?: boolean
   focusSkillId?: string | null
   /** Signed-in viewer, for the skill map's guiding-light glow. */
   viewer?: Athlete | null
+  /** Athletes on the live class roster — their goal paths light up too. */
+  classAthletes?: Athlete[]
+  /** Active athlete (from athleteId), for the skill map's guiding-light glow. */
+  activeAthlete?: Athlete | null
 }) {
   const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
     getRegistrySkillByGuideId(focusSkillId),
@@ -774,7 +780,7 @@ export function SkillPathCards({
           </p>
         </div>
         <div className="mt-4">
-          <SkillMapView onTileTap={setModalSkill} viewer={viewer} />
+          <SkillMapView onTileTap={setModalSkill} viewer={viewer} classAthletes={classAthletes} activeAthlete={activeAthlete} />
         </div>
       </section>
 

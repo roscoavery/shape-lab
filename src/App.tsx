@@ -880,6 +880,8 @@ export default function App() {
 
   const liveClass = getActiveMeeting(activeAthleteId)
   const liveClassOffering = liveClass ? getOffering(liveClass.offeringId) : null
+  const liveClassRosterIds = liveClass ? (getOffering(liveClass.offeringId)?.rosterIds ?? []) : []
+  const liveClassAthletes = athletes.filter((a) => liveClassRosterIds.includes(a.id))
   const floorKiosk = sessionIsKiosk(authUser)
   const ryanEdit =
     !floorKiosk &&
@@ -1521,6 +1523,7 @@ export default function App() {
           onReferencesChange={setReferencePhotos}
           signedIn={previewProfile}
           athletes={athletes}
+          classAthletes={liveClassAthletes}
           intent={learnIntent}
           onIntentConsumed={() => setLearnIntent(null)}
           onOpenNamesTest={
