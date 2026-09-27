@@ -896,7 +896,7 @@ export function SkillMapView({
 
       {/* Skill tree with the difficulty level bar pinned to its right edge */}
       <div className="relative space-y-2.5 pr-6 sm:pr-20">
-        <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
+        <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
         <div className="pt-1">
           <RollsSection onTap={onTileTap} glowMap={glowMap} />
         </div>
@@ -909,7 +909,7 @@ export function SkillMapView({
               'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
           }}
         />
-        <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
+        <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} />
         <div className="pt-2" />
         <LevelBar />
       </div>
