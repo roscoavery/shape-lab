@@ -137,7 +137,6 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         answerKey: "stages-in-your-words",
         answer: [
           "Skill introduction, skill approximation, skill acquisition, skill mastery.",
-          "ill prob go back and add more but ive comminicated this stuff already..",
         ],
       },
     ],
