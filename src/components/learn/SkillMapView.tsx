@@ -292,6 +292,8 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_standing_tuck: 'standing',
   skl_standing_open_tuck: 'standing',
   skl_standing_full: 'standing',
+  skl_standing_tuck_up_8: 'standing',
+  skl_standing_tuck_up_16: 'standing',
   skl_double_back: 'doubleback',
   // forwards family (orange)
   skl_handstand: 'forwards',
@@ -388,17 +390,21 @@ const ROWS: MapRow[] = [
     ],
   },
   {
-    // R10 — doubles level (back double full stacks above back 1.5)
+    // R10 — doubles level (back double full stacks above back 1.5;
+    // standing tuck up 16" splits the standing column with standing full)
     tiles: [
-      { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 3' },
+      { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 2' },
+      { skillId: 'skl_standing_tuck_up_16', label: 'Tuck up 16"', col: '2 / 3' },
       { skillId: 'skl_front_2', label: 'Front double full', col: '3 / 5' },
       { skillId: 'skl_kick_15', label: 'Kick 1.5', col: '5 / 7' },
       { skillId: 'skl_double_full', label: 'Back double full', col: '7 / 9' },
     ],
   },
   {
-    // R9 — 1.5 level (back 1.5 stacks above back full; kick full between the 1.5s)
+    // R9 — 1.5 level (back 1.5 stacks above back full; kick full between the 1.5s;
+    // tuck up 8" sits above standing open tuck)
     tiles: [
+      { skillId: 'skl_standing_tuck_up_8', label: 'Tuck up 8"', col: '1 / 3' },
       { skillId: 'skl_front_15', label: 'Front 1.5', col: '3 / 5' },
       { skillId: 'skl_kick_full', label: 'Kick full', col: '5 / 7' },
       { skillId: 'skl_back_1_5', label: 'Back 1.5', col: '7 / 9' },

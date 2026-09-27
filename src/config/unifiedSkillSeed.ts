@@ -249,6 +249,24 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "standing"
   },
   {
+    "id": "skl_standing_tuck_up_8",
+    "name": "Standing tuck up panel mat (8\")",
+    "aliases": [
+      "tuck up 8 inch mat",
+      "standing tuck up 8"
+    ],
+    "track": "standing"
+  },
+  {
+    "id": "skl_standing_tuck_up_16",
+    "name": "Standing tuck up 2 panel mats (16\")",
+    "aliases": [
+      "tuck up 16 inch",
+      "standing tuck up 16"
+    ],
+    "track": "standing"
+  },
+  {
     "id": "skl_tuck_up_raised",
     "name": "Back tuck up a knee-high raised surface",
     "aliases": [
