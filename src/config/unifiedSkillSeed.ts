@@ -259,10 +259,10 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   },
   {
     "id": "skl_standing_tuck_up_16",
-    "name": "Standing tuck up 2 panel mats (16\")",
+    "name": "Tuck up knee high surface",
     "aliases": [
-      "tuck up 16 inch",
-      "standing tuck up 16"
+      "standing tuck up knee high",
+      "tuck up 16 inch"
     ],
     "track": "standing"
   },

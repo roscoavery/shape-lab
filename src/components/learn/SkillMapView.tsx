@@ -374,27 +374,27 @@ const ROLLS_ROWS: MapRow[] = [
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
 const ROWS: MapRow[] = [
   {
-    // R12 — triples (double back sits between the triples; kick dub joins them)
+    // R12 — triples (double back sits between the triples)
     tiles: [
-      { skillId: 'skl_front_triple', label: 'Front triple', col: '1 / 3' },
-      { skillId: 'skl_kick_2', label: 'Kick double full', col: '3 / 5' },
-      { skillId: 'skl_double_back', label: 'Double back', col: '5 / 7' },
-      { skillId: 'skl_triple_full', label: 'Back triple', col: '7 / 9' },
+      { skillId: 'skl_front_triple', label: 'Front triple', col: '2 / 4' },
+      { skillId: 'skl_double_back', label: 'Double back', col: '4 / 6' },
+      { skillId: 'skl_triple_full', label: 'Back triple', col: '6 / 8' },
     ],
   },
   {
-    // R11 — 2.5 level
+    // R11 — 2.5 level: each stacks above its double full
     tiles: [
-      { skillId: 'skl_front_25', label: 'Front 2.5', col: '2 / 4' },
-      { skillId: 'skl_back_25', label: 'Back 2.5', col: '4 / 6' },
+      { skillId: 'skl_front_25', label: 'Front 2.5', col: '3 / 5' },
+      { skillId: 'skl_kick_2', label: 'Kick double full', col: '5 / 7' },
+      { skillId: 'skl_back_25', label: 'Back 2.5', col: '7 / 9' },
     ],
   },
   {
     // R10 — doubles level (back double full stacks above back 1.5;
-    // standing tuck up 16" splits the standing column with standing full)
+    // tuck up knee high splits the standing column, left of standing full)
     tiles: [
-      { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 2' },
-      { skillId: 'skl_standing_tuck_up_16', label: 'Tuck up 16"', col: '2 / 3' },
+      { skillId: 'skl_standing_tuck_up_16', label: 'Tuck up knee high', col: '1 / 2' },
+      { skillId: 'skl_standing_full', label: 'Standing full', col: '2 / 3' },
       { skillId: 'skl_front_2', label: 'Front double full', col: '3 / 5' },
       { skillId: 'skl_kick_15', label: 'Kick 1.5', col: '5 / 7' },
       { skillId: 'skl_double_full', label: 'Back double full', col: '7 / 9' },
