@@ -255,6 +255,11 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_back_pike_roll: 'rolls',
   // cartwheel family (blue)
   skl_cartwheel: 'cartwheel',
+  skl_one_arm_cartwheel: 'cartwheel',
+  skl_backbend_kick_over: 'standing',
+  skl_front_limber: 'forwards',
+  skl_round_off_to_knees: 'roundoff',
+  skl_fhs_front_tuck: 'forwards',
   skl_side_aerial: 'cartwheel',
   skl_cartwheel_handspring: 'cartwheel',
   skl_cart_hs_step_out: 'cartwheel',
@@ -451,7 +456,7 @@ const ROWS: MapRow[] = [
     // R5
     tiles: [
       { skillId: 'skl_standing_two_to_tuck', label: 'Standing 2 to tuck', col: '1 / 3' },
-      { skillId: 'skl_front_tuck', label: 'Front tuck', col: '3 / 4' },
+      { skillId: 'skl_fhs_front_tuck', label: 'Front HS front tuck', col: '3 / 4' },
       { skillId: 'skl_bounder_step_out', label: 'Bounder step out', col: '4 / 5' },
       { skillId: 'skl_cart_tuck', label: 'Cart tuck', col: '5 / 7' },
       { skillId: 'skl_ro_bhs_tuck', label: 'RO HS tuck', col: '7 / 9' },
@@ -461,7 +466,7 @@ const ROWS: MapRow[] = [
     // R4
     tiles: [
       { skillId: 'skl_standing_bhs_series', label: 'Standing series', col: '1 / 3' },
-      { skillId: 'skl_front_hs_step_out', label: 'Front HS step out', col: '3 / 4' },
+      { skillId: 'skl_front_tuck', label: 'Front tuck', col: '3 / 4' },
       { skillId: 'skl_bounders', label: 'Bounders', col: '4 / 5' },
       { skillId: 'skl_cart_hs_step_out', label: 'Cartwheel 2 back handsprings', col: '5 / 7' },
       { skillId: 'skl_ro_bhs_series', label: 'RO series', col: '7 / 9' },
@@ -484,6 +489,15 @@ const ROWS: MapRow[] = [
       { skillId: 'skl_front_walkover', label: 'Front walkover', col: '3 / 5' },
       { skillId: 'skl_side_aerial', label: 'Side aerial', col: '5 / 7' },
       { skillId: 'skl_strong_round_off', label: 'Round off', col: '7 / 9' },
+    ],
+  },
+  {
+    // R1.5 — jammed in above R1: the next step up from each foundation
+    tiles: [
+      { skillId: 'skl_backbend_kick_over', label: 'Backbend kick over', col: '1 / 3' },
+      { skillId: 'skl_front_limber', label: 'Front limber', col: '3 / 5' },
+      { skillId: 'skl_one_arm_cartwheel', label: 'One-arm cartwheel', col: '5 / 7' },
+      { skillId: 'skl_round_off_to_knees', label: 'Round off to knees', col: '7 / 9' },
     ],
   },
   {

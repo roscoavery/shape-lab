@@ -394,6 +394,38 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "foundation"
   },
   {
+    "id": "skl_backbend_kick_over",
+    "name": "Backbend kick over",
+    "aliases": [
+      "back bend kick over"
+    ],
+    "track": "standing"
+  },
+  {
+    "id": "skl_front_limber",
+    "name": "Front limber",
+    "aliases": [
+      "handstand fall to bridge",
+      "front limber"
+    ],
+    "track": "standing"
+  },
+  {
+    "id": "skl_round_off_to_knees",
+    "name": "Round off to knees",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_fhs_front_tuck",
+    "name": "Front handspring front tuck",
+    "aliases": [
+      "front handspring front",
+      "fhs front"
+    ],
+    "track": "running"
+  },
+  {
     "id": "skl_standing_bhs_series",
     "catalogId": "stand_bhs_series",
     "name": "Back handspring series",
