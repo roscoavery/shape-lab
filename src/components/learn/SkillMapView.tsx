@@ -701,6 +701,43 @@ function RollsSection({
   )
 }
 
+/**
+ * Difficulty level bar — a thin vertical gradient pinned to the right edge of
+ * the skill tree, fading smoothly from Light (bottom) to Legend (top) with
+ * no hard boundaries. Labels sit left of the bar; hidden on small screens
+ * so they never squeeze the tiles.
+ */
+function LevelBar() {
+  const labels = [
+    { text: 'Legend', top: '1%' },
+    { text: 'Expert', top: '15%' },
+    { text: 'Heavy', top: '37%' },
+    { text: 'Hard', top: '58%' },
+    { text: 'Intermediate', top: '77%' },
+    { text: 'Light', top: '90%' },
+  ]
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-6 sm:w-20">
+      <div
+        className="absolute bottom-0 right-2 top-0 w-2 rounded-full opacity-70"
+        style={{
+          background:
+            'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)',
+        }}
+      />
+      {labels.map((l) => (
+        <span
+          key={l.text}
+          className="absolute right-5 hidden -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-semibold text-white/60 sm:block"
+          style={{ top: l.top }}
+        >
+          {l.text}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function Legend() {
   const [open, setOpen] = useState(false)
   return (
@@ -844,21 +881,25 @@ export function SkillMapView({
 
       <Legend />
 
-      <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
-      <div className="pt-1">
-        <RollsSection onTap={onTileTap} glowMap={glowMap} />
+      {/* Skill tree with the difficulty level bar pinned to its right edge */}
+      <div className="relative space-y-2.5 pr-6 sm:pr-20">
+        <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
+        <div className="pt-1">
+          <RollsSection onTap={onTileTap} glowMap={glowMap} />
+        </div>
+        {/* Light beaming upward from Foundations into the tree */}
+        <div
+          aria-hidden
+          className="pointer-events-none mx-auto h-10 w-3/4"
+          style={{
+            background:
+              'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
+          }}
+        />
+        <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
+        <div className="pt-2" />
+        <LevelBar />
       </div>
-      {/* Light beaming upward from Foundations into the tree */}
-      <div
-        aria-hidden
-        className="pointer-events-none mx-auto h-10 w-3/4"
-        style={{
-          background:
-            'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
-        }}
-      />
-      <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
-      <div className="pt-2" />
     </div>
   )
 }
