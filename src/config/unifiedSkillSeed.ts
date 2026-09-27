@@ -326,8 +326,9 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "id": "skl_double_full",
     "guideId": "double-full",
     "catalogId": "run_ro_hs_double",
-    "name": "Double full",
+    "name": "Back double full",
     "aliases": [
+      "double full",
       "round-off handspring double full",
       "RO BHS double full",
       "Ro hs double full",
@@ -760,5 +761,87 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "name": "Bounder step out",
     "aliases": [],
     "track": "running"
+  },
+  {
+    "id": "skl_standing_two_to_tuck",
+    "name": "Standing two to tuck",
+    "aliases": [],
+    "track": "standing"
+  },
+  {
+    "id": "skl_standing_one_to_tuck",
+    "name": "Standing one to tuck",
+    "aliases": [
+      "standing 1 to tuck"
+    ],
+    "track": "standing"
+  },
+  {
+    "id": "skl_backward_roll",
+    "name": "Backward roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_back_roll_push_up",
+    "name": "Back roll to push up",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_back_extension_roll",
+    "name": "Back extension roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_forward_roll",
+    "name": "Forward roll",
+    "aliases": [
+      "fwd roll"
+    ],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_handstand_fwd_roll",
+    "name": "Handstand forward roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_dive_roll",
+    "name": "Dive roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_360_dive_roll",
+    "name": "360 dive roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_straddle_fwd_roll",
+    "name": "Straddle forward roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_straddle_bwd_roll",
+    "name": "Straddle backward roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_front_pike_roll",
+    "name": "Front pike roll",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_back_pike_roll",
+    "name": "Back pike roll",
+    "aliases": [],
+    "track": "foundation"
   }
 ]
