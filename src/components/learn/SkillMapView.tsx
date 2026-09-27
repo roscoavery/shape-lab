@@ -305,6 +305,9 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_front_2: 'forwards',
   skl_front_25: 'forwards',
   skl_front_triple: 'forwards',
+  skl_kick_full: 'forwards',
+  skl_kick_15: 'forwards',
+  skl_kick_2: 'forwards',
   skl_front_35: 'forwards',
   // killer gets its own accent
   skl_killer: 'killer',
@@ -365,11 +368,12 @@ const ROLLS_ROWS: MapRow[] = [
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
 const ROWS: MapRow[] = [
   {
-    // R12 — triples (double back sits between the triples)
+    // R12 — triples (double back sits between the triples; kick dub joins them)
     tiles: [
-      { skillId: 'skl_front_triple', label: 'Front triple', col: '2 / 4' },
-      { skillId: 'skl_double_back', label: 'Double back', col: '4 / 6' },
-      { skillId: 'skl_triple_full', label: 'Back triple', col: '6 / 8' },
+      { skillId: 'skl_front_triple', label: 'Front triple', col: '1 / 3' },
+      { skillId: 'skl_kick_2', label: 'Kick double full', col: '3 / 5' },
+      { skillId: 'skl_double_back', label: 'Double back', col: '5 / 7' },
+      { skillId: 'skl_triple_full', label: 'Back triple', col: '7 / 9' },
     ],
   },
   {
@@ -384,13 +388,15 @@ const ROWS: MapRow[] = [
     tiles: [
       { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 3' },
       { skillId: 'skl_front_2', label: 'Front double full', col: '3 / 5' },
+      { skillId: 'skl_kick_15', label: 'Kick 1.5', col: '5 / 7' },
       { skillId: 'skl_double_full', label: 'Back double full', col: '7 / 9' },
     ],
   },
   {
-    // R9 — 1.5 level (back 1.5 stacks above back full)
+    // R9 — 1.5 level (back 1.5 stacks above back full; kick full between the 1.5s)
     tiles: [
       { skillId: 'skl_front_15', label: 'Front 1.5', col: '3 / 5' },
+      { skillId: 'skl_kick_full', label: 'Kick full', col: '5 / 7' },
       { skillId: 'skl_back_1_5', label: 'Back 1.5', col: '7 / 9' },
     ],
   },

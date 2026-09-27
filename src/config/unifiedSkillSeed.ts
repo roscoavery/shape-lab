@@ -665,6 +665,29 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "running"
   },
   {
+    "id": "skl_kick_full",
+    "name": "Kick full",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_kick_15",
+    "name": "Kick 1.5",
+    "aliases": [
+      "kick one and a half"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_kick_2",
+    "name": "Kick double full",
+    "aliases": [
+      "kick dub",
+      "kick double"
+    ],
+    "track": "running"
+  },
+  {
     "id": "skl_back_25",
     "name": "Back 2.5",
     "aliases": [],
