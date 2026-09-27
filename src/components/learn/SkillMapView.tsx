@@ -24,6 +24,7 @@ type SkillFamily =
   | 'forwards'
   | 'killer'
   | 'doubleback'
+  | 'kick'
 
 const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: string }> = {
   foundations: { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.20)', label: 'Foundations' },
@@ -35,6 +36,8 @@ const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: st
   killer: { bg: 'rgba(251,191,36,0.20)', border: 'rgba(251,191,36,0.75)', label: 'Killer' },
   // Double back: green like the round-off family, trimmed in yellow.
   doubleback: { bg: 'rgba(74,222,128,0.14)', border: 'rgba(251,191,36,0.70)', label: 'Double back' },
+  // Kicks: blue fading to green, trimmed in yellow.
+  kick: { bg: 'linear-gradient(135deg, rgba(96,165,250,0.16), rgba(74,222,128,0.10))', border: 'rgba(251,191,36,0.60)', label: 'Kick' },
 }
 
 /** Solid RGB triplet per family, used for the guiding-light glow. */
@@ -47,6 +50,7 @@ const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
   forwards: '251,146,60',
   killer: '251,191,36',
   doubleback: '190,242,100',
+  kick: '130,210,170',
 }
 
 /** Deepest prerequisite level that still glows (fades to a faint shimmer). */
@@ -305,9 +309,9 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_front_2: 'forwards',
   skl_front_25: 'forwards',
   skl_front_triple: 'forwards',
-  skl_kick_full: 'forwards',
-  skl_kick_15: 'forwards',
-  skl_kick_2: 'forwards',
+  skl_kick_full: 'kick',
+  skl_kick_15: 'kick',
+  skl_kick_2: 'kick',
   skl_front_35: 'forwards',
   // killer gets its own accent
   skl_killer: 'killer',
