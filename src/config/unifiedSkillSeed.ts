@@ -726,5 +726,39 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "cartwheel step-in"
     ],
     "track": "walking"
+  },
+  {
+    "id": "skl_handstand",
+    "name": "Handstand",
+    "aliases": [],
+    "track": "foundation"
+  },
+  {
+    "id": "skl_bounders",
+    "name": "Bounders",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_cart_hs_step_out",
+    "name": "Cartwheel HS step out",
+    "aliases": [
+      "cart handspring step out"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_front_hs_step_out",
+    "name": "Front HS step out",
+    "aliases": [
+      "front handspring step out"
+    ],
+    "track": "running"
+  },
+  {
+    "id": "skl_bounder_step_out",
+    "name": "Bounder step out",
+    "aliases": [],
+    "track": "running"
   }
 ]

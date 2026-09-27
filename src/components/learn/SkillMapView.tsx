@@ -36,7 +36,7 @@ const HEADERS: { label: string; col: string }[] = [
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
 const ROWS: MapRow[] = [
   {
-    // R11
+    // R12
     tiles: [
       { skillId: 'skl_front_triple', label: 'Front triple', col: '2 / 4' },
       { skillId: 'skl_triple_full', label: 'Back triple', col: '4 / 6' },
@@ -45,60 +45,69 @@ const ROWS: MapRow[] = [
     ],
   },
   {
-    // R10
+    // R11
     tiles: [
       { skillId: 'skl_front_25', label: 'Front 2.5', col: '3 / 5' },
       { skillId: 'skl_back_25', label: 'Back 2.5', col: '5 / 7' },
     ],
   },
   {
-    // R9
+    // R10
     tiles: [
-      { skillId: 'skl_front_2', label: 'Front double', col: '2 / 4' },
-      { skillId: 'skl_double_full', label: 'Back double', col: '4 / 6' },
-      { skillId: 'skl_double_back', label: 'Double back', col: '6 / 8' },
+      { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 3' },
+      { skillId: 'skl_front_2', label: 'Front double', col: '3 / 5' },
+      { skillId: 'skl_double_full', label: 'Back double', col: '5 / 7' },
+      { skillId: 'skl_double_back', label: 'Double back', col: '7 / 9' },
     ],
   },
   {
-    // R8
+    // R9
     tiles: [
       { skillId: 'skl_front_15', label: 'Front 1.5', col: '3 / 5' },
       { skillId: 'skl_back_1_5', label: 'Back 1.5', col: '5 / 7' },
     ],
   },
   {
-    // R7
-    tiles: [
-      { skillId: 'skl_barani', label: 'Front half', col: '1 / 3' },
-      { skillId: 'skl_front_full', label: 'Front full', col: '3 / 5' },
-      { skillId: 'skl_back_full', label: 'Back full', col: '5 / 7' },
-      { skillId: 'skl_back_half', label: 'Back half', col: '7 / 9' },
-    ],
-  },
-  {
-    // R6 — five tiles, own 5-column row
-    cols: 5,
-    tiles: [
-      { skillId: 'skl_standing_full', label: 'Standing full', col: '1 / 2' },
-      { skillId: 'skl_layout', label: 'Layout', col: '2 / 3' },
-      { skillId: 'skl_front_layout', label: 'Front layout', col: '3 / 4' },
-      { skillId: 'skl_cart_full', label: 'Cart full', col: '4 / 5' },
-      { skillId: 'skl_ro_bhs_full', label: 'RO HS full', col: '5 / 6' },
-    ],
-  },
-  {
-    // R5
+    // R8
     tiles: [
       { skillId: 'skl_standing_tuck', label: 'Standing tuck', col: '1 / 3' },
-      { skillId: 'skl_front_tuck', label: 'Front tuck', col: '3 / 5' },
-      { skillId: 'skl_ro_bhs_tuck', label: 'RO HS tuck', col: '5 / 7' },
-      { skillId: 'skl_cart_tuck', label: 'Cart tuck', col: '7 / 9' },
+      { skillId: 'skl_front_full', label: 'Front full', col: '3 / 5' },
+      { skillId: 'skl_back_full', label: 'Back full', col: '5 / 7' },
+      { skillId: 'skl_ro_bhs_full', label: 'RO HS full', col: '7 / 9' },
+    ],
+  },
+  {
+    // R7 — halves level
+    tiles: [
+      { skillId: 'skl_standing_open_tuck', label: 'Standing open tuck', col: '1 / 3' },
+      { skillId: 'skl_barani', label: 'Front half', col: '3 / 5' },
+      { skillId: 'skl_back_half', label: 'Back half', col: '5 / 7' },
+    ],
+  },
+  {
+    // R6
+    tiles: [
+      { skillId: 'skl_layout', label: 'Layout', col: '3 / 5' },
+      { skillId: 'skl_front_layout', label: 'Front layout', col: '5 / 7' },
+      { skillId: 'skl_cart_full', label: 'Cart full', col: '7 / 9' },
+    ],
+  },
+  {
+    // R5 — standing column empty (standing tuck moved up to R8)
+    tiles: [
+      { skillId: 'skl_front_tuck', label: 'Front tuck', col: '3 / 4' },
+      { skillId: 'skl_bounder_step_out', label: 'Bounder step out', col: '4 / 5' },
+      { skillId: 'skl_cart_tuck', label: 'Cart tuck', col: '5 / 7' },
+      { skillId: 'skl_ro_bhs_tuck', label: 'RO HS tuck', col: '7 / 9' },
     ],
   },
   {
     // R4
     tiles: [
       { skillId: 'skl_standing_bhs_series', label: 'Standing series', col: '1 / 3' },
+      { skillId: 'skl_front_hs_step_out', label: 'Front HS step out', col: '3 / 4' },
+      { skillId: 'skl_bounders', label: 'Bounders', col: '4 / 5' },
+      { skillId: 'skl_cart_hs_step_out', label: 'Cart HS step out', col: '5 / 7' },
       { skillId: 'skl_ro_bhs_series', label: 'RO series', col: '7 / 9' },
     ],
   },
@@ -122,10 +131,11 @@ const ROWS: MapRow[] = [
     ],
   },
   {
-    // R1
+    // R1 — four across
     tiles: [
       { skillId: 'skl_back_bend', label: 'Back bend', col: '1 / 3' },
-      { skillId: 'skl_cartwheel', label: 'Cartwheel', col: '4 / 6' },
+      { skillId: 'skl_handstand', label: 'Handstand', col: '3 / 5' },
+      { skillId: 'skl_cartwheel', label: 'Cartwheel', col: '5 / 7' },
       { skillId: 'skl_cartwheel_step_in', label: 'Cartwheel step-in', col: '7 / 9' },
     ],
   },
