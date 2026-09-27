@@ -49,6 +49,69 @@ const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
 const MAX_GLOW_DISTANCE = 5
 
 /**
+ * Roll highlight tiers by goal difficulty. Rolls are NOT prerequisites —
+ * they span a huge difficulty range, so they never light up as part of the
+ * chain. Instead, specific rolls highlight when the goal reaches their level:
+ * - Cartwheel level or above → backward roll
+ * - Handspring level or above → back roll to push up
+ * - RO HS level or above → handstand forward roll
+ * - Layout level or above → back extension roll
+ * 360 dive roll is never highlighted; it's beyond-level, not a stepping stone.
+ *
+ * Level is determined from the goal's row in the map (ROWS is top-down).
+ * The shipped prerequisite data is too sparse to rely on chain-walking for
+ * level detection, so row position is the primary signal.
+ */
+const ROLL_HIGHLIGHT_TIERS: { minRow: number; rolls: string[]; name: string }[] = [
+  // Row indices in ROWS (0 = R12 top). Lower index = harder.
+  { minRow: 11, rolls: ['skl_backward_roll'], name: 'cartwheel' }, // R1 and up
+  { minRow: 9, rolls: ['skl_back_roll_push_up'], name: 'handspring' }, // R3 and up
+  { minRow: 9, rolls: ['skl_handstand_fwd_roll'], name: 'roHs' }, // R3 and up, RO progression only
+  { minRow: 6, rolls: ['skl_back_extension_roll'], name: 'layout' }, // R6 and up
+]
+
+/** Skills at R1 that are below cartwheel difficulty — never trigger highlights. */
+const BELOW_CARTWHEEL = new Set(['skl_back_bend', 'skl_handstand', 'skl_foundations'])
+
+/** Lazily built map: skillId -> row index in ROWS (0 = top). Beyond rows = -1. */
+let skillRowIndex: Map<string, number> | null = null
+function getSkillRow(skillId: string): number | undefined {
+  if (!skillRowIndex) {
+    skillRowIndex = new Map()
+    ROWS.forEach((row, idx) => {
+      for (const t of row.tiles) skillRowIndex!.set(t.skillId, idx)
+    })
+    BEYOND_ROWS.forEach((row) => {
+      for (const t of row.tiles) skillRowIndex!.set(t.skillId, -1)
+    })
+  }
+  return skillRowIndex.get(CANONICAL_SKILL_ID[skillId] ?? skillId)
+}
+
+/**
+ * Does this goal count as "at or above" the given tier?
+ * Tier thresholds are row indices; the RO HS tier additionally requires the
+ * roundoff family (or layout+, which implies RO HS in the progression).
+ */
+function goalReachesTier(skillId: string, tier: { minRow: number; name: string }): boolean {
+  const canon = CANONICAL_SKILL_ID[skillId] ?? skillId
+  const row = getSkillRow(canon)
+  if (row === undefined) return false
+  if (tier.name === 'cartwheel' && BELOW_CARTWHEEL.has(canon)) return false
+  if (row > tier.minRow) return false
+  if (tier.name === 'roHs') {
+    // RO HS tier: the skill itself, the roundoff family at R3+, or layout+
+    // (layouts and above imply RO HS in the progression).
+    if (canon === 'skl_ro_bhs') return true
+    const family = FAMILY_BY_SKILL[canon]
+    if (family === 'roundoff' && row <= 9) return true
+    if (row <= 6) return true // layout level and above
+    return false
+  }
+  return true
+}
+
+/**
  * Skills consolidated into a canonical tile. Goals and shipped needs may
  * still reference the old id — map them so the glow lands on the tile.
  */
@@ -71,8 +134,16 @@ function needsForSkillConsolidated(skillId: string) {
  * "hope", brightest). Follows required + helpful needs that resolve to
  * registry skills; skips alt paths and non-skill needs. Cycle-safe: a skill
  * is only re-queued when a strictly shorter path is found.
+ *
+ * Also returns `highlights`: rolls relevant at the goal's level (handspring
+ * → back rolls, RO HS → handstand fwd roll, layout → back extension roll).
+ * Rolls are never chain prerequisites — these glow dimmer as "relevant, not
+ * required". 360 dive roll is never highlighted.
  */
-function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
+function buildGlowMap(goals: AthleteSkillGoal[]): {
+  dist: Map<string, number>
+  highlights: Set<string>
+} {
   const dist = new Map<string, number>()
   const queue: Array<[string, number]> = []
   const enqueue = (id: string, d: number) => {
@@ -98,7 +169,26 @@ function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
       if (need.needSkillId) enqueue(need.needSkillId, d + 1)
     }
   }
-  return dist
+  // Level-based roll highlights: check each GOAL's tier (not the walked chain —
+  // the shipped prerequisite data is too sparse for chain-based detection).
+  // Additive — a layout goal gets all four tiers. Skipped when already lit.
+  const highlights = new Set<string>()
+  const goalIds: string[] = []
+  for (const goal of goals) {
+    const raw = goal.skillId?.trim()
+    if (!raw) continue
+    const resolved = resolveGoalSkill(goal)
+    const id = CANONICAL_SKILL_ID[resolved?.id ?? raw] ?? (resolved?.id ?? raw)
+    if (getRegistrySkill(id)) goalIds.push(id)
+  }
+  for (const tier of ROLL_HIGHLIGHT_TIERS) {
+    if (!goalIds.some((id) => goalReachesTier(id, tier))) continue
+    for (const rollId of tier.rolls) {
+      if (!getRegistrySkill(rollId)) continue
+      if (!dist.has(rollId)) highlights.add(rollId)
+    }
+  }
+  return { dist, highlights }
 }
 
 /** Layered luminous box-shadow in the family color, fading with distance.
@@ -413,12 +503,15 @@ function Tile({
   skill,
   onTap,
   glowDist,
+  isHighlight,
 }: {
   tile: MapTile
   skill: UnifiedSkill
   onTap: (skill: UnifiedSkill) => void
   /** Guiding-light distance (0 = goal). Undefined = no glow. */
   glowDist?: number
+  /** Roll highlighted as relevant-at-level ("relevant, not required"). */
+  isHighlight?: boolean
 }) {
   const hasGuide = !!skill.guideId
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
@@ -426,13 +519,16 @@ function Tile({
   const rgb = FAMILY_GLOW_RGB[family]
   const isBanner = tile.skillId === 'skl_foundations'
   const glowing = glowDist !== undefined
+  const highlighted = isHighlight && !glowing
   const featured = isFeaturedSkill(skill) && !isBanner
   // Base shadow: soft layered elevation like the Today cards.
   // Featured glow sits underneath; the guiding-light glow adds on top.
+  // Highlights get a faint halo — visibly dimmer than the trail.
   const boxShadow =
     `0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22)` +
     (featured ? `, ${featuredShadow(rgb)}` : '') +
-    (glowing ? `, ${glowShadow(rgb, glowDist)}` : '')
+    (glowing ? `, ${glowShadow(rgb, glowDist)}` : '') +
+    (highlighted ? `, 0 0 10px 2px rgba(${rgb},0.35), 0 0 22px 5px rgba(${rgb},0.14)` : '')
   const borderColor = isBanner
     ? 'rgba(251,191,36,0.55)'
     : glowing
@@ -441,9 +537,11 @@ function Tile({
         : glowDist <= 2
           ? `rgba(${rgb},0.95)` // on the trail — near-full so the path reads continuous
           : `rgba(${rgb},0.7)`
-      : featured
-        ? `rgba(${rgb},0.75)`
-        : style.border
+      : highlighted
+        ? `rgba(${rgb},0.55)` // relevant, not required — softer + dashed below
+        : featured
+          ? `rgba(${rgb},0.75)`
+          : style.border
   return (
     <button
       type="button"
@@ -475,6 +573,8 @@ function Tile({
             }
       }
       className={`relative flex items-center justify-center rounded-2xl border px-2 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
+        highlighted ? 'border-dashed' : ''
+      } ${
         isBanner
           ? 'min-h-[64px] text-[13px] py-3 tracking-[0.28em] uppercase'
           : 'min-h-[56px] text-[11px] py-2 tracking-[0.02em]'
@@ -501,7 +601,7 @@ function MapRows({
 }: {
   rows: MapRow[]
   onTap: (s: UnifiedSkill) => void
-  glowMap?: Map<string, number> | null
+  glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
 }) {
   return (
     <>
@@ -520,7 +620,8 @@ function MapRows({
                 tile={tile}
                 skill={skill}
                 onTap={onTap}
-                glowDist={glowMap?.get(tile.skillId)}
+                glowDist={glowMap?.dist.get(tile.skillId)}
+                isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
               />
             )
           })}
@@ -535,7 +636,7 @@ function RollsSection({
   glowMap,
 }: {
   onTap: (s: UnifiedSkill) => void
-  glowMap?: Map<string, number> | null
+  glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
 }) {
   const [open, setOpen] = useState(false)
   return (
