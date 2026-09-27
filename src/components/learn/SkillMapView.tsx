@@ -717,15 +717,27 @@ function RollsSection({
  * no hard boundaries. Closed it shows just a thin gradient tab; tapping it
  * slides the bar open to reveal the zone labels.
  */
-function LevelBar() {
+function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
   const [open, setOpen] = useState(false)
-  const labels = [
-    { text: 'Expert', top: '8%' },
-    { text: 'Heavy', top: '30%' },
-    { text: 'Hard', top: '52%' },
-    { text: 'Intermediate', top: '73%' },
-    { text: 'Light', top: '90%' },
-  ]
+  // When Beyond is open the bar spans the Legend zone too, so Legend gets
+  // its label back at the top. (It was removed in b0173f1 because Beyond
+  // sat above the bar — now the bar reaches up there.)
+  const labels = beyondOpen
+    ? [
+        { text: 'Legend', top: '1%' },
+        { text: 'Expert', top: '15%' },
+        { text: 'Heavy', top: '37%' },
+        { text: 'Hard', top: '58%' },
+        { text: 'Intermediate', top: '77%' },
+        { text: 'Light', top: '90%' },
+      ]
+    : [
+        { text: 'Expert', top: '8%' },
+        { text: 'Heavy', top: '30%' },
+        { text: 'Hard', top: '52%' },
+        { text: 'Intermediate', top: '73%' },
+        { text: 'Light', top: '90%' },
+      ]
   return (
     <div className="pointer-events-none absolute inset-y-0 right-0">
       <button
@@ -894,51 +906,57 @@ export function SkillMapView({
         </p>
       )}
 
-      {/* Beyond — collapsed by default */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setBeyondOpen((o) => !o)}
-          aria-expanded={beyondOpen}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
-        >
-          <span>
-            <span className="block text-sm font-extrabold">Beyond <span className="text-[11px] font-semibold opacity-60">· Legend level</span></span>
-            <span className="block text-[11px] opacity-60">
-              Most people never cross this line
-            </span>
-          </span>
-          <span className="text-base opacity-60" aria-hidden>
-            {beyondOpen ? '▾' : '▸'}
-          </span>
-        </button>
-        {beyondOpen && (
-          <div className="mt-2 space-y-2">
-            <MapRows rows={BEYOND_ROWS} onTap={onTileTap} glowMap={glowMap} />
+      {/* Beyond + tree share one relative context so the level bar spans both —
+          when Beyond is open the bar reaches up into the Legend zone */}
+      <div className="relative">
+        <div className="space-y-2.5 pr-6 sm:pr-20">
+          {/* Beyond — collapsed by default */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setBeyondOpen((o) => !o)}
+              aria-expanded={beyondOpen}
+              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
+            >
+              <span>
+                <span className="block text-sm font-extrabold">Beyond <span className="text-[11px] font-semibold opacity-60">· Legend level</span></span>
+                <span className="block text-[11px] opacity-60">
+                  Most people never cross this line
+                </span>
+              </span>
+              <span className="text-base opacity-60" aria-hidden>
+                {beyondOpen ? '▾' : '▸'}
+              </span>
+            </button>
+            {beyondOpen && (
+              <div className="mt-2 space-y-2">
+                <MapRows rows={BEYOND_ROWS} onTap={onTileTap} glowMap={glowMap} />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <Legend />
+          <Legend />
 
-      {/* Skill tree with the difficulty level bar sliding out from its right edge */}
-      <div className="relative space-y-2.5 pr-6 sm:pr-20">
-        <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
-        <div className="pt-1">
-          <RollsSection onTap={onTileTap} glowMap={glowMap} />
+          {/* Skill tree */}
+          <div className="space-y-2.5">
+            <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
+            <div className="pt-1">
+              <RollsSection onTap={onTileTap} glowMap={glowMap} />
+            </div>
+            {/* Light beaming upward from Foundations into the tree */}
+            <div
+              aria-hidden
+              className="pointer-events-none mx-auto h-10 w-3/4"
+              style={{
+                background:
+                  'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
+              }}
+            />
+            <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} />
+            <div className="pt-2" />
+          </div>
         </div>
-        {/* Light beaming upward from Foundations into the tree */}
-        <div
-          aria-hidden
-          className="pointer-events-none mx-auto h-10 w-3/4"
-          style={{
-            background:
-              'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
-          }}
-        />
-        <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} />
-        <div className="pt-2" />
-        <LevelBar />
+        <LevelBar beyondOpen={beyondOpen} />
       </div>
     </div>
   )
