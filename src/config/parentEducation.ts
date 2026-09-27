@@ -68,7 +68,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         question: "What are the quiet improvements you notice in an athlete that parents usually miss?",
         answerKey: "quiet-improvements",
         answer: [
-          "Hand position, handstand lines, lunge lever handstand improvements. It's easy to overlook the small wins.. not every win is about getting a new skill! Speeding up a little on the handspring series or hitting more accurate shapes in sequences we used last week are wins worth acknowledging!! Doing a a few solid proper reps on a skill they have had for a while is still a win. I feel a notable sense of gratification when I do a nice standing tuck even though it's easy for me! Those reps are productive!",
+          "Hand position, handstand lines, lunge lever handstand improvements. It's easy to overlook the small wins, but not every win is about getting a new skill. Speeding up a little on the handspring series, or hitting more accurate shapes in sequences we used last week, those are wins 100% worth acknowledging. Doing a few solid proper reps on a skill they've had for a while is still absolutely a win. I feel a real sense of gratification when I do a nice standing tuck even if it isnt my hardest skill.. Those reps are productive.",
         ],
       },
       {
