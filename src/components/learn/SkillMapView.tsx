@@ -716,12 +716,13 @@ function RollsSection({
 }
 
 /**
- * Difficulty level bar — a thin vertical gradient pinned to the right edge of
+ * Difficulty level bar — a collapsible slide-out pinned to the left edge of
  * the skill tree, fading smoothly from Light (bottom) to Legend (top) with
- * no hard boundaries. Labels sit left of the bar; hidden on small screens
- * so they never squeeze the tiles.
+ * no hard boundaries. Closed it shows just a thin gradient tab; tapping it
+ * slides the bar open to reveal the zone labels.
  */
 function LevelBar() {
+  const [open, setOpen] = useState(false)
   const labels = [
     { text: 'Expert', top: '8%' },
     { text: 'Heavy', top: '30%' },
@@ -730,23 +731,52 @@ function LevelBar() {
     { text: 'Light', top: '90%' },
   ]
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-6 sm:w-20">
-      <div
-        className="absolute bottom-0 right-2 top-0 w-2 rounded-full opacity-70"
-        style={{
-          background:
-            'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)',
-        }}
-      />
-      {labels.map((l) => (
+    <div className="pointer-events-none absolute inset-y-0 left-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={open ? 'Collapse difficulty levels' : 'Show difficulty levels'}
+        className={`pointer-events-auto absolute bottom-0 left-0 top-0 overflow-hidden transition-[width] duration-300 ease-out ${
+          open ? 'w-20' : 'w-4'
+        }`}
+      >
+        {/* gradient strip — always visible, the closed tab */}
+        <div
+          aria-hidden
+          className="absolute bottom-0 left-1 top-0 w-2 rounded-full opacity-70"
+          style={{
+            background:
+              'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)',
+          }}
+        />
+        {/* open/close chevron */}
         <span
-          key={l.text}
-          className="absolute right-5 hidden -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-semibold text-white/60 sm:block"
-          style={{ top: l.top }}
+          aria-hidden
+          className={`absolute left-1 top-1/2 -translate-y-1/2 text-[9px] leading-none text-white/80 transition-transform duration-300 ${
+            open ? 'rotate-180' : ''
+          }`}
         >
-          {l.text}
+          ›
         </span>
-      ))}
+        {/* zone labels — fade in when open */}
+        <div
+          aria-hidden
+          className={`absolute inset-0 transition-opacity duration-300 ${
+            open ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {labels.map((l) => (
+            <span
+              key={l.text}
+              className="absolute left-4 -translate-y-1/2 whitespace-nowrap text-left text-[10px] font-semibold text-white/60"
+              style={{ top: l.top }}
+            >
+              {l.text}
+            </span>
+          ))}
+        </div>
+      </button>
     </div>
   )
 }
@@ -894,8 +924,8 @@ export function SkillMapView({
 
       <Legend />
 
-      {/* Skill tree with the difficulty level bar pinned to its right edge */}
-      <div className="relative space-y-2.5 pr-6 sm:pr-20">
+      {/* Skill tree with the difficulty level bar sliding out from its left edge */}
+      <div className="relative space-y-2.5 pl-6 sm:pl-20">
         <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
         <div className="pt-1">
           <RollsSection onTap={onTileTap} glowMap={glowMap} />
