@@ -117,6 +117,27 @@ function glowShadow(rgb: string, distance: number): string {
     `0 0 ${s.b2}px ${s.s2}px rgba(${rgb},${s.a2})`
   )
 }
+
+/**
+ * Featured glow: for skills Ryan put real thought into (rich guide prose +
+ * his notes). Luminous and lit-from-within — brighter and more saturated
+ * than the base family tint. Separate from the athlete guiding-light glow;
+ * the two compose when a featured skill is also on the athlete's path.
+ */
+function isFeaturedSkill(skill: UnifiedSkill): boolean {
+  if (!skill.guideId) return false
+  return (skill.guideNeeds?.length ?? 0) > 0 || !!skill.ryanNote?.trim()
+}
+
+/** Lit-from-within glow: inner radiance plus a bright outer halo. */
+function featuredShadow(rgb: string): string {
+  return (
+    `inset 0 0 20px rgba(${rgb},0.30), ` +
+    `inset 0 1px 0 rgba(255,255,255,0.12), ` +
+    `0 0 16px 3px rgba(${rgb},0.70), ` +
+    `0 0 44px 8px rgba(${rgb},0.38)`
+  )
+}
 /** Skill family per tile, by registry skl_* id. */
 const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_foundations: 'foundations',
@@ -403,9 +424,20 @@ function Tile({
   const rgb = FAMILY_GLOW_RGB[family]
   const isBanner = tile.skillId === 'skl_foundations'
   const glowing = glowDist !== undefined
+  const featured = isFeaturedSkill(skill) && !isBanner
+  // Base shadow: soft layered elevation like the Today cards.
+  // Featured glow sits underneath; the guiding-light glow adds on top.
   const boxShadow =
-    `0 2px 10px rgba(0,0,0,0.35)` +
+    `0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22)` +
+    (featured ? `, ${featuredShadow(rgb)}` : '') +
     (glowing ? `, ${glowShadow(rgb, glowDist)}` : '')
+  const borderColor = isBanner
+    ? 'rgba(251,191,36,0.55)'
+    : glowing
+      ? `rgba(${rgb},0.85)`
+      : featured
+        ? `rgba(${rgb},0.75)`
+        : style.border
   return (
     <button
       type="button"
@@ -414,36 +446,42 @@ function Tile({
         tile.col
           ? {
               gridColumn: tile.col,
-              background: `linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 55%), ${style.bg}`,
-              borderColor: glowing ? `rgba(${rgb},0.85)` : style.border,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%), ${style.bg}`,
+              borderColor,
               boxShadow,
               ...(glowDist === 0
                 ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+                : null),
+              ...(isBanner
+                ? { animation: 'foundations-beam 5s ease-in-out infinite' }
                 : null),
             }
           : {
-              background: `linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 55%), ${style.bg}`,
-              borderColor: glowing ? `rgba(${rgb},0.85)` : style.border,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%), ${style.bg}`,
+              borderColor,
               boxShadow,
               ...(glowDist === 0
                 ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
                 : null),
+              ...(isBanner
+                ? { animation: 'foundations-beam 5s ease-in-out infinite' }
+                : null),
             }
       }
-      className={`relative flex items-center justify-center rounded-xl border px-1 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
+      className={`relative flex items-center justify-center rounded-2xl border px-2 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
         isBanner
-          ? 'min-h-[56px] text-[12px] py-2 tracking-[0.2em] uppercase'
-          : 'min-h-[52px] text-[10px] py-1.5'
+          ? 'min-h-[64px] text-[13px] py-3 tracking-[0.28em] uppercase'
+          : 'min-h-[56px] text-[11px] py-2 tracking-[0.02em]'
       }`}
     >
-      {!hasGuide && (
+      {!hasGuide && !isBanner && (
         <span
-          className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
+          className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400"
           title="Guide coming"
           aria-hidden
         />
       )}
-      <span className="break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+      <span className="break-words drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
         {tile.label}
       </span>
     </button>
@@ -464,7 +502,7 @@ function MapRows({
       {rows.map((row, i) => (
         <div
           key={i}
-          className="grid gap-1.5"
+          className="grid gap-2"
           style={{ gridTemplateColumns: `repeat(${row.cols ?? 8}, 1fr)` }}
         >
           {row.tiles.map((tile) => {
@@ -500,7 +538,7 @@ function RollsSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left"
         style={{
           borderColor: 'rgba(45,212,191,0.45)',
           background: 'rgba(45,212,191,0.08)',
@@ -517,7 +555,7 @@ function RollsSection({
         </span>
       </button>
       {open && (
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-2 space-y-2">
           <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} />
         </div>
       )}
@@ -575,17 +613,18 @@ export function SkillMapView({
     return buildGlowMap(goals)
   }, [viewer])
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2.5">
       {/* Pulse keyframes for the goal tile (distance 0). Brightness-only so it
           stays cheap on phones; the static box-shadow carries the glow. */}
-      <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }`}</style>
-      {/* Column headers */}
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+      <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
+@keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 22px 4px rgba(251,191,36,0.35), 0 0 60px 12px rgba(251,191,36,0.14); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 34px 7px rgba(251,191,36,0.55), 0 0 90px 20px rgba(251,191,36,0.22); } }`}</style>
+      {/* Column headers — Today section-label style */}
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
         {HEADERS.map((h) => (
           <div
             key={h.label}
             style={{ gridColumn: h.col }}
-            className="pb-0.5 text-center text-[10px] font-extrabold uppercase tracking-[0.25em] text-white/45"
+            className="pb-1 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]"
           >
             {h.label}
           </div>
@@ -605,7 +644,7 @@ export function SkillMapView({
           type="button"
           onClick={() => setBeyondOpen((o) => !o)}
           aria-expanded={beyondOpen}
-          className="flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2 text-left"
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
         >
           <span>
             <span className="block text-sm font-extrabold">Beyond</span>
@@ -618,7 +657,7 @@ export function SkillMapView({
           </span>
         </button>
         {beyondOpen && (
-          <div className="mt-1.5 space-y-1.5">
+          <div className="mt-2 space-y-2">
             <MapRows rows={BEYOND_ROWS} onTap={onTileTap} glowMap={glowMap} />
           </div>
         )}
@@ -627,8 +666,20 @@ export function SkillMapView({
       <Legend />
 
       <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
-      <RollsSection onTap={onTileTap} glowMap={glowMap} />
+      <div className="pt-1">
+        <RollsSection onTap={onTileTap} glowMap={glowMap} />
+      </div>
+      {/* Light beaming upward from Foundations into the tree */}
+      <div
+        aria-hidden
+        className="pointer-events-none mx-auto h-10 w-3/4"
+        style={{
+          background:
+            'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
+        }}
+      />
       <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
+      <div className="pt-2" />
     </div>
   )
 }
