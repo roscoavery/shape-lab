@@ -218,7 +218,6 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         answerKey: "move-up-criteria",
         answer: [
           "This depends on the athlete and the skill level and class that they are in. Not all gym’s require the same things for an athlete to move up. if they are ahead of the rest of the class and could benefit more from being in another class, this is more important than sticking to a clear criteria for them to master.. they need to be in an environment that challenges them and allows them to focus on what they need to be focused on. If they have mastered the criteria in the class and have what they need to work what is focused on in the next class, they move up.. sometimes we move an athlete up into a higher level class to keep them with athletes the same age as long as we can continue focusing on what that athlete needs.. the overal athlete experience is important to take into account for. What is best for the athlete’s progression is not always what is best to keep them in the program.. what is best for keeping them in the program is not always what is best for the athlete’s progression.",
-          "this question could maybe get more tailored to skill specific classes but then again we have a skill pathway for that..",
         ],
       },
       {
