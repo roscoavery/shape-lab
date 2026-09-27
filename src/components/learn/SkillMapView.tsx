@@ -709,11 +709,10 @@ function RollsSection({
  */
 function LevelBar() {
   const labels = [
-    { text: 'Legend', top: '1%' },
-    { text: 'Expert', top: '15%' },
-    { text: 'Heavy', top: '37%' },
-    { text: 'Hard', top: '58%' },
-    { text: 'Intermediate', top: '77%' },
+    { text: 'Expert', top: '8%' },
+    { text: 'Heavy', top: '30%' },
+    { text: 'Hard', top: '52%' },
+    { text: 'Intermediate', top: '73%' },
     { text: 'Light', top: '90%' },
   ]
   return (
