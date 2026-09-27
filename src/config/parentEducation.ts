@@ -102,9 +102,9 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         question: "Tell me about a time a basic unlocked a harder skill for one of your athletes. What was the basic, what was the skill, what changed?",
         answerKey: "basics-unlocked-skill",
         answer: [
-          "I had to go back to handsprings because I rushed round off tucks. We can't really ever get a round off handspring double if we never get a round off handspring. It's common for athletes to get stuck on round off handsprings because they learned their handspring before having a strong round off. It's common for athletes to get stuck on tucks because they worked it out of a round off before refining their series. Can't move onto the RO hs lay without a strong round off handspring tuck.",
+          "I had to go back to handsprings because I went straight to round off tucks. We can't really ever get a round off handspring double full if we never get a round off handspring. It's common for athletes to get stuck on round off handsprings because they learned their handspring before having a strong round off. It’s also common for athletes to get stuck on tucks because they worked it out of a round off before refining their round off handspring and series. Moving onto the RO hs lay without a strong round off handspring tuck creates challenges we can avoid by understanding and following the progression.",
           "The stronger my layout is, the stronger my fulls and dubs can be.",
-          "The more accurate my shapes hit in a sequence like \"pike tuck hollow arch\", the stronger my shapes can be in a lightning fast tumbling sequence while passing through the upside down with several other things to think about.",
+          "The more accurate my shapes hit in a sequence like \"pike tuck hollow arch\", the stronger my shapes can be in an even faster tumbling sequence while passing through the upside down with a number of other things to think about.",
         ],
       },
       {
