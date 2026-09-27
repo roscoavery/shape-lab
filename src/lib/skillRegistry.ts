@@ -119,7 +119,8 @@ export function guideSkillsInOrder(): UnifiedSkill[] {
 
 /** Registry skills with no guide card yet — shown as placeholders in the guide. */
 export function guidelessSkills(): UnifiedSkill[] {
-  return ALL_SKILLS.filter((s) => !s.guideId).map(applyOverride)
+  // skl_ro_bhs_full is a thin compat record for the consolidated back full — never a placeholder.
+  return ALL_SKILLS.filter((s) => !s.guideId && s.id !== 'skl_ro_bhs_full').map(applyOverride)
 }
 
 /* ------------------------------------------------------------------ */

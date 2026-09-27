@@ -59,27 +59,13 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   },
   {
     "id": "skl_ro_bhs_full",
-    "guideId": "full",
     "catalogId": "run_ro_hs_full",
-    "name": "Round-off handspring full twisting layout",
+    "name": "Back full (round off entry)",
     "aliases": [
       "RO BHS full",
-      "round off back handspring full",
-      "ro hs full",
-      "round-off handspring full twisting layout"
+      "round off back handspring full"
     ],
-    "track": "running",
-    "guideNeeds": [
-      "A strong layout first. Non-negotiable.",
-      "Layout standards before twisting: solid blocking angle to convert travel to height; shape deadline at 3 o’clock (first quarter of flip); set with head in; enough rotation to keep hips open all the way through (no piking)",
-      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better — the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land",
-      "Front halves (barani) and back halves can both help build toward a full"
-    ],
-    "canBend": [
-      "Ryan sometimes bends the strong-layout rule if it is close or the athlete already has the skill, but it messes with what he is trying to build."
-    ],
-    "ask": "Ask your coach about your twist timing and whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.",
-    "ryanNote": "Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section. His arm-drop method: master a consistent 3/4 layout to belly (5 good reps, pit pillow if you have one), then add the arm drop late — drop the right arm, squeeze the left against the ear, stay rigid and do not think about twisting. Move the drop a little earlier and deeper, then both arms, working the twist into 11 to 1. Then add the handspring or round off and take the layout all the way to the feet."
+    "track": "running"
   },
   {
     "id": "skl_standing_tuck",
@@ -625,9 +611,38 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   },
   {
     "id": "skl_back_full",
+    "guideId": "full",
     "name": "Back full",
     "aliases": [
-      "back full twisting layout"
+      "back full twisting layout",
+      "ro hs full",
+      "round off handspring full",
+      "round-off handspring full twisting layout"
+    ],
+    "track": "running",
+    "guideNeeds": [
+      "A strong layout first. Non-negotiable.",
+      "Layout standards before twisting: solid blocking angle to convert travel to height; shape deadline at 3 o’clock (first quarter of flip); set with head in; enough rotation to keep hips open all the way through (no piking)",
+      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better — the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land",
+      "Front halves (barani) and back halves can both help build toward a full"
+    ],
+    "canBend": [
+      "Ryan sometimes bends the strong-layout rule if it is close or the athlete already has the skill, but it messes with what he is trying to build."
+    ],
+    "ask": "Ask your coach about your twist timing and whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.",
+    "ryanNote": "Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section. His arm-drop method: master a consistent 3/4 layout to belly (5 good reps, pit pillow if you have one), then add the arm drop late — drop the right arm, squeeze the left against the ear, stay rigid and do not think about twisting. Move the drop a little earlier and deeper, then both arms, working the twist into 11 to 1. Then add the handspring or round off and take the layout all the way to the feet."
+  },
+  {
+    "id": "skl_cartwheel_open_tuck",
+    "name": "Cartwheel open tuck",
+    "aliases": [],
+    "track": "running"
+  },
+  {
+    "id": "skl_whips",
+    "name": "Whips",
+    "aliases": [
+      "whip"
     ],
     "track": "running"
   },
@@ -772,7 +787,8 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "id": "skl_standing_one_to_tuck",
     "name": "Standing one to tuck",
     "aliases": [
-      "standing 1 to tuck"
+      "standing 1 to tuck",
+      "standing handspring tuck"
     ],
     "track": "standing"
   },

@@ -49,6 +49,23 @@ const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
 const MAX_GLOW_DISTANCE = 5
 
 /**
+ * Skills consolidated into a canonical tile. Goals and shipped needs may
+ * still reference the old id — map them so the glow lands on the tile.
+ */
+const CANONICAL_SKILL_ID: Record<string, string> = {
+  skl_ro_bhs_full: 'skl_back_full',
+}
+
+/** Prerequisite needs for a skill, including needs keyed to consolidated ids. */
+function needsForSkillConsolidated(skillId: string) {
+  const ids = new Set([skillId])
+  for (const [oldId, canon] of Object.entries(CANONICAL_SKILL_ID)) {
+    if (canon === skillId) ids.add(oldId)
+  }
+  return [...ids].flatMap((id) => needsForSkill(id))
+}
+
+/**
  * Guiding light: for each goal skill, walk the prerequisite chain and record
  * the shortest distance from any goal. Distance 0 = the goal itself (the
  * "hope", brightest). Follows required + helpful needs that resolve to
@@ -59,11 +76,12 @@ function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
   const dist = new Map<string, number>()
   const queue: Array<[string, number]> = []
   const enqueue = (id: string, d: number) => {
-    if (!getRegistrySkill(id)) return
-    const prev = dist.get(id)
+    const canon = CANONICAL_SKILL_ID[id] ?? id
+    if (!getRegistrySkill(canon)) return
+    const prev = dist.get(canon)
     if (prev === undefined || d < prev) {
-      dist.set(id, d)
-      queue.push([id, d])
+      dist.set(canon, d)
+      queue.push([canon, d])
     }
   }
   for (const goal of goals) {
@@ -75,7 +93,7 @@ function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
   while (queue.length > 0) {
     const [id, d] = queue.shift()!
     if (d >= MAX_GLOW_DISTANCE) continue
-    for (const need of needsForSkill(id)) {
+    for (const need of needsForSkillConsolidated(id)) {
       if (need.kind !== 'required' && need.kind !== 'helpful') continue
       if (need.needSkillId) enqueue(need.needSkillId, d + 1)
     }
@@ -120,6 +138,7 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_cartwheel_handspring: 'cartwheel',
   skl_cart_hs_step_out: 'cartwheel',
   skl_cart_tuck: 'cartwheel',
+  skl_cartwheel_open_tuck: 'cartwheel',
   skl_cart_full: 'cartwheel',
   skl_cart_double_full: 'cartwheel',
   // round off family (green)
@@ -129,13 +148,14 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_ro_bhs_series: 'roundoff',
   skl_ro_bhs_tuck: 'roundoff',
   skl_layout: 'roundoff',
+  skl_arabian: 'roundoff',
+  skl_whips: 'roundoff',
   skl_back_half: 'roundoff',
   skl_back_full: 'roundoff',
   skl_back_1_5: 'roundoff',
   skl_double_full: 'roundoff',
   skl_back_25: 'roundoff',
   skl_triple_full: 'roundoff',
-  skl_ro_bhs_full: 'roundoff',
   skl_full_in: 'roundoff',
   skl_full_full: 'roundoff',
   skl_back_35: 'roundoff',
@@ -195,18 +215,34 @@ const HEADERS: { label: string; col: string }[] = [
   { label: 'Round off', col: '7 / 9' },
 ]
 
-const ROLL_TILES: MapTile[] = [
-  { skillId: 'skl_backward_roll', label: 'Backward roll', col: '' },
-  { skillId: 'skl_back_roll_push_up', label: 'Back roll to push up', col: '' },
-  { skillId: 'skl_back_extension_roll', label: 'Back extension roll', col: '' },
-  { skillId: 'skl_forward_roll', label: 'Forward roll', col: '' },
-  { skillId: 'skl_handstand_fwd_roll', label: 'Handstand fwd roll', col: '' },
-  { skillId: 'skl_dive_roll', label: 'Dive roll', col: '' },
-  { skillId: 'skl_360_dive_roll', label: '360 dive roll', col: '' },
-  { skillId: 'skl_straddle_fwd_roll', label: 'Straddle fwd roll', col: '' },
-  { skillId: 'skl_straddle_bwd_roll', label: 'Straddle bwd roll', col: '' },
-  { skillId: 'skl_front_pike_roll', label: 'Front pike roll', col: '' },
-  { skillId: 'skl_back_pike_roll', label: 'Back pike roll', col: '' },
+/**
+ * Rolls as a mini-tree, ordered by difficulty bottom-up (easiest at the
+ * bottom, hardest at the top). Rendered top-down; collapsed by default.
+ */
+const ROLLS_ROWS: MapRow[] = [
+  { tiles: [{ skillId: 'skl_360_dive_roll', label: '360 dive roll', col: '4 / 6' }] },
+  {
+    tiles: [
+      { skillId: 'skl_handstand_fwd_roll', label: 'Handstand fwd roll', col: '3 / 5' },
+      { skillId: 'skl_back_extension_roll', label: 'Back extension roll', col: '5 / 7' },
+    ],
+  },
+  { tiles: [{ skillId: 'skl_dive_roll', label: 'Dive roll', col: '4 / 6' }] },
+  { tiles: [{ skillId: 'skl_back_roll_push_up', label: 'Back roll to push up', col: '3 / 7' }] },
+  { tiles: [{ skillId: 'skl_straddle_bwd_roll', label: 'Straddle bwd roll', col: '4 / 6' }] },
+  {
+    tiles: [
+      { skillId: 'skl_front_pike_roll', label: 'Front pike roll', col: '3 / 5' },
+      { skillId: 'skl_back_pike_roll', label: 'Back pike roll', col: '5 / 7' },
+    ],
+  },
+  {
+    tiles: [
+      { skillId: 'skl_forward_roll', label: 'Forward roll', col: '3 / 5' },
+      { skillId: 'skl_backward_roll', label: 'Backward roll', col: '5 / 7' },
+    ],
+  },
+  { tiles: [{ skillId: 'skl_straddle_fwd_roll', label: 'Straddle fwd roll', col: '4 / 6' }] },
 ]
 
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
@@ -235,36 +271,40 @@ const ROWS: MapRow[] = [
     ],
   },
   {
-    // R9 — 1.5 level (cart full moved up here)
+    // R9 — 1.5 level
     tiles: [
-      { skillId: 'skl_front_15', label: 'Front 1.5', col: '2 / 4' },
-      { skillId: 'skl_back_1_5', label: 'Back 1.5', col: '4 / 6' },
-      { skillId: 'skl_cart_full', label: 'Cart full', col: '6 / 8' },
+      { skillId: 'skl_front_15', label: 'Front 1.5', col: '3 / 5' },
+      { skillId: 'skl_back_1_5', label: 'Back 1.5', col: '5 / 7' },
     ],
   },
   {
-    // R8 — fulls level
-    tiles: [
-      { skillId: 'skl_standing_tuck', label: 'Standing tuck', col: '1 / 3' },
-      { skillId: 'skl_front_full', label: 'Front full', col: '3 / 5' },
-      { skillId: 'skl_back_full', label: 'Back full', col: '5 / 7' },
-      { skillId: 'skl_ro_bhs_full', label: 'RO HS full', col: '7 / 9' },
-    ],
-  },
-  {
-    // R7 — halves level
+    // R8 — fulls level: cart full sits between front and back full;
+    // back full is the consolidated full-twisting-layout tile.
     tiles: [
       { skillId: 'skl_standing_open_tuck', label: 'Standing open tuck', col: '1 / 3' },
-      { skillId: 'skl_barani', label: 'Front half', col: '3 / 5' },
-      { skillId: 'skl_back_half', label: 'Back half', col: '5 / 7' },
+      { skillId: 'skl_front_full', label: 'Front full', col: '3 / 5' },
+      { skillId: 'skl_cart_full', label: 'Cart full', col: '5 / 7' },
+      { skillId: 'skl_back_full', label: 'Back full', col: '7 / 9' },
     ],
   },
   {
-    // R6 — front layout and back layout switched
+    // R7 — halves level: whips nearer back half, arabian nearer front half
+    tiles: [
+      { skillId: 'skl_standing_tuck', label: 'Standing tuck', col: '1 / 3' },
+      { skillId: 'skl_barani', label: 'Front half', col: '3 / 5' },
+      { skillId: 'skl_arabian', label: 'Arabian', col: '5 / 6' },
+      { skillId: 'skl_whips', label: 'Whips', col: '6 / 7' },
+      { skillId: 'skl_back_half', label: 'Back half', col: '7 / 9' },
+    ],
+  },
+  {
+    // R6 — back layout sits directly above RO HS tuck (green stack);
+    // cartwheel open tuck sits above cart tuck
     tiles: [
       { skillId: 'skl_standing_one_to_tuck', label: 'Standing 1 to tuck', col: '1 / 3' },
       { skillId: 'skl_front_layout', label: 'Front layout', col: '3 / 5' },
-      { skillId: 'skl_layout', label: 'Back layout', col: '5 / 7' },
+      { skillId: 'skl_cartwheel_open_tuck', label: 'Cartwheel open tuck', col: '5 / 7' },
+      { skillId: 'skl_layout', label: 'Back layout', col: '7 / 9' },
     ],
   },
   {
@@ -349,13 +389,11 @@ function Tile({
   tile,
   skill,
   onTap,
-  compact = false,
   glowDist,
 }: {
   tile: MapTile
   skill: UnifiedSkill
   onTap: (skill: UnifiedSkill) => void
-  compact?: boolean
   /** Guiding-light distance (0 = goal). Undefined = no glow. */
   glowDist?: number
 }) {
@@ -393,11 +431,9 @@ function Tile({
             }
       }
       className={`relative flex items-center justify-center rounded-xl border px-1 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
-        compact
-          ? 'min-h-[40px] flex-1 text-[9px] py-1'
-          : isBanner
-            ? 'min-h-[56px] text-[12px] py-2 tracking-[0.2em] uppercase'
-            : 'min-h-[52px] text-[10px] py-1.5'
+        isBanner
+          ? 'min-h-[56px] text-[12px] py-2 tracking-[0.2em] uppercase'
+          : 'min-h-[52px] text-[10px] py-1.5'
       }`}
     >
       {!hasGuide && (
@@ -450,34 +486,41 @@ function MapRows({
   )
 }
 
-function RollsRow({
+function RollsSection({
   onTap,
   glowMap,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: Map<string, number> | null
 }) {
+  const [open, setOpen] = useState(false)
   return (
     <div>
-      <p className="pb-1 text-[10px] font-extrabold uppercase tracking-[0.25em] text-white/45">
-        Rolls
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {ROLL_TILES.map((tile) => {
-          const skill = getRegistrySkill(tile.skillId)
-          if (!skill) return null
-          return (
-            <Tile
-              key={tile.skillId}
-              tile={tile}
-              skill={skill}
-              onTap={onTap}
-              compact
-              glowDist={glowMap?.get(tile.skillId)}
-            />
-          )
-        })}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left"
+        style={{
+          borderColor: 'rgba(45,212,191,0.45)',
+          background: 'rgba(45,212,191,0.08)',
+        }}
+      >
+        <span>
+          <span className="block text-sm font-extrabold">Rolls</span>
+          <span className="block text-[11px] opacity-60">
+            Easiest at the bottom, hardest at the top
+          </span>
+        </span>
+        <span className="text-base opacity-60" aria-hidden>
+          {open ? '▾' : '▸'}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1.5">
+          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} />
+        </div>
+      )}
     </div>
   )
 }
@@ -584,7 +627,7 @@ export function SkillMapView({
       <Legend />
 
       <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
-      <RollsRow onTap={onTileTap} glowMap={glowMap} />
+      <RollsSection onTap={onTileTap} glowMap={glowMap} />
       <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
     </div>
   )
