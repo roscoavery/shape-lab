@@ -239,4 +239,39 @@ export const CONCEPT_CARDS: ConceptCard[] = [
       takeaway: 'The funnel never reverses. There is no shortcut from the top to the bottom.',
     },
   },
+  {
+    id: 'four-stages',
+    title: 'The four stages of learning a skill',
+    subtitle: 'Every skill passes through all four. You cannot skip one.',
+    kind: 'steps',
+    data: {
+      steps: [
+        {
+          n: 1,
+          name: 'Skill introduction',
+          color: '#6ec8d6',
+          text: 'The athlete meets the skill for the first time. Shapes, drills, and the basic idea.',
+        },
+        {
+          n: 2,
+          name: 'Skill approximation',
+          color: '#2e7d4f',
+          text: 'Rough versions start happening. It looks like the skill, but it is not consistent yet.',
+        },
+        {
+          n: 3,
+          name: 'Skill acquisition',
+          color: '#d9732b',
+          text: 'The athlete can land it. Celebrate it — but landing it is not the same as owning it.',
+        },
+        {
+          n: 4,
+          name: 'Skill mastery',
+          color: '#c93a3a',
+          text: 'Hundreds to thousands of intentional reps later, it starts to feel like second nature.',
+        },
+      ],
+      takeaway: 'Most of the work — and most of the growth — lives in stages 2 and 3.',
+    },
+  },
 ]

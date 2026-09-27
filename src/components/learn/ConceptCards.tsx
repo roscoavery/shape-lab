@@ -290,6 +290,10 @@ function FunnelCard({ card }: { card: ConceptCard }) {
   )
 }
 
+export function ConceptCardBody({ card }: { card: ConceptCard }) {
+  return <CardBody card={card} />
+}
+
 function CardBody({ card }: { card: ConceptCard }) {
   switch (card.kind) {
     case 'gears': return <GearsCard card={card} />

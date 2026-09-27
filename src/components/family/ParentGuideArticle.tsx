@@ -8,6 +8,10 @@
  * "Preview as parent" so Ryan sees exactly what parents see.
  */
 import type { ParentEducationArticle } from '../../config/parentEducation'
+import { CONCEPT_CARDS } from '../../config/conceptCards'
+import { ConceptCardBody } from '../learn/ConceptCards'
+
+const FOUR_STAGES_CARD = CONCEPT_CARDS.find((c) => c.id === 'four-stages')
 
 export function ParentGuideArticle({ article }: { article: ParentEducationArticle }) {
   return (
@@ -28,9 +32,11 @@ export function ParentGuideArticle({ article }: { article: ParentEducationArticl
               {item.question}
             </p>
             <div className="mt-2 space-y-3">
-              {item.answer.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
+              {item.answerKey === 'stages-in-your-words' && FOUR_STAGES_CARD ? (
+                <ConceptCardBody card={FOUR_STAGES_CARD} />
+              ) : (
+                item.answer.map((p, i) => <p key={i}>{p}</p>)
+              )}
             </div>
           </div>
         ))}
