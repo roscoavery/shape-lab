@@ -320,6 +320,7 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_front_35: 'forwards',
   // killer gets its own accent
   skl_killer: 'killer',
+  skl_full_twisting_triple_back: 'killer',
 }
 
 type MapTile = {
@@ -377,12 +378,12 @@ const ROLLS_ROWS: MapRow[] = [
 /** Rows top-down (render order). Ryan's rows are numbered bottom-up. */
 const ROWS: MapRow[] = [
   {
-    // R12 — triples, each above its 2.5; standing straight leg full tops the standing column
+    // R12 — front triple above front 2.5, double back above kick dub;
+    // standing straight leg full tops the standing column
     tiles: [
       { skillId: 'skl_standing_straight_leg_full', label: 'Standing straight leg full', col: '1 / 3' },
       { skillId: 'skl_front_triple', label: 'Front triple', col: '3 / 5' },
       { skillId: 'skl_double_back', label: 'Double back', col: '5 / 7' },
-      { skillId: 'skl_triple_full', label: 'Back triple', col: '7 / 9' },
     ],
   },
   {
@@ -503,14 +504,18 @@ const ROWS: MapRow[] = [
 const BEYOND_ROWS: MapRow[] = [
   {
     // killer — top top top
-    tiles: [{ skillId: 'skl_killer', label: 'Killer', col: '4 / 6' }],
+    tiles: [
+      { skillId: 'skl_killer', label: 'Killer', col: '3 / 5' },
+      { skillId: 'skl_full_twisting_triple_back', label: 'Full twisting triple back', col: '5 / 7' },
+    ],
   },
   {
-    // quad row
+    // quad row (triple back lives here now, at miller level)
     tiles: [
-      { skillId: 'skl_standing_double', label: 'Standing double', col: '2 / 4' },
-      { skillId: 'skl_back_quad', label: 'Back quad', col: '4 / 6' },
-      { skillId: 'skl_miller', label: 'Miller', col: '6 / 8' },
+      { skillId: 'skl_triple_full', label: 'Back triple', col: '1 / 3' },
+      { skillId: 'skl_standing_double', label: 'Standing double', col: '3 / 5' },
+      { skillId: 'skl_back_quad', label: 'Back quad', col: '5 / 7' },
+      { skillId: 'skl_miller', label: 'Miller', col: '7 / 9' },
     ],
   },
   {

@@ -439,6 +439,14 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "ryanNote": "You cannot set and wait on the takeoff for a triple full like you can for a single or some doubles. Do not stand up and reach for the sky then twist. The twist arm will be moving down while the rebound is pushing up. Adding a twist to the beginning of a double was easier than adding a third twist to the end of one."
   },
   {
+    "id": "skl_full_twisting_triple_back",
+    "name": "Full twisting triple back",
+    "aliases": [
+      "triple back full"
+    ],
+    "track": "running"
+  },
+  {
     "id": "skl_back_half",
     "guideId": "back-half",
     "name": "Back layout with half to feet",
