@@ -27,17 +27,17 @@ type SkillFamily =
   | 'kick'
 
 const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: string }> = {
-  foundations: { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.20)', label: 'Foundations' },
-  rolls: { bg: 'rgba(45,212,191,0.12)', border: 'rgba(45,212,191,0.45)', label: 'Rolls' },
-  cartwheel: { bg: 'rgba(96,165,250,0.13)', border: 'rgba(96,165,250,0.50)', label: 'Cartwheel' },
-  roundoff: { bg: 'rgba(74,222,128,0.12)', border: 'rgba(74,222,128,0.45)', label: 'Round off' },
-  standing: { bg: 'rgba(192,132,252,0.13)', border: 'rgba(192,132,252,0.50)', label: 'Standing' },
-  forwards: { bg: 'rgba(251,146,60,0.13)', border: 'rgba(251,146,60,0.50)', label: 'Forwards' },
-  killer: { bg: 'rgba(251,191,36,0.20)', border: 'rgba(251,191,36,0.75)', label: 'Killer' },
+  foundations: { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.20)', label: 'Foundations' },
+  rolls: { bg: 'rgba(45,212,191,0.07)', border: 'rgba(45,212,191,0.45)', label: 'Rolls' },
+  cartwheel: { bg: 'rgba(96,165,250,0.07)', border: 'rgba(96,165,250,0.50)', label: 'Cartwheel' },
+  roundoff: { bg: 'rgba(74,222,128,0.07)', border: 'rgba(74,222,128,0.45)', label: 'Round off' },
+  standing: { bg: 'rgba(192,132,252,0.07)', border: 'rgba(192,132,252,0.50)', label: 'Standing' },
+  forwards: { bg: 'rgba(251,146,60,0.07)', border: 'rgba(251,146,60,0.50)', label: 'Forwards' },
+  killer: { bg: 'rgba(251,191,36,0.10)', border: 'rgba(251,191,36,0.75)', label: 'Killer' },
   // Double back: green like the round-off family, trimmed in yellow.
-  doubleback: { bg: 'rgba(74,222,128,0.14)', border: 'rgba(251,191,36,0.70)', label: 'Double back' },
+  doubleback: { bg: 'rgba(74,222,128,0.08)', border: 'rgba(251,191,36,0.70)', label: 'Double back' },
   // Kicks: blue fading to green, trimmed in yellow.
-  kick: { bg: 'linear-gradient(135deg, rgba(96,165,250,0.16), rgba(74,222,128,0.10))', border: 'rgba(251,191,36,0.60)', label: 'Kick' },
+  kick: { bg: 'linear-gradient(135deg, rgba(96,165,250,0.09), rgba(74,222,128,0.06))', border: 'rgba(251,191,36,0.60)', label: 'Kick' },
 }
 
 /** Solid RGB triplet per family, used for the guiding-light glow. */
@@ -199,17 +199,18 @@ function buildGlowMap(goals: AthleteSkillGoal[]): {
   return { dist, highlights }
 }
 
-/** Layered luminous box-shadow in the family color, fading with distance.
- * Steep ramp: the goal (0) is unmistakably the destination, and each step
- * down the chain is visibly dimmer so the lit trail reads at a glance. */
+/** Neon-edge glow in the family color: a tight bright outline hugging the
+ * tile edge plus one soft outer halo. No lit-from-within. Steep ramp: the
+ * goal (0) is unmistakably the destination, and each step down the chain is
+ * visibly dimmer so the lit trail reads at a glance. */
 function glowShadow(rgb: string, distance: number): string {
   const specs = [
-    { a1: 1.0, b1: 20, s1: 5, a2: 0.7, b2: 48, s2: 12 }, // 0 — the destination, brightest
-    { a1: 0.9, b1: 15, s1: 4, a2: 0.5, b2: 34, s2: 8 }, // 1 — strong, on the trail
-    { a1: 0.68, b1: 12, s1: 3, a2: 0.34, b2: 26, s2: 6 }, // 2 — clearly lit
-    { a1: 0.42, b1: 9, s1: 2, a2: 0.2, b2: 18, s2: 4 }, // 3
-    { a1: 0.24, b1: 6, s1: 1, a2: 0.11, b2: 12, s2: 3 }, // 4
-    { a1: 0.12, b1: 4, s1: 0, a2: 0.05, b2: 8, s2: 2 }, // 5 — faint shimmer
+    { a1: 0.95, b1: 2, s1: 1, a2: 0.35, b2: 14, s2: 4 }, // 0 — the destination, brightest
+    { a1: 0.85, b1: 2, s1: 1, a2: 0.28, b2: 12, s2: 3 }, // 1 — strong, on the trail
+    { a1: 0.7, b1: 1, s1: 1, a2: 0.22, b2: 10, s2: 3 }, // 2 — clearly lit
+    { a1: 0.5, b1: 1, s1: 1, a2: 0.15, b2: 8, s2: 2 }, // 3
+    { a1: 0.35, b1: 1, s1: 0, a2: 0.1, b2: 6, s2: 2 }, // 4
+    { a1: 0.25, b1: 1, s1: 0, a2: 0.06, b2: 5, s2: 1 }, // 5 — faint shimmer
   ]
   const s = specs[Math.min(distance, MAX_GLOW_DISTANCE)]
   return (
@@ -218,24 +219,19 @@ function glowShadow(rgb: string, distance: number): string {
   )
 }
 
-/**
- * Featured glow: for skills Ryan put real thought into (rich guide prose +
- * his notes). Luminous and lit-from-within — brighter and more saturated
- * than the base family tint. Separate from the athlete guiding-light glow;
- * the two compose when a featured skill is also on the athlete's path.
- */
+/** Featured neon edge: for skills Ryan put real thought into (rich guide prose +
+ * his notes). A thin bright outline plus a soft halo — no lit-from-within.
+ * Separate from the athlete guiding-light glow; the two compose when a
+ * featured skill is also on the athlete's path. */
 function isFeaturedSkill(skill: UnifiedSkill): boolean {
   if (!skill.guideId) return false
   return (skill.guideNeeds?.length ?? 0) > 0 || !!skill.ryanNote?.trim()
 }
 
-/** Lit-from-within glow: inner radiance plus a bright outer halo. */
+/** Neon edge: thin bright outline hugging the tile plus a soft outer halo. */
 function featuredShadow(rgb: string): string {
   return (
-    `inset 0 0 20px rgba(${rgb},0.30), ` +
-    `inset 0 1px 0 rgba(255,255,255,0.12), ` +
-    `0 0 16px 3px rgba(${rgb},0.70), ` +
-    `0 0 44px 8px rgba(${rgb},0.38)`
+    `0 0 1px 1px rgba(${rgb},0.8), ` + `0 0 12px 3px rgba(${rgb},0.35)`
   )
 }
 /** Skill family per tile, by registry skl_* id. */
@@ -573,7 +569,7 @@ function Tile({
     `0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22)` +
     (featured ? `, ${featuredShadow(rgb)}` : '') +
     (glowing ? `, ${glowShadow(rgb, glowDist)}` : '') +
-    (highlighted ? `, 0 0 10px 2px rgba(${rgb},0.35), 0 0 22px 5px rgba(${rgb},0.14)` : '')
+    (highlighted ? `, 0 0 1px 1px rgba(${rgb},0.5), 0 0 8px 2px rgba(${rgb},0.16)` : '')
   const borderColor = isBanner
     ? 'rgba(251,191,36,0.55)'
     : glowing
@@ -595,7 +591,7 @@ function Tile({
         tile.col
           ? {
               gridColumn: tile.col,
-              background: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%), ${style.bg}`,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 55%), ${style.bg}`,
               borderColor,
               boxShadow,
               ...(glowDist === 0
@@ -606,7 +602,7 @@ function Tile({
                 : null),
             }
           : {
-              background: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 55%), ${style.bg}`,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 55%), ${style.bg}`,
               borderColor,
               boxShadow,
               ...(glowDist === 0
@@ -617,12 +613,12 @@ function Tile({
                 : null),
             }
       }
-      className={`relative flex items-center justify-center rounded-2xl border px-2 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
+      className={`relative flex items-center justify-center rounded-2xl border px-1 text-center font-bold leading-snug text-white/90 transition-transform active:scale-95 sm:px-2 ${
         highlighted ? 'border-dashed' : ''
       } ${
         isBanner
-          ? 'min-h-[64px] text-[13px] py-3 tracking-[0.28em] uppercase'
-          : 'min-h-[56px] text-[11px] py-2 tracking-[0.02em]'
+          ? 'min-h-[64px] py-3 text-[12px] uppercase tracking-[0.18em] sm:text-[13px] sm:tracking-[0.28em]'
+          : 'min-h-[60px] py-2 text-[10px] tracking-[0.02em] sm:text-[11px]'
       }`}
     >
       {!hasGuide && !isBanner && (
@@ -716,7 +712,7 @@ function RollsSection({
 }
 
 /**
- * Difficulty level bar — a collapsible slide-out pinned to the left edge of
+ * Difficulty level bar — a collapsible slide-out pinned to the right edge of
  * the skill tree, fading smoothly from Light (bottom) to Legend (top) with
  * no hard boundaries. Closed it shows just a thin gradient tab; tapping it
  * slides the bar open to reveal the zone labels.
@@ -731,20 +727,20 @@ function LevelBar() {
     { text: 'Light', top: '90%' },
   ]
   return (
-    <div className="pointer-events-none absolute inset-y-0 left-0">
+    <div className="pointer-events-none absolute inset-y-0 right-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={open ? 'Collapse difficulty levels' : 'Show difficulty levels'}
-        className={`pointer-events-auto absolute bottom-0 left-0 top-0 overflow-hidden transition-[width] duration-300 ease-out ${
+        className={`pointer-events-auto absolute bottom-0 right-0 top-0 overflow-hidden transition-[width] duration-300 ease-out ${
           open ? 'w-20' : 'w-4'
         }`}
       >
         {/* gradient strip — always visible, the closed tab */}
         <div
           aria-hidden
-          className="absolute bottom-0 left-1 top-0 w-2 rounded-full opacity-70"
+          className="absolute bottom-0 right-1 top-0 w-2 rounded-full opacity-70"
           style={{
             background:
               'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)',
@@ -753,11 +749,11 @@ function LevelBar() {
         {/* open/close chevron */}
         <span
           aria-hidden
-          className={`absolute left-1 top-1/2 -translate-y-1/2 text-[9px] leading-none text-white/80 transition-transform duration-300 ${
+          className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] leading-none text-white/80 transition-transform duration-300 ${
             open ? 'rotate-180' : ''
           }`}
         >
-          ›
+          ‹
         </span>
         {/* zone labels — fade in when open */}
         <div
@@ -769,7 +765,7 @@ function LevelBar() {
           {labels.map((l) => (
             <span
               key={l.text}
-              className="absolute left-4 -translate-y-1/2 whitespace-nowrap text-left text-[10px] font-semibold text-white/60"
+              className="absolute right-4 -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-semibold text-white/85"
               style={{ top: l.top }}
             >
               {l.text}
@@ -870,17 +866,18 @@ export function SkillMapView({
   }, [glowAthletes])
   return (
     <div className="space-y-2.5">
-      {/* Pulse keyframes for the goal tile (distance 0). Brightness-only so it
-          stays cheap on phones; the static box-shadow carries the glow. */}
-      <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
-@keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 22px 4px rgba(251,191,36,0.35), 0 0 60px 12px rgba(251,191,36,0.14); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 34px 7px rgba(251,191,36,0.55), 0 0 90px 20px rgba(251,191,36,0.22); } }`}</style>
+      {/* Pulse keyframes for the goal tile (distance 0). Pulses the neon edge
+          (brightness + saturation) — no halo bloom; the static box-shadow
+          carries the glow. Cheap on phones. */}
+      <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.18) saturate(1.35); } }
+@keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,0.8), 0 0 18px 4px rgba(251,191,36,0.25); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,1), 0 0 26px 6px rgba(251,191,36,0.35); } }`}</style>
       {/* Column headers — Today section-label style */}
       <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
         {HEADERS.map((h) => (
           <div
             key={h.label}
             style={{ gridColumn: h.col }}
-            className="pb-1 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]"
+            className="pb-1 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] sm:text-[11px] sm:tracking-[0.2em]"
           >
             {h.label}
           </div>
@@ -924,8 +921,8 @@ export function SkillMapView({
 
       <Legend />
 
-      {/* Skill tree with the difficulty level bar sliding out from its left edge */}
-      <div className="relative space-y-2.5 pl-6 sm:pl-20">
+      {/* Skill tree with the difficulty level bar sliding out from its right edge */}
+      <div className="relative space-y-2.5 pr-6 sm:pr-20">
         <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
         <div className="pt-1">
           <RollsSection onTap={onTileTap} glowMap={glowMap} />
