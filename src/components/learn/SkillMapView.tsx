@@ -9,8 +9,11 @@
  * Layout follows Ryan's spec: an 8-column grid, rows numbered from the
  * bottom (R0 = foundations). The "Beyond" rows stay collapsed by default.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
+import { needsForSkill, resolveGoalSkill } from '../../lib/skillPaths'
+import { isAthleteProfile } from '../../lib/profileRole'
+import type { Athlete, AthleteSkillGoal } from '../../types'
 
 type SkillFamily =
   | 'foundations'
@@ -31,6 +34,71 @@ const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: st
   killer: { bg: 'rgba(251,191,36,0.20)', border: 'rgba(251,191,36,0.75)', label: 'Killer' },
 }
 
+/** Solid RGB triplet per family, used for the guiding-light glow. */
+const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
+  foundations: '255,255,255',
+  rolls: '45,212,191',
+  cartwheel: '96,165,250',
+  roundoff: '74,222,128',
+  standing: '192,132,252',
+  forwards: '251,146,60',
+  killer: '251,191,36',
+}
+
+/** Deepest prerequisite level that still glows (fades to a faint shimmer). */
+const MAX_GLOW_DISTANCE = 5
+
+/**
+ * Guiding light: for each goal skill, walk the prerequisite chain and record
+ * the shortest distance from any goal. Distance 0 = the goal itself (the
+ * "hope", brightest). Follows required + helpful needs that resolve to
+ * registry skills; skips alt paths and non-skill needs. Cycle-safe: a skill
+ * is only re-queued when a strictly shorter path is found.
+ */
+function buildGlowMap(goals: AthleteSkillGoal[]): Map<string, number> {
+  const dist = new Map<string, number>()
+  const queue: Array<[string, number]> = []
+  const enqueue = (id: string, d: number) => {
+    if (!getRegistrySkill(id)) return
+    const prev = dist.get(id)
+    if (prev === undefined || d < prev) {
+      dist.set(id, d)
+      queue.push([id, d])
+    }
+  }
+  for (const goal of goals) {
+    const raw = goal.skillId?.trim()
+    if (!raw) continue
+    const resolved = resolveGoalSkill(goal)
+    enqueue(resolved?.id ?? raw, 0)
+  }
+  while (queue.length > 0) {
+    const [id, d] = queue.shift()!
+    if (d >= MAX_GLOW_DISTANCE) continue
+    for (const need of needsForSkill(id)) {
+      if (need.kind !== 'required' && need.kind !== 'helpful') continue
+      if (need.needSkillId) enqueue(need.needSkillId, d + 1)
+    }
+  }
+  return dist
+}
+
+/** Layered luminous box-shadow in the family color, fading with distance. */
+function glowShadow(rgb: string, distance: number): string {
+  const specs = [
+    { a1: 0.95, b1: 14, s1: 3, a2: 0.5, b2: 34, s2: 8 }, // 0 — the hope, brightest
+    { a1: 0.75, b1: 11, s1: 2, a2: 0.35, b2: 26, s2: 6 }, // 1
+    { a1: 0.55, b1: 9, s1: 2, a2: 0.25, b2: 20, s2: 5 }, // 2
+    { a1: 0.38, b1: 7, s1: 1, a2: 0.16, b2: 15, s2: 4 }, // 3
+    { a1: 0.24, b1: 5, s1: 1, a2: 0.1, b2: 11, s2: 3 }, // 4
+    { a1: 0.14, b1: 4, s1: 0, a2: 0.06, b2: 8, s2: 2 }, // 5 — faint shimmer
+  ]
+  const s = specs[Math.min(distance, MAX_GLOW_DISTANCE)]
+  return (
+    `0 0 ${s.b1}px ${s.s1}px rgba(${rgb},${s.a1}), ` +
+    `0 0 ${s.b2}px ${s.s2}px rgba(${rgb},${s.a2})`
+  )
+}
 /** Skill family per tile, by registry skl_* id. */
 const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_foundations: 'foundations',
@@ -282,26 +350,54 @@ function Tile({
   skill,
   onTap,
   compact = false,
+  glowDist,
 }: {
   tile: MapTile
   skill: UnifiedSkill
   onTap: (skill: UnifiedSkill) => void
   compact?: boolean
+  /** Guiding-light distance (0 = goal). Undefined = no glow. */
+  glowDist?: number
 }) {
   const hasGuide = !!skill.guideId
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
   const style = FAMILY_STYLES[family]
+  const rgb = FAMILY_GLOW_RGB[family]
+  const isBanner = tile.skillId === 'skl_foundations'
+  const glowing = glowDist !== undefined
+  const boxShadow =
+    `0 2px 10px rgba(0,0,0,0.35)` +
+    (glowing ? `, ${glowShadow(rgb, glowDist)}` : '')
   return (
     <button
       type="button"
       onClick={() => onTap(skill)}
       style={
         tile.col
-          ? { gridColumn: tile.col, background: style.bg, borderColor: style.border }
-          : { background: style.bg, borderColor: style.border }
+          ? {
+              gridColumn: tile.col,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 55%), ${style.bg}`,
+              borderColor: glowing ? `rgba(${rgb},0.85)` : style.border,
+              boxShadow,
+              ...(glowDist === 0
+                ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+                : null),
+            }
+          : {
+              background: `linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 55%), ${style.bg}`,
+              borderColor: glowing ? `rgba(${rgb},0.85)` : style.border,
+              boxShadow,
+              ...(glowDist === 0
+                ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+                : null),
+            }
       }
-      className={`relative flex items-center justify-center rounded-lg border px-1 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
-        compact ? 'min-h-[40px] flex-1 text-[9px] py-1' : 'min-h-[52px] text-[10px] py-1.5'
+      className={`relative flex items-center justify-center rounded-xl border px-1 text-center font-bold leading-tight text-white/90 transition-transform active:scale-95 ${
+        compact
+          ? 'min-h-[40px] flex-1 text-[9px] py-1'
+          : isBanner
+            ? 'min-h-[56px] text-[12px] py-2 tracking-[0.2em] uppercase'
+            : 'min-h-[52px] text-[10px] py-1.5'
       }`}
     >
       {!hasGuide && (
@@ -311,12 +407,22 @@ function Tile({
           aria-hidden
         />
       )}
-      <span className="break-words">{tile.label}</span>
+      <span className="break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+        {tile.label}
+      </span>
     </button>
   )
 }
 
-function MapRows({ rows, onTap }: { rows: MapRow[]; onTap: (s: UnifiedSkill) => void }) {
+function MapRows({
+  rows,
+  onTap,
+  glowMap,
+}: {
+  rows: MapRow[]
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: Map<string, number> | null
+}) {
   return (
     <>
       {rows.map((row, i) => (
@@ -328,7 +434,15 @@ function MapRows({ rows, onTap }: { rows: MapRow[]; onTap: (s: UnifiedSkill) => 
           {row.tiles.map((tile) => {
             const skill = getRegistrySkill(tile.skillId)
             if (!skill) return null
-            return <Tile key={`${tile.skillId}-${tile.label}`} tile={tile} skill={skill} onTap={onTap} />
+            return (
+              <Tile
+                key={`${tile.skillId}-${tile.label}`}
+                tile={tile}
+                skill={skill}
+                onTap={onTap}
+                glowDist={glowMap?.get(tile.skillId)}
+              />
+            )
           })}
         </div>
       ))}
@@ -336,10 +450,16 @@ function MapRows({ rows, onTap }: { rows: MapRow[]; onTap: (s: UnifiedSkill) => 
   )
 }
 
-function RollsRow({ onTap }: { onTap: (s: UnifiedSkill) => void }) {
+function RollsRow({
+  onTap,
+  glowMap,
+}: {
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: Map<string, number> | null
+}) {
   return (
     <div>
-      <p className="pb-1 text-[10px] font-extrabold uppercase tracking-widest text-white/40">
+      <p className="pb-1 text-[10px] font-extrabold uppercase tracking-[0.25em] text-white/45">
         Rolls
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -353,6 +473,7 @@ function RollsRow({ onTap }: { onTap: (s: UnifiedSkill) => void }) {
               skill={skill}
               onTap={onTap}
               compact
+              glowDist={glowMap?.get(tile.skillId)}
             />
           )
         })}
@@ -393,22 +514,47 @@ function Legend() {
   )
 }
 
-export function SkillMapView({ onTileTap }: { onTileTap: (skill: UnifiedSkill) => void }) {
+export function SkillMapView({
+  onTileTap,
+  viewer = null,
+}: {
+  onTileTap: (skill: UnifiedSkill) => void
+  /** Signed-in viewer. Glow only renders for athlete-role viewers with goals. */
+  viewer?: Athlete | null
+}) {
   const [beyondOpen, setBeyondOpen] = useState(false)
+  // Guiding light: null when no athlete is signed in, the viewer isn't an
+  // athlete, or they have no goals — the map renders exactly as before.
+  const glowMap = useMemo(() => {
+    if (!viewer || !isAthleteProfile(viewer)) return null
+    const goals = (viewer.skillGoals ?? []).filter((g) => g.skillId?.trim())
+    if (!goals.length) return null
+    return buildGlowMap(goals)
+  }, [viewer])
   return (
     <div className="space-y-1.5">
+      {/* Pulse keyframes for the goal tile (distance 0). Brightness-only so it
+          stays cheap on phones; the static box-shadow carries the glow. */}
+      <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }`}</style>
       {/* Column headers */}
       <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
         {HEADERS.map((h) => (
           <div
             key={h.label}
             style={{ gridColumn: h.col }}
-            className="pb-0.5 text-center text-[10px] font-extrabold uppercase tracking-widest text-white/40"
+            className="pb-0.5 text-center text-[10px] font-extrabold uppercase tracking-[0.25em] text-white/45"
           >
             {h.label}
           </div>
         ))}
       </div>
+
+      {glowMap && (
+        <p className="text-center text-[11px] font-semibold text-white/55">
+          <span aria-hidden>✦ </span>Your goals light the way — follow the glow
+          upward<span aria-hidden> ✦</span>
+        </p>
+      )}
 
       {/* Beyond — collapsed by default */}
       <div>
@@ -430,16 +576,16 @@ export function SkillMapView({ onTileTap }: { onTileTap: (skill: UnifiedSkill) =
         </button>
         {beyondOpen && (
           <div className="mt-1.5 space-y-1.5">
-            <MapRows rows={BEYOND_ROWS} onTap={onTileTap} />
+            <MapRows rows={BEYOND_ROWS} onTap={onTileTap} glowMap={glowMap} />
           </div>
         )}
       </div>
 
       <Legend />
 
-      <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} />
-      <RollsRow onTap={onTileTap} />
-      <MapRows rows={ROWS.slice(12)} onTap={onTileTap} />
+      <MapRows rows={ROWS.slice(0, 12)} onTap={onTileTap} glowMap={glowMap} />
+      <RollsRow onTap={onTileTap} glowMap={glowMap} />
+      <MapRows rows={ROWS.slice(12)} onTap={onTileTap} glowMap={glowMap} />
     </div>
   )
 }

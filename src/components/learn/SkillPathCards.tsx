@@ -15,6 +15,7 @@ import {
   type UnifiedSkillTrack,
 } from '../../lib/skillRegistry'
 import { SkillMapView } from './SkillMapView'
+import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
@@ -695,10 +696,13 @@ export function SkillPathCards({
   coach = false,
   canEdit = false,
   focusSkillId,
+  viewer = null,
 }: {
   coach?: boolean
   canEdit?: boolean
   focusSkillId?: string | null
+  /** Signed-in viewer, for the skill map's guiding-light glow. */
+  viewer?: Athlete | null
 }) {
   const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
     getRegistrySkillByGuideId(focusSkillId),
@@ -770,7 +774,7 @@ export function SkillPathCards({
           </p>
         </div>
         <div className="mt-4">
-          <SkillMapView onTileTap={setModalSkill} />
+          <SkillMapView onTileTap={setModalSkill} viewer={viewer} />
         </div>
       </section>
 
