@@ -8,12 +8,72 @@
  *
  * Layout follows Ryan's spec: an 8-column grid, rows numbered from the
  * bottom (R0 = foundations). The "Beyond" rows stay collapsed by default.
+ *
+ * The page has a sticky control bar with two segmented pickers:
+ * - Look: Neon | Midnight | Paper | Ember (persisted in localStorage)
+ * - View: Map | List | Compact | Levels (persisted in localStorage)
+ * The guiding-light data (glowMap) is theme/view-independent — only the
+ * rendering changes. The LevelBar only renders in Map view.
  */
 import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
 import { needsForSkill, resolveGoalSkill } from '../../lib/skillPaths'
 import { isAthleteProfile } from '../../lib/profileRole'
 import type { Athlete, AthleteSkillGoal } from '../../types'
+
+/** Look + layout options for the skill map page. Persisted in localStorage. */
+type MapTheme = 'neon' | 'midnight' | 'paper' | 'ember'
+type MapViewMode = 'map' | 'list' | 'compact' | 'levels'
+
+const MAP_THEME_KEY = 'shapelab.skillmap.theme.v1'
+const MAP_VIEW_KEY = 'shapelab.skillmap.view.v1'
+
+const THEME_OPTIONS: { id: MapTheme; label: string }[] = [
+  { id: 'neon', label: 'Neon' },
+  { id: 'midnight', label: 'Midnight' },
+  { id: 'paper', label: 'Paper' },
+  { id: 'ember', label: 'Ember' },
+]
+const VIEW_OPTIONS: { id: MapViewMode; label: string }[] = [
+  { id: 'map', label: 'Map' },
+  { id: 'list', label: 'List' },
+  { id: 'compact', label: 'Compact' },
+  { id: 'levels', label: 'Levels' },
+]
+
+function loadMapTheme(): MapTheme {
+  try {
+    const v = localStorage.getItem(MAP_THEME_KEY)
+    if (v === 'midnight' || v === 'paper' || v === 'ember') return v
+  } catch {
+    /* storage unavailable — fall through to default */
+  }
+  return 'neon'
+}
+function loadMapView(): MapViewMode {
+  try {
+    const v = localStorage.getItem(MAP_VIEW_KEY)
+    if (v === 'list' || v === 'compact' || v === 'levels') return v
+  } catch {
+    /* storage unavailable — fall through to default */
+  }
+  return 'map'
+}
+function saveMapTheme(t: MapTheme) {
+  try {
+    localStorage.setItem(MAP_THEME_KEY, t)
+  } catch {
+    /* ignore */
+  }
+}
+function saveMapView(v: MapViewMode) {
+  try {
+    localStorage.setItem(MAP_VIEW_KEY, v)
+  } catch {
+    /* ignore */
+  }
+}
 
 type SkillFamily =
   | 'foundations'
@@ -233,6 +293,252 @@ function featuredShadow(rgb: string): string {
   return (
     `0 0 1px 1px rgba(${rgb},0.8), ` + `0 0 12px 3px rgba(${rgb},0.35)`
   )
+}
+
+/* ------------------------------------------------------------------ */
+/* Themes                                                              */
+/*                                                                     */
+/* The guiding-light data (glowMap distances) is theme-independent —   */
+/* these resolvers only change how each state renders per theme. The   */
+/* neon path is pixel-identical to the original hard-coded Tile style. */
+/* ------------------------------------------------------------------ */
+
+interface TileVisuals {
+  background: string
+  borderColor: string
+  borderWidth?: string
+  borderLeftWidth?: string
+  borderLeftColor?: string
+  boxShadow: string
+  textClass: string
+  labelClass: string
+  /** Dashed border for "relevant, not required" highlights. */
+  dashed: boolean
+  /** Apply the goal pulse animation (neon only). */
+  pulse: boolean
+  /** Apply the foundations beam animation (neon only). */
+  beam: boolean
+}
+
+interface TileState {
+  isBanner: boolean
+  glowing: boolean
+  glowDist?: number
+  highlighted: boolean
+  featured: boolean
+}
+
+function tileVisuals(theme: MapTheme, family: SkillFamily, state: TileState): TileVisuals {
+  const rgb = FAMILY_GLOW_RGB[family]
+  const style = FAMILY_STYLES[family]
+  const d = state.glowDist ?? 99
+  // Gold edge for the foundations banner on light themes (white is invisible on cream).
+  const edge = state.isBanner ? '180,130,20' : rgb
+  if (theme === 'midnight') {
+    // Deep near-black tiles, whisper-thin family borders, almost no glow.
+    return {
+      background: `linear-gradient(180deg, rgba(${rgb},0.07), rgba(${rgb},0.02)), #0b0d12`,
+      borderColor: state.isBanner
+        ? 'rgba(251,191,36,0.45)'
+        : state.glowing
+          ? `rgba(${rgb},${d === 0 ? 0.9 : d <= 2 ? 0.6 : 0.38})`
+          : state.highlighted
+            ? `rgba(${rgb},0.35)`
+            : state.featured
+              ? `rgba(${rgb},0.5)`
+              : `rgba(${rgb},0.22)`,
+      boxShadow:
+        `0 1px 3px rgba(0,0,0,0.6)` +
+        (state.glowing && d <= 2
+          ? `, 0 0 1px 1px rgba(${rgb},${Math.max(0.12, 0.55 - d * 0.15).toFixed(2)})`
+          : '') +
+        (state.highlighted ? `, 0 0 1px 1px rgba(${rgb},0.22)` : ''),
+      textClass: 'text-white/70',
+      labelClass: '',
+      dashed: state.highlighted,
+      pulse: false,
+      beam: false,
+    }
+  }
+  if (theme === 'paper') {
+    // Warm cream tiles, dark ink text, family color as a thick left border.
+    // The guiding light becomes a tinted background + colored border. Cheap
+    // single-layer shadows only.
+    return {
+      background: state.glowing ? `rgba(${rgb},0.16)` : 'linear-gradient(180deg,#fffdf9,#f6f1e5)',
+      borderColor: state.isBanner
+        ? 'rgba(180,130,20,0.6)'
+        : state.glowing
+          ? `rgba(${rgb},0.85)`
+          : state.highlighted
+            ? `rgba(${rgb},0.55)`
+            : state.featured
+              ? `rgba(${rgb},0.5)`
+              : 'rgba(28,25,23,0.14)',
+      borderLeftWidth: '4px',
+      borderLeftColor: `rgba(${edge},${state.glowing ? 1 : 0.8})`,
+      boxShadow:
+        `0 1px 2px rgba(60,50,30,0.14)` +
+        (state.glowing ? `, 0 0 0 1px rgba(${rgb},0.45)` : ''),
+      textClass: 'text-stone-800',
+      labelClass: '',
+      dashed: state.highlighted,
+      pulse: false,
+      beam: false,
+    }
+  }
+  if (theme === 'ember') {
+    // High contrast: pure black tiles, thick bright family borders, bold
+    // white text. Glow is replaced by a solid bright outline.
+    return {
+      background: '#000000',
+      borderColor: state.isBanner
+        ? 'rgba(251,191,36,1)'
+        : state.highlighted
+          ? `rgba(${rgb},0.55)`
+          : `rgba(${rgb},1)`,
+      borderWidth: '2px',
+      boxShadow: state.glowing
+        ? d === 0
+          ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
+          : `0 0 0 3px rgba(${rgb},0.85)`
+        : 'none',
+      textClass: 'text-white',
+      labelClass: '',
+      dashed: state.highlighted,
+      pulse: false,
+      beam: false,
+    }
+  }
+  // neon — the original look, unchanged
+  return {
+    background: `linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 55%), ${style.bg}`,
+    borderColor: state.isBanner
+      ? 'rgba(251,191,36,0.55)'
+      : state.glowing
+        ? d === 0
+          ? `rgba(${rgb},1)` // destination — full-strength border
+          : d <= 2
+            ? `rgba(${rgb},0.95)` // on the trail — near-full so the path reads continuous
+            : `rgba(${rgb},0.7)`
+        : state.highlighted
+          ? `rgba(${rgb},0.55)` // relevant, not required — softer + dashed below
+          : state.featured
+            ? `rgba(${rgb},0.75)`
+            : style.border,
+    boxShadow:
+      `0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22)` +
+      (state.featured ? `, ${featuredShadow(rgb)}` : '') +
+      (state.glowing ? `, ${glowShadow(rgb, d)}` : '') +
+      (state.highlighted ? `, 0 0 1px 1px rgba(${rgb},0.5), 0 0 8px 2px rgba(${rgb},0.16)` : ''),
+    textClass: 'text-white/90',
+    labelClass: 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]',
+    dashed: state.highlighted,
+    pulse: true,
+    beam: true,
+  }
+}
+
+/** Resolved chrome for list rows and level chips — simpler than tiles. */
+interface ItemVisuals {
+  background: string
+  borderColor: string
+  borderWidth?: string
+  borderLeftWidth?: string
+  borderLeftColor?: string
+  boxShadow: string
+  color: string
+}
+
+function itemVisuals(
+  theme: MapTheme,
+  family: SkillFamily,
+  opts: { glowing: boolean; glowDist?: number; highlighted: boolean },
+): ItemVisuals {
+  const rgb = FAMILY_GLOW_RGB[family]
+  const d = opts.glowDist ?? 99
+  const lit = opts.glowing || opts.highlighted
+  if (theme === 'paper') {
+    return {
+      background: opts.glowing
+        ? `rgba(${rgb},0.16)`
+        : opts.highlighted
+          ? `rgba(${rgb},0.07)`
+          : '#fffdf8',
+      borderColor: lit ? `rgba(${rgb},0.8)` : 'rgba(28,25,23,0.12)',
+      borderLeftWidth: '3px',
+      borderLeftColor: `rgba(${rgb},0.85)`,
+      boxShadow: '0 1px 2px rgba(60,50,30,0.12)',
+      color: '#292524',
+    }
+  }
+  if (theme === 'ember') {
+    return {
+      background: '#000000',
+      borderColor: `rgba(${rgb},${lit ? 1 : 0.55})`,
+      borderWidth: lit ? '2px' : '1px',
+      boxShadow: opts.glowing ? `0 0 0 2px rgba(${rgb},0.7)` : 'none',
+      color: '#ffffff',
+    }
+  }
+  if (theme === 'midnight') {
+    return {
+      background: lit ? `rgba(${rgb},0.08)` : '#0c0e13',
+      borderColor: `rgba(${rgb},${lit ? (d === 0 ? 0.9 : 0.5) : 0.2})`,
+      boxShadow:
+        opts.glowing && d <= 2 ? `0 0 1px 1px rgba(${rgb},0.5)` : '0 1px 3px rgba(0,0,0,0.6)',
+      color: 'rgba(255,255,255,0.8)',
+    }
+  }
+  // neon
+  return {
+    background: opts.glowing ? `rgba(${rgb},0.10)` : 'rgba(255,255,255,0.03)',
+    borderColor: opts.glowing
+      ? `rgba(${rgb},${d === 0 ? 1 : 0.8})`
+      : opts.highlighted
+        ? `rgba(${rgb},0.5)`
+        : 'rgba(255,255,255,0.08)',
+    boxShadow: opts.glowing ? glowShadow(rgb, d) : 'none',
+    color: 'rgba(255,255,255,0.92)',
+  }
+}
+
+/**
+ * Panel-style overrides for the collapsible section buttons (Beyond, Rolls).
+ * Neon keeps the app's var(--panel) classes, so its spec is undefined.
+ */
+const PANEL_STYLE: Record<MapTheme, CSSProperties | undefined> = {
+  neon: undefined,
+  midnight: {
+    background: '#0c0e13',
+    borderColor: 'rgba(255,255,255,0.09)',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  paper: { background: '#fffdf8', borderColor: 'rgba(28,25,23,0.16)', color: '#292524' },
+  ember: { background: '#000000', borderColor: 'rgba(255,255,255,0.28)', color: '#ffffff' },
+}
+
+/** LevelBar gradient per theme — Paper gets a darker/muted version that reads on cream. */
+function levelBarGradient(theme: MapTheme): string {
+  if (theme === 'paper')
+    return 'linear-gradient(to top, #0369a1 0%, #15803d 18%, #a16207 38%, #c2410c 55%, #a21caf 72%, #b45309 92%, #b45309 100%)'
+  return 'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)'
+}
+
+/** Legend (color key) chip style per theme. */
+function legendChipStyle(theme: MapTheme, family: SkillFamily): CSSProperties {
+  const rgb = FAMILY_GLOW_RGB[family]
+  if (theme === 'paper')
+    return { background: `rgba(${rgb},0.10)`, borderColor: `rgba(${rgb},0.45)`, color: '#44403c' }
+  if (theme === 'ember')
+    return { background: '#000000', borderColor: `rgba(${rgb},0.9)`, color: '#ffffff' }
+  if (theme === 'midnight')
+    return {
+      background: `rgba(${rgb},0.06)`,
+      borderColor: `rgba(${rgb},0.28)`,
+      color: 'rgba(255,255,255,0.75)',
+    }
+  return { background: FAMILY_STYLES[family].bg, borderColor: FAMILY_STYLES[family].border }
 }
 /** Skill family per tile, by registry skl_* id. */
 const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
@@ -539,12 +845,107 @@ const BEYOND_ROWS: MapRow[] = [
   },
 ]
 
+/* ------------------------------------------------------------------ */
+/* Zones + flat entries for the List / Compact / Levels views          */
+/*                                                                     */
+/* Zone boundaries follow the LevelBar calibration: rows split          */
+/* proportionally top-down across Expert → Light, Beyond = Legend.     */
+/* ------------------------------------------------------------------ */
+
+const ZONE_ORDER = ['Legend', 'Expert', 'Heavy', 'Hard', 'Intermediate', 'Light'] as const
+type ZoneName = (typeof ZONE_ORDER)[number]
+const ZONE_RANK: Record<ZoneName, number> = {
+  Legend: 0,
+  Expert: 1,
+  Heavy: 2,
+  Hard: 3,
+  Intermediate: 4,
+  Light: 5,
+}
+/** Zone accent colors — same calibration as the LevelBar gradient. */
+const ZONE_ACCENT: Record<ZoneName, string> = {
+  Legend: '#fbbf24',
+  Expert: '#e879f9',
+  Heavy: '#fb923c',
+  Hard: '#facc15',
+  Intermediate: '#4ade80',
+  Light: '#7dd3fc',
+}
+/** Darker accents for the Paper theme. */
+const ZONE_ACCENT_DARK: Record<ZoneName, string> = {
+  Legend: '#b45309',
+  Expert: '#a21caf',
+  Heavy: '#c2410c',
+  Hard: '#a16207',
+  Intermediate: '#15803d',
+  Light: '#0369a1',
+}
+const ZONES_TOP_DOWN: ZoneName[] = ['Expert', 'Heavy', 'Hard', 'Intermediate', 'Light']
+/** Band order for the Levels view — easiest first. */
+const BAND_ORDER: ZoneName[] = ['Light', 'Intermediate', 'Hard', 'Heavy', 'Expert', 'Legend']
+
+type SkillEntry = {
+  skillId: string
+  label: string
+  family: SkillFamily
+  zone: ZoneName
+  kind: 'beyond' | 'main' | 'roll'
+}
+
+/** Flat skill list with zone + family metadata, for the List/Compact/Levels views. */
+let skillEntries: SkillEntry[] | null = null
+function getSkillEntries(): SkillEntry[] {
+  if (!skillEntries) {
+    const out: SkillEntry[] = []
+    for (const row of BEYOND_ROWS)
+      for (const t of row.tiles)
+        out.push({
+          skillId: t.skillId,
+          label: t.label,
+          family: FAMILY_BY_SKILL[t.skillId] ?? 'foundations',
+          zone: 'Legend',
+          kind: 'beyond',
+        })
+    ROWS.forEach((row, ri) => {
+      const zone = ZONES_TOP_DOWN[Math.min(4, Math.floor((ri / ROWS.length) * 5))]
+      for (const t of row.tiles)
+        out.push({
+          skillId: t.skillId,
+          label: t.label,
+          family: FAMILY_BY_SKILL[t.skillId] ?? 'foundations',
+          zone,
+          kind: 'main',
+        })
+    })
+    ROLLS_ROWS.forEach((row, ri) => {
+      const zone = ZONES_TOP_DOWN[Math.min(4, Math.floor((ri / ROLLS_ROWS.length) * 5))]
+      for (const t of row.tiles)
+        out.push({ skillId: t.skillId, label: t.label, family: 'rolls', zone, kind: 'roll' })
+    })
+    skillEntries = out.filter((e) => getRegistrySkill(e.skillId))
+  }
+  return skillEntries
+}
+
+/** Family group order for the List view. */
+const LIST_FAMILY_ORDER: SkillFamily[] = [
+  'foundations',
+  'standing',
+  'forwards',
+  'cartwheel',
+  'roundoff',
+  'doubleback',
+  'kick',
+  'rolls',
+]
+
 function Tile({
   tile,
   skill,
   onTap,
   glowDist,
   isHighlight,
+  theme,
 }: {
   tile: MapTile
   skill: UnifiedSkill
@@ -553,68 +954,37 @@ function Tile({
   glowDist?: number
   /** Roll highlighted as relevant-at-level ("relevant, not required"). */
   isHighlight?: boolean
+  theme: MapTheme
 }) {
   const hasGuide = !!skill.guideId
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
-  const style = FAMILY_STYLES[family]
-  const rgb = FAMILY_GLOW_RGB[family]
   const isBanner = tile.skillId === 'skl_foundations'
   const glowing = glowDist !== undefined
-  const highlighted = isHighlight && !glowing
+  const highlighted = !!isHighlight && !glowing
   const featured = isFeaturedSkill(skill) && !isBanner
-  // Base shadow: soft layered elevation like the Today cards.
-  // Featured glow sits underneath; the guiding-light glow adds on top.
-  // Highlights get a faint halo — visibly dimmer than the trail.
-  const boxShadow =
-    `0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22)` +
-    (featured ? `, ${featuredShadow(rgb)}` : '') +
-    (glowing ? `, ${glowShadow(rgb, glowDist)}` : '') +
-    (highlighted ? `, 0 0 1px 1px rgba(${rgb},0.5), 0 0 8px 2px rgba(${rgb},0.16)` : '')
-  const borderColor = isBanner
-    ? 'rgba(251,191,36,0.55)'
-    : glowing
-      ? glowDist === 0
-        ? `rgba(${rgb},1)` // destination — full-strength border
-        : glowDist <= 2
-          ? `rgba(${rgb},0.95)` // on the trail — near-full so the path reads continuous
-          : `rgba(${rgb},0.7)`
-      : highlighted
-        ? `rgba(${rgb},0.55)` // relevant, not required — softer + dashed below
-        : featured
-          ? `rgba(${rgb},0.75)`
-          : style.border
+  const v = tileVisuals(theme, family, { isBanner, glowing, glowDist, highlighted, featured })
   return (
     <button
       type="button"
       onClick={() => onTap(skill)}
-      style={
-        tile.col
-          ? {
-              gridColumn: tile.col,
-              background: `linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 55%), ${style.bg}`,
-              borderColor,
-              boxShadow,
-              ...(glowDist === 0
-                ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
-                : null),
-              ...(isBanner
-                ? { animation: 'foundations-beam 5s ease-in-out infinite' }
-                : null),
-            }
-          : {
-              background: `linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 55%), ${style.bg}`,
-              borderColor,
-              boxShadow,
-              ...(glowDist === 0
-                ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
-                : null),
-              ...(isBanner
-                ? { animation: 'foundations-beam 5s ease-in-out infinite' }
-                : null),
-            }
-      }
-      className={`relative flex items-center justify-center rounded-2xl border px-1 text-center font-bold leading-snug text-white/90 transition-transform active:scale-95 sm:px-2 ${
-        highlighted ? 'border-dashed' : ''
+      style={{
+        ...(tile.col ? { gridColumn: tile.col } : null),
+        background: v.background,
+        borderColor: v.borderColor,
+        ...(v.borderWidth ? { borderWidth: v.borderWidth } : null),
+        ...(v.borderLeftWidth
+          ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
+          : null),
+        boxShadow: v.boxShadow,
+        ...(v.pulse && glowDist === 0
+          ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+          : null),
+        ...(v.beam && isBanner
+          ? { animation: 'foundations-beam 5s ease-in-out infinite' }
+          : null),
+      }}
+      className={`relative flex items-center justify-center rounded-2xl border px-1 text-center font-bold leading-snug transition-transform active:scale-95 sm:px-2 ${v.textClass} ${
+        v.dashed ? 'border-dashed' : ''
       } ${
         isBanner
           ? 'min-h-[64px] py-3 text-[12px] uppercase tracking-[0.18em] sm:text-[13px] sm:tracking-[0.28em]'
@@ -628,9 +998,7 @@ function Tile({
           aria-hidden
         />
       )}
-      <span className="break-words drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-        {tile.label}
-      </span>
+      <span className={`break-words ${v.labelClass}`}>{tile.label}</span>
     </button>
   )
 }
@@ -639,10 +1007,12 @@ function MapRows({
   rows,
   onTap,
   glowMap,
+  theme,
 }: {
   rows: MapRow[]
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
+  theme: MapTheme
 }) {
   return (
     <>
@@ -663,6 +1033,7 @@ function MapRows({
                 onTap={onTap}
                 glowDist={glowMap?.dist.get(tile.skillId)}
                 isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
+                theme={theme}
               />
             )
           })}
@@ -675,9 +1046,11 @@ function MapRows({
 function RollsSection({
   onTap,
   glowMap,
+  theme,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
+  theme: MapTheme
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -687,10 +1060,12 @@ function RollsSection({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left"
-        style={{
-          borderColor: 'rgba(45,212,191,0.45)',
-          background: 'rgba(45,212,191,0.08)',
-        }}
+        style={
+          PANEL_STYLE[theme] ?? {
+            borderColor: 'rgba(45,212,191,0.45)',
+            background: 'rgba(45,212,191,0.08)',
+          }
+        }
       >
         <span>
           <span className="block text-sm font-extrabold">Rolls</span>
@@ -704,7 +1079,7 @@ function RollsSection({
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} />
+          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} />
         </div>
       )}
     </div>
@@ -717,7 +1092,7 @@ function RollsSection({
  * no hard boundaries. Closed it shows just a thin gradient tab; tapping it
  * slides the bar open to reveal the zone labels.
  */
-function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
+function LevelBar({ beyondOpen, theme }: { beyondOpen: boolean; theme: MapTheme }) {
   const [open, setOpen] = useState(false)
   // When Beyond is open the bar spans the Legend zone too, so Legend gets
   // its label back at the top. (It was removed in b0173f1 because Beyond
@@ -738,6 +1113,8 @@ function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
         { text: 'Intermediate', top: '73%' },
         { text: 'Light', top: '90%' },
       ]
+  const labelColor = theme === 'paper' ? 'text-stone-600' : 'text-white/85'
+  const chevronColor = theme === 'paper' ? 'text-stone-500' : 'text-white/80'
   return (
     <div className="pointer-events-none absolute inset-y-0 right-0">
       <button
@@ -753,15 +1130,12 @@ function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
         <div
           aria-hidden
           className="absolute bottom-0 right-1 top-0 w-2 rounded-full opacity-70"
-          style={{
-            background:
-              'linear-gradient(to top, #7dd3fc 0%, #4ade80 18%, #facc15 38%, #fb923c 55%, #e879f9 72%, #fbbf24 92%, #fbbf24 100%)',
-          }}
+          style={{ background: levelBarGradient(theme) }}
         />
         {/* open/close chevron */}
         <span
           aria-hidden
-          className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] leading-none text-white/80 transition-transform duration-300 ${
+          className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] leading-none transition-transform duration-300 ${chevronColor} ${
             open ? 'rotate-180' : ''
           }`}
         >
@@ -777,7 +1151,7 @@ function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
           {labels.map((l) => (
             <span
               key={l.text}
-              className="absolute right-4 -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-semibold text-white/85"
+              className={`absolute right-4 -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-semibold ${labelColor}`}
               style={{ top: l.top }}
             >
               {l.text}
@@ -789,7 +1163,7 @@ function LevelBar({ beyondOpen }: { beyondOpen: boolean }) {
   )
 }
 
-function Legend() {
+function Legend({ theme }: { theme: MapTheme }) {
   const [open, setOpen] = useState(false)
   return (
     <div>
@@ -798,6 +1172,7 @@ function Legend() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="text-[11px] font-semibold text-white/50 underline decoration-dotted underline-offset-2"
+        style={theme === 'paper' ? { color: '#78716c' } : undefined}
       >
         {open ? 'Hide color key' : 'Color key'}
       </button>
@@ -807,16 +1182,488 @@ function Legend() {
             <span
               key={f}
               className="inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold text-white/80"
-              style={{
-                background: FAMILY_STYLES[f].bg,
-                borderColor: FAMILY_STYLES[f].border,
-              }}
+              style={legendChipStyle(theme, f)}
             >
               {FAMILY_STYLES[f].label}
             </span>
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Controls + alternate views                                          */
+/* ------------------------------------------------------------------ */
+
+/** One segmented picker row inside the control bar. */
+function SegPicker({
+  options,
+  current,
+  onPick,
+  theme,
+}: {
+  options: { id: string; label: string }[]
+  current: string
+  onPick: (id: string) => void
+  theme: MapTheme
+}) {
+  return (
+    <div
+      className="flex gap-0.5 overflow-x-auto rounded-full border p-0.5"
+      style={{ borderColor: theme === 'paper' ? 'rgba(28,25,23,0.18)' : 'rgba(255,255,255,0.12)' }}
+    >
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => onPick(o.id)}
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
+          style={
+            o.id === current
+              ? { background: theme === 'paper' ? '#292524' : 'rgba(45,212,191,0.28)', color: '#ffffff' }
+              : { color: theme === 'paper' ? '#57534e' : 'rgba(255,255,255,0.6)' }
+          }
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Compact sticky control bar: theme + view segmented pickers. */
+function ViewControls({
+  theme,
+  onTheme,
+  view,
+  onView,
+}: {
+  theme: MapTheme
+  onTheme: (t: MapTheme) => void
+  view: MapViewMode
+  onView: (v: MapViewMode) => void
+}) {
+  const barBg =
+    theme === 'paper'
+      ? '#f3efe4'
+      : theme === 'ember'
+        ? '#000000'
+        : theme === 'midnight'
+          ? '#0b0d12'
+          : 'rgba(8,10,14,0.94)'
+  const labelColor = theme === 'paper' ? '#78716c' : 'rgba(255,255,255,0.55)'
+  return (
+    <div className="sticky top-0 z-10 py-1.5" style={{ background: barBg }}>
+      <div className="flex items-center gap-2">
+        <span
+          className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]"
+          style={{ color: labelColor }}
+        >
+          Look
+        </span>
+        <SegPicker
+          options={THEME_OPTIONS}
+          current={theme}
+          onPick={(id) => onTheme(id as MapTheme)}
+          theme={theme}
+        />
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span
+          className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]"
+          style={{ color: labelColor }}
+        >
+          View
+        </span>
+        <SegPicker
+          options={VIEW_OPTIONS}
+          current={view}
+          onPick={(id) => onView(id as MapViewMode)}
+          theme={theme}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Column headers for the map view (Today section-label style). */
+function ColumnHeaders({ theme }: { theme: MapTheme }) {
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+      {HEADERS.map((h) => (
+        <div
+          key={h.label}
+          style={{ gridColumn: h.col, ...(theme === 'paper' ? { color: '#57534e' } : null) }}
+          className="pb-1 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] sm:text-[11px] sm:tracking-[0.2em]"
+        >
+          {h.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** "Your goals light the way" note, shown when the guiding light is active. */
+function GlowNote({
+  theme,
+  classGlow,
+  glowNames,
+}: {
+  theme: MapTheme
+  classGlow: boolean
+  glowNames: string[]
+}) {
+  return (
+    <p
+      className={`text-center text-[11px] font-semibold ${theme === 'paper' ? 'text-stone-500' : 'text-white/55'}`}
+    >
+      <span aria-hidden>✦ </span>
+      {classGlow
+        ? `Lighting the way for ${glowNames.slice(0, 3).join(', ')}${glowNames.length > 3 ? ' and others' : ''}`
+        : 'Your goals light the way — follow the glow upward'}
+      <span aria-hidden> ✦</span>
+    </p>
+  )
+}
+
+/** Beyond — collapsed by default (map view only; other views integrate Beyond). */
+function BeyondSection({
+  open,
+  onToggle,
+  onTap,
+  glowMap,
+  theme,
+}: {
+  open: boolean
+  onToggle: () => void
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
+  theme: MapTheme
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
+        style={PANEL_STYLE[theme]}
+      >
+        <span>
+          <span className="block text-sm font-extrabold">
+            Beyond <span className="text-[11px] font-semibold opacity-60">· Legend level</span>
+          </span>
+          <span className="block text-[11px] opacity-60">Most people never cross this line</span>
+        </span>
+        <span className="text-base opacity-60" aria-hidden>
+          {open ? '▾' : '▸'}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <MapRows rows={BEYOND_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+type GlowMap = { dist: Map<string, number>; highlights: Set<string> } | null
+
+/** One full-width row in the List view. */
+function ListRow({
+  entry,
+  onTap,
+  glowMap,
+  theme,
+}: {
+  entry: SkillEntry
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const skill = getRegistrySkill(entry.skillId)
+  if (!skill) return null
+  const glowDist = glowMap?.dist.get(entry.skillId)
+  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const v = itemVisuals(theme, entry.family, {
+    glowing: glowDist !== undefined,
+    glowDist,
+    highlighted,
+  })
+  const rgb = FAMILY_GLOW_RGB[entry.family]
+  const zoneAccent = (theme === 'paper' ? ZONE_ACCENT_DARK : ZONE_ACCENT)[entry.zone]
+  return (
+    <button
+      type="button"
+      onClick={() => onTap(skill)}
+      className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left active:scale-[0.99]"
+      style={{
+        background: v.background,
+        borderColor: v.borderColor,
+        ...(v.borderWidth ? { borderWidth: v.borderWidth } : null),
+        ...(v.borderLeftWidth
+          ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
+          : null),
+        boxShadow: v.boxShadow,
+        color: v.color,
+      }}
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: `rgb(${rgb})` }}
+        aria-hidden
+      />
+      <span className="flex-1 text-[13px] font-semibold">{entry.label}</span>
+      {glowDist !== undefined && (
+        <span className="shrink-0 text-[10px] font-bold" style={{ color: `rgb(${rgb})` }}>
+          ✦ path
+        </span>
+      )}
+      <span
+        className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em]"
+        style={{ color: zoneAccent }}
+      >
+        {entry.zone}
+      </span>
+      {!skill.guideId && (
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"
+          title="Guide coming"
+          aria-hidden
+        />
+      )}
+      <span className="shrink-0 opacity-50" aria-hidden>
+        ›
+      </span>
+    </button>
+  )
+}
+
+/** List view: full-width rows grouped by family, Beyond · Legend last. */
+function ListView({
+  onTap,
+  glowMap,
+  theme,
+}: {
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const entries = getSkillEntries()
+  const groups: { key: string; label: string; entries: SkillEntry[] }[] = LIST_FAMILY_ORDER.map(
+    (f) => ({
+      key: f,
+      label: FAMILY_STYLES[f].label,
+      entries: entries
+        .filter((e) => e.family === f && e.kind !== 'beyond')
+        .sort((a, b) => ZONE_RANK[a.zone] - ZONE_RANK[b.zone]),
+    }),
+  ).filter((g) => g.entries.length > 0)
+  const beyond = entries
+    .filter((e) => e.kind === 'beyond')
+    .sort((a, b) => ZONE_RANK[a.zone] - ZONE_RANK[b.zone])
+  if (beyond.length > 0) groups.push({ key: 'beyond', label: 'Beyond · Legend', entries: beyond })
+  const headerColor = theme === 'paper' ? '#57534e' : 'rgba(255,255,255,0.55)'
+  return (
+    <div className="space-y-4">
+      {groups.map((g) => (
+        <div key={g.key}>
+          <p
+            className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: headerColor }}
+          >
+            {g.label} <span className="opacity-60">· {g.entries.length}</span>
+          </p>
+          <div className="space-y-1.5">
+            {g.entries.map((e) => (
+              <ListRow key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** One dense tile in the Compact view. */
+function CompactTile({
+  entry,
+  onTap,
+  glowMap,
+  theme,
+}: {
+  entry: SkillEntry
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const skill = getRegistrySkill(entry.skillId)
+  if (!skill) return null
+  const glowDist = glowMap?.dist.get(entry.skillId)
+  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const v = tileVisuals(theme, entry.family, {
+    isBanner: false,
+    glowing: glowDist !== undefined,
+    glowDist,
+    highlighted,
+    featured: isFeaturedSkill(skill),
+  })
+  return (
+    <button
+      type="button"
+      onClick={() => onTap(skill)}
+      className={`flex min-h-[46px] items-center justify-center rounded-lg border px-1 text-center text-[9px] font-bold leading-tight active:scale-95 ${v.textClass} ${
+        v.dashed ? 'border-dashed' : ''
+      }`}
+      style={{
+        background: v.background,
+        borderColor: v.borderColor,
+        ...(v.borderWidth ? { borderWidth: v.borderWidth } : null),
+        ...(v.borderLeftWidth
+          ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
+          : null),
+        boxShadow: v.boxShadow,
+        ...(v.pulse && glowDist === 0
+          ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+          : null),
+      }}
+    >
+      <span className={`break-words ${v.labelClass}`}>{entry.label}</span>
+    </button>
+  )
+}
+
+/** Compact view: dense grids — the whole map on screen at once. */
+function CompactView({
+  onTap,
+  glowMap,
+  theme,
+}: {
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const entries = getSkillEntries()
+  const sections = [
+    { key: 'beyond', label: 'Beyond · Legend', entries: entries.filter((e) => e.kind === 'beyond') },
+    { key: 'path', label: 'Skill path', entries: entries.filter((e) => e.kind === 'main') },
+    { key: 'rolls', label: 'Rolls', entries: entries.filter((e) => e.kind === 'roll') },
+  ].filter((s) => s.entries.length > 0)
+  const headerColor = theme === 'paper' ? '#57534e' : 'rgba(255,255,255,0.55)'
+  return (
+    <div className="space-y-4">
+      {sections.map((s) => (
+        <div key={s.key}>
+          <p
+            className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: headerColor }}
+          >
+            {s.label} <span className="opacity-60">· {s.entries.length}</span>
+          </p>
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
+            {s.entries.map((e) => (
+              <CompactTile key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** One skill chip in the Levels view. */
+function LevelChip({
+  entry,
+  onTap,
+  glowMap,
+  theme,
+}: {
+  entry: SkillEntry
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const skill = getRegistrySkill(entry.skillId)
+  if (!skill) return null
+  const glowDist = glowMap?.dist.get(entry.skillId)
+  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const v = itemVisuals(theme, entry.family, {
+    glowing: glowDist !== undefined,
+    glowDist,
+    highlighted,
+  })
+  const rgb = FAMILY_GLOW_RGB[entry.family]
+  return (
+    <button
+      type="button"
+      onClick={() => onTap(skill)}
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold active:scale-95"
+      style={{
+        background: v.background,
+        borderColor: v.borderColor,
+        ...(v.borderWidth ? { borderWidth: v.borderWidth } : null),
+        boxShadow: v.boxShadow,
+        color: v.color,
+      }}
+    >
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ background: `rgb(${rgb})` }}
+        aria-hidden
+      />
+      {entry.label}
+      {glowDist !== undefined && (
+        <span style={{ color: `rgb(${rgb})` }} aria-hidden>
+          ✦
+        </span>
+      )}
+    </button>
+  )
+}
+
+/** Levels view: horizontal bands by difficulty zone, easiest first. */
+function LevelsView({
+  onTap,
+  glowMap,
+  theme,
+}: {
+  onTap: (s: UnifiedSkill) => void
+  glowMap?: GlowMap
+  theme: MapTheme
+}) {
+  const entries = getSkillEntries()
+  const accents = theme === 'paper' ? ZONE_ACCENT_DARK : ZONE_ACCENT
+  return (
+    <div className="space-y-4">
+      {BAND_ORDER.map((zone) => {
+        const zs = entries.filter((e) => e.zone === zone)
+        if (zs.length === 0) return null
+        return (
+          <div key={zone}>
+            <div className="mb-1.5 flex items-center gap-2">
+              <span
+                className="h-4 w-1 shrink-0 rounded-full"
+                style={{ background: accents[zone] }}
+                aria-hidden
+              />
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.18em]"
+                style={{ color: theme === 'paper' ? '#44403c' : 'rgba(255,255,255,0.75)' }}
+              >
+                {zone} <span className="opacity-60">· {zs.length}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {zs.map((e) => (
+                <LevelChip key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -836,6 +1683,16 @@ export function SkillMapView({
   activeAthlete?: Athlete | null
 }) {
   const [beyondOpen, setBeyondOpen] = useState(false)
+  const [theme, setTheme] = useState<MapTheme>(loadMapTheme)
+  const [view, setView] = useState<MapViewMode>(loadMapView)
+  const pickTheme = (t: MapTheme) => {
+    setTheme(t)
+    saveMapTheme(t)
+  }
+  const pickView = (v: MapViewMode) => {
+    setView(v)
+    saveMapView(v)
+  }
   // Guiding light: null when no athlete is signed in, no active athlete, and
   // no class roster — the map renders exactly as before. Otherwise the union
   // of everyone's goals lights up (shortest distance wins across athletes).
@@ -877,87 +1734,63 @@ export function SkillMapView({
     return buildGlowMap(goals)
   }, [glowAthletes])
   return (
-    <div className="space-y-2.5">
+    <div className={`space-y-2.5 ${theme === 'paper' ? 'rounded-2xl bg-[#f3efe4] p-3' : ''}`}>
       {/* Pulse keyframes for the goal tile (distance 0). Pulses the neon edge
           (brightness + saturation) — no halo bloom; the static box-shadow
           carries the glow. Cheap on phones. */}
       <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.18) saturate(1.35); } }
 @keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,0.8), 0 0 18px 4px rgba(251,191,36,0.25); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,1), 0 0 26px 6px rgba(251,191,36,0.35); } }`}</style>
-      {/* Column headers — Today section-label style */}
-      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
-        {HEADERS.map((h) => (
-          <div
-            key={h.label}
-            style={{ gridColumn: h.col }}
-            className="pb-1 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] sm:text-[11px] sm:tracking-[0.2em]"
-          >
-            {h.label}
-          </div>
-        ))}
-      </div>
+      {/* Compact control bar: Look + View pickers, sticky at the top */}
+      <ViewControls theme={theme} view={view} onTheme={pickTheme} onView={pickView} />
 
-      {glowMap && (
-        <p className="text-center text-[11px] font-semibold text-white/55">
-          <span aria-hidden>✦ </span>
-          {classGlow
-            ? `Lighting the way for ${glowNames.slice(0, 3).join(', ')}${glowNames.length > 3 ? ' and others' : ''}`
-            : 'Your goals light the way — follow the glow upward'}
-          <span aria-hidden> ✦</span>
-        </p>
-      )}
+      {view === 'map' && <ColumnHeaders theme={theme} />}
 
-      {/* Beyond + tree share one relative context so the level bar spans both —
-          when Beyond is open the bar reaches up into the Legend zone */}
-      <div className="relative">
-        <div className="space-y-2.5 pr-6 sm:pr-20">
-          {/* Beyond — collapsed by default */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setBeyondOpen((o) => !o)}
-              aria-expanded={beyondOpen}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
-            >
-              <span>
-                <span className="block text-sm font-extrabold">Beyond <span className="text-[11px] font-semibold opacity-60">· Legend level</span></span>
-                <span className="block text-[11px] opacity-60">
-                  Most people never cross this line
-                </span>
-              </span>
-              <span className="text-base opacity-60" aria-hidden>
-                {beyondOpen ? '▾' : '▸'}
-              </span>
-            </button>
-            {beyondOpen && (
-              <div className="mt-2 space-y-2">
-                <MapRows rows={BEYOND_ROWS} onTap={onTileTap} glowMap={glowMap} />
-              </div>
-            )}
-          </div>
+      {glowMap && <GlowNote theme={theme} classGlow={classGlow} glowNames={glowNames} />}
 
-          <Legend />
-
-          {/* Skill tree */}
-          <div className="space-y-2.5">
-            <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} />
-            <div className="pt-1">
-              <RollsSection onTap={onTileTap} glowMap={glowMap} />
-            </div>
-            {/* Light beaming upward from Foundations into the tree */}
-            <div
-              aria-hidden
-              className="pointer-events-none mx-auto h-10 w-3/4"
-              style={{
-                background:
-                  'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
-              }}
+      {view === 'map' ? (
+        /* Beyond + tree share one relative context so the level bar spans both —
+            when Beyond is open the bar reaches up into the Legend zone */
+        <div className="relative">
+          <div className="space-y-2.5 pr-6 sm:pr-20">
+            <BeyondSection
+              open={beyondOpen}
+              onToggle={() => setBeyondOpen((o) => !o)}
+              onTap={onTileTap}
+              glowMap={glowMap}
+              theme={theme}
             />
-            <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} />
-            <div className="pt-2" />
+
+            <Legend theme={theme} />
+
+            {/* Skill tree */}
+            <div className="space-y-2.5">
+              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} />
+              <div className="pt-1">
+                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} />
+              </div>
+              {/* Light beaming upward from Foundations into the tree */}
+              <div
+                aria-hidden
+                className="pointer-events-none mx-auto h-10 w-3/4"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
+                }}
+              />
+              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} />
+              <div className="pt-2" />
+            </div>
           </div>
+          <LevelBar beyondOpen={beyondOpen} theme={theme} />
         </div>
-        <LevelBar beyondOpen={beyondOpen} />
-      </div>
+      ) : (
+        <>
+          <Legend theme={theme} />
+          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
+          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
+          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
+        </>
+      )}
     </div>
   )
 }
