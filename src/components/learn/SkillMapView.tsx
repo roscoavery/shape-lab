@@ -23,6 +23,7 @@ type SkillFamily =
   | 'standing'
   | 'forwards'
   | 'killer'
+  | 'doubleback'
 
 const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: string }> = {
   foundations: { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.20)', label: 'Foundations' },
@@ -32,6 +33,8 @@ const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: st
   standing: { bg: 'rgba(192,132,252,0.13)', border: 'rgba(192,132,252,0.50)', label: 'Standing' },
   forwards: { bg: 'rgba(251,146,60,0.13)', border: 'rgba(251,146,60,0.50)', label: 'Forwards' },
   killer: { bg: 'rgba(251,191,36,0.20)', border: 'rgba(251,191,36,0.75)', label: 'Killer' },
+  // Double back: green like the round-off family, trimmed in yellow.
+  doubleback: { bg: 'rgba(74,222,128,0.14)', border: 'rgba(251,191,36,0.70)', label: 'Double back' },
 }
 
 /** Solid RGB triplet per family, used for the guiding-light glow. */
@@ -43,6 +46,7 @@ const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
   standing: '192,132,252',
   forwards: '251,146,60',
   killer: '251,191,36',
+  doubleback: '190,242,100',
 }
 
 /** Deepest prerequisite level that still glows (fades to a faint shimmer). */
@@ -284,7 +288,7 @@ const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_standing_tuck: 'standing',
   skl_standing_open_tuck: 'standing',
   skl_standing_full: 'standing',
-  skl_double_back: 'standing',
+  skl_double_back: 'doubleback',
   // forwards family (orange)
   skl_handstand: 'forwards',
   skl_front_walkover: 'forwards',
@@ -436,7 +440,7 @@ const ROWS: MapRow[] = [
       { skillId: 'skl_standing_bhs_series', label: 'Standing series', col: '1 / 3' },
       { skillId: 'skl_front_hs_step_out', label: 'Front HS step out', col: '3 / 4' },
       { skillId: 'skl_bounders', label: 'Bounders', col: '4 / 5' },
-      { skillId: 'skl_cart_hs_step_out', label: 'Cart HS step out', col: '5 / 7' },
+      { skillId: 'skl_cart_hs_step_out', label: 'Cartwheel 2 back handsprings', col: '5 / 7' },
       { skillId: 'skl_ro_bhs_series', label: 'RO series', col: '7 / 9' },
     ],
   },

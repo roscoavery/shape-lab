@@ -757,9 +757,11 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   },
   {
     "id": "skl_cart_hs_step_out",
-    "name": "Cartwheel HS step out",
+    "name": "Cartwheel 2 back handsprings",
     "aliases": [
-      "cart handspring step out"
+      "cartwheel hs step out",
+      "cart handspring step out",
+      "cartwheel back handspring back handspring"
     ],
     "track": "running"
   },
