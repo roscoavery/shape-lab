@@ -876,7 +876,7 @@ export function SkillMapView({
           className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
         >
           <span>
-            <span className="block text-sm font-extrabold">Beyond</span>
+            <span className="block text-sm font-extrabold">Beyond <span className="text-[11px] font-semibold opacity-60">· Legend level</span></span>
             <span className="block text-[11px] opacity-60">
               Most people never cross this line
             </span>
