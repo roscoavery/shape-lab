@@ -131,6 +131,31 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Layout reference — the hollow shape held in flight.',
     },
     {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/DKZ21GGu4l_/',
+      watchFor: 'His layout reference on trampoline — the shape he points athletes to.',
+    },
+    {
+      who: 'gymneotv',
+      url: 'https://www.instagram.com/reel/DCpDQYuN4Ni/',
+      watchFor: 'Layout reference — the stretched hollow in flight.',
+    },
+    {
+      who: 'Valeriy',
+      url: 'https://www.instagram.com/reel/DaZrfVbojJb/',
+      watchFor: 'Front layout reference — same hollow shape, forward takeoff.',
+    },
+    {
+      who: 'coachwithpatience',
+      url: 'https://www.instagram.com/reel/DcmFoBNxPTd/',
+      watchFor: 'Round off handspring into layout — the connection that sets up the full.',
+    },
+    {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/DaiLLlAGi42/',
+      watchFor: 'Layout drill — building the shape before the skill.',
+    },
+    {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/Dba2VNTmvaX/',
       watchFor: 'Rebound to candle — the layout drill that builds the shape.',
@@ -243,6 +268,78 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DbBLac8GjS6/',
       watchFor: 'Hollow arch front support shape drill — basics that carry upward.',
+    },
+  ],
+  'standing-bhs': [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DYsu8CdB93m/',
+      watchFor: 'Long handspring reference — the full stretch of the skill.',
+    },
+    {
+      who: 'Elliot Helms',
+      url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
+      watchFor: 'Handspring rebound into punch tuck — the snap and lift.',
+    },
+    {
+      who: 'Valeriy',
+      url: 'https://www.instagram.com/reel/DYRkyrpoB-k/',
+      watchFor: 'Handspring shaping — the positions inside the skill.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DM97Ag4KC-_/',
+      watchFor: 'Handspring deconstruction — the pieces inside the skill.',
+    },
+  ],
+  'standing-tuck': [
+    {
+      who: 'Coach Ryan Williams',
+      url: 'https://www.instagram.com/reel/DHL_hfEuRYi/',
+      watchFor: 'His tuck reference — the shape every tuck starts from.',
+    },
+    {
+      who: 'Elliot Helms',
+      url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
+      watchFor: 'Rebound punch tuck — the tuck pulled out of a handspring snap.',
+    },
+  ],
+  'back-half': [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DcZBL5zkryD/',
+      watchFor: 'Layout step half turn — the half-twist shape inside a back half.',
+    },
+  ],
+  'double-back': [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DJHqG7xIrpQ/',
+      watchFor: 'Round off handspring prep for double flips — the setup work.',
+    },
+  ],
+  'back-walkover': [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DalCqRAo8ig/',
+      watchFor: 'Back walkover to handstand step-out — the line through the skill.',
+    },
+  ],
+  'cartwheel-handspring': [
+    {
+      who: 'Roman',
+      url: 'https://www.instagram.com/reel/DblQlGDxaOU/',
+      watchFor: 'Cartwheel hand placement drill — where the hands go.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DJ_7qLMRLrq/',
+      watchFor: 'Cartwheel step-in through pike to arch — the shape path.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/DYSxclHPl1r/',
+      watchFor: 'Cartwheel drill — the lateral line.',
     },
   ],
   // Cue swaps

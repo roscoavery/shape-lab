@@ -6,6 +6,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
+import { SKILL_SHAPES } from '../../config/skillShapes'
+import { getShape } from '../../config/shapes'
+import { shippedStillUrl } from '../../lib/shippedRefs'
 import {
   GUIDE_ORDER,
   TRACK_LABELS,
@@ -189,6 +192,42 @@ function LocalLoopEditor({
         {loopA != null || loopB != null
           ? `Loops ${loopA != null ? fmtLoopTime(loopA) : '0:00'} – ${loopB != null ? fmtLoopTime(loopB) : 'end'}`
           : `Scrub to the moment, then tap Set start / Set end. Now: ${fmtLoopTime(now)}`}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The body positions inside a skill — shape stills from the shape library.
+ * Rendered only when SKILL_SHAPES has entries for the guide. Captions reuse
+ * the shape's own description from src/config/shapes.ts.
+ */
+function ShapeStrip({ guideId }: { guideId: string }) {
+  const refs = SKILL_SHAPES[guideId]
+  if (!refs || refs.length === 0) return null
+  const items = refs
+    .map((r) => {
+      const def = getShape(r.shapeId)
+      const src = shippedStillUrl(r.shapeId)
+      if (!def || !src) return null
+      return { key: r.shapeId, name: def.name, desc: def.description?.trim() || '', src }
+    })
+    .filter((x): x is { key: string; name: string; desc: string; src: string } => x !== null)
+  if (items.length === 0) return null
+  return (
+    <div>
+      <Label>Shapes</Label>
+      <p className="mt-1 text-xs opacity-70">The body positions inside this skill.</p>
+      <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
+        {items.map((s) => (
+          <div key={s.key} className="w-36 shrink-0">
+            <div className="aspect-square overflow-hidden rounded-xl bg-black">
+              <img src={s.src} alt={s.name} className="h-full w-full object-cover" loading="lazy" />
+            </div>
+            <div className="mt-1 text-xs font-bold">{s.name}</div>
+            {s.desc && <div className="text-[11px] opacity-70">{s.desc}</div>}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -572,6 +611,7 @@ export function SkillGuideCardContent({
         <Label>Ask your coach</Label>
         <p className="mt-1 text-sm italic">{skill.ask}</p>
       </div>
+      <ShapeStrip guideId={guideId} />
       <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
       {skill.ryanNote && (
         <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
