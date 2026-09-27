@@ -33,7 +33,7 @@ import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
-import { CoachInterview } from './components/coach/CoachInterview'
+import { CoachInterviewPanel } from './components/coach/CoachInterviewPanel'
 import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
@@ -1509,7 +1509,7 @@ export default function App() {
             Coach interview · 28 answers
           </summary>
           <div className="px-4 pb-4">
-            <CoachInterview />
+            <CoachInterviewPanel />
           </div>
         </details>
       )}

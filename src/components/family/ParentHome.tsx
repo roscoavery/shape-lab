@@ -3,6 +3,8 @@ import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { getAgeFromDateOfBirth, birthdayNeeded } from '../../lib/age'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/parentEducation'
+import { useParentGuide } from '../../lib/useParentGuide'
+import { ParentGuideArticle } from './ParentGuideArticle'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
@@ -146,8 +148,9 @@ function ChildSnapshot({
 }
 
 export function ParentEducationDesk() {
-  const [open, setOpen] = useState<string | null>(PARENT_EDUCATION[0]?.id ?? null)
-  const article = PARENT_EDUCATION.find((row) => row.id === open) ?? PARENT_EDUCATION[0]
+  const { articles, loading, live } = useParentGuide()
+  const [open, setOpen] = useState<string | null>(articles[0]?.id ?? null)
+  const article = articles.find((row) => row.id === open) ?? articles[0]
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       <DeskMessageCarousel audience="parent" surface="learn" />
@@ -162,7 +165,7 @@ export function ParentEducationDesk() {
         {PARENT_EDUCATION_CATEGORIES.map((cat) => (
           <div key={cat.id} className="mt-3">
             <p className="px-2 text-[10px] uppercase tracking-wider text-[var(--muted)]">{cat.label}</p>
-            {PARENT_EDUCATION.filter((row) => row.category === cat.id).map((row) => (
+            {articles.filter((row) => row.category === cat.id).map((row) => (
               <button
                 key={row.id}
                 type="button"
@@ -177,33 +180,17 @@ export function ParentEducationDesk() {
           </div>
         ))}
       </nav>
-      {article && (
-        <article className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-          <p className="rounded-lg bg-[#102028] px-3 py-2 text-xs leading-relaxed text-[var(--accent)]">
-            Written for parents, in the coach&apos;s own words.
+      <div className="grid gap-2">
+        {loading && (
+          <p className="text-xs text-[var(--muted)]">Loading the latest answers…</p>
+        )}
+        {!loading && !live && (
+          <p className="rounded-lg bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200/80">
+            Showing saved answers — could not reach the gym computer for the latest.
           </p>
-          <p className="mt-3 text-xs uppercase tracking-wider text-[var(--accent)]">{article.summary}</p>
-          <h2 className="mt-2 text-2xl font-semibold">{article.title}</h2>
-          <div className="mt-4 text-sm leading-relaxed text-[var(--text)]">
-            {article.intro.map((p) => (
-              <p key={p} className="mb-3">{p}</p>
-            ))}
-            {article.qa.map((item) => (
-              <div key={item.question} className="mb-5">
-                <p className="border-l-2 border-[var(--accent)] pl-3 text-xs italic leading-relaxed text-[var(--muted)]">
-                  <span className="font-semibold not-italic uppercase tracking-wider text-[var(--accent)]">Question </span>
-                  {item.question}
-                </p>
-                <div className="mt-2 space-y-3">
-                  {item.answer.map((p) => (
-                    <p key={p}>{p}</p>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      )}
+        )}
+        {article && <ParentGuideArticle article={article} />}
+      </div>
     </div>
       <CollapsibleSection title="The 4 levels of progression" hint="How skills build" defaultOpen={false}>
         <ProgressionLevels />
