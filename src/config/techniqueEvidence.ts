@@ -148,6 +148,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Standing 2 on tramp — noodle between the feet to focus on feet together.',
     },
   ],
+  'cart-full': [
+    {
+      who: 'RileyAnne',
+      url: '/videos/rileyanne-cart-full.mp4',
+      watchFor: 'Cart full through to full. She learned to tumble out of fulls from cartwheel fulls before running fulls.',
+    },
+  ],
   // Skill path steps
   'back-tuck': [
     {
