@@ -26,6 +26,11 @@ export interface ProofVideo {
  * the strip below it so it doesn't appear twice.
  */
 export const FEATURED_PROOF: Record<string, ProofVideo> = {
+  'round-off': {
+    who: 'Back Handspring Academy',
+    url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
+    watchFor: 'Coach-approved round off education for athletes, parents, and coaches — the video behind the quotes below.',
+  },
   layout: {
     who: 'Coach Ryan Williams',
     url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
@@ -197,11 +202,6 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
   ],
   'round-off': [
-    {
-      who: 'Back Handspring Academy',
-      url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
-      watchFor: 'Coach-approved round off education for athletes, parents, and coaches. The same conclusions and principles Ryan coaches from.',
-    },
     {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',

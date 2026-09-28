@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { FEATURED_PROOF, GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
+import { youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
 import { shippedStillUrl, shippedFileCandidates } from '../../lib/shippedRefs'
@@ -401,6 +402,7 @@ export function ProofStrip({
   // Featured reference (e.g. Ryan's spring layout analysis on the layout
   // card): shown bigger at the top, excluded from the strip below.
   const featured = FEATURED_PROOF[evidenceKey]
+  const featuredYouTube = featured ? youtubeEmbedSrc(featured.url) : null
   const videos = [
     ...baseVideos.filter((v) => !hiddenSet.has(v.url) && v.url !== featured?.url),
     ...adminVideos,
@@ -606,7 +608,13 @@ export function ProofStrip({
           <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
             Featured reference
           </span>
-          <div className="relative mt-2 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-black">
+          <div
+              className={
+                featuredYouTube
+                  ? 'relative mt-2 aspect-video w-full max-w-[560px] overflow-hidden rounded-xl bg-black'
+                  : 'relative mt-2 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-black'
+              }
+            >
             <InstagramEmbed
               url={featured.url}
               compact
