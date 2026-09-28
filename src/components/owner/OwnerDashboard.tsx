@@ -1,7 +1,7 @@
 /**
- * Gym owner dashboard — the owner-only tab. Six modules:
+ * Gym owner dashboard — the owner-only tab. Seven modules:
  * Overview, Coach onboarding, Class criteria (levels), Classes,
- * Staff hub, Athlete progress. Read-only aggregates plus owner
+ * Staff hub, Athlete progress, Muse connection. Read-only aggregates plus owner
  * management tools. Nothing here touches athlete/coach/parent flows.
  */
 import { useState } from 'react'
@@ -12,6 +12,7 @@ import { ClassCriteria } from './ClassCriteria'
 import { OwnerClasses } from './OwnerClasses'
 import { StaffHub } from './StaffHub'
 import { AthleteProgress } from './AthleteProgress'
+import { MuseConnection } from './MuseConnection'
 
 type Props = {
   owner: Athlete
@@ -25,6 +26,7 @@ const SECTIONS = [
   { id: 'classes', label: 'Classes' },
   { id: 'staff', label: 'Staff' },
   { id: 'progress', label: 'Athletes' },
+  { id: 'muse', label: 'Muse' },
 ] as const
 
 type SectionId = (typeof SECTIONS)[number]['id']
@@ -62,6 +64,7 @@ export function OwnerDashboard({ owner, athletes }: Props) {
       {section === 'classes' && <OwnerClasses athletes={athletes} ownerId={owner.id} />}
       {section === 'staff' && <StaffHub owner={owner} athletes={athletes} />}
       {section === 'progress' && <AthleteProgress athletes={athletes} />}
+      {section === 'muse' && <MuseConnection athletes={athletes} />}
     </div>
   )
 }

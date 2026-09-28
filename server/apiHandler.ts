@@ -122,6 +122,27 @@ import { appendHoldLog } from './holdLog.ts'
 import { readParentWellness, writeParentWellness } from './parentWellnessStore.ts'
 import { patchStillTags, stillTagsForViewer } from './stillTags.ts'
 import { handleCalendarApi } from './calendar/apiRoutes.ts'
+import { handleMuseApi } from './museApi.ts'
+import {
+  createMuseKey,
+  listMuseKeys,
+  presentMuseKey,
+  revokeMuseKey,
+} from './auth/museKeys.ts'
+
+/**
+ * Muse-connection Bearer routes. These carry their own key auth in
+ * handleMuseApi and never reach the session gate. Key management below
+ * stays session-gated and admin-only.
+ */
+function isMuseBearerPath(path: string): boolean {
+  return (
+    path === '/api/muse/library' ||
+    path === '/api/muse/library/items' ||
+    path === '/api/muse/philosophy' ||
+    path.startsWith('/api/muse/progress/')
+  )
+}
 
 const API_PATHS = new Set([
   '/api/admin/video-replace',
@@ -150,6 +171,8 @@ const API_PATHS = new Set([
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
+  '/api/muse/keys',
+  '/api/muse/keys/revoke',
   '/api/roster',
   '/api/roster-photos',
   '/api/roster-photo-file',
@@ -258,6 +281,10 @@ export async function handleShapeLabApi(
   if (path === '/api/calendar' || path.startsWith('/api/calendar/')) {
     const sub = path.slice('/api/calendar'.length) || '/'
     return await handleCalendarApi(req, res, sub)
+  }
+  if (isMuseBearerPath(path)) {
+    const handled = await handleMuseApi(req, res, path)
+    if (handled) return true
   }
   if (!API_PATHS.has(path)) return false
 
@@ -1553,6 +1580,63 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/muse/keys') {
+    if (!isAdmin(viewer)) {
+      sendJson(res, 403, { error: 'Muse connection keys are managed by the gym owner.' })
+      return true
+    }
+    if (req.method === 'GET') {
+      const keys = await listMuseKeys()
+      sendJson(res, 200, { keys: keys.map(presentMuseKey) })
+      return true
+    }
+    if (req.method === 'POST') {
+      let body: { label?: unknown; scopes?: unknown; athleteId?: unknown }
+      try {
+        body = JSON.parse(await readRequestBody(req))
+      } catch {
+        sendJson(res, 400, { error: 'Send JSON with label and scopes.' })
+        return true
+      }
+      try {
+        const { record, secret } = await createMuseKey({
+          label: body.label,
+          scopes: body.scopes,
+          athleteId: body.athleteId,
+        })
+        sendJson(res, 201, { key: presentMuseKey(record), secret })
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not create key.' })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or POST' })
+    return true
+  }
+  if (path === '/api/muse/keys/revoke') {
+    if (!isAdmin(viewer)) {
+      sendJson(res, 403, { error: 'Muse connection keys are managed by the gym owner.' })
+      return true
+    }
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { id?: unknown }
+    try {
+      body = JSON.parse(await readRequestBody(req))
+    } catch {
+      sendJson(res, 400, { error: 'Send JSON with the key id.' })
+      return true
+    }
+    const id = typeof body.id === 'string' ? body.id : ''
+    if (!id || !(await revokeMuseKey(id))) {
+      sendJson(res, 404, { error: 'Key not found.' })
+      return true
+    }
+    sendJson(res, 200, { revoked: true })
     return true
   }
   if (path === '/api/lessons') {

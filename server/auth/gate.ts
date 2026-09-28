@@ -1,6 +1,10 @@
 /**
  * Path-level authorization for the gym API.
  * Health and /api/auth/* are handled before this gate.
+ *
+ * NOTE: /api/muse/* Bearer-key routes never reach this gate — they are
+ * dispatched earlier in handleShapeLabApi (server/apiHandler.ts) and carry
+ * their own key auth + scope checks in server/museApi.ts.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
