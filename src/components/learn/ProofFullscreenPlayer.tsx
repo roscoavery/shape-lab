@@ -3,15 +3,17 @@
  *
  * Any video in a card's "The proof" section can be opened here: the player
  * goes (near-)fullscreen, arrows and swipe move through the other videos on
- * the card, and local videos get the same analysis controls as the reference
+ * the card, and every video gets the same analysis controls as the reference
  * scroll player — scrub, slow motion, flip (mirror), A/B loop.
  *
- * Social embeds (Instagram/TikTok/YouTube) are iframes: they can't be
- * scrubbed, slowed, or flipped, so they render big with just the carousel.
+ * Social videos (Instagram/TikTok) are downloaded into the app cache and play
+ * through the same workbench as local videos. YouTube plays in its official
+ * iframe with YouTube's own controls.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
+import { youtubeEmbedSrc } from '../../lib/socialUrls'
 import type { ProofVideo } from '../../config/techniqueEvidence'
 
 /** True for local video files (public/videos/...) vs social embeds. */
@@ -192,6 +194,7 @@ export function ProofFullscreenPlayer({
 
   const video = videos[index]
   const local = video ? isLocalVideo(video.url) : false
+  const youTube = video ? !!youtubeEmbedSrc(video.url) : false
 
   // Try real browser fullscreen on open (needs the tap gesture — we get one).
   useEffect(() => {
@@ -286,10 +289,10 @@ export function ProofFullscreenPlayer({
               <InstagramEmbed
                 url={video.url}
                 compact
-                bare
                 fill
                 fit="contain"
-                posterFirst={false}
+                markup
+                markupSwipeSafe
               />
             </div>
           )}
@@ -299,9 +302,9 @@ export function ProofFullscreenPlayer({
       <div className="px-4 py-3 text-center">
         <div className="text-sm font-bold text-white">{video.who}</div>
         {video.watchFor && <div className="mx-auto mt-0.5 max-w-xl text-xs text-white/70">{video.watchFor}</div>}
-        {!local && (
+        {youTube && (
           <div className="mt-1 text-[11px] text-white/40">
-            Scrub, slow-mo, and flip are available on saved gym videos.
+            Plays in YouTube's player with YouTube's controls.
           </div>
         )}
       </div>
