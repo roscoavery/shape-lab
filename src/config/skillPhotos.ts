@@ -28,6 +28,11 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
       label:
         'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
     },
+    {
+      file: 'bhs_rebound_hollow.jpg',
+      label:
+        'Nice hollow body position, eyes on the ground, allowing arms to go a bit higher after the rebound has sent her airborne.',
+    },
   ],
   skl_ro_bhs: [
     { file: 'back_handspring_sequence.jpg' },
@@ -39,6 +44,11 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
       label:
         'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
     },
+    {
+      file: 'bhs_rebound_hollow.jpg',
+      label:
+        'Nice hollow body position, eyes on the ground, allowing arms to go a bit higher after the rebound has sent her airborne.',
+    },
   ],
   skl_strong_round_off: [{ file: 'zombie_collage.jpg' }],
   skl_ro_bhs_series: [
@@ -49,6 +59,11 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
       label:
         'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
     },
+    {
+      file: 'bhs_rebound_hollow.jpg',
+      label:
+        'Nice hollow body position, eyes on the ground, allowing arms to go a bit higher after the rebound has sent her airborne.',
+    },
   ],
   skl_cartwheel_handspring: [{ file: 'c_shape_collage.jpg' }],
   skl_standing_bhs_series: [
@@ -57,6 +72,11 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
       file: 'bhs_pike_frame.jpg',
       label:
         'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
+    },
+    {
+      file: 'bhs_rebound_hollow.jpg',
+      label:
+        'Nice hollow body position, eyes on the ground, allowing arms to go a bit higher after the rebound has sent her airborne.',
     },
   ],
 }
