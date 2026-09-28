@@ -424,6 +424,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'His tuck reference — the shape every tuck starts from.',
     },
     {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-standing-tuck.mp4',
+      watchFor:
+        'Fully open shoulder tight arch shape for the set to maximize height — requires more jump height and end range abdominal strength to still tuck quickly. Some coaches teach a slightly closed shoulder angle, staying more hollow while the hips set, to maximize speed into the tuck.',
+    },
+    {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
       watchFor: 'Rebound punch tuck — the tuck pulled out of a handspring snap.',
