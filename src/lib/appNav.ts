@@ -95,6 +95,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'learn', label: 'Shapes & skills' },
     { id: 'coachlib', label: 'Coach library' },
     { id: 'drills', label: 'Drill library' },
+    { id: 'spotting', label: 'Spotting' },
   ],
   team: [
     { id: 'classes', label: 'Classes' },
@@ -140,6 +141,7 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
     case 'learn':
     case 'coachlib':
     case 'drills':
+    case 'spotting':
       return 'learn'
     case 'classes':
     case 'feed':

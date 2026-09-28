@@ -21,6 +21,7 @@ import { StoryRail } from '../stories/StoryRail'
 import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { AddToSkillCardModal } from './CardVideoManager'
+import { LinkToSpottingCardModal } from './LinkToSpottingCardModal'
 
 type Props = {
   athlete?: Athlete | null
@@ -37,6 +38,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
   const [addToCardClip, setAddToCardClip] = useState<{ url: string; who: string; watchFor: string } | null>(null)
+  const [linkSpottingClip, setLinkSpottingClip] = useState<{ id: string; url: string; name: string } | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const editor = {
@@ -304,6 +306,16 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                               })
                           : undefined
                       }
+                      onLinkToSpottingCard={
+                        isGymAdmin(athlete)
+                          ? () =>
+                              setLinkSpottingClip({
+                                id: clip.id,
+                                url: clip.url,
+                                name: clip.name,
+                              })
+                          : undefined
+                      }
                     />
                     <ClipOrganizeMenu
                     variant="icon"
@@ -349,6 +361,9 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
       ) : null}
       {addToCardClip && (
         <AddToSkillCardModal video={addToCardClip} onClose={() => setAddToCardClip(null)} />
+      )}
+      {linkSpottingClip && (
+        <LinkToSpottingCardModal clip={linkSpottingClip} onClose={() => setLinkSpottingClip(null)} />
       )}
     </div>
   )

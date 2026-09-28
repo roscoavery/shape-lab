@@ -28,6 +28,8 @@ type Props = {
   className?: string
   /** When set (admin), the sheet offers "Add to skill card". */
   onAddToSkillCard?: () => void
+  /** When set (admin), the sheet offers "Link to spotting card". */
+  onLinkToSpottingCard?: () => void
 }
 
 export function ShareReference({
@@ -37,6 +39,7 @@ export function ShareReference({
   variant = 'button',
   className = '',
   onAddToSkillCard,
+  onLinkToSpottingCard,
 }: Props) {
   const { viewer: ctxViewer, athletes } = useClipEditor()
   const viewer = viewerProp ?? ctxViewer
@@ -216,6 +219,18 @@ export function ShareReference({
                 >
                   ⧉ Copy link
                 </button>
+                {onLinkToSpottingCard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      onLinkToSpottingCard()
+                    }}
+                    className="rounded-xl bg-sky-600 px-3 py-2.5 text-sm font-bold text-white"
+                  >
+                    + Spotting card
+                  </button>
+                )}
                 {onAddToSkillCard && (
                   <button
                     type="button"

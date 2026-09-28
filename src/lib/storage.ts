@@ -957,6 +957,7 @@ export const APP_TABS = [
   'learn',
   'coachlib',
   'drills',
+  'spotting',
   'compare',
   'scroll',
   'classes',

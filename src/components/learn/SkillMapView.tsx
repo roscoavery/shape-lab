@@ -695,6 +695,7 @@ export const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_standing_double: 'standing',
   skl_standing_straight_leg_full: 'standing',
   skl_double_back: 'doubleback',
+  skl_double_layout: 'doubleback',
   // forwards family (orange)
   skl_handstand: 'forwards',
   skl_front_walkover: 'forwards',
@@ -931,6 +932,12 @@ const BEYOND_ROWS: MapRow[] = [
       { skillId: 'skl_back_35', label: 'Back 3.5', col: '4 / 6' },
       { skillId: 'skl_full_in', label: 'Full in', col: '6 / 7' },
       { skillId: 'skl_full_full', label: 'Full full', col: '7 / 8' },
+    ],
+  },
+  {
+    // double layout — backwards Beyond, just below the 3.5 line in the double-back column
+    tiles: [
+      { skillId: 'skl_double_layout', label: 'Double layout', col: '5 / 7' },
     ],
   },
 ]

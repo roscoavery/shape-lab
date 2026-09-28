@@ -953,6 +953,12 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "running"
   },
   {
+    "id": "skl_double_layout",
+    "name": "Double layout",
+    "aliases": [],
+    "track": "running"
+  },
+  {
     "id": "skl_miller",
     "name": "Miller",
     "aliases": [],
