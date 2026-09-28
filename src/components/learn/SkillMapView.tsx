@@ -1121,6 +1121,81 @@ function Tile({
   )
 }
 
+/** Parse the starting grid line from a "a / b" column value. */
+function parseColStart(col: string): number | null {
+  const m = /^\s*(\d+)\s*\//.exec(col)
+  return m ? parseInt(m[1], 10) : null
+}
+
+/** Parse a "a / b" column value into integer grid lines. */
+function parseColSpan(col: string): { start: number; end: number } | null {
+  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(col)
+  if (!m) return null
+  return { start: parseInt(m[1], 10), end: parseInt(m[2], 10) }
+}
+
+/**
+ * Column values splitting the [start, end] span into n parts.
+ * Cumulative rounding keeps every boundary on a real integer grid line.
+ */
+function splitSpan(start: number, end: number, n: number): string[] {
+  const bounds: number[] = []
+  for (let i = 0; i <= n; i++) bounds.push(Math.round(start + ((end - start) * i) / n))
+  const out: string[] = []
+  for (let i = 0; i < n; i++) out.push(`${bounds[i]} / ${bounds[i + 1]}`)
+  return out
+}
+
+/**
+ * Reflow a row's tiles to fill gaps left by deleted skills.
+ * Tiles whose skill no longer resolves are dropped; the survivors expand to
+ * fill the freed space. When nothing was deleted the original columns are
+ * returned untouched, so the arranged layout never shifts otherwise.
+ * With header spans (main map), survivors are grouped by the header span
+ * their original column starts in, and each group divides its header span
+ * evenly, so track alignment is preserved. Without headers (rolls, beyond),
+ * the survivors divide the row's own total span evenly.
+ */
+function reflowRowTiles(row: MapRow, headers?: { label: string; col: string }[]): MapTile[] {
+  const survivors = row.tiles.filter((t) => getRegistrySkill(t.skillId))
+  if (survivors.length === row.tiles.length) return row.tiles
+  if (survivors.length === 0) return []
+  if (headers && headers.length > 0) {
+    const spans = headers
+      .map((h) => parseColSpan(h.col))
+      .filter((s): s is { start: number; end: number } => s !== null)
+    if (spans.length === 0) return survivors
+    const groups: MapTile[][] = spans.map(() => [])
+    for (const t of survivors) {
+      const s = parseColStart(t.col)
+      const gi = s === null ? -1 : spans.findIndex((sp) => s >= sp.start && s < sp.end)
+      if (gi >= 0) groups[gi].push(t)
+    }
+    const cols = new Map<MapTile, string>()
+    groups.forEach((g, gi) => {
+      if (g.length === 0) return
+      const parts = splitSpan(spans[gi].start, spans[gi].end, g.length)
+      g.forEach((t, i) => cols.set(t, parts[i]))
+    })
+    // Tiles that matched no header keep their original column.
+    return survivors.map((t) => {
+      const col = cols.get(t)
+      return col ? { ...t, col } : t
+    })
+  }
+  // The total span comes from the row's original tiles (deleted ones included),
+  // so survivors expand into the freed space.
+  const parsed = row.tiles.map((t) => ({ tile: t, span: parseColSpan(t.col) }))
+  if (parsed.some((p) => p.span === null)) return survivors
+  const start = Math.min(...parsed.map((p) => p.span!.start))
+  const end = Math.max(...parsed.map((p) => p.span!.end))
+  const parts = splitSpan(start, end, survivors.length)
+  const kept = new Set(survivors)
+  return parsed
+    .filter((p) => kept.has(p.tile))
+    .map((p, i) => ({ ...p.tile, col: parts[i] }))
+}
+
 function MapRows({
   rows,
   onTap,
@@ -1128,6 +1203,7 @@ function MapRows({
   theme,
   infoOnly,
   hl,
+  headers,
 }: {
   rows: MapRow[]
   onTap: (s: UnifiedSkill) => void
@@ -1135,6 +1211,8 @@ function MapRows({
   theme: MapTheme
   infoOnly?: boolean
   hl?: PathHighlight | null
+  /** Track header spans for reflow (main map). Omit for rolls/beyond rows. */
+  headers?: { label: string; col: string }[]
 }) {
   return (
     <>
@@ -1144,7 +1222,7 @@ function MapRows({
           className="grid gap-2"
           style={{ gridTemplateColumns: `repeat(${row.cols ?? 8}, 1fr)` }}
         >
-          {row.tiles.map((tile) => {
+          {reflowRowTiles(row, headers).map((tile) => {
             const skill = getRegistrySkill(tile.skillId)
             if (!skill) return null
             return (
@@ -2201,7 +2279,7 @@ export function SkillMapView({
 
             {/* Skill tree */}
             <div className="space-y-2.5">
-              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={ROWS.slice(0, 13)} headers={HEADERS} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-1">
                 <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               </div>
@@ -2214,7 +2292,7 @@ export function SkillMapView({
                     'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
                 }}
               />
-              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={ROWS.slice(13)} headers={HEADERS} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-2" />
             </div>
           </div>
