@@ -315,7 +315,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/Dcmu9aWpQ2A/',
-      watchFor: 'Layout reference — the hollow shape held in flight.',
+      watchFor: 'Back layout reference — the hollow shape held in flight.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -325,7 +325,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'gymneotv',
       url: 'https://www.instagram.com/reel/DCpDQYuN4Ni/',
-      watchFor: 'Layout reference — the stretched hollow in flight.',
+      watchFor: 'Back layout reference — the stretched hollow in flight.',
     },
     {
       who: 'Valeriy',

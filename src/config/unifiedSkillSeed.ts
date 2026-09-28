@@ -125,7 +125,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "id": "skl_layout",
     "guideId": "layout",
     "catalogId": "run_ro_hs_layout",
-    "name": "Layout",
+    "name": "Back layout",
     "aliases": [
       "lay",
       "straight layout",
