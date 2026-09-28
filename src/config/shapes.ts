@@ -1460,6 +1460,71 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // PUCK — between a pike and a tuck. Speeds up rotation for flipping AND
+  // twisting. Most people need it for standing fulls; common on cartwheel
+  // fulls and twisting double flips. An air shape — not trained on the
+  // ground much.
+  // ===========================================================================
+  {
+    id: 'puck',
+    name: 'Puck',
+    description:
+      'Somewhere between a pike and a tuck: hips folded and knees bent just enough to speed up rotation for both flipping and twisting. Tucking is best for pure flip speed but can make it harder to twist — the puck bends just enough to split the energy more equally between the two.',
+    bodyPosition:
+      'SIDE VIEW, in the air. Fold at the hips past a pike but do not pull all the way into a tuck; let the knees bend and the feet sit slightly behind. Chest stays more open than in a tuck. You see it on standing fulls, cartwheel fulls, and double-flipping skills that add twisting (full ins, full fulls, tucked millers).',
+    category: 'transition',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Bend just enough — more than a pike, less than a tuck.',
+      'Let the knees bend; do not pull them all the way to the chest.',
+      'Keep the chest open. A full tuck kills the twist.',
+    ],
+    coachNotes:
+      'Most people require the puck for standing fulls, and it is very commonly used for cartwheel fulls. Ideally avoided on anything out of a handspring or whip. Some athletes have even made a puck work in a killer (2 flips, 4 twists). You do not see it trained on the ground much — it is an air shape, so teach it from video and shaping work rather than floor holds.',
+    criteria: [
+      // Ranges estimated between the pike and tuck entries — verify against video.
+      {
+        id: 'hip_fold',
+        label: 'Hips folded past pike',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 55,
+        targetMax: 105,
+        tolerance: 14,
+        falloff: 40,
+        weight: 30,
+        feedbackLow: 'Fold more at the hips — past a pike.',
+        feedbackHigh: 'Do not tuck all the way — open the hips a little.',
+      },
+      {
+        id: 'knees',
+        label: 'Knees bent, not tucked',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 110,
+        targetMax: 165,
+        tolerance: 14,
+        falloff: 40,
+        weight: 30,
+        feedbackLow: 'Let the knees bend — this is not a pike.',
+        feedbackHigh: 'Do not pull into a full tuck — keep the knees softer.',
+      },
+      {
+        id: 'feet_together',
+        label: 'Feet together',
+        kind: 'point_distance',
+        pair: [LM.LEFT_ANKLE, LM.RIGHT_ANKLE],
+        target: 0,
+        tolerance: 0.08,
+        falloff: 0.2,
+        weight: 10,
+        feedbackHigh: 'Keep feet together.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // HOLLOW (ARMS UP) — progression after a proper 1-minute arms-down hold
   // ===========================================================================
   {

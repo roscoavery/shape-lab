@@ -48,7 +48,7 @@ export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
     { shapeId: 'hollow_arms_up' },
     { shapeId: 'candlestick' },
   ],
-  'standing-full': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }],
+  'standing-full': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'puck' }],
   'back-half': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }],
   full: [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }],
   'double-full': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }],
