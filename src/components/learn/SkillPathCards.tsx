@@ -327,7 +327,7 @@ function SkillPhotoStrip({ skillId }: { skillId: string }) {
                   loading="lazy"
                 />
               </div>
-              {p.label && <div className="mt-1 text-xs font-bold">{p.label}</div>}
+              {p.label && <div className="mt-1 w-0 min-w-full break-words text-xs font-bold">{p.label}</div>}
             </div>
           )
         })}
