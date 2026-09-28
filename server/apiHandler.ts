@@ -130,6 +130,8 @@ const API_PATHS = new Set([
   '/api/skill-card-videos',
   '/api/admin/skill-card-hidden',
   '/api/skill-card-hidden',
+  '/api/admin/skill-card-pinned',
+  '/api/skill-card-pinned',
   '/api/auth/me',
   '/api/auth/login',
   '/api/auth/logout',
@@ -493,6 +495,44 @@ export async function handleShapeLabApi(
       return true
     }
     if (req.method !== 'POST' || path !== '/api/admin/skill-card-hidden') {
+      sendJson(res, 405, { error: 'Use POST to the admin path' })
+      return true
+    }
+    let body = ''
+    try {
+      for await (const chunk of req) {
+        body += chunk
+        if (body.length > 1024 * 1024) break
+      }
+    } catch {
+      sendJson(res, 400, { error: 'Failed to read body' })
+      return true
+    }
+    try {
+      const parsed = JSON.parse(body)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('bad shape')
+      }
+      await wf(storePath, JSON.stringify(parsed, null, 2))
+      sendJson(res, 200, { ok: true })
+    } catch {
+      sendJson(res, 400, { error: 'Invalid data' })
+    }
+    return true
+  }
+  if (path === '/api/skill-card-pinned' || path === '/api/admin/skill-card-pinned') {
+    const { readFile, writeFile: wf } = await import('node:fs/promises')
+    const storePath = join(process.cwd(), 'data', 'skill-card-pinned.json')
+    if (req.method === 'GET') {
+      try {
+        const raw = await readFile(storePath, 'utf8')
+        sendJson(res, 200, JSON.parse(raw))
+      } catch {
+        sendJson(res, 200, {})
+      }
+      return true
+    }
+    if (req.method !== 'POST' || path !== '/api/admin/skill-card-pinned') {
       sendJson(res, 405, { error: 'Use POST to the admin path' })
       return true
     }

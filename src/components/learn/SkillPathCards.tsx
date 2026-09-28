@@ -312,6 +312,7 @@ export function ProofStrip({
   const [showRefs, setShowRefs] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [hiddenUrls, setHiddenUrls] = useState<string[]>([])
+  const [pinnedUrls, setPinnedUrls] = useState<string[]>([])
   /** Fullscreen carousel player: the video list + index, null = closed. */
   const [fullView, setFullView] = useState<{ list: ProofVideo[]; index: number } | null>(null)
 
@@ -336,12 +337,22 @@ export function ProofStrip({
         }
       })
       .catch(() => {})
+    fetch('/api/skill-card-pinned')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => {
+        if (!cancelled && data && typeof data === 'object') {
+          const list = (data as Record<string, string[]>)[evidenceKey]
+          if (Array.isArray(list)) setPinnedUrls(list.filter((u) => typeof u === 'string'))
+        }
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [evidenceKey])
 
   const hiddenSet = new Set(hiddenUrls)
+  const pinSet = new Set(pinnedUrls)
   // Featured reference (e.g. Ryan's spring layout analysis on the layout
   // card): shown bigger at the top, excluded from the strip below.
   const featured = FEATURED_PROOF[evidenceKey]
@@ -349,8 +360,11 @@ export function ProofStrip({
     ...baseVideos.filter((v) => !hiddenSet.has(v.url) && v.url !== featured?.url),
     ...adminVideos,
   ]
+  // Pinned videos render above everything else in a bigger player.
+  const pinnedVideos = videos.filter((v) => pinSet.has(v.url))
+  const stripVideos = videos.filter((v) => !pinSet.has(v.url))
   const adminUrls = new Set(adminVideos.map((v) => v.url))
-  const pinnedUrls = new Set(videos.map((v) => v.url))
+  const shownUrls = new Set(videos.map((v) => v.url))
 
   // Layer 2: auto-match reference library videos whose keywords mention this skill.
   useEffect(() => {
@@ -366,7 +380,7 @@ export function ProofStrip({
         for (const col of collections) {
           for (const item of col.items ?? []) {
             const url = item.savedUrl || item.url
-            if (!url || seen.has(url) || pinnedUrls.has(url)) continue
+            if (!url || seen.has(url) || shownUrls.has(url)) continue
             const kws = (item.keywords ?? []).map((k) => k.toLowerCase())
             const matched = kws.some((kw) => kw && (kw.includes(name) || name.includes(kw)))
             if (!matched) continue
@@ -394,6 +408,21 @@ export function ProofStrip({
       const current = await fetch('/api/skill-card-videos').then((r) => (r.ok ? r.json() : {}))
       const data = { ...(current as Record<string, ProofVideo[]>), [evidenceKey]: next }
       await markedFetch('/api/admin/skill-card-videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    } catch {
+      /* keep local state; will retry next change */
+    }
+  }
+
+  const savePinned = async (next: string[]) => {
+    setPinnedUrls(next)
+    try {
+      const current = await fetch('/api/skill-card-pinned').then((r) => (r.ok ? r.json() : {}))
+      const data = { ...(current as Record<string, string[]>), [evidenceKey]: next }
+      await markedFetch('/api/admin/skill-card-pinned', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -472,6 +501,61 @@ export function ProofStrip({
       <p className="mt-1 text-xs opacity-70">
         Watch it taught and done.
       </p>
+      {pinnedVideos.length > 0 && (
+        <div className="mb-4">
+          <span className="rounded-full bg-emerald-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+            Pinned
+          </span>
+          {pinnedVideos.map((v, i) => {
+            const override = overrides[v.url]
+            const loopA = override?.a ?? v.startAt ?? null
+            const loopB = override?.b ?? v.endAt ?? null
+            const local = isLocalVideo(v.url)
+            return (
+              <div key={v.url} className="mt-2 max-w-[420px]">
+                <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black">
+                  {local ? (
+                    <LocalVideo url={v.url} loopA={loopA} loopB={loopB} />
+                  ) : (
+                    <InstagramEmbed
+                      url={v.url}
+                      compact
+                      bare
+                      quiet
+                      playWhenVisible
+                      loopA={loopA}
+                      loopB={loopB}
+                      fit="contain"
+                      fill
+                      posterFirst
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFullView({ list: pinnedVideos, index: i })}
+                    className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+                    aria-label={`Open ${v.who} fullscreen`}
+                    title="Full screen — scrub, slow-mo, flip"
+                  >
+                    ⛶
+                  </button>
+                </div>
+                <div className="mt-1 text-xs font-bold">{v.who}</div>
+                <div className="text-[11px] opacity-70">{v.watchFor}</div>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => void savePinned(pinnedUrls.filter((u) => u !== v.url))}
+                    className="mt-1 text-[11px] font-bold text-amber-400"
+                  >
+                    Unpin
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
       {featured && (
         <div className="mb-3 mt-2">
           <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
@@ -503,7 +587,7 @@ export function ProofStrip({
         </div>
       )}
       <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
-        {videos.map((v) => {
+        {stripVideos.map((v) => {
           const override = overrides[v.url]
           const loopA = override?.a ?? v.startAt ?? null
           const loopB = override?.b ?? v.endAt ?? null
@@ -511,6 +595,7 @@ export function ProofStrip({
           const local = isLocalVideo(v.url)
           const bust = bustMap[v.url]
           const playUrl = bust ? `${v.url}?t=${bust}` : v.url
+          const isPinned = pinSet.has(v.url)
           return (
             <div key={v.url} className="w-64 shrink-0">
               {editing ? (
@@ -554,7 +639,7 @@ export function ProofStrip({
                   <button
                     type="button"
                     onClick={() =>
-                      setFullView({ list: videos, index: videos.findIndex((x) => x.url === v.url) })
+                      setFullView({ list: stripVideos, index: stripVideos.findIndex((x) => x.url === v.url) })
                     }
                     className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
@@ -594,6 +679,17 @@ export function ProofStrip({
                   className="mt-1 ml-2 text-[11px] font-bold text-amber-400"
                 >
                   Trim
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void savePinned(isPinned ? pinnedUrls.filter((u) => u !== v.url) : [...pinnedUrls, v.url])
+                  }
+                  className="mt-1 ml-2 text-[11px] font-bold text-emerald-400"
+                >
+                  {isPinned ? 'Unpin' : '📌 Pin'}
                 </button>
               )}
               {canEdit && (
@@ -645,7 +741,7 @@ export function ProofStrip({
                         }}
                         className="mt-1 text-[11px] font-bold text-emerald-400"
                       >
-                        Pin to top
+                        Add to card
                       </button>
                     )}
                   </div>
