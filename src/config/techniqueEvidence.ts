@@ -46,6 +46,7 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
 export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_arabian: 'arabian',
   skl_handstand_fwd_roll: 'handstand-fwd-roll',
+  skl_front_aerial: 'front-aerial',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -54,6 +55,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: '/videos/handstand-fwd-roll-panel-mat.mp4',
       watchFor: 'Handstand forward roll to a panel mat.',
+    },
+  ],
+  'front-aerial': [
+    {
+      who: 'Reference',
+      url: '/videos/front-aerial-reference.mp4',
+      watchFor: 'Front aerial on floor.',
     },
   ],
   // Skill path steps
