@@ -635,6 +635,18 @@ export default function App() {
     if (authUser && !tabAllowedForNavRole(tab, role, ryan, ownerView)) setTab('today')
   }, [athletes, activeAthleteId, tab, authUser, deskPreview])
 
+  // Admin default: opening the app in the admin home desk with the Learn tab
+  // restored lands on Today instead. Once per boot — navigating to Learn
+  // afterwards stays put.
+  const adminDefaultedRef = useRef(false)
+  useEffect(() => {
+    if (authStatus !== 'in' || adminDefaultedRef.current) return
+    adminDefaultedRef.current = true
+    if (sessionIsAdmin(authUser) && deskPreview === 'home' && tab === 'learn') {
+      setTab('today')
+    }
+  }, [authStatus, authUser, deskPreview, tab])
+
   useEffect(
     () => () => {
       if (hitPreviewUrl) URL.revokeObjectURL(hitPreviewUrl)
