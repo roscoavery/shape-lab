@@ -64,6 +64,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/front-aerial-reference.mp4',
       watchFor: 'Front aerial on floor.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/front-aerial-drill.mp4',
+      watchFor: 'Front aerial onto stacked mats.',
+    },
   ],
   'kick-full': [
     {
