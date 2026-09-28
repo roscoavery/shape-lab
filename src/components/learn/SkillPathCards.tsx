@@ -1475,19 +1475,26 @@ function GuideTabContent({
           Ryan: {skill.ryanNote}
         </p>
       )}
-      {skill.videoQuotes && skill.videoQuotes.length > 0 && (
+      {skill.noteBlocks && skill.noteBlocks.length > 0 && (
         <div>
-          <Label>Quoted from the video</Label>
-          <div className="mt-2 space-y-2">
-            {skill.videoQuotes.map((q) => (
-              <blockquote
-                key={q.text}
-                className="rounded-lg bg-[var(--panel-border)]/20 px-3 py-2 text-xs italic"
-              >
-                &ldquo;{q.text}&rdquo;
-                <div className="mt-1 text-[11px] not-italic opacity-70">— {q.source}</div>
-              </blockquote>
-            ))}
+          <Label>Breaking down the video</Label>
+          <div className="mt-2 space-y-2.5">
+            {skill.noteBlocks.map((b, i) =>
+              b.kind === 'quote' ? (
+                <blockquote
+                  key={i}
+                  className="rounded-lg border-l-4 border-amber-400/70 bg-amber-300/10 px-3 py-2 text-xs italic"
+                >
+                  &ldquo;{b.text}&rdquo;
+                  <div className="mt-1 text-[11px] not-italic opacity-70">— {b.source}</div>
+                </blockquote>
+              ) : (
+                <div key={i} className="rounded-lg bg-sky-300/10 px-3 py-2 text-xs">
+                  <span className="font-bold text-sky-300">Ryan: </span>
+                  <span className="whitespace-pre-line">{b.text}</span>
+                </div>
+              ),
+            )}
           </div>
         </div>
       )}

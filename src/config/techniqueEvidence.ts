@@ -31,6 +31,11 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
     url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
     watchFor: 'Coach-approved round off education for athletes, parents, and coaches — the video behind the quotes below.',
   },
+  'ro-bhs': {
+    who: 'Back Handspring Academy',
+    url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
+    watchFor: 'Coach-approved round off back handspring education for athletes, parents, and coaches — the video behind the quotes below.',
+  },
   layout: {
     who: 'Coach Ryan Williams',
     url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
