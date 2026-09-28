@@ -50,6 +50,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_kick_full: 'kick-full',
   skl_double_full: 'double-full',
   skl_front_layout: 'front-layout',
+  skl_back_25: 'back-25',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -97,6 +98,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Kyler',
       url: '/videos/kyler-front-layout.mp4',
       watchFor: 'Front layout onto stacked mats.',
+    },
+  ],
+  'back-25': [
+    {
+      who: 'Darnell — Camp TumbleSmart',
+      url: '/videos/darnell-back-25-triple-full.mp4',
+      watchFor: 'Back 2.5 through to triple full.',
     },
   ],
   // Skill path steps
@@ -427,6 +435,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Asa Ware — Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
       watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'Darnell — Camp TumbleSmart',
+      url: '/videos/darnell-back-25-triple-full.mp4',
+      watchFor: 'Back 2.5 through to triple full.',
     },
   ],
   'arabian': [
