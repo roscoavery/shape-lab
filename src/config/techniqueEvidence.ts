@@ -166,6 +166,16 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DblQlGDxaOU/',
       watchFor: 'Cartwheel hand placement drill.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/cartwheel-step-in-zombie.mp4',
+      watchFor: 'Cartwheel step in zombie — connections class at TumbleSmart.',
+    },
+    {
+      who: 'Drill',
+      url: '/videos/round-off-zombie.mp4',
+      watchFor: 'Round off to zombie shape — connections class at TumbleSmart.',
+    },
   ],
   'ro-bhs': [
     {
