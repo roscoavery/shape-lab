@@ -125,7 +125,7 @@ import { handleCalendarApi } from './calendar/apiRoutes.ts'
 import { handleMuseApi } from './museApi.ts'
 import {
   createMuseKey,
-  listMuseKeys,
+  listMuseKeysFor,
   presentMuseKey,
   revokeMuseKey,
 } from './auth/museKeys.ts'
@@ -140,6 +140,13 @@ function isMuseBearerPath(path: string): boolean {
     path === '/api/muse/library' ||
     path === '/api/muse/library/items' ||
     path === '/api/muse/philosophy' ||
+    path === '/api/muse/coach-shapes' ||
+    path === '/api/muse/roster/athletes' ||
+    path === '/api/muse/classes' ||
+    path === '/api/muse/athlete-notes' ||
+    path === '/api/muse/stories' ||
+    path === '/api/muse/drills' ||
+    path === '/api/muse/skill-maps' ||
     path.startsWith('/api/muse/progress/')
   )
 }
@@ -1582,13 +1589,31 @@ export async function handleShapeLabApi(
     sendJson(res, 405, { error: 'Use GET or PUT' })
     return true
   }
+  /**
+   * Who may manage Muse connection keys. Owner/admin see and revoke every
+   * key; coaches manage only keys their own account created. Keys are
+   * stamped with the creator's account, and createMuseKey refuses any scope
+   * the creator's role is not allowed to grant.
+   */
+  const museKeyManager = viewer
+    ? {
+        allowed:
+          !viewer.kiosk &&
+          (isAdmin(viewer) || viewer.role === 'coach'),
+        privileged: isAdmin(viewer),
+        accountId: viewer.accountId,
+      }
+    : null
   if (path === '/api/muse/keys') {
-    if (!isAdmin(viewer)) {
-      sendJson(res, 403, { error: 'Muse connection keys are managed by the gym owner.' })
+    if (!museKeyManager?.allowed) {
+      sendJson(res, 403, { error: 'Muse connection keys are managed from a coach or owner login.' })
       return true
     }
     if (req.method === 'GET') {
-      const keys = await listMuseKeys()
+      const keys = await listMuseKeysFor({
+        accountId: museKeyManager.accountId,
+        privileged: museKeyManager.privileged,
+      })
       sendJson(res, 200, { keys: keys.map(presentMuseKey) })
       return true
     }
@@ -1605,10 +1630,13 @@ export async function handleShapeLabApi(
           label: body.label,
           scopes: body.scopes,
           athleteId: body.athleteId,
+          createdBy: { accountId: museKeyManager.accountId, role: viewer?.role ?? 'coach' },
         })
         sendJson(res, 201, { key: presentMuseKey(record), secret })
       } catch (err) {
-        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not create key.' })
+        const message = err instanceof Error ? err.message : 'Could not create key.'
+        const status = message === 'This account cannot grant those permissions on a key.' ? 403 : 400
+        sendJson(res, status, { error: message })
       }
       return true
     }
@@ -1616,8 +1644,8 @@ export async function handleShapeLabApi(
     return true
   }
   if (path === '/api/muse/keys/revoke') {
-    if (!isAdmin(viewer)) {
-      sendJson(res, 403, { error: 'Muse connection keys are managed by the gym owner.' })
+    if (!museKeyManager?.allowed) {
+      sendJson(res, 403, { error: 'Muse connection keys are managed from a coach or owner login.' })
       return true
     }
     if (req.method !== 'POST') {
@@ -1632,7 +1660,13 @@ export async function handleShapeLabApi(
       return true
     }
     const id = typeof body.id === 'string' ? body.id : ''
-    if (!id || !(await revokeMuseKey(id))) {
+    if (
+      !id ||
+      !(await revokeMuseKey(id, {
+        accountId: museKeyManager.accountId,
+        privileged: museKeyManager.privileged,
+      }))
+    ) {
       sendJson(res, 404, { error: 'Key not found.' })
       return true
     }

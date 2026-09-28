@@ -22,6 +22,7 @@ import {
 import { CollapsibleSection } from './CollapsibleSection'
 import { DeskPreviewPicker } from './DeskPreviewPicker'
 import { DeskMessagesEditor } from './DeskMessagesEditor'
+import { MuseConnection } from './owner/MuseConnection'
 import { type DeskPreview } from '../lib/deskPreview'
 
 const ROLES: { id: SessionRole; label: string }[] = [
@@ -225,6 +226,16 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
         )}
       </section>
       </CollapsibleSection>
+
+      {(user.role === 'coach' || admin) && (
+        <CollapsibleSection title="Muse connection" hint="Let your own Muse help from anywhere" defaultOpen={false}>
+          <MuseConnection
+            athletes={athletes}
+            viewerRole={user.role === 'coach' ? 'coach' : user.role === 'gymOwner' ? 'gymOwner' : 'admin'}
+            keyScope="own"
+          />
+        </CollapsibleSection>
+      )}
 
       {admin && (
         <CollapsibleSection title="Floor iPad" hint="Shared gym iPad mode" defaultOpen={false}>

@@ -1,9 +1,12 @@
 /**
- * Muse connection API keys — lets a gym owner (or a parent, with a scoped key)
- * give their own Muse scoped remote access to this gym through the tunnel.
+ * Muse connection API keys — lets a gym owner, admin, or coach (or a parent,
+ * with a scoped key) give their own Muse scoped remote access to this gym
+ * through the tunnel.
  *
- * Only the SHA-256 hash of a key is ever stored (data/muse-keys.json).
- * The secret itself is shown once at generation time and never again.
+ * Keys belong to the account that created them and can never grant more than
+ * that account's role allows. Only the SHA-256 hash of a key is ever stored
+ * (data/muse-keys.json). The secret itself is shown once at generation time
+ * and never again.
  */
 
 import { createHash, randomBytes } from 'node:crypto'
@@ -17,6 +20,13 @@ export const MUSE_SCOPES = [
   'library:add',
   'progress:read',
   'philosophy:read',
+  'coach-shapes:write',
+  'roster:write',
+  'classes:write',
+  'athlete-notes:write',
+  'stories:write',
+  'drills:write',
+  'skill-maps:write',
 ] as const
 
 export type MuseScope = (typeof MUSE_SCOPES)[number]
@@ -32,6 +42,33 @@ export const OWNER_PRESET_SCOPES: MuseScope[] = [
 /** Scopes handed out by the "Parent" preset in the app. */
 export const PARENT_PRESET_SCOPES: MuseScope[] = ['progress:read', 'philosophy:read']
 
+/** Scopes handed out by the "Coach" preset in the app. */
+export const COACH_PRESET_SCOPES: MuseScope[] = [
+  'library:read',
+  'library:add',
+  'progress:read',
+  'philosophy:read',
+  'coach-shapes:write',
+  'roster:write',
+  'classes:write',
+  'athlete-notes:write',
+  'stories:write',
+  'drills:write',
+  'skill-maps:write',
+]
+
+/**
+ * Which scopes each account role may put on a key it creates. A key can
+ * never grant more than its creator's role allows in the app itself.
+ */
+export const ROLE_ALLOWED_SCOPES: Record<string, MuseScope[]> = {
+  gymOwner: [...MUSE_SCOPES],
+  admin: [...MUSE_SCOPES],
+  coach: [...COACH_PRESET_SCOPES],
+}
+
+export type MuseKeyCreator = { accountId: string; role: string }
+
 export type MuseKeyRecord = {
   id: string
   label: string
@@ -40,6 +77,9 @@ export type MuseKeyRecord = {
   scopes: MuseScope[]
   /** When set, progress:read is limited to this athlete. */
   athleteId: string | null
+  /** Account + role that created the key. Keys never escalate past this. */
+  createdByAccountId: string | null
+  createdByRole: string | null
   createdAt: string
   lastUsedAt: string | null
   revoked: boolean
@@ -70,6 +110,12 @@ function cleanRecord(raw: unknown): MuseKeyRecord | null {
     keyHash: r.keyHash,
     scopes,
     athleteId: typeof r.athleteId === 'string' && r.athleteId ? r.athleteId : null,
+    createdByAccountId:
+      typeof r.createdByAccountId === 'string' && r.createdByAccountId
+        ? r.createdByAccountId
+        : null,
+    createdByRole:
+      typeof r.createdByRole === 'string' && r.createdByRole ? r.createdByRole : null,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
     lastUsedAt: typeof r.lastUsedAt === 'string' ? r.lastUsedAt : null,
     revoked: r.revoked === true,
@@ -104,13 +150,40 @@ export async function listMuseKeys(): Promise<MuseKeyRecord[]> {
   return file.keys
 }
 
+/**
+ * Keys visible to a signed-in account. Privileged roles (owner/admin) see
+ * every key; coaches see only the keys their own account created.
+ */
+export async function listMuseKeysFor(input: {
+  accountId: string
+  privileged: boolean
+}): Promise<MuseKeyRecord[]> {
+  const keys = await listMuseKeys()
+  if (input.privileged) return keys
+  return keys.filter((k) => k.createdByAccountId === input.accountId)
+}
+
+/** Scopes a role is allowed to grant on keys it creates. */
+export function allowedScopesForRole(role: string): MuseScope[] {
+  return ROLE_ALLOWED_SCOPES[role] ?? []
+}
+
 export async function createMuseKey(input: {
   label: unknown
   scopes: unknown
   athleteId?: unknown
+  createdBy?: MuseKeyCreator | null
 }): Promise<{ record: MuseKeyRecord; secret: string }> {
   const scopes = Array.isArray(input.scopes) ? input.scopes.filter(isScope) : []
   if (scopes.length === 0) throw new Error('Pick at least one scope.')
+  const creator = input.createdBy ?? null
+  if (creator) {
+    const allowed = allowedScopesForRole(creator.role)
+    const overreach = scopes.filter((s) => !allowed.includes(s))
+    if (overreach.length > 0) {
+      throw new Error('This account cannot grant those permissions on a key.')
+    }
+  }
   const secret = `${MUSE_KEY_PREFIX}${randomBytes(32).toString('base64url')}`
   const record: MuseKeyRecord = {
     id: `mk_${randomBytes(8).toString('hex')}`,
@@ -118,6 +191,8 @@ export async function createMuseKey(input: {
     keyHash: hashMuseKey(secret),
     scopes,
     athleteId: typeof input.athleteId === 'string' && input.athleteId ? input.athleteId : null,
+    createdByAccountId: creator?.accountId ?? null,
+    createdByRole: creator?.role ?? null,
     createdAt: new Date().toISOString(),
     lastUsedAt: null,
     revoked: false,
@@ -128,10 +203,16 @@ export async function createMuseKey(input: {
   return { record, secret }
 }
 
-export async function revokeMuseKey(id: string): Promise<boolean> {
+export async function revokeMuseKey(
+  id: string,
+  input?: { accountId: string; privileged: boolean },
+): Promise<boolean> {
   const file = await readKeyFile()
-  const found = file.keys.some((k) => k.id === id)
+  const found = file.keys.find((k) => k.id === id)
   if (!found) return false
+  if (input && !input.privileged && found.createdByAccountId !== input.accountId) {
+    return false
+  }
   file.keys = file.keys.map((k) => (k.id === id ? { ...k, revoked: true } : k))
   await writeKeyFile(file)
   return true

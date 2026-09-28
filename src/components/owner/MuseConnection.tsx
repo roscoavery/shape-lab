@@ -1,10 +1,12 @@
 /**
- * Muse connection (owner side) — generate and manage scoped API keys that let
- * someone's own Muse talk to this gym remotely: file library videos, read
- * athlete progress, and read Ryan's coaching philosophy.
+ * Muse connection — generate and manage scoped API keys that let someone's
+ * own Muse talk to this gym remotely: file library videos, read athlete
+ * progress, and read Ryan's coaching philosophy. Coach keys can also add
+ * coach shapes, athletes, classes, notes, posts, drills, and skill maps.
  *
- * Keys are shown once at creation and stored as hashes only. The owner can
- * revoke any key at any time.
+ * Keys are shown once at creation and stored as hashes only. A key belongs
+ * to the account that created it and can never grant more than that
+ * account's role allows. Any key can be revoked at any time.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
@@ -16,22 +18,65 @@ type MuseKeyView = {
   label: string
   scopes: string[]
   athleteId: string | null
+  createdByAccountId: string | null
+  createdByRole: string | null
   createdAt: string
   lastUsedAt: string | null
   revoked: boolean
 }
 
-type Props = { athletes: Athlete[] }
+type Props = {
+  athletes: Athlete[]
+  /** Role of the signed-in account viewing this. Coach sees the Coach preset only. */
+  viewerRole: 'gymOwner' | 'admin' | 'coach'
+  /** 'all' lists every key (owner view); 'own' lists only this account's keys. */
+  keyScope: 'all' | 'own'
+}
 
 const SCOPE_LABELS: Record<string, string> = {
   'library:read': 'Read the video library',
   'library:add': 'Add videos to the library',
   'progress:read': 'Read athlete progress',
   'philosophy:read': 'Read coaching philosophy',
+  'coach-shapes:write': 'Add shapes to the coach library',
+  'roster:write': 'Add athletes to the roster',
+  'classes:write': 'Add classes to the schedule',
+  'athlete-notes:write': 'Add notes on athletes',
+  'stories:write': 'Post to gym, wins, and passes',
+  'drills:write': 'Add drills to the drill library',
+  'skill-maps:write': 'Build skill maps and paths',
 }
 
 const OWNER_SCOPES = ['library:read', 'library:add', 'progress:read', 'philosophy:read']
 const PARENT_SCOPES = ['progress:read', 'philosophy:read']
+const COACH_SCOPES = [
+  'library:read',
+  'library:add',
+  'progress:read',
+  'philosophy:read',
+  'coach-shapes:write',
+  'roster:write',
+  'classes:write',
+  'athlete-notes:write',
+  'stories:write',
+  'drills:write',
+  'skill-maps:write',
+]
+
+type Preset = 'owner' | 'parent' | 'coach'
+
+const PRESET_SCOPES: Record<Preset, string[]> = {
+  owner: OWNER_SCOPES,
+  parent: PARENT_SCOPES,
+  coach: COACH_SCOPES,
+}
+
+const PRESET_BLURBS: Record<Preset, string> = {
+  owner: 'Owner: file library videos, read the library, read any athlete\u2019s progress, read coaching philosophy.',
+  parent: 'Parent: read one athlete\u2019s progress and the coaching philosophy. Nothing else.',
+  coach:
+    'Coach: everything an owner key does, plus add coach shapes, athletes, classes, athlete notes, gym/wins/passes posts, drills, and skill maps. A coach key can only reach athletes its coach works with.',
+}
 
 function scopeText(scopes: string[]): string {
   return scopes.map((s) => SCOPE_LABELS[s] ?? s).join(', ')
@@ -43,12 +88,13 @@ function formatDate(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? 'Never' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function MuseConnection({ athletes }: Props) {
+export function MuseConnection({ athletes, viewerRole, keyScope }: Props) {
   const [keys, setKeys] = useState<MuseKeyView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [label, setLabel] = useState('')
-  const [preset, setPreset] = useState<'owner' | 'parent'>('owner')
+  const presets: Preset[] = viewerRole === 'coach' ? ['coach'] : ['owner', 'coach', 'parent']
+  const [preset, setPreset] = useState<Preset>(viewerRole === 'coach' ? 'coach' : 'owner')
   const [athleteId, setAthleteId] = useState('')
   const [creating, setCreating] = useState(false)
   const [newSecret, setNewSecret] = useState<string | null>(null)
@@ -86,7 +132,7 @@ export function MuseConnection({ athletes }: Props) {
 
   const create = async () => {
     if (creating) return
-    const scopes = preset === 'owner' ? OWNER_SCOPES : PARENT_SCOPES
+    const scopes = PRESET_SCOPES[preset]
     if (preset === 'parent' && !athleteId) {
       setError('Pick the athlete this parent key may read.')
       return
@@ -98,7 +144,7 @@ export function MuseConnection({ athletes }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          label: label.trim() || (preset === 'owner' ? 'Owner key' : 'Parent key'),
+          label: label.trim() || `${preset[0].toUpperCase()}${preset.slice(1)} key`,
           scopes,
           athleteId: preset === 'parent' ? athleteId : null,
         }),
@@ -153,8 +199,13 @@ export function MuseConnection({ athletes }: Props) {
         <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">
           Give your own Muse a key and it can help with the gym from anywhere: file a video you
           send it straight into the library, look up an athlete's progress, or answer from your
-          coaching philosophy. A key only allows what you pick below, and you can revoke it any
-          time. The secret is shown once. Keep it somewhere safe.
+          coaching philosophy.
+          {viewerRole === 'coach'
+            ? ' A coach key can also add shapes, athletes, classes, notes, posts, drills, and skill maps, but only for athletes you work with.'
+            : ' An owner key can file library videos and read any athlete\u2019s progress.'}{' '}
+          A key only allows what you pick below, and you can revoke it any time. The secret is
+          shown once. Keep it somewhere safe.
+          {keyScope === 'own' && ' You only see keys this login created.'}
         </p>
       </div>
 
@@ -202,37 +253,24 @@ export function MuseConnection({ athletes }: Props) {
           </label>
           <div>
             <span className="text-xs text-[var(--muted)]">What this key may do</span>
-            <div className="mt-1 flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPreset('owner')}
-                aria-pressed={preset === 'owner'}
-                className={`rounded-full px-3.5 py-1.5 text-sm transition ${
-                  preset === 'owner'
-                    ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                    : 'bg-white/5 text-[var(--muted)] hover:text-[var(--text)]'
-                }`}
-              >
-                Owner
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreset('parent')}
-                aria-pressed={preset === 'parent'}
-                className={`rounded-full px-3.5 py-1.5 text-sm transition ${
-                  preset === 'parent'
-                    ? 'bg-[var(--accent-dim)] font-semibold text-white'
-                    : 'bg-white/5 text-[var(--muted)] hover:text-[var(--text)]'
-                }`}
-              >
-                Parent
-              </button>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {presets.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPreset(p)}
+                  aria-pressed={preset === p}
+                  className={`rounded-full px-3.5 py-1.5 text-sm transition ${
+                    preset === p
+                      ? 'bg-[var(--accent-dim)] font-semibold text-white'
+                      : 'bg-white/5 text-[var(--muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  {p[0].toUpperCase() + p.slice(1)}
+                </button>
+              ))}
             </div>
-            <p className="mt-1.5 text-xs text-[var(--muted)]">
-              {preset === 'owner'
-                ? 'Owner: file library videos, read the library, read any athlete\u2019s progress, read coaching philosophy.'
-                : 'Parent: read one athlete\u2019s progress and the coaching philosophy. Nothing else.'}
-            </p>
+            <p className="mt-1.5 text-xs text-[var(--muted)]">{PRESET_BLURBS[preset]}</p>
           </div>
           {preset === 'parent' && (
             <label className="block">
@@ -289,6 +327,11 @@ export function MuseConnection({ athletes }: Props) {
                     {k.athleteId && (
                       <p className="mt-0.5 text-xs text-[var(--muted)]">
                         Athlete: {athleteName(k.athleteId)}
+                      </p>
+                    )}
+                    {keyScope === 'all' && k.createdByRole && (
+                      <p className="mt-0.5 text-xs text-[var(--muted)]">
+                        Created by: {k.createdByRole === 'gymOwner' ? 'owner' : k.createdByRole} account
                       </p>
                     )}
                     <p className="mt-0.5 text-[11px] text-[var(--muted)]">

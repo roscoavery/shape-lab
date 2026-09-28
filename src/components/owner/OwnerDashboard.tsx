@@ -64,7 +64,7 @@ export function OwnerDashboard({ owner, athletes }: Props) {
       {section === 'classes' && <OwnerClasses athletes={athletes} ownerId={owner.id} />}
       {section === 'staff' && <StaffHub owner={owner} athletes={athletes} />}
       {section === 'progress' && <AthleteProgress athletes={athletes} />}
-      {section === 'muse' && <MuseConnection athletes={athletes} />}
+      {section === 'muse' && <MuseConnection athletes={athletes} viewerRole="gymOwner" keyScope="all" />}
     </div>
   )
 }
