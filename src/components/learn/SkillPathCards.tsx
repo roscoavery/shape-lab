@@ -1467,6 +1467,22 @@ function GuideTabContent({
           Ryan: {skill.ryanNote}
         </p>
       )}
+      {skill.videoQuotes && skill.videoQuotes.length > 0 && (
+        <div>
+          <Label>Quoted from the video</Label>
+          <div className="mt-2 space-y-2">
+            {skill.videoQuotes.map((q) => (
+              <blockquote
+                key={q.text}
+                className="rounded-lg bg-[var(--panel-border)]/20 px-3 py-2 text-xs italic"
+              >
+                &ldquo;{q.text}&rdquo;
+                <div className="mt-1 text-[11px] not-italic opacity-70">— {q.source}</div>
+              </blockquote>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

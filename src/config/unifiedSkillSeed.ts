@@ -31,6 +31,8 @@ export interface UnifiedSkill {
   canBend?: string[]
   ask?: string
   ryanNote?: string
+  /** Quoted lines from a featured video, rendered as distinct quote cards with attribution. */
+  videoQuotes?: { text: string; source: string }[]
 }
 
 export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
@@ -355,7 +357,45 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "canBend": [],
     "ask": "Ask your coach to watch your eyes and arms out of the round off. Eyes down and arms carrying back beat arms up and eyes up for everything that connects after it.",
-    "ryanNote": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target.\n\nA strong round off means blocking through your shoulders with enough power to jump off your hands. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs.\n\nThis is the hard part. Getting your feet all the way in front for a handspring connection takes real power. Even finishing a round off by itself takes holding one clean shape from your hands to your feet, without your body breaking apart anywhere in between. That is exactly why round offs get so many reps in back handspring classes.\n\nThe second half of the round off is the second half of the back handspring. Same shapes, same block, same finish.\n\nThe video below is coach-approved education for athletes, parents, and coaches. These are the same conclusions and principles I coach from:\n\n\"The goal is to tumble with fast rebounds, not with slower half squat jumps.\"\n\n\"Hand contact must also push off as fast as possible as if the floor was on fire.\"\n\n\"Many times the reason for this mistake is the lack of wrist and shoulders repulsion off the floor.\"\n\n\"Bending the legs out of the roundoff instead of rebounding may also be caused by a weak turnover from the hands to the feet.\"\n\nMost of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed."
+    "ryanNote": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target.\n\nA strong round off means blocking through your shoulders with enough power to jump off your hands. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs.\n\nThis is the hard part. Getting your feet all the way in front for a handspring connection takes real power. Even finishing a round off by itself takes holding one clean shape from your hands to your feet, without your body breaking apart anywhere in between. That is exactly why round offs get so many reps in back handspring classes.\n\nThe second half of the round off is the second half of the back handspring. Same shapes, same block, same finish.\n\nA note on the snap down drill in the video: it is done off a raised surface, and it is shown with more advanced gymnasts. It is not recommended for athletes in the approximation or early acquisition phase.\n\nTraining round off back handsprings on soft surfaces while the back handspring is still being acquired protects athletes in so many ways. It greatly reduces the chance of an athlete being traumatized by a mistake in the early phases and developing a fear that lasts long after the mistake itself is fixed. Rushing the skill can create a long-term roadblock, like a mental barrier or an injury. Be patient and trust the process.\n\nThis is one of those places where what we prioritize in training can change the trajectory of an athlete\u2019s long-term success. Cheer tryouts often push athletes to skip the part where we build their long-term tumbling success during back handspring and round off back handspring training. That shortcut risks injuries, getting stuck, or fear that comes from never understanding what the skill physically requires to work as designed.\n\nMost of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed.",
+    "videoQuotes": [
+      {
+        "text": "Gymnasts that have already learned the round off back handspring must continue polishing every single detail of these 2 combined skills which are the basic building blocks of backwards tumbling.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "The goal is to tumble with fast rebounds, not with slower half squat jumps.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "Hand contact must also push off as fast as possible as if the floor was on fire.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "Many times the reason for this mistake is the lack of wrist and shoulders repulsion off the floor.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "Bending the legs out of the roundoff instead of rebounding may also be caused by a weak turnover from the hands to the feet.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "This softer setup may protect their wrists or bodies in case of any mistakes due to their lack of complete skill mastery.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "When gymnasts show more consistency, they can progressively move more of their training onto regular floor exercise surfaces where they can continue adding incremental steps on speed and rebounding connection... so the softer and slower early patterns of tumbling do not become a long-term habit.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "The coach must catch mistakes early to offer instructional feedback to the gymnast and implement ways to solve the problem before it becomes a bad habit.",
+        "source": "Back Handspring Academy"
+      },
+      {
+        "text": "Most of the success or failure of what happens in more complex tumbling combinations is a product of how the roundoff back handspring is executed.",
+        "source": "Back Handspring Academy"
+      }
+    ]
   },
   {
     "id": "skl_double_full",
