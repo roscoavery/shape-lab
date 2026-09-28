@@ -1479,6 +1479,7 @@ export const SHAPES: ShapeDef[] = [
       'Bend just enough — more than a pike, less than a tuck.',
       'Let the knees bend; do not pull them all the way to the chest.',
       'Keep the chest open. A full tuck kills the twist.',
+      'Hooking the non-twist-side leg, like the still — most double-flipping skills do not hook like that.',
     ],
     coachNotes:
       'Most people require the puck for standing fulls, and it is very commonly used for cartwheel fulls. Ideally avoided on anything out of a handspring or whip. Some athletes have even made a puck work in a killer (2 flips, 4 twists). You do not see it trained on the ground much — it is an air shape, so teach it from video and shaping work rather than floor holds.',

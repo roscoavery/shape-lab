@@ -43,6 +43,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
     'tuck_open_shoulders_b.jpg',
     'tuck_open_shoulders_class.jpg',
   ],
+  puck: 'puck.jpg',
   mountain_climber: 'mountain_climber.jpg',
   superman: 'superman.jpg',
   rainbow_bridge: 'rainbow_bridge.jpg',
