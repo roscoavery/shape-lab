@@ -48,6 +48,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_handstand_fwd_roll: 'handstand-fwd-roll',
   skl_front_aerial: 'front-aerial',
   skl_kick_full: 'kick-full',
+  skl_double_full: 'double-full',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -80,6 +81,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'RileyAnne',
       url: '/videos/rileyanne-kick-full.mp4',
       watchFor: 'Kick full on the tumble track.',
+    },
+  ],
+  'double-full': [
+    {
+      who: 'Building block',
+      url: '/videos/rudi-back-double-full.mp4',
+      watchFor:
+        'Rudi (front 1.5). Helps so much with air awareness on back double fulls — uses a pike set for a mix of cat and tilt twist.',
     },
   ],
   // Skill path steps
