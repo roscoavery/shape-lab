@@ -115,6 +115,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Kick double on tramp, front angle.',
     },
   ],
+  'standing-full': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-standing-full.mp4',
+      watchFor: 'Standing full — emphasis on standing all the way up on the take off.',
+    },
+  ],
   // Skill path steps
   'back-tuck': [
     {
