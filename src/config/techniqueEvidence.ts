@@ -51,6 +51,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_double_full: 'double-full',
   skl_front_layout: 'front-layout',
   skl_back_25: 'back-25',
+  skl_kick_2: 'kick-double',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -105,6 +106,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Darnell — Camp TumbleSmart',
       url: '/videos/darnell-back-25-triple-full.mp4',
       watchFor: 'Back 2.5 through to triple full.',
+    },
+  ],
+  'kick-double': [
+    {
+      who: 'Reference',
+      url: '/videos/kick-double-tramp.mp4',
+      watchFor: 'Kick double on tramp, front angle.',
     },
   ],
   // Skill path steps
@@ -387,6 +395,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DM97Ag4KC-_/',
       watchFor: 'Handspring deconstruction — the pieces inside the skill.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-standing-bhs-zombie.mp4',
+      watchFor: 'Standing back handspring finishing in a zombie shape.',
     },
   ],
   'standing-tuck': [
