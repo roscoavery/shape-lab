@@ -178,14 +178,16 @@ export function ShapeExplorer({ shapes, startId, photos, onClose }: Props) {
   )
 
   const still = (s: ShapeDef) => (
-    <div className="flex h-full min-h-0 w-full items-center justify-center bg-black px-2">
-      <CoachStillGallery
-        shapeId={s.id}
-        photos={photos}
-        alt={s.name}
-        emptyLabel={`No still for ${s.name} yet`}
-        imgClass="max-h-[78dvh] w-full object-contain"
-      />
+    <div className="flex min-h-full w-full px-2">
+      <div className="m-auto w-full bg-black">
+        <CoachStillGallery
+          shapeId={s.id}
+          photos={photos}
+          alt={s.name}
+          emptyLabel={`No still for ${s.name} yet`}
+          imgClass="max-h-[78dvh] w-full object-contain"
+        />
+      </div>
     </div>
   )
 
@@ -196,7 +198,7 @@ export function ShapeExplorer({ shapes, startId, photos, onClose }: Props) {
       </p>
       <h3 className="text-xl font-semibold text-white">{shape.name}</h3>
       {athlete ? (
-        <p className="mt-1 max-h-[22dvh] overflow-y-auto text-sm leading-relaxed text-white/85">
+        <p className="pointer-events-auto mt-1 max-h-[22dvh] overflow-y-auto text-sm leading-relaxed text-white/85">
           {athlete}
         </p>
       ) : (
@@ -219,20 +221,20 @@ export function ShapeExplorer({ shapes, startId, photos, onClose }: Props) {
         <div
           ref={scrollerRef}
           className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
         >
           {shapes.map((s, i) => (
             <section
               key={s.id}
               data-shape-slide={i}
-              className="relative h-full w-screen shrink-0 snap-start"
+              className="relative h-full w-screen shrink-0 snap-start overflow-y-auto overscroll-contain"
             >
               {still(s)}
             </section>
           ))}
         </div>
       ) : (
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full overflow-y-auto overscroll-contain">
           {shape ? still(shape) : null}
           {mode === 'story' && (
             <div className="absolute inset-0 z-10 flex">

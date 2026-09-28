@@ -4,6 +4,7 @@
  * Top-down: peak skills first, foundations last.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { FEATURED_PROOF, GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
 import { youtubeEmbedSrc } from '../../lib/socialUrls'
@@ -1651,6 +1652,16 @@ export function SkillPathCards({
     return () => window.removeEventListener('keydown', onKey)
   }, [modalSkill])
 
+  // Lock the page behind the modal so background scroll can't fight the card.
+  useEffect(() => {
+    if (!modalSkill) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [modalSkill])
+
   // Cue up proof videos while the guide is open: resolve the Instagram
   // manifests in the background (no video bytes yet) so opening a card
   // starts playback fast. YouTube / TikTok load on tap; local files need nothing.
@@ -1708,18 +1719,19 @@ export function SkillPathCards({
 
       <CueSwaps />
 
-      {modalSkill && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
-          onClick={() => setModalSkill(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={modalSkill.name}
-        >
+      {modalSkill &&
+        createPortal(
           <div
-            className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-[var(--panel)] sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+            onClick={() => setModalSkill(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={modalSkill.name}
           >
+            <div
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
             <article
               id={modalSkill.guideId ? `skill-card-${modalSkill.guideId}` : undefined}
               className="overflow-hidden"
@@ -1778,7 +1790,8 @@ export function SkillPathCards({
               )}
             </article>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
