@@ -22,15 +22,43 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
   skl_standing_bhs: [
     { file: 'back_handspring_sequence.jpg' },
     { file: 'zombie_collage.jpg' },
+    { file: 'bhs_arch_handstand.jpg' },
+    {
+      file: 'bhs_pike_frame.jpg',
+      label:
+        'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
+    },
   ],
   skl_ro_bhs: [
     { file: 'back_handspring_sequence.jpg' },
     { file: 'zombie_collage.jpg' },
     { file: 'c_shape_collage.jpg' },
+    { file: 'bhs_arch_handstand.jpg' },
+    {
+      file: 'bhs_pike_frame.jpg',
+      label:
+        'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
+    },
   ],
   skl_strong_round_off: [{ file: 'zombie_collage.jpg' }],
-  skl_ro_bhs_series: [{ file: 'c_shape_collage.jpg' }],
+  skl_ro_bhs_series: [
+    { file: 'c_shape_collage.jpg' },
+    { file: 'bhs_arch_handstand.jpg' },
+    {
+      file: 'bhs_pike_frame.jpg',
+      label:
+        'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
+    },
+  ],
   skl_cartwheel_handspring: [{ file: 'c_shape_collage.jpg' }],
+  skl_standing_bhs_series: [
+    { file: 'bhs_arch_handstand.jpg' },
+    {
+      file: 'bhs_pike_frame.jpg',
+      label:
+        'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
+    },
+  ],
 }
 
 export function skillPhotosFor(skillId: string): SkillPhoto[] {
