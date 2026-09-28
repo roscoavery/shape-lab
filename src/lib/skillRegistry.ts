@@ -98,6 +98,7 @@ export const GUIDE_ORDER = [
   'standing-full',
   'standing-tuck',
   'standing-bhs',
+  'angle-bhs',
   'back-walkover',
   'front-walkover',
   'cart-dub',

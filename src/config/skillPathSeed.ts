@@ -446,6 +446,24 @@ export const SHIPPED_NEEDS: SkillNeed[] = [
     order: 10,
     shipped: true,
   },
+  {
+    id: 'need_standing_bhs_angle',
+    skillId: 'skl_standing_bhs',
+    needSkillId: 'skl_angle_back_handspring',
+    kind: 'helpful',
+    note: 'Drops the arm swing — trains the right shapes and timing from the bounce.',
+    order: 5,
+    shipped: true,
+  },
+  {
+    id: 'need_ro_bhs_angle',
+    skillId: 'skl_ro_bhs',
+    needSkillId: 'skl_angle_back_handspring',
+    kind: 'helpful',
+    note: 'Drops the arm swing — teaches positive angle for feet in front on connections.',
+    order: 5,
+    shipped: true,
+  },
 ]
 
 export const SHIPPED_CONDITIONING: ConditioningNeed[] = [

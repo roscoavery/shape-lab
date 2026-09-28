@@ -182,6 +182,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Back quad on tramp.',
     },
   ],
+  'angle-bhs': [],
   // Skill path steps
   'back-tuck': [
     {

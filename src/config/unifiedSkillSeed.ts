@@ -207,6 +207,23 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "ask": "Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps."
   },
   {
+    "id": "skl_angle_back_handspring",
+    "guideId": "angle-bhs",
+    "name": "Angle back handspring",
+    "aliases": [
+      "angle bhs",
+      "angle handspring"
+    ],
+    "track": "standing",
+    "guideNeeds": [
+      "A back handspring with solid shapes",
+      "A strong bounce and jump from the feet"
+    ],
+    "canBend": [],
+    "ask": "Ask your coach whether your back handspring shapes are clean enough to drop the arm swing.",
+    "ryanNote": "Removes the arm swing and uses nothing but timing the upwards force from the bounce into the right shapes from the right angle. Teaches positive angle for feet in front to accelerate backwards on connections. Allows the athlete to train correct shapes in the skill much more easily since power is not an issue with these."
+  },
+  {
     "id": "skl_standing_layout",
     "name": "Standing layout",
     "aliases": [
