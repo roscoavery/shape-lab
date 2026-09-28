@@ -49,6 +49,7 @@ import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
+import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
 import { markedFetch } from '../../lib/authSession'
 
 /** True for local video files (public/videos/...) vs social embeds. */
@@ -311,6 +312,8 @@ export function ProofStrip({
   const [showRefs, setShowRefs] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [hiddenUrls, setHiddenUrls] = useState<string[]>([])
+  /** Fullscreen carousel player: the video list + index, null = closed. */
+  const [fullView, setFullView] = useState<{ list: ProofVideo[]; index: number } | null>(null)
 
   // Load admin-added videos for this card.
   useEffect(() => {
@@ -474,7 +477,7 @@ export function ProofStrip({
           <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
             Featured reference
           </span>
-          <div className="mt-2 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-black">
+          <div className="relative mt-2 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl bg-black">
             <InstagramEmbed
               url={featured.url}
               compact
@@ -485,6 +488,15 @@ export function ProofStrip({
               fill
               posterFirst
             />
+            <button
+              type="button"
+              onClick={() => setFullView({ list: [featured], index: 0 })}
+              className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+              aria-label={`Open ${featured.who} fullscreen`}
+              title="Full screen"
+            >
+              ⛶
+            </button>
           </div>
           <div className="mt-1 text-xs font-bold">{featured.who}</div>
           <div className="text-[11px] opacity-70">{featured.watchFor}</div>
@@ -522,7 +534,7 @@ export function ProofStrip({
                   </div>
                 )
               ) : (
-                <div className="aspect-square overflow-hidden rounded-xl bg-black">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-black">
                   {local ? (
                     <LocalVideo url={playUrl} loopA={loopA} loopB={loopB} />
                   ) : (
@@ -539,6 +551,17 @@ export function ProofStrip({
                       posterFirst
                     />
                   )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFullView({ list: videos, index: videos.findIndex((x) => x.url === v.url) })
+                    }
+                    className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+                    aria-label={`Open ${v.who} fullscreen`}
+                    title="Full screen — scrub, slow-mo, flip"
+                  >
+                    ⛶
+                  </button>
                 </div>
               )}
               <div className="mt-1 text-xs font-bold">{v.who}</div>
@@ -640,6 +663,14 @@ export function ProofStrip({
           onSaved={() => {
             setBustMap((prev) => ({ ...prev, [trimUrl]: Date.now() }))
           }}
+        />
+      )}
+      {fullView && (
+        <ProofFullscreenPlayer
+          videos={fullView.list}
+          index={fullView.index}
+          onIndex={(i) => setFullView((prev) => (prev ? { ...prev, index: i } : prev))}
+          onClose={() => setFullView(null)}
         />
       )}
       {showAddModal && (
