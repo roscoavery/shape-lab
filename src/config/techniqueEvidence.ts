@@ -26,6 +26,11 @@ export interface ProofVideo {
  * the strip below it so it doesn't appear twice.
  */
 export const FEATURED_PROOF: Record<string, ProofVideo> = {
+  layout: {
+    who: 'Coach Ryan Williams',
+    url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+    watchFor: 'His layout analysis on spring floor.',
+  },
   full: {
     who: 'Coach Ryan Williams',
     url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
@@ -343,16 +348,66 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'triple-full': [
     {
-      who: 'Porter',
+      who: 'Porter — Camp TumbleSmart',
       url: '/videos/porter-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Porter — Camp TumbleSmart',
+      url: '/videos/porter-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: freeze frames on both rebounds, slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'Ayden Gerlach — Camp TumbleSmart',
+      url: '/videos/ayden-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Ayden Gerlach — Camp TumbleSmart',
+      url: '/videos/ayden-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: later twist — squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'Asa Ware — Camp TumbleSmart',
+      url: '/videos/asa-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Asa Ware — Camp TumbleSmart',
+      url: '/videos/asa-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
   ],
   'arabian': [
     {
-      who: 'Porter',
+      who: 'Porter — Camp TumbleSmart',
       url: '/videos/porter-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Porter — Camp TumbleSmart',
+      url: '/videos/porter-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: freeze frames on both rebounds, slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'Ayden Gerlach — Camp TumbleSmart',
+      url: '/videos/ayden-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Ayden Gerlach — Camp TumbleSmart',
+      url: '/videos/ayden-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: later twist — squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'Asa Ware — Camp TumbleSmart',
+      url: '/videos/asa-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
+    },
+    {
+      who: 'Asa Ware — Camp TumbleSmart',
+      url: '/videos/asa-arabian-triple-analysis.mp4',
+      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
   ],
   'back-walkover': [
