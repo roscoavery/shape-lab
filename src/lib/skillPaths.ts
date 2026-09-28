@@ -546,6 +546,19 @@ export function drillsForSkill(skillId: string): SkillDrill[] {
     .sort((a, b) => a.order - b.order)
 }
 
+/** Every drill video attached to any skill card, with its skill name. For the drill library. */
+export function listSkillCardDrillVideos(): Array<{ drill: SkillDrill; skillName: string }> {
+  const out: Array<{ drill: SkillDrill; skillName: string }> = []
+  for (const skill of listSkills()) {
+    for (const drill of drillsForSkill(skill.id)) {
+      if (drill?.videoUrl) out.push({ drill, skillName: skill.name })
+    }
+  }
+  return out.sort(
+    (a, b) => a.skillName.localeCompare(b.skillName) || a.drill.label.localeCompare(b.drill.label),
+  )
+}
+
 export function saveDrill(input: Omit<SkillDrill, 'id'> & { id?: string }): SkillDrill {
   const file = readRaw()
   const row: SkillDrill = {

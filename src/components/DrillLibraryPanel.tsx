@@ -14,6 +14,7 @@ import {
   subscribeCoachContent,
   uploadCoachMedia,
 } from '../lib/coachContentStore'
+import { listSkillCardDrillVideos, subscribeSkillPaths } from '../lib/skillPaths'
 import type { Athlete, DrillClip } from '../types'
 import { videoFileAccept } from '../lib/saveMedia'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
@@ -37,6 +38,7 @@ export function DrillLibraryPanel({ signedIn }: Props) {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
+  useEffect(() => subscribeSkillPaths(() => setTick((n) => n + 1)), [])
   void tick
 
   if (!signedIn) {
@@ -48,6 +50,7 @@ export function DrillLibraryPanel({ signedIn }: Props) {
   }
 
   const drills = listDrills()
+  const cardDrills = listSkillCardDrillVideos()
   const watching =
     screen.kind === 'watch' ? drills.find((d) => d.id === screen.id) : undefined
 
@@ -150,6 +153,37 @@ export function DrillLibraryPanel({ signedIn }: Props) {
             </li>
           ))}
         </ul>
+      )}
+      {cardDrills.length > 0 && (
+        <section className="mt-2">
+          <h3 className="text-sm font-semibold">On skill cards</h3>
+          <p className="text-xs text-[var(--muted)]">
+            Drill videos attached to skill cards in Learn. Remove them from the card.
+          </p>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {cardDrills.map(({ drill, skillName }) => (
+              <li
+                key={drill.id}
+                className="flex items-center gap-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-2.5 py-2"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{drill.label}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-[var(--muted)]">
+                    {skillName}
+                  </span>
+                </span>
+                <a
+                  href={drill.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 text-xs font-semibold text-[var(--accent)] underline"
+                >
+                  Watch
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   )

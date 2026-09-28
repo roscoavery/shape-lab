@@ -37,6 +37,12 @@ export type CoachContentFile = {
   removedWarmupIds?: string[]
   /** Gym-library shape ids dropped on any device — do not resurrect on merge. */
   removedGymShapeIds?: string[]
+  /** Drill ids dropped on any device — do not resurrect on merge. */
+  removedDrillIds?: string[]
+  /** Coach-shape ids dropped on any device — do not resurrect on merge. */
+  removedShapeIds?: string[]
+  /** Coach skill-ref ids dropped on any device — do not resurrect on merge. */
+  removedReferenceIds?: string[]
 }
 
 const listeners = new Set<() => void>()
@@ -58,10 +64,19 @@ function mergeIdLists(...lists: Array<string[] | undefined>): string[] {
 function applyTombstones(file: CoachContentFile): CoachContentFile {
   const removedWarmupIds = asIdList(file.removedWarmupIds)
   const removedGymShapeIds = asIdList(file.removedGymShapeIds)
+  const removedDrillIds = asIdList(file.removedDrillIds)
+  const removedShapeIds = asIdList(file.removedShapeIds)
+  const removedReferenceIds = asIdList(file.removedReferenceIds)
   const goneWarmups = new Set(removedWarmupIds)
   const goneShapes = new Set(removedGymShapeIds)
+  const goneDrills = new Set(removedDrillIds)
+  const goneCoachShapes = new Set(removedShapeIds)
+  const goneRefs = new Set(removedReferenceIds)
   return {
     ...file,
+    shapes: file.shapes.filter((s) => s?.id && !goneCoachShapes.has(s.id)),
+    references: (file.references ?? []).filter((r) => r?.id && !goneRefs.has(r.id)),
+    drills: (file.drills ?? []).filter((d) => d?.id && !goneDrills.has(d.id)),
     warmups: file.warmups.filter((w) => w?.id && !goneWarmups.has(w.id)),
     stars: file.stars.filter((s) => s?.warmupId && !goneWarmups.has(s.warmupId)),
     gymLibrary: mergeShippedGymShapes(
@@ -70,6 +85,9 @@ function applyTombstones(file: CoachContentFile): CoachContentFile {
     ),
     removedWarmupIds,
     removedGymShapeIds,
+    removedDrillIds,
+    removedShapeIds,
+    removedReferenceIds,
   }
 }
 
@@ -99,6 +117,9 @@ function parseFile(raw: string | null): CoachContentFile {
       drills: Array.isArray(data.drills) ? data.drills : [],
       removedWarmupIds: asIdList(data.removedWarmupIds),
       removedGymShapeIds: asIdList(data.removedGymShapeIds),
+      removedDrillIds: asIdList(data.removedDrillIds),
+      removedShapeIds: asIdList(data.removedShapeIds),
+      removedReferenceIds: asIdList(data.removedReferenceIds),
     })
   } catch {
     return emptyFile()
@@ -120,6 +141,9 @@ function readFile(): CoachContentFile {
       ...memoryFile,
       removedWarmupIds: mergeIdLists(stored.removedWarmupIds, memoryFile.removedWarmupIds),
       removedGymShapeIds: mergeIdLists(stored.removedGymShapeIds, memoryFile.removedGymShapeIds),
+      removedDrillIds: mergeIdLists(stored.removedDrillIds, memoryFile.removedDrillIds),
+      removedShapeIds: mergeIdLists(stored.removedShapeIds, memoryFile.removedShapeIds),
+      removedReferenceIds: mergeIdLists(stored.removedReferenceIds, memoryFile.removedReferenceIds),
     })
     syncGymCache(parsed)
     return parsed
@@ -147,6 +171,9 @@ function readFile(): CoachContentFile {
       ),
       removedWarmupIds: mergeIdLists(stored.removedWarmupIds, memoryFile.removedWarmupIds),
       removedGymShapeIds: mergeIdLists(stored.removedGymShapeIds, memoryFile.removedGymShapeIds),
+      removedDrillIds: mergeIdLists(stored.removedDrillIds, memoryFile.removedDrillIds),
+      removedShapeIds: mergeIdLists(stored.removedShapeIds, memoryFile.removedShapeIds),
+      removedReferenceIds: mergeIdLists(stored.removedReferenceIds, memoryFile.removedReferenceIds),
     })
     syncGymCache(parsed)
     return parsed
@@ -168,6 +195,9 @@ function emptyFile(): CoachContentFile {
     drills: [],
     removedWarmupIds: [],
     removedGymShapeIds: [],
+    removedDrillIds: [],
+    removedShapeIds: [],
+    removedReferenceIds: [],
   }
 }
 
@@ -223,6 +253,9 @@ function persist(next: CoachContentFile, sync = true) {
     drills: (next.drills ?? []).slice(0, 200),
     removedWarmupIds: asIdList(next.removedWarmupIds),
     removedGymShapeIds: asIdList(next.removedGymShapeIds),
+    removedDrillIds: asIdList(next.removedDrillIds),
+    removedShapeIds: asIdList(next.removedShapeIds),
+    removedReferenceIds: asIdList(next.removedReferenceIds),
   })
   memoryFile = file
   try {
@@ -281,7 +314,10 @@ export async function hydrateCoachContent(): Promise<void> {
       if (
         local.warmups.length > 0 ||
         (local.removedWarmupIds ?? []).length > 0 ||
-        (local.removedGymShapeIds ?? []).length > 0
+        (local.removedGymShapeIds ?? []).length > 0 ||
+        (local.removedDrillIds ?? []).length > 0 ||
+        (local.removedShapeIds ?? []).length > 0 ||
+        (local.removedReferenceIds ?? []).length > 0
       ) {
         await pushContent()
       }
@@ -292,7 +328,10 @@ export async function hydrateCoachContent(): Promise<void> {
       if (
         local.warmups.length > 0 ||
         (local.removedWarmupIds ?? []).length > 0 ||
-        (local.removedGymShapeIds ?? []).length > 0
+        (local.removedGymShapeIds ?? []).length > 0 ||
+        (local.removedDrillIds ?? []).length > 0 ||
+        (local.removedShapeIds ?? []).length > 0 ||
+        (local.removedReferenceIds ?? []).length > 0
       ) {
         await pushContent()
       }
@@ -309,6 +348,12 @@ export async function hydrateCoachContent(): Promise<void> {
     const removedGymShapeIds = mergeIdLists(local.removedGymShapeIds, data.removedGymShapeIds).filter(
       (id) => !serverGymIds.has(id),
     )
+    // Drill, coach-shape and coach-ref tombstones are permanent: a delete is
+    // only ever expressed as an absence, and the server unions on write, so a
+    // dropped tombstone would resurrect the row on the next merge.
+    const removedDrillIds = mergeIdLists(local.removedDrillIds, data.removedDrillIds)
+    const removedShapeIds = mergeIdLists(local.removedShapeIds, data.removedShapeIds)
+    const removedReferenceIds = mergeIdLists(local.removedReferenceIds, data.removedReferenceIds)
     persist(
       {
         kind: 'shape-lab-coach-content',
@@ -327,6 +372,9 @@ export async function hydrateCoachContent(): Promise<void> {
         ),
         removedWarmupIds,
         removedGymShapeIds,
+        removedDrillIds,
+        removedShapeIds,
+        removedReferenceIds,
       },
       false,
     )
@@ -335,6 +383,10 @@ export async function hydrateCoachContent(): Promise<void> {
     const remoteRemoved = asIdList(data.removedWarmupIds)
     const remoteGymRemoved = asIdList(data.removedGymShapeIds)
     const remoteGym = Array.isArray(data.gymLibrary) ? data.gymLibrary : []
+    const remoteDrills = Array.isArray(data.drills) ? data.drills : []
+    const remoteRemovedDrillIds = asIdList(data.removedDrillIds)
+    const remoteRemovedShapeIds = asIdList(data.removedShapeIds)
+    const remoteRemovedReferenceIds = asIdList(data.removedReferenceIds)
     const remoteById = new Map(
       remoteWarmups
         .filter((w): w is WarmupGuide => Boolean(w && typeof w === 'object' && w.id))
@@ -349,6 +401,11 @@ export async function hydrateCoachContent(): Promise<void> {
       next.warmups.length !== remoteWarmups.filter((w) => w?.id && !removedWarmupIds.includes(w.id)).length ||
       (next.removedWarmupIds ?? []).some((id) => !remoteRemoved.includes(id)) ||
       (next.removedGymShapeIds ?? []).some((id) => !remoteGymRemoved.includes(id)) ||
+      (next.removedDrillIds ?? []).some((id) => !remoteRemovedDrillIds.includes(id)) ||
+      (next.removedShapeIds ?? []).some((id) => !remoteRemovedShapeIds.includes(id)) ||
+      (next.removedReferenceIds ?? []).some((id) => !remoteRemovedReferenceIds.includes(id)) ||
+      (next.drills ?? []).length !==
+        remoteDrills.filter((d) => d?.id && !removedDrillIds.includes(d.id)).length ||
       (next.gymLibrary ?? []).length !==
         remoteGym.filter((s) => s && typeof s === 'object' && s.id && !removedGymShapeIds.includes(s.id))
           .length
@@ -357,7 +414,10 @@ export async function hydrateCoachContent(): Promise<void> {
     if (
       local.warmups.length > 0 ||
       (local.removedWarmupIds ?? []).length > 0 ||
-      (local.removedGymShapeIds ?? []).length > 0
+      (local.removedGymShapeIds ?? []).length > 0 ||
+      (local.removedDrillIds ?? []).length > 0 ||
+      (local.removedShapeIds ?? []).length > 0 ||
+      (local.removedReferenceIds ?? []).length > 0
     ) {
       await pushContent()
     }
@@ -385,13 +445,18 @@ export function saveCoachShape(shape: CoachShape): CoachShape {
   persist({
     ...file,
     shapes: [next, ...file.shapes.filter((s) => s.id !== next.id)],
+    removedShapeIds: (file.removedShapeIds ?? []).filter((id) => id !== next.id),
   })
   return next
 }
 
 export function deleteCoachShape(id: string) {
   const file = readFile()
-  persist({ ...file, shapes: file.shapes.filter((s) => s.id !== id) })
+  persist({
+    ...file,
+    shapes: file.shapes.filter((s) => s.id !== id),
+    removedShapeIds: mergeIdLists(file.removedShapeIds, [id]),
+  })
 }
 
 export function listGymLibraryShapes(): GymLibraryShape[] {
@@ -457,6 +522,7 @@ export function saveDrill(row: DrillClip): DrillClip {
   persist({
     ...file,
     drills: [next, ...(file.drills ?? []).filter((d) => d.id !== next.id)],
+    removedDrillIds: (file.removedDrillIds ?? []).filter((id) => id !== next.id),
   })
   return next
 }
@@ -466,6 +532,7 @@ export function deleteDrill(id: string) {
   persist({
     ...file,
     drills: (file.drills ?? []).filter((d) => d.id !== id),
+    removedDrillIds: mergeIdLists(file.removedDrillIds, [id]),
   })
 }
 
@@ -508,6 +575,7 @@ export function saveCoachSkillRef(ref: CoachSkillRef): CoachSkillRef {
   persist({
     ...file,
     references: [next, ...(file.references ?? []).filter((r) => r.id !== next.id)],
+    removedReferenceIds: (file.removedReferenceIds ?? []).filter((id) => id !== next.id),
   })
   dispatchLibraryChanged()
   return next
@@ -518,6 +586,7 @@ export function deleteCoachSkillRef(id: string) {
   persist({
     ...file,
     references: (file.references ?? []).filter((r) => r.id !== id),
+    removedReferenceIds: mergeIdLists(file.removedReferenceIds, [id]),
   })
   dispatchLibraryChanged()
 }
