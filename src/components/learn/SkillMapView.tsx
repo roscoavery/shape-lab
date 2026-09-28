@@ -25,9 +25,11 @@ import type { Athlete, AthleteSkillGoal } from '../../types'
 /** Look + layout options for the skill map page. Persisted in localStorage. */
 type MapTheme = 'neon' | 'midnight' | 'paper' | 'ember'
 type MapViewMode = 'map' | 'list' | 'compact' | 'levels'
+type InfoFilter = 'all' | 'info'
 
 const MAP_THEME_KEY = 'shapelab.skillmap.theme.v1'
 const MAP_VIEW_KEY = 'shapelab.skillmap.view.v1'
+const INFO_FILTER_KEY = 'shapelab.skillmap.infofilter.v1'
 
 const THEME_OPTIONS: { id: MapTheme; label: string }[] = [
   { id: 'neon', label: 'Neon' },
@@ -73,6 +75,30 @@ function saveMapView(v: MapViewMode) {
   } catch {
     /* ignore */
   }
+}
+const INFO_FILTER_OPTIONS: { id: InfoFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'info', label: 'With info' },
+]
+function loadInfoFilter(): InfoFilter {
+  try {
+    const v = localStorage.getItem(INFO_FILTER_KEY)
+    if (v === 'info') return v
+  } catch {
+    /* storage unavailable — fall through to default */
+  }
+  return 'all'
+}
+function saveInfoFilter(f: InfoFilter) {
+  try {
+    localStorage.setItem(INFO_FILTER_KEY, f)
+  } catch {
+    /* ignore */
+  }
+}
+/** A skill "has info" when its card has guide prose (same signal as the amber dot). */
+function hasCardInfo(skillId: string): boolean {
+  return !!getRegistrySkill(skillId)?.guideId
 }
 
 type SkillFamily =
@@ -887,6 +913,9 @@ const ZONE_OVERRIDE: Record<string, ZoneName> = {
   skl_forward_roll: 'Light',
   skl_backward_roll: 'Light',
   skl_round_off_to_knees: 'Light',
+  skl_front_pike_roll: 'Hard',
+  skl_front_limber: 'Light',
+  skl_backbend_kick_over: 'Light',
 }
 /** Band order for the Levels view — easiest first. */
 const BAND_ORDER: ZoneName[] = ['Light', 'Intermediate', 'Hard', 'Heavy', 'Expert', 'Legend']
@@ -953,6 +982,7 @@ function Tile({
   glowDist,
   isHighlight,
   theme,
+  infoOnly,
 }: {
   tile: MapTile
   skill: UnifiedSkill
@@ -962,8 +992,11 @@ function Tile({
   /** Roll highlighted as relevant-at-level ("relevant, not required"). */
   isHighlight?: boolean
   theme: MapTheme
+  /** Dim tiles whose cards have no guide prose yet. */
+  infoOnly?: boolean
 }) {
   const hasGuide = !!skill.guideId
+  const dimmed = !!infoOnly && !hasGuide
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
   const isBanner = tile.skillId === 'skl_foundations'
   const glowing = glowDist !== undefined
@@ -992,7 +1025,7 @@ function Tile({
       }}
       className={`relative flex items-center justify-center rounded-2xl border px-1 text-center font-bold leading-snug transition-transform active:scale-95 sm:px-2 ${v.textClass} ${
         v.dashed ? 'border-dashed' : ''
-      } ${
+      } ${dimmed ? 'opacity-25' : ''} ${
         isBanner
           ? 'min-h-[64px] py-3 text-[12px] uppercase tracking-[0.18em] sm:text-[13px] sm:tracking-[0.28em]'
           : 'min-h-[60px] py-2 text-[10px] tracking-[0.02em] sm:text-[11px]'
@@ -1015,11 +1048,13 @@ function MapRows({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   rows: MapRow[]
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
+  infoOnly?: boolean
 }) {
   return (
     <>
@@ -1041,6 +1076,7 @@ function MapRows({
                 glowDist={glowMap?.dist.get(tile.skillId)}
                 isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
                 theme={theme}
+                infoOnly={infoOnly}
               />
             )
           })}
@@ -1054,10 +1090,12 @@ function RollsSection({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
+  infoOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -1086,7 +1124,7 @@ function RollsSection({
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} />
+          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
         </div>
       )}
     </div>
@@ -1240,17 +1278,21 @@ function SegPicker({
   )
 }
 
-/** Compact sticky control bar: theme + view segmented pickers. */
+/** Compact sticky control bar: theme + view + info-filter segmented pickers. */
 function ViewControls({
   theme,
   onTheme,
   view,
   onView,
+  infoFilter,
+  onInfoFilter,
 }: {
   theme: MapTheme
   onTheme: (t: MapTheme) => void
   view: MapViewMode
   onView: (v: MapViewMode) => void
+  infoFilter: InfoFilter
+  onInfoFilter: (f: InfoFilter) => void
 }) {
   const barBg =
     theme === 'paper'
@@ -1288,6 +1330,20 @@ function ViewControls({
           options={VIEW_OPTIONS}
           current={view}
           onPick={(id) => onView(id as MapViewMode)}
+          theme={theme}
+        />
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span
+          className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]"
+          style={{ color: labelColor }}
+        >
+          Cards
+        </span>
+        <SegPicker
+          options={INFO_FILTER_OPTIONS}
+          current={infoFilter}
+          onPick={(id) => onInfoFilter(id as InfoFilter)}
           theme={theme}
         />
       </div>
@@ -1342,12 +1398,14 @@ function BeyondSection({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   open: boolean
   onToggle: () => void
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
+  infoOnly?: boolean
 }) {
   return (
     <div>
@@ -1370,7 +1428,7 @@ function BeyondSection({
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <MapRows rows={BEYOND_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} />
+          <MapRows rows={BEYOND_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
         </div>
       )}
     </div>
@@ -1454,12 +1512,14 @@ function ListView({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  infoOnly: boolean
 }) {
-  const entries = getSkillEntries()
+  const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
   const groups: { key: string; label: string; entries: SkillEntry[] }[] = LIST_FAMILY_ORDER.map(
     (f) => ({
       key: f,
@@ -1548,12 +1608,14 @@ function CompactView({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  infoOnly: boolean
 }) {
-  const entries = getSkillEntries()
+  const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
   const sections = [
     { key: 'beyond', label: 'Beyond · Legend', entries: entries.filter((e) => e.kind === 'beyond') },
     { key: 'path', label: 'Skill path', entries: entries.filter((e) => e.kind === 'main') },
@@ -1631,22 +1693,29 @@ function LevelChip({
   )
 }
 
-/** Levels view: horizontal bands by difficulty zone, easiest first. */
+/** Levels view: horizontal bands by difficulty zone, easiest first. Rolls stay
+ * in their own section below the bands, separate from the skill path. */
 function LevelsView({
   onTap,
   glowMap,
   theme,
+  infoOnly,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  infoOnly: boolean
 }) {
-  const entries = getSkillEntries()
+  const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
+  const main = entries.filter((e) => e.kind !== 'roll')
+  const rolls = entries.filter((e) => e.kind === 'roll')
   const accents = theme === 'paper' ? ZONE_ACCENT_DARK : ZONE_ACCENT
+  const headerColor = theme === 'paper' ? '#44403c' : 'rgba(255,255,255,0.75)'
+  const sectionColor = theme === 'paper' ? '#57534e' : 'rgba(255,255,255,0.55)'
   return (
     <div className="space-y-4">
       {BAND_ORDER.map((zone) => {
-        const zs = entries.filter((e) => e.zone === zone)
+        const zs = main.filter((e) => e.zone === zone)
         if (zs.length === 0) return null
         return (
           <div key={zone}>
@@ -1658,7 +1727,7 @@ function LevelsView({
               />
               <p
                 className="text-[11px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: theme === 'paper' ? '#44403c' : 'rgba(255,255,255,0.75)' }}
+                style={{ color: headerColor }}
               >
                 {zone} <span className="opacity-60">· {zs.length}</span>
               </p>
@@ -1671,6 +1740,21 @@ function LevelsView({
           </div>
         )
       })}
+      {rolls.length > 0 && (
+        <div>
+          <p
+            className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: sectionColor }}
+          >
+            Rolls <span className="opacity-60">· {rolls.length}</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {rolls.map((e) => (
+              <LevelChip key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1692,6 +1776,7 @@ export function SkillMapView({
   const [beyondOpen, setBeyondOpen] = useState(false)
   const [theme, setTheme] = useState<MapTheme>(loadMapTheme)
   const [view, setView] = useState<MapViewMode>(loadMapView)
+  const [infoFilter, setInfoFilter] = useState<InfoFilter>(loadInfoFilter)
   const pickTheme = (t: MapTheme) => {
     setTheme(t)
     saveMapTheme(t)
@@ -1700,6 +1785,11 @@ export function SkillMapView({
     setView(v)
     saveMapView(v)
   }
+  const pickInfoFilter = (f: InfoFilter) => {
+    setInfoFilter(f)
+    saveInfoFilter(f)
+  }
+  const infoOnly = infoFilter === 'info'
   // Guiding light: null when no athlete is signed in, no active athlete, and
   // no class roster — the map renders exactly as before. Otherwise the union
   // of everyone's goals lights up (shortest distance wins across athletes).
@@ -1747,8 +1837,15 @@ export function SkillMapView({
           carries the glow. Cheap on phones. */}
       <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.18) saturate(1.35); } }
 @keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,0.8), 0 0 18px 4px rgba(251,191,36,0.25); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,1), 0 0 26px 6px rgba(251,191,36,0.35); } }`}</style>
-      {/* Compact control bar: Look + View pickers, sticky at the top */}
-      <ViewControls theme={theme} view={view} onTheme={pickTheme} onView={pickView} />
+      {/* Compact control bar: Look + View + Cards pickers, sticky at the top */}
+      <ViewControls
+        theme={theme}
+        view={view}
+        onTheme={pickTheme}
+        onView={pickView}
+        infoFilter={infoFilter}
+        onInfoFilter={pickInfoFilter}
+      />
 
       {view === 'map' && <ColumnHeaders theme={theme} />}
 
@@ -1765,15 +1862,16 @@ export function SkillMapView({
               onTap={onTileTap}
               glowMap={glowMap}
               theme={theme}
+              infoOnly={infoOnly}
             />
 
             <Legend theme={theme} />
 
             {/* Skill tree */}
             <div className="space-y-2.5">
-              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} />
+              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
               <div className="pt-1">
-                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} />
+                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
               </div>
               {/* Light beaming upward from Foundations into the tree */}
               <div
@@ -1784,7 +1882,7 @@ export function SkillMapView({
                     'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
                 }}
               />
-              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} />
+              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
               <div className="pt-2" />
             </div>
           </div>
@@ -1793,9 +1891,9 @@ export function SkillMapView({
       ) : (
         <>
           <Legend theme={theme} />
-          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
-          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
-          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} />}
+          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
+          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
+          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
         </>
       )}
     </div>
