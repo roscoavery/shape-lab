@@ -47,6 +47,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_arabian: 'arabian',
   skl_handstand_fwd_roll: 'handstand-fwd-roll',
   skl_front_aerial: 'front-aerial',
+  skl_kick_full: 'kick-full',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -62,6 +63,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: '/videos/front-aerial-reference.mp4',
       watchFor: 'Front aerial on floor.',
+    },
+  ],
+  'kick-full': [
+    {
+      who: 'RileyAnne',
+      url: '/videos/rileyanne-kick-full.mp4',
+      watchFor: 'Kick full on the tumble track.',
     },
   ],
   // Skill path steps
