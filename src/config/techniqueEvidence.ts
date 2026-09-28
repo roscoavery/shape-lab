@@ -513,6 +513,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'arabian': [
     {
+      who: 'Reference',
+      url: '/videos/arabian-reference.mp4',
+      watchFor: 'Taught more as a back half tucked using opposite side spot.',
+    },
+    {
       who: 'Porter — Camp TumbleSmart',
       url: '/videos/porter-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
