@@ -210,7 +210,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       },
       {
         "kind": "ryan",
-        "text": "The connection lives or dies on the rebound. The round off has to block hard enough that the handspring starts from power, not from a squat. A slow round off makes the handspring do all the work, and the shapes fall apart."
+        "text": "Strong round off from a passe fall. This skill should build speed and power, not just use it. Same for the back handspring. We do not want the back handspring to spend the power from the round off. It should carry that power through and add more."
       },
       {
         "kind": "quote",
@@ -421,6 +421,10 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
         "text": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target."
       },
       {
+        "kind": "ryan",
+        "text": "Mountain climber, lunge, lever, hollow and zombie shapes are building blocks."
+      },
+      {
         "kind": "quote",
         "text": "The goal is to tumble with fast rebounds, not with slower half squat jumps.",
         "source": "Back Handspring Academy"
@@ -440,6 +444,10 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       {
         "kind": "ryan",
         "text": "Zombie is the landing shape for the round off, not the lightning bolt. The zombie shape sets the athlete up for less segmentation in the hips and knees through the second half of the round off. The lightning bolt does the opposite: it prioritizes no segmentation at the shoulders. A round off that lands in a lightning bolt builds habits that have to be reworked later."
+      },
+      {
+        "kind": "ryan",
+        "text": "No tight arch in a round off."
       },
       {
         "kind": "quote",
