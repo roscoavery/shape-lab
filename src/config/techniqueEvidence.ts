@@ -145,7 +145,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Charlie',
       url: '/videos/charlie-standing-bhs-series.mp4',
-      watchFor: 'Standing 2 back handsprings on tramp — noodle between the feet to focus on feet together.',
+      watchFor: 'Standing 2 on tramp — noodle between the feet to focus on feet together.',
     },
   ],
   // Skill path steps
