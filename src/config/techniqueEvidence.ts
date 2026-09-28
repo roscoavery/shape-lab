@@ -55,6 +55,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_back_extension_roll: 'back-extension-roll',
   skl_backward_roll: 'backward-roll',
   skl_standing_bhs_series: 'standing-bhs-series',
+  skl_back_1_5: 'back-15',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -153,6 +154,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'RileyAnne',
       url: '/videos/rileyanne-cart-full.mp4',
       watchFor: 'Cart full through to full. She learned to tumble out of fulls from cartwheel fulls before running fulls.',
+    },
+  ],
+  'back-15': [
+    {
+      who: 'Reference',
+      url: '/videos/whip-15-spring.mp4',
+      watchFor:
+        'Whip 1.5 on spring — keeping the back 1.5 relatively long since you carry forward momentum out of it. Back 1.5 lands blind so you cannot pike down on an under-rotated flip, which is why so many athletes skip the 1.5 and go straight to doubles. Helps to have the air awareness from a front full. Any time you step out of a skill like this, it has to over-rotate, especially if you do not travel much.',
     },
   ],
   // Skill path steps
