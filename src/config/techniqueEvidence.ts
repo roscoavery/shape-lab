@@ -276,11 +276,6 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DYEj-LloNIO/',
       watchFor: 'Round off to zombie, then the handspring connection.',
     },
-    {
-      who: 'Charlie',
-      url: '/videos/charlie-standing-bhs-series.mp4',
-      watchFor: 'Standing 2 back handsprings on tramp — noodle between the feet to focus on feet together.',
-    },
   ],
   layout: [
     {
