@@ -96,6 +96,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'coachlib', label: 'Coach library' },
     { id: 'drills', label: 'Drill library' },
     { id: 'spotting', label: 'Spotting' },
+    { id: 'chat', label: 'Ask' },
   ],
   team: [
     { id: 'classes', label: 'Classes' },
@@ -142,6 +143,7 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
     case 'coachlib':
     case 'drills':
     case 'spotting':
+    case 'chat':
       return 'learn'
     case 'classes':
     case 'feed':
@@ -240,7 +242,8 @@ export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean, 
       tab === 'scroll' ||
       tab === 'feed' ||
       tab === 'wins' ||
-      tab === 'compare'
+      tab === 'compare' ||
+      tab === 'chat'
     )
   }
   if (role === 'athlete') {
@@ -257,7 +260,8 @@ export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean, 
       tab === 'classclock' ||
       tab === 'network' ||
       tab === 'scroll' ||
-      tab === 'feed'
+      tab === 'feed' ||
+      tab === 'chat'
     )
   }
   if (role === 'kiosk') {

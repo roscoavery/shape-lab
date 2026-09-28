@@ -40,6 +40,7 @@ const FEATURE_WORDS: Record<AppTab, string> = {
   coachlib: 'coach library references',
   drills: 'drill library exercises',
   spotting: 'spotting spot coach safety spotting methods',
+  chat: 'ask chat questions coach help builder',
   compare: 'compare video delay side by side ab',
   scroll: 'reels scroll reference videos passes',
   classes: 'classes roster meeting',

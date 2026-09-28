@@ -37,6 +37,7 @@ import { CoachInterviewPanel } from './components/coach/CoachInterviewPanel'
 import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { SpottingPanel } from './components/learn/SpottingPanel'
+import { ChatPanel } from './components/chat/ChatPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
@@ -1632,6 +1633,7 @@ export default function App() {
       {tab === 'drills' && <DrillLibraryPanel signedIn={activeProfile} />}
 
       {tab === 'spotting' && <SpottingPanel />}
+      {tab === 'chat' && <ChatPanel onOpenTab={goTab} canEditFaq={ryanEdit} />}
 
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>
