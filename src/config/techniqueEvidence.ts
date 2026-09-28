@@ -54,6 +54,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_kick_2: 'kick-double',
   skl_back_extension_roll: 'back-extension-roll',
   skl_backward_roll: 'backward-roll',
+  skl_standing_bhs_series: 'standing-bhs-series',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -138,6 +139,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/backward-roll-tucked-candle.mp4',
       watchFor:
         'Tucked candle with pizza hands — roll back to hands to a tucked candle, press off hands to get back to feet like the end of a fwd roll. Do not go over on flat ground if you do not feel completely in control of this already.',
+    },
+  ],
+  'standing-bhs-series': [
+    {
+      who: 'Charlie',
+      url: '/videos/charlie-standing-bhs-series.mp4',
+      watchFor: 'Standing 2 back handsprings on tramp — noodle between the feet to focus on feet together.',
     },
   ],
   // Skill path steps
@@ -267,6 +275,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DYEj-LloNIO/',
       watchFor: 'Round off to zombie, then the handspring connection.',
+    },
+    {
+      who: 'Charlie',
+      url: '/videos/charlie-standing-bhs-series.mp4',
+      watchFor: 'Standing 2 back handsprings on tramp — noodle between the feet to focus on feet together.',
     },
   ],
   layout: [
