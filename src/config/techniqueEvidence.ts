@@ -198,6 +198,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'round-off': [
     {
+      who: 'Back Handspring Academy',
+      url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
+      watchFor: 'Coach-approved round off education for athletes, parents, and coaches. The same conclusions and principles Ryan coaches from.',
+    },
+    {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',
       watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',

@@ -1463,7 +1463,7 @@ function GuideTabContent({
       <ShapeStrip guideId={guideId} />
       <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
       {skill.ryanNote && (
-        <p className="border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
+        <p className="whitespace-pre-line border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
           Ryan: {skill.ryanNote}
         </p>
       )}
