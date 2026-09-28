@@ -53,6 +53,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_back_25: 'back-25',
   skl_kick_2: 'kick-double',
   skl_back_extension_roll: 'back-extension-roll',
+  skl_backward_roll: 'backward-roll',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -129,6 +130,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/back-roll-push-up-wedge.mp4',
       watchFor:
         'Back roll to push up (front support) down a wedge with straight arms. Start in a c shape with bent knees, hands turned in, arms behind the ears, elbows locked. Prerequisite for back extension roll — starts the athlete on landing in a front support from a backwards skill before handspring shaping drills from a handstand.',
+    },
+  ],
+  'backward-roll': [
+    {
+      who: 'Drill',
+      url: '/videos/backward-roll-tucked-candle.mp4',
+      watchFor:
+        'Tucked candle with pizza hands — roll back to hands to a tucked candle, press off hands to get back to feet like the end of a fwd roll. Do not go over on flat ground if you do not feel completely in control of this already.',
     },
   ],
   // Skill path steps
