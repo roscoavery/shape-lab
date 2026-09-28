@@ -1693,8 +1693,21 @@ function LevelChip({
   )
 }
 
-/** Levels view: horizontal bands by difficulty zone, easiest first. Rolls stay
- * in their own section below the bands, separate from the skill path. */
+/** Family order inside each Levels band — same order as the List view groups. */
+const LEVEL_FAMILY_ORDER: SkillFamily[] = [
+  'foundations',
+  'standing',
+  'forwards',
+  'cartwheel',
+  'roundoff',
+  'doubleback',
+  'kick',
+]
+
+/** Levels view: horizontal bands by difficulty zone, easiest first. Within each
+ * band, skills are grouped by family (each family on its own row) so the
+ * placement shows the progression, not just the color dot. Rolls stay in
+ * their own section below the bands, separate from the skill path. */
 function LevelsView({
   onTap,
   glowMap,
@@ -1717,6 +1730,10 @@ function LevelsView({
       {BAND_ORDER.map((zone) => {
         const zs = main.filter((e) => e.zone === zone)
         if (zs.length === 0) return null
+        const famGroups = LEVEL_FAMILY_ORDER.map((f) => ({
+          family: f,
+          entries: zs.filter((e) => e.family === f),
+        })).filter((g) => g.entries.length > 0)
         return (
           <div key={zone}>
             <div className="mb-1.5 flex items-center gap-2">
@@ -1732,9 +1749,27 @@ function LevelsView({
                 {zone} <span className="opacity-60">· {zs.length}</span>
               </p>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {zs.map((e) => (
-                <LevelChip key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+            <div className="space-y-2">
+              {famGroups.map((g) => (
+                <div key={g.family} className="flex items-start gap-2">
+                  <span
+                    className="w-20 shrink-0 pt-1 text-[9px] font-bold uppercase tracking-[0.08em]"
+                    style={{ color: sectionColor }}
+                  >
+                    {FAMILY_STYLES[g.family].label}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {g.entries.map((e) => (
+                      <LevelChip
+                        key={e.skillId}
+                        entry={e}
+                        onTap={onTap}
+                        glowMap={glowMap}
+                        theme={theme}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
