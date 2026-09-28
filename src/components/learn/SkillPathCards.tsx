@@ -8,7 +8,8 @@ import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { FEATURED_PROOF, GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
-import { shippedStillUrl } from '../../lib/shippedRefs'
+import { shippedStillUrl, shippedFileCandidates } from '../../lib/shippedRefs'
+import { skillPhotosFor } from '../../config/skillPhotos'
 import {
   GUIDE_ORDER,
   TRACK_LABELS,
@@ -254,6 +255,36 @@ function ShapeStrip({ guideId }: { guideId: string }) {
             {s.desc && <div className="text-[11px] opacity-70">{s.desc}</div>}
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/** Ryan's photo collages dropped into skill cards. */
+function SkillPhotoStrip({ skillId }: { skillId: string }) {
+  const photos = skillPhotosFor(skillId)
+  if (photos.length === 0) return null
+  return (
+    <div>
+      <Label>Photos</Label>
+      <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
+        {photos.map((p) => {
+          const src = shippedFileCandidates(p.file)[0]
+          if (!src) return null
+          return (
+            <div key={p.file} className="shrink-0">
+              <div className="h-72 overflow-hidden rounded-xl bg-black">
+                <img
+                  src={src}
+                  alt={p.label ?? 'Skill photo'}
+                  className="h-full w-auto object-contain"
+                  loading="lazy"
+                />
+              </div>
+              {p.label && <div className="mt-1 text-xs font-bold">{p.label}</div>}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1233,6 +1264,7 @@ function GuideTabContent({
   const canBend = skill.canBend ?? []
   return (
     <div className="space-y-4 p-4">
+      <SkillPhotoStrip skillId={skill.id} />
       <div>
         <Label>Needs</Label>
         <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
@@ -1521,6 +1553,7 @@ export function SkillPathCards({
                   <span className="inline-block rounded-full bg-neutral-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/60">
                     guide coming
                   </span>
+                  <SkillPhotoStrip skillId={modalSkill.id} />
                   <p className="text-sm opacity-80">
                     This skill is on the map but its guide card isn't written
                     yet.
