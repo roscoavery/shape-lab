@@ -38,6 +38,7 @@ export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
     { shapeId: 'lunge_land' },
   ],
   'standing-bhs': [
+    { shapeId: 'long_bridge' },
     { shapeId: 'handstand' },
     { shapeId: 'arch' },
     { shapeId: 'hollow_arms_up' },
