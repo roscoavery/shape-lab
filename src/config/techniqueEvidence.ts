@@ -192,6 +192,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'ro-bhs': [
     {
+      who: 'Drill',
+      url: '/videos/ro-bhs-rebound-pike.mp4',
+      watchFor: 'Round off rebound backwards to pike/hollow shape — hitting feet in front angle.',
+    },
+    {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DZNL4ZRGlyA/',
       watchFor: 'Round off rebound to flat back — essential for a good handspring.',
