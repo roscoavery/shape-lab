@@ -24,6 +24,7 @@ import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
 import { SkillPathCards } from './learn/SkillPathCards'
+import { getRegistrySkill, getRegistrySkillByGuideId } from '../lib/skillRegistry'
 import { ProgressionLevels } from './learn/ProgressionLevels'
 import { ConceptCards } from './learn/ConceptCards'
 import { customShapeId, groupIgStillsByShape, igStillDisplayName, igStillsForShape, listIgStills } from '../lib/igStills'
@@ -173,6 +174,26 @@ export function EducationPanel({
   }, [])
 
   const [focusSkillId, setFocusSkillId] = useState<string | null>(null)
+  // A shared card link (?skill=<guideId or skillId>) opens the Learn
+  // section straight at that card. The param is consumed once so it
+  // doesn't reopen on every visit.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const shared = params.get('skill')
+      if (!shared) return
+      const skill = getRegistrySkillByGuideId(shared) ?? getRegistrySkill(shared)
+      if (skill) {
+        setView({ kind: 'skillPath' })
+        setFocusSkillId(skill.id)
+      }
+      params.delete('skill')
+      const rest = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''))
+    } catch {
+      /* URL not readable — ignore */
+    }
+  }, [])
   useEffect(() => {
     const jump = takeMobileSearchJump('skill')
     if (!jump || jump.kind !== 'skill') return

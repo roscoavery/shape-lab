@@ -207,6 +207,12 @@ function isOwnerView(activeProfile: Athlete | null, deskPreview: DeskPreview): b
 export default function App() {
   const camera = usePoseCamera()
   const [tab, setTab] = useState<AppTab>(() => {
+    // A shared card link (?skill=...) jumps straight to Learn.
+    try {
+      if (new URLSearchParams(window.location.search).get('skill')) return 'learn'
+    } catch {
+      /* ignore */
+    }
     const saved = loadTab()
     if (!isRyanOnlyTab(saved)) return saved
     const id = unlockedProfileId() || loadActiveAthleteId()

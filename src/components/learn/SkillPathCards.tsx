@@ -57,6 +57,12 @@ function isLocalVideo(url: string): boolean {
   return /\.(mp4|mov|webm)(\?|#|$)/i.test(url)
 }
 
+/** Resolve a skill from either a guideId or a skill id (shared card links). */
+function resolveSkill(id: string | null | undefined): UnifiedSkill | null {
+  if (!id) return null
+  return getRegistrySkillByGuideId(id) ?? getRegistrySkill(id)
+}
+
 /** Native player for local video files, with A/B loop support. */
 /** Native player for local video files, with A/B loop support.
  * Plays when mostly on screen, pauses when scrolled away. Simple and dumb. */
@@ -124,8 +130,7 @@ export function guideCardColor(guideId: string): string {
   return STEP_COLORS[(i < 0 ? 0 : i) % STEP_COLORS.length]
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
+function Label({ children }: { children: React.ReactNode }) {  return (
     <div className="text-[11px] font-extrabold uppercase tracking-widest opacity-70">
       {children}
     </div>
@@ -136,6 +141,46 @@ function fmtLoopTime(s: number) {
   const m = Math.floor(s / 60)
   const sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+/**
+ * Coach shares a skill card with an athlete: copies a link that opens the
+ * Learn section straight to this card (their sign-in still applies).
+ */
+function ShareSkillCardButton({ skill }: { skill: UnifiedSkill }) {
+  const [copied, setCopied] = useState(false)
+  const share = async () => {
+    const key = skill.guideId ?? skill.id
+    const url = `${window.location.origin}${window.location.pathname}?skill=${encodeURIComponent(key)}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        document.execCommand('copy')
+      } catch {
+        /* clipboard unavailable */
+      }
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="rounded-full bg-black/25 px-3 py-1 text-sm font-bold"
+      aria-label={`Share the ${skill.name} card`}
+    >
+      {copied ? 'Copied ✓' : '⤴ Share'}
+    </button>
+  )
 }
 
 /**
@@ -1555,13 +1600,13 @@ export function SkillPathCards({
   activeAthlete?: Athlete | null
 }) {
   const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
-    getRegistrySkillByGuideId(focusSkillId),
+    resolveSkill(focusSkillId),
   )
 
-  // Deep-linked from search: open the skill's card in the modal.
+  // Deep-linked from search or a shared card link: open the skill's card in the modal.
   useEffect(() => {
     if (!focusSkillId) return
-    const skill = getRegistrySkillByGuideId(focusSkillId)
+    const skill = resolveSkill(focusSkillId)
     if (skill) setModalSkill(skill)
   }, [focusSkillId])
 
@@ -1657,14 +1702,17 @@ export function SkillPathCards({
                 }}
               >
                 <span>{modalSkill.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setModalSkill(null)}
-                  aria-label="Close"
-                  className="rounded-full bg-black/25 px-3 py-1 text-sm font-bold"
-                >
-                  ✕
-                </button>
+                <div className="flex items-center gap-2">
+                  {coach && <ShareSkillCardButton skill={modalSkill} />}
+                  <button
+                    type="button"
+                    onClick={() => setModalSkill(null)}
+                    aria-label="Close"
+                    className="rounded-full bg-black/25 px-3 py-1 text-sm font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
               {modalSkill.guideId ? (
                 <SkillGuideCardContent
