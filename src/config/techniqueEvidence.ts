@@ -56,6 +56,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_backward_roll: 'backward-roll',
   skl_standing_bhs_series: 'standing-bhs-series',
   skl_back_1_5: 'back-15',
+  skl_back_quad: 'back-quad',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -172,6 +173,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/whip-15-spring.mp4',
       watchFor:
         'Whip 1.5 on spring — keeping the back 1.5 relatively long since you carry forward momentum out of it. Back 1.5 lands blind so you cannot pike down on an under-rotated flip, which is why so many athletes skip the 1.5 and go straight to doubles. Helps to have the air awareness from a front full. Any time you step out of a skill like this, it has to over-rotate, especially if you do not travel much.',
+    },
+  ],
+  'back-quad': [
+    {
+      who: 'Tumbling Dee — Camp TumbleSmart',
+      url: '/videos/dee-back-quad.mp4',
+      watchFor: 'Back quad on tramp.',
     },
   ],
   // Skill path steps
