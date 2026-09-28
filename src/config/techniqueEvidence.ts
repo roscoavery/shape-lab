@@ -85,6 +85,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'kick-full': [
     {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-kick-full-tumbletrak.mp4',
+      watchFor: 'Kick full on tumble track.',
+    },
+    {
       who: 'Reference',
       url: '/videos/kick-full-spring.mp4',
       watchFor: 'Big kick full on spring.',
