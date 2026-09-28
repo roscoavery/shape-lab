@@ -19,6 +19,29 @@ export interface ProofVideo {
   endAt?: number
 }
 
+/**
+ * One featured reference per skill card: rendered bigger at the top of the
+ * card's video area (e.g. Ryan's spring layout analysis on the layout card).
+ * Keys match TECHNIQUE_EVIDENCE keys. The featured video is excluded from
+ * the strip below it so it doesn't appear twice.
+ */
+export const FEATURED_PROOF: Record<string, ProofVideo> = {
+  full: {
+    who: 'Coach Ryan Williams',
+    url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+    watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
+  },
+}
+
+/**
+ * Evidence keys for guideless skills (no guideId, so no guide card).
+ * The "guide coming" modal renders the ProofStrip for these keys, so the
+ * video still shows in what Ryan calls the skill's card.
+ */
+export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
+  skl_arabian: 'arabian',
+}
+
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   // Skill path steps
   'back-tuck': [
@@ -316,6 +339,20 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DJHqG7xIrpQ/',
       watchFor: 'Round off handspring prep for double flips — the setup work.',
+    },
+  ],
+  'triple-full': [
+    {
+      who: 'Porter',
+      url: '/videos/porter-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
+    },
+  ],
+  'arabian': [
+    {
+      who: 'Porter',
+      url: '/videos/porter-arabian-triple.mp4',
+      watchFor: 'Arabian through to triple.',
     },
   ],
   'back-walkover': [

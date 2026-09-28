@@ -15,11 +15,26 @@ import {
   type UnifiedSkill,
   type UnifiedSkillTrack,
 } from './skillRegistry'
-import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS } from '../config/skillPathSeed'
+import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS, SHIPPED_VERSIONS } from '../config/skillPathSeed'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
 import { givenName } from './classStation'
 
 export type SkillNeedKind = 'required' | 'helpful' | 'alt'
+
+/**
+ * Skills consolidated into a canonical tile. Goals and shipped needs may
+ * still reference the old id — canonicalize before every needsForSkill /
+ * conditioningForSkill call so the path lands on the tile.
+ */
+export const CANONICAL_SKILL_ID: Record<string, string> = {
+  skl_ro_bhs_full: 'skl_back_full',
+}
+
+/** Map an old/consolidated skill id to the canonical tile id. */
+export function canonicalSkillId(id: string | null | undefined): string {
+  if (!id) return ''
+  return CANONICAL_SKILL_ID[id] ?? id
+}
 
 export type PowerDownStep = {
   id: string
@@ -75,6 +90,30 @@ export type ConditioningNeed = {
   shipped?: boolean
 }
 
+/**
+ * A drill attached to one skill's card. videoUrl is optional on purpose —
+ * Ryan adds videos later, when uploading is less of a burden.
+ */
+export type SkillDrill = {
+  id: string
+  skillId: string
+  label: string
+  videoUrl?: string
+  note?: string
+  order: number
+  shipped?: boolean
+}
+
+/** A harder version of a skill, named by the coach (e.g. Switch kick full). */
+export type SkillVersion = {
+  id: string
+  skillId: string
+  label: string
+  note?: string
+  order: number
+  shipped?: boolean
+}
+
 export type SkillPathFile = {
   kind: 'shape-lab-skill-paths'
   version: 1
@@ -82,7 +121,14 @@ export type SkillPathFile = {
   skills: SkillDef[]
   needs: SkillNeed[]
   conditioning: ConditioningNeed[]
+  drills: SkillDrill[]
+  versions: SkillVersion[]
   removedSkillIds?: string[]
+  /** Tombstones so deleted rows stay deleted when the server file merges back. */
+  removedNeedIds?: string[]
+  removedConditioningIds?: string[]
+  removedDrillIds?: string[]
+  removedVersionIds?: string[]
 }
 
 export const TRAINING_SURFACES: { id: TrainingSurface; label: string; short: string }[] = [
@@ -116,7 +162,13 @@ function emptyFile(): SkillPathFile {
     skills: [],
     needs: [],
     conditioning: [],
+    drills: [],
+    versions: [],
     removedSkillIds: [],
+    removedNeedIds: [],
+    removedConditioningIds: [],
+    removedDrillIds: [],
+    removedVersionIds: [],
   }
 }
 
@@ -132,7 +184,15 @@ function readRaw(): SkillPathFile {
       skills: Array.isArray(data.skills) ? data.skills : [],
       needs: Array.isArray(data.needs) ? data.needs : [],
       conditioning: Array.isArray(data.conditioning) ? data.conditioning : [],
+      drills: Array.isArray(data.drills) ? data.drills : [],
+      versions: Array.isArray(data.versions) ? data.versions : [],
       removedSkillIds: Array.isArray(data.removedSkillIds) ? data.removedSkillIds : [],
+      removedNeedIds: Array.isArray(data.removedNeedIds) ? data.removedNeedIds : [],
+      removedConditioningIds: Array.isArray(data.removedConditioningIds)
+        ? data.removedConditioningIds
+        : [],
+      removedDrillIds: Array.isArray(data.removedDrillIds) ? data.removedDrillIds : [],
+      removedVersionIds: Array.isArray(data.removedVersionIds) ? data.removedVersionIds : [],
     }
   } catch {
     return emptyFile()
@@ -141,26 +201,46 @@ function readRaw(): SkillPathFile {
 
 function mergeShipped(file: SkillPathFile): SkillPathFile {
   const removed = new Set(file.removedSkillIds ?? [])
+  const removedNeeds = new Set(file.removedNeedIds ?? [])
+  const removedCond = new Set(file.removedConditioningIds ?? [])
+  const removedDrills = new Set(file.removedDrillIds ?? [])
+  const removedVersions = new Set(file.removedVersionIds ?? [])
   const skills = new Map(file.skills.filter((s) => s?.id).map((s) => [s.id, s]))
   for (const row of SHIPPED_SKILLS) {
     if (removed.has(row.id) || skills.has(row.id)) continue
     skills.set(row.id, row)
   }
-  const needs = new Map(file.needs.filter((n) => n?.id).map((n) => [n.id, n]))
+  const needs = new Map(
+    file.needs.filter((n) => n?.id && !removedNeeds.has(n.id)).map((n) => [n.id, n]),
+  )
   for (const row of SHIPPED_NEEDS) {
-    if (removed.has(row.skillId) || needs.has(row.id)) continue
+    if (removed.has(row.skillId) || removedNeeds.has(row.id) || needs.has(row.id)) continue
     needs.set(row.id, row)
   }
-  const conditioning = new Map(file.conditioning.filter((c) => c?.id).map((c) => [c.id, c]))
+  const conditioning = new Map(
+    file.conditioning.filter((c) => c?.id && !removedCond.has(c.id)).map((c) => [c.id, c]),
+  )
   for (const row of SHIPPED_CONDITIONING) {
-    if (removed.has(row.skillId) || conditioning.has(row.id)) continue
+    if (removed.has(row.skillId) || removedCond.has(row.id) || conditioning.has(row.id)) continue
     conditioning.set(row.id, row)
+  }
+  const drills = new Map(
+    file.drills.filter((d) => d?.id && !removedDrills.has(d.id)).map((d) => [d.id, d]),
+  )
+  const versions = new Map(
+    file.versions.filter((v) => v?.id && !removedVersions.has(v.id)).map((v) => [v.id, v]),
+  )
+  for (const row of SHIPPED_VERSIONS) {
+    if (removed.has(row.skillId) || removedVersions.has(row.id) || versions.has(row.id)) continue
+    versions.set(row.id, row)
   }
   return {
     ...file,
     skills: [...skills.values()].sort((a, b) => a.name.localeCompare(b.name)),
     needs: [...needs.values()],
     conditioning: [...conditioning.values()],
+    drills: [...drills.values()],
+    versions: [...versions.values()],
   }
 }
 
@@ -393,12 +473,22 @@ export function saveSkill(input: {
 
 export function deleteSkill(id: string) {
   const file = readRaw()
+  const needIds = file.needs.filter((n) => n.skillId === id || n.needSkillId === id).map((n) => n.id)
+  const condIds = file.conditioning.filter((c) => c.skillId === id).map((c) => c.id)
+  const drillIds = file.drills.filter((d) => d.skillId === id).map((d) => d.id)
+  const versionIds = file.versions.filter((v) => v.skillId === id).map((v) => v.id)
   write({
     ...file,
     skills: file.skills.filter((s) => s.id !== id),
     needs: file.needs.filter((n) => n.skillId !== id && n.needSkillId !== id),
     conditioning: file.conditioning.filter((c) => c.skillId !== id),
+    drills: file.drills.filter((d) => d.skillId !== id),
+    versions: file.versions.filter((v) => v.skillId !== id),
     removedSkillIds: [...new Set([...(file.removedSkillIds ?? []), id])],
+    removedNeedIds: [...new Set([...(file.removedNeedIds ?? []), ...needIds])],
+    removedConditioningIds: [...new Set([...(file.removedConditioningIds ?? []), ...condIds])],
+    removedDrillIds: [...new Set([...(file.removedDrillIds ?? []), ...drillIds])],
+    removedVersionIds: [...new Set([...(file.removedVersionIds ?? []), ...versionIds])],
   })
 }
 
@@ -417,7 +507,11 @@ export function saveNeed(input: Omit<SkillNeed, 'id'> & { id?: string }): SkillN
 
 export function deleteNeed(id: string) {
   const file = readRaw()
-  write({ ...file, needs: file.needs.filter((n) => n.id !== id) })
+  write({
+    ...file,
+    needs: file.needs.filter((n) => n.id !== id),
+    removedNeedIds: [...new Set([...(file.removedNeedIds ?? []), id])],
+  })
 }
 
 export function saveConditioning(input: Omit<ConditioningNeed, 'id'> & { id?: string }): ConditioningNeed {
@@ -435,7 +529,100 @@ export function saveConditioning(input: Omit<ConditioningNeed, 'id'> & { id?: st
 
 export function deleteConditioning(id: string) {
   const file = readRaw()
-  write({ ...file, conditioning: file.conditioning.filter((c) => c.id !== id) })
+  write({
+    ...file,
+    conditioning: file.conditioning.filter((c) => c.id !== id),
+    removedConditioningIds: [...new Set([...(file.removedConditioningIds ?? []), id])],
+  })
+}
+
+/** Drills attached to one skill's card, shallowest first. */
+export function drillsForSkill(skillId: string): SkillDrill[] {
+  const canon = canonicalSkillId(skillId) || skillId
+  return read()
+    .drills.filter((d) => canonicalSkillId(d.skillId) === canon)
+    .sort((a, b) => a.order - b.order)
+}
+
+export function saveDrill(input: Omit<SkillDrill, 'id'> & { id?: string }): SkillDrill {
+  const file = readRaw()
+  const row: SkillDrill = {
+    ...input,
+    skillId: canonicalSkillId(input.skillId) || input.skillId,
+    id: input.id ?? createId('drl'),
+  }
+  write({
+    ...file,
+    drills: [row, ...file.drills.filter((d) => d.id !== row.id)],
+  })
+  return row
+}
+
+export function deleteDrill(id: string) {
+  const file = readRaw()
+  write({
+    ...file,
+    drills: file.drills.filter((d) => d.id !== id),
+    removedDrillIds: [...new Set([...(file.removedDrillIds ?? []), id])],
+  })
+}
+
+/** Harder versions of one skill, shallowest first. */
+export function versionsForSkill(skillId: string): SkillVersion[] {
+  const canon = canonicalSkillId(skillId) || skillId
+  return read()
+    .versions.filter((v) => canonicalSkillId(v.skillId) === canon)
+    .sort((a, b) => a.order - b.order)
+}
+
+export function saveVersion(input: Omit<SkillVersion, 'id'> & { id?: string }): SkillVersion {
+  const file = readRaw()
+  const row: SkillVersion = {
+    ...input,
+    skillId: canonicalSkillId(input.skillId) || input.skillId,
+    id: input.id ?? createId('ver'),
+  }
+  write({
+    ...file,
+    versions: [row, ...file.versions.filter((v) => v.id !== row.id)],
+  })
+  return row
+}
+
+export function deleteVersion(id: string) {
+  const file = readRaw()
+  write({
+    ...file,
+    versions: file.versions.filter((v) => v.id !== id),
+    removedVersionIds: [...new Set([...(file.removedVersionIds ?? []), id])],
+  })
+}
+
+/**
+ * Awaited re-push of the local skill-path file to the gym server.
+ * Local data is already written before this is called; this gives card
+ * editors a real saved / failed signal instead of the fire-and-forget PUT.
+ */
+export async function pushSkillPathsNow(): Promise<{ ok: boolean; message: string }> {
+  const next = { ...readRaw(), exportedAt: new Date().toISOString() }
+  try {
+    const res = await gymWriteFetch('/api/skill-paths', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    })
+    if (res.ok) return { ok: true, message: 'Saved' }
+    let detail = ''
+    try {
+      const data = (await res.json()) as { error?: string }
+      if (data?.error) detail = data.error
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, message: detail || `Sync failed (status ${res.status})` }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : 'Network error' }
+  }
 }
 
 export function goalLine(goal: AthleteSkillGoal): string {
@@ -595,14 +782,37 @@ export async function hydrateSkillPaths(): Promise<void> {
       }
     }
     const needs = new Map(local.needs.map((n) => [n.id, n]))
+    const removedNeedIds = new Set([...(local.removedNeedIds ?? []), ...(data.removedNeedIds ?? [])])
     for (const row of data.needs ?? []) {
-      if (!row?.id) continue
+      if (!row?.id || removedNeedIds.has(row.id)) continue
       needs.set(row.id, row)
     }
     const conditioning = new Map(local.conditioning.map((c) => [c.id, c]))
+    const removedCondIds = new Set([
+      ...(local.removedConditioningIds ?? []),
+      ...(data.removedConditioningIds ?? []),
+    ])
     for (const row of data.conditioning ?? []) {
-      if (!row?.id) continue
+      if (!row?.id || removedCondIds.has(row.id)) continue
       conditioning.set(row.id, row)
+    }
+    const drills = new Map(local.drills.map((d) => [d.id, d]))
+    const removedDrillIds = new Set([
+      ...(local.removedDrillIds ?? []),
+      ...(data.removedDrillIds ?? []),
+    ])
+    for (const row of data.drills ?? []) {
+      if (!row?.id || removedDrillIds.has(row.id)) continue
+      drills.set(row.id, row)
+    }
+    const versions = new Map(local.versions.map((v) => [v.id, v]))
+    const removedVersionIds = new Set([
+      ...(local.removedVersionIds ?? []),
+      ...(data.removedVersionIds ?? []),
+    ])
+    for (const row of data.versions ?? []) {
+      if (!row?.id || removedVersionIds.has(row.id)) continue
+      versions.set(row.id, row)
     }
     write({
       kind: 'shape-lab-skill-paths',
@@ -611,7 +821,13 @@ export async function hydrateSkillPaths(): Promise<void> {
       skills: [...skills.values()],
       needs: [...needs.values()],
       conditioning: [...conditioning.values()],
+      drills: [...drills.values()],
+      versions: [...versions.values()],
       removedSkillIds: [...new Set([...(local.removedSkillIds ?? []), ...(data.removedSkillIds ?? [])])],
+      removedNeedIds: [...removedNeedIds],
+      removedConditioningIds: [...removedCondIds],
+      removedDrillIds: [...removedDrillIds],
+      removedVersionIds: [...removedVersionIds],
     })
   } catch {
     /* offline */

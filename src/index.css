@@ -81,6 +81,21 @@ button {
   cursor: pointer;
 }
 
+/**
+ * "Shine light" traveling glow: a brightness/saturation pulse that sweeps
+ * bottom-to-top through a prerequisite chain. Chain nodes stagger it with
+ * animation-delay = (maxDist - dist) * 0.45s so the wave starts at the
+ * deepest prerequisite and rises toward the target skill.
+ */
+@keyframes path-travel {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.55) saturate(1.4);
+  }
+}
+
 @keyframes hit-check-pop {
   0% {
     transform: scale(0.35);

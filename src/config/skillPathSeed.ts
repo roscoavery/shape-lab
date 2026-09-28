@@ -4,7 +4,7 @@
  * Alt = another order that can come first.
  */
 
-import type { ConditioningNeed, SkillDef, SkillNeed } from '../lib/skillPaths'
+import type { ConditioningNeed, SkillDef, SkillNeed, SkillVersion } from '../lib/skillPaths'
 
 const now = '2026-09-13T00:00:00.000Z'
 
@@ -464,6 +464,17 @@ export const SHIPPED_CONDITIONING: ConditioningNeed[] = [
     label: 'Hold a proper hollow, arms up, for one minute',
     kind: 'helpful',
     shapeId: 'hollow',
+    shipped: true,
+  },
+]
+
+/** Harder versions shipped with the app. Ryan names these himself. */
+export const SHIPPED_VERSIONS: SkillVersion[] = [
+  {
+    id: 'ver_kick_full_switch',
+    skillId: 'skl_kick_full',
+    label: 'Switch kick full',
+    order: 0,
     shipped: true,
   },
 ]

@@ -15,10 +15,18 @@
  * The guiding-light data (glowMap) is theme/view-independent — only the
  * rendering changes. The LevelBar only renders in Map view.
  */
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
-import { needsForSkill, resolveGoalSkill } from '../../lib/skillPaths'
+import { canonicalSkillId, resolveGoalSkill } from '../../lib/skillPaths'
+import {
+  buildPathHighlight,
+  needsForSkillConsolidated,
+  searchMapSkills,
+  usePathTick,
+  type MapSearchResult,
+  type PathHighlight,
+} from '../../lib/skillPathHighlight'
 import { isAthleteProfile } from '../../lib/profileRole'
 import type { Athlete, AthleteSkillGoal } from '../../types'
 
@@ -101,7 +109,8 @@ function hasCardInfo(skillId: string): boolean {
   return !!getRegistrySkill(skillId)?.guideId
 }
 
-type SkillFamily =
+/** Exported for the card Path tab's chain colors. */
+export type SkillFamily =
   | 'foundations'
   | 'rolls'
   | 'cartwheel'
@@ -127,7 +136,7 @@ const FAMILY_STYLES: Record<SkillFamily, { bg: string; border: string; label: st
 }
 
 /** Solid RGB triplet per family, used for the guiding-light glow. */
-const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
+export const FAMILY_GLOW_RGB: Record<SkillFamily, string> = {
   foundations: '255,255,255',
   rolls: '45,212,191',
   cartwheel: '96,165,250',
@@ -179,7 +188,7 @@ function getSkillRow(skillId: string): number | undefined {
       for (const t of row.tiles) skillRowIndex!.set(t.skillId, -1)
     })
   }
-  return skillRowIndex.get(CANONICAL_SKILL_ID[skillId] ?? skillId)
+  return skillRowIndex.get(canonicalSkillId(skillId))
 }
 
 /**
@@ -188,7 +197,7 @@ function getSkillRow(skillId: string): number | undefined {
  * roundoff family (or layout+, which implies RO HS in the progression).
  */
 function goalReachesTier(skillId: string, tier: { minRow: number; name: string }): boolean {
-  const canon = CANONICAL_SKILL_ID[skillId] ?? skillId
+  const canon = canonicalSkillId(skillId)
   const row = getSkillRow(canon)
   if (row === undefined) return false
   if (tier.name === 'cartwheel' && BELOW_CARTWHEEL.has(canon)) return false
@@ -205,22 +214,7 @@ function goalReachesTier(skillId: string, tier: { minRow: number; name: string }
   return true
 }
 
-/**
- * Skills consolidated into a canonical tile. Goals and shipped needs may
- * still reference the old id — map them so the glow lands on the tile.
- */
-const CANONICAL_SKILL_ID: Record<string, string> = {
-  skl_ro_bhs_full: 'skl_back_full',
-}
-
-/** Prerequisite needs for a skill, including needs keyed to consolidated ids. */
-function needsForSkillConsolidated(skillId: string) {
-  const ids = new Set([skillId])
-  for (const [oldId, canon] of Object.entries(CANONICAL_SKILL_ID)) {
-    if (canon === skillId) ids.add(oldId)
-  }
-  return [...ids].flatMap((id) => needsForSkill(id))
-}
+/** Prerequisite needs — canonicalized; see lib/skillPathHighlight. */
 
 /**
  * Guiding light: for each goal skill, walk the prerequisite chain and record
@@ -241,7 +235,7 @@ function buildGlowMap(goals: AthleteSkillGoal[]): {
   const dist = new Map<string, number>()
   const queue: Array<[string, number]> = []
   const enqueue = (id: string, d: number) => {
-    const canon = CANONICAL_SKILL_ID[id] ?? id
+    const canon = canonicalSkillId(id)
     if (!getRegistrySkill(canon)) return
     const prev = dist.get(canon)
     if (prev === undefined || d < prev) {
@@ -272,7 +266,7 @@ function buildGlowMap(goals: AthleteSkillGoal[]): {
     const raw = goal.skillId?.trim()
     if (!raw) continue
     const resolved = resolveGoalSkill(goal)
-    const id = CANONICAL_SKILL_ID[resolved?.id ?? raw] ?? (resolved?.id ?? raw)
+    const id = canonicalSkillId(resolved?.id ?? raw)
     if (getRegistrySkill(id)) goalIds.push(id)
   }
   for (const tier of ROLL_HIGHLIGHT_TIERS) {
@@ -283,6 +277,76 @@ function buildGlowMap(goals: AthleteSkillGoal[]): {
     }
   }
   return { dist, highlights }
+}
+
+/**
+ * "Shine light" highlight roles, resolved per tile. While a highlight is
+ * active the athlete-goal glow steps aside — the chosen path is the focus.
+ */
+export type HlRole = 'target' | 'required' | 'helpful' | 'dim' | null
+
+export function hlFor(hl: PathHighlight | null | undefined, skillId: string): {
+  role: HlRole
+  dist: number
+} {
+  if (!hl) return { role: null, dist: 0 }
+  const canon = canonicalSkillId(skillId)
+  if (canon === hl.target) return { role: 'target', dist: 0 }
+  const rd = hl.required.get(canon)
+  if (rd !== undefined) return { role: 'required', dist: rd }
+  const hd = hl.helpful.get(canon)
+  if (hd !== undefined) return { role: 'helpful', dist: hd }
+  return { role: 'dim', dist: 0 }
+}
+
+/**
+ * The highlight's visual layer for a tile: a family-color ring + the
+ * traveling bottom-to-top pulse. The pulse is staggered so the wave starts
+ * at the deepest prerequisite and rises toward the target. Takes precedence
+ * over the steady goal glow while a highlight is active.
+ */
+export function hlGlowStyle(
+  hl: PathHighlight,
+  role: HlRole,
+  dist: number,
+  family: SkillFamily,
+): CSSProperties {
+  const rgb = FAMILY_GLOW_RGB[family]
+  const s: CSSProperties = {}
+  if (role === 'target') {
+    s.boxShadow = `0 0 0 2px rgba(${rgb},0.95), 0 0 26px 6px rgba(${rgb},0.45)`
+    s.animation = 'path-travel 2.6s ease-in-out infinite'
+  } else if (role === 'required') {
+    s.boxShadow = `0 0 0 1px rgba(${rgb},0.9), 0 0 16px 3px rgba(${rgb},0.35)`
+    s.animation = 'path-travel 2.6s ease-in-out infinite'
+    s.animationDelay = `${(hl.maxDist - dist) * 0.45}s`
+  } else if (role === 'helpful') {
+    s.boxShadow = `0 0 0 1px rgba(${rgb},0.4), 0 0 9px 2px rgba(${rgb},0.16)`
+  }
+  return s
+}
+
+/** Small role marker for rows and chips: ◎ target · ✦ required · ✧ helpful. */
+export function HlMarker({ role, className = '' }: { role: HlRole; className?: string }) {
+  if (role === 'target')
+    return (
+      <span aria-label="highlight target" className={`shrink-0 text-amber-300 ${className}`}>
+        ◎
+      </span>
+    )
+  if (role === 'required')
+    return (
+      <span aria-label="required for the highlight target" className={`shrink-0 text-amber-300/90 ${className}`}>
+        ✦
+      </span>
+    )
+  if (role === 'helpful')
+    return (
+      <span aria-label="helpful for the highlight target" className={`shrink-0 opacity-60 ${className}`}>
+        ✧
+      </span>
+    )
+  return null
 }
 
 /** Neon-edge glow in the family color: a tight bright outline hugging the
@@ -566,8 +630,8 @@ function legendChipStyle(theme: MapTheme, family: SkillFamily): CSSProperties {
     }
   return { background: FAMILY_STYLES[family].bg, borderColor: FAMILY_STYLES[family].border }
 }
-/** Skill family per tile, by registry skl_* id. */
-const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
+/** Skill family per tile, by registry skl_* id. Exported for the card Path tab. */
+export const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_foundations: 'foundations',
   // rolls
   skl_backward_roll: 'rolls',
@@ -983,6 +1047,7 @@ function Tile({
   isHighlight,
   theme,
   infoOnly,
+  hl,
 }: {
   tile: MapTile
   skill: UnifiedSkill
@@ -994,15 +1059,21 @@ function Tile({
   theme: MapTheme
   /** Dim tiles whose cards have no guide prose yet. */
   infoOnly?: boolean
+  /** "Shine light" path highlight. While active it takes over the glow. */
+  hl?: PathHighlight | null
 }) {
   const hasGuide = !!skill.guideId
   const dimmed = !!infoOnly && !hasGuide
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
   const isBanner = tile.skillId === 'skl_foundations'
-  const glowing = glowDist !== undefined
-  const highlighted = !!isHighlight && !glowing
+  const { role: hlRole, dist: hlDist } = hlFor(hl, tile.skillId)
+  const hlActive = hlRole !== null
+  // While a highlight is active, the athlete-goal glow steps aside.
+  const glowing = !hlActive && glowDist !== undefined
+  const highlighted = !hlActive && !!isHighlight && !glowing
   const featured = isFeaturedSkill(skill) && !isBanner
   const v = tileVisuals(theme, family, { isBanner, glowing, glowDist, highlighted, featured })
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, family) : null
   return (
     <button
       type="button"
@@ -1015,17 +1086,19 @@ function Tile({
         ...(v.borderLeftWidth
           ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
           : null),
-        boxShadow: v.boxShadow,
-        ...(v.pulse && glowDist === 0
-          ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
-          : null),
-        ...(v.beam && isBanner
-          ? { animation: 'foundations-beam 5s ease-in-out infinite' }
-          : null),
+        boxShadow: hlActive ? hlLayer?.boxShadow : v.boxShadow,
+        ...(hlLayer?.animation
+          ? { animation: hlLayer.animation, animationDelay: hlLayer.animationDelay }
+          : v.pulse && glowDist === 0
+            ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+            : v.beam && isBanner
+              ? { animation: 'foundations-beam 5s ease-in-out infinite' }
+              : null),
+        opacity: dimmed ? 0.25 : hlRole === 'dim' ? 0.35 : undefined,
       }}
       className={`relative flex items-center justify-center rounded-2xl border px-1 text-center font-bold leading-snug transition-transform active:scale-95 sm:px-2 ${v.textClass} ${
         v.dashed ? 'border-dashed' : ''
-      } ${dimmed ? 'opacity-25' : ''} ${
+      } ${
         isBanner
           ? 'min-h-[64px] py-3 text-[12px] uppercase tracking-[0.18em] sm:text-[13px] sm:tracking-[0.28em]'
           : 'min-h-[60px] py-2 text-[10px] tracking-[0.02em] sm:text-[11px]'
@@ -1038,6 +1111,11 @@ function Tile({
           aria-hidden
         />
       )}
+      {hlRole && hlRole !== 'dim' && (
+        <span className="absolute left-1.5 top-1.5">
+          <HlMarker role={hlRole} className="text-[10px]" />
+        </span>
+      )}
       <span className={`break-words ${v.labelClass}`}>{tile.label}</span>
     </button>
   )
@@ -1049,12 +1127,14 @@ function MapRows({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   rows: MapRow[]
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
   infoOnly?: boolean
+  hl?: PathHighlight | null
 }) {
   return (
     <>
@@ -1077,6 +1157,7 @@ function MapRows({
                 isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
                 theme={theme}
                 infoOnly={infoOnly}
+                hl={hl}
               />
             )
           })}
@@ -1091,11 +1172,13 @@ function RollsSection({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
   infoOnly?: boolean
+  hl?: PathHighlight | null
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -1124,7 +1207,7 @@ function RollsSection({
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
+          <MapRows rows={ROLLS_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
         </div>
       )}
     </div>
@@ -1286,6 +1369,9 @@ function ViewControls({
   onView,
   infoFilter,
   onInfoFilter,
+  onSearch,
+  hlTargetName,
+  onClearHighlight,
 }: {
   theme: MapTheme
   onTheme: (t: MapTheme) => void
@@ -1293,6 +1379,9 @@ function ViewControls({
   onView: (v: MapViewMode) => void
   infoFilter: InfoFilter
   onInfoFilter: (f: InfoFilter) => void
+  onSearch: () => void
+  hlTargetName: string | null
+  onClearHighlight: () => void
 }) {
   const barBg =
     theme === 'paper'
@@ -1303,6 +1392,8 @@ function ViewControls({
           ? '#0b0d12'
           : 'rgba(8,10,14,0.94)'
   const labelColor = theme === 'paper' ? '#78716c' : 'rgba(255,255,255,0.55)'
+  const chipColor = theme === 'paper' ? '#44403c' : 'rgba(255,255,255,0.85)'
+  const chipBorder = theme === 'paper' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.25)'
   return (
     <div className="sticky top-0 z-10 py-1.5" style={{ background: barBg }}>
       <div className="flex items-center gap-2">
@@ -1347,13 +1438,132 @@ function ViewControls({
           theme={theme}
         />
       </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <span
+          className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]"
+          style={{ color: labelColor }}
+        >
+          Shine
+        </span>
+        <button
+          type="button"
+          onClick={onSearch}
+          aria-label="Search skills to shine light on a path"
+          className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium"
+          style={{ color: chipColor, borderColor: chipBorder }}
+        >
+          <span aria-hidden>🔍</span> Search skills…
+        </button>
+        {hlTargetName && (
+          <button
+            type="button"
+            onClick={onClearHighlight}
+            title="Clear the path highlight"
+            className="flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-200"
+          >
+            <span aria-hidden>✦</span> {hlTargetName}{' '}
+            <span aria-hidden className="opacity-70">
+              ✕
+            </span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Search every skill on the map and pick one to shine light on: its
+ * prerequisite path glows (brightest at the target, traveling up from the
+ * deepest prerequisite) while unrelated skills fade out of focus.
+ * Tapping a tile still opens its card — highlight and card coexist.
+ */
+function SkillSearchOverlay({
+  onClose,
+  onPick,
+  mapIds,
+  labelOf,
+}: {
+  onClose: () => void
+  onPick: (skillId: string) => void
+  mapIds: Set<string>
+  labelOf: (id: string) => string
+}) {
+  const [q, setQ] = useState('')
+  const results: MapSearchResult[] = useMemo(
+    () => searchMapSkills(q, mapIds, labelOf),
+    [q, mapIds, labelOf],
+  )
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-[12vh]"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
+    >
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        role="dialog"
+        aria-label="Search skills to shine light on"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/15 bg-[#14141c] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 border-b border-white/10 p-3">
+          <span aria-hidden>🔍</span>
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Type a skill name…"
+            aria-label="Search skills"
+            className="w-full bg-transparent text-sm text-white placeholder-white/40 outline-none"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close search"
+            className="rounded-full px-2 py-1 text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          {q.trim() === '' ? (
+            <p className="p-3 text-sm text-white/50">
+              Start typing to search every skill on the map. Pick one and its path lights up.
+            </p>
+          ) : results.length === 0 ? (
+            <p className="p-3 text-sm text-white/50">No skills match “{q.trim()}”.</p>
+          ) : (
+            <ul>
+              {results.map((r) => (
+                <li key={r.skillId}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(r.skillId)}
+                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left hover:bg-white/10"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-white">{r.label}</span>
+                      {r.name !== r.label && (
+                        <span className="block truncate text-xs text-white/50">{r.name}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-xs text-amber-200/70">shine ✦</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
 /** Column headers for the map view (Today section-label style). */
-function ColumnHeaders({ theme }: { theme: MapTheme }) {
-  return (
+function ColumnHeaders({ theme }: { theme: MapTheme }) {  return (
     <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
       {HEADERS.map((h) => (
         <div
@@ -1399,6 +1609,7 @@ function BeyondSection({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   open: boolean
   onToggle: () => void
@@ -1406,6 +1617,7 @@ function BeyondSection({
   glowMap?: { dist: Map<string, number>; highlights: Set<string> } | null
   theme: MapTheme
   infoOnly?: boolean
+  hl?: PathHighlight | null
 }) {
   return (
     <div>
@@ -1428,7 +1640,7 @@ function BeyondSection({
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <MapRows rows={BEYOND_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
+          <MapRows rows={BEYOND_ROWS} onTap={onTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
         </div>
       )}
     </div>
@@ -1443,21 +1655,28 @@ function ListRow({
   onTap,
   glowMap,
   theme,
+  hl,
 }: {
   entry: SkillEntry
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  hl?: PathHighlight | null
 }) {
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const hlActive = hlRole !== null
+  const highlighted =
+    hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const glowing = hlActive ? hlRole === 'target' || hlRole === 'required' : glowDist !== undefined
   const v = itemVisuals(theme, entry.family, {
-    glowing: glowDist !== undefined,
-    glowDist,
+    glowing,
+    glowDist: hlActive ? (hlRole === 'target' ? 0 : 1) : glowDist,
     highlighted,
   })
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
   const rgb = FAMILY_GLOW_RGB[entry.family]
   const zoneAccent = (theme === 'paper' ? ZONE_ACCENT_DARK : ZONE_ACCENT)[entry.zone]
   return (
@@ -1472,8 +1691,12 @@ function ListRow({
         ...(v.borderLeftWidth
           ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
           : null),
-        boxShadow: v.boxShadow,
+        boxShadow: hlActive ? hlLayer?.boxShadow : v.boxShadow,
         color: v.color,
+        ...(hlLayer?.animation
+          ? { animation: hlLayer.animation, animationDelay: hlLayer.animationDelay }
+          : null),
+        opacity: hlRole === 'dim' ? 0.35 : undefined,
       }}
     >
       <span
@@ -1482,10 +1705,14 @@ function ListRow({
         aria-hidden
       />
       <span className="flex-1 text-[13px] font-semibold">{entry.label}</span>
-      {glowDist !== undefined && (
-        <span className="shrink-0 text-[10px] font-bold" style={{ color: `rgb(${rgb})` }}>
-          ✦ path
-        </span>
+      {hlActive ? (
+        <HlMarker role={hlRole} className="text-xs" />
+      ) : (
+        glowDist !== undefined && (
+          <span className="shrink-0 text-[10px] font-bold" style={{ color: `rgb(${rgb})` }}>
+            ✦ path
+          </span>
+        )
       )}
       <span
         className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em]"
@@ -1513,11 +1740,13 @@ function ListView({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
   infoOnly: boolean
+  hl?: PathHighlight | null
 }) {
   const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
   const groups: { key: string; label: string; entries: SkillEntry[] }[] = LIST_FAMILY_ORDER.map(
@@ -1546,7 +1775,7 @@ function ListView({
           </p>
           <div className="space-y-1.5">
             {g.entries.map((e) => (
-              <ListRow key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+              <ListRow key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} hl={hl} />
             ))}
           </div>
         </div>
@@ -1561,28 +1790,35 @@ function CompactTile({
   onTap,
   glowMap,
   theme,
+  hl,
 }: {
   entry: SkillEntry
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  hl?: PathHighlight | null
 }) {
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const hlActive = hlRole !== null
+  const highlighted =
+    hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const glowing = hlActive ? hlRole === 'target' || hlRole === 'required' : glowDist !== undefined
   const v = tileVisuals(theme, entry.family, {
     isBanner: false,
-    glowing: glowDist !== undefined,
-    glowDist,
+    glowing,
+    glowDist: hlActive ? (hlRole === 'target' ? 0 : 1) : glowDist,
     highlighted,
-    featured: isFeaturedSkill(skill),
+    featured: !hlActive && isFeaturedSkill(skill),
   })
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
   return (
     <button
       type="button"
       onClick={() => onTap(skill)}
-      className={`flex min-h-[46px] items-center justify-center rounded-lg border px-1 text-center text-[9px] font-bold leading-tight active:scale-95 ${v.textClass} ${
+      className={`relative flex min-h-[46px] items-center justify-center rounded-lg border px-1 text-center text-[9px] font-bold leading-tight active:scale-95 ${v.textClass} ${
         v.dashed ? 'border-dashed' : ''
       }`}
       style={{
@@ -1592,12 +1828,20 @@ function CompactTile({
         ...(v.borderLeftWidth
           ? { borderLeftWidth: v.borderLeftWidth, borderLeftColor: v.borderLeftColor }
           : null),
-        boxShadow: v.boxShadow,
-        ...(v.pulse && glowDist === 0
-          ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
-          : null),
+        boxShadow: hlActive ? hlLayer?.boxShadow : v.boxShadow,
+        ...(hlLayer?.animation
+          ? { animation: hlLayer.animation, animationDelay: hlLayer.animationDelay }
+          : v.pulse && glowDist === 0
+            ? { animation: 'skill-glow-pulse 2.8s ease-in-out infinite' }
+            : null),
+        opacity: hlRole === 'dim' ? 0.35 : undefined,
       }}
     >
+      {hlRole && hlRole !== 'dim' && (
+        <span className="absolute left-1 top-0.5">
+          <HlMarker role={hlRole} className="text-[8px]" />
+        </span>
+      )}
       <span className={`break-words ${v.labelClass}`}>{entry.label}</span>
     </button>
   )
@@ -1609,11 +1853,13 @@ function CompactView({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
   infoOnly: boolean
+  hl?: PathHighlight | null
 }) {
   const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
   const sections = [
@@ -1634,7 +1880,7 @@ function CompactView({
           </p>
           <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
             {s.entries.map((e) => (
-              <CompactTile key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+              <CompactTile key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} hl={hl} />
             ))}
           </div>
         </div>
@@ -1649,21 +1895,28 @@ function LevelChip({
   onTap,
   glowMap,
   theme,
+  hl,
 }: {
   entry: SkillEntry
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
+  hl?: PathHighlight | null
 }) {
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const highlighted = (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const hlActive = hlRole !== null
+  const highlighted =
+    hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
+  const glowing = hlActive ? hlRole === 'target' || hlRole === 'required' : glowDist !== undefined
   const v = itemVisuals(theme, entry.family, {
-    glowing: glowDist !== undefined,
-    glowDist,
+    glowing,
+    glowDist: hlActive ? (hlRole === 'target' ? 0 : 1) : glowDist,
     highlighted,
   })
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
   const rgb = FAMILY_GLOW_RGB[entry.family]
   return (
     <button
@@ -1674,8 +1927,12 @@ function LevelChip({
         background: v.background,
         borderColor: v.borderColor,
         ...(v.borderWidth ? { borderWidth: v.borderWidth } : null),
-        boxShadow: v.boxShadow,
+        boxShadow: hlActive ? hlLayer?.boxShadow : v.boxShadow,
         color: v.color,
+        ...(hlLayer?.animation
+          ? { animation: hlLayer.animation, animationDelay: hlLayer.animationDelay }
+          : null),
+        opacity: hlRole === 'dim' ? 0.35 : undefined,
       }}
     >
       <span
@@ -1684,10 +1941,14 @@ function LevelChip({
         aria-hidden
       />
       {entry.label}
-      {glowDist !== undefined && (
-        <span style={{ color: `rgb(${rgb})` }} aria-hidden>
-          ✦
-        </span>
+      {hlActive ? (
+        <HlMarker role={hlRole} className="text-[10px]" />
+      ) : (
+        glowDist !== undefined && (
+          <span style={{ color: `rgb(${rgb})` }} aria-hidden>
+            ✦
+          </span>
+        )
       )}
     </button>
   )
@@ -1713,11 +1974,13 @@ function LevelsView({
   glowMap,
   theme,
   infoOnly,
+  hl,
 }: {
   onTap: (s: UnifiedSkill) => void
   glowMap?: GlowMap
   theme: MapTheme
   infoOnly: boolean
+  hl?: PathHighlight | null
 }) {
   const entries = getSkillEntries().filter((e) => !infoOnly || hasCardInfo(e.skillId))
   const main = entries.filter((e) => e.kind !== 'roll')
@@ -1785,7 +2048,7 @@ function LevelsView({
           </p>
           <div className="flex flex-wrap gap-1.5">
             {rolls.map((e) => (
-              <LevelChip key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} />
+              <LevelChip key={e.skillId} entry={e} onTap={onTap} glowMap={glowMap} theme={theme} hl={hl} />
             ))}
           </div>
         </div>
@@ -1865,6 +2128,25 @@ export function SkillMapView({
     if (!goals.length) return null
     return buildGlowMap(goals)
   }, [glowAthletes])
+  // "Shine light": pick a skill and its prerequisite path lights up while
+  // everything else fades. Rebuilds live when Ryan edits needs in a card.
+  const pathTick = usePathTick()
+  const [hlTarget, setHlTarget] = useState<string | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const hl = useMemo(
+    () => (hlTarget ? buildPathHighlight(hlTarget) : null),
+    [hlTarget, pathTick],
+  )
+  const hlTargetName = hlTarget ? getRegistrySkill(hlTarget)?.name ?? null : null
+  const mapIds = useMemo(() => new Set(getSkillEntries().map((e) => e.skillId)), [])
+  const mapLabels = useMemo(
+    () => new Map(getSkillEntries().map((e) => [e.skillId, e.label] as const)),
+    [],
+  )
+  const labelOf = useCallback(
+    (id: string) => mapLabels.get(id) ?? getRegistrySkill(id)?.name ?? id,
+    [mapLabels],
+  )
   return (
     <div className={`space-y-2.5 ${theme === 'paper' ? 'rounded-2xl bg-[#f3efe4] p-3' : ''}`}>
       {/* Pulse keyframes for the goal tile (distance 0). Pulses the neon edge
@@ -1880,7 +2162,21 @@ export function SkillMapView({
         onView={pickView}
         infoFilter={infoFilter}
         onInfoFilter={pickInfoFilter}
+        onSearch={() => setSearchOpen(true)}
+        hlTargetName={hlTargetName}
+        onClearHighlight={() => setHlTarget(null)}
       />
+      {searchOpen && (
+        <SkillSearchOverlay
+          onClose={() => setSearchOpen(false)}
+          onPick={(id) => {
+            setHlTarget(id)
+            setSearchOpen(false)
+          }}
+          mapIds={mapIds}
+          labelOf={labelOf}
+        />
+      )}
 
       {view === 'map' && <ColumnHeaders theme={theme} />}
 
@@ -1898,15 +2194,16 @@ export function SkillMapView({
               glowMap={glowMap}
               theme={theme}
               infoOnly={infoOnly}
+              hl={hl}
             />
 
             <Legend theme={theme} />
 
             {/* Skill tree */}
             <div className="space-y-2.5">
-              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
+              <MapRows rows={ROWS.slice(0, 13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-1">
-                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
+                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               </div>
               {/* Light beaming upward from Foundations into the tree */}
               <div
@@ -1917,7 +2214,7 @@ export function SkillMapView({
                     'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
                 }}
               />
-              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />
+              <MapRows rows={ROWS.slice(13)} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-2" />
             </div>
           </div>
@@ -1926,9 +2223,9 @@ export function SkillMapView({
       ) : (
         <>
           <Legend theme={theme} />
-          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
-          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
-          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} />}
+          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
+          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
+          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
         </>
       )}
     </div>
