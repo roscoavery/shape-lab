@@ -21,7 +21,6 @@ export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
   'back-tuck': [{ shapeId: 'tuck_open_shoulders' }, { shapeId: 'hollow_arms_up' }, { shapeId: 'candlestick' }],
   'round-off': [
     { shapeId: 'handstand' },
-    { shapeId: 'arch' },
     { shapeId: 'hollow_arms_up' },
     { shapeId: 'zombie' },
   ],

@@ -1653,12 +1653,16 @@ export function SkillPathCards({
   }, [modalSkill])
 
   // Lock the page behind the modal so background scroll can't fight the card.
+  // Both html and body: iOS Safari can keep scrolling the document on body-only locks.
   useEffect(() => {
     if (!modalSkill) return
-    const prev = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    const prevBody = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = prev
+      document.documentElement.style.overflow = prevHtml
+      document.body.style.overflow = prevBody
     }
   }, [modalSkill])
 
@@ -1729,7 +1733,7 @@ export function SkillPathCards({
             aria-label={modalSkill.name}
           >
             <div
-              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:rounded-3xl"
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] pb-[max(2rem,env(safe-area-inset-bottom))] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:rounded-3xl"
               onClick={(e) => e.stopPropagation()}
             >
             <article

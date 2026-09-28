@@ -431,7 +431,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       },
       {
         "kind": "ryan",
-        "text": "A strong round off means blocking through your shoulders with enough power to jump off your hands. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs."
+        "text": "A strong round off means blocking through a surface with enough power to jump off your hands adequately. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs."
       },
       {
         "kind": "ryan",
@@ -443,11 +443,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       },
       {
         "kind": "ryan",
-        "text": "Zombie is the landing shape for the round off, not the lightning bolt. The zombie shape sets the athlete up for less segmentation in the hips and knees through the second half of the round off. The lightning bolt does the opposite: it prioritizes no segmentation at the shoulders. A round off that lands in a lightning bolt builds habits that have to be reworked later."
-      },
-      {
-        "kind": "ryan",
-        "text": "No tight arch in a round off."
+        "text": "Zombie is the landing shape for the round off. The zombie shape sets the athlete up for less segmentation in the hips and knees through the second half of the round off. Some coaches teach the round off to land in a lightning bolt shape instead, and athletes can build connections that way. Coach Ryan avoids it because of a pattern he kept seeing: athletes who learned the round off to a lightning bolt often never learned to use the arm drop to get their feet in front, so their connections kept landing with feet behind and bent knees. He taught connections off a lightning bolt landing successfully for several years before that recurring problem convinced him to change. The zombie landing keeps the arm drop helping the feet instead of working against them."
       },
       {
         "kind": "quote",

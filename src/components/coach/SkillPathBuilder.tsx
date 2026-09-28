@@ -108,7 +108,7 @@ export function SkillPathBuilder({
           Close
         </button>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-10 [touch-action:pan-y]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(3.25rem+env(safe-area-inset-bottom)+1.5rem)] [touch-action:pan-y]">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
           {editable ? (
             <SkillEditor
