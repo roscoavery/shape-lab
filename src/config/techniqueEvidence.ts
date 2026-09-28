@@ -122,6 +122,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DHL_hfEuRYi/',
       watchFor: 'His whole take on the back tuck — the prerequisite standard for layouts.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/ryan-round-off-rebound-mat.mp4',
+      watchFor: 'Round off into a rebound onto a raised soft mat.',
+    },
   ],
   'round-off': [
     {
