@@ -28,6 +28,8 @@ export type SkillNeedKind = 'required' | 'helpful' | 'alt'
  */
 export const CANONICAL_SKILL_ID: Record<string, string> = {
   skl_ro_bhs_full: 'skl_back_full',
+  /** Bounder step out is no longer its own skill — it lives inside Bounders. */
+  skl_bounder_step_out: 'skl_bounders',
 }
 
 /** Map an old/consolidated skill id to the canonical tile id. */

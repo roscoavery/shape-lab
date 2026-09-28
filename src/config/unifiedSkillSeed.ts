@@ -847,7 +847,12 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   {
     "id": "skl_bounders",
     "name": "Bounders",
-    "aliases": [],
+    "aliases": [
+      "bounder",
+      "flyspring",
+      "fly spring",
+      "bounder step out"
+    ],
     "track": "running"
   },
   {
@@ -866,12 +871,6 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "aliases": [
       "front handspring step out"
     ],
-    "track": "running"
-  },
-  {
-    "id": "skl_bounder_step_out",
-    "name": "Bounder step out",
-    "aliases": [],
     "track": "running"
   },
   {
