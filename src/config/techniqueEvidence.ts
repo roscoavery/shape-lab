@@ -52,6 +52,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_front_layout: 'front-layout',
   skl_back_25: 'back-25',
   skl_kick_2: 'kick-double',
+  skl_back_extension_roll: 'back-extension-roll',
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -120,6 +121,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-standing-full.mp4',
       watchFor: 'Standing full — emphasis on standing all the way up on the take off.',
+    },
+  ],
+  'back-extension-roll': [
+    {
+      who: 'Drill',
+      url: '/videos/back-roll-push-up-wedge.mp4',
+      watchFor:
+        'Back roll to push up (front support) down a wedge with straight arms. Start in a c shape with bent knees, hands turned in, arms behind the ears, elbows locked. Prerequisite for back extension roll — starts the athlete on landing in a front support from a backwards skill before handspring shaping drills from a handstand.',
     },
   ],
   // Skill path steps
