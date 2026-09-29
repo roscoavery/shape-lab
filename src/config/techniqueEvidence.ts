@@ -319,7 +319,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-roundoff-eyes-forward-blocking-angle.mp4',
-      watchFor: 'How he teaches the eyes-forward blocking angle with open shoulders after a round off.',
+      watchFor: 'How he teaches the eyes-forward blocking angle with open shoulders out of a round off back handspring.',
     },
     {
       who: 'Reference',
@@ -369,6 +369,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'ro-bhs': [
     {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-roundoff-eyes-forward-blocking-angle.mp4',
+      watchFor: 'How he teaches the eyes-forward blocking angle with open shoulders out of a round off back handspring.',
+    },
+    {
       who: 'Drill',
       url: '/videos/ro-bhs-rebound-pike.mp4',
       watchFor: 'Round off rebound backwards to pike/hollow shape — hitting feet in front angle.',
@@ -405,6 +410,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
   ],
   'ro-bhs-series': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-roundoff-eyes-forward-blocking-angle.mp4',
+      watchFor: 'How he teaches the eyes-forward blocking angle with open shoulders out of a round off back handspring.',
+    },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DbpyloMstn8/',
