@@ -38,12 +38,12 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
   },
   layout: {
     who: 'Coach Ryan Williams',
-    url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+    url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
     watchFor: 'His layout analysis on spring floor.',
   },
   full: {
     who: 'Coach Ryan Williams',
-    url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+    url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
     watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
   },
 }
@@ -422,7 +422,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
     {
       who: 'Coach Ryan Williams',
-      url: 'https://www.tiktok.com/@coachryanwilliams/video/7530711980978539790',
+      url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
       watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
     },
     {
