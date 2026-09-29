@@ -737,6 +737,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-cartwheel-stepin-zombie.mp4',
       watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/cartwheel-step-in-zombie.mp4',
+      watchFor: 'Cartwheel step in zombie — connections class at TumbleSmart.',
+    },
   ],
   'cartwheel-handspring': [
     {
