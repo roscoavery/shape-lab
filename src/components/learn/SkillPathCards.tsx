@@ -307,6 +307,32 @@ export function ProofStrip({
   /** Fullscreen carousel player: the video list + index, null = closed. */
   const [fullView, setFullView] = useState<{ list: ProofVideo[]; index: number } | null>(null)
 
+  /**
+   * Open the fullscreen player. The true browser fullscreen request must run
+   * synchronously inside the tap gesture (a deferred call is rejected on
+   * iPad); iPhone Safari doesn't support it and just gets the overlay.
+   */
+  const openFullView = (list: ProofVideo[], index: number) => {
+    try {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        void document.documentElement.requestFullscreen().catch(() => {})
+      }
+    } catch {
+      /* unsupported — the overlay player is the fullscreen */
+    }
+    setFullView({ list, index })
+  }
+
+  /** Close the fullscreen player, leaving true browser fullscreen if we entered it. */
+  const closeFullView = () => {
+    setFullView(null)
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Load admin-added videos for this card.
   useEffect(() => {
     let cancelled = false
@@ -524,8 +550,8 @@ export function ProofStrip({
                   )}
                   <button
                     type="button"
-                    onClick={() => setFullView({ list: pinnedVideos, index: i })}
-                    className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+                    onClick={() => openFullView(pinnedVideos, i)}
+                    className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
                     title="Full screen — scrub, slow-mo, flip"
                   >
@@ -572,8 +598,8 @@ export function ProofStrip({
             />
             <button
               type="button"
-              onClick={() => setFullView({ list: [featured], index: 0 })}
-              className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+              onClick={() => openFullView([featured], 0)}
+              className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
               aria-label={`Open ${featured.who} fullscreen`}
               title="Full screen"
             >
@@ -637,9 +663,9 @@ export function ProofStrip({
                   <button
                     type="button"
                     onClick={() =>
-                      setFullView({ list: stripVideos, index: stripVideos.findIndex((x) => x.url === v.url) })
+                      openFullView(stripVideos, stripVideos.findIndex((x) => x.url === v.url))
                     }
-                    className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-black/80"
+                    className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
                     title="Full screen — scrub, slow-mo, flip"
                   >
@@ -764,7 +790,7 @@ export function ProofStrip({
           videos={fullView.list}
           index={fullView.index}
           onIndex={(i) => setFullView((prev) => (prev ? { ...prev, index: i } : prev))}
-          onClose={() => setFullView(null)}
+          onClose={closeFullView}
         />
       )}
       {showAddModal && (

@@ -272,51 +272,55 @@ export function InlineVideo({
               {zoomLabel(scale)}x · reset
             </button>
           )}
-          <div className="pointer-events-none flex flex-1 items-center justify-center gap-6">
-            <button
-              type="button"
-              aria-label="Back 10 seconds"
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                seek(time - 10)
-                showChrome()
-              }}
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center gap-0.5 rounded-full bg-black/55 text-lg font-bold text-white"
-            >
-              <span aria-hidden="true">↺</span>
-              <span className="text-[10px]">10</span>
-            </button>
-            <button
-              type="button"
-              aria-label={playing ? 'Pause' : 'Play'}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                togglePlay()
-              }}
-              className="pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-2xl text-black"
-            >
-              {playing ? '❚❚' : '▶'}
-            </button>
-            <button
-              type="button"
-              aria-label="Forward 10 seconds"
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                seek(time + 10)
-                showChrome()
-              }}
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center gap-0.5 rounded-full bg-black/55 text-lg font-bold text-white"
-            >
-              <span className="text-[10px]">10</span>
-              <span aria-hidden="true">↻</span>
-            </button>
-          </div>
+          {/* Centered transport buttons: paused only, so a playing video is
+              never covered. The scrub bar below keeps the 3s auto-hide. */}
+          {!playing && (
+            <div className="pointer-events-none flex flex-1 items-center justify-center gap-6">
+              <button
+                type="button"
+                aria-label="Back 10 seconds"
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  seek(time - 10)
+                  showChrome()
+                }}
+                className="pointer-events-auto flex h-12 w-12 items-center justify-center gap-0.5 rounded-full bg-black/55 text-lg font-bold text-white"
+              >
+                <span aria-hidden="true">↺</span>
+                <span className="text-[10px]">10</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Play"
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  togglePlay()
+                }}
+                className="pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-2xl text-black"
+              >
+                ▶
+              </button>
+              <button
+                type="button"
+                aria-label="Forward 10 seconds"
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  seek(time + 10)
+                  showChrome()
+                }}
+                className="pointer-events-auto flex h-12 w-12 items-center justify-center gap-0.5 rounded-full bg-black/55 text-lg font-bold text-white"
+              >
+                <span className="text-[10px]">10</span>
+                <span aria-hidden="true">↻</span>
+              </button>
+            </div>
+          )}
           <div
             className="pointer-events-auto bg-gradient-to-t from-black/85 via-black/60 to-transparent px-3 pb-2 pt-6"
             onPointerDown={(e) => e.stopPropagation()}

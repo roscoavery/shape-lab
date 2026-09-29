@@ -25,8 +25,10 @@ function SectionLabel({ children }: { children: ReactNode }) {
 
 /**
  * Inline player with hidden-by-default chrome: tapping the video toggles
- * play/pause and reveals the controls; they auto-hide a few seconds after
- * the last touch while playing. Autoplays muted when mostly on screen.
+ * play/pause and reveals the controls; the centered transport buttons only
+ * ever show while paused so a playing video is never covered, and the rest
+ * of the chrome auto-hides a few seconds after the last touch while playing.
+ * Autoplays muted when mostly on screen.
  */
 function SharePlayer({
   video,
@@ -257,52 +259,53 @@ function SharePlayer({
             </span>
           </div>
           <div className="pointer-events-auto">
-            <div className="mb-1 flex items-center justify-center gap-6">
-              <button
-                type="button"
-                aria-label="Back 10 seconds"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  skip(-10)
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                className="rounded-full bg-black/60 p-2 text-lg text-white"
-              >
-                ↺<span className="text-[10px]">10</span>
-              </button>
-              <button
-                type="button"
-                aria-label={playing ? 'Pause' : 'Play'}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const v = ref.current
-                  if (!v) return
-                  if (v.paused) {
+            {/* Centered transport buttons: paused only, so a playing video is never covered. */}
+            {!playing && (
+              <div className="mb-1 flex items-center justify-center gap-6">
+                <button
+                  type="button"
+                  aria-label="Back 10 seconds"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    skip(-10)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  className="rounded-full bg-black/60 p-2 text-lg text-white"
+                >
+                  ↺<span className="text-[10px]">10</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Play"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const v = ref.current
+                    if (!v) return
                     v.play().catch(() => {})
                     armHide()
-                  } else v.pause()
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                className="rounded-full bg-black/60 p-3 text-xl text-white"
-              >
-                {playing ? '⏸' : '▶'}
-              </button>
-              <button
-                type="button"
-                aria-label="Forward 10 seconds"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  skip(10)
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  className="rounded-full bg-black/60 p-3 text-xl text-white"
+                >
+                  ▶
+                </button>
+                <button
+                  type="button"
+                  aria-label="Forward 10 seconds"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    skip(10)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
                 className="rounded-full bg-black/60 p-2 text-lg text-white"
               >
                 <span className="text-[10px]">10</span>↻
               </button>
-            </div>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-[10px] text-white/80">
               <span>{fmt(time)}</span>
               <input
