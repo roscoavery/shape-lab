@@ -72,6 +72,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         caption:
           'Same athlete, same session — next step. She sets up and we pause in the hollow straight shape to make corrections before passing through. This allows the spotting to become the teaching method and the drilling method. For small athletes like this, using the hands: right hand on the upper back almost at the neck area, left hand can bump the thighs to assist the rotation or go straight to the lower back area to act as a base of support when pausing. With full-grown athletes, you will use arms instead of hands with the same placements for bases of support. Pause, check shape, then flip — as the athlete gets consistent with hitting the shape without technical mistakes by the moment you pause, you can begin to pass through rather than pause. On this one we pause for less time and then pass through. It becomes way harder to do this with full-grown athletes but it can be done. This method seamlessly allows for an easy safety spot when you start passing through.',
       },
+      {
+        url: '/videos/layout-pass-through.mp4',
+        caption:
+          'Same athlete, same session — passing through. Getting a little faster with passing through, same spot.',
+      },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
   },
