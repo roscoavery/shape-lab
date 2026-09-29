@@ -56,6 +56,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     description:
       "The safety spot is one of the most important ones for coaches to learn and understand because it focuses on staying under the athlete's torso rather than putting emphasis on supporting the rotation by driving the athlete's lower body upward. Super important on back tucks and layouts especially. The same side full spotting method generally ends with a safety spot.",
     appliesTo: ['back-tuck', 'back-layout'],
+    demoVideo: {
+      url: '/videos/layout-safety-spot.mp4',
+      caption:
+        "Spotted layout — the spot is a safety spot. I put my left hand on the lower back tailbone area and my right hand on the athlete's right lat. My right fingers are pointing towards where the athlete came from and my right palm facing outward. As the athlete gets their toes up to about 10 or 11 o'clock, my right hand can sort of grip the ribs and I can add flip to what they have so they can hold their shape. If the athlete is smaller, you can do this with hands like how I did in the video. If the athlete is bigger you may put more of your left forearm across the low back almost with the elbow behind the athlete so you can get under their weight a bit more. Allows hands on for the entire flip.",
+    },
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
   },
   {
