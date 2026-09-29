@@ -77,6 +77,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         caption:
           'Same athlete, same session — passing through. Getting a little faster with passing through, same spot.',
       },
+      {
+        url: '/videos/layout-decent-looking.mp4',
+        caption:
+          'Same athlete, same session — this one was the last one we did that day and turned into a decent looking layout.',
+      },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
   },
