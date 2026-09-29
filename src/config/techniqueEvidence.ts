@@ -223,6 +223,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Round off sweep through to hollow — arms carry, eyes down.',
     },
     {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-roundoff-eyes-forward-blocking-angle.mp4',
+      watchFor: 'How he teaches the eyes-forward blocking angle with open shoulders after a round off.',
+    },
+    {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DV6NNgJEWkV/',
       watchFor: 'Round off reference — the finish shape Ryan teaches.',
