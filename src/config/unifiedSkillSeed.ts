@@ -189,7 +189,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "A strong round off"
     ],
     "canBend": [
-      "Round off back handsprings can come before a standing handspring is independent. More power makes it easier to hold the right shapes, then you work down to less power. Most of Ryan’s athletes get a nice running handspring on floor while the standing one still lives on trampoline, and the standing one ends up stronger for it."
+      "Many of Ryan's athletes get a nice round off handspring on the mats or floor while the standing handspring is still being refined on the trampoline."
     ],
     "ask": "Ask your coach whether your round off is strong enough to connect. That is the only gate here.",
     "ryanNote": "We get round off handsprings from a passe fall and the standing handsprings get stronger. During approximation and acquisition, teach a strong round off back handspring zombie shape falling down to a pike hollow arch shape — the athlete learns to carry momentum backwards into a connection drill before acquiring the round off back handspring. A strong round off is required for this to work. Plenty of athletes can flip by themselves but lack the shaping and round off to build a handspring that becomes a series. Training it right from the start drastically increases what they can get later. Cheer tryouts rush this: athletes chase the handspring without a mental grasp of how it works or the physical feeling of the shapes it was designed around.",
@@ -198,10 +198,6 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
         "kind": "quote",
         "text": "Gymnasts that have already learned the round off back handspring must continue polishing every single detail of these 2 combined skills which are the basic building blocks of backwards tumbling.",
         "source": "Back Handspring Academy"
-      },
-      {
-        "kind": "ryan",
-        "text": "The round off back handspring is the basic building block of backwards tumbling. Every tuck, layout, and full after it is built on this connection, which is why it keeps getting polished long after it is learned."
       },
       {
         "kind": "quote",
@@ -218,27 +214,15 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
         "source": "Back Handspring Academy"
       },
       {
-        "kind": "ryan",
-        "text": "Learning the connection on softer surfaces protects the wrists and the body while the timing is still being figured out. The snap down drill in the video is done off a raised surface with more advanced gymnasts. It is not for athletes in the approximation or early acquisition phase."
-      },
-      {
         "kind": "quote",
         "text": "When gymnasts show more consistency, they can progressively move more of their training onto regular floor exercise surfaces where they can continue adding incremental steps on speed and rebounding connection... so the softer and slower early patterns of tumbling do not become a long-term habit.",
         "source": "Back Handspring Academy"
-      },
-      {
-        "kind": "ryan",
-        "text": "Once the connection is consistent, move it onto the regular floor and keep adding speed. The slow, soft patterns from early training must not become the long-term habit."
       },
       {
         "kind": "quote",
         "text": "The coach must catch mistakes early to offer instructional feedback to the gymnast and implement ways to solve the problem before it becomes a bad habit.",
         "source": "Back Handspring Academy"
       },
-      {
-        "kind": "ryan",
-        "text": "A mistake in the round off becomes a mistake in the handspring. Catch the shapes early, because most of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed."
-      }
     ]
   },
   {
@@ -402,6 +386,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "roundoff"
     ],
     "track": "running",
+    "ryanNote": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target.\n\nA strong round off means blocking through a surface with enough power to jump off your hands adequately. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs.\n\nThis is the hard part. Getting your feet all the way in front for a handspring connection takes real power. Even finishing a round off by itself takes holding one clean shape from your hands to your feet, without your body breaking apart anywhere in between. That is exactly why round offs get so many reps in back handspring classes.\n\nThe second half of the round off is the second half of the back handspring. Same shapes, same block, same finish.\n\nThe video below is coach-approved education for athletes, parents, and coaches. These are the same conclusions and principles I coach from.\n\nMountain climber, lunge, lever, hollow and zombie shapes are building blocks.\n\nZombie is the landing shape for the round off. It sets the athlete up for less segmentation in the hips and knees through the second half, and the arm drop helps the feet get in front for the connection. Some coaches teach the landing as a lightning bolt instead and build connections that way. Coach Ryan taught it that way himself for several years before switching.\n\nA note on the snap down drill in the video: it is done off a raised surface, and it is shown with more advanced gymnasts. It is not recommended for athletes in the approximation or early acquisition phase.\n\nTraining round off back handsprings on soft surfaces while the back handspring is still being acquired protects athletes in so many ways. It greatly reduces the chance of an athlete being traumatized by a mistake in the early phases and developing a fear that lasts long after the mistake itself is fixed. Rushing the skill can create a long-term roadblock, like a mental barrier or an injury. Be patient and trust the process.\n\nThis is one of those places where what we prioritize in training can change the trajectory of an athlete’s long-term success. Cheer tryouts often push athletes to skip the part where we build their long-term tumbling success during back handspring and round off back handspring training. That shortcut risks injuries, getting stuck, or fear that comes from never understanding what the skill physically requires to work as designed.\n\nMost of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed.",
     "guideNeeds": [
       "Strong cartwheel step-in to zombie shape or C shape",
       "Strong round off from a passe fall — tumbling should build power, not use it",
@@ -409,7 +394,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Strong hollow and handstand shapes"
     ],
     "canBend": [],
-    "ask": "Ask your coach to watch your eyes and arms out of the round off. Eyes down and arms carrying back beat arms up and eyes up for everything that connects after it.",
+    "ask": "Ask your coach to watch your eyes and arms out of the round off. Eyes down, then eyes forward with arms carrying back for everything that connects after it. The shape you hit the ground with matters more than where your eyes are, although visual cues can be extremely helpful.",
     "noteBlocks": [
       {
         "kind": "quote",
@@ -417,33 +402,9 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
         "source": "Back Handspring Academy"
       },
       {
-        "kind": "ryan",
-        "text": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target."
-      },
-      {
-        "kind": "ryan",
-        "text": "Mountain climber, lunge, lever, hollow and zombie shapes are building blocks."
-      },
-      {
         "kind": "quote",
         "text": "The goal is to tumble with fast rebounds, not with slower half squat jumps.",
         "source": "Back Handspring Academy"
-      },
-      {
-        "kind": "ryan",
-        "text": "A strong round off means blocking through a surface with enough power to jump off your hands adequately. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs."
-      },
-      {
-        "kind": "ryan",
-        "text": "This is the hard part. Getting your feet all the way in front for a handspring connection takes real power. Even finishing a round off by itself takes holding one clean shape from your hands to your feet, without your body breaking apart anywhere in between. That is exactly why round offs get so many reps in back handspring classes."
-      },
-      {
-        "kind": "ryan",
-        "text": "The second half of the round off is the second half of the back handspring. Same shapes, same block, same finish."
-      },
-      {
-        "kind": "ryan",
-        "text": "Zombie is the landing shape for the round off. The zombie shape sets the athlete up for less segmentation in the hips and knees through the second half of the round off. Some coaches teach the round off to land in a lightning bolt shape instead, and athletes can build connections that way. Coach Ryan avoids it because of a pattern he kept seeing: athletes who learned the round off to a lightning bolt often never learned to use the arm drop to get their feet in front, so their connections kept landing with feet behind and bent knees. He taught connections off a lightning bolt landing successfully for several years before that recurring problem convinced him to change. The zombie landing keeps the arm drop helping the feet instead of working against them."
       },
       {
         "kind": "quote",
@@ -451,27 +412,15 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
         "source": "Back Handspring Academy"
       },
       {
-        "kind": "ryan",
-        "text": "A note on the snap down drill in the video: it is done off a raised surface, and it is shown with more advanced gymnasts. It is not recommended for athletes in the approximation or early acquisition phase."
-      },
-      {
         "kind": "quote",
         "text": "When gymnasts show more consistency, they can progressively move more of their training onto regular floor exercise surfaces where they can continue adding incremental steps on speed and rebounding connection... so the softer and slower early patterns of tumbling do not become a long-term habit.",
         "source": "Back Handspring Academy"
-      },
-      {
-        "kind": "ryan",
-        "text": "Training round off back handsprings on soft surfaces while the back handspring is still being acquired protects athletes in so many ways. It greatly reduces the chance of an athlete being traumatized by a mistake in the early phases and developing a fear that lasts long after the mistake itself is fixed. Rushing the skill can create a long-term roadblock, like a mental barrier or an injury. Be patient and trust the process.\n\nThis is one of those places where what we prioritize in training can change the trajectory of an athlete’s long-term success. Cheer tryouts often push athletes to skip the part where we build their long-term tumbling success during back handspring and round off back handspring training. That shortcut risks injuries, getting stuck, or fear that comes from never understanding what the skill physically requires to work as designed."
       },
       {
         "kind": "quote",
         "text": "The coach must catch mistakes early to offer instructional feedback to the gymnast and implement ways to solve the problem before it becomes a bad habit.",
         "source": "Back Handspring Academy"
       },
-      {
-        "kind": "ryan",
-        "text": "Most of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed."
-      }
     ]
   },
   {

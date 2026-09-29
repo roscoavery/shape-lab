@@ -38,6 +38,7 @@ type InfoFilter = 'all' | 'info'
 const MAP_THEME_KEY = 'shapelab.skillmap.theme.v1'
 const MAP_VIEW_KEY = 'shapelab.skillmap.view.v1'
 const INFO_FILTER_KEY = 'shapelab.skillmap.infofilter.v1'
+const DIRECT_PATH_KEY = 'shapelab.skillmap.directpath.v1'
 
 const THEME_OPTIONS: { id: MapTheme; label: string }[] = [
   { id: 'neon', label: 'Neon' },
@@ -100,6 +101,21 @@ function loadInfoFilter(): InfoFilter {
 function saveInfoFilter(f: InfoFilter) {
   try {
     localStorage.setItem(INFO_FILTER_KEY, f)
+  } catch {
+    /* ignore */
+  }
+}
+/** Direct-path mode: shine only the target + its key helpers. */
+function loadDirectPath(): boolean {
+  try {
+    return localStorage.getItem(DIRECT_PATH_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function saveDirectPath(on: boolean) {
+  try {
+    localStorage.setItem(DIRECT_PATH_KEY, on ? '1' : '0')
   } catch {
     /* ignore */
   }
@@ -285,18 +301,34 @@ function buildGlowMap(goals: AthleteSkillGoal[]): {
  */
 export type HlRole = 'target' | 'required' | 'helpful' | 'dim' | null
 
-export function hlFor(hl: PathHighlight | null | undefined, skillId: string): {
+export function hlFor(
+  hl: PathHighlight | null | undefined,
+  skillId: string,
+): {
   role: HlRole
   dist: number
+  /** True when this tile is one of the target's key helpers — it wiggles. */
+  keyHelper: boolean
 } {
-  if (!hl) return { role: null, dist: 0 }
+  if (!hl) return { role: null, dist: 0, keyHelper: false }
   const canon = canonicalSkillId(skillId)
-  if (canon === hl.target) return { role: 'target', dist: 0 }
+  const isKH = hl.keyHelpers.has(canon)
+  if (canon === hl.target) return { role: 'target', dist: 0, keyHelper: false }
   const rd = hl.required.get(canon)
-  if (rd !== undefined) return { role: 'required', dist: rd }
+  if (rd !== undefined) {
+    // Direct-path mode: only the target and its key helpers stay lit.
+    if (hl.direct && !isKH) return { role: 'dim', dist: 0, keyHelper: false }
+    return { role: 'required', dist: rd, keyHelper: isKH }
+  }
   const hd = hl.helpful.get(canon)
-  if (hd !== undefined) return { role: 'helpful', dist: hd }
-  return { role: 'dim', dist: 0 }
+  if (hd !== undefined) {
+    if (hl.direct && !isKH) return { role: 'dim', dist: 0, keyHelper: false }
+    return { role: 'helpful', dist: hd, keyHelper: isKH }
+  }
+  // A key helper outside the prerequisite closure still lights up (soft glow
+  // + wiggle) so the most adjacent skills are never dimmed out.
+  if (isKH) return { role: 'helpful', dist: 1, keyHelper: true }
+  return { role: 'dim', dist: 0, keyHelper: false }
 }
 
 /**
@@ -310,6 +342,7 @@ export function hlGlowStyle(
   role: HlRole,
   dist: number,
   family: SkillFamily,
+  keyHelper = false,
 ): CSSProperties {
   const rgb = FAMILY_GLOW_RGB[family]
   const s: CSSProperties = {}
@@ -322,6 +355,10 @@ export function hlGlowStyle(
     s.animationDelay = `${(hl.maxDist - dist) * 0.45}s`
   } else if (role === 'helpful') {
     s.boxShadow = `0 0 0 1px rgba(${rgb},0.4), 0 0 9px 2px rgba(${rgb},0.16)`
+  }
+  // Key helpers wiggle gently on top of their glow to draw the eye.
+  if (keyHelper && role !== 'dim') {
+    s.animation = (s.animation ? s.animation + ', ' : '') + 'keyhelper-wiggle 1.7s ease-in-out infinite'
   }
   return s
 }
@@ -1073,14 +1110,14 @@ function Tile({
   const dimmed = !!infoOnly && !hasGuide
   const family = FAMILY_BY_SKILL[tile.skillId] ?? 'foundations'
   const isBanner = tile.skillId === 'skl_foundations'
-  const { role: hlRole, dist: hlDist } = hlFor(hl, tile.skillId)
+  const { role: hlRole, dist: hlDist, keyHelper: hlKeyHelper } = hlFor(hl, tile.skillId)
   const hlActive = hlRole !== null
   // While a highlight is active, the athlete-goal glow steps aside.
   const glowing = !hlActive && glowDist !== undefined
   const highlighted = !hlActive && !!isHighlight && !glowing
   const featured = isFeaturedSkill(skill) && !isBanner
   const v = tileVisuals(theme, family, { isBanner, glowing, glowDist, highlighted, featured })
-  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, family) : null
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, family, hlKeyHelper) : null
   return (
     <button
       type="button"
@@ -1457,6 +1494,11 @@ function ViewControls({
   onSearch,
   hlTargetName,
   onClearHighlight,
+  hlCombos,
+  hlComboIdx,
+  onPickCombo,
+  directPath,
+  onToggleDirectPath,
 }: {
   theme: MapTheme
   onTheme: (t: MapTheme) => void
@@ -1467,6 +1509,11 @@ function ViewControls({
   onSearch: () => void
   hlTargetName: string | null
   onClearHighlight: () => void
+  hlCombos: { ids: string[]; label: string }[]
+  hlComboIdx: number
+  onPickCombo: (i: number) => void
+  directPath: boolean
+  onToggleDirectPath: (on: boolean) => void
 }) {
   const barBg =
     theme === 'paper'
@@ -1552,7 +1599,49 @@ function ViewControls({
             </span>
           </button>
         )}
+        {hlCombos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onToggleDirectPath(!directPath)}
+            aria-pressed={directPath}
+            title="Show only the target and its most adjacent helper skills"
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+              directPath
+                ? 'border-amber-300/70 bg-amber-300/15 text-amber-200'
+                : 'text-white/70 hover:text-white'
+            }`}
+            style={directPath ? undefined : { color: chipColor, borderColor: chipBorder }}
+          >
+            <span aria-hidden>{directPath ? '◉' : '◎'}</span> Direct path
+          </button>
+        )}
       </div>
+      {hlCombos.length > 1 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <span
+            className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]"
+            style={{ color: labelColor }}
+          >
+            Path
+          </span>
+          {hlCombos.map((c, i) => (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => onPickCombo(i)}
+              aria-pressed={hlComboIdx === i}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                hlComboIdx === i
+                  ? 'border-amber-300/70 bg-amber-300/15 font-semibold text-amber-200'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              style={hlComboIdx === i ? undefined : { color: chipColor, borderColor: chipBorder }}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1751,7 +1840,7 @@ function ListRow({
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const { role: hlRole, dist: hlDist, keyHelper: hlKeyHelper } = hlFor(hl, entry.skillId)
   const hlActive = hlRole !== null
   const highlighted =
     hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
@@ -1761,7 +1850,7 @@ function ListRow({
     glowDist: hlActive ? (hlRole === 'target' ? 0 : 1) : glowDist,
     highlighted,
   })
-  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family, hlKeyHelper) : null
   const rgb = FAMILY_GLOW_RGB[entry.family]
   const zoneAccent = (theme === 'paper' ? ZONE_ACCENT_DARK : ZONE_ACCENT)[entry.zone]
   return (
@@ -1886,7 +1975,7 @@ function CompactTile({
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const { role: hlRole, dist: hlDist, keyHelper: hlKeyHelper } = hlFor(hl, entry.skillId)
   const hlActive = hlRole !== null
   const highlighted =
     hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
@@ -1898,7 +1987,7 @@ function CompactTile({
     highlighted,
     featured: !hlActive && isFeaturedSkill(skill),
   })
-  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family, hlKeyHelper) : null
   return (
     <button
       type="button"
@@ -1991,7 +2080,7 @@ function LevelChip({
   const skill = getRegistrySkill(entry.skillId)
   if (!skill) return null
   const glowDist = glowMap?.dist.get(entry.skillId)
-  const { role: hlRole, dist: hlDist } = hlFor(hl, entry.skillId)
+  const { role: hlRole, dist: hlDist, keyHelper: hlKeyHelper } = hlFor(hl, entry.skillId)
   const hlActive = hlRole !== null
   const highlighted =
     hlActive ? hlRole === 'helpful' : (glowMap?.highlights.has(entry.skillId) ?? false) && glowDist === undefined
@@ -2001,7 +2090,7 @@ function LevelChip({
     glowDist: hlActive ? (hlRole === 'target' ? 0 : 1) : glowDist,
     highlighted,
   })
-  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family) : null
+  const hlLayer = hl && hlRole ? hlGlowStyle(hl, hlRole, hlDist, entry.family, hlKeyHelper) : null
   const rgb = FAMILY_GLOW_RGB[entry.family]
   return (
     <button
@@ -2218,11 +2307,21 @@ export function SkillMapView({
   const pathTick = usePathTick()
   const [hlTarget, setHlTarget] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [directPath, setDirectPath] = useState(loadDirectPath)
+  const [comboIdx, setComboIdx] = useState(0)
   const hl = useMemo(
-    () => (hlTarget ? buildPathHighlight(hlTarget) : null),
-    [hlTarget, pathTick],
+    () => (hlTarget ? buildPathHighlight(hlTarget, { comboIdx, direct: directPath }) : null),
+    [hlTarget, comboIdx, directPath, pathTick],
   )
   const hlTargetName = hlTarget ? getRegistrySkill(hlTarget)?.name ?? null : null
+  const pickHlTarget = useCallback((id: string) => {
+    setComboIdx(0)
+    setHlTarget(id)
+  }, [])
+  const pickDirectPath = useCallback((on: boolean) => {
+    setDirectPath(on)
+    saveDirectPath(on)
+  }, [])
   const mapIds = useMemo(() => new Set(getSkillEntries().map((e) => e.skillId)), [])
   const mapLabels = useMemo(
     () => new Map(getSkillEntries().map((e) => [e.skillId, e.label] as const)),
@@ -2231,6 +2330,15 @@ export function SkillMapView({
   const labelOf = useCallback(
     (id: string) => mapLabels.get(id) ?? getRegistrySkill(id)?.name ?? id,
     [mapLabels],
+  )
+  /** Key-helper combos for the shine target, labeled for the picker. */
+  const hlCombos = useMemo(
+    () =>
+      (hl?.combos ?? []).map((ids) => ({
+        ids,
+        label: ids.map((id) => labelOf(id)).join(' + '),
+      })),
+    [hl, labelOf],
   )
   return (
     <div className={`space-y-2.5 ${theme === 'paper' ? 'rounded-2xl bg-[#f3efe4] p-3' : ''}`}>
@@ -2250,12 +2358,17 @@ export function SkillMapView({
         onSearch={() => setSearchOpen(true)}
         hlTargetName={hlTargetName}
         onClearHighlight={() => setHlTarget(null)}
+        hlCombos={hlCombos}
+        hlComboIdx={comboIdx}
+        onPickCombo={setComboIdx}
+        directPath={directPath}
+        onToggleDirectPath={pickDirectPath}
       />
       {searchOpen && (
         <SkillSearchOverlay
           onClose={() => setSearchOpen(false)}
           onPick={(id) => {
-            setHlTarget(id)
+            pickHlTarget(id)
             setSearchOpen(false)
           }}
           mapIds={mapIds}

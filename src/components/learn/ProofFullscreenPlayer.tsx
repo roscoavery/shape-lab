@@ -189,8 +189,23 @@ export function ProofFullscreenPlayer({
   onClose: () => void
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
-  const touchX = useRef<number | null>(null)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
   const [entered, setEntered] = useState(false)
+  // Chrome (header, arrows, caption) auto-hides so the video can be watched
+  // clean; any tap brings it back for a few seconds.
+  const [chromeVisible, setChromeVisible] = useState(true)
+  const idleTimer = useRef<number | null>(null)
+  const pokeChrome = useCallback(() => {
+    setChromeVisible(true)
+    if (idleTimer.current) window.clearTimeout(idleTimer.current)
+    idleTimer.current = window.setTimeout(() => setChromeVisible(false), 3000)
+  }, [])
+  useEffect(() => {
+    pokeChrome()
+    return () => {
+      if (idleTimer.current) window.clearTimeout(idleTimer.current)
+    }
+  }, [pokeChrome, index])
 
   const video = videos[index]
   const local = video ? isLocalVideo(video.url) : false
@@ -222,31 +237,44 @@ export function ProofFullscreenPlayer({
   }, [index, videos.length, onClose, onIndex])
 
   const onTouchStart = (e: React.TouchEvent) => {
-    touchX.current = e.touches[0]?.clientX ?? null
+    const t = e.touches[0]
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
   }
   const onTouchEnd = (e: React.TouchEvent) => {
-    const start = touchX.current
-    touchX.current = null
-    if (start == null) return
-    const dx = e.changedTouches[0]?.clientX - start
-    if (dx == null) return
+    const st = touchStart.current
+    touchStart.current = null
+    if (!st) return
+    const t = e.changedTouches[0]
+    if (!t) return
+    const dx = t.clientX - st.x
+    const dy = t.clientY - st.y
+    // A deliberate downward swipe closes the player.
+    if (dy > 90 && Math.abs(dy) > Math.abs(dx) * 1.4) {
+      onClose()
+      return
+    }
     if (dx < -60) onIndex((index + 1) % videos.length)
     else if (dx > 60) onIndex((index - 1 + videos.length) % videos.length)
   }
 
   if (!video) return null
 
+  const chromeCls = `transition-opacity duration-300 ${
+    chromeVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
+  }`
+
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[120] flex flex-col bg-black/95"
+      className="fixed inset-0 z-[120] flex flex-col bg-black/95 [touch-action:pan-x]"
       role="dialog"
       aria-modal="true"
       aria-label={`${video.who} video`}
+      onPointerDown={pokeChrome}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className={`flex items-center justify-between px-4 py-3 ${chromeCls}`}>
         <button
           type="button"
           onClick={onClose}
@@ -266,7 +294,7 @@ export function ProofFullscreenPlayer({
             <button
               type="button"
               onClick={() => onIndex((index - 1 + videos.length) % videos.length)}
-              className="absolute left-1 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 px-3 py-3 text-lg font-bold text-white"
+              className={`absolute left-1 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 px-3 py-3 text-lg font-bold text-white ${chromeCls}`}
               aria-label="Previous video"
             >
               ‹
@@ -274,7 +302,7 @@ export function ProofFullscreenPlayer({
             <button
               type="button"
               onClick={() => onIndex((index + 1) % videos.length)}
-              className="absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 px-3 py-3 text-lg font-bold text-white"
+              className={`absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 px-3 py-3 text-lg font-bold text-white ${chromeCls}`}
               aria-label="Next video"
             >
               ›
@@ -299,7 +327,7 @@ export function ProofFullscreenPlayer({
         </div>
       </div>
 
-      <div className="px-4 py-3 text-center">
+      <div className={`px-4 py-3 text-center ${chromeCls}`}>
         <div className="text-sm font-bold text-white">{video.who}</div>
         {video.watchFor && <div className="mx-auto mt-0.5 max-w-xl text-xs text-white/70">{video.watchFor}</div>}
         {youTube && (

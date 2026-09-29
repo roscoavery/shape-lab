@@ -24,14 +24,25 @@ import {
   getSpottingSkill,
 } from '../config/spotting'
 import { TECHNIQUE_EVIDENCE } from '../config/techniqueEvidence'
-import { getRegistrySkillByGuideId } from './skillRegistry'
+import { getRegistrySkill, getRegistrySkillByGuideId, guideSkills } from './skillRegistry'
 import { getCollections } from './clipStore'
 import { readFaqAnswers } from './chatFaq'
 import type { DrillClip } from '../types'
 
+/** Sections inside a skill guide card that a chat deep link can jump to. */
+export type SkillCardSection =
+  | 'needs'
+  | 'canbend'
+  | 'ask'
+  | 'shapes'
+  | 'proof'
+  | 'ryan'
+  | 'breakdown'
+  | 'path'
+
 export type ChatLink =
   | { kind: 'tab'; tab: AppTab }
-  | { kind: 'skill'; skillId: string }
+  | { kind: 'skill'; skillId: string; section?: SkillCardSection }
   | { kind: 'clip'; url: string }
 
 export type CorpusDoc = {
@@ -68,31 +79,173 @@ export function queryTokens(q: string): string[] {
   return out
 }
 
-function scoreDoc(doc: CorpusDoc, tokens: string[]): number {
-  const title = doc.title.toLowerCase()
-  const text = doc.text.toLowerCase()
-  let score = 0
-  for (const t of tokens) {
-    if (title.includes(t)) score += 3
-    else if (text.includes(t)) score += 1
-  }
-  return score
-}
-
 export type ScoredDoc = { doc: CorpusDoc; score: number }
 
 const MIN_SCORE = 2
 
+function scoreDoc(
+  doc: CorpusDoc,
+  tokens: string[],
+  skill: DetectedSkill | null,
+  intent: AskIntent,
+): number {
+  const title = doc.title.toLowerCase()
+  const text = doc.text.toLowerCase()
+  let score = 0
+  let hits = 0
+  for (const t of tokens) {
+    if (title.includes(t)) {
+      score += 3
+      hits++
+    } else if (text.includes(t)) {
+      score += 1
+      hits++
+    }
+  }
+  // The skill the question is about outranks everything else: a question
+  // about a back handspring must surface the back handspring card, never
+  // the back tuck card that merely mentions handsprings.
+  if (
+    skill &&
+    doc.kind === 'skill' &&
+    doc.link?.kind === 'skill' &&
+    doc.link.skillId === skill.id
+  ) {
+    score += 12
+  }
+  // Intent-kind alignment.
+  if (intent === 'spot' && doc.kind === 'spotting') score += 4
+  if (intent === 'drill' && doc.kind === 'drill') score += 4
+  if (intent === 'parent' && doc.kind === 'interview') score += 2
+  // Coverage bonus: most of the question's words hit this doc.
+  if (tokens.length > 0 && hits / tokens.length >= 0.6) score += 2
+  return score
+}
+
+export type AskIntent = 'help' | 'spot' | 'drill' | 'parent' | 'general'
+
+const HELP_RE = /\b(struggl\w*|stuck|trouble|can'?t|won'?t|help\w*|fix\w*|work on|getting|learn\w*)\b/
+const SPOT_RE = /\bspot\w*\b/
+const DRILL_RE = /\bdrill\w*\b/
+const PARENT_RE = /\bparent\w*\b/
+
+/** What the asker wants: coaching help, spotting, drills, parent talk, or general. */
+export function detectIntent(query: string): AskIntent {
+  const q = ` ${query.toLowerCase()} `
+  if (SPOT_RE.test(q)) return 'spot'
+  if (DRILL_RE.test(q)) return 'drill'
+  if (PARENT_RE.test(q)) return 'parent'
+  if (HELP_RE.test(q)) return 'help'
+  return 'general'
+}
+
+export type DetectedSkill = { id: string; name: string }
+
+/** Normalized phrase for matching: lowercase, stemmed words, single spaces. */
+function phraseKey(t: string): string {
+  return t
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(stem)
+    .join(' ')
+}
+
+/**
+ * The skill the question is about, by name/alias phrase match.
+ * Longest phrase wins ("round off back handspring" beats "back handspring"),
+ * so "struggling with her back handspring" finds the back handspring card
+ * and not the back tuck card. Null when no skill is named.
+ */
+export function detectSkill(query: string): DetectedSkill | null {
+  const q = ` ${phraseKey(query)} `
+  const cands: (DetectedSkill & { phrase: string })[] = []
+  for (const s of guideSkills()) {
+    for (const p of [s.name, ...(s.aliases ?? [])]) {
+      const k = phraseKey(p)
+      if (k.length < 3) continue
+      cands.push({ id: s.id, name: s.name, phrase: k })
+    }
+  }
+  cands.sort((a, b) => b.phrase.length - a.phrase.length)
+  for (const c of cands) {
+    if (q.includes(` ${c.phrase} `)) return { id: c.id, name: c.name }
+  }
+  return null
+}
+
+export type AnswerPlan = {
+  skill: DetectedSkill | null
+  intent: AskIntent
+  scored: ScoredDoc[]
+}
+
 /** Top matching docs for a question, or null when nothing matches well enough. */
-export function answerQuestion(query: string, docs: CorpusDoc[]): ScoredDoc[] | null {
+export function planAnswer(query: string, docs: CorpusDoc[]): AnswerPlan | null {
+  const skill = detectSkill(query)
+  const intent = detectIntent(query)
   const tokens = queryTokens(query)
-  if (tokens.length === 0) return null
+  if (tokens.length === 0 && !skill) return null
   const scored = docs
-    .map((doc) => ({ doc, score: scoreDoc(doc, tokens) }))
+    .map((doc) => ({ doc, score: scoreDoc(doc, tokens, skill, intent) }))
     .filter((s) => s.score >= MIN_SCORE)
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
-  return scored.length > 0 ? scored : null
+  if (scored.length === 0) return null
+  return { skill, intent, scored }
+}
+
+/** Back-compat: top matching docs for a question, or null. */
+export function answerQuestion(query: string, docs: CorpusDoc[]): ScoredDoc[] | null {
+  return planAnswer(query, docs)?.scored ?? null
+}
+
+/**
+ * Conversational lead-in for an answer, in Ryan's voice. Claim-free
+ * connective tissue only — every coaching claim stays inside the verbatim
+ * quotes that follow, so nothing is ever invented.
+ */
+export function synthesizeLead(plan: AnswerPlan): string {
+  const name = plan.skill?.name
+  switch (plan.intent) {
+    case 'help':
+      return name
+        ? `When an athlete is struggling with ${name}, Ryan goes back to what the card actually says:`
+        : `Here's how Ryan thinks about this one:`
+    case 'spot':
+      return name ? `Here's how Ryan spots ${name}:` : `Here's Ryan on spotting:`
+    case 'drill':
+      return name ? `Drills Ryan uses for ${name}:` : `Here's what Ryan uses:`
+    case 'parent':
+      return `Here's how Ryan talks to parents about this:`
+    default:
+      return name ? `Here's what Ryan says about ${name}:` : `Here's what Ryan says on this:`
+  }
+}
+
+export type AnswerExtra = {
+  title: string
+  text: string
+  link: ChatLink
+  linkLabel: string
+}
+
+/**
+ * Coach-like follow-through for struggling athletes: Ryan's own prerequisite
+ * list for the skill, quoted from its card. Grounded in his content —
+ * never advice, just what his card requires first.
+ */
+export function prerequisitesExtra(plan: AnswerPlan): AnswerExtra | null {
+  if (plan.intent !== 'help' || !plan.skill) return null
+  const s = getRegistrySkill(plan.skill.id)
+  const needs = (s?.guideNeeds ?? []).filter(Boolean)
+  if (!s || needs.length === 0) return null
+  return {
+    title: `${s.name} — prerequisites`,
+    text: `His card lists the prerequisites for ${s.name}: ${needs.join('; ')}.`,
+    link: { kind: 'skill', skillId: s.id, section: 'path' },
+    linkLabel: `Open ${s.name} path`,
+  }
 }
 
 /** Verbatim excerpt around the first matched query token. */
@@ -137,8 +290,63 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
     }
   }
 
-  // Skill cards.
+  // Skill cards — one doc per card section, so answers quote Ryan's actual
+  // card content (his note, his ask, his breakdown) and deep-link to it.
+  const guideIds = new Set<string>()
+  for (const s of guideSkills()) {
+    guideIds.add(s.id)
+    const aliasText =
+      s.aliases && s.aliases.length > 0 ? ` Also called: ${s.aliases.join(', ')}.` : ''
+    const secLink = (section: SkillCardSection): ChatLink => ({
+      kind: 'skill',
+      skillId: s.id,
+      section,
+    })
+    if (s.ryanNote) {
+      docs.push({
+        id: `skill:${s.id}:ryan`,
+        kind: 'skill',
+        title: `${s.name} — Ryan's note`,
+        text: `Ryan: ${s.ryanNote}.${aliasText}`,
+        link: secLink('ryan'),
+      })
+    }
+    if (s.noteBlocks && s.noteBlocks.length > 0) {
+      docs.push({
+        id: `skill:${s.id}:breakdown`,
+        kind: 'skill',
+        title: `${s.name} — breaking down the video`,
+        text: s.noteBlocks
+          .map((b) =>
+            b.kind === 'quote' ? `"${b.text}" — ${b.source}.` : `Ryan: ${b.text}.`,
+          )
+          .join(' '),
+        link: secLink('breakdown'),
+      })
+    }
+    if (s.ask) {
+      docs.push({
+        id: `skill:${s.id}:ask`,
+        kind: 'skill',
+        title: `${s.name} — ask your coach`,
+        text: `${s.ask}.${aliasText}`,
+        link: secLink('ask'),
+      })
+    }
+    if (s.canBend && s.canBend.length > 0) {
+      docs.push({
+        id: `skill:${s.id}:canbend`,
+        kind: 'skill',
+        title: `${s.name} — can bend`,
+        text: s.canBend.join(' '),
+        link: secLink('canbend'),
+      })
+    }
+  }
+
+  // Skill-path store skills not covered by a registry guide card.
   for (const s of listSkills()) {
+    if (guideIds.has(s.id)) continue
     const parts: string[] = []
     if (s.note) parts.push(s.note)
     if (s.aliases && s.aliases.length > 0) parts.push(`Also called: ${s.aliases.join(', ')}.`)

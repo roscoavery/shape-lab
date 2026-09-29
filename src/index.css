@@ -96,6 +96,23 @@ button {
   }
 }
 
+/*
+ * Key-helper wiggle: a gentle side-to-side rock for the most adjacent
+ * skills of a shine-light target. Composes with path-travel (which only
+ * touches filter) — run both animations on the same tile.
+ */
+@keyframes keyhelper-wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(1.8deg);
+  }
+  70% {
+    transform: rotate(-1.8deg);
+  }
+}
+
 @keyframes hit-check-pop {
   0% {
     transform: scale(0.35);

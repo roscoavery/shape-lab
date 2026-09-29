@@ -15,7 +15,9 @@ import type { AppTab } from '../../lib/storage'
 import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 import {
   buildCorpus,
-  answerQuestion,
+  planAnswer,
+  synthesizeLead,
+  prerequisitesExtra,
   excerptFor,
   parseBuilderCommand,
   isThisDrill,
@@ -24,6 +26,7 @@ import {
   addDrillToSkill,
   type CorpusDoc,
   type ChatLink,
+  type SkillCardSection,
 } from '../../lib/chatBrain'
 import { listFaq, addFaqQuestion, answerFaq, removeFaq, type FaqItem } from '../../lib/chatFaq'
 import { createId } from '../../lib/storage'
@@ -52,8 +55,22 @@ const TAB_LABELS: Partial<Record<AppTab, string>> = {
   coachlib: 'Coach library',
 }
 
+const SECTION_LABELS: Record<SkillCardSection, string> = {
+  needs: 'Needs',
+  canbend: 'Can bend',
+  ask: 'Ask your coach',
+  shapes: 'Shapes',
+  proof: 'The proof',
+  ryan: "Ryan's note",
+  breakdown: 'Video breakdown',
+  path: 'Path',
+}
+
 function linkLabel(link: ChatLink, title: string): string {
-  if (link.kind === 'skill') return `Open ${title}`
+  if (link.kind === 'skill') {
+    const base = title.split(' — ')[0]
+    return link.section ? `Open ${base} · ${SECTION_LABELS[link.section]}` : `Open ${base}`
+  }
   if (link.kind === 'clip') return 'Open video'
   return TAB_LABELS[link.tab] ?? 'Open'
 }
@@ -103,7 +120,7 @@ export function ChatPanel({
 
   function followLink(link: ChatLink) {
     if (link.kind === 'skill') {
-      stashMobileSearchJump({ kind: 'skill', skillId: link.skillId })
+      stashMobileSearchJump({ kind: 'skill', skillId: link.skillId, section: link.section })
       onOpenTab('learn')
     } else if (link.kind === 'clip') {
       stashMobileSearchJump({ kind: 'clip', url: link.url })
@@ -161,8 +178,8 @@ export function ChatPanel({
       return
     }
 
-    const answered = answerQuestion(text, docs)
-    if (!answered) {
+    const plan = planAnswer(text, docs)
+    if (!plan) {
       push({
         role: 'bot',
         text: "I can't answer that from Ryan's content. I only quote what he's actually written or recorded, and I don't have anything on this.",
@@ -170,15 +187,24 @@ export function ChatPanel({
       })
       return
     }
-    const quotes: Quote[] = answered.map(({ doc }) => ({
+    const quotes: Quote[] = plan.scored.map(({ doc }) => ({
       title: doc.title,
       excerpt: excerptFor(doc, text),
       link: doc.link,
       linkLabel: doc.link ? linkLabel(doc.link, doc.title) : '',
     }))
+    const extra = prerequisitesExtra(plan)
+    if (extra) {
+      quotes.push({
+        title: extra.title,
+        excerpt: extra.text,
+        link: extra.link,
+        linkLabel: extra.linkLabel,
+      })
+    }
     push({
       role: 'bot',
-      text: quotes.length === 1 ? "Here's what Ryan says:" : "Here's what Ryan says on this:",
+      text: synthesizeLead(plan),
       quotes,
       actions: [{ kind: 'faq', label: 'Not quite it? Send to FAQ inbox', question: text }],
     })

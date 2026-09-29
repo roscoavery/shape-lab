@@ -18,6 +18,7 @@ import {
   type ConditioningNeed,
 } from './skillPaths'
 import { getRegistrySkill } from './skillRegistry'
+import { keyHelperCombosFor } from '../config/skillKeyHelpers'
 
 /** Prerequisite needs for a skill, including rows keyed to consolidated ids. */
 export function needsForSkillConsolidated(skillId: string) {
@@ -52,6 +53,14 @@ export type PathHighlight = {
   helpful: Map<string, number>
   /** Deepest required distance — drives the bottom-to-top travel delay. */
   maxDist: number
+  /** Key-helper combos for the target (most adjacent skills). */
+  combos: string[][]
+  /** Which combo is active (index into combos). */
+  comboIdx: number
+  /** Canonical ids in the active combo — these wiggle on top of their glow. */
+  keyHelpers: Set<string>
+  /** Direct-path mode: only the target + key helpers stay lit. */
+  direct: boolean
 }
 
 /**
@@ -61,8 +70,12 @@ export type PathHighlight = {
  * - helpful: reached following required+helpful edges, minus the required set.
  * - ids are canonicalized so old goal/need ids land on the tile.
  * - cycle-safe: first visit wins, BFS so distances are shortest.
+ * - keyHelpers: the active key-helper combo from SKILL_KEY_HELPERS (if any).
  */
-export function buildPathHighlight(targetSkillId: string): PathHighlight | null {
+export function buildPathHighlight(
+  targetSkillId: string,
+  opts?: { comboIdx?: number; direct?: boolean },
+): PathHighlight | null {
   const target = canonicalSkillId(targetSkillId)
   const reg = getRegistrySkill(target)
   if (!target || !reg) return null
@@ -99,7 +112,20 @@ export function buildPathHighlight(targetSkillId: string): PathHighlight | null 
   for (const d of required.values()) {
     if (d > maxDist) maxDist = d
   }
-  return { target, targetName: reg.name, required, helpful, maxDist }
+  const combos = keyHelperCombosFor(target, (id) => !!getRegistrySkill(id))
+  const comboIdx =
+    combos.length > 0 ? Math.min(Math.max(opts?.comboIdx ?? 0, 0), combos.length - 1) : 0
+  return {
+    target,
+    targetName: reg.name,
+    required,
+    helpful,
+    maxDist,
+    combos,
+    comboIdx,
+    keyHelpers: new Set(combos[comboIdx] ?? []),
+    direct: !!opts?.direct && combos.length > 0,
+  }
 }
 
 /** Re-render whenever the skill-path file changes (e.g. Ryan edits needs). */

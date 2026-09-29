@@ -20,8 +20,10 @@ export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
   layout: [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }, { shapeId: 'candlestick' }],
   'back-tuck': [{ shapeId: 'tuck_open_shoulders' }, { shapeId: 'hollow_arms_up' }, { shapeId: 'candlestick' }],
   'round-off': [
-    { shapeId: 'handstand' },
-    { shapeId: 'hollow_arms_up' },
+    { shapeId: 'mountain_climber' },
+    { shapeId: 'lunge_start' },
+    { shapeId: 'lever' },
+    { shapeId: 'hollow_arms_down' },
     { shapeId: 'zombie' },
   ],
   'ro-bhs': [

@@ -174,6 +174,7 @@ export function EducationPanel({
   }, [])
 
   const [focusSkillId, setFocusSkillId] = useState<string | null>(null)
+  const [focusSection, setFocusSection] = useState<string | null>(null)
   // A shared card link (?skill=<guideId or skillId>) opens the Learn
   // section straight at that card. The param is consumed once so it
   // doesn't reopen on every visit.
@@ -199,6 +200,7 @@ export function EducationPanel({
     if (!jump || jump.kind !== 'skill') return
     setView({ kind: 'skillPath' })
     setFocusSkillId(jump.skillId)
+    setFocusSection(jump.section ?? null)
   }, [])
   useEffect(() => {
     const jump = takeMobileSearchJump('skillPath')
@@ -526,7 +528,7 @@ export function EducationPanel({
 
       {view.kind === 'skillPath' && (
         <PanelErrorBoundary label="Skill path">
-          <SkillPathCards coach={coach} canEdit={persistIgToApp} focusSkillId={focusSkillId} viewer={signedIn} classAthletes={classAthletes} activeAthlete={athletes.find((a) => a.id === athleteId) ?? null} />
+          <SkillPathCards coach={coach} canEdit={persistIgToApp} focusSkillId={focusSkillId} focusSection={focusSection} viewer={signedIn} classAthletes={classAthletes} activeAthlete={athletes.find((a) => a.id === athleteId) ?? null} />
         </PanelErrorBoundary>
       )}
 

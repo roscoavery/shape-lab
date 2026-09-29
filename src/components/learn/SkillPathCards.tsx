@@ -954,7 +954,7 @@ function PathNode({
   const reg = getRegistrySkill(skillId)
   const name = reg?.name ?? skillId
   const family: SkillFamily = FAMILY_BY_SKILL[skillId] ?? 'foundations'
-  const layer = hlGlowStyle(hl, role, dist, family)
+  const layer = hlGlowStyle(hl, role, dist, family, hl.keyHelpers.has(canonicalSkillId(skillId)))
   const canOpen = !!reg?.guideId && !!onSelectSkill
   const cls =
     'flex w-full items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5'
@@ -1305,7 +1305,7 @@ function PathTab({
     [hl],
   )
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-card-section="path">
       <div>
         <Label>The path to {skill.name}</Label>
         <p className="mt-1 text-xs opacity-70">
@@ -1385,6 +1385,7 @@ export function SkillGuideCardContent({
   coach,
   canEdit,
   onSelectSkill,
+  initialTab,
 }: {
   skill: UnifiedSkill
   color: string
@@ -1392,8 +1393,10 @@ export function SkillGuideCardContent({
   canEdit: boolean
   /** Tapping a Path-chain node opens that skill's card. */
   onSelectSkill?: (s: UnifiedSkill) => void
+  /** Deep links can open straight on the Path tab. */
+  initialTab?: 'guide' | 'path'
 }) {
-  const [tab, setTab] = useState<'guide' | 'path'>('guide')
+  const [tab, setTab] = useState<'guide' | 'path'>(initialTab ?? 'guide')
   return (
     <div>
       <div className="flex gap-1 px-4 pt-3" role="tablist" aria-label="Card sections">
@@ -1446,7 +1449,7 @@ function GuideTabContent({
   return (
     <div className="space-y-4 p-4">
       <SkillPhotoStrip skillId={skill.id} />
-      <div>
+      <div data-card-section="needs" className="scroll-mt-4">
         <Label>Needs</Label>
         <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
           {needs.map((n) => (
@@ -1455,7 +1458,7 @@ function GuideTabContent({
         </ul>
       </div>
       {canBend.length > 0 && (
-        <div className="rounded-xl bg-[var(--panel-border)]/20 p-3">
+        <div data-card-section="canbend" className="scroll-mt-4 rounded-xl bg-[var(--panel-border)]/20 p-3">
           <Label>Can bend</Label>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
             {canBend.map((b) => (
@@ -1465,19 +1468,23 @@ function GuideTabContent({
         </div>
       )}
       <HarderVersions skillId={skill.id} canEdit={canEdit} />
-      <div>
+      <div data-card-section="ask" className="scroll-mt-4">
         <Label>Ask your coach</Label>
         <p className="mt-1 text-sm italic">{skill.ask}</p>
       </div>
-      <ShapeStrip guideId={guideId} />
-      <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
+      <div data-card-section="shapes" className="scroll-mt-4">
+        <ShapeStrip guideId={guideId} />
+      </div>
+      <div data-card-section="proof" className="scroll-mt-4">
+        <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
+      </div>
       {skill.ryanNote && (
-        <p className="whitespace-pre-line border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
+        <p data-card-section="ryan" className="scroll-mt-4 whitespace-pre-line border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
           Ryan: {skill.ryanNote}
         </p>
       )}
       {skill.noteBlocks && skill.noteBlocks.length > 0 && (
-        <div>
+        <div data-card-section="breakdown" className="scroll-mt-4">
           <Label>Breaking down the video</Label>
           <div className="mt-2 space-y-2.5">
             {skill.noteBlocks.map((b, i) =>
@@ -1617,6 +1624,7 @@ export function SkillPathCards({
   coach = false,
   canEdit = false,
   focusSkillId,
+  focusSection,
   viewer = null,
   classAthletes = [],
   activeAthlete = null,
@@ -1624,6 +1632,8 @@ export function SkillPathCards({
   coach?: boolean
   canEdit?: boolean
   focusSkillId?: string | null
+  /** Card section to scroll to when opened from a deep link (chat quotes). */
+  focusSection?: string | null
   /** Signed-in viewer, for the skill map's guiding-light glow. */
   viewer?: Athlete | null
   /** Athletes on the live class roster — their goal paths light up too. */
@@ -1634,6 +1644,7 @@ export function SkillPathCards({
   const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
     resolveSkill(focusSkillId),
   )
+  const modalScrollRef = useRef<HTMLDivElement>(null)
 
   // Deep-linked from search or a shared card link: open the skill's card in the modal.
   useEffect(() => {
@@ -1641,6 +1652,18 @@ export function SkillPathCards({
     const skill = resolveSkill(focusSkillId)
     if (skill) setModalSkill(skill)
   }, [focusSkillId])
+
+  // Deep link with a section (chat quote): jump the open card to it.
+  useEffect(() => {
+    if (!modalSkill || !focusSection) return
+    const section = focusSection
+    const t = window.setTimeout(() => {
+      const root = modalScrollRef.current
+      const el = root?.querySelector(`[data-card-section="${section}"]`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 90)
+    return () => window.clearTimeout(t)
+  }, [modalSkill, focusSection])
 
   // Close the modal on Escape.
   useEffect(() => {
@@ -1733,6 +1756,7 @@ export function SkillPathCards({
             aria-label={modalSkill.name}
           >
             <div
+              ref={modalScrollRef}
               className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] pb-[max(2rem,env(safe-area-inset-bottom))] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:rounded-3xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1769,6 +1793,9 @@ export function SkillPathCards({
                   coach={coach}
                   canEdit={canEdit}
                   onSelectSkill={setModalSkill}
+                  initialTab={
+                    focusSection === 'path' && modalSkill.id === focusSkillId ? 'path' : 'guide'
+                  }
                 />
               ) : (
                 <div className="space-y-4 p-4">
