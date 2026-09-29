@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { installLegacySafariShims } from './lib/legacySafari'
 import './index.css'
 import App from './App.tsx'
+import PublicSharePage from './components/share/PublicSharePage.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
 
 installLegacySafariShims()
@@ -27,6 +28,20 @@ applyAndroidShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {shareCardIdFromPath() ? (
+      <PublicSharePage cardId={shareCardIdFromPath()!} />
+    ) : (
+      <App />
+    )}
   </StrictMode>,
 )
+
+/** /share/<guideId|skillId> renders the public no-account card page. */
+function shareCardIdFromPath(): string | null {
+  try {
+    const m = /^\/share\/([^/?#]+)/.exec(window.location.pathname)
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}

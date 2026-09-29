@@ -53,6 +53,7 @@ import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
 import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
 import { markedFetch } from '../../lib/authSession'
+import { shareBaseUrl } from '../../lib/gymLink'
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -313,8 +314,9 @@ function fmtLoopTime(s: number) {
 function ShareSkillCardButton({ skill }: { skill: UnifiedSkill }) {
   const [copied, setCopied] = useState(false)
   const share = async () => {
+    // Public no-account link: /share/<guideId> renders the card standalone.
     const key = skill.guideId ?? skill.id
-    const url = `${window.location.origin}${window.location.pathname}?skill=${encodeURIComponent(key)}`
+    const url = `${shareBaseUrl()}/share/${encodeURIComponent(key)}`
     try {
       await navigator.clipboard.writeText(url)
     } catch {

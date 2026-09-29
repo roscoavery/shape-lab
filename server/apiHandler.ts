@@ -108,6 +108,7 @@ import {
 
 import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
+import { handleShareCard } from './shareCard.ts'
 import { authorizeRosterWrite, presentRosterForViewer } from './auth/rosterAccess.ts'
 import {
   applyConsentPatch,
@@ -223,6 +224,7 @@ const API_PATHS = new Set([
   '/api/chalkboards',
   '/api/coach-content',
   '/api/coach-systems',
+  '/api/share/card',
   '/api/coach-media',
   '/api/coach-media-file',
   '/api/stories',
@@ -303,6 +305,13 @@ export async function handleShapeLabApi(
   }
   if (path.startsWith('/api/auth')) {
     return handleAuthRoutes(req, res, path)
+  }
+
+  // Public shareable skill cards — no sign-in required. Only exposes
+  // public card content (guide prose + reference videos); everything else
+  // still goes through the gate below.
+  if (path === '/api/share/card') {
+    return handleShareCard(req, res, url)
   }
 
   const gate = await gateApiRequest(req, res, path)
