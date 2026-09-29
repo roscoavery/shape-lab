@@ -241,6 +241,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Back tuck wedge drill (2 of 2 — solo, faster). Same drill — this time she does it faster by herself.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
+      watchFor:
+        'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+    },
   ],
   'barani': [
     {
@@ -409,6 +415,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DYEj-LloNIO/',
       watchFor: 'Round off to zombie, then the handspring connection.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
+      watchFor:
+        'After an athlete gets a series, we start looking forward and finishing with open shoulder angle. Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+    },
   ],
   layout: [
     {
@@ -450,6 +462,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/back-layout-blocking-drill.mp4',
       watchFor: 'A drill to teach blocking with feet behind and creating rotation from the block while the upper body lifts directly where she wants to set her center of mass to land.',
+    },
+    {
+      who: 'Drill',
+      url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
+      watchFor:
+        'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
   ],
   full: [
