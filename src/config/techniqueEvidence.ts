@@ -219,6 +219,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-round-off-rebound-mat.mp4',
       watchFor: 'Round off into a rebound onto a raised soft mat.',
     },
+    {
+      who: 'Averie',
+      url: '/videos/averie-ro-hs-tuck-airfloor.mp4',
+      watchFor: 'Round off handspring tuck on airfloor.',
+    },
   ],
   'barani': [
     {
