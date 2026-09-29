@@ -688,6 +688,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
   ],
+  'front-walkover': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/front-walkover-reference.mp4',
+      watchFor: 'Front walkover reference.',
+    },
+  ],
   'back-walkover': [
     {
       who: 'Reference',
