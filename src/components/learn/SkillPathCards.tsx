@@ -1633,7 +1633,7 @@ function GuideTabContent({
       <HarderVersions skillId={skill.id} canEdit={canEdit} />
       <div data-card-section="ask" className="scroll-mt-4">
         <Label>Ask your coach</Label>
-        <p className="mt-1 text-sm italic">{skill.ask}</p>
+        <p className="mt-1 whitespace-pre-line text-sm italic">{skill.ask}</p>
       </div>
       <div data-card-section="shapes" className="scroll-mt-4">
         <ShapeStrip guideId={guideId} />
