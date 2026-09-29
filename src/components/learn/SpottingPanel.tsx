@@ -19,6 +19,7 @@ import {
 import { getCollections, type RefItem } from '../../lib/clipStore'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
+import { InlineVideo } from './InlineVideo'
 
 type View = 'methods' | 'skills'
 
@@ -132,7 +133,20 @@ function MethodCard({
             </div>
           ) : null}
           <VideoLinks videos={videos} />
-          {videos.length === 0 && method.videoPlaceholder ? (
+          {method.demoVideo ? (
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                Demo video
+              </div>
+              <div className="mt-1 aspect-[9/16] w-full overflow-hidden rounded-xl">
+                <InlineVideo url={method.demoVideo.url} />
+              </div>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
+                {method.demoVideo.caption}
+              </p>
+            </div>
+          ) : null}
+          {videos.length === 0 && !method.demoVideo && method.videoPlaceholder ? (
             <p className="text-xs italic text-[var(--muted)]">{method.videoPlaceholder}</p>
           ) : null}
         </div>

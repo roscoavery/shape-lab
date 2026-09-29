@@ -6,6 +6,8 @@
  * Videos are NOT stored here. Ryan adds IG demo URLs to the reference
  * library and tags them (see spotting-tags.md); the panel matches
  * `spotting-method:<method-id>` and `spot-skill:<skill-id>` keywords.
+ * A method can also carry its own gym-hosted demoVideo (an mp4 in
+ * public/videos), which renders inline in place of the placeholder.
  */
 
 export type SpottingMethod = {
@@ -25,6 +27,8 @@ export type SpottingMethod = {
   watchOuts?: string[]
   /** Credit line, where someone else originated the method. */
   credit?: string
+  /** Local demo video (gym-hosted mp4) — replaces videoPlaceholder when set. */
+  demoVideo?: { url: string; caption: string }
   /** Shown when no tagged video exists yet. */
   videoPlaceholder?: string
 }
@@ -59,8 +63,15 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       'The opposite side spot can be used for back halves, back fulls, arabians, back 1.5s, and double fulls (rarely).',
     appliesTo: ['back-half', 'back-full', 'back-1-5', 'double-full'],
     appliesToNote: 'Also usable for arabians.',
-    videoPlaceholder:
-      "Ryan's IG video on opposite side spotting goes here — its caption holds the details for this card. Add the URL to the reference library tagged spotting-method:opposite-side-spot.",
+    watchOuts: [
+      'Only do this one with a super soft landing surface — I am not assisting the landing.',
+      'The athlete needs to be kind of close already.',
+    ],
+    demoVideo: {
+      url: '/videos/opposite-side-spot-standing-full.mp4',
+      caption:
+        'Opposite side spot for a standing full. I use my right hand to grab around the front side of the right hip and my left hand to grip the inner thigh to roll the athlete over into a twist. Different than the opposite side spot where you twist their hips from a crossover safety spot grip. This should really only be done with a super soft landing surface since I am not assisting the landing and the athlete needs to be kind of close already. Can be used to ease out of the same side spotting or if they already have the air awareness for a full and just need a boost when they try it.',
+    },
   },
   {
     id: 'twist-side-spot',
