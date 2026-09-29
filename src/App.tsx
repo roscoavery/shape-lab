@@ -55,6 +55,8 @@ import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { NamesQuiz } from './components/coach/NamesQuiz'
 import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
+import { CoachSetupWizard } from './components/coach/CoachSetupWizard'
+import { MySystemPanel } from './components/coach/MySystemPanel'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { ImproveNotesDock } from './components/ImproveNotesDock'
@@ -241,6 +243,9 @@ export default function App() {
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [skillPathsOpen, setSkillPathsOpen] = useState(false)
+  const [skillBuilderStart, setSkillBuilderStart] = useState<string | null>(null)
+  const [skillBuilderUnscoped, setSkillBuilderUnscoped] = useState(false)
+  const [coachWizardOpen, setCoachWizardOpen] = useState(false)
   const [viewingAthleteId, setViewingAthleteId] = useState<string | null>(null)
   const [shape, setShape] = useState<ShapeDef>(SHAPES[0])
   const [athletes, setAthletes] = useState<Athlete[]>(() => ensureRyanInAthletes(loadAthletes()))
@@ -1630,6 +1635,20 @@ export default function App() {
 
       {tab === 'coachlib' && <CoachShapeLibrary signedIn={activeProfile} />}
 
+      {tab === 'mysystem' && (
+        <MySystemPanel
+          signedIn={activeProfile}
+          athletes={athletes}
+          ryanEdit={ryanEdit}
+          onOpenWizard={() => setCoachWizardOpen(true)}
+          onOpenBuilder={(skillId, unscoped) => {
+            setSkillBuilderStart(skillId)
+            setSkillBuilderUnscoped(unscoped)
+            setSkillPathsOpen(true)
+          }}
+        />
+      )}
+
       {tab === 'drills' && <DrillLibraryPanel signedIn={activeProfile} />}
 
       {tab === 'spotting' && <SpottingPanel />}
@@ -2238,7 +2257,23 @@ export default function App() {
       <SkillPathBuilder
         coachId={activeProfile?.id}
         athletes={athletes}
-        onClose={() => setSkillPathsOpen(false)}
+        onClose={() => {
+          setSkillPathsOpen(false)
+          setSkillBuilderStart(null)
+          setSkillBuilderUnscoped(false)
+        }}
+        startSkillId={skillBuilderStart}
+        unscopedEdit={skillBuilderUnscoped}
+      />
+    )}
+    {coachWizardOpen && activeProfile && (
+      <CoachSetupWizard
+        coach={activeProfile}
+        onDone={() => setCoachWizardOpen(false)}
+        onOpenAsk={() => {
+          setCoachWizardOpen(false)
+          goTab('chat')
+        }}
       />
     )}
     {namesQuizOpen && (

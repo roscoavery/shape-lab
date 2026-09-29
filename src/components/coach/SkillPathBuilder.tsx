@@ -36,6 +36,11 @@ type Props = {
   athletes?: Athlete[]
   onClose: () => void
   startSkillId?: string | null
+  /**
+   * Granted edit on the default system: saves land on the shared row
+   * (no coach namespace) instead of the coach's own override.
+   */
+  unscopedEdit?: boolean
 }
 
 const KINDS: SkillNeedKind[] = ['required', 'helpful', 'alt']
@@ -52,6 +57,7 @@ export function SkillPathBuilder({
   athletes = [],
   onClose,
   startSkillId = null,
+  unscopedEdit = false,
 }: Props) {
   const [tick, setTick] = useState(0)
   useEffect(() => subscribeSkillPaths(() => setTick((n) => n + 1)), [])
@@ -99,6 +105,11 @@ export function SkillPathBuilder({
           <p className="text-sm text-white/60">
             {editable ? 'One place to maintain a skill' : 'Pick a skill to maintain'}
           </p>
+          {unscopedEdit && (
+            <p className="mt-1 rounded-lg border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-[11px] text-amber-100">
+              Editing the default system directly — changes affect everyone.
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -115,6 +126,7 @@ export function SkillPathBuilder({
               key={editable.registry.id}
               editable={editable}
               coachId={coachId}
+              unscopedEdit={unscopedEdit}
               onBack={() => setSkillId(null)}
             />
           ) : (
@@ -264,10 +276,12 @@ function SkillRow({ skill, onOpen }: { skill: UnifiedSkill; onOpen: () => void }
 function SkillEditor({
   editable,
   coachId,
+  unscopedEdit,
   onBack,
 }: {
   editable: EditableSkill
   coachId?: string
+  unscopedEdit: boolean
   onBack: () => void
 }) {
   const { registry } = editable
@@ -285,7 +299,7 @@ function SkillEditor({
     powerDown?: PowerDownStep[]
     note?: string
   }) => {
-    saveSkill({ id: registry.id, name: registry.name, coachId, ...patch })
+    saveSkill({ id: registry.id, name: registry.name, coachId: unscopedEdit ? undefined : coachId, ...patch })
   }
 
   return (

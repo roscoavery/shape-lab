@@ -37,6 +37,7 @@ const FEATURE_WORDS: Record<AppTab, string> = {
   homework: 'homework holds reps drills log',
   warmup: 'warm up warmup stretch',
   learn: 'learn shapes library education skill',
+  mysystem: 'my system coaching system setup wizard skills map',
   coachlib: 'coach library references',
   drills: 'drill library exercises',
   spotting: 'spotting spot coach safety spotting methods',

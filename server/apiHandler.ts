@@ -85,6 +85,7 @@ import {
 } from './athleteVideoDisk.ts'
 import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
+import { readCoachSystemsFile, writeCoachSystemsFile } from './coachSystemStore.ts'
 import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coachMediaDisk.ts'
 import { isHomeGym, persistMode, readRevision } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
@@ -221,6 +222,7 @@ const API_PATHS = new Set([
   '/api/desk-messages',
   '/api/chalkboards',
   '/api/coach-content',
+  '/api/coach-systems',
   '/api/coach-media',
   '/api/coach-media-file',
   '/api/stories',
@@ -1777,6 +1779,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeCoachContentFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-systems') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachSystemsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeCoachSystemsFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })

@@ -12,6 +12,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { profileRole } from '../../lib/profileRole'
 import { markedFetch } from '../../lib/authSession'
+import {
+  PRESET_BLURBS,
+  PRESET_SCOPES,
+  scopeText,
+  type KeyPreset as Preset,
+} from '../../lib/museKeyScopes'
 
 type MuseKeyView = {
   id: string
@@ -31,55 +37,6 @@ type Props = {
   viewerRole: 'gymOwner' | 'admin' | 'coach'
   /** 'all' lists every key (owner view); 'own' lists only this account's keys. */
   keyScope: 'all' | 'own'
-}
-
-const SCOPE_LABELS: Record<string, string> = {
-  'library:read': 'Read the video library',
-  'library:add': 'Add videos to the library',
-  'progress:read': 'Read athlete progress',
-  'philosophy:read': 'Read coaching philosophy',
-  'coach-shapes:write': 'Add shapes to the coach library',
-  'roster:write': 'Add athletes to the roster',
-  'classes:write': 'Add classes to the schedule',
-  'athlete-notes:write': 'Add notes on athletes',
-  'stories:write': 'Post to gym, wins, and passes',
-  'drills:write': 'Add drills to the drill library',
-  'skill-maps:write': 'Build skill maps and paths',
-}
-
-const OWNER_SCOPES = ['library:read', 'library:add', 'progress:read', 'philosophy:read']
-const PARENT_SCOPES = ['progress:read', 'philosophy:read']
-const COACH_SCOPES = [
-  'library:read',
-  'library:add',
-  'progress:read',
-  'philosophy:read',
-  'coach-shapes:write',
-  'roster:write',
-  'classes:write',
-  'athlete-notes:write',
-  'stories:write',
-  'drills:write',
-  'skill-maps:write',
-]
-
-type Preset = 'owner' | 'parent' | 'coach'
-
-const PRESET_SCOPES: Record<Preset, string[]> = {
-  owner: OWNER_SCOPES,
-  parent: PARENT_SCOPES,
-  coach: COACH_SCOPES,
-}
-
-const PRESET_BLURBS: Record<Preset, string> = {
-  owner: 'Owner: file library videos, read the library, read any athlete\u2019s progress, read coaching philosophy.',
-  parent: 'Parent: read one athlete\u2019s progress and the coaching philosophy. Nothing else.',
-  coach:
-    'Coach: everything an owner key does, plus add coach shapes, athletes, classes, athlete notes, gym/wins/passes posts, drills, and skill maps. A coach key can only reach athletes its coach works with.',
-}
-
-function scopeText(scopes: string[]): string {
-  return scopes.map((s) => SCOPE_LABELS[s] ?? s).join(', ')
 }
 
 function formatDate(iso: string | null): string {

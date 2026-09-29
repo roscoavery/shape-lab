@@ -955,6 +955,7 @@ export const APP_TABS = [
   'homework',
   'warmup',
   'learn',
+  'mysystem',
   'coachlib',
   'drills',
   'spotting',
