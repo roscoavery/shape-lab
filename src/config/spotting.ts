@@ -156,6 +156,10 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       "Hands on support is often used with basic shapes to help the athlete hit the right position. Lunges, spotting levers and handstands, and assisting athletes on their bridge is sometimes required.",
     appliesTo: ['back-bend', 'back-walkover', 'front-limber', 'front-walkover'],
     appliesToNote: 'Also used for lunges, levers, handstands, and bridges.',
+    demoVideo: {
+      url: '/videos/spotted-back-extension-roll-averie.mp4',
+      caption: 'Averie — spotted back extension roll.',
+    },
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:hands-on-shapes and it will show up here.',
   },
 ]
