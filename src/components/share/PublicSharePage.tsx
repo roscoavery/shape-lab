@@ -40,6 +40,7 @@ function SharePlayer({
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [muted, setMuted] = useState(true)
   const hideTimer = useRef<number | null>(null)
   const tapRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
@@ -51,6 +52,12 @@ function SharePlayer({
     const v = ref.current
     if (!v || !src) return
     setChromeOpen(false)
+    try {
+      v.muted = true
+    } catch {
+      /* ignore */
+    }
+    setMuted(true)
     const wantPlayRef = { current: false }
     const tryPlay = () => {
       if (wantPlayRef.current && v.paused) v.play().catch(() => {})
@@ -142,6 +149,43 @@ function SharePlayer({
     armHide()
   }
 
+  const toggleMute = () => {
+    const v = ref.current
+    if (!v) return
+    const next = !muted
+    try {
+      v.muted = next
+    } catch {
+      /* ignore */
+    }
+    setMuted(next)
+    if (!next && v.paused) v.play().catch(() => {})
+    armHide()
+  }
+
+  const toggleFullscreen = () => {
+    const v = ref.current
+    if (!v) return
+    const vv = v as HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void
+      webkitExitFullscreen?: () => void
+      webkitDisplayingFullscreen?: boolean
+    }
+    try {
+      if (document.fullscreenElement || vv.webkitDisplayingFullscreen) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {})
+        else if (vv.webkitExitFullscreen) vv.webkitExitFullscreen()
+      } else if (v.requestFullscreen) {
+        v.requestFullscreen().catch(() => {})
+      } else if (vv.webkitEnterFullscreen) {
+        vv.webkitEnterFullscreen()
+      }
+    } catch {
+      /* ignore */
+    }
+    armHide()
+  }
+
   const fmt = (s: number) => {
     if (!Number.isFinite(s) || s < 0) return '0:00'
     const m = Math.floor(s / 60)
@@ -179,7 +223,35 @@ function SharePlayer({
       />
       {chromeOpen && (
         <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/60 p-2">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label={muted ? 'Unmute' : 'Mute'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleMute()
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                className="rounded-full bg-black/60 p-2 text-base text-white"
+              >
+                {muted ? '🔇' : '🔊'}
+              </button>
+              <button
+                type="button"
+                aria-label="Fullscreen"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleFullscreen()
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                className="rounded-full bg-black/60 p-2 text-base text-white"
+              >
+                ⛶
+              </button>
+            </div>
             <span className="rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/80">
               {video.platform === 'local' ? 'Video' : video.platform}
             </span>
