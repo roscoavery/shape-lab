@@ -133,6 +133,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       'double-back',
       'full-in',
     ],
+    demoVideo: {
+      url: '/videos/shadow-spot-ro-bhs-tuck.mp4',
+      caption:
+        'Shadow spot for a tuck out of a round off back handspring. My hands use the safety spot grip and can stay inches away from where she needs to be spotted while passing through the upside down phase of the flip. Really adds peace of mind for both the coach and athlete in case she bails or needs help while easing out of spotting. Drastically reduces the likelihood of accidents while going from spotting to independence.',
+    },
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:shadow-spot and it will show up here.',
   },
   {
