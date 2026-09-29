@@ -132,6 +132,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Rudi (front 1.5). Helps so much with air awareness on back double fulls — uses a pike set for a mix of cat and tilt twist.',
     },
+    {
+      who: 'Elliot Helms (@cirque_coach_elliot)',
+      url: 'https://www.instagram.com/p/Dd4eoR9SYYf/',
+      watchFor: 'Front half (barani) into a full full straight on double mini trampoline.',
+    },
   ],
   'front-layout': [
     {
@@ -242,6 +247,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/barani-half-turn-front-full-progression.mp4',
       watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+    },
+    {
+      who: 'Elliot Helms (@cirque_coach_elliot)',
+      url: 'https://www.instagram.com/p/Dd4eoR9SYYf/',
+      watchFor:
+        'This barani is like a big front layout with a half turn rather than a front pike. No cat twist, only tilt method.',
     },
   ],
   'front-full': [
