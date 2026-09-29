@@ -68,6 +68,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_back_1_5: 'back-15',
   skl_back_quad: 'back-quad',
   skl_cartwheel_step_in: 'cartwheel-step-in',
+  skl_front_full: 'front-full',
 }
 
 /**
@@ -216,6 +217,25 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/ryan-round-off-rebound-mat.mp4',
       watchFor: 'Round off into a rebound onto a raised soft mat.',
+    },
+  ],
+  'barani': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/barani-half-turn-front-full-progression.mp4',
+      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+    },
+  ],
+  'front-full': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/barani-half-turn-front-full-progression.mp4',
+      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/front-full-finished.mp4',
+      watchFor: 'The front full that comes after.',
     },
   ],
   'round-off': [
