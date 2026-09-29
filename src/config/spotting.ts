@@ -29,6 +29,8 @@ export type SpottingMethod = {
   credit?: string
   /** Local demo video (gym-hosted mp4) — replaces videoPlaceholder when set. */
   demoVideo?: { url: string; caption: string }
+  /** Extra local demo videos (gym-hosted mp4s), e.g. multiple examples of one method. */
+  demoVideos?: { url: string; caption: string }[]
   /** Shown when no tagged video exists yet. */
   videoPlaceholder?: string
 }
@@ -72,6 +74,13 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       caption:
         'Opposite side spot for a standing full. I use my right hand to grab around the front side of the right hip and my left hand to grip the inner thigh to roll the athlete over into a twist. Different than the opposite side spot where you twist their hips from a crossover safety spot grip. This should really only be done with a super soft landing surface since I am not assisting the landing and the athlete needs to be kind of close already. Can be used to ease out of the same side spotting or if they already have the air awareness for a full and just need a boost when they try it.',
     },
+    demoVideos: [
+      {
+        url: '/videos/opposite-side-full-spot-ro-hs.mp4',
+        caption:
+          "Opposite side full spot from a round off handspring on spring floor (example 1 — more coming). Athlete requires minimal spotting already and we have already ensured consistency onto a mat. Keeps spotter out of the athlete's vision and prevents them from twisting straight into the spotter.",
+      },
+    ],
   },
   {
     id: 'twist-side-spot',

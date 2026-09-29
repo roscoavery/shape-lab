@@ -146,6 +146,19 @@ function MethodCard({
               </p>
             </div>
           ) : null}
+          {method.demoVideos?.map((demo) => (
+            <div key={demo.url}>
+              <div className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                Demo video
+              </div>
+              <div className="mt-1 aspect-[9/16] w-full overflow-hidden rounded-xl">
+                <InlineVideo url={demo.url} />
+              </div>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
+                {demo.caption}
+              </p>
+            </div>
+          ))}
           {videos.length === 0 && !method.demoVideo && method.videoPlaceholder ? (
             <p className="text-xs italic text-[var(--muted)]">{method.videoPlaceholder}</p>
           ) : null}
