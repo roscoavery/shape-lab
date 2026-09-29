@@ -672,7 +672,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Asa Ware — Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Slow motion through the arabian and the triple.',
     },
     {
       who: 'Darnell — Camp TumbleSmart',
@@ -714,7 +714,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Asa Ware — Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Slow motion through the arabian and the triple.',
     },
   ],
   'front-walkover': [
