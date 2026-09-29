@@ -69,6 +69,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_back_quad: 'back-quad',
   skl_cartwheel_step_in: 'cartwheel-step-in',
   skl_front_full: 'front-full',
+  skl_front_15: 'front-15',
 }
 
 /**
@@ -236,6 +237,23 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/front-full-finished.mp4',
       watchFor: 'The front full that comes after.',
+    },
+  ],
+  'front-15': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/barani-half-turn-front-full-progression.mp4',
+      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/front-full-finished.mp4',
+      watchFor: 'The front full that comes after.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/front-full-half-turn-rudi-progression.mp4',
+      watchFor: 'Front full that lands and hits a half turn after landing — front rudi progression.',
     },
   ],
   'round-off': [
@@ -506,6 +524,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/C9aXPgMP7Lk/',
       watchFor: 'Opposite-side spotting on Rylie — preserving the set through the twist.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/standing-full-reference.mp4',
+      watchFor: 'Standing full reference.',
     },
   ],
   basics: [
