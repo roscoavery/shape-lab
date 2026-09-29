@@ -222,8 +222,8 @@ function SharePlayer({
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
       />
       {chromeOpen && (
-        <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/60 p-2">
-          <div className="flex items-center justify-between">
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/60 p-2">
+          <div className="pointer-events-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -256,7 +256,7 @@ function SharePlayer({
               {video.platform === 'local' ? 'Video' : video.platform}
             </span>
           </div>
-          <div>
+          <div className="pointer-events-auto">
             <div className="mb-1 flex items-center justify-center gap-6">
               <button
                 type="button"
