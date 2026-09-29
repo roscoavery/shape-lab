@@ -400,6 +400,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/p/Dba2VNTmvaX/',
       watchFor: 'Rebound to candle — the layout drill that builds the shape.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/back-layout-blocking-drill.mp4',
+      watchFor: 'A drill to teach blocking with feet behind and creating rotation from the block while the upper body lifts directly where she wants to set her center of mass to land.',
+    },
   ],
   full: [
     {
