@@ -1,5 +1,5 @@
 /**
- * Technique evidence — video proof from other high-level coaches and athletes.
+ * Technique evidence — reference videos from other high-level coaches and athletes.
  * Ryan's rule: "lead with the evidence." These videos sit next to the technique
  * in Learn so it's never just Coach Ryan's word against a disagreeing coach.
  * Add entries here; the SkillPathCards component renders them.

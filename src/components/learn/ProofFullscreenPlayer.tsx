@@ -1,7 +1,7 @@
 /**
  * Fullscreen proof player for skill cards.
  *
- * Any video in a card's "The proof" section can be opened here: the player
+ * Any video in a card's "References" section can be opened here: the player
  * goes (near-)fullscreen, arrows and swipe move through the other videos on
  * the card, and every video gets the same analysis controls as the reference
  * scroll player — scrub, slow motion, flip (mirror), A/B loop.

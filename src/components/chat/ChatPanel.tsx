@@ -60,7 +60,7 @@ const SECTION_LABELS: Record<SkillCardSection, string> = {
   canbend: 'Can bend',
   ask: 'Ask your coach',
   shapes: 'Shapes',
-  proof: 'The proof',
+  proof: 'References',
   ryan: "Ryan's note",
   breakdown: 'Video breakdown',
   path: 'Path',

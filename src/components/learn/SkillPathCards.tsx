@@ -535,7 +535,7 @@ export function ProofStrip({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <Label>The proof</Label>
+        <Label>References</Label>
         {canEdit && (
           <button
             type="button"
