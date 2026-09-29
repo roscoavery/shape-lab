@@ -738,9 +738,9 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
     },
     {
-      who: 'Drill',
-      url: '/videos/cartwheel-step-in-zombie.mp4',
-      watchFor: 'Cartwheel step in zombie — connections class at TumbleSmart.',
+      who: 'Elliot Helms (Cirque du Soleil)',
+      url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',
+      watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',
     },
   ],
   'cartwheel-handspring': [
