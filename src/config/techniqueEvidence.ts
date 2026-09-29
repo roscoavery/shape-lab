@@ -224,6 +224,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/averie-ro-hs-tuck-airfloor.mp4',
       watchFor: 'Round off handspring tuck on airfloor.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/back-tuck-wedge-drill-assisted.mp4',
+      watchFor:
+        'Back tuck wedge drill (1 of 2 — assisted pause). The athlete sets up and pulls a tuck shape, then rolls back down a wedge to a mad cat position. On this one Ryan helps the athlete stop in the tuck shape before rolling back. You can gradually have the athlete create more and more rotation before hitting the mat: they go from landing on their butt then rolling in the early stages, to landing on their low back, then eventually setting and landing on their back and shoulders to ease proper head position into the flip.',
+    },
   ],
   'barani': [
     {
