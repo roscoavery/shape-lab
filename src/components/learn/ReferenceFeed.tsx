@@ -22,6 +22,47 @@ import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { AddToSkillCardModal } from './CardVideoManager'
 import { LinkToSpottingCardModal } from './LinkToSpottingCardModal'
+import { GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
+import { getRegistrySkill, getRegistrySkillByGuideId } from '../../lib/skillRegistry'
+
+/** Human-readable skill name for an evidence key, for "on cards" displays. */
+function skillNameForEvidenceKey(key: string): string | null {
+  const guided = getRegistrySkillByGuideId(key)
+  if (guided) return guided.name
+  for (const [id, k] of Object.entries(GUIDELESS_EVIDENCE_KEY)) {
+    if (k === key) return getRegistrySkill(id)?.name ?? null
+  }
+  return getRegistrySkill(key)?.name ?? null
+}
+
+/** Map a video URL to the skill-card names it appears on (seed + admin-added). */
+function useCardAttachments(refreshKey: number): Record<string, string[]> {
+  const [map, setMap] = useState<Record<string, string[]>>({})
+  useEffect(() => {
+    const out: Record<string, string[]> = {}
+    const add = (url: string, key: string) => {
+      const name = skillNameForEvidenceKey(key)
+      if (!name) return
+      const list = out[url] ?? (out[url] = [])
+      if (!list.includes(name)) list.push(name)
+    }
+    for (const [key, videos] of Object.entries(TECHNIQUE_EVIDENCE)) {
+      for (const v of videos ?? []) if (v?.url) add(v.url, key)
+    }
+    fetch('/api/skill-card-videos')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          for (const [key, videos] of Object.entries(data as Record<string, { url?: string }[]>)) {
+            for (const v of videos ?? []) if (v?.url) add(v.url, key)
+          }
+        }
+        setMap(out)
+      })
+      .catch(() => setMap(out))
+  }, [refreshKey])
+  return map
+}
 
 type Props = {
   athlete?: Athlete | null
@@ -39,6 +80,8 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const [reelIndex, setReelIndex] = useState(0)
   const [addToCardClip, setAddToCardClip] = useState<{ url: string; who: string; watchFor: string } | null>(null)
   const [linkSpottingClip, setLinkSpottingClip] = useState<{ id: string; url: string; name: string } | null>(null)
+  const [cardRefresh, setCardRefresh] = useState(0)
+  const cardAttachments = useCardAttachments(cardRefresh)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const editor = {
@@ -291,6 +334,11 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
                 {clip.keywords && clip.keywords.length > 0 && (
                   <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
                 )}
+                {isGymAdmin(athlete) && cardAttachments[clip.url]?.length ? (
+                  <p className="mt-1 text-[11px] font-bold text-emerald-300/80">
+                    On cards: {cardAttachments[clip.url].join(', ')}
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <ShareReference
@@ -360,7 +408,13 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
         />
       ) : null}
       {addToCardClip && (
-        <AddToSkillCardModal video={addToCardClip} onClose={() => setAddToCardClip(null)} />
+        <AddToSkillCardModal
+          video={addToCardClip}
+          onClose={() => {
+            setAddToCardClip(null)
+            setCardRefresh((n) => n + 1)
+          }}
+        />
       )}
       {linkSpottingClip && (
         <LinkToSpottingCardModal clip={linkSpottingClip} onClose={() => setLinkSpottingClip(null)} />

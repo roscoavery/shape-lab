@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
-import { guideSkillsInOrder } from '../../lib/skillRegistry'
+import { TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVideo } from '../../config/techniqueEvidence'
+import { TRACK_LABELS, guideSkillsInOrder, guidelessSkills, searchSkills } from '../../lib/skillRegistry'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -273,7 +273,12 @@ export function AddToSkillCardModal({
   video: { url: string; who: string; watchFor: string }
   onClose: () => void
 }) {
-  const [skillId, setSkillId] = useState(guideSkillsInOrder()[0]?.guideId ?? '')
+  const allSkills = useMemo(() => [...guideSkillsInOrder(), ...guidelessSkills()], [])
+  const [query, setQuery] = useState('')
+  const [evidenceKey, setEvidenceKey] = useState(() => {
+    const first = guideSkillsInOrder()[0]
+    return first ? evidenceKeyForSkill(first) : ''
+  })
   const [loopA, setLoopA] = useState('')
   const [loopB, setLoopB] = useState('')
   const [saving, setSaving] = useState(false)
@@ -282,8 +287,21 @@ export function AddToSkillCardModal({
 
   const local = isLocalVideo(video.url)
 
+  /** Every skill on the map, guided first; search narrows across all of them. */
+  const matches = useMemo(() => {
+    const q = query.trim()
+    if (!q) return allSkills
+    return searchSkills(q, 60).map((h) => h.skill)
+  }, [query, allSkills])
+
+  const selectedName = useMemo(() => {
+    const byGuide = allSkills.find((s) => s.guideId === evidenceKey)
+    if (byGuide) return byGuide.name
+    return allSkills.find((s) => evidenceKeyForSkill(s) === evidenceKey)?.name ?? ''
+  }, [allSkills, evidenceKey])
+
   const handleAdd = async () => {
-    if (!skillId) return
+    if (!evidenceKey) return
     setSaving(true)
     setError(null)
     try {
@@ -292,7 +310,7 @@ export function AddToSkillCardModal({
       const v: ProofVideo = { url: video.url, who: video.who, watchFor: video.watchFor }
       if (a !== undefined && !Number.isNaN(a)) v.startAt = a
       if (b !== undefined && !Number.isNaN(b)) v.endAt = b
-      await addVideoToSkillCard(skillId, v)
+      await addVideoToSkillCard(evidenceKey, v)
       setDone(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add video')
@@ -319,9 +337,7 @@ export function AddToSkillCardModal({
         {done ? (
           <div className="py-6 text-center">
             <p className="text-base font-bold text-emerald-400">Added ✓</p>
-            <p className="mt-1 text-sm text-white/60">
-              {guideSkillsInOrder().find((s) => s.guideId === skillId)?.name}
-            </p>
+            <p className="mt-1 text-sm text-white/60">{selectedName}</p>
             <button
               type="button"
               onClick={onClose}
@@ -342,17 +358,36 @@ export function AddToSkillCardModal({
             <p className="mb-3 text-center text-xs text-white/60">{video.watchFor || video.who}</p>
 
             <label className="mb-1 block text-xs font-bold text-white/70">Skill card</label>
-            <select
-              value={skillId}
-              onChange={(e) => setSkillId(e.target.value)}
-              className="mb-3 w-full rounded-lg bg-neutral-800 px-3 py-2.5 text-sm text-white"
-            >
-              {guideSkillsInOrder().map((s) => (
-                <option key={s.guideId} value={s.guideId}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search every skill on the map…"
+              className="mb-2 w-full rounded-lg bg-neutral-800 px-3 py-2.5 text-sm text-white placeholder:text-white/40"
+            />
+            <div className="mb-3 max-h-56 overflow-y-auto rounded-lg bg-neutral-800">
+              {matches.map((s) => {
+                const key = evidenceKeyForSkill(s)
+                const selected = key === evidenceKey
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setEvidenceKey(key)}
+                    className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm ${
+                      selected ? 'bg-emerald-600 font-bold text-white' : 'text-white/85 hover:bg-neutral-700'
+                    }`}
+                  >
+                    <span>{s.name}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${selected ? 'text-white/80' : 'text-white/40'}`}>
+                      {s.guideId ? TRACK_LABELS[s.track] : 'Guide coming'}
+                    </span>
+                  </button>
+                )
+              })}
+              {matches.length === 0 && (
+                <p className="px-3 py-4 text-center text-sm text-white/50">No skills match.</p>
+              )}
+            </div>
 
             <label className="mb-1 block text-xs font-bold text-white/70">
               Loop points <span className="font-normal text-white/40">(seconds, optional)</span>
@@ -376,7 +411,7 @@ export function AddToSkillCardModal({
 
             <button
               type="button"
-              disabled={saving || !skillId}
+              disabled={saving || !evidenceKey}
               onClick={handleAdd}
               className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
             >

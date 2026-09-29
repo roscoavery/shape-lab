@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
-import { FEATURED_PROOF, GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE, type ProofVideo } from '../../config/techniqueEvidence'
+import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVideo } from '../../config/techniqueEvidence'
 import { youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
@@ -1971,14 +1971,12 @@ export function SkillPathCards({
                     yet.
                   </p>
                   <HarderVersions skillId={modalSkill.id} canEdit={canEdit} />
-                  {GUIDELESS_EVIDENCE_KEY[modalSkill.id] && (
-                    <ProofStrip
-                      evidenceKey={GUIDELESS_EVIDENCE_KEY[modalSkill.id]}
-                      matchName={modalSkill.name}
-                      coach={coach}
-                      canEdit={canEdit}
-                    />
-                  )}
+                  <ProofStrip
+                    evidenceKey={evidenceKeyForSkill(modalSkill)}
+                    matchName={modalSkill.name}
+                    coach={coach}
+                    canEdit={canEdit}
+                  />
                   <PathTab skill={modalSkill} canEdit={canEdit} onSelectSkill={setModalSkill} />
                 </div>
               )}

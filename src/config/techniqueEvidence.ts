@@ -67,6 +67,18 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_standing_bhs_series: 'standing-bhs-series',
   skl_back_1_5: 'back-15',
   skl_back_quad: 'back-quad',
+  skl_cartwheel_step_in: 'cartwheel-step-in',
+}
+
+/**
+ * Evidence key for any registry skill: guideId for guided skills, the
+ * guideless override when present, else the skill id itself. Admin-added
+ * videos for guideless skills persist under this key and render in the
+ * skill's "guide coming" card.
+ */
+export function evidenceKeyForSkill(skill: { id: string; guideId?: string | null }): string {
+  if (skill.guideId) return skill.guideId
+  return GUIDELESS_EVIDENCE_KEY[skill.id] ?? skill.id
 }
 
 export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
@@ -221,6 +233,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DX5usxfpoZ-/',
       watchFor: 'Round off sweep through to hollow — arms carry, eyes down.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-cartwheel-stepin-zombie.mp4',
+      watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -611,6 +628,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DalCqRAo8ig/',
       watchFor: 'Back walkover to handstand step-out — the line through the skill.',
+    },
+  ],
+  'cartwheel-step-in': [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-cartwheel-stepin-zombie.mp4',
+      watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
     },
   ],
   'cartwheel-handspring': [
