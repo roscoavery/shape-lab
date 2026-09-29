@@ -137,6 +137,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/p/Dd4eoR9SYYf/',
       watchFor: 'Front half (barani) into a full full straight on double mini trampoline.',
     },
+    {
+      who: 'Owen Germsheid',
+      url: 'https://www.instagram.com/p/Ddy9wabxnxj/',
+      watchFor: 'Standing handspring double full.',
+    },
   ],
   'front-layout': [
     {
