@@ -27,6 +27,8 @@ export const MUSE_SCOPES = [
   'stories:write',
   'drills:write',
   'skill-maps:write',
+  'chalkboards:read',
+  'chalkboards:write',
 ] as const
 
 export type MuseScope = (typeof MUSE_SCOPES)[number]
@@ -55,6 +57,8 @@ export const COACH_PRESET_SCOPES: MuseScope[] = [
   'stories:write',
   'drills:write',
   'skill-maps:write',
+  'chalkboards:read',
+  'chalkboards:write',
 ]
 
 /**
@@ -104,18 +108,30 @@ function cleanRecord(raw: unknown): MuseKeyRecord | null {
   if (typeof r.keyHash !== 'string' || !r.keyHash) return null
   const scopes = Array.isArray(r.scopes) ? r.scopes.filter(isScope) : []
   if (scopes.length === 0) return null
+  const createdByRole = typeof r.createdByRole === 'string' && r.createdByRole ? r.createdByRole : null
+  const createdByAccountId =
+    typeof r.createdByAccountId === 'string' && r.createdByAccountId ? r.createdByAccountId : null
+  // Build 707: chalkboard routes are new, so keys minted before they existed
+  // cannot carry the scopes. Owner/admin keys never escalate past their
+  // creator's role, and owners/admins manage chalkboards in the app itself,
+  // so backfill the chalkboard scopes at read time rather than stranding old
+  // keys. Runtime-only; stored records are untouched.
+  const ownerMade =
+    !createdByAccountId || createdByRole === 'gymOwner' || createdByRole === 'admin'
+  const withChalkboards = ownerMade
+    ? (['chalkboards:read', 'chalkboards:write'] as const).reduce<MuseScope[]>(
+        (list, s) => (list.includes(s) ? list : [...list, s]),
+        [...scopes],
+      )
+    : scopes
   return {
     id: r.id,
     label: typeof r.label === 'string' ? r.label.slice(0, 80) : 'Untitled key',
     keyHash: r.keyHash,
-    scopes,
+    scopes: withChalkboards,
     athleteId: typeof r.athleteId === 'string' && r.athleteId ? r.athleteId : null,
-    createdByAccountId:
-      typeof r.createdByAccountId === 'string' && r.createdByAccountId
-        ? r.createdByAccountId
-        : null,
-    createdByRole:
-      typeof r.createdByRole === 'string' && r.createdByRole ? r.createdByRole : null,
+    createdByAccountId,
+    createdByRole,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
     lastUsedAt: typeof r.lastUsedAt === 'string' ? r.lastUsedAt : null,
     revoked: r.revoked === true,

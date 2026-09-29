@@ -16,9 +16,18 @@ export const SCOPE_LABELS: Record<string, string> = {
   'stories:write': 'Post to gym, wins, and passes',
   'drills:write': 'Add drills to the drill library',
   'skill-maps:write': 'Build skill maps and paths',
+  'chalkboards:read': 'Read chalkboards',
+  'chalkboards:write': 'Manage chalkboards',
 }
 
-export const OWNER_SCOPES = ['library:read', 'library:add', 'progress:read', 'philosophy:read']
+export const OWNER_SCOPES = [
+  'library:read',
+  'library:add',
+  'progress:read',
+  'philosophy:read',
+  'chalkboards:read',
+  'chalkboards:write',
+]
 export const PARENT_SCOPES = ['progress:read', 'philosophy:read']
 
 /** Everything a coach's own Muse needs to file drills, references, and maps. */
@@ -34,6 +43,8 @@ export const COACH_SCOPES = [
   'stories:write',
   'drills:write',
   'skill-maps:write',
+  'chalkboards:read',
+  'chalkboards:write',
 ]
 
 export type KeyPreset = 'owner' | 'parent' | 'coach'
@@ -45,7 +56,7 @@ export const PRESET_SCOPES: Record<KeyPreset, string[]> = {
 }
 
 export const PRESET_BLURBS: Record<KeyPreset, string> = {
-  owner: 'Owner: file library videos, read the library, read any athlete\u2019s progress, read coaching philosophy.',
+  owner: 'Owner: file library videos, read the library, read any athlete\u2019s progress, read coaching philosophy, manage chalkboards.',
   parent: 'Parent: read one athlete\u2019s progress and the coaching philosophy. Nothing else.',
   coach:
     'Coach: everything an owner key does, plus add coach shapes, athletes, classes, athlete notes, gym/wins/passes posts, drills, and skill maps. A coach key can only reach athletes its coach works with.',

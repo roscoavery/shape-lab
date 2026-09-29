@@ -35,6 +35,7 @@ import { readFeedFile, addTextFeedPost } from './feedStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
+import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 
 const WINDOW_DAYS = 30
 
@@ -761,6 +762,229 @@ async function handleSkillMapsPost(req: IncomingMessage, res: ServerResponse): P
   return true
 }
 
+/* ------------------------------------------------------------------ */
+/* Chalkboards — list, read, add items, and tombstone deletes.            */
+/* All writes go through writeChalkboardsFile so removedBoardIds /        */
+/* removedItemIds tombstones merge monotonically and deletes stay gone.   */
+/* ------------------------------------------------------------------ */
+
+type ChalkboardRow = Record<string, unknown>
+
+function chalkboardBoards(file: { boards: unknown[] }): ChalkboardRow[] {
+  return (Array.isArray(file.boards) ? file.boards : []).filter(
+    (b): b is ChalkboardRow => !!b && typeof b === 'object',
+  )
+}
+
+function findBoard(boards: ChalkboardRow[], id: string): ChalkboardRow | null {
+  return boards.find((b) => b.id === id) ?? null
+}
+
+function boardItems(board: ChalkboardRow): ChalkboardRow[] {
+  return (Array.isArray(board.items) ? board.items : []).filter(
+    (i): i is ChalkboardRow => !!i && typeof i === 'object',
+  )
+}
+
+function boardSummary(board: ChalkboardRow): Record<string, unknown> {
+  return {
+    id: board.id,
+    name: board.name,
+    offeringId: board.offeringId,
+    scope: board.scope ?? null,
+    active: board.active === true,
+    itemCount: boardItems(board).length,
+    createdAt: board.createdAt ?? null,
+    updatedAt: board.updatedAt ?? null,
+  }
+}
+
+async function handleChalkboardsList(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'Use GET' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:read')
+  if (!verified) return true
+  const file = await readChalkboardsFile()
+  const boards = chalkboardBoards(file).map(boardSummary)
+  sendJson(res, 200, { boards })
+  await verified.touch()
+  return true
+}
+
+async function handleChalkboardDetail(
+  req: IncomingMessage,
+  res: ServerResponse,
+  boardId: string,
+): Promise<boolean> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'Use GET' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:read')
+  if (!verified) return true
+  const file = await readChalkboardsFile()
+  const board = findBoard(chalkboardBoards(file), boardId)
+  if (!board) {
+    sendJson(res, 404, { error: 'Chalkboard not found.' })
+    return true
+  }
+  sendJson(res, 200, { board: { ...board, items: boardItems(board) } })
+  await verified.touch()
+  return true
+}
+
+const CHALKBOARD_ITEM_KINDS = [
+  'clip',
+  'loop',
+  'still',
+  'ig-still',
+  'drill',
+  'drill-list',
+  'collage',
+] as const
+
+async function handleChalkboardAddItem(
+  req: IncomingMessage,
+  res: ServerResponse,
+  boardId: string,
+): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:write')
+  if (!verified) return true
+  const body = await readJsonBody(req)
+  if (!body) {
+    sendJson(res, 400, { error: 'Send JSON with a kind and a title for the item.' })
+    return true
+  }
+  const kind = textField(body, 'kind', 40)
+  if (!(CHALKBOARD_ITEM_KINDS as readonly string[]).includes(kind)) {
+    sendJson(res, 400, {
+      error: `A valid kind is required: ${CHALKBOARD_ITEM_KINDS.join(', ')}.`,
+    })
+    return true
+  }
+  const title = textField(body, 'title', 160)
+  if (!title) {
+    sendJson(res, 400, { error: 'A title for the item is required.' })
+    return true
+  }
+  const file = await readChalkboardsFile()
+  const boards = chalkboardBoards(file)
+  const board = findBoard(boards, boardId)
+  if (!board) {
+    sendJson(res, 404, { error: 'Chalkboard not found.' })
+    return true
+  }
+  const creator = await keyCreator(verified.key)
+  const url = textField(body, 'url', 1000)
+  const drillIds = Array.isArray(body.drillIds)
+    ? body.drillIds.filter((x): x is string => typeof x === 'string' && x.length > 0).slice(0, 50)
+    : []
+  const numField = (name: string): number | null => {
+    const v = body[name]
+    return typeof v === 'number' && Number.isFinite(v) ? v : null
+  }
+  const loopA = numField('loopA')
+  const loopB = numField('loopB')
+  const now = new Date().toISOString()
+  const item: ChalkboardRow = {
+    id: `mcb_${randomBytes(8).toString('hex')}`,
+    offeringId: board.offeringId,
+    boardId: board.id,
+    kind,
+    title,
+    ...(url && isHttpUrl(url) ? { url } : {}),
+    ...(loopA != null ? { loopA } : {}),
+    ...(loopB != null ? { loopB } : {}),
+    ...(textField(body, 'stillId', 120) ? { stillId: textField(body, 'stillId', 120) } : {}),
+    ...(textField(body, 'shapeId', 120) ? { shapeId: textField(body, 'shapeId', 120) } : {}),
+    ...(textField(body, 'photoSrc', 1000) ? { photoSrc: textField(body, 'photoSrc', 1000) } : {}),
+    ...(textField(body, 'drillId', 120) ? { drillId: textField(body, 'drillId', 120) } : {}),
+    ...(drillIds.length > 0 ? { drillIds } : {}),
+    ...(textField(body, 'collageId', 120) ? { collageId: textField(body, 'collageId', 120) } : {}),
+    ...(textField(body, 'comment', 2000) ? { comment: textField(body, 'comment', 2000) } : {}),
+    pinned: body.pinned === true,
+    createdById: creator.rosterProfileId ?? creator.accountId ?? 'muse',
+    createdByName: creator.displayName,
+    createdAt: now,
+    addedVia: 'muse-connection',
+  }
+  const nextBoards = boards.map((b) =>
+    b.id === boardId ? { ...b, items: [...boardItems(b), item], updatedAt: now } : b,
+  )
+  await writeChalkboardsFile({ ...file, boards: nextBoards })
+  await verified.touch()
+  sendJson(res, 201, { item: { id: item.id, boardId, kind, title } })
+  return true
+}
+
+async function handleChalkboardDelete(
+  req: IncomingMessage,
+  res: ServerResponse,
+  boardId: string,
+): Promise<boolean> {
+  if (req.method !== 'DELETE') {
+    sendJson(res, 405, { error: 'Use DELETE' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:write')
+  if (!verified) return true
+  const file = await readChalkboardsFile()
+  const boards = chalkboardBoards(file)
+  if (!findBoard(boards, boardId)) {
+    sendJson(res, 404, { error: 'Chalkboard not found.' })
+    return true
+  }
+  // Tombstone, never hard-delete: writeChalkboardsFile merges the tombstone
+  // list monotonically and filters the board on every write and read.
+  await writeChalkboardsFile({
+    ...file,
+    removedBoardIds: [...(file.removedBoardIds ?? []), boardId],
+  })
+  await verified.touch()
+  sendJson(res, 200, { deleted: boardId })
+  return true
+}
+
+async function handleChalkboardDeleteItem(
+  req: IncomingMessage,
+  res: ServerResponse,
+  boardId: string,
+  itemId: string,
+): Promise<boolean> {
+  if (req.method !== 'DELETE') {
+    sendJson(res, 405, { error: 'Use DELETE' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:write')
+  if (!verified) return true
+  const file = await readChalkboardsFile()
+  const boards = chalkboardBoards(file)
+  const board = findBoard(boards, boardId)
+  if (!board) {
+    sendJson(res, 404, { error: 'Chalkboard not found.' })
+    return true
+  }
+  if (!boardItems(board).some((i) => i.id === itemId)) {
+    sendJson(res, 404, { error: 'Item not found on that chalkboard.' })
+    return true
+  }
+  // Tombstone, never hard-delete: the item id joins removedItemIds, which
+  // writeChalkboardsFile merges monotonically and honors on write and read.
+  await writeChalkboardsFile({
+    ...file,
+    removedItemIds: [...(file.removedItemIds ?? []), itemId],
+  })
+  await verified.touch()
+  sendJson(res, 200, { deleted: itemId, boardId })
+  return true
+}
+
 /**
  * Entry point from handleShapeLabApi. Returns true when the request was
  * handled here (including auth failures).
@@ -780,6 +1004,28 @@ export async function handleMuseApi(  req: IncomingMessage,
   if (path === '/api/muse/drills') return handleDrills(req, res)
   if (path === '/api/muse/skill-maps') {
     return req.method === 'GET' ? handleSkillMapsGet(req, res) : handleSkillMapsPost(req, res)
+  }
+  if (path === '/api/muse/chalkboards') return handleChalkboardsList(req, res)
+  const chalkboardItemsMatch = /^\/api\/muse\/chalkboards\/([^/]+)\/items$/.exec(path)
+  if (chalkboardItemsMatch) {
+    return handleChalkboardAddItem(req, res, decodeURIComponent(chalkboardItemsMatch[1]))
+  }
+  const chalkboardItemMatch = /^\/api\/muse\/chalkboards\/([^/]+)\/items\/([^/]+)$/.exec(path)
+  if (chalkboardItemMatch) {
+    return handleChalkboardDeleteItem(
+      req,
+      res,
+      decodeURIComponent(chalkboardItemMatch[1]),
+      decodeURIComponent(chalkboardItemMatch[2]),
+    )
+  }
+  const chalkboardMatch = /^\/api\/muse\/chalkboards\/([^/]+)$/.exec(path)
+  if (chalkboardMatch) {
+    const boardId = decodeURIComponent(chalkboardMatch[1])
+    if (req.method === 'GET') return handleChalkboardDetail(req, res, boardId)
+    if (req.method === 'DELETE') return handleChalkboardDelete(req, res, boardId)
+    sendJson(res, 405, { error: 'Use GET or DELETE' })
+    return true
   }
   if (path.startsWith('/api/muse/progress/')) return handleProgress(req, res, path)
   return false
