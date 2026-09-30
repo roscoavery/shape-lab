@@ -323,6 +323,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-back-tuck-oasis.mp4',
       watchFor: 'Nice round off back tuck.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-ro-hs-tuck-spring-floor.mp4',
+      watchFor: 'Nice spring floor round off handspring tuck reference from the sensei.',
+    },
   ],
   'barani': [
     {
