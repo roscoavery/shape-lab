@@ -2,7 +2,7 @@ import type { AppTab } from '../../lib/storage'
 import { saveTab } from '../../lib/storage'
 import { MobilePortal } from './MobilePortal'
 
-export type DiscoverTarget = 'all' | 'scroll' | 'wins' | 'feed' | 'compare'
+export type DiscoverTarget = 'all' | 'scroll' | 'wins' | 'feed' | 'compare' | 'learn'
 
 type Props = {
   open: boolean
@@ -16,6 +16,7 @@ const ROWS: { target: DiscoverTarget; tab: AppTab; title: string; hint: string }
   { target: 'wins', tab: 'wins', title: 'Wins', hint: 'Hits and accomplishments' },
   { target: 'feed', tab: 'feed', title: 'Gym feed', hint: 'Team posts and shares' },
   { target: 'compare', tab: 'compare', title: 'Passes & compare', hint: 'ShapeLab passes and A/B video' },
+  { target: 'learn', tab: 'learn', title: 'Learn', hint: 'Shapes, skills, drills, and spotting' },
 ]
 
 export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
@@ -34,7 +35,7 @@ export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
       >
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />
         <p className="text-center text-base font-semibold">Discover</p>
-        <p className="mt-1 text-center text-xs text-[var(--muted)]">Passes, wins, feed, and reference video</p>
+        <p className="mt-1 text-center text-xs text-[var(--muted)]">Passes, wins, feed, reference video, and learn</p>
         <ul className="mt-4 space-y-1">
           {ROWS.map((row) => (
             <li key={row.target}>

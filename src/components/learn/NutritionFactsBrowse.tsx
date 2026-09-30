@@ -17,8 +17,9 @@ export function NutritionFactsBrowse({ compact = false }: { compact?: boolean })
     >
       <h3 className="font-semibold">NutritionFacts.org</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Short readings from public NutritionFacts.org topics and Dr. Michael Greger videos — not
-        medical advice.
+        Short readings from public NutritionFacts.org topics and Dr. Michael Greger videos. For
+        anything beyond these cards, the search below jumps to their full site search — not medical
+        advice.
       </p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
         <a href={NUTRITIONFACTS_HOME} target="_blank" rel="noreferrer" className="text-[var(--accent)] underline">
@@ -37,6 +38,16 @@ export function NutritionFactsBrowse({ compact = false }: { compact?: boolean })
         placeholder="Ask about protein, dairy, sugar, sleep…"
         className="mt-3 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
       />
+      <a
+        href={searchUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-2 block text-sm font-semibold text-[var(--accent)] underline"
+      >
+        {query.trim()
+          ? `Search all of nutritionfacts.org for \u201c${query.trim()}\u201d`
+          : 'Search everything on nutritionfacts.org'}
+      </a>
       <ul className="mt-3 space-y-3">
         {hits.length === 0 ? (
           <li className="text-sm text-[var(--muted)]">
