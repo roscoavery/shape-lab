@@ -187,6 +187,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-standing-full.mp4',
       watchFor: 'Standing full — emphasis on standing all the way up on the take off.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-tuck-knee-high-surface.mp4',
+      watchFor: 'Standing tuck up to a knee-high surface.',
+    },
   ],
   'back-extension-roll': [
     {
@@ -692,6 +697,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
       watchFor: 'Rebound punch tuck — the tuck pulled out of a handspring snap.',
+    },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-tuck-knee-high-surface.mp4',
+      watchFor: 'Standing tuck up to a knee-high surface.',
     },
   ],
   'back-half': [
