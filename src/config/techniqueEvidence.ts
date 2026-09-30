@@ -221,6 +221,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/standing-tuck-knee-high-surface.mp4',
       watchFor: 'Standing tuck up to a knee-high surface.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-full-arabian-triple.mp4',
+      watchFor: 'Standing full through to arabian through to triple full.',
+    },
   ],
   'back-extension-roll': [
     {
@@ -818,6 +823,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/darnell-back-25-triple-full.mp4',
       watchFor: 'Back 2.5 through to triple full.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-full-arabian-triple.mp4',
+      watchFor: 'Standing full through to arabian through to triple full.',
+    },
   ],
   'arabian': [
     {
@@ -854,6 +864,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Asa Ware — Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
       watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Slow motion through the arabian and the triple.',
+    },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-full-arabian-triple.mp4',
+      watchFor: 'Standing full through to arabian through to triple full.',
     },
   ],
   'front-walkover': [
