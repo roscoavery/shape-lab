@@ -556,6 +556,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         "Safety spot reference using hands instead of arms. The left hand pushing low back forward while right hand pulls ribs backwards. We did a lot of pausing with toes at 10-11 o'clock before this could pass through smoothly.",
     },
+    {
+      who: 'Maggie (athlete)',
+      url: '/videos/maggie-layout-tumble-track.mp4',
+      watchFor: 'Awesome layout on tumble track.',
+    },
   ],
   full: [
     {
