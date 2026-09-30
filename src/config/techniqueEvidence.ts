@@ -264,6 +264,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/ro-bhs-tuck-tramp.mp4',
+      watchFor: 'Round off back handspring tuck on tramp.',
+    },
   ],
   'barani': [
     {
