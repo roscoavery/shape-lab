@@ -100,6 +100,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/straight-arm-handstand-fwd-roll.mov',
       watchFor: 'Straight arm handstand forward roll.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/stunt-style-handstand-fwd-roll.mp4',
+      watchFor: 'Nice stunt style handstand forward roll. Bent arms.',
+    },
   ],
   'front-aerial': [
     {
