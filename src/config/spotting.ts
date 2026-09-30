@@ -86,6 +86,22 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
   },
   {
+    id: 'bump-and-catch',
+    name: 'Bump and catch',
+    description:
+      "A bump and catch method on a round off back tuck on tramp. This is more of a lift and catch. I am lifting the athlete up to assist with height on the take off and actually pushing their tailbone forward while pushing their ribcage backwards as I lift up. Then I switch my grip to a safety spot with left hand on back and right hand on ribs.",
+    appliesTo: ['back-tuck'],
+    watchOuts: [
+      "This requires a release which can be good to communicate to the athlete before so they don't bail when they feel you let go for that tiny moment.",
+    ],
+    demoVideo: {
+      url: '/videos/back-tuck-bump-and-catch-tramp.mp4',
+      caption:
+        'Bump and catch on a round off back tuck on tramp — more of a lift and catch. Lift for height on the takeoff, tailbone forward and ribcage back, then switch to a safety spot with left hand on back and right hand on ribs.',
+    },
+    videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bump-and-catch and it will show up here.',
+  },
+  {
     id: 'opposite-side-spot',
     name: 'Opposite side spot',
     description:
@@ -228,7 +244,7 @@ export const SPOTTING_SKILLS: SpottingSkill[] = [
     id: 'back-tuck',
     name: 'Back tuck',
     sub: 'Standing, round off, back handspring',
-    methodIds: ['safety-spot', 'shadow-spot'],
+    methodIds: ['safety-spot', 'bump-and-catch', 'shadow-spot'],
   },
   {
     id: 'back-layout',
