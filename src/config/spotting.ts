@@ -183,6 +183,13 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       'A deconstruction method for the back handspring. Credit to Coach Lain — he ties in verbal cues and a step by step process with motions.',
     appliesTo: ['back-handspring'],
     credit: 'Coach Lain',
+    demoVideos: [
+      {
+        url: '/videos/handspring-deconstruction-shirt-grab.mp4',
+        caption:
+          'Good example of the Coach Lain handspring deconstruction spotting method using bend fall reach push. Emphasize the shirt grab on the second half. To help the athlete off hands by replaying in slo mo and noting',
+      },
+    ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bhs-deconstruction and it will show up here.',
   },
   {
