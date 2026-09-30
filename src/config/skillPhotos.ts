@@ -45,6 +45,11 @@ export const SKILL_PHOTOS: Record<string, SkillPhoto[]> = {
         'She hits the pike shape and really decreases moment of inertia a lot by dropping arms and closing hips to get feet in front for the next handspring.',
     },
     {
+      file: 'bhs_feet_behind_zombie.jpg',
+      label:
+        'The athlete hits a feet behind zombie shape into the springs regardless of the position she hits while in the air after the rebound.',
+    },
+    {
       file: 'bhs_rebound_hollow.jpg',
       label:
         'Nice hollow body position, eyes on the ground, allowing arms to go a bit higher after the rebound has sent her airborne.',
