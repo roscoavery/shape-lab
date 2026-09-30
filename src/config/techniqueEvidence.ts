@@ -715,6 +715,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-full-kick-full-style.mp4',
       watchFor: 'This kind of full can translate to kick fulls really easily.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-back-full-tumble-track.mp4',
+      watchFor:
+        'Back full reference from Ryan on the tumble track. There is a subtle quarter turn that happens on the way up with arms up. Both arms drop through the twist plane at the top to wrap into full twist.',
+    },
   ],
   basics: [
     {
