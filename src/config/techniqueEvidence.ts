@@ -603,7 +603,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     },
     {
       who: 'Ari (athlete)',
-      url: 'https://www.instagram.com/reel/DKcgyPLO9Hz/',
+      url: '/videos/ari-full-spring-floor.mp4',
       watchFor: "Ari's full — the finished product of the arm-drop process.",
     },
     {
