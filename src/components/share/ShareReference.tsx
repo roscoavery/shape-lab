@@ -3,7 +3,7 @@
  * chalkboard, athlete, coach, gym feed.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Athlete } from '../../types'
 import { isCoachProfile, profileRole, roleLabel } from '../../lib/profileRole'
@@ -30,6 +30,8 @@ type Props = {
   onAddToSkillCard?: () => void
   /** When set (admin), the sheet offers "Link to spotting card". */
   onLinkToSpottingCard?: () => void
+  /** Extra buttons rendered inside the sheet (e.g. Collect / Collage for reels). */
+  extraActions?: ReactNode
 }
 
 export function ShareReference({
@@ -40,6 +42,7 @@ export function ShareReference({
   className = '',
   onAddToSkillCard,
   onLinkToSpottingCard,
+  extraActions,
 }: Props) {
   const { viewer: ctxViewer, athletes } = useClipEditor()
   const viewer = viewerProp ?? ctxViewer
@@ -244,6 +247,8 @@ export function ShareReference({
                   </button>
                 )}
               </div>
+
+              {extraActions ? <div className="mt-2">{extraActions}</div> : null}
 
               {!viewer ? (
                 <p className="mt-3 text-sm text-[var(--muted)]">

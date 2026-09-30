@@ -5,7 +5,7 @@
  * sit in a separate bar so markup never steals those taps.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { VideoMarkOverlay } from './VideoMarkOverlay'
 import { DraggableStillOverlay } from '../DraggableStillOverlay'
 import { FavoriteStar } from '../FavoriteStar'
@@ -53,6 +53,12 @@ type Props = {
   overlayChrome?: boolean
   /** Start with the transport HUD open. Chalkboard defaults this off. */
   startChromeOpen?: boolean
+  /** Controlled chrome visibility. When set, toggles call onToggleChrome instead of internal state. */
+  chromeOpen?: boolean
+  /** Called when the user taps the video or the Show/Hide control (controlled mode). */
+  onToggleChrome?: () => void
+  /** Tapping the video itself toggles the chrome; markup tools hide with it. Used by fullscreen reels. */
+  tapTogglesChrome?: boolean
   /** Two-finger pinch-zoom on phones (Replay Last). */
   pinchZoom?: boolean
   /** Scrub window currently looping — used to save that exact clip to Photos. */
@@ -114,6 +120,9 @@ function VideoWorkbenchInner({
   active,
   overlayChrome,
   startChromeOpen,
+  chromeOpen: controlledChromeOpen,
+  onToggleChrome: onToggleChromeProp,
+  tapTogglesChrome = false,
   pinchZoom = false,
   onWindowChange,
   overlayActions,
@@ -162,8 +171,37 @@ function VideoWorkbenchInner({
   const [renameDraft, setRenameDraft] = useState('')
   const [loopNotice, setLoopNotice] = useState<string | null>(null)
   const overlay = overlayChrome ?? (fill || replayChrome)
-  const [chromeOpen, setChromeOpen] = useState(
+  const [innerChromeOpen, setInnerChromeOpen] = useState(
     () => startChromeOpen ?? (Boolean(compact && fill) || Boolean(replayChrome)),
+  )
+  const chromeOpen = controlledChromeOpen ?? innerChromeOpen
+  const toggleChrome = useCallback(() => {
+    if (onToggleChromeProp) onToggleChromeProp()
+    else setInnerChromeOpen((open) => !open)
+  }, [onToggleChromeProp])
+  // Tap-the-video toggles the whole chrome (reels). A real tap is short with
+  // almost no movement; anything on a button / input / link / draw surface is
+  // left alone, and swipes (reel scroll, scrub) exceed the movement budget.
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  const onTapDown = useCallback(
+    (e: PointerEvent) => {
+      if (tapTogglesChrome) tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+    },
+    [tapTogglesChrome],
+  )
+  const onTapUp = useCallback(
+    (e: PointerEvent) => {
+      const start = tapStartRef.current
+      tapStartRef.current = null
+      if (!tapTogglesChrome || !start) return
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 14) return
+      if (Date.now() - start.t > 500) return
+      const target = e.target as HTMLElement | null
+      if (!target || target.closest('button, a, input, select, textarea')) return
+      if (!target.closest('video')) return
+      toggleChrome()
+    },
+    [tapTogglesChrome, toggleChrome],
   )
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
@@ -708,6 +746,8 @@ function VideoWorkbenchInner({
     <div className={`flex min-h-0 flex-col ${fill ? 'h-full gap-0' : overlay ? 'gap-0' : 'gap-2'}`}>
       <div
         ref={frameRef}
+        onPointerDown={onTapDown}
+        onPointerUp={onTapUp}
         className={`relative min-h-0 overflow-hidden bg-black ${
           fill ? 'h-full w-full flex-1' : overlay ? 'rounded-lg' : 'rounded-lg border border-[var(--panel-border)]'
         }`}
@@ -750,6 +790,8 @@ function VideoWorkbenchInner({
             mirror={mirror}
             pinchPassthrough={pinchZoom}
             hud
+            toolsHidden={tapTogglesChrome && !chromeOpen}
+            surfaceDisabled={tapTogglesChrome && !chromeOpen}
             hudOffsetClass={replayChrome ? 'left-1.5 top-14' : 'left-1.5 top-2'}
             swipeSafe={markupSwipeSafe}
           />
@@ -796,7 +838,7 @@ function VideoWorkbenchInner({
             onBack={onBack}
             onSave={onSavePhotos}
             onSaveInApp={onSaveInApp}
-            onToggleChrome={() => setChromeOpen((open) => !open)}
+            onToggleChrome={toggleChrome}
             onMinimize={onMinimize}
             libraryBusy={libraryBusy}
             libraryNotice={libraryNotice}
@@ -823,7 +865,7 @@ function VideoWorkbenchInner({
                 {hudCorner}
                 <HudCircle
                   label={chromeOpen ? 'Hide' : 'Show'}
-                  onClick={() => setChromeOpen((open) => !open)}
+                  onClick={toggleChrome}
                 >
                   {chromeOpen ? <IconHide /> : <IconShow />}
                 </HudCircle>

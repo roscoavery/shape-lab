@@ -91,17 +91,23 @@ const ReelSection = memo(function ReelSection({
     () => ({ gymEditor, personalEditor, profileId }),
     [gymEditor, personalEditor, profileId],
   )
+  // IG-style chrome: hidden while scrolling, tap the video to show/hide.
+  const [chrome, setChrome] = useState(false)
+  const toggleChrome = useCallback(() => setChrome((c) => !c), [])
+  const clipForCard = useMemo(() => ({ ...clip, postedBy: handle || clip.postedBy }), [clip, handle])
   return (
     <section
       data-reel-index={index}
-      className="flex h-full snap-start snap-always flex-col bg-black"
+      className="relative h-full snap-start snap-always overflow-hidden bg-black"
     >
-      <div className="min-h-0 flex-1">
+      {/* The video fills the whole card, like IG — no caption bar shrinking it. */}
+      <div className="absolute inset-0">
         {near ? (
           <GymClipPlayer
             url={clip.url}
             itemId={clip.id}
             fill
+            fit="contain"
             active={on}
             persistUrl={clip.url}
             loopA={clip.loopA}
@@ -113,6 +119,9 @@ const ReelSection = memo(function ReelSection({
             markupSwipeSafe
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.id, clip.url, next)}
+            chromeOpen={chrome}
+            onToggleChrome={toggleChrome}
+            tapTogglesChrome
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-black text-sm text-white/35">
@@ -120,43 +129,59 @@ const ReelSection = memo(function ReelSection({
           </div>
         )}
       </div>
-      {/* Caption bar sits BELOW the video in normal flow, never over it, so
-          the bottom of the footage is never hidden behind the chrome. */}
-      <div className="shrink-0 bg-black px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            {clip.collectionName ? (
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6ee7f0]/85">
-                {clip.collectionName}
+      {chrome && near ? (
+        <>
+          {/* Caption overlays the bottom of the video, above the scrub bar. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-36 pt-14">
+            <div className="max-w-[72%]">
+              {clip.collectionName ? (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6ee7f0]/85">
+                  {clip.collectionName}
+                </p>
+              ) : null}
+              <h2 className="text-lg font-semibold leading-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
+                {clip.name}
+              </h2>
+              {handle ? (
+                <p className="mt-1 text-sm font-semibold text-white/85 [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
+                  @{handle.replace(/^@/, '')}
+                </p>
+              ) : null}
+              {clip.keywords && clip.keywords.length > 0 ? (
+                <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
+              ) : null}
+              <p className="mt-2 text-[11px] text-white/45">
+                Tap the video to hide · swipe for the next clip
               </p>
-            ) : null}
-            <h2 className="text-lg font-semibold leading-tight">{clip.name}</h2>
-            {handle ? (
-              <p className="mt-1 text-sm font-semibold text-white/85">
-                @{handle.replace(/^@/, '')}
-              </p>
-            ) : null}
-            {clip.keywords && clip.keywords.length > 0 ? (
-              <p className="mt-1 text-xs text-white/55">{clip.keywords.join(' · ')}</p>
-            ) : null}
-            <p className="mt-2 text-[11px] text-white/40">
-              Swipe for the next clip · tap Shot to crop a shape
-            </p>
-            {flash ? <p className="mt-1 text-xs text-[#6ee7f0]">{flash}</p> : null}
+              {flash ? <p className="mt-1 text-xs text-[#6ee7f0]">{flash}</p> : null}
+            </div>
           </div>
-          <div className="flex shrink-0 flex-col items-center gap-2">
+          {/* Action rail floats above the scrub bar. Collect / Collage live in Share. */}
+          <div className="absolute bottom-40 right-2 z-20 flex flex-col items-center gap-3">
             <ShareReference
               variant="story"
               draft={clipShareDraft(clip.name, clip.url, clip.loopA, clip.loopB)}
               onAddToSkillCard={
-                onAddToSkillCard
-                  ? () => onAddToSkillCard({ ...clip, postedBy: handle || clip.postedBy })
-                  : undefined
+                onAddToSkillCard ? () => onAddToSkillCard(clipForCard) : undefined
               }
               onLinkToSpottingCard={
-                onLinkToSpottingCard
-                  ? () => onLinkToSpottingCard({ ...clip, postedBy: handle || clip.postedBy })
-                  : undefined
+                onLinkToSpottingCard ? () => onLinkToSpottingCard(clipForCard) : undefined
+              }
+              extraActions={
+                <ClipOrganizeMenu
+                  variant="feed"
+                  clip={{
+                    name: clip.name,
+                    url: clip.url,
+                    kind: clip.kind ?? kindFromUrl(clip.url),
+                    keywords: clip.keywords,
+                    sourceId: clip.id,
+                    postedBy: handle ?? clip.postedBy,
+                  }}
+                  editor={editor}
+                  gymAdmin={gymAdmin}
+                  onCopied={onCopied}
+                />
               }
             />
             <FavoriteStar
@@ -166,23 +191,9 @@ const ReelSection = memo(function ReelSection({
               label={favOn ? `Unfavorite ${clip.name}` : `Favorite ${clip.name}`}
               className="rounded-full bg-white/12 px-2 py-1 text-xl"
             />
-            <ClipOrganizeMenu
-              variant="reel"
-              clip={{
-                name: clip.name,
-                url: clip.url,
-                kind: clip.kind ?? kindFromUrl(clip.url),
-                keywords: clip.keywords,
-                sourceId: clip.id,
-                postedBy: handle ?? clip.postedBy,
-              }}
-              editor={editor}
-              gymAdmin={gymAdmin}
-              onCopied={onCopied}
-            />
           </div>
-        </div>
-      </div>
+        </>
+      ) : null}
     </section>
   )
 })

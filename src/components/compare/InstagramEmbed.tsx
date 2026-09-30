@@ -190,6 +190,10 @@ type Props = {
   markupSwipeSafe?: boolean
   overlayChrome?: boolean
   startChromeOpen?: boolean
+  /** Controlled chrome visibility for fullscreen reels (tap the video to toggle). */
+  chromeOpen?: boolean
+  onToggleChrome?: () => void
+  tapTogglesChrome?: boolean
   /** Letterbox the full frame (chalkboard) instead of cropping 9:16. */
   fit?: 'cover' | 'contain'
   smartFit?: boolean
@@ -225,6 +229,9 @@ export function InstagramEmbed({
   markupSwipeSafe = false,
   overlayChrome,
   startChromeOpen,
+  chromeOpen,
+  onToggleChrome,
+  tapTogglesChrome,
   fit,
   smartFit,
   savedUrl,
@@ -758,6 +765,9 @@ export function InstagramEmbed({
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
         startChromeOpen={startChromeOpen}
+        chromeOpen={chromeOpen}
+        onToggleChrome={onToggleChrome}
+        tapTogglesChrome={tapTogglesChrome}
         pictureChrome={carouselChrome}
         onError={() => {
           skipHostedRef.current = true

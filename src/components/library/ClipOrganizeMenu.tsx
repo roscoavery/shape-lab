@@ -151,7 +151,7 @@ export function ClipOrganizeMenu({
     panel && typeof document !== 'undefined'
       ? createPortal(
           <div
-            className="fixed inset-0 z-[400] flex items-end justify-center bg-black/55 p-4 sm:items-center"
+            className="fixed inset-0 z-[430] flex items-end justify-center bg-black/55 p-4 sm:items-center"
             onPointerDown={() => setPanel(null)}
           >
             <div

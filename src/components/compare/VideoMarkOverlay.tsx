@@ -140,6 +140,10 @@ type Props = {
    * Shot / Draw / Arrow is selected. Used by the phone reel viewer.
    */
   swipeSafe?: boolean
+  /** Force the draw surface to ignore pointer input (e.g. chrome hidden in a reel). */
+  surfaceDisabled?: boolean
+  /** Hide the markup tool buttons entirely (e.g. chrome hidden in a reel). */
+  toolsHidden?: boolean
 }
 
 export function VideoMarkOverlay({
@@ -149,6 +153,8 @@ export function VideoMarkOverlay({
   hud = false,
   hudOffsetClass = 'left-1.5 top-2',
   swipeSafe = false,
+  surfaceDisabled = false,
+  toolsHidden = false,
 }: Props) {
   const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -758,12 +764,12 @@ export function VideoMarkOverlay({
       <canvas
         ref={canvasRef}
         className={`absolute inset-0 h-full w-full ${
-          tool && !pending ? 'pointer-events-auto' : 'pointer-events-none'
+          tool && !pending && !surfaceDisabled ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
         style={{
           touchAction: tool === 'crop' ? 'manipulation' : tool ? 'none' : 'pan-y',
           cursor: tool ? cursor : 'default',
-          pointerEvents: pending || !tool ? 'none' : 'auto',
+          pointerEvents: pending || !tool || surfaceDisabled ? 'none' : 'auto',
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -771,7 +777,7 @@ export function VideoMarkOverlay({
         onPointerCancel={onPointerUp}
         aria-label="Draw on video"
       />
-      {hud ? (
+      {toolsHidden ? null : hud ? (
         toolHud
       ) : (
         <div className="pointer-events-auto absolute left-1 top-1 z-20 flex flex-wrap gap-1">

@@ -30,6 +30,10 @@ type Props = {
   onPostedBy?: (handle: string) => void
   /** Overlay Share on fill players. Off for reels that already have Share in chrome. */
   shareChrome?: boolean
+  /** Controlled chrome visibility for fullscreen reels (tap the video to toggle). */
+  chromeOpen?: boolean
+  onToggleChrome?: () => void
+  tapTogglesChrome?: boolean
   /** Letterbox the full frame instead of cropping. */
   fit?: 'cover' | 'contain'
   /** 9:16 cover / other contain. Off when `fit` is set. */
@@ -56,6 +60,9 @@ export function GymClipPlayer({
   postedBy,
   onPostedBy,
   shareChrome,
+  chromeOpen,
+  onToggleChrome,
+  tapTogglesChrome,
   fit,
   smartFit,
 }: Props) {
@@ -122,6 +129,9 @@ export function GymClipPlayer({
         hudCorner={hudCorner}
         overlayChrome={overlayChrome}
         startChromeOpen={startChromeOpen}
+        chromeOpen={chromeOpen}
+        onToggleChrome={onToggleChrome}
+        tapTogglesChrome={tapTogglesChrome}
         postedBy={postedBy}
         onPostedBy={onPostedBy}
         fit={objectFit}
@@ -160,6 +170,9 @@ export function GymClipPlayer({
       hudCorner={hudCorner}
       overlayChrome={overlayChrome}
       startChromeOpen={startChromeOpen}
+      chromeOpen={chromeOpen}
+      onToggleChrome={onToggleChrome}
+      tapTogglesChrome={tapTogglesChrome}
     />
   )
   return fill ? (
