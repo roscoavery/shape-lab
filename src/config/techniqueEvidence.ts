@@ -518,6 +518,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/layout-safety-spot-hands.mp4',
+      watchFor:
+        "Safety spot reference using hands instead of arms. The left hand pushing low back forward while right hand pulls ribs backwards. We did a lot of pausing with toes at 10-11 o'clock before this could pass through smoothly.",
+    },
   ],
   full: [
     {

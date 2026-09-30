@@ -82,6 +82,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         caption:
           'Same athlete, same session — passing through. Getting a little faster with passing through, same spot.',
       },
+      {
+        url: '/videos/layout-safety-spot-hands.mp4',
+        caption:
+          "Safety spot using hands instead of arms. The left hand pushing low back forward while right hand pulls ribs backwards. We did a lot of pausing with toes at 10-11 o'clock before this could pass through smoothly.",
+      },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
   },
