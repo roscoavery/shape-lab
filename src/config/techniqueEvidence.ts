@@ -420,6 +420,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DUkhQbRiDVY/',
       watchFor: 'Connections and handspring shaping.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/ro-bhs-carpet-foam-transition.mp4',
+      watchFor:
+        'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
+    },
   ],
   'ro-bhs-series': [
     {
@@ -447,6 +453,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
       watchFor:
         'After an athlete gets a series, we start looking forward and finishing with open shoulder angle. Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+    },
+    {
+      who: 'Drill',
+      url: '/videos/ro-bhs-carpet-foam-transition.mp4',
+      watchFor:
+        'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
     },
   ],
   layout: [
