@@ -165,8 +165,21 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
   {
     id: 'late-spot-grips',
     name: 'Late spot grips',
-    description: 'A couple different grips for the late spot. Grip details coming from Ryan.',
+    description:
+      "One of the late spot grips for a round off back handspring. The athlete needs to have the skill over 75% by themselves before using this spot. Helps a ton with working the shape change on the second half and easing into independence with the first half. You can gradually help later and later until you're only softening the handstand pressure. At some point you can shadow with the left hand near the low back and only spot ribs on shape change.",
     appliesTo: ['back-handspring'],
+    demoVideo: {
+      url: '/videos/ro-bhs-late-spot-grip.mp4',
+      caption:
+        "Late spot grip for a round off back handspring — the athlete needs the skill over 75% by themselves first. Gradually help later and later on the shape change until you're only softening the handstand pressure.",
+    },
+    demoVideos: [
+      {
+        url: '/videos/late-spot-grip-second-bhs.mp4',
+        caption:
+          "Another good example of the same thing on the athlete's second handspring.",
+      },
+    ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:late-spot-grips and it will show up here.',
   },
   {
