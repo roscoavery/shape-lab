@@ -636,6 +636,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/gainer-quarter-drill-twisting.mp4',
       watchFor: 'Gainer 1/4 drill for twisting.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/back-full-spring-floor.mp4',
+      watchFor: 'Back full on spring floor.',
+    },
   ],
   basics: [
     {
