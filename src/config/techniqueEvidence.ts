@@ -700,6 +700,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-hs-full-spring-floor.mp4',
       watchFor: 'Decent round off handspring full on spring floors preserves set with some asymmetry on take off.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-full-kick-full-style.mp4',
+      watchFor: 'This kind of full can translate to kick fulls really easily.',
+    },
   ],
   basics: [
     {
