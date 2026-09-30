@@ -112,8 +112,9 @@ const FeedArticle = memo(function FeedArticle({
 }: FeedArticleProps) {
   const handle = clip.postedBy || postedByFromUrl(clip.url)
   return (
-    <article data-feed-index={index} className="flex h-full snap-start flex-col">
-      <div className="relative min-h-0 flex-1">
+    <article data-feed-index={index} className="relative h-full snap-start overflow-hidden bg-black">
+      {/* Full-bleed video: no dead panel below, IG-style. */}
+      <div className="absolute inset-0">
         {near ? (
           <GymClipPlayer
             url={clip.url}
@@ -134,68 +135,73 @@ const FeedArticle = memo(function FeedArticle({
             {clip.name}
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => onOpenReel(index)}
-          className="absolute bottom-3 right-3 z-20 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-lg"
-        >
-          Full screen
-        </button>
       </div>
-      <div className="shrink-0 bg-black/90 px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-              {clip.collectionName}
+      {/* Compact caption overlay, bottom-left: gradient only, so the bottom
+          of the footage stays visible. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-4 pb-3 pt-12">
+        <div className="max-w-[72%]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            {clip.collectionName}
+          </p>
+          <h3 className="truncate text-base font-semibold leading-tight text-white">{clip.name}</h3>
+          {handle && (
+            <p className="mt-0.5 truncate text-xs font-semibold text-white/80">
+              @{handle.replace(/^@/, '')}
             </p>
-            <h3 className="text-base font-semibold text-white">{clip.name}</h3>
-            {handle && (
-              <p className="mt-0.5 text-sm font-semibold text-white/80">
-                @{handle.replace(/^@/, '')}
-              </p>
-            )}
+          )}
+          {clip.keywords && clip.keywords.length > 0 && (
+            <p className="mt-0.5 truncate text-[11px] text-white/55">{clip.keywords.join(' · ')}</p>
+          )}
+          {isAdmin && cardNames?.length ? (
+            <p className="mt-0.5 truncate text-[10px] font-bold text-emerald-300/80">
+              On cards: {cardNames.join(', ')}
+            </p>
+          ) : null}
+          <div className="mt-1 flex items-center gap-2">
+            <p className="text-[10px] text-white/40">
+              {index + 1} / {total}
+            </p>
+            <button
+              type="button"
+              onClick={() => onOpenReel(index)}
+              className="pointer-events-auto rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm"
+            >
+              Full screen
+            </button>
           </div>
-          <FavoriteStar
-            fill
-            on={favOn}
-            onClick={() => onToggleFavorite(clip.url)}
-            label={favOn ? `Unfavorite ${clip.name}` : `Favorite ${clip.name}`}
-          />
-        </div>
-        {clip.keywords && clip.keywords.length > 0 && (
-          <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
-        )}
-        {isAdmin && cardNames?.length ? (
-          <p className="mt-1 text-[11px] font-bold text-emerald-300/80">
-            On cards: {cardNames.join(', ')}
-          </p>
-        ) : null}
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <ShareReference
-              variant="reel"
-              draft={clipShareDraft(clip.name, clip.url)}
-              onAddToSkillCard={isAdmin ? () => onAddToSkillCard(clip) : undefined}
-              onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
-            />
-            <ClipOrganizeMenu
-              variant="icon"
-              clip={{
-                name: clip.name,
-                url: clip.url,
-                kind: clip.kind,
-                keywords: clip.keywords,
-                sourceId: clip.id,
-              }}
-              editor={editor}
-              gymAdmin={isAdmin}
-              onCopied={onCopied}
-            />
-          </div>
-          <p className="text-[11px] text-white/40">
-            {index + 1} / {total}
+          <p className="mt-1 text-[10px] text-white/35">
+            Swipe for the next clip · tap Shot to crop a shape
           </p>
         </div>
+      </div>
+      {/* Action rail, bottom-right over the video, IG-style. */}
+      <div className="absolute bottom-3 right-3 z-20 flex flex-col items-center gap-2.5">
+        <ShareReference
+          variant="story"
+          draft={clipShareDraft(clip.name, clip.url)}
+          onAddToSkillCard={isAdmin ? () => onAddToSkillCard(clip) : undefined}
+          onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
+        />
+        <FavoriteStar
+          fill
+          on={favOn}
+          onClick={() => onToggleFavorite(clip.url)}
+          label={favOn ? `Unfavorite ${clip.name}` : `Favorite ${clip.name}`}
+          className="rounded-full bg-white/12 px-2 py-1 text-xl"
+        />
+        <ClipOrganizeMenu
+          variant="reel"
+          clip={{
+            name: clip.name,
+            url: clip.url,
+            kind: clip.kind,
+            keywords: clip.keywords,
+            sourceId: clip.id,
+          }}
+          editor={editor}
+          gymAdmin={isAdmin}
+          onCopied={onCopied}
+        />
       </div>
     </article>
   )

@@ -1,6 +1,7 @@
 /**
- * Verbal cues to reconsider: common cues worth rethinking, what to try
- * instead, and why. Shown in the Learn guide below the skill cards.
+ * "Say this instead": cue swaps that lead with what works — Ryan's cue as
+ * the headline, the old cue and the reason behind a "Why this works"
+ * disclosure. Shown in the Learn guide below the skill cards.
  *
  * Moved here from the old ryanSkillPath.ts during the Phase 5 skill merge
  * cleanup (2026-09-26). Content unchanged.

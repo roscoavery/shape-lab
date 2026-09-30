@@ -1547,9 +1547,38 @@ function GuidePlaceholders() {
 }
 
 /**
- * Verbal cue swaps. Collapsed by default — useful, but not what people come
- * to the guide for.
+ * Verbal cue swaps, reframed: lead with what works. Each swap shows Ryan's
+ * cue as the headline; the old cue and the reason sit behind a
+ * "Why this works" disclosure so nobody reads a correction first.
+ * Collapsed by default — useful, but not what people come to the guide for.
  */
+function CueSwapCard({ cue }: { cue: (typeof RYAN_CUE_SWAPS)[number] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <article className="min-w-0 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+      <div className="text-base font-extrabold text-emerald-400 break-words">
+        {cue.sayThis}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="mt-2 text-xs font-bold text-white/60 underline underline-offset-2"
+      >
+        {open ? 'Hide why' : 'Why this works ▸'}
+      </button>
+      {open && (
+        <div className="mt-2 border-t border-white/10 pt-2">
+          <div className="text-sm font-bold text-red-400 line-through opacity-80 break-words">
+            {cue.insteadOf}
+          </div>
+          <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
+        </div>
+      )}
+    </article>
+  )
+}
+
 function CueSwaps() {
   const [open, setOpen] = useState(false)
   return (
@@ -1561,7 +1590,7 @@ function CueSwaps() {
         className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-left"
       >
         <span>
-          <span className="block text-base font-extrabold">Verbal cues to reconsider</span>
+          <span className="block text-base font-extrabold">Say this instead</span>
           <span className="mt-0.5 block text-xs opacity-70">
             Common cues worth rethinking, what to try instead, and why
           </span>
@@ -1571,18 +1600,7 @@ function CueSwaps() {
       {open && (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {RYAN_CUE_SWAPS.map((cue) => (
-            <article
-              key={cue.id}
-              className="min-w-0 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
-            >
-              <div className="text-sm font-bold text-red-400 line-through opacity-80 break-words">
-                {cue.insteadOf}
-              </div>
-              <div className="mt-1 text-base font-extrabold text-emerald-400 break-words">
-                {cue.sayThis}
-              </div>
-              <p className="mt-2 text-sm opacity-85 break-words">{cue.why}</p>
-            </article>
+            <CueSwapCard key={cue.id} cue={cue} />
           ))}
         </div>
       )}
