@@ -40,7 +40,22 @@ function qualityReady(score: ScoreResult): boolean {
   return Boolean(score.holdReady)
 }
 
-export async function runQualityHoldSession(opts: HoldSessionOpts): Promise<RawHoldAttempt[]> {
+export type QualityHoldSessionOpts = HoldSessionOpts & {
+  /**
+   * Optional second opinion: score of the same frame with mirrored landmarks.
+   * The hold counts when either the live score or the mirrored score is
+   * beep-quality, so facing the opposite way from the reference still counts.
+   */
+  scoreMirrored?: () => ScoreResult | null
+}
+
+function qualityReadyEither(opts: QualityHoldSessionOpts, live: ScoreResult): boolean {
+  if (qualityReady(live)) return true
+  const mirrored = opts.scoreMirrored?.()
+  return mirrored ? qualityReady(mirrored) : false
+}
+
+export async function runQualityHoldSession(opts: QualityHoldSessionOpts): Promise<RawHoldAttempt[]> {
   const attempts: RawHoldAttempt[] = []
   let last: number | null = null
   let best: number | null = null
@@ -111,7 +126,7 @@ export async function runQualityHoldSession(opts: HoldSessionOpts): Promise<RawH
     while (!opts.cancelled() && !opts.doneRequested()) {
       const lm = opts.landmarks()
       samplePose(lm)
-      const ready = qualityReady(opts.score())
+      const ready = qualityReadyEither(opts, opts.score())
       if (ready) {
         enter += 1
         startRec()
@@ -154,7 +169,7 @@ export async function runQualityHoldSession(opts: HoldSessionOpts): Promise<RawH
       const lm = opts.landmarks()
       samplePose(lm)
       const live = opts.score()
-      const ready = qualityReady(live)
+      const ready = qualityReadyEither(opts, live)
       if (now - lastPeakSample >= PEAK_SAMPLE_MS) {
         lastPeakSample = now
         if (live.overall >= peakRank) {

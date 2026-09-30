@@ -432,9 +432,31 @@ export async function saveHoldClipWithOverlay(opts: {
   fullLength?: boolean
 }): Promise<SaveVideoResult> {
   if (opts.skipOverlay) {
-    const ext = extForVideoType(opts.source.type || opts.filename)
+    // Trim to the hold window even without the overlay, so the no-overlay
+    // save is no longer than the overlay version. Re-encode via the burn
+    // pipeline with every layer off.
+    const out = await burnOverlayVideo({
+      source: opts.source,
+      track: opts.track,
+      mode: opts.mode ?? 'auto',
+      mirror: opts.mirror !== false,
+      holdSeconds: opts.holdSeconds,
+      clockOffsetSec: opts.clockOffsetSec,
+      recordedWallSec: opts.recordedWallSec,
+      showSkeleton: false,
+      showAngles: false,
+      showScore: false,
+      showClock: false,
+      skeletonWhenOneLine: false,
+      saveSpeed: clampSaveSpeed(opts.saveSpeed ?? 1),
+      shapeId: opts.shapeId,
+      onProgress: opts.onProgress,
+      video: opts.video ?? null,
+      canvas: opts.canvas ?? null,
+    })
+    const ext = extForVideoType(out.type || opts.filename)
     const name = opts.filename.replace(/\.(webm|mp4)$/i, '') + `.${ext}`
-    return saveVideoToDevice(opts.source, name)
+    return saveVideoToDevice(out, name)
   }
   const mode = opts.mode ?? 'auto'
   const mirror = opts.mirror !== false

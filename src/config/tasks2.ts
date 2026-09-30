@@ -41,6 +41,12 @@ export type FlowBeat = {
   record?: 'pause' | 'resume'
   /** Rep number for numbered handstand grades (MC HS 5 reps). */
   rep?: number
+  /**
+   * After speaking this beat, wait until the scored shape is holdReady
+   * (beep-quality) before continuing, up to this many ms. The count only
+   * starts once the hold is good enough to beep.
+   */
+  waitQualityMs?: number
 }
 
 export type FlowSequence = {
@@ -203,6 +209,129 @@ function hsNonCartwheel(): FlowBeat[] {
       snapshotMinMs: 1100,
     },
   ]
+}
+
+/** Cartwheel into a landing lunge hold. The lunge has to beep before the 5-count starts. */
+function cartwheelLungeHoldClass(starter: 'cshape' | 'ftos' | 'mc'): FlowBeat[] {
+  const beats: FlowBeat[] = []
+  if (starter === 'cshape') {
+    beats.push({
+      speak: 'Hit a C shape, eyes forward.',
+      shapeId: 'c_shape',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  } else if (starter === 'ftos') {
+    beats.push({
+      speak: 'Start feet together, fully open shoulders, arms in close by the ears.',
+      shapeId: 'feet_together_open_shoulders',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  } else {
+    beats.push({
+      speak: 'Start in a mountain climber.',
+      shapeId: 'mountain_climber',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  }
+  if (starter !== 'mc') {
+    beats.push({
+      speak: 'Take your cartwheel leg to a passé and hold for 3.',
+      shapeId: 'passe',
+      pauseMs: 350,
+    })
+    beats.push({ speak: '2.', pauseMs: 400, snapshotAtMs: 120 })
+  }
+  beats.push({ speak: 'Cartwheel.', pauseMs: 400 })
+  beats.push({
+    speak: 'Stick the landing lunge.',
+    shapeId: 'lunge_land',
+    pauseMs: 250,
+    waitQualityMs: 8000,
+  })
+  beats.push({ speak: 'Hold for 5. Back foot flat.', pauseMs: 150 })
+  beats.push({ speak: '4. Arms tight by the ears.', pauseMs: 150 })
+  beats.push({ speak: '3. Chest stays tilted forward.', pauseMs: 150 })
+  beats.push({ speak: '2. Chin stays up.', pauseMs: 300, snapshotAtMs: 120 })
+  beats.push({
+    speak: 'And clean.',
+    shapeId: 'stand_clean',
+    profileOk: true,
+    pauseMs: 700,
+  })
+  return beats
+}
+
+/** Cartwheel step into a zombie hold. The zombie has to beep before the 5-count starts. */
+function zombieCartwheelStepClass(starter: 'cshape' | 'ftos' | 'mc'): FlowBeat[] {
+  const beats: FlowBeat[] = []
+  if (starter === 'cshape') {
+    beats.push({
+      speak: 'Hit a C shape, eyes forward.',
+      shapeId: 'c_shape',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  } else if (starter === 'ftos') {
+    beats.push({
+      speak: 'Start feet together, fully open shoulders, arms in close by the ears.',
+      shapeId: 'feet_together_open_shoulders',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  } else {
+    beats.push({
+      speak: 'Start in a mountain climber.',
+      shapeId: 'mountain_climber',
+      profileOk: true,
+      pauseMs: 300,
+      snapshotBestMs: 2800,
+      snapshotMinMs: 700,
+      replayStart: true,
+    })
+  }
+  if (starter !== 'mc') {
+    beats.push({
+      speak: 'Passé.',
+      shapeId: 'passe',
+      pauseMs: 350,
+    })
+  }
+  beats.push({ speak: 'Cartwheel step.', pauseMs: 400 })
+  beats.push({
+    speak: 'Land in your zombie.',
+    shapeId: 'zombie',
+    pauseMs: 250,
+    waitQualityMs: 8000,
+  })
+  beats.push({ speak: 'Hold for 5. Shrug your shoulders to your ears.', pauseMs: 150 })
+  beats.push({ speak: '4. Straight knees, ribs in, butt in.', pauseMs: 150 })
+  beats.push({ speak: '3. Armpits in front of the toes.', pauseMs: 150 })
+  beats.push({ speak: '2. Chin stays up.', pauseMs: 300, snapshotAtMs: 120 })
+  beats.push({
+    speak: 'And clean.',
+    shapeId: 'stand_clean',
+    profileOk: true,
+    pauseMs: 700,
+  })
+  return beats
 }
 
 function mcHsLungeAssisted(): FlowBeat[] {
@@ -854,6 +983,40 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     beats: mcHsLeverLunge(),
   },
   {
+    id: 'flow_cartwheel_lunge_hold',
+    name: 'Cartwheel to lunge hold',
+    nickname: 'Cartwheel lunge hold',
+    mode: 'beats',
+    description:
+      'Cartwheel into a landing lunge hold. The lunge has to be good enough to beep before the 5-count starts. Pick the start shape: C shape to passé, feet together open shoulders to passé, or mountain climber. Not a gate.',
+    previewSpeak: 'Ready to stick a cartwheel landing?',
+    setupSpeak: 'Start clean. Face sideways to the camera.',
+    setupShapeId: 'stand_clean',
+    previewShapes: [
+      { shapeId: 'c_shape', label: 'C' },
+      { shapeId: 'passe', label: 'PS' },
+      { shapeId: 'lunge_land', label: 'LG' },
+    ],
+    beats: cartwheelLungeHoldClass('ftos'),
+  },
+  {
+    id: 'flow_zombie_cartwheel_step',
+    name: 'Cartwheel step to zombie hold',
+    nickname: 'Zombie hold',
+    mode: 'beats',
+    description:
+      'Cartwheel step into a zombie hold. The zombie has to be good enough to beep before the 5-count starts. Pick the start shape: C shape to passé, feet together open shoulders to passé, or mountain climber. Not a gate.',
+    previewSpeak: 'Ready to hold a zombie?',
+    setupSpeak: 'Start clean. Face sideways to the camera.',
+    setupShapeId: 'stand_clean',
+    previewShapes: [
+      { shapeId: 'c_shape', label: 'C' },
+      { shapeId: 'passe', label: 'PS' },
+      { shapeId: 'zombie', label: 'ZB' },
+    ],
+    beats: zombieCartwheelStepClass('cshape'),
+  },
+  {
     id: 'flow_mc_hs_lg_assist',
     name: 'MC HS LG (Assisted)',
     nickname: 'MC HS LG',
@@ -1054,6 +1217,8 @@ export type FlowRunConfig = {
   lemonSets?: number
   lemonReps?: number
   lemonRestSec?: number
+  /** First shape(s) after clean in the cartwheel / zombie sequences. */
+  sequenceStarter?: 'cshape' | 'ftos' | 'mc'
 }
 
 /** Build the spoken run for Start / Go again, including pike–hollow–arch reps and lemon sets. */
@@ -1071,6 +1236,12 @@ export function resolveFlowRun(id: string, config?: FlowRunConfig): FlowSequence
     const restSec = Math.min(20, Math.max(10, config?.lemonRestSec ?? 15))
     const repsPerSet = Array.from({ length: sets }, () => reps)
     return { ...base, beats: lemonSqueezesClass({ sets, repsPerSet, restSec }) }
+  }
+  if (id === 'flow_cartwheel_lunge_hold') {
+    return { ...base, beats: cartwheelLungeHoldClass(config?.sequenceStarter ?? 'ftos') }
+  }
+  if (id === 'flow_zombie_cartwheel_step') {
+    return { ...base, beats: zombieCartwheelStepClass(config?.sequenceStarter ?? 'cshape') }
   }
   return base
 }

@@ -57,7 +57,7 @@ import {
   HOLD_PINK_BTN,
   HOLD_PINK_TEXT,
 } from '../lib/holdBuild'
-import { unlockHoldTones } from '../lib/sounds'
+import { playHoldEnterBeep, unlockHoldTones } from '../lib/sounds'
 import { HoldDetectHud } from './HoldDetectHud'
 import { HoldReplayPlayer } from './HoldReplayPlayer'
 import {
@@ -72,7 +72,8 @@ import {
 } from '../lib/storage'
 import { chosenFlowCounts, lemonHomeworkFromCheck, logHomeworkSequenceRun } from '../lib/homeworkFlow'
 import { recordHoldSession, sessionHoldTotal, todayHoldSeconds } from '../lib/holdDay'
-import { handstandPeakScore, snapshotLooksRight } from '../lib/scoring'
+import { handstandPeakScore, scoreShape, snapshotLooksRight } from '../lib/scoring'
+import { swapLeftRight } from '../lib/view'
 import { writtenCues } from '../lib/taskAnalysis'
 import type {
   Athlete,
@@ -375,6 +376,13 @@ export function Tasks2Panel({
   const [holdLunge, setHoldLunge] = useState<'start' | 'land'>('start')
   const holdLungeRef = useRef<'start' | 'land'>('start')
   holdLungeRef.current = holdLunge
+  /** Voice on/off for the hold challenges (handstand, lunge, lever). Beats flows always talk. */
+  const [holdVoice, setHoldVoice] = useState(true)
+  const holdVoiceRef = useRef(true)
+  /** Start-shape picker for the cartwheel / zombie sequences. */
+  const [sequenceStarter, setSequenceStarter] = useState<'cshape' | 'ftos' | 'mc'>('ftos')
+  const sequenceStarterRef = useRef<'cshape' | 'ftos' | 'mc'>('ftos')
+  sequenceStarterRef.current = sequenceStarter
   const [activeClipId, setActiveClipId] = useState<string | null>(null)
   const [deviceSave, setDeviceSave] = useState<{
     blob: Blob
@@ -427,6 +435,16 @@ export function Tasks2Panel({
     seq.mode === 'quality-hold' ||
     runSeq?.mode === 'hs-hold' ||
     runSeq?.mode === 'quality-hold'
+  /** Mute the hold-challenge voice mid-run: stop current speech, block the rest. */
+  const muteHoldVoice = useCallback(() => {
+    holdVoiceRef.current = false
+    setHoldVoice(false)
+    resetSpeech()
+  }, [resetSpeech])
+  const unmuteHoldVoice = useCallback(() => {
+    holdVoiceRef.current = true
+    setHoldVoice(true)
+  }, [])
   // Canvas captureStream is empty / unplayable on iPad. Hold clips use the camera.
   const recordStream = holdChallenge ? stream : overlayStream ?? stream
   const delay = useDelayCam(recordStream, DELAY_MAX, cameraRunning && Boolean(recordStream))
@@ -556,6 +574,36 @@ export function Tasks2Panel({
     if (first?.shapeId) onRequestShape(first.shapeId, 'auto', { profileOk: true })
     return () => onPreviewItems?.(null)
   }, [seq.id, onPreviewItems, onRequestShape])
+
+  // Default start shape per sequence (Ryan's dictation: FTOS for the cartwheel
+  // lunge hold, C shape for the zombie hold).
+  useEffect(() => {
+    if (seq.id === 'flow_zombie_cartwheel_step') setSequenceStarter('cshape')
+    else if (seq.id === 'flow_cartwheel_lunge_hold') setSequenceStarter('ftos')
+  }, [seq.id])
+
+  // Prewarm the pose model when a hold challenge sits idle. Starting the
+  // challenge used to feel frozen while the model downloaded + compiled;
+  // warming it here means Start only has to open the camera.
+  useEffect(() => {
+    if (!holdChallenge || phase !== 'idle') return
+    let cancelled = false
+    void (async () => {
+      try {
+        const [{ getPoseLandmarker }, { loadPoseQuality }] = await Promise.all([
+          import('../lib/pose'),
+          import('../lib/athleteTrack'),
+        ])
+        if (cancelled) return
+        await getPoseLandmarker(loadPoseQuality())
+      } catch {
+        /* prewarm is best-effort; Start still loads on demand */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [holdChallenge, phase, seq.id])
 
   useEffect(() => {
     onCue?.(cue || null)
@@ -1183,6 +1231,25 @@ export function Tasks2Panel({
             landmarks: () => landmarksRef.current,
             candidates: () => getPoseCandidates(),
             score: () => scoreRef.current,
+            // Mirrored acceptance: score the flipped pose against the hold
+            // shape too, so the hold counts facing either way. Belt and
+            // braces on top of the scorer's auto-stance.
+            scoreMirrored:
+              seqRun.mode === 'quality-hold'
+                ? () => {
+                    const lm = landmarksRef.current
+                    const shape = getShape(holdShape)
+                    if (!lm || !shape) return null
+                    try {
+                      return scoreShape(swapLeftRight(lm), shape, null, {
+                        stance: 'auto',
+                        profileOk: true,
+                      })
+                    } catch {
+                      return null
+                    }
+                  }
+                : undefined,
             stream: () => (rolling ? null : streamRef.current),
             timelineSec: rolling ? () => delay.capturedSec() : undefined,
             canvas: () => canvasRef.current,
@@ -1199,6 +1266,9 @@ export function Tasks2Panel({
               ? runQualityHoldSession(holdOpts)
               : runHandstandHoldSession(holdOpts)
           void (async () => {
+            // Voice off: the instructions were shown as text on the idle screen.
+            // Skip the speech and let the hold session wait for the athlete.
+            if (!holdVoiceRef.current) return
             await speakLine(seqRun.previewSpeak)
             if (!alive() || holdDoneRef.current) return
             if (seqRun.setupSpeak) {
@@ -1416,6 +1486,22 @@ export function Tasks2Panel({
 
         await Promise.all([speakLine(beat.speak), snapP])
         if (!alive()) return
+        // waitQualityMs: hold the beat until the scored shape is good enough
+        // to beep (holdReady), so the count only starts on a quality hold.
+        // Settle first so the scorer catches up to this beat's shape.
+        if (beat.waitQualityMs != null && beat.waitQualityMs > 0) {
+          await wait(600)
+          if (!alive()) return
+          const deadline = Date.now() + beat.waitQualityMs
+          while (alive() && Date.now() < deadline) {
+            if (scoreRef.current?.holdReady) break
+            await wait(120)
+          }
+          if (alive() && scoreRef.current?.holdReady) {
+            playHoldEnterBeep()
+          }
+          if (!alive()) return
+        }
         await wait(beat.pauseMs ?? 200)
         if (beat.replayEnd) {
           replayBlob = await delay.flushRollingBlob()
@@ -1507,6 +1593,7 @@ export function Tasks2Panel({
     lemonSets,
     lemonReps,
     lemonRestSec,
+    sequenceStarter: sequenceStarterRef.current,
   })
 
   const confirmLemonLog = (finished: boolean, actualReps?: number) => {
@@ -2088,13 +2175,22 @@ export function Tasks2Panel({
             </div>
           ) : phase === 'holding' ? (
             <>
-              <p className={`mt-1 text-3xl font-black tabular-nums ${HOLD_PINK_TEXT}`}>
-                {holdTick?.running && holdTick.seconds != null
-                  ? formatSeconds(holdTick.seconds)
-                  : holdTick?.last != null
-                    ? formatSeconds(holdTick.last)
-                    : '0.0s'}
-              </p>
+              <div className="mt-1 flex items-start justify-between gap-2">
+                <p className={`text-3xl font-black tabular-nums ${HOLD_PINK_TEXT}`}>
+                  {holdTick?.running && holdTick.seconds != null
+                    ? formatSeconds(holdTick.seconds)
+                    : holdTick?.last != null
+                      ? formatSeconds(holdTick.last)
+                      : '0.0s'}
+                </p>
+                <button
+                  type="button"
+                  onClick={holdVoice ? muteHoldVoice : unmuteHoldVoice}
+                  className="shrink-0 rounded-full border border-white/25 px-3 py-1.5 text-[11px] font-semibold text-white/80"
+                >
+                  {holdVoice ? 'Mute voice' : 'Voice on'}
+                </button>
+              </div>
               <p className="mt-1 text-sm font-semibold leading-snug">{cue}</p>
               {cameraError && (
                 <p className="mt-1 text-[12px] text-[#f07178]">{cameraError}</p>
@@ -2296,6 +2392,76 @@ export function Tasks2Panel({
             </p>
           </div>
         )}
+        {holdChallenge && phase === 'idle' && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={unmuteHoldVoice}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                holdVoice
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Voice on
+            </button>
+            <button
+              type="button"
+              onClick={muteHoldVoice}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                !holdVoice
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'border border-white/15 text-[var(--muted)]'
+              }`}
+            >
+              Voice off
+            </button>
+            <div className="w-full rounded-xl border border-white/10 bg-black/20 p-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Before you start
+              </p>
+              {seq.setupSpeak && (
+                <p className="mt-1 text-[12px] leading-snug text-[var(--text)]/85">{seq.setupSpeak}</p>
+              )}
+              {seq.setupExtraSpeak && (
+                <p className="mt-1 text-[12px] leading-snug text-[var(--text)]/85">{seq.setupExtraSpeak}</p>
+              )}
+            </div>
+          </div>
+        )}
+        {(seq.id === 'flow_cartwheel_lunge_hold' || seq.id === 'flow_zombie_cartwheel_step') &&
+          phase === 'idle' && (
+            <div className="mt-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Start shape
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {(
+                  [
+                    ['cshape', 'C shape, passé'],
+                    ['ftos', 'Feet together open shoulders, passé'],
+                    ['mc', 'Mountain climber'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSequenceStarter(value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      sequenceStarter === value
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'border border-white/15 text-[var(--muted)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[12px] text-[var(--muted)]">
+                This is the first shape after clean.
+              </p>
+            </div>
+          )}
         {seq.mode === 'hs-hold' && holdDay && holdDay.today > 0 && (
           <p className={`mt-1 text-[13px] font-semibold ${HOLD_PINK_TEXT}`}>
             Today {formatSeconds(holdDay.today)} in a handstand

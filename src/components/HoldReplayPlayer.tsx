@@ -71,7 +71,7 @@ export function HoldReplayPlayer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [mode, setMode] = useState<JointDrawMode>('auto')
   const [showSkeleton, setShowSkeleton] = useState(true)
-  const [skeletonWhenOneLine, setSkeletonWhenOneLine] = useState(false)
+  const [skeletonWhenOneLine, setSkeletonWhenOneLine] = useState(true)
   const [showAngles, setShowAngles] = useState(true)
   const [showScore, setShowScore] = useState(true)
   const [showClock, setShowClock] = useState(true)
@@ -83,7 +83,7 @@ export function HoldReplayPlayer({
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
-  /** Quick save: burn the overlay at the full clip length with the current
+  /** Quick save: burn the overlay trimmed to the hold with the current
    *  save settings, then share to Photos without leaving the recap.
    *  iOS needs a fresh tap gesture for the share sheet, so after a long burn
    *  the button becomes a "tap to share" retry instead of navigating away. */
@@ -103,7 +103,7 @@ export function HoldReplayPlayer({
       showAngles,
       skeletonWhenOneLine,
     }
-    const key = burnedOverlayKey(clipId, mode, mirror !== false, layers, saveSpeed, true)
+    const key = burnedOverlayKey(clipId, mode, mirror !== false, layers, saveSpeed, false)
     const cached = getBurnedOverlay(key)
     // Fresh tap + already-burned clip: the share sheet gets a live gesture.
     if (cached && (quickState === 'idle' || quickState === 'ready')) {
@@ -126,7 +126,7 @@ export function HoldReplayPlayer({
     setQuickState('burning')
     setSaving(true)
     onSaveBusy?.(true)
-    setFlash('Writing the overlay at full clip length… stay on this recap.')
+    setFlash('Writing the overlay… stay on this recap.')
     try {
       const out = await burnOverlayVideo({
         source: blob,
@@ -143,7 +143,6 @@ export function HoldReplayPlayer({
         skeletonWhenOneLine,
         saveSpeed,
         shapeId: holdShapeId,
-        fullLength: true,
         onProgress: (p) => {
           setFlash(`Writing the overlay… ${Math.round(p * 100)}%`)
         },
@@ -425,10 +424,11 @@ export function HoldReplayPlayer({
           onClick={() => void save(false)}
           className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold disabled:opacity-50"
         >
-          {saving ? 'Writing clip…' : 'Save raw clip'}
+          {saving ? 'Writing clip…' : 'Save video without overlay'}
         </button>
         <p className={`w-full text-[11px] text-[var(--muted)] ${fill ? 'px-1' : ''}`}>
-          Save video burns the overlay with your save settings at the full clip length — the recap stays open.
+          Save video trims to the hold and burns the overlay with your save settings — the recap stays open.
+          Save video without overlay saves the same trimmed hold with no overlay drawn.
         </p>
         {athleteId && (
           <button
