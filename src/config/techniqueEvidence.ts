@@ -95,6 +95,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/handstand-fwd-roll-panel-mat.mp4',
       watchFor: 'Handstand forward roll to a panel mat.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/straight-arm-handstand-fwd-roll.mov',
+      watchFor: 'Straight arm handstand forward roll.',
+    },
   ],
   'front-aerial': [
     {
