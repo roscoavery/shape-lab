@@ -376,6 +376,26 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
     setActive(0)
   }, [query, onlyFavorites, visible.length])
 
+  // Deep link from search (or Ask): after the feed re-renders with the
+  // jumped clip visible, scroll the snap container straight to its card.
+  const [jumpUrl, setJumpUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!jumpUrl) return
+    const idx = visible.findIndex((c) => isSameReferenceUrl(c.url, jumpUrl))
+    if (idx < 0) return
+    setJumpUrl(null)
+    setActive(idx)
+    requestAnimationFrame(() => {
+      const root = rootRef.current
+      const el = root?.querySelector<HTMLElement>(`[data-feed-index="${idx}"]`)
+      if (root && el) {
+        const rootRect = root.getBoundingClientRect()
+        const elRect = el.getBoundingClientRect()
+        root.scrollTo({ top: root.scrollTop + (elRect.top - rootRect.top), behavior: 'smooth' })
+      }
+    })
+  }, [visible, jumpUrl])
+
   // Stable item objects for the fullscreen reel: without this, every parent
   // re-render hands the reel fresh objects and defeats its memoization.
   const reelItems = useMemo(
@@ -397,9 +417,10 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
     if (!jump || jump.kind !== 'clip') return
     setOnlyFavorites(false)
     setQuery('')
-    const idx = clips.findIndex((c) => isSameReferenceUrl(c.url, jump.url))
-    if (idx >= 0) {
-      setActive(idx)
+    if (clips.some((c) => isSameReferenceUrl(c.url, jump.url))) {
+      // Stash the URL — the scroll happens once `visible` recomputes below,
+      // resolved against the visible (possibly sorted) order.
+      setJumpUrl(jump.url)
       return
     }
     if (jump.label) setQuery(jump.label)
