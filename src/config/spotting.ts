@@ -115,6 +115,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         caption:
           'Bump and catch method for a twist side full spot that was taught using 3/4 flip twist process mixed with opposite side spotting. The athlete twists late so this does not feel the same as passing through a half turn to superman.',
       },
+      {
+        url: '/videos/bump-and-catch-analysis-cut.mp4',
+        caption:
+          'Analysis cut — slowed rebound, freeze on the block into tuck, freeze upside down, slowed tuck descent, zoomed in on the spot during the catch.',
+      },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bump-and-catch and it will show up here.',
   },
