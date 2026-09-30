@@ -346,7 +346,7 @@ export function AddToSkillCardModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[390] flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
       <div
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl bg-neutral-900 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] [touch-action:pan-y] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}

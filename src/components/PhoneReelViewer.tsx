@@ -38,6 +38,10 @@ type Props = {
   gymAdmin?: boolean
   title?: string
   onCopied?: (message: string) => void
+  /** When set, the share sheet on each reel offers "Add to skill card". */
+  onAddToSkillCard?: (clip: PhoneReelClip) => void
+  /** When set, the share sheet on each reel offers "Link to spotting card". */
+  onLinkToSpottingCard?: (clip: PhoneReelClip) => void
 }
 
 type ReelSectionProps = {
@@ -55,6 +59,8 @@ type ReelSectionProps = {
   onPostedBy: (id: string, url: string, next: string) => void
   onToggleFavorite: (url: string) => void
   onCopied: (message: string) => void
+  onAddToSkillCard?: (clip: PhoneReelClip) => void
+  onLinkToSpottingCard?: (clip: PhoneReelClip) => void
 }
 
 /**
@@ -78,6 +84,8 @@ const ReelSection = memo(function ReelSection({
   onPostedBy,
   onToggleFavorite,
   onCopied,
+  onAddToSkillCard,
+  onLinkToSpottingCard,
 }: ReelSectionProps) {
   const editor = useMemo(
     () => ({ gymEditor, personalEditor, profileId }),
@@ -140,6 +148,16 @@ const ReelSection = memo(function ReelSection({
             <ShareReference
               variant="story"
               draft={clipShareDraft(clip.name, clip.url, clip.loopA, clip.loopB)}
+              onAddToSkillCard={
+                onAddToSkillCard
+                  ? () => onAddToSkillCard({ ...clip, postedBy: handle || clip.postedBy })
+                  : undefined
+              }
+              onLinkToSpottingCard={
+                onLinkToSpottingCard
+                  ? () => onLinkToSpottingCard({ ...clip, postedBy: handle || clip.postedBy })
+                  : undefined
+              }
             />
             <FavoriteStar
               fill
@@ -177,6 +195,8 @@ export function PhoneReelViewer({
   gymAdmin = editor.gymEditor,
   title = 'Reels',
   onCopied,
+  onAddToSkillCard,
+  onLinkToSpottingCard,
 }: Props) {
   const favorites = useFavorites()
   const { rememberHandle } = useGymLibrary()
@@ -297,6 +317,8 @@ export function PhoneReelViewer({
               onPostedBy={handlePostedBy}
               onToggleFavorite={handleToggleFavorite}
               onCopied={handleCopied}
+              onAddToSkillCard={onAddToSkillCard}
+              onLinkToSpottingCard={onLinkToSpottingCard}
             />
           ))}
         </div>

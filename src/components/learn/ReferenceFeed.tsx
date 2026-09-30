@@ -322,7 +322,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
     setReelOpen(true)
   }, [])
   const handleAddToCard = useCallback(
-    (clip: GymClip) =>
+    (clip: { url: string; name: string; postedBy?: string }) =>
       setAddToCardClip({
         url: clip.url,
         who: clip.postedBy || 'Reference library',
@@ -331,7 +331,8 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
     [],
   )
   const handleLinkSpotting = useCallback(
-    (clip: GymClip) => setLinkSpottingClip({ id: clip.id, url: clip.url, name: clip.name }),
+    (clip: { id: string; url: string; name: string }) =>
+      setLinkSpottingClip({ id: clip.id, url: clip.url, name: clip.name }),
     [],
   )
 
@@ -641,6 +642,8 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           gymAdmin={isAdmin}
           title="Reference scroll"
           onCopied={setFlash}
+          onAddToSkillCard={isAdmin ? handleAddToCard : undefined}
+          onLinkToSpottingCard={isAdmin ? handleLinkSpotting : undefined}
         />
       ) : null}
       {addToCardClip && (

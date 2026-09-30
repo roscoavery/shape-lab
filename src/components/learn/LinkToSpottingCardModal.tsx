@@ -74,7 +74,7 @@ export function LinkToSpottingCardModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[390] flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
       <div
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-neutral-900 p-4 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
