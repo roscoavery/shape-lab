@@ -33,6 +33,8 @@ export type GymClip = {
   collectionName: string
   keywords?: string[]
   postedBy?: string
+  /** When the underlying library item was added — powers "last added" sorting. */
+  createdAt?: string
 }
 
 function flattenSkillRefs(
@@ -57,6 +59,7 @@ function flattenSkillRefs(
       collectionName: `${ref.coachName} skill refs`,
       keywords: [ref.notes ?? '', 'skill'].filter(Boolean),
         postedBy: postedByForUrl(ref.src) || postedByFromUrl(ref.src) || undefined,
+      createdAt: ref.createdAt,
     })
   }
   return out
@@ -100,6 +103,7 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
         collectionName: col.athleteId ? `${col.name} (mine)` : col.name,
         keywords: item.keywords,
         postedBy: item.postedBy || postedByForUrl(item.url) || postedByFromUrl(item.url) || undefined,
+        createdAt: item.createdAt,
       })
     }
   }

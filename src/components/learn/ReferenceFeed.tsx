@@ -26,6 +26,59 @@ import type { OrganizeEditor } from '../../lib/organizeLibrary'
 import { GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { getRegistrySkill, getRegistrySkillByGuideId } from '../../lib/skillRegistry'
 
+type SortKey = 'default' | 'added' | 'creator' | 'skill'
+type SortDir = 'asc' | 'desc'
+
+const SORT_STORE_KEY = 'shapelab:refscroll:sort'
+/** Natural direction when a sort is first picked: newest first, A to Z. */
+const SORT_DEFAULT_DIR: Record<Exclude<SortKey, 'default'>, SortDir> = {
+  added: 'desc',
+  creator: 'asc',
+  skill: 'asc',
+}
+
+function loadSort(): { key: SortKey; dir: SortDir } {
+  try {
+    const raw = localStorage.getItem(SORT_STORE_KEY)
+    if (raw) {
+      const p = JSON.parse(raw) as { key?: unknown; dir?: unknown }
+      const key: SortKey =
+        p.key === 'added' || p.key === 'creator' || p.key === 'skill' ? p.key : 'default'
+      const dir: SortDir = p.dir === 'asc' || p.dir === 'desc' ? p.dir : SORT_DEFAULT_DIR[key === 'default' ? 'added' : key]
+      return { key, dir }
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return { key: 'default', dir: 'desc' }
+}
+
+/** Creator handle for sorting — same fallback the cards already show. */
+function clipSortCreator(c: GymClip): string | null {
+  const h = (c.postedBy || postedByFromUrl(c.url) || '').trim().toLowerCase()
+  return h || null
+}
+
+/** Skill tag for sorting — first keyword, else the collection name. */
+function clipSortSkill(c: GymClip): string | null {
+  const kw = (c.keywords ?? []).map((k) => k.trim()).filter(Boolean)[0]
+  const s = (kw || c.collectionName || '').trim().toLowerCase()
+  return s || null
+}
+
+/** Added timestamp for sorting — missing dates sink to the bottom. */
+function clipSortAdded(c: GymClip): number {
+  const t = c.createdAt ? Date.parse(c.createdAt) : NaN
+  return Number.isFinite(t) ? (t as number) : -Infinity
+}
+
+function compareNullableText(a: string | null, b: string | null, dirMul: number): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return dirMul * a.localeCompare(b)
+}
+
 /** Human-readable skill name for an evidence key, for "on cards" displays. */
 function skillNameForEvidenceKey(key: string): string | null {
   const guided = getRegistrySkillByGuideId(key)
@@ -219,6 +272,26 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const [addToCardClip, setAddToCardClip] = useState<{ url: string; who: string; watchFor: string } | null>(null)
   const [linkSpottingClip, setLinkSpottingClip] = useState<{ id: string; url: string; name: string } | null>(null)
   const [cardRefresh, setCardRefresh] = useState(0)
+  const [sortState, setSortState] = useState(loadSort)
+  const sortKey = sortState.key
+  const sortDir = sortState.dir
+  /** Pick a sort — re-tapping the active one flips its direction. */
+  const pickSort = (key: SortKey) => {
+    setSortState((prev) => {
+      const next =
+        key === 'default'
+          ? { key, dir: prev.dir }
+          : key === prev.key
+            ? { key, dir: (prev.dir === 'asc' ? 'desc' : 'asc') as SortDir }
+            : { key, dir: SORT_DEFAULT_DIR[key] }
+      try {
+        localStorage.setItem(SORT_STORE_KEY, JSON.stringify(next))
+      } catch {
+        /* storage unavailable */
+      }
+      return next
+    })
+  }
   const cardAttachments = useCardAttachments(cardRefresh)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -264,7 +337,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
 
   const visible = useMemo(() => {
     const q = query.trim()
-    return clips.filter((c) => {
+    const filtered = clips.filter((c) => {
       if (onlyFavorites && !favorites.isUrlFavorite(c.url)) return false
       if (!q) return true
       const asItem = {
@@ -279,7 +352,25 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
         itemMatchesQuery(asItem, q) || c.collectionName.toLowerCase().includes(q.toLowerCase())
       )
     })
-  }, [clips, onlyFavorites, favorites, query])
+    if (sortKey === 'default') return filtered
+    const dirMul = sortDir === 'asc' ? 1 : -1
+    const sorted = [...filtered]
+    if (sortKey === 'added') {
+      sorted.sort((a, b) => {
+        const ta = clipSortAdded(a)
+        const tb = clipSortAdded(b)
+        if (ta === -Infinity && tb === -Infinity) return 0
+        if (ta === -Infinity) return 1
+        if (tb === -Infinity) return -1
+        return dirMul * (ta - tb)
+      })
+    } else if (sortKey === 'creator') {
+      sorted.sort((a, b) => compareNullableText(clipSortCreator(a), clipSortCreator(b), dirMul))
+    } else {
+      sorted.sort((a, b) => compareNullableText(clipSortSkill(a), clipSortSkill(b), dirMul))
+    }
+    return sorted
+  }, [clips, onlyFavorites, favorites, query, sortKey, sortDir])
 
   useEffect(() => {
     setActive(0)
@@ -436,6 +527,47 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
             className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-black"
           >
             Full screen reels
+          </button>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-[var(--muted)]">Sort</span>
+        {(
+          [
+            { key: 'added', label: 'Last added' },
+            { key: 'creator', label: 'Creator' },
+            { key: 'skill', label: 'Skill' },
+            { key: 'default', label: 'Default' },
+          ] as const
+        ).map((opt) => {
+          const on = sortKey === opt.key
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              aria-pressed={on}
+              title={on && opt.key !== 'default' ? 'Tap again to flip the order' : undefined}
+              onClick={() => pickSort(opt.key)}
+              className={
+                on
+                  ? 'rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white'
+                  : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]'
+              }
+            >
+              {opt.label}
+              {on && opt.key !== 'default' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : null}
+            </button>
+          )
+        })}
+        {sortKey !== 'default' ? (
+          <button
+            type="button"
+            onClick={() => pickSort(sortKey)}
+            aria-label="Flip sort order"
+            title="Flip order"
+            className="rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]"
+          >
+            ⇅
           </button>
         ) : null}
       </div>
