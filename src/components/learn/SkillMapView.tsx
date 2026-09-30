@@ -1493,6 +1493,7 @@ function ViewControls({
   onInfoFilter,
   onSearch,
   hlTargetName,
+  hlActive,
   onClearHighlight,
   hlCombos,
   hlComboIdx,
@@ -1508,6 +1509,7 @@ function ViewControls({
   onInfoFilter: (f: InfoFilter) => void
   onSearch: () => void
   hlTargetName: string | null
+  hlActive: boolean
   onClearHighlight: () => void
   hlCombos: { ids: string[]; label: string }[]
   hlComboIdx: number
@@ -1599,6 +1601,11 @@ function ViewControls({
             </span>
           </button>
         )}
+        {hlActive && (
+          <span className="text-[11px]" style={{ color: labelColor }}>
+            tap the skill again to open its card
+          </span>
+        )}
         {hlCombos.length > 0 && (
           <button
             type="button"
@@ -1650,7 +1657,9 @@ function ViewControls({
  * Search every skill on the map and pick one to shine light on: its
  * prerequisite path glows (brightest at the target, traveling up from the
  * deepest prerequisite) while unrelated skills fade out of focus.
- * Tapping a tile still opens its card — highlight and card coexist.
+ * First tap on a skill tile previews its shine; tapping the same skill again
+ * opens its card, tapping another skill switches the preview, and tapping
+ * anywhere off a tile clears the preview back to the original view.
  */
 function SkillSearchOverlay({
   onClose,
@@ -2316,8 +2325,22 @@ export function SkillMapView({
   const hlTargetName = hlTarget ? getRegistrySkill(hlTarget)?.name ?? null : null
   const pickHlTarget = useCallback((id: string) => {
     setComboIdx(0)
-    setHlTarget(id)
+    setHlTarget(canonicalSkillId(id) || null)
   }, [])
+  // Tap-to-preview: first tap on a skill tile previews its shine (prereq path
+  // glows, rest fades); a second tap on the same skill opens its card.
+  // Tapping anywhere off a tile restores the original view.
+  const handleTileTap = useCallback(
+    (skill: UnifiedSkill) => {
+      const id = canonicalSkillId(skill.id)
+      if (hlTarget && hlTarget === id) {
+        onTileTap(skill)
+      } else {
+        pickHlTarget(skill.id)
+      }
+    },
+    [hlTarget, onTileTap, pickHlTarget],
+  )
   const pickDirectPath = useCallback((on: boolean) => {
     setDirectPath(on)
     saveDirectPath(on)
@@ -2341,7 +2364,15 @@ export function SkillMapView({
     [hl, labelOf],
   )
   return (
-    <div className={`space-y-2.5 ${theme === 'paper' ? 'rounded-2xl bg-[#f3efe4] p-3' : ''}`}>
+    <div
+      className={`space-y-2.5 ${theme === 'paper' ? 'rounded-2xl bg-[#f3efe4] p-3' : ''}`}
+      onClick={(e) => {
+        // Tap-away clears a tap-previewed shine. Every tile and every control
+        // is a <button> with its own handler; taps on background, gaps, and
+        // headers (non-button areas) restore the original view.
+        if (hlTarget && !(e.target as HTMLElement).closest('button')) setHlTarget(null)
+      }}
+    >
       {/* Pulse keyframes for the goal tile (distance 0). Pulses the neon edge
           (brightness + saturation) — no halo bloom; the static box-shadow
           carries the glow. Cheap on phones. */}
@@ -2357,6 +2388,7 @@ export function SkillMapView({
         onInfoFilter={pickInfoFilter}
         onSearch={() => setSearchOpen(true)}
         hlTargetName={hlTargetName}
+        hlActive={!!hlTarget}
         onClearHighlight={() => setHlTarget(null)}
         hlCombos={hlCombos}
         hlComboIdx={comboIdx}
@@ -2388,7 +2420,7 @@ export function SkillMapView({
             <BeyondSection
               open={beyondOpen}
               onToggle={() => setBeyondOpen((o) => !o)}
-              onTap={onTileTap}
+              onTap={handleTileTap}
               glowMap={glowMap}
               theme={theme}
               infoOnly={infoOnly}
@@ -2399,9 +2431,9 @@ export function SkillMapView({
 
             {/* Skill tree */}
             <div className="space-y-2.5">
-              <MapRows rows={ROWS.slice(0, 13)} headers={HEADERS} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={ROWS.slice(0, 13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-1">
-                <RollsSection onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+                <RollsSection onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               </div>
               {/* Light beaming upward from Foundations into the tree */}
               <div
@@ -2412,7 +2444,7 @@ export function SkillMapView({
                     'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
                 }}
               />
-              <MapRows rows={ROWS.slice(13)} headers={HEADERS} onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={ROWS.slice(13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-2" />
             </div>
           </div>
@@ -2421,9 +2453,9 @@ export function SkillMapView({
       ) : (
         <>
           <Legend theme={theme} />
-          {view === 'list' && <ListView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
-          {view === 'compact' && <CompactView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
-          {view === 'levels' && <LevelsView onTap={onTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
+          {view === 'list' && <ListView onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
+          {view === 'compact' && <CompactView onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
+          {view === 'levels' && <LevelsView onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />}
         </>
       )}
     </div>
