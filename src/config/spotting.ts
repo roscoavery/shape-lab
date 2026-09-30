@@ -149,6 +149,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         url: '/videos/opposite-side-spot-arabian.mp4',
         caption: 'Opposite side spot for an arabian taught as a back half.',
       },
+      {
+        url: '/videos/opposite-side-spot-right-full.mp4',
+        caption:
+          'Opposite side spot on a right full. We eased in with halves and 3/4 twist before I started releasing for the full.',
+      },
     ],
   },
   {
