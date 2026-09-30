@@ -171,6 +171,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/C-jBIzcRNLc/',
       watchFor: 'The feet apart for standing dub take off helps generate torque against floor for contact twist.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/standing-dub-feet-apart-torque.mp4',
+      watchFor: 'The feet apart for standing dub take off helps generate torque against floor for contact twist.',
+    },
   ],
   'front-layout': [
     {
