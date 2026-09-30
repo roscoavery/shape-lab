@@ -56,6 +56,50 @@ export interface ShapeVariation {
   detail?: string
 }
 
+/**
+ * Arch and hollow variation progressions, easiest first — Ryan's verbatim.
+ * Rendered on the standing back handspring card and at the bottom of
+ * Learn → Shape library.
+ */
+export const ARCH_HOLLOW_VARIATIONS: {
+  intro?: string
+  arch: ShapeVariation[]
+  hollow: ShapeVariation[]
+} = {
+  intro: 'Arch variations seem important to understand.',
+  arch: [
+    { name: 'Tight arch' },
+    { name: 'Bridge' },
+    { name: 'Long bridge' },
+    { name: 'Arch handstand' },
+    { name: 'Superman' },
+  ],
+  hollow: [
+    {
+      name: 'Zombie',
+      detail: 'Standing, which makes it the easiest hollow.',
+    },
+    { name: 'Hollow tucked' },
+    { name: 'Hollow bent knees' },
+    { name: 'Curl up' },
+    { name: 'Mad cat' },
+    { name: 'Elbow plank' },
+    { name: 'Front support' },
+    { name: 'Hollow arms down' },
+    {
+      name: 'Foam roller prone arch to hollow',
+      detail:
+        'Foam roller elevates the thighs, a couple layers of panel mat elevate the arms overhead. Going from arch to hollow here is hard.',
+    },
+    { name: 'Hollow arms up' },
+    {
+      name: 'Supine hollow, hands pinned',
+      detail:
+        'Flip the athlete onto their back and put their hands under a big mat to hold them down; the foam roller elevates the middle to lower butt. Under the tailbone makes it harder. The athlete maintains open hips while pulling the ribs and low back toward the ground and lifting the toes in line with the hips and ribs.',
+    },
+  ],
+}
+
 export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
   {
     "id": "skl_ro_bhs_tuck",
@@ -260,38 +304,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Often arrives after the running handspring, not before. That is normal in Ryan’s gym."
     ],
     "ask": "Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps.",
-    "shapeVariations": {
-      "intro": "Arch variations seem important to understand.",
-      "arch": [
-        { "name": "Tight arch" },
-        { "name": "Bridge" },
-        { "name": "Long bridge" },
-        { "name": "Arch handstand" },
-        { "name": "Superman" }
-      ],
-      "hollow": [
-        {
-          "name": "Zombie",
-          "detail": "Standing, which makes it the easiest hollow."
-        },
-        { "name": "Hollow tucked" },
-        { "name": "Hollow bent knees" },
-        { "name": "Curl up" },
-        { "name": "Mad cat" },
-        { "name": "Elbow plank" },
-        { "name": "Front support" },
-        { "name": "Hollow arms down" },
-        {
-          "name": "Foam roller prone arch to hollow",
-          "detail": "Foam roller elevates the thighs, a couple layers of panel mat elevate the arms overhead. Going from arch to hollow here is hard."
-        },
-        { "name": "Hollow arms up" },
-        {
-          "name": "Supine hollow, hands pinned",
-          "detail": "Flip the athlete onto their back and put their hands under a big mat to hold them down; the foam roller elevates the middle to lower butt. Under the tailbone makes it harder. The athlete maintains open hips while pulling the ribs and low back toward the ground and lifting the toes in line with the hips and ribs."
-        }
-      ]
-    }
+    "shapeVariations": ARCH_HOLLOW_VARIATIONS
   },
   {
     "id": "skl_angle_back_handspring",
