@@ -759,6 +759,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DJHqG7xIrpQ/',
       watchFor: 'Round off handspring prep for double flips — the setup work.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/double-back-ryan.mp4',
+      watchFor: 'Double back reference from Ryan.',
+    },
   ],
   'triple-full': [
     {
