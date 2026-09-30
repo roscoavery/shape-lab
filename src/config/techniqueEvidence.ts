@@ -313,6 +313,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-bhs-tuck-tramp.mp4',
       watchFor: 'Round off back handspring tuck on tramp.',
     },
+    {
+      who: 'Oasis athlete',
+      url: '/videos/ro-back-tuck-oasis.mp4',
+      watchFor: 'Nice round off back tuck.',
+    },
   ],
   'barani': [
     {
