@@ -293,17 +293,30 @@ export function PhoneReelViewer({
           full screen instead of in the space below the header. Taps pass
           through to the video except on Done. */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/75 via-black/35 to-transparent">
-        <div className="flex items-center justify-between gap-3 px-3 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
-          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-            {title}
-          </p>
+        <div className="flex items-center gap-1 px-2 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onClose}
-            className="pointer-events-auto rounded-full bg-[#e03131] px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+            aria-label="Back"
+            className="pointer-events-auto rounded-full p-2 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)] transition active:scale-90"
           >
-            Done
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
           </button>
+          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
+            {title}
+          </p>
         </div>
       </header>
       {items.length === 0 ? (
