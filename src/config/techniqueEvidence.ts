@@ -226,6 +226,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/standing-full-arabian-triple.mp4',
       watchFor: 'Standing full through to arabian through to triple full.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-standing-full-ring-challenge.mp4',
+      watchFor: 'Fun standing full stay in the ring challenge.',
+    },
   ],
   'back-extension-roll': [
     {
