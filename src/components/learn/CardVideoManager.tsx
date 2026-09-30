@@ -105,6 +105,19 @@ export function AddCardVideoModal({
   const [expandedUrl, setExpandedUrl] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Lock the page behind the sheet while it's open: a swipe inside the sheet
+  // must scroll the sheet itself, never the feed underneath it.
+  useEffect(() => {
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     void compareLibraryVideos().then((vs) => {
@@ -151,7 +164,7 @@ export function AddCardVideoModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl bg-neutral-900 p-4 [-webkit-overflow-scrolling:touch] sm:rounded-2xl"
+        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl bg-neutral-900 p-4 [-webkit-overflow-scrolling:touch] [touch-action:pan-y] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -285,6 +298,19 @@ export function AddToSkillCardModal({
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
+  // Lock the page behind the sheet while it's open: a swipe inside the sheet
+  // must scroll the sheet itself, never the feed underneath it.
+  useEffect(() => {
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [])
+
   const local = isLocalVideo(video.url)
 
   /** Every skill on the map, guided first; search narrows across all of them. */
@@ -322,7 +348,7 @@ export function AddToSkillCardModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-neutral-900 p-4 sm:rounded-2xl"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl bg-neutral-900 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] [touch-action:pan-y] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">

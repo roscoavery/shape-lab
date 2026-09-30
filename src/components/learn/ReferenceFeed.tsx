@@ -2,7 +2,7 @@
  * Learn → Reference scroll — vertical snap through the gym Compare URL library.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
@@ -10,7 +10,7 @@ import { PhoneReelViewer } from '../PhoneReelViewer'
 import { ShareReference } from '../share/ShareReference'
 import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
-import { useGymLibrary } from '../../lib/gymLibrary'
+import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
 import { itemMatchesQuery } from '../../lib/clipStore'
@@ -22,6 +22,7 @@ import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { AddToSkillCardModal } from './CardVideoManager'
 import { LinkToSpottingCardModal } from './LinkToSpottingCardModal'
+import type { OrganizeEditor } from '../../lib/organizeLibrary'
 import { GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { getRegistrySkill, getRegistrySkillByGuideId } from '../../lib/skillRegistry'
 
@@ -69,6 +70,137 @@ type Props = {
   athletes?: Athlete[]
 }
 
+type FeedArticleProps = {
+  clip: GymClip
+  index: number
+  total: number
+  near: boolean
+  on: boolean
+  favOn: boolean
+  isAdmin: boolean
+  editor: OrganizeEditor
+  cardNames: string[] | undefined
+  onOpenReel: (index: number) => void
+  onPostedBy: (url: string, handle: string) => void
+  onToggleFavorite: (url: string) => void
+  onAddToSkillCard: (clip: GymClip) => void
+  onLinkToSpottingCard: (clip: GymClip) => void
+  onCopied: (message: string) => void
+}
+
+/**
+ * One inline feed card, memoized: while the active index moves during a
+ * scroll, only the cards whose near/on/fav state changed re-render instead
+ * of the whole list. Props are primitives or stable callbacks so memo holds.
+ */
+const FeedArticle = memo(function FeedArticle({
+  clip,
+  index,
+  total,
+  near,
+  on,
+  favOn,
+  isAdmin,
+  editor,
+  cardNames,
+  onOpenReel,
+  onPostedBy,
+  onToggleFavorite,
+  onAddToSkillCard,
+  onLinkToSpottingCard,
+  onCopied,
+}: FeedArticleProps) {
+  const handle = clip.postedBy || postedByFromUrl(clip.url)
+  return (
+    <article data-feed-index={index} className="flex h-full snap-start flex-col">
+      <div className="relative min-h-0 flex-1">
+        {near ? (
+          <GymClipPlayer
+            url={clip.url}
+            itemId={clip.id}
+            fill
+            active={on}
+            persistUrl={clip.url}
+            compact
+            quiet
+            shareChrome={false}
+            markup
+            markupSwipeSafe
+            postedBy={handle}
+            onPostedBy={(next) => onPostedBy(clip.url, next)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-white/40">
+            {clip.name}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => onOpenReel(index)}
+          className="absolute bottom-3 right-3 z-20 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-lg"
+        >
+          Full screen
+        </button>
+      </div>
+      <div className="shrink-0 bg-black/90 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              {clip.collectionName}
+            </p>
+            <h3 className="text-base font-semibold text-white">{clip.name}</h3>
+            {handle && (
+              <p className="mt-0.5 text-sm font-semibold text-white/80">
+                @{handle.replace(/^@/, '')}
+              </p>
+            )}
+          </div>
+          <FavoriteStar
+            fill
+            on={favOn}
+            onClick={() => onToggleFavorite(clip.url)}
+            label={favOn ? `Unfavorite ${clip.name}` : `Favorite ${clip.name}`}
+          />
+        </div>
+        {clip.keywords && clip.keywords.length > 0 && (
+          <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
+        )}
+        {isAdmin && cardNames?.length ? (
+          <p className="mt-1 text-[11px] font-bold text-emerald-300/80">
+            On cards: {cardNames.join(', ')}
+          </p>
+        ) : null}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ShareReference
+              variant="reel"
+              draft={clipShareDraft(clip.name, clip.url)}
+              onAddToSkillCard={isAdmin ? () => onAddToSkillCard(clip) : undefined}
+              onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
+            />
+            <ClipOrganizeMenu
+              variant="icon"
+              clip={{
+                name: clip.name,
+                url: clip.url,
+                kind: clip.kind,
+                keywords: clip.keywords,
+                sourceId: clip.id,
+              }}
+              editor={editor}
+              gymAdmin={isAdmin}
+              onCopied={onCopied}
+            />
+          </div>
+          <p className="text-[11px] text-white/40">
+            {index + 1} / {total}
+          </p>
+        </div>
+      </div>
+    </article>
+  )
+})
+
 export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const { clips, loading, rememberHandle } = useGymLibrary()
   const favorites = useFavorites()
@@ -84,11 +216,45 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   const cardAttachments = useCardAttachments(cardRefresh)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
-  const editor = {
-    gymEditor: isGymAdmin(athlete),
-    personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
-    profileId: athlete?.id ?? null,
-  }
+  const editor = useMemo(
+    () => ({
+      gymEditor: isGymAdmin(athlete),
+      personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
+      profileId: athlete?.id ?? null,
+    }),
+    [athlete],
+  )
+  const isAdmin = editor.gymEditor
+
+  // Stable callbacks so the memoized feed cards only re-render when their
+  // own near/on/fav state changes.
+  const rememberHandleRef = useRef(rememberHandle)
+  rememberHandleRef.current = rememberHandle
+  const handlePostedBy = useCallback(
+    (url: string, next: string) => rememberHandleRef.current(url, next),
+    [],
+  )
+  const handleToggleFavorite = useCallback(
+    (url: string) => favorites.toggleUrlFavorite(url),
+    [favorites],
+  )
+  const handleOpenReel = useCallback((i: number) => {
+    setReelIndex(i)
+    setReelOpen(true)
+  }, [])
+  const handleAddToCard = useCallback(
+    (clip: GymClip) =>
+      setAddToCardClip({
+        url: clip.url,
+        who: clip.postedBy || 'Reference library',
+        watchFor: clip.name,
+      }),
+    [],
+  )
+  const handleLinkSpotting = useCallback(
+    (clip: GymClip) => setLinkSpottingClip({ id: clip.id, url: clip.url, name: clip.name }),
+    [],
+  )
 
   const visible = useMemo(() => {
     const q = query.trim()
@@ -112,6 +278,22 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
   useEffect(() => {
     setActive(0)
   }, [query, onlyFavorites, visible.length])
+
+  // Stable item objects for the fullscreen reel: without this, every parent
+  // re-render hands the reel fresh objects and defeats its memoization.
+  const reelItems = useMemo(
+    () =>
+      visible.map((clip) => ({
+        id: clip.id,
+        name: clip.name,
+        url: clip.url,
+        kind: clip.kind,
+        keywords: clip.keywords,
+        collectionName: clip.collectionName,
+        postedBy: clip.postedBy || postedByFromUrl(clip.url) || undefined,
+      })),
+    [visible],
+  )
 
   useEffect(() => {
     const jump = takeMobileSearchJump('clip')
@@ -267,142 +449,37 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
       ) : (
         <div
           ref={rootRef}
-          className="h-[min(78dvh,760px)] snap-y snap-mandatory overflow-y-auto rounded-2xl border border-[var(--panel-border)] bg-black"
+          className="h-[min(78dvh,760px)] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-2xl border border-[var(--panel-border)] bg-black"
         >
           {visible.map((clip, i) => (
-            <article
+            <FeedArticle
               key={clip.id}
-              data-feed-index={i}
-              className="flex h-full snap-start flex-col"
-            >
-              <div className="relative min-h-0 flex-1">
-                {Math.abs(i - active) <= 1 ? (
-                  <GymClipPlayer
-                    url={clip.url}
-                    itemId={clip.id}
-                    fill
-                    active={i === active}
-                    persistUrl={clip.url}
-                    compact
-                    quiet
-                    shareChrome={false}
-                    markup
-                    markupSwipeSafe
-                    postedBy={clip.postedBy || postedByFromUrl(clip.url)}
-                    onPostedBy={(handle) => rememberHandle(clip.url, handle)}
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-white/40">
-                    {clip.name}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReelIndex(i)
-                    setReelOpen(true)
-                  }}
-                  className="absolute bottom-3 right-3 z-20 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-lg"
-                >
-                  Full screen
-                </button>
-              </div>
-              <div className="shrink-0 bg-black/90 px-4 py-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-                      {clip.collectionName}
-                    </p>
-                    <h3 className="text-base font-semibold text-white">{clip.name}</h3>
-                    {(clip.postedBy || postedByFromUrl(clip.url)) && (
-                      <p className="mt-0.5 text-sm font-semibold text-white/80">
-                        @{(clip.postedBy || postedByFromUrl(clip.url) || '').replace(/^@/, '')}
-                      </p>
-                    )}
-                  </div>
-                  <FavoriteStar
-                    fill
-                    on={favorites.isUrlFavorite(clip.url)}
-                    onClick={() => favorites.toggleUrlFavorite(clip.url)}
-                    label={
-                      favorites.isUrlFavorite(clip.url)
-                        ? `Unfavorite ${clip.name}`
-                        : `Favorite ${clip.name}`
-                    }
-                  />
-                </div>
-                {clip.keywords && clip.keywords.length > 0 && (
-                  <p className="mt-1 text-xs text-white/60">{clip.keywords.join(' · ')}</p>
-                )}
-                {isGymAdmin(athlete) && cardAttachments[clip.url]?.length ? (
-                  <p className="mt-1 text-[11px] font-bold text-emerald-300/80">
-                    On cards: {cardAttachments[clip.url].join(', ')}
-                  </p>
-                ) : null}
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ShareReference
-                      variant="reel"
-                      draft={clipShareDraft(clip.name, clip.url)}
-                      onAddToSkillCard={
-                        isGymAdmin(athlete)
-                          ? () =>
-                              setAddToCardClip({
-                                url: clip.url,
-                                who: clip.postedBy || 'Reference library',
-                                watchFor: clip.name,
-                              })
-                          : undefined
-                      }
-                      onLinkToSpottingCard={
-                        isGymAdmin(athlete)
-                          ? () =>
-                              setLinkSpottingClip({
-                                id: clip.id,
-                                url: clip.url,
-                                name: clip.name,
-                              })
-                          : undefined
-                      }
-                    />
-                    <ClipOrganizeMenu
-                    variant="icon"
-                    clip={{
-                      name: clip.name,
-                      url: clip.url,
-                      kind: clip.kind,
-                      keywords: clip.keywords,
-                      sourceId: clip.id,
-                    }}
-                    editor={editor}
-                    gymAdmin={isGymAdmin(athlete)}
-                    onCopied={setFlash}
-                  />
-                  </div>
-                  <p className="text-[11px] text-white/40">
-                    {i + 1} / {visible.length}
-                  </p>
-                </div>
-              </div>
-            </article>
+              clip={clip}
+              index={i}
+              total={visible.length}
+              near={Math.abs(i - active) <= 1}
+              on={i === active}
+              favOn={favorites.isUrlFavorite(clip.url)}
+              isAdmin={isAdmin}
+              editor={editor}
+              cardNames={isAdmin ? cardAttachments[clip.url] : undefined}
+              onOpenReel={handleOpenReel}
+              onPostedBy={handlePostedBy}
+              onToggleFavorite={handleToggleFavorite}
+              onAddToSkillCard={handleAddToCard}
+              onLinkToSpottingCard={handleLinkSpotting}
+              onCopied={setFlash}
+            />
           ))}
         </div>
       )}
       {reelOpen ? (
         <PhoneReelViewer
-          items={visible.map((clip) => ({
-            id: clip.id,
-            name: clip.name,
-            url: clip.url,
-            kind: clip.kind,
-            keywords: clip.keywords,
-            collectionName: clip.collectionName,
-            postedBy: clip.postedBy || postedByFromUrl(clip.url) || undefined,
-          }))}
+          items={reelItems}
           startIndex={reelIndex}
           onClose={() => setReelOpen(false)}
           editor={editor}
-          gymAdmin={isGymAdmin(athlete)}
+          gymAdmin={isAdmin}
           title="Reference scroll"
           onCopied={setFlash}
         />

@@ -232,7 +232,12 @@ export function InlineVideo({
         muted
         loop={loopA == null && loopB == null}
         preload="metadata"
-        className="h-full w-full object-contain [touch-action:none]"
+        // pan-x AND pan-y: a swipe that starts on the video must still drive
+        // the surrounding scroller (skill-card reference carousel, card
+        // vertical scroll). Taps still reach the pointer handlers below, and
+        // the scrub strip is its own element, so play/pause and scrubbing
+        // are unaffected.
+        className="h-full w-full object-contain [touch-action:pan-x_pan-y]"
         style={{ transform: `scale(${scale})` }}
         onPlay={() => {
           setPlaying(true)
