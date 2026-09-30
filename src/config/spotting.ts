@@ -145,6 +145,10 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         caption:
           "Opposite side full spot from a round off handspring on spring floor (example 1 — more coming). Athlete requires minimal spotting already and we have already ensured consistency onto a mat. Keeps spotter out of the athlete's vision and prevents them from twisting straight into the spotter.",
       },
+      {
+        url: '/videos/opposite-side-spot-arabian.mp4',
+        caption: 'Opposite side spot for an arabian taught as a back half.',
+      },
     ],
   },
   {
