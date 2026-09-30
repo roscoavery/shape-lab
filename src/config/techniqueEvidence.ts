@@ -561,6 +561,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/maggie-layout-tumble-track.mp4',
       watchFor: 'Awesome layout on tumble track.',
     },
+    {
+      who: 'Kyler (athlete)',
+      url: '/videos/kyler-layout-tumble-track.mp4',
+      watchFor: 'Nice layout on tumble track.',
+    },
   ],
   full: [
     {
