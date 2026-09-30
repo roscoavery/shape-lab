@@ -1,5 +1,5 @@
 /**
- * "Say this instead": cue swaps that lead with what works — Ryan's cue as
+ * "Say this instead": cue swaps that lead with what works: Ryan's cue as
  * the headline, the old cue and the reason behind a "Why this works"
  * disclosure. Shown in the Learn guide below the skill cards.
  *
@@ -34,21 +34,15 @@ export const RYAN_CUE_SWAPS: CueSwap[] = [
     why: 'It usually doesnt help when athletes are struggling with fear. Fear needs a smaller agreed step, not a command.',
   },
   {
-    id: 'chin-in',
-    insteadOf: '\u201cGet your chin in\u201d (handsprings)',
-    sayThis: '\u201cCover the ears and look through your hands\u201d',
-    why: 'It puts the head where it needs to be without collapsing the chest.',
-  },
-  {
     id: 'chin-to-chest',
     insteadOf: '\u201cChin to chest\u201d',
-    sayThis: 'Neutral head, chin slightly down, rounded thoracic spine',
-    why: 'Round your thoracic spine to bring the head in naturally.',
+    sayThis: 'On tucks: \u201cNeutral head, chin slightly down, rounded thoracic spine.\u201d On handsprings: \u201cCover the ears and look through your hands.\u201d',
+    why: 'On tucks: \u201cRound your thoracic spine to bring the head in naturally.\u201d On handsprings: a quick cue to get the head in between the arms and shoulders instead of the head and neck sticking out. Same idea as \u201clook at the wall\u201d on a handstand. Technically looking at the hands is preferred, but telling a full class to look at their hands will not get them to cover their ears too.',
   },
   {
     id: 'big-rebound',
     insteadOf: '\u201cBig rebound\u201d out of round offs',
-    sayThis: '\u201cTight zombie at the end\u201d \u2014 arms in front, armpits past the toes, stand into the springs',
+    sayThis: '\u201cTight zombie at the end.\u201d Arms in front, armpits past the toes, stand into the springs',
     why: 'A smaller rebound with the right shapes beats a big one with bent hips and knees. The rebound recycles momentum; bend-and-jump defeats the purpose.',
   },
   {
