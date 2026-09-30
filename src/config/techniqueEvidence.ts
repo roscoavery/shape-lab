@@ -46,6 +46,11 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
     url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
     watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
   },
+  'front-15': {
+    who: 'Coach Ryan Williams',
+    url: '/videos/rudi-tramp-ryan.mp4',
+    watchFor: 'Front rudi (1.5 twist) on tramp.',
+  },
 }
 
 /**
