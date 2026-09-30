@@ -148,6 +148,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Standing handspring double full.',
     },
   ],
+  'skl_full_full': [
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/full-full-coach-elliott.mov',
+      watchFor: 'S/o coach elliott for the coaching on this one.',
+    },
+  ],
   'front-layout': [
     {
       who: 'Kyler',
