@@ -229,6 +229,7 @@ export function IgMobileShell({
           onGo={onGo}
           onViewProfile={onViewProfile}
           onClose={() => setMobileSearch(false)}
+          canEditFaq={ryan}
         />
       ) : (
         children

@@ -84,9 +84,12 @@ const SUGGESTIONS = [
 export function ChatPanel({
   onOpenTab,
   canEditFaq,
+  bare = false,
 }: {
   onOpenTab: (tab: AppTab) => void
   canEditFaq: boolean
+  /** Hide the title header when embedded inside another page (e.g. the mobile Search page). */
+  bare?: boolean
 }) {
   const [docs, setDocs] = useState<CorpusDoc[] | null>(null)
   const [messages, setMessages] = useState<ChatMsg[]>([])
@@ -296,13 +299,16 @@ export function ChatPanel({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 px-3 pb-16">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Ask</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Answers from Ryan's own content, quoted word for word. I never make up coaching advice.
-          </p>
-        </div>
+      {(!bare || canEditFaq) && (
+        <div className={`flex items-start gap-2 ${bare ? 'justify-end' : 'justify-between'}`}>
+          {!bare && (
+            <div>
+              <h1 className="text-2xl font-bold">Ask</h1>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Answers from Ryan's own content, quoted word for word. I never make up coaching advice.
+              </p>
+            </div>
+          )}
         {canEditFaq && (
           <div className="flex shrink-0 gap-1 rounded-xl bg-[#0d1218] p-1">
             <button
@@ -321,7 +327,8 @@ export function ChatPanel({
             </button>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {view === 'inbox' && canEditFaq ? (
         <div className="space-y-3">

@@ -10,6 +10,7 @@ import { sessionIsKiosk } from '../../lib/authSession'
 import { isRyanAthlete } from '../../lib/ryanProfile'
 import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 import { IgSearchIcon } from './IgNavIcons'
+import { ChatPanel } from '../chat/ChatPanel'
 
 type Props = {
   athletes: Athlete[]
@@ -18,6 +19,7 @@ type Props = {
   onGo: (tab: AppTab) => void
   onViewProfile?: (id: string) => void
   onClose: () => void
+  canEditFaq: boolean
 }
 
 function hitIcon(kind: AppSearchHit['kind']): string {
@@ -44,11 +46,16 @@ export function MobileSearchPage({
   onGo,
   onViewProfile,
   onClose,
+  canEditFaq,
 }: Props) {
   const [q, setQ] = useState('')
+  const [mode, setMode] = useState<'search' | 'ask'>('search')
+  const [askMounted, setAskMounted] = useState(false)
   const { clips } = useGymLibrary()
   const role: NavRole = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
   const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
+  // The Ask chatbot isn't available on the floor kiosk, so it stays search-only there.
+  const showAsk = role !== 'kiosk'
 
   const hits = useMemo(
     () => searchAppIndex(q, { athletes, clips, role, ryan, limit: 40 }),
@@ -87,6 +94,38 @@ export function MobileSearchPage({
 
   return (
     <div className="mx-auto flex min-h-[50vh] w-full max-w-2xl flex-col">
+      {showAsk && (
+        <div className="mb-3 flex justify-center">
+          <div className="flex rounded-full bg-white/5 p-1" role="tablist" aria-label="Search or ask">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'search'}
+              onClick={() => setMode('search')}
+              className={`rounded-full px-5 py-1.5 text-sm transition ${
+                mode === 'search' ? 'bg-[var(--panel)] font-semibold text-white' : 'text-[var(--muted)]'
+              }`}
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'ask'}
+              onClick={() => {
+                setAskMounted(true)
+                setMode('ask')
+              }}
+              className={`rounded-full px-5 py-1.5 text-sm transition ${
+                mode === 'ask' ? 'bg-[var(--panel)] font-semibold text-white' : 'text-[var(--muted)]'
+              }`}
+            >
+              Ask
+            </button>
+          </div>
+        </div>
+      )}
+      <div className={mode === 'search' ? 'flex min-h-[50vh] flex-col' : 'hidden'}>
       <div className="flex items-center gap-2 border-b border-white/10 pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5">
           <IgSearchIcon className="h-5 w-5 shrink-0 text-[var(--muted)]" />
@@ -134,6 +173,19 @@ export function MobileSearchPage({
           </li>
         )}
       </ul>
+      </div>
+      {showAsk && askMounted && (
+        <div className={mode === 'ask' ? 'min-h-[50vh] flex-1' : 'hidden'}>
+          <ChatPanel
+            bare
+            canEditFaq={canEditFaq}
+            onOpenTab={(t) => {
+              onGo(t)
+              onClose()
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
