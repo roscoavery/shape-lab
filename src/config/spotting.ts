@@ -95,7 +95,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     name: 'Bump and catch',
     description:
       "A bump and catch method on a round off back tuck on tramp. This is more of a lift and catch. I am lifting the athlete up to assist with height on the take off and actually pushing their tailbone forward while pushing their ribcage backwards as I lift up. Then I switch my grip to a safety spot with left hand on back and right hand on ribs.",
-    appliesTo: ['back-tuck', 'back-layout'],
+    appliesTo: ['back-tuck', 'back-layout', 'back-full'],
     watchOuts: [
       "This requires a release which can be good to communicate to the athlete before so they don't bail when they feel you let go for that tiny moment.",
     ],
@@ -109,6 +109,11 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
         url: '/videos/back-layout-bump-and-catch-tramp.mp4',
         caption:
           'Same spot done on a layout on tramp requires a bit more thrust against their tailbone and rib cage to flip the straight body and requires drilling rebound to candle stick at shoulder level with spotting or mats to make sure the rotation mostly comes from the athlete before using this spotting method on a layout.',
+      },
+      {
+        url: '/videos/side-full-bump-and-catch-tramp.mp4',
+        caption:
+          'Bump and catch method for a twist side full spot that was taught using 3/4 flip twist process mixed with opposite side spotting. The athlete twists late so this does not feel the same as passing through a half turn to superman.',
       },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bump-and-catch and it will show up here.',
@@ -284,7 +289,7 @@ export const SPOTTING_SKILLS: SpottingSkill[] = [
   {
     id: 'back-full',
     name: 'Back fulls',
-    methodIds: ['twist-side-spot', 'opposite-side-spot', 'shadow-spot'],
+    methodIds: ['twist-side-spot', 'opposite-side-spot', 'bump-and-catch', 'shadow-spot'],
   },
   {
     id: 'back-1-5',
