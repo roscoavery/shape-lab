@@ -1,9 +1,10 @@
 /**
  * Inline player for gym-hosted video files, with A/B loop support.
  * Plays when mostly on screen, pauses when scrolled away.
- * The chrome (play, skip, scrubber) stays hidden so the video is fully visible
- * while swiping; tapping the video toggles play/pause and reveals it, and it
- * auto-hides a few seconds after the last touch while the video is playing.
+ * The chrome (play, skip, scrubber) hides the moment playback starts — the
+ * buttons and the scrub bar vanish together — leaving only a slim progress
+ * line at the bottom edge. Tapping the video toggles play/pause; pausing
+ * reveals the chrome with the scrub bar pinned to the bottom.
  *
  * Touch model: the chrome overlay itself is pointer-transparent, so it can
  * never swallow touches meant for the scrub bar — only the buttons and the
@@ -108,8 +109,9 @@ export function InlineVideo({
     const v = ref.current
     if (!v) return
     if (v.paused) {
+      // onPlay closes the chrome when playback actually starts; if play()
+      // rejects, the chrome simply stays open, which is correct.
       v.play().catch(() => {})
-      showChrome()
     } else {
       v.pause()
       clearHideTimer()
@@ -241,7 +243,10 @@ export function InlineVideo({
         style={{ transform: `scale(${scale})` }}
         onPlay={() => {
           setPlaying(true)
-          armHideTimer()
+          // Hide the whole chrome the moment playback starts: buttons and
+          // scrub bar vanish together, leaving only the slim progress line.
+          setChromeOpen(false)
+          clearHideTimer()
         }}
         onPause={() => {
           setPlaying(false)
@@ -278,9 +283,11 @@ export function InlineVideo({
             </button>
           )}
           {/* Centered transport buttons: paused only, so a playing video is
-              never covered. The scrub bar below keeps the 3s auto-hide. */}
-          {!playing && (
-            <div className="pointer-events-none flex flex-1 items-center justify-center gap-6">
+              never covered. This spacer always renders so the scrub bar
+              below stays pinned to the bottom in both states. */}
+          <div className="pointer-events-none flex flex-1 items-center justify-center gap-6">
+            {!playing && (
+              <>
               <button
                 type="button"
                 aria-label="Back 10 seconds"
@@ -324,8 +331,9 @@ export function InlineVideo({
                 <span className="text-[10px]">10</span>
                 <span aria-hidden="true">↻</span>
               </button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
           <div
             className="pointer-events-auto bg-gradient-to-t from-black/85 via-black/60 to-transparent px-3 pb-2 pt-6"
             onPointerDown={(e) => e.stopPropagation()}
@@ -349,6 +357,17 @@ export function InlineVideo({
               <span>-{fmtClock(Math.max(0, duration - time))}</span>
             </div>
           </div>
+        </div>
+      )}
+      {/* Slim progress line while playing with the chrome hidden: bottom edge
+          only, purely indicative — tapping the video pauses it and brings the
+          full scrub bar back. */}
+      {!chromeOpen && playing && duration > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[3px] bg-white/15" aria-hidden>
+          <div
+            className="h-full bg-emerald-400"
+            style={{ width: `${Math.min(100, (time / duration) * 100)}%` }}
+          />
         </div>
       )}
     </div>
