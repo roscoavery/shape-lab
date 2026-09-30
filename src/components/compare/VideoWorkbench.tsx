@@ -866,12 +866,8 @@ function VideoWorkbenchInner({
                 {overlayActions}
               </div>
             ) : null}
-            {!bare && overlay && (
-              <div
-                className={`pointer-events-auto absolute right-2 z-[35] flex flex-col items-center gap-3 ${
-                  tapTogglesChrome ? 'top-[6.75rem]' : 'top-2'
-                }`}
-              >
+            {!bare && overlay && !tapTogglesChrome && (
+              <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
                 {hudCorner}
                 <HudCircle
                   label={chromeOpen ? 'Hide' : 'Show'}
