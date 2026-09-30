@@ -165,6 +165,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'S/o coach elliott for the coaching on this one.',
     },
   ],
+  skl_standing_double: [
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/C-jBIzcRNLc/',
+      watchFor: 'The feet apart for standing dub take off helps generate torque against floor for contact twist.',
+    },
+  ],
   'front-layout': [
     {
       who: 'Kyler',
@@ -241,6 +248,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Tumbling Dee — Camp TumbleSmart',
       url: '/videos/dee-back-quad.mp4',
       watchFor: 'Back quad on tramp.',
+    },
+    {
+      who: 'Reference',
+      url: 'https://www.instagram.com/reel/C-jBIzcRNLc/',
+      watchFor: 'The feet apart for standing dub take off helps generate torque against floor for contact twist.',
     },
   ],
   'angle-bhs': [],
