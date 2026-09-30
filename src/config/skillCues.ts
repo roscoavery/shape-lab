@@ -43,19 +43,13 @@ export const RYAN_CUE_SWAPS: CueSwap[] = [
     id: 'chin-to-chest',
     insteadOf: '\u201cChin to chest\u201d',
     sayThis: 'Neutral head, chin slightly down, rounded thoracic spine',
-    why: 'Ryan has never done a tumbling skill with his chin on his chest and cannot imagine a back handspring that way. The chin cue is independent from what the thoracic spine does; the rounded upper back is the actual shape.',
+    why: 'Round your thoracic spine to bring the head in naturally.',
   },
   {
     id: 'big-rebound',
     insteadOf: '\u201cBig rebound\u201d out of round offs',
     sayThis: '\u201cTight zombie at the end\u201d \u2014 arms in front, armpits past the toes, stand into the springs',
     why: 'A smaller rebound with the right shapes beats a big one with bent hips and knees. The rebound recycles momentum; bend-and-jump defeats the purpose.',
-  },
-  {
-    id: 'eyes-up',
-    insteadOf: 'Eyes up, arms up rebound',
-    sayThis: 'Eyes down, arms down in front, chest comes up',
-    why: 'Newton\u2019s third law, angular momentum, moment of inertia. Looking at the ground with arms going down in front brings the chest up. Arms-up-eyes-up on a beginner round off makes no sense: the next skill connects backwards, not upwards.',
   },
   {
     id: 'sit',
