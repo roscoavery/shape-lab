@@ -286,29 +286,34 @@ export function PhoneReelViewer({
 
   const body = (
     <div
-      className="fixed inset-0 z-[380] flex h-[100dvh] w-screen flex-col bg-black text-white"
+      className="fixed inset-0 z-[380] h-[100dvh] w-screen bg-black text-white"
       style={{ touchAction: 'manipulation' }}
     >
-      <header className="flex shrink-0 items-center justify-between gap-3 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-          {title}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full bg-[#e03131] px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
-        >
-          Done
-        </button>
+      {/* Header floats over the video (IG-style) so the footage centers in the
+          full screen instead of in the space below the header. Taps pass
+          through to the video except on Done. */}
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/75 via-black/35 to-transparent">
+        <div className="flex items-center justify-between gap-3 px-3 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
+            {title}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="pointer-events-auto rounded-full bg-[#e03131] px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+          >
+            Done
+          </button>
+        </div>
       </header>
       {items.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-white/60">
+        <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
           No clips to play in full screen.
         </div>
       ) : (
         <div
           ref={scrollerRef}
-          className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain"
+          className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
         >
           {items.map((clip, i) => (

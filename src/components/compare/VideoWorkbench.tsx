@@ -792,7 +792,13 @@ function VideoWorkbenchInner({
             hud
             toolsHidden={tapTogglesChrome && !chromeOpen}
             surfaceDisabled={tapTogglesChrome && !chromeOpen}
-            hudOffsetClass={replayChrome ? 'left-1.5 top-14' : 'left-1.5 top-2'}
+            hudOffsetClass={
+              tapTogglesChrome
+                ? 'left-1.5 top-[6.75rem]'
+                : replayChrome
+                  ? 'left-1.5 top-14'
+                  : 'left-1.5 top-2'
+            }
             swipeSafe={markupSwipeSafe}
           />
         )}
@@ -861,7 +867,11 @@ function VideoWorkbenchInner({
               </div>
             ) : null}
             {!bare && overlay && (
-              <div className="pointer-events-auto absolute right-2 top-2 z-[35] flex flex-col items-center gap-3">
+              <div
+                className={`pointer-events-auto absolute right-2 z-[35] flex flex-col items-center gap-3 ${
+                  tapTogglesChrome ? 'top-[6.75rem]' : 'top-2'
+                }`}
+              >
                 {hudCorner}
                 <HudCircle
                   label={chromeOpen ? 'Hide' : 'Show'}
