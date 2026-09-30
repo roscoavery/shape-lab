@@ -673,6 +673,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/back-full-spring-floor.mp4',
       watchFor: 'Back full on spring floor.',
     },
+    {
+      who: 'Rylie (athlete)',
+      url: '/videos/ro-hs-full-spring-floor.mp4',
+      watchFor: 'Decent round off handspring full on spring floors preserves set with some asymmetry on take off.',
+    },
   ],
   basics: [
     {
