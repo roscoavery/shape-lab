@@ -196,6 +196,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Back 2.5 through to triple full.',
     },
   ],
+  skl_kick_15: [
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/kick-1-5-to-dub-ryan.mp4',
+      watchFor: 'Kick 1.5 through to double back — Camp TumbleSmart 2024.',
+    },
+  ],
   'kick-double': [
     {
       who: 'Reference',
