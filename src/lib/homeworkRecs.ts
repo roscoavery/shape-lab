@@ -1,5 +1,5 @@
 import type { Athlete, HomeworkItem } from '../types'
-import { addHomeworkItem, createId, loadHomeworkLogs } from './storage'
+import { addHomeworkItem, createId, loadAllHomework, loadHomeworkLogs } from './storage'
 
 export type PracticeRec = {
   id: string
@@ -118,4 +118,50 @@ export function homeworkNudgeCopy(athlete: Athlete): string {
     return `Iso holds are how you stay out of pain. Hollow or Superman for a minute beats skipping.`
   }
   return `Handstand is the skill everything else hangs on. Even a short wall hold today counts.`
+}
+
+export type HoldBenchmarkKey = 'hollow' | 'superman' | 'side_plank' | 'wall_handstand'
+
+export type HoldBenchmark = {
+  autoKey: HoldBenchmarkKey
+  label: string
+  targetSeconds: number
+  bestSeconds: number
+  met: boolean
+}
+
+/**
+ * Ryan's hold benchmarks behind the training nudge: 60s hollow, 60s Superman,
+ * 60s wall handstand, 45s side plank.
+ */
+export const HOLD_BENCHMARKS: {
+  autoKey: HoldBenchmarkKey
+  label: string
+  targetSeconds: number
+}[] = [
+  { autoKey: 'hollow', label: 'Hollow hold', targetSeconds: 60 },
+  { autoKey: 'superman', label: 'Superman', targetSeconds: 60 },
+  { autoKey: 'wall_handstand', label: 'Wall handstand', targetSeconds: 60 },
+  { autoKey: 'side_plank', label: 'Side plank', targetSeconds: 45 },
+]
+
+/** Best logged hold per benchmark hold, from the athlete's auto homework logs. */
+export function holdBenchmarksFor(athleteId: string): HoldBenchmark[] {
+  const homework = loadAllHomework().filter((h) => h.athleteId === athleteId)
+  const keyByHomeworkId = new Map(homework.map((h) => [h.id, h.autoKey]))
+  const logs = loadHomeworkLogs().filter((l) => l.athleteId === athleteId)
+  return HOLD_BENCHMARKS.map((b) => {
+    let best = 0
+    for (const log of logs) {
+      if (keyByHomeworkId.get(log.homeworkId) !== b.autoKey) continue
+      const s = log.totalHoldSeconds ?? 0
+      if (s > best) best = s
+    }
+    return { ...b, bestSeconds: best, met: best >= b.targetSeconds }
+  })
+}
+
+export function formatHoldSeconds(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }

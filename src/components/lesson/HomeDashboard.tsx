@@ -23,6 +23,8 @@ import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { CalendarDesk, happeningNow } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { PracticeNudge } from '../today/PracticeNudge'
+import { BackCheckin } from '../today/BackCheckin'
+import { isRyanAthlete } from '../../lib/ryanProfile'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
 import { EndClassPrompt } from '../today/EndClassPrompt'
@@ -502,6 +504,9 @@ export function HomeDashboard({
             onTrain={() => onShortcut('homework')}
             onReview={() => onShortcut('library')}
           />
+        )}
+        {onShortcut && signedIn && isRyanAthlete(signedIn) && (
+          <BackCheckin athlete={signedIn} onTrain={() => onShortcut('homework')} />
         )}
         {onShortcut && <TodayShortcuts onGo={onShortcut} showStation={false} />}
         {myPlans.length > 0 && profileRole(signedIn) !== 'parent' && (
