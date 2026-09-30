@@ -168,6 +168,12 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       "The twist side spot can be used for fulls, arabians, and doubles. It doesn't work very well with back halves. Generally ends with a safety spot.",
     appliesTo: ['back-full', 'double-full'],
     appliesToNote: 'Also usable for arabians. Not recommended for back halves.',
+    demoVideos: [
+      {
+        url: '/videos/same-side-full-spot-set.mp4',
+        caption: 'Regular same side full spot. Aiming to preserve the set.',
+      },
+    ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:twist-side-spot and it will show up here.',
   },
   {
