@@ -39,6 +39,21 @@ export interface UnifiedSkill {
     | { kind: 'quote'; text: string; source: string }
     | { kind: 'ryan'; text: string }
   )[]
+  /**
+   * Ordered shape variations for the skill, easiest first, Ryan's verbatim.
+   * Rendered as their own card section (e.g. arch and hollow progressions).
+   */
+  shapeVariations?: {
+    intro?: string
+    arch: ShapeVariation[]
+    hollow: ShapeVariation[]
+  }
+}
+
+/** One named step in a shape-variation progression. */
+export interface ShapeVariation {
+  name: string
+  detail?: string
 }
 
 export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
@@ -244,7 +259,39 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "canBend": [
       "Often arrives after the running handspring, not before. That is normal in Ryan’s gym."
     ],
-    "ask": "Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps."
+    "ask": "Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps.",
+    "shapeVariations": {
+      "intro": "Arch variations seem important to understand.",
+      "arch": [
+        { "name": "Tight arch" },
+        { "name": "Bridge" },
+        { "name": "Long bridge" },
+        { "name": "Arch handstand" },
+        { "name": "Superman" }
+      ],
+      "hollow": [
+        {
+          "name": "Zombie",
+          "detail": "Standing, which makes it the easiest hollow."
+        },
+        { "name": "Hollow tucked" },
+        { "name": "Hollow bent knees" },
+        { "name": "Curl up" },
+        { "name": "Mad cat" },
+        { "name": "Elbow plank" },
+        { "name": "Front support" },
+        { "name": "Hollow arms down" },
+        {
+          "name": "Foam roller prone arch to hollow",
+          "detail": "Foam roller elevates the thighs, a couple layers of panel mat elevate the arms overhead. Going from arch to hollow here is hard."
+        },
+        { "name": "Hollow arms up" },
+        {
+          "name": "Supine hollow, hands pinned",
+          "detail": "Flip the athlete onto their back and put their hands under a big mat to hold them down; the foam roller elevates the middle to lower butt. Under the tailbone makes it harder. The athlete maintains open hips while pulling the ribs and low back toward the ground and lifting the toes in line with the hips and ribs."
+        }
+      ]
+    }
   },
   {
     "id": "skl_angle_back_handspring",

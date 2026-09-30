@@ -1445,6 +1445,46 @@ function GuideTabContent({
       <div data-card-section="shapes" className="scroll-mt-4">
         <ShapeStrip guideId={guideId} />
       </div>
+      {skill.shapeVariations && (
+        <div data-card-section="shape-variations" className="scroll-mt-4">
+          <Label>Arch and hollow variations</Label>
+          {skill.shapeVariations.intro && (
+            <p className="mt-1 text-sm">{skill.shapeVariations.intro}</p>
+          )}
+          <div className="mt-2 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-60">
+                Arch, easiest first
+              </p>
+              <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm">
+                {skill.shapeVariations.arch.map((v) => (
+                  <li key={v.name}>
+                    <span className="font-semibold">{v.name}</span>
+                    {v.detail && (
+                      <span className="block text-xs opacity-70">{v.detail}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-60">
+                Hollow, easiest first
+              </p>
+              <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm">
+                {skill.shapeVariations.hollow.map((v) => (
+                  <li key={v.name}>
+                    <span className="font-semibold">{v.name}</span>
+                    {v.detail && (
+                      <span className="block text-xs opacity-70">{v.detail}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
       <div data-card-section="proof" className="scroll-mt-4">
         <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
       </div>
