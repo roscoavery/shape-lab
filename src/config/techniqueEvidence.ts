@@ -124,6 +124,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/rileyanne-kick-full.mp4',
       watchFor: 'Kick full on the tumble track.',
     },
+    {
+      who: 'Drill',
+      url: '/videos/gainer-quarter-drill-twisting.mp4',
+      watchFor: 'Gainer 1/4 drill for twisting.',
+    },
   ],
   'double-full': [
     {
@@ -590,6 +595,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/standing-full-reference.mp4',
       watchFor: 'Standing full reference.',
+    },
+    {
+      who: 'Drill',
+      url: '/videos/gainer-quarter-drill-twisting.mp4',
+      watchFor: 'Gainer 1/4 drill for twisting.',
     },
   ],
   basics: [
