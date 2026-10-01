@@ -883,10 +883,7 @@ function VideoWorkbenchInner({
         onPointerUp={onTapUp}
         onPointerCancel={onGestureCancel}
         onContextMenu={(e) => e.preventDefault()}
-        className={`relative min-h-0 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] ${
-          // Fullscreen: the browser must never steal the gesture mid-scrub.
-          fill ? '[touch-action:none]' : '[touch-action:pan-y]'
-        } ${
+        className={`relative min-h-0 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [touch-action:pan-y] ${
           fill ? 'h-full w-full flex-1' : overlay ? 'rounded-lg' : 'rounded-lg border border-[var(--panel-border)]'
         }`}
       >

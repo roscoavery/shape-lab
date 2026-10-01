@@ -609,7 +609,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
       ) : (
         <div
           ref={rootRef}
-          className="h-[min(78dvh,760px)] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-2xl border border-[var(--panel-border)] bg-black"
+          className="h-[min(78dvh,760px)] overflow-y-auto overscroll-contain rounded-2xl border border-[var(--panel-border)] bg-black"
         >
           {visible.map((clip, i) => (
             <FeedArticle
