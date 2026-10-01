@@ -22,6 +22,7 @@ import {
   useAdjustment,
   useVideoAdjustmentsOptional,
   type SlowMoSegment,
+  type TextOverlay,
   type VideoAdjustment,
   type VideoCrop,
 } from '../../lib/videoAdjustments'
@@ -48,6 +49,8 @@ type DraftAdj = {
   trimEnd: number | null
   crop: VideoCrop | null
   slowMo: SlowMoSegment[]
+  mirrored: boolean
+  textOverlays: TextOverlay[]
 }
 
 function draftFrom(saved: VideoAdjustment | null): DraftAdj {
@@ -56,11 +59,33 @@ function draftFrom(saved: VideoAdjustment | null): DraftAdj {
     trimEnd: saved?.trimEnd ?? null,
     crop: saved?.crop ? { ...saved.crop } : null,
     slowMo: (saved?.slowMo ?? []).map((s) => ({ ...s })),
+    mirrored: saved?.mirrored ?? false,
+    textOverlays: (saved?.textOverlays ?? []).map((o) => ({ ...o })),
   }
 }
 
 function isEmptyDraft(d: DraftAdj): boolean {
-  return d.trimStart == null && d.trimEnd == null && d.crop == null && d.slowMo.length === 0
+  return (
+    d.trimStart == null &&
+    d.trimEnd == null &&
+    d.crop == null &&
+    d.slowMo.length === 0 &&
+    !d.mirrored &&
+    d.textOverlays.length === 0
+  )
+}
+
+/** True when a saved adjustment has any visible effect (used for the badge). */
+function hasVisibleEffect(a: VideoAdjustment | null): boolean {
+  if (!a) return false
+  return (
+    a.trimStart != null ||
+    a.trimEnd != null ||
+    a.crop != null ||
+    a.slowMo.length > 0 ||
+    a.mirrored ||
+    a.textOverlays.length > 0
+  )
 }
 
 /**
@@ -160,7 +185,7 @@ function CropOverlay({
   )
 }
 
-/** Adjust panel: trim, crop, and slow-motion segments for one video. */
+/** Adjust panel: trim, crop, slow-motion, text, and mirror for one video. */
 function AdjustPanel({
   draft,
   onDraft,
@@ -169,8 +194,11 @@ function AdjustPanel({
   scrubTo,
   onSave,
   onReset,
+  onDelete,
+  onUnhide,
   onCancel,
   hasSaved,
+  isHidden,
   tab,
   onTab,
 }: {
@@ -181,14 +209,20 @@ function AdjustPanel({
   scrubTo: (t: number) => void
   onSave: () => void
   onReset: () => void
+  onDelete: () => void
+  onUnhide: () => void
   onCancel: () => void
   hasSaved: boolean
-  tab: 'trim' | 'crop' | 'slowmo'
-  onTab: (t: 'trim' | 'crop' | 'slowmo') => void
+  isHidden: boolean
+  tab: 'trim' | 'crop' | 'slowmo' | 'text'
+  onTab: (t: 'trim' | 'crop' | 'slowmo' | 'text') => void
 }) {
   const [smRate, setSmRate] = useState<(typeof SM_RATES)[number]>(0.5)
   const [smStart, setSmStart] = useState<number | null>(null)
+  const [textInput, setTextInput] = useState('')
+  const [textStart, setTextStart] = useState<number | null>(null)
   const adjApi = useVideoAdjustmentsOptional()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const btn = 'rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white'
   const tabBtn = (active: boolean) =>
@@ -218,10 +252,23 @@ function AdjustPanel({
     setSmStart(null)
   }
 
+  const addTextOverlay = () => {
+    const text = textInput.trim().slice(0, 140)
+    if (!text || textStart == null) return
+    const end = Math.round(now * 100) / 100
+    if (end <= textStart) return
+    onDraft({
+      ...draft,
+      textOverlays: [...draft.textOverlays, { text, start: textStart, end }].sort((a, b) => a.start - b.start),
+    })
+    setTextInput('')
+    setTextStart(null)
+  }
+
   return (
     <div className="space-y-2 bg-black/90 px-4 py-3" onPointerDown={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => onTab('trim')} className={tabBtn(tab === 'trim')}>
             Trim
           </button>
@@ -230,6 +277,17 @@ function AdjustPanel({
           </button>
           <button type="button" onClick={() => onTab('slowmo')} className={tabBtn(tab === 'slowmo')}>
             Slow-mo
+          </button>
+          <button type="button" onClick={() => onTab('text')} className={tabBtn(tab === 'text')}>
+            Text
+          </button>
+          <button
+            type="button"
+            onClick={() => onDraft({ ...draft, mirrored: !draft.mirrored })}
+            className={draft.mirrored ? 'rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white' : btn}
+            aria-pressed={draft.mirrored}
+          >
+            ⇄ Mirror{draft.mirrored ? ' ✓' : ''}
           </button>
         </div>
         <button type="button" onClick={onCancel} className="rounded-full px-2 py-1.5 text-xs font-bold text-white/60">
@@ -348,6 +406,54 @@ function AdjustPanel({
         </div>
       )}
 
+      {tab === 'text' && (
+        <div className="space-y-2">
+          <p className="text-[11px] text-white/60">
+            Show text over part of the video. Type it, mark start, scrub, mark end.
+          </p>
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder="What should it say?"
+            maxLength={140}
+            className="w-full rounded-xl bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setTextStart(Math.round(now * 100) / 100)} className={btn}>
+              Mark start {textStart != null ? `(${fmt(textStart)})` : ''}
+            </button>
+            <button
+              type="button"
+              onClick={addTextOverlay}
+              disabled={!textInput.trim() || textStart == null}
+              className={`${btn} disabled:opacity-40`}
+            >
+              Mark end & add
+            </button>
+          </div>
+          {draft.textOverlays.length > 0 && (
+            <div className="space-y-1">
+              {draft.textOverlays.map((o, i) => (
+                <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2 py-1">
+                  <span className="min-w-0 flex-1 truncate text-xs text-white/80">
+                    “{o.text}” <span className="text-white/50 tabular-nums">{fmt(o.start)} – {fmt(o.end)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDraft({ ...draft, textOverlays: draft.textOverlays.filter((_, j) => j !== i) })}
+                    className="shrink-0 px-2 py-0.5 text-xs font-bold text-red-400"
+                    aria-label="Remove text overlay"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 pt-1">
         <button
           type="button"
@@ -363,9 +469,30 @@ function AdjustPanel({
           </button>
         )}
       </div>
-      <p className="text-[10px] text-white/40">
-        Saved per video. Applies everywhere this video plays. Original file untouched.
-      </p>
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[10px] text-white/40">
+          Saved per video. Applies everywhere this video plays. Original file untouched.
+        </p>
+        {isHidden ? (
+          <button type="button" onClick={onUnhide} className="text-xs font-bold text-emerald-300">
+            Unhide video
+          </button>
+        ) : confirmDelete ? (
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-white/60">Hide this video everywhere?</span>
+            <button type="button" onClick={onDelete} className="text-xs font-bold text-red-400">
+              Yes, hide it
+            </button>
+            <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs font-bold text-white/60">
+              Keep it
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className="text-xs font-bold text-red-400/80">
+            Delete video
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -388,7 +515,7 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
   const [loopA, setLoopA] = useState<number | null>(null)
   const [loopB, setLoopB] = useState<number | null>(null)
   const [adjusting, setAdjusting] = useState(false)
-  const [adjustTab, setAdjustTab] = useState<'trim' | 'crop' | 'slowmo'>('trim')
+  const [adjustTab, setAdjustTab] = useState<'trim' | 'crop' | 'slowmo' | 'text'>('trim')
   const [draft, setDraft] = useState<DraftAdj | null>(null)
 
   // The adjustments in effect: the working draft while adjusting, else saved.
@@ -487,14 +614,29 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
     setAdjusting(false)
   }
   const saveAdjust = () => {
-    if (draft && adjApi) adjApi.save(url, draft)
+    if (draft && adjApi) {
+      // Hidden is managed by the Delete/Unhide actions, not the draft —
+      // preserve whatever the saved record has.
+      adjApi.save(url, { ...draft, hidden: savedAdj?.hidden === true })
+    }
     setDraft(null)
     setAdjusting(false)
   }
   const resetAdjust = () => {
     adjApi?.clear(url)
-    setDraft({ trimStart: null, trimEnd: null, crop: null, slowMo: [] })
+    setDraft({ trimStart: null, trimEnd: null, crop: null, slowMo: [], mirrored: false, textOverlays: [] })
     setAdjusting(false)
+  }
+  const deleteVideo = () => {
+    if (!adjApi) return
+    const base = draftFrom(savedAdj)
+    adjApi.save(url, { ...base, hidden: true })
+    setDraft(null)
+    setAdjusting(false)
+  }
+  const unhideVideo = () => {
+    if (!adjApi || !savedAdj) return
+    adjApi.save(url, { ...draftFrom(savedAdj), hidden: false })
   }
 
   const crop = active.crop
@@ -504,6 +646,8 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
         transform: `scale(${1 / crop.w}, ${1 / crop.h}) translate(${-crop.x * 100}%, ${-crop.y * 100}%)`,
       }
     : undefined
+  const mirrored = active.mirrored || flipped
+  const visibleOverlays = active.textOverlays.filter((o) => now >= o.start && now < o.end)
 
   const btn =
     'rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/20'
@@ -511,7 +655,7 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
   return (
     <div className="flex h-full w-full flex-col">
       <div ref={boxRef} className="relative min-h-0 flex-1 overflow-hidden bg-black">
-        <div className="h-full w-full" style={flipped ? { transform: 'scaleX(-1)' } : undefined}>
+        <div className="h-full w-full" style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={ref}
@@ -529,6 +673,19 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
             onEnded={handleEnded}
           />
         </div>
+        {/* Text overlays sit above the mirror so they always read normally. */}
+        {visibleOverlays.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex flex-col items-center gap-1 px-6">
+            {visibleOverlays.map((o, i) => (
+              <div
+                key={i}
+                className="rounded-lg bg-black/65 px-3 py-1.5 text-center text-sm font-bold text-white"
+              >
+                {o.text}
+              </div>
+            ))}
+          </div>
+        )}
         {adjusting && adjustTab === 'crop' && (
           <CropOverlay
             boxRef={boxRef}
@@ -553,8 +710,11 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
           scrubTo={scrubTo}
           onSave={saveAdjust}
           onReset={resetAdjust}
+          onDelete={deleteVideo}
+          onUnhide={unhideVideo}
           onCancel={cancelAdjust}
           hasSaved={savedAdj != null}
+          isHidden={savedAdj?.hidden === true}
           tab={adjustTab}
           onTab={setAdjustTab}
         />
@@ -635,7 +795,7 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
                 Loops {loopA != null ? fmt(loopA) : '0:00'}–{loopB != null ? fmt(loopB) : 'end'}
               </span>
             )}
-            {savedAdj && (savedAdj.trimStart != null || savedAdj.trimEnd != null || savedAdj.crop || savedAdj.slowMo.length > 0) && (
+            {hasVisibleEffect(savedAdj) && (
               <span className="rounded-full bg-emerald-600/25 px-2 py-0.5 font-bold text-emerald-300">
                 Adjusted ✓
               </span>
@@ -665,6 +825,7 @@ export function ProofFullscreenPlayer({
   // clean; any tap brings it back for a few seconds.
   const [chromeVisible, setChromeVisible] = useState(true)
   const idleTimer = useRef<number | null>(null)
+  const adjApi = useVideoAdjustmentsOptional()
   const pokeChrome = useCallback(() => {
     setChromeVisible(true)
     if (idleTimer.current) window.clearTimeout(idleTimer.current)
@@ -680,6 +841,21 @@ export function ProofFullscreenPlayer({
   const video = videos[index]
   const local = video ? isLocalVideo(video.url) : false
   const youTube = video ? !!youtubeEmbedSrc(video.url) : false
+  const videoHidden = video ? adjApi?.get(video.url)?.hidden === true : false
+  const unhide = () => {
+    if (!video || !adjApi) return
+    const saved = adjApi.get(video.url)
+    if (!saved) return
+    adjApi.save(video.url, {
+      trimStart: saved.trimStart,
+      trimEnd: saved.trimEnd,
+      crop: saved.crop,
+      slowMo: saved.slowMo,
+      mirrored: saved.mirrored,
+      textOverlays: saved.textOverlays,
+      hidden: false,
+    })
+  }
 
   // Try real browser fullscreen on open (needs the tap gesture — we get one).
   useEffect(() => {
@@ -800,6 +976,15 @@ export function ProofFullscreenPlayer({
       <div className={`px-4 py-3 text-center ${chromeCls}`}>
         <div className="text-sm font-bold text-white">{video.who}</div>
         {video.watchFor && <div className="mx-auto mt-0.5 max-w-xl text-xs text-white/70">{video.watchFor}</div>}
+        {videoHidden && (
+          <button
+            type="button"
+            onClick={unhide}
+            className="mt-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white"
+          >
+            Unhide this video
+          </button>
+        )}
         {youTube && (
           <div className="mt-1 text-[11px] text-white/40">
             Plays in YouTube's player with YouTube's controls.

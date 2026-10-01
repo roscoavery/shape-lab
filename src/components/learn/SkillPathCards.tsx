@@ -55,6 +55,7 @@ import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
 import { InlineVideo } from './InlineVideo'
 import { markedFetch } from '../../lib/authSession'
 import { shareBaseUrl } from '../../lib/gymLink'
+import { useVideoAdjustmentsOptional } from '../../lib/videoAdjustments'
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -370,13 +371,16 @@ export function ProofStrip({
 
   const hiddenSet = new Set(hiddenUrls)
   const pinSet = new Set(pinnedUrls)
+  const adjApi = useVideoAdjustmentsOptional()
+  // Videos hidden via Adjust mode are excluded from the card entirely.
+  const isAdjHidden = (url: string) => adjApi?.get(url)?.hidden === true
   // Featured reference (e.g. Ryan's spring layout analysis on the layout
   // card): shown bigger at the top, excluded from the strip below.
   const featured = FEATURED_PROOF[evidenceKey]
   const featuredYouTube = featured ? youtubeEmbedSrc(featured.url) : null
   const videos = [
-    ...baseVideos.filter((v) => !hiddenSet.has(v.url) && v.url !== featured?.url),
-    ...adminVideos,
+    ...baseVideos.filter((v) => !hiddenSet.has(v.url) && v.url !== featured?.url && !isAdjHidden(v.url)),
+    ...adminVideos.filter((v) => !isAdjHidden(v.url)),
   ]
   // Pinned videos render above everything else in a bigger player.
   const pinnedVideos = videos.filter((v) => pinSet.has(v.url))
@@ -574,7 +578,7 @@ export function ProofStrip({
           })}
         </div>
       )}
-      {featured && (
+      {featured && !isAdjHidden(featured.url) && (
         <div className="mb-3 mt-2">
           <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
             Featured reference
@@ -737,13 +741,13 @@ export function ProofStrip({
             className="flex w-full items-center justify-between rounded-lg bg-neutral-800/60 px-3 py-2 text-left"
           >
             <span className="text-xs font-bold text-white/80">
-              More from the reference library ({refMatches.length})
+              More from the reference library ({refMatches.filter((v) => !isAdjHidden(v.url)).length})
             </span>
             <span className="text-xs text-white/40">{showRefs ? '▾' : '▸'}</span>
           </button>
           {showRefs && (
             <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
-              {refMatches.map((v) => {
+              {refMatches.filter((v) => !isAdjHidden(v.url)).map((v) => {
                 const local = isLocalVideo(v.url)
                 return (
                   <div key={v.url} className="w-48 shrink-0">

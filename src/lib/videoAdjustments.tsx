@@ -33,17 +33,26 @@ export type SlowMoSegment = {
   rate: number
 }
 
+export type TextOverlay = {
+  text: string
+  start: number
+  end: number
+}
+
 export type VideoAdjustment = {
   trimStart: number | null
   trimEnd: number | null
   crop: VideoCrop | null
   slowMo: SlowMoSegment[]
+  mirrored: boolean
+  textOverlays: TextOverlay[]
+  hidden: boolean
   updatedAt: string
 }
 
 type AdjustmentsFile = {
   kind: 'shape-lab-video-adjustments'
-  version: 1
+  version: 2
   exportedAt: string
   adjustments: Record<string, VideoAdjustment>
 }
@@ -82,12 +91,35 @@ function normalizeAdjustment(value: unknown): VideoAdjustment | null {
         }))
         .filter((s) => Number.isFinite(s.start) && Number.isFinite(s.end) && s.end > s.start && s.rate > 0 && s.rate <= 1)
     : []
-  if (trimStart == null && trimEnd == null && crop == null && slowMo.length === 0) return null
+  const textOverlays = Array.isArray(raw.textOverlays)
+    ? raw.textOverlays
+        .map((o) => ({
+          text: String((o as TextOverlay).text ?? '').slice(0, 140),
+          start: Number((o as TextOverlay).start),
+          end: Number((o as TextOverlay).end),
+        }))
+        .filter((o) => o.text.length > 0 && Number.isFinite(o.start) && Number.isFinite(o.end) && o.end > o.start)
+    : []
+  const mirrored = raw.mirrored === true
+  const hidden = raw.hidden === true
+  if (
+    trimStart == null &&
+    trimEnd == null &&
+    crop == null &&
+    slowMo.length === 0 &&
+    !mirrored &&
+    textOverlays.length === 0 &&
+    !hidden
+  )
+    return null
   return {
     trimStart,
     trimEnd,
     crop,
     slowMo,
+    mirrored,
+    textOverlays,
+    hidden,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
   }
 }
@@ -129,7 +161,7 @@ export function VideoAdjustmentsProvider({ children }: { children: ReactNode }) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'shape-lab-video-adjustments',
-          version: 1,
+          version: 2,
           exportedAt: new Date().toISOString(),
           adjustments: next,
         }),

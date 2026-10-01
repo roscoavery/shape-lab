@@ -22,6 +22,7 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { InlineVideo } from './InlineVideo'
 import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
+import { useVideoAdjustmentsOptional } from '../../lib/videoAdjustments'
 
 type View = 'methods' | 'skills'
 
@@ -73,14 +74,16 @@ function MethodCard({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [fsIndex, setFsIndex] = useState<number | null>(null)
+  const adjApi = useVideoAdjustmentsOptional()
   const skillNames = method.appliesTo
     .map((id) => getSpottingSkill(id)?.name ?? id)
     .filter(Boolean)
   // Demo videos as fullscreen-player entries, in display order.
+  // Videos hidden via Adjust mode are excluded from the card.
   const demos: { url: string; caption: string }[] = [
     ...(method.demoVideo ? [method.demoVideo] : []),
     ...(method.demoVideos ?? []),
-  ]
+  ].filter((d) => adjApi?.get(d.url)?.hidden !== true)
   const proofVideos: ProofVideo[] = demos.map((d) => ({
     who: method.name,
     url: d.url,

@@ -24,24 +24,33 @@ export type SlowMoSegment = {
   rate: number
 }
 
+export type TextOverlay = {
+  text: string
+  start: number
+  end: number
+}
+
 export type VideoAdjustment = {
   trimStart: number | null
   trimEnd: number | null
   crop: VideoCrop | null
   slowMo: SlowMoSegment[]
+  mirrored: boolean
+  textOverlays: TextOverlay[]
+  hidden: boolean
   updatedAt: string
 }
 
 export type DiskVideoAdjustments = {
   kind: 'shape-lab-video-adjustments'
-  version: 1
+  version: 2
   exportedAt: string
   adjustments: Record<string, VideoAdjustment>
 }
 
 const EMPTY: DiskVideoAdjustments = {
   kind: 'shape-lab-video-adjustments',
-  version: 1,
+  version: 2,
   exportedAt: '',
   adjustments: {},
 }
@@ -70,6 +79,17 @@ function cleanSlowMo(raw: unknown): SlowMoSegment | null {
   return { start, end, rate }
 }
 
+function cleanTextOverlay(raw: unknown): TextOverlay | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as TextOverlay
+  const text = String(o.text ?? '').slice(0, 140)
+  const start = Number(o.start)
+  const end = Number(o.end)
+  if (text.length === 0) return null
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null
+  return { text, start, end }
+}
+
 export function normalizeAdjustment(value: unknown): VideoAdjustment | null {
   if (!value || typeof value !== 'object') return null
   const raw = value as VideoAdjustment
@@ -81,13 +101,30 @@ export function normalizeAdjustment(value: unknown): VideoAdjustment | null {
   const slowMo = Array.isArray(raw.slowMo)
     ? raw.slowMo.map(cleanSlowMo).filter((s): s is SlowMoSegment => Boolean(s))
     : []
+  const textOverlays = Array.isArray(raw.textOverlays)
+    ? raw.textOverlays.map(cleanTextOverlay).filter((o): o is TextOverlay => Boolean(o))
+    : []
   const crop = cleanCrop(raw.crop)
-  if (trimStart == null && trimEnd == null && crop == null && slowMo.length === 0) return null
+  const mirrored = raw.mirrored === true
+  const hidden = raw.hidden === true
+  if (
+    trimStart == null &&
+    trimEnd == null &&
+    crop == null &&
+    slowMo.length === 0 &&
+    !mirrored &&
+    textOverlays.length === 0 &&
+    !hidden
+  )
+    return null
   return {
     trimStart,
     trimEnd,
     crop,
     slowMo,
+    mirrored,
+    textOverlays,
+    hidden,
     updatedAt:
       typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
   }
@@ -130,7 +167,7 @@ export async function writeVideoAdjustmentsFile(data: unknown): Promise<DiskVide
   }
   const next: DiskVideoAdjustments = {
     kind: 'shape-lab-video-adjustments',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     adjustments,
   }

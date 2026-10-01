@@ -12,6 +12,7 @@
  * and while scrubbing); double-tap toggles between 1x and 2x.
  */
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useAdjustment } from '../../lib/videoAdjustments'
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 4
@@ -36,6 +37,22 @@ export function InlineVideo({
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [scale, setScale] = useState(1)
+  const adj = useAdjustment(url)
+  const trimStart = adj?.trimStart ?? null
+  const trimEnd = adj?.trimEnd ?? null
+  // Effective loop window: session A/B loop intersected with the saved trim.
+  const lo = Math.max(loopA ?? 0, trimStart ?? 0)
+  const hiRaw = Math.min(loopB ?? Infinity, trimEnd ?? Infinity)
+  const hi = Number.isFinite(hiRaw) ? hiRaw : null
+  const crop = adj?.crop ?? null
+  const mirrored = adj?.mirrored === true
+  const cropStyle: React.CSSProperties | undefined = crop
+    ? {
+        transformOrigin: '0 0',
+        transform: `scale(${1 / crop.w}, ${1 / crop.h}) translate(${-crop.x * 100}%, ${-crop.y * 100}%)`,
+      }
+    : undefined
+  const visibleOverlays = (adj?.textOverlays ?? []).filter((o) => time >= o.start && time < o.end)
   const hideTimer = useRef<number | null>(null)
   const tapRef = useRef<{ x: number; y: number; t: number } | null>(null)
   const lastTapRef = useRef<{ x: number; y: number; t: number } | null>(null)
@@ -227,43 +244,86 @@ export function InlineVideo({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerEnd}
     >
-      <video
-        ref={ref}
-        src={url}
-        playsInline
-        muted
-        loop={loopA == null && loopB == null}
-        preload="metadata"
-        // pan-x AND pan-y: a swipe that starts on the video must still drive
-        // the surrounding scroller (skill-card reference carousel, card
-        // vertical scroll). Taps still reach the pointer handlers below, and
-        // the scrub strip is its own element, so play/pause and scrubbing
-        // are unaffected.
-        className="h-full w-full object-contain [touch-action:pan-x_pan-y]"
-        style={{ transform: `scale(${scale})` }}
-        onPlay={() => {
-          setPlaying(true)
-          // Hide the whole chrome the moment playback starts: buttons and
-          // scrub bar vanish together, leaving only the slim progress line.
-          setChromeOpen(false)
-          clearHideTimer()
-        }}
-        onPause={() => {
-          setPlaying(false)
-          clearHideTimer()
-          setChromeOpen(true)
-        }}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-        onTimeUpdate={(e) => {
-          const v = e.currentTarget
-          if (loopA != null && v.currentTime < loopA) v.currentTime = loopA
-          if (loopB != null && v.currentTime >= loopB) {
-            v.currentTime = loopA ?? 0
-            v.play().catch(() => {})
-          }
-          setTime(v.currentTime)
-        }}
-      />
+      <div className="h-full w-full" style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
+        <div className="h-full w-full" style={cropStyle}>
+          <video
+            ref={ref}
+            src={url}
+            playsInline
+            muted
+            loop={hi == null}
+            preload="metadata"
+            // pan-x AND pan-y: a swipe that starts on the video must still drive
+            // the surrounding scroller (skill-card reference carousel, card
+            // vertical scroll). Taps still reach the pointer handlers below, and
+            // the scrub strip is its own element, so play/pause and scrubbing
+            // are unaffected.
+            className="h-full w-full object-contain [touch-action:pan-x_pan-y]"
+            style={{ transform: `scale(${scale})` }}
+            onPlay={() => {
+              setPlaying(true)
+              // Hide the whole chrome the moment playback starts: buttons and
+              // scrub bar vanish together, leaving only the slim progress line.
+              setChromeOpen(false)
+              clearHideTimer()
+            }}
+            onPause={() => {
+              setPlaying(false)
+              clearHideTimer()
+              setChromeOpen(true)
+            }}
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget
+              const d = v.duration || 0
+              setDuration(d)
+              // Start inside the trim window when one is saved.
+              if (trimStart != null && trimStart > 0 && trimStart < d) {
+                v.currentTime = trimStart
+                setTime(trimStart)
+              }
+            }}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget
+              const t = v.currentTime
+              // Saved trim + session A/B loop share one effective window.
+              if (trimStart != null && t < trimStart - 0.05) {
+                v.currentTime = trimStart
+                setTime(trimStart)
+                return
+              }
+              if (hi != null && t >= hi - 0.03) {
+                v.currentTime = lo
+                setTime(lo)
+                if (v.paused) v.play().catch(() => {})
+                return
+              }
+              if (t < lo) {
+                v.currentTime = lo
+                setTime(lo)
+                return
+              }
+              // Saved slow-motion segments drive the rate while inside one.
+              const seg = adj?.slowMo.find((s) => t >= s.start && t < s.end)
+              const target = seg ? seg.rate : 1
+              if (v.playbackRate !== target) v.playbackRate = target
+              setTime(t)
+            }}
+          />
+        </div>
+      </div>
+      {/* Text overlays: above mirror/crop so they always read normally. */}
+      {visibleOverlays.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-1 px-4">
+          {visibleOverlays.map((o, i) => (
+            <div
+              key={i}
+              className="rounded-lg bg-black/65 px-3 py-1 text-center text-xs font-bold text-white"
+            >
+              {o.text}
+            </div>
+          ))}
+        </div>
+      )}
       {chromeOpen && (
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between bg-black/25">
           {scale > MIN_ZOOM && (
