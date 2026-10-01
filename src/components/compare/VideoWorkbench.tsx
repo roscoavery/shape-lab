@@ -184,20 +184,22 @@ function VideoWorkbenchInner({
   // left alone, and swipes (reel scroll, scrub) exceed the movement budget.
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
   // Gesture recognizer for fullscreen reels:
-  // - Single tap: toggle play/pause (+ chrome if tapTogglesChrome)
-  // - Double tap: toggle 0.25x slo-mo (double tap again for full speed)
-  // - Tap and hold: freeze while held, resume on release
-  // - Tap, hold, and drag: scrub from the playhead
+  // - Single tap: show/hide controls only (no play/pause on tap).
+  // - Tap and hold: pauses the video; while held, drag horizontally to scrub
+  //   the paused video; release resumes playback (if it was playing).
   const gestureRef = useRef<{
     x: number
     y: number
     t: number
     holdTimer: ReturnType<typeof setTimeout> | null
     holding: boolean
-    scrubbing: boolean
     wasPlaying: boolean
-    lastTap: number
+    scrubAnchorX: number
+    scrubAnchorT: number
+    pointerId: number
   } | null>(null)
+
+  const HOLD_MS = 400
 
   const onGestureDown = useCallback(
     (e: PointerEvent) => {
@@ -205,121 +207,106 @@ function VideoWorkbenchInner({
       if (target?.closest('button, a, input, select, textarea')) return
       // Kill iOS long-press magnifier / text selection.
       e.preventDefault()
-      const now = Date.now()
-      const g = gestureRef.current
-      // Double tap detection: second tap within 300ms.
-      if (g && now - g.lastTap < 300 && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 30) {
-        if (g.holdTimer) clearTimeout(g.holdTimer)
-        gestureRef.current = null
-        // Double tap: toggle slo-mo.
-        const v = videoRef.current
-        if (v) {
-          const toSlow = v.playbackRate !== 0.25
-          v.playbackRate = toSlow ? 0.25 : 1
-          setSpeed(toSlow ? 0.25 : 1)
-        }
-        return
+      // Capture the pointer so drags keep firing even if the finger drifts
+      // off the frame.
+      try {
+        frameRef.current?.setPointerCapture(e.pointerId)
+      } catch {
+        /* noop */
       }
       const v = videoRef.current
-      gestureRef.current = {
+      const g = {
         x: e.clientX,
         y: e.clientY,
-        t: now,
-        holdTimer: null,
+        t: Date.now(),
+        holdTimer: null as ReturnType<typeof setTimeout> | null,
         holding: false,
-        scrubbing: false,
         wasPlaying: v ? !v.paused : false,
-        lastTap: g?.lastTap ?? 0,
+        scrubAnchorX: e.clientX,
+        scrubAnchorT: v ? v.currentTime : 0,
+        pointerId: e.pointerId,
       }
-      const cur = gestureRef.current
-      // Hold threshold: 500ms without significant movement = freeze.
-      cur.holdTimer = setTimeout(() => {
+      gestureRef.current = g
+      // Hold threshold: pause the video and enter scrub mode.
+      g.holdTimer = setTimeout(() => {
         const gg = gestureRef.current
-        if (!gg || gg.scrubbing) return
+        if (!gg || gg.pointerId !== e.pointerId) return
         gg.holding = true
         const vv = videoRef.current
-        if (vv && !vv.paused) {
-          vv.pause()
-          setPlaying(false)
+        if (vv) {
+          // Anchor the scrub to the playhead at the moment the hold engages.
+          gg.scrubAnchorX = e.clientX
+          gg.scrubAnchorT = vv.currentTime
+          if (!vv.paused) {
+            vv.pause()
+            setPlaying(false)
+          }
         }
-      }, 500)
-      if (tapTogglesChrome) tapStartRef.current = { x: e.clientX, y: e.clientY, t: now }
+      }, HOLD_MS)
+      if (tapTogglesChrome) tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
     },
     [tapTogglesChrome],
   )
 
   const onGestureMove = useCallback((e: PointerEvent) => {
     const g = gestureRef.current
-    if (!g || !g.holding) {
-      // Check if we've moved enough to cancel the hold timer (it's a swipe, not a hold).
-      if (g && g.holdTimer && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 14) {
+    if (!g || e.pointerId !== g.pointerId) return
+    const moved = Math.hypot(e.clientX - g.x, e.clientY - g.y)
+    if (!g.holding) {
+      // Before the hold engages, a real swipe cancels it (it's a scroll, not a hold).
+      if (g.holdTimer && moved > 14) {
         clearTimeout(g.holdTimer)
         g.holdTimer = null
       }
       return
     }
-    // We're in hold mode and moving: switch to scrub.
-    const dx = e.clientX - g.x
-    if (Math.abs(dx) > 10 && !g.scrubbing) {
-      g.scrubbing = true
+    // Holding: horizontal drag scrubs the paused video.
+    const v = videoRef.current
+    const frame = frameRef.current
+    if (v && v.duration && frame) {
+      const w = frame.clientWidth || 1
+      const t = g.scrubAnchorT + ((e.clientX - g.scrubAnchorX) / w) * v.duration
+      v.currentTime = Math.max(0, Math.min(v.duration, t))
     }
-    if (g.scrubbing) {
-      const v = videoRef.current
-      if (v && v.duration) {
-        // Scrub: full width = full duration.
-        const frame = frameRef.current
-        const w = frame?.clientWidth || 300
-        // Anchor the scrub to where the hold started.
-        if ((g as any).scrubStart == null) {
-          ;(g as any).scrubStart = v.currentTime
-          ;(g as any).scrubX = g.x
-        }
-        const startT = (g as any).scrubStart as number
-        const startX = (g as any).scrubX as number
-        v.currentTime = Math.max(0, Math.min(v.duration, startT + ((e.clientX - startX) / w) * v.duration))
-      }
-      e.preventDefault()
-    }
+    e.preventDefault()
   }, [])
 
   const onGestureUp = useCallback(
     (e: PointerEvent) => {
       const g = gestureRef.current
+      if (g && e.pointerId !== g.pointerId) return
       gestureRef.current = null
       if (g?.holdTimer) clearTimeout(g.holdTimer)
+      try {
+        if (g && frameRef.current?.hasPointerCapture(g.pointerId)) {
+          frameRef.current.releasePointerCapture(g.pointerId)
+        }
+      } catch {
+        /* noop */
+      }
       const target = e.target as HTMLElement | null
       if (g?.holding) {
-        // Was holding (freeze or scrub): resume if it was playing.
-        if (!g.scrubbing && g.wasPlaying) {
+        // Release after hold/scrub: resume playback if it was playing.
+        if (g.wasPlaying) {
           const v = videoRef.current
           if (v) {
             void v.play()
             setPlaying(true)
           }
         }
-        if (g.scrubbing) {
-          // After scrub, stay paused so the coach can inspect the frame.
-          const v = videoRef.current
-          if (v) {
-            v.pause()
-            setPlaying(false)
-          }
-        }
         tapStartRef.current = null
         return
       }
-      // Not a hold: single tap (if quick and didn't move much).
-      if (g && Math.hypot(e.clientX - g.x, e.clientY - g.y) <= 14 && Date.now() - g.t <= 500) {
+      // Single tap: show/hide controls only.
+      if (
+        tapTogglesChrome &&
+        g &&
+        Math.hypot(e.clientX - g.x, e.clientY - g.y) <= 14 &&
+        Date.now() - g.t <= 500
+      ) {
         if (!target?.closest('button, a, input, select, textarea') && target?.closest('video')) {
-          togglePlay()
-          if (tapTogglesChrome) toggleChrome()
+          toggleChrome()
         }
-        // Record for double-tap detection.
-        gestureRef.current = { ...g, lastTap: Date.now(), holdTimer: null, holding: false, scrubbing: false, wasPlaying: false, x: e.clientX, y: e.clientY, t: Date.now() }
-        // Clear the stale record after the double-tap window.
-        setTimeout(() => {
-          if (gestureRef.current && Date.now() - gestureRef.current.lastTap >= 300) gestureRef.current = null
-        }, 350)
       }
       tapStartRef.current = null
     },
