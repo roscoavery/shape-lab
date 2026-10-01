@@ -91,6 +91,7 @@ import { NetworkPanel } from './components/network/NetworkPanel'
 import { ResearchPanel } from './components/research/ResearchPanel'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
+import { VideoAdjustmentsProvider } from './lib/videoAdjustments'
 import { FavoritesProvider } from './lib/favorites'
 import { ProfilePeekProvider } from './components/ProfilePeekContext'
 import type { IgCropDraft } from './components/compare/IgStillContext'
@@ -991,6 +992,7 @@ export default function App() {
     <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
     <ClipEditProvider viewer={activeProfile} athletes={athletes}>
     <ClipLoopsProvider>
+    <VideoAdjustmentsProvider>
     <FavoritesProvider>
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
@@ -2308,6 +2310,7 @@ export default function App() {
     )}
     </ProfilePeekProvider>
     </FavoritesProvider>
+    </VideoAdjustmentsProvider>
     </ClipLoopsProvider>
     </ClipEditProvider>
     </GymLibraryProvider>

@@ -16,10 +16,12 @@ import {
   type SpottingMethod,
   type SpottingSkill,
 } from '../../config/spotting'
+import type { ProofVideo } from '../../config/techniqueEvidence'
 import { getCollections, type RefItem } from '../../lib/clipStore'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { InlineVideo } from './InlineVideo'
+import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
 
 type View = 'methods' | 'skills'
 
@@ -70,9 +72,20 @@ function MethodCard({
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
+  const [fsIndex, setFsIndex] = useState<number | null>(null)
   const skillNames = method.appliesTo
     .map((id) => getSpottingSkill(id)?.name ?? id)
     .filter(Boolean)
+  // Demo videos as fullscreen-player entries, in display order.
+  const demos: { url: string; caption: string }[] = [
+    ...(method.demoVideo ? [method.demoVideo] : []),
+    ...(method.demoVideos ?? []),
+  ]
+  const proofVideos: ProofVideo[] = demos.map((d) => ({
+    who: method.name,
+    url: d.url,
+    watchFor: d.caption,
+  }))
   return (
     <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-2 text-left">
@@ -133,37 +146,40 @@ function MethodCard({
             </div>
           ) : null}
           <VideoLinks videos={videos} />
-          {method.demoVideo ? (
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
-                Demo video
-              </div>
-              <div className="mt-1 aspect-[9/16] w-full overflow-hidden rounded-xl">
-                <InlineVideo url={method.demoVideo.url} />
-              </div>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
-                {method.demoVideo.caption}
-              </p>
-            </div>
-          ) : null}
-          {method.demoVideos?.map((demo) => (
+          {demos.map((demo, i) => (
             <div key={demo.url}>
               <div className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
                 Demo video
               </div>
-              <div className="mt-1 aspect-[9/16] w-full overflow-hidden rounded-xl">
+              <div className="relative mt-1 aspect-[9/16] w-full overflow-hidden rounded-xl">
                 <InlineVideo url={demo.url} />
+                <button
+                  type="button"
+                  onClick={() => setFsIndex(i)}
+                  className="absolute left-2 top-2 z-20 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold text-white"
+                  aria-label="Open fullscreen player"
+                >
+                  ⤢ Fullscreen
+                </button>
               </div>
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
                 {demo.caption}
               </p>
             </div>
           ))}
-          {videos.length === 0 && !method.demoVideo && method.videoPlaceholder ? (
+          {videos.length === 0 && demos.length === 0 && method.videoPlaceholder ? (
             <p className="text-xs italic text-[var(--muted)]">{method.videoPlaceholder}</p>
           ) : null}
         </div>
       ) : null}
+      {fsIndex != null && proofVideos.length > 0 && (
+        <ProofFullscreenPlayer
+          videos={proofVideos}
+          index={Math.min(fsIndex, proofVideos.length - 1)}
+          onIndex={setFsIndex}
+          onClose={() => setFsIndex(null)}
+        />
+      )}
     </div>
   )
 }

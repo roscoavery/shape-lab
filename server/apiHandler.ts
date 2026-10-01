@@ -25,6 +25,7 @@ import {
   writeRosterPhotoBytes,
 } from './rosterPhotoStore.ts'
 import { readClipLoopsFile, writeClipLoopsFile } from './clipLoopsStore.ts'
+import { readVideoAdjustmentsFile, writeVideoAdjustmentsFile } from './videoAdjustmentsStore.ts'
 import { readFavoritesFile, writeFavoritesFile } from './favoritesStore.ts'
 import {
   collagesForOwner,
@@ -206,6 +207,7 @@ const API_PATHS = new Set([
   '/api/athlete-videos',
   '/api/athlete-video-file',
   '/api/clip-loops',
+  '/api/video-adjustments',
   '/api/favorites',
   '/api/collages',
   '/api/feed',
@@ -1240,6 +1242,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeClipLoopsFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/video-adjustments') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readVideoAdjustmentsFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeVideoAdjustmentsFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
