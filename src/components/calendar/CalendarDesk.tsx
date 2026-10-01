@@ -172,7 +172,7 @@ export function happeningNow(events: TodayCalendarEvent[], now = new Date()): To
 export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [selected, setSelected] = useState(() => new Date())
-  const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month')
+  const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('day')
   const [events, setEvents] = useState<TodayCalendarEvent[]>([])
   const [loadError, setLoadError] = useState(false)
   const [needsAuth, setNeedsAuth] = useState(false)
