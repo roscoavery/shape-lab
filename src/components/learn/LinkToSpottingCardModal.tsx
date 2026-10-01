@@ -17,11 +17,19 @@ import {
 
 export function LinkToSpottingCardModal({
   clip,
+  coachId,
+  isAdmin,
   onClose,
 }: {
   clip: { id: string; url: string; name: string }
+  coachId: string | null
+  isAdmin: boolean
   onClose: () => void
 }) {
+  // coachId/isAdmin reserved for per-coach spotting systems (not yet implemented).
+  // Currently only admins can link to spotting cards (Ryan's system).
+  void coachId
+  void isAdmin
   const [selected, setSelected] = useState<SpottingLinkTarget[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

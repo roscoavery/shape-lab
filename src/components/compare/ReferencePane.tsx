@@ -2002,7 +2002,7 @@ export function ReferencePane({
         ))}
       </datalist>
       {addToCardItem && (
-        <AddToSkillCardModal video={addToCardItem} onClose={() => setAddToCardItem(null)} />
+        <AddToSkillCardModal video={addToCardItem} coachId={profileId} isAdmin={gymEditor} onClose={() => setAddToCardItem(null)} />
       )}
     </section>
   )

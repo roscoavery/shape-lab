@@ -232,7 +232,7 @@ const FeedArticle = memo(function FeedArticle({
         <ShareReference
           variant="story"
           draft={clipShareDraft(clip.name, clip.url)}
-          onAddToSkillCard={isAdmin ? () => onAddToSkillCard(clip) : undefined}
+          onAddToSkillCard={editor.profileId ? () => onAddToSkillCard(clip) : undefined}
           onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
         />
         <FavoriteStar
@@ -642,13 +642,15 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           gymAdmin={isAdmin}
           title="Reference scroll"
           onCopied={setFlash}
-          onAddToSkillCard={isAdmin ? handleAddToCard : undefined}
+          onAddToSkillCard={editor.profileId ? handleAddToCard : undefined}
           onLinkToSpottingCard={isAdmin ? handleLinkSpotting : undefined}
         />
       ) : null}
       {addToCardClip && (
         <AddToSkillCardModal
           video={addToCardClip}
+          coachId={editor.profileId}
+          isAdmin={isAdmin}
           onClose={() => {
             setAddToCardClip(null)
             setCardRefresh((n) => n + 1)
@@ -656,7 +658,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
         />
       )}
       {linkSpottingClip && (
-        <LinkToSpottingCardModal clip={linkSpottingClip} onClose={() => setLinkSpottingClip(null)} />
+        <LinkToSpottingCardModal clip={linkSpottingClip} coachId={editor.profileId} isAdmin={isAdmin} onClose={() => setLinkSpottingClip(null)} />
       )}
     </div>
   )

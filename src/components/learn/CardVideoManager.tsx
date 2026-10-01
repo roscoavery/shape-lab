@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVideo } from '../../config/techniqueEvidence'
 import { TRACK_LABELS, guideSkillsInOrder, guidelessSkills, searchSkills } from '../../lib/skillRegistry'
+import { systemSkillCards } from '../../lib/coachSystems'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -281,12 +282,26 @@ export function AddCardVideoModal({
  */
 export function AddToSkillCardModal({
   video,
+  coachId,
+  isAdmin,
   onClose,
 }: {
   video: { url: string; who: string; watchFor: string }
+  coachId: string | null
+  isAdmin: boolean
   onClose: () => void
 }) {
-  const allSkills = useMemo(() => [...guideSkillsInOrder(), ...guidelessSkills()], [])
+  const allSkills = useMemo(() => {
+    // Non-admin coaches only see their own system's cards, never Ryan's.
+    if (!isAdmin && coachId) {
+      const own = systemSkillCards(coachId)
+      if (own.length > 0) {
+        // Map SkillDef to the shape the picker expects (no guideId/track for coach skills).
+        return own.map((s) => ({ ...s, guideId: null as string | null, track: 'foundation' as const }))
+      }
+    }
+    return [...guideSkillsInOrder(), ...guidelessSkills()]
+  }, [coachId, isAdmin])
   const [query, setQuery] = useState('')
   const [evidenceKey, setEvidenceKey] = useState(() => {
     const first = guideSkillsInOrder()[0]
