@@ -354,6 +354,8 @@ function VideoWorkbenchInner({
       v.muted = true
       const wantPlayRef = { current: false }
       const tryPlay = () => {
+        // Never resume while the coach is holding the screen to scrub.
+        if (gestureRef.current?.holding) return
         if (wantPlayRef.current && v.paused) v.play().catch(() => {})
       }
       const io = new IntersectionObserver(
@@ -382,6 +384,7 @@ function VideoWorkbenchInner({
     v.setAttribute('playsinline', 'true')
     v.setAttribute('webkit-playsinline', 'true')
     const kick = () => {
+      if (gestureRef.current?.holding) return
       void v.play().catch(() => {})
     }
     kick()
