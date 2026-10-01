@@ -62,6 +62,7 @@ import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { ImproveNotesDock } from './components/ImproveNotesDock'
 import { DeskPreviewPicker } from './components/DeskPreviewPicker'
 import { loadDeskPreview, saveDeskPreview, type DeskPreview } from './lib/deskPreview'
+import { TEST_PARENT, TEST_ATHLETE } from './lib/testParentFixture'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
@@ -643,7 +644,11 @@ export default function App() {
       sessionIsAdmin(authUser) && deskPreview !== 'home'
         ? deskPreview === 'gymOwner'
           ? 'gymOwner'
-          : deskPreview
+          : deskPreview === 'testParent' || deskPreview === 'parent'
+            ? 'parent'
+            : deskPreview === 'athlete'
+              ? 'athlete'
+              : 'coach'
         : authUser?.role
     const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
     const ownerView = isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview)
@@ -703,7 +708,11 @@ export default function App() {
       sessionIsAdmin(authUser) && deskPreview !== 'home'
         ? deskPreview === 'gymOwner'
           ? 'gymOwner'
-          : deskPreview
+          : deskPreview === 'testParent' || deskPreview === 'parent'
+            ? 'parent'
+            : deskPreview === 'athlete'
+              ? 'athlete'
+              : 'coach'
         : authUser?.role
     const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
     if (authUser && !tabAllowedForNavRole(id, role, ryan, isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview))) return
@@ -920,16 +929,27 @@ export default function App() {
     if (row && !canViewAthleteProfile(activeProfile, row)) return
     setViewingAthleteId(id)
   }
-  const parentKids = activeProfile ? childAthletes(activeProfile, athletes) : []
+  const parentKids =
+    deskPreview === 'testParent' && sessionIsAdmin(authUser)
+      ? [TEST_ATHLETE]
+      : activeProfile
+        ? childAthletes(activeProfile, athletes)
+        : []
   const previewRole: SessionRole | undefined =
     sessionIsAdmin(authUser) && deskPreview !== 'home'
       ? deskPreview === 'gymOwner'
         ? 'gymOwner'
-        : deskPreview
+        : deskPreview === 'testParent' || deskPreview === 'parent'
+          ? 'parent'
+          : deskPreview === 'athlete'
+            ? 'athlete'
+            : 'coach'
       : authUser?.role
   const deskRole = navRoleFromSession(previewRole, floorKiosk)
   const previewProfile: Athlete | null =
-    activeProfile && deskPreview === 'parent'
+    deskPreview === 'testParent' && sessionIsAdmin(authUser)
+      ? TEST_PARENT
+      : activeProfile && deskPreview === 'parent'
       ? { ...activeProfile, role: 'parent' }
       : activeProfile && deskPreview === 'athlete'
         ? { ...activeProfile, role: 'athlete' }

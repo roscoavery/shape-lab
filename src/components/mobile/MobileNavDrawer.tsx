@@ -36,6 +36,7 @@ const PREVIEW_LABEL: Record<DeskPreview, string> = {
   coach: 'Coach',
   gymOwner: 'Gym owner',
   parent: 'Parent',
+  testParent: 'Test parent',
   athlete: 'Athlete',
 }
 

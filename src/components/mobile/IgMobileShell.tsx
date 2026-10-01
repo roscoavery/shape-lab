@@ -31,6 +31,7 @@ const PREVIEW_LABEL: Record<Exclude<DeskPreview, 'home'>, string> = {
   gymOwner: 'gym owner',
   parent: 'parent',
   athlete: 'athlete',
+  testParent: 'test parent',
 }
 
 type Props = {

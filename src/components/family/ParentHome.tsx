@@ -6,6 +6,7 @@ import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/pare
 import { useParentGuide } from '../../lib/useParentGuide'
 import { ParentGuideArticle } from './ParentGuideArticle'
 import { HelpfulRightNow } from './HelpfulRightNow'
+import { TEST_HOMEWORK, TEST_LOGS, isTestAthletePreview } from '../../lib/testParentFixture'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
@@ -36,11 +37,21 @@ export function ParentHome({
 }: Props) {
   const child = kids.find((row) => row.id === (focusId || kids[0]?.id)) ?? kids[0] ?? null
   const homework = useMemo(
-    () => (child ? loadAllHomework().filter((row) => row.athleteId === child.id).slice(0, 8) : []),
+    () =>
+      child
+        ? isTestAthletePreview(child.id)
+          ? TEST_HOMEWORK
+          : loadAllHomework().filter((row) => row.athleteId === child.id).slice(0, 8)
+        : [],
     [child],
   )
   const logs = useMemo(
-    () => (child ? loadHomeworkLogs().filter((row) => row.athleteId === child.id) : []),
+    () =>
+      child
+        ? isTestAthletePreview(child.id)
+          ? TEST_LOGS
+          : loadHomeworkLogs().filter((row) => row.athleteId === child.id)
+        : [],
     [child],
   )
 
@@ -85,10 +96,10 @@ export function ParentHome({
         </section>
       )}
 
+      <HelpfulRightNow child={child} homework={homework} logs={logs} onOpenArticle={onOpenArticle} />
       {child && (
         <>
           <ChildSnapshot child={child} homework={homework} logs={logs} />
-          <HelpfulRightNow child={child} homework={homework} logs={logs} onOpenArticle={onOpenArticle} />
           <AthleteDeskFeed athlete={child} logs={logs} />
           {birthdayNeeded(child.dateOfBirth) && (
             <p className="rounded-xl border border-[#6ec8d6]/40 bg-[#6ec8d6]/10 px-4 py-3 text-sm">

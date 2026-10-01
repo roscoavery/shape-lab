@@ -8,7 +8,7 @@ import {
 } from '../../lib/parentGuideRecommendations'
 
 type Props = {
-  child: Athlete
+  child: Athlete | null
   homework: HomeworkItem[]
   logs: HomeworkLog[]
   onOpenArticle: (articleId: string) => void

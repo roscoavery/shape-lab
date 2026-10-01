@@ -3,7 +3,7 @@
  * Does not change the real account. Local to this browser.
  */
 
-export type DeskPreview = 'home' | 'coach' | 'gymOwner' | 'parent' | 'athlete'
+export type DeskPreview = 'home' | 'coach' | 'gymOwner' | 'parent' | 'athlete' | 'testParent'
 
 const KEY = 'shape-lab.deskPreview.v1'
 
@@ -13,6 +13,7 @@ export const DESK_PREVIEW_OPTIONS: { id: DeskPreview; label: string }[] = [
   { id: 'gymOwner', label: 'Gym owner' },
   { id: 'parent', label: 'Parent' },
   { id: 'athlete', label: 'Athlete' },
+  { id: 'testParent', label: 'Test parent' },
 ]
 
 export function loadDeskPreview(): DeskPreview {
@@ -23,7 +24,8 @@ export function loadDeskPreview(): DeskPreview {
       raw === 'parent' ||
       raw === 'athlete' ||
       raw === 'home' ||
-      raw === 'coach'
+      raw === 'coach' ||
+      raw === 'testParent'
     ) {
       return raw
     }

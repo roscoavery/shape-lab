@@ -15,6 +15,7 @@ const HINT: Record<DeskPreview, string> = {
   coach: 'Coach desk preview',
   gymOwner: 'Gym owner desk preview',
   parent: 'Parent desk preview',
+  testParent: 'Test parent',
   athlete: 'Athlete desk preview',
 }
 

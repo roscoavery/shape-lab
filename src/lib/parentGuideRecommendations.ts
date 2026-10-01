@@ -88,10 +88,19 @@ const FUNDAMENTAL_HINTS = [
 ]
 
 export function getParentEducationRecommendations(
-  athlete: Athlete,
+  athlete: Athlete | null,
   ctx: RecommendationContext,
 ): ParentGuideRecommendation[] {
   if (!PARENT_GUIDE_RECOMMENDATIONS_ENABLED) return []
+  if (!athlete) {
+    return [
+      {
+        articleId: 'what-progress-looks-like',
+        reason: 'A good general starting point for supporting your athlete.',
+        priority: 10,
+      },
+    ]
+  }
   const name = firstNameOf(athlete)
   const recs: ParentGuideRecommendation[] = []
   const goals = goalLabels(athlete)
