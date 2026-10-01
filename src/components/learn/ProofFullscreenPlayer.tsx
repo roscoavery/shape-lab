@@ -502,7 +502,15 @@ function AdjustPanel({
  * Autoplays and loops on open. Applies the video's saved adjustments
  * (trim, crop, slow-motion) and offers an Adjust mode to change them.
  */
-function LocalAnalysisPlayer({ url }: { url: string }) {
+function LocalAnalysisPlayer({
+  url,
+  onToggleChrome,
+  swipeSuppressRef,
+}: {
+  url: string
+  onToggleChrome?: () => void
+  swipeSuppressRef?: React.MutableRefObject<number>
+}) {
   const ref = useRef<HTMLVideoElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
   const adjApi = useVideoAdjustmentsOptional()
@@ -550,6 +558,161 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
     if (!v) return
     v.currentTime = t
     setNow(t)
+  }, [])
+
+  // --- Tap-hold-scrub gestures: same contract as the reference player. ---
+  // Single tap: toggle chrome only (never play/pause). Tap-hold (400ms):
+  // pause. Hold-drag: scrub the paused video anchored at hold engagement.
+  // Release: resume only if it was playing.
+  const gestureRef = useRef<{
+    x: number
+    y: number
+    t: number
+    holdTimer: ReturnType<typeof setTimeout> | null
+    holding: boolean
+    wasPlaying: boolean
+    scrubAnchorX: number
+    scrubAnchorT: number
+    pointerId: number
+  } | null>(null)
+  const HOLD_MS = 400
+
+  const onGestureDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (adjusting) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('button, a, input, select, textarea')) return
+      // The root pokes chrome on pointerdown; tap fully owns chrome here.
+      e.stopPropagation()
+      // Kill iOS long-press magnifier / text selection. No setPointerCapture
+      // on touch-down (it can stop iOS starting a native scroll); capture
+      // only once the hold engages.
+      e.preventDefault()
+      const v = ref.current
+      const g = {
+        x: e.clientX,
+        y: e.clientY,
+        t: Date.now(),
+        holdTimer: null as ReturnType<typeof setTimeout> | null,
+        holding: false,
+        wasPlaying: v ? !v.paused : false,
+        scrubAnchorX: e.clientX,
+        scrubAnchorT: v ? v.currentTime : 0,
+        pointerId: e.pointerId,
+      }
+      gestureRef.current = g
+      g.holdTimer = setTimeout(() => {
+        const gg = gestureRef.current
+        if (!gg || gg.pointerId !== e.pointerId) return
+        gg.holding = true
+        // Suppress the carousel's swipe nav/close for this touch.
+        if (swipeSuppressRef) swipeSuppressRef.current = Date.now() + 1500
+        try {
+          boxRef.current?.setPointerCapture(gg.pointerId)
+        } catch {
+          /* noop */
+        }
+        const vv = ref.current
+        if (vv) {
+          gg.scrubAnchorX = e.clientX
+          gg.scrubAnchorT = vv.currentTime
+          if (!vv.paused) {
+            vv.pause()
+            setPlaying(false)
+          }
+        }
+      }, HOLD_MS)
+    },
+    [adjusting, swipeSuppressRef],
+  )
+
+  const onGestureMove = useCallback(
+    (e: React.PointerEvent) => {
+      const g = gestureRef.current
+      if (!g || e.pointerId !== g.pointerId) return
+      const moved = Math.hypot(e.clientX - g.x, e.clientY - g.y)
+      if (!g.holding) {
+        // Before the hold engages, a real swipe cancels it (it's a nav
+        // swipe, not a hold).
+        if (g.holdTimer && moved > 14) {
+          clearTimeout(g.holdTimer)
+          g.holdTimer = null
+        }
+        return
+      }
+      const v = ref.current
+      const frame = boxRef.current
+      if (v && v.duration && frame) {
+        const w = frame.clientWidth || 1
+        scrubTo(
+          Math.max(0, Math.min(v.duration, g.scrubAnchorT + ((e.clientX - g.scrubAnchorX) / w) * v.duration)),
+        )
+      }
+      e.preventDefault()
+    },
+    [scrubTo],
+  )
+
+  const onGestureUp = useCallback(
+    (e: React.PointerEvent) => {
+      const g = gestureRef.current
+      if (g && e.pointerId !== g.pointerId) return
+      gestureRef.current = null
+      if (g?.holdTimer) clearTimeout(g.holdTimer)
+      try {
+        if (g && boxRef.current?.hasPointerCapture(g.pointerId)) {
+          boxRef.current.releasePointerCapture(g.pointerId)
+        }
+      } catch {
+        /* noop */
+      }
+      if (g?.holding) {
+        // Release after hold/scrub: resume only if it was playing.
+        if (g.wasPlaying) {
+          const v = ref.current
+          if (v) {
+            v.play().catch(() => {})
+            setPlaying(true)
+          }
+        }
+        return
+      }
+      // Single tap: toggle chrome only.
+      if (g && Math.hypot(e.clientX - g.x, e.clientY - g.y) <= 14 && Date.now() - g.t <= 500) {
+        const target = e.target as HTMLElement | null
+        if (!target?.closest('button, a, input, select, textarea') && target?.closest('video')) {
+          onToggleChrome?.()
+        }
+      }
+    },
+    [onToggleChrome],
+  )
+
+  // pointercancel = the browser hijacked the gesture. Never resume here.
+  const onGestureCancel = useCallback((e: React.PointerEvent) => {
+    const g = gestureRef.current
+    if (g && e.pointerId !== g.pointerId) return
+    gestureRef.current = null
+    if (g?.holdTimer) clearTimeout(g.holdTimer)
+    try {
+      if (g && boxRef.current?.hasPointerCapture(g.pointerId)) {
+        boxRef.current.releasePointerCapture(g.pointerId)
+      }
+    } catch {
+      /* noop */
+    }
+  }, [])
+
+  // While holding to scrub, kill the browser's scroll/pan takeover at the
+  // touch level so it can never fire pointercancel mid-scrub.
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const onTouchMove = (e: TouchEvent) => {
+      if (gestureRef.current?.holding) e.preventDefault()
+    }
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
   }, [])
 
   const handleTimeUpdate = useCallback(() => {
@@ -654,7 +817,14 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div ref={boxRef} className="relative min-h-0 flex-1 overflow-hidden bg-black">
+      <div
+        ref={boxRef}
+        className="relative min-h-0 flex-1 overflow-hidden bg-black"
+        onPointerDown={onGestureDown}
+        onPointerMove={onGestureMove}
+        onPointerUp={onGestureUp}
+        onPointerCancel={onGestureCancel}
+      >
         <div className="h-full w-full" style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
@@ -665,7 +835,7 @@ function LocalAnalysisPlayer({ url }: { url: string }) {
             preload="auto"
             className="h-full w-full object-contain"
             style={cropStyle}
-            onClick={adjusting ? undefined : toggle}
+
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onLoadedMetadata={handleLoadedMetadata}
@@ -825,6 +995,9 @@ export function ProofFullscreenPlayer({
   // clean; any tap brings it back for a few seconds.
   const [chromeVisible, setChromeVisible] = useState(true)
   const idleTimer = useRef<number | null>(null)
+  // Suppress swipe nav/close while a hold-scrub is in flight (timestamp, so
+  // it self-expires and can never stick).
+  const swipeSuppressRef = useRef(0)
   const adjApi = useVideoAdjustmentsOptional()
   const pokeChrome = useCallback(() => {
     setChromeVisible(true)
@@ -837,6 +1010,18 @@ export function ProofFullscreenPlayer({
       if (idleTimer.current) window.clearTimeout(idleTimer.current)
     }
   }, [pokeChrome, index])
+
+  // Single tap on the video toggles chrome (same contract as the reference
+  // player); the video's own gesture calls stopPropagation so the root's
+  // pokeChrome doesn't fire for video taps.
+  const toggleChromeVisibility = useCallback(() => {
+    if (chromeVisible) {
+      if (idleTimer.current) window.clearTimeout(idleTimer.current)
+      setChromeVisible(false)
+    } else {
+      pokeChrome()
+    }
+  }, [chromeVisible, pokeChrome])
 
   const video = videos[index]
   const local = video ? isLocalVideo(video.url) : false
@@ -887,6 +1072,12 @@ export function ProofFullscreenPlayer({
     touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
   }
   const onTouchEnd = (e: React.TouchEvent) => {
+    // A hold-scrub just ended on the video; don't treat its drag as a swipe.
+    if (Date.now() < swipeSuppressRef.current) {
+      swipeSuppressRef.current = 0
+      touchStart.current = null
+      return
+    }
     const st = touchStart.current
     touchStart.current = null
     if (!st) return
@@ -957,7 +1148,11 @@ export function ProofFullscreenPlayer({
         )}
         <div key={video.url} className="h-full w-full">
           {local ? (
-            <LocalAnalysisPlayer url={video.url} />
+            <LocalAnalysisPlayer
+              url={video.url}
+              onToggleChrome={toggleChromeVisibility}
+              swipeSuppressRef={swipeSuppressRef}
+            />
           ) : (
             <div className="mx-auto h-full max-w-[560px]">
               <InstagramEmbed
