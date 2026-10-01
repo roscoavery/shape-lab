@@ -49,7 +49,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
     title: "What Progress Looks Like",
     summary: "Progress is not linear.",
     intro: [
-      "One of the biggest things that leads to an athlete's progress is an intrinsic pursuit of understanding. DETERMINATION and relentless pursuit of understanding, that is one of the many important lessons that come with tumbling and gymnastics. The importance of consistent effort, celebrating small wins, a persistent drive for understanding, and overall pure determination.",
+      "One of the biggest drivers in an athlete's progress is an intrinsic and persistent curiosity. Paired with inner drive and patience, that curiosity can take an athlete far. Some of the many important lessons that come with tumbling and gymnastics are the importance of consistent effort, celebrating small wins, a relentless pursuit of understanding, and the power of determination.",
     ],
     qa: [
       {
