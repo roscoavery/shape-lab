@@ -22,7 +22,7 @@ type Props = {
   logs?: HomeworkLog[]
 }
 
-export function AthleteDeskFeed({ athlete, logs: logsProp }: Props) {
+function useAthleteDeskData(athlete: Athlete, logsProp?: HomeworkLog[]) {
   const [upcoming, setUpcoming] = useState<UpcomingLesson[]>([])
   const [tick, setTick] = useState(0)
   const logs = useMemo(() => {
@@ -66,63 +66,86 @@ export function AthleteDeskFeed({ athlete, logs: logsProp }: Props) {
       cancelled = true
     }
   }, [athlete.id])
+  return { upcoming, visits, gains }
+}
 
+export function AthleteUpcomingCard({ athlete }: { athlete: Athlete }) {
+  const { upcoming } = useAthleteDeskData(athlete)
+  return (
+    <CollapsibleSection
+      title="Upcoming with your coach"
+      hint={upcoming.length ? `${upcoming.length} scheduled` : 'No upcoming lesson is matched yet'}
+      defaultOpen
+    >
+      <ul className="mt-3 space-y-2 text-sm">
+        {upcoming.map((row) => (
+          <li key={row.id} className="rounded-lg bg-[#0d1218] px-3 py-2">
+            <p className="font-medium">{row.title}</p>
+            <p className="text-[var(--muted)]">
+              {formatWhen(row.startAt)} · {row.coachName}
+              {row.location ? ` · ${row.location}` : ''}
+            </p>
+          </li>
+        ))}
+        {upcoming.length === 0 && (
+          <li className="text-[var(--muted)]">No upcoming lesson is matched yet.</li>
+        )}
+      </ul>
+    </CollapsibleSection>
+  )
+}
+
+export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
+  const { gains } = useAthleteDeskData(athlete, logsProp)
+  return (
+    <CollapsibleSection
+      title="Hold times going up"
+      hint={gains.length ? `${gains.length} recent improvement${gains.length === 1 ? '' : 's'}` : 'No progress yet'}
+      defaultOpen
+    >
+      <ul className="mt-3 space-y-2 text-sm">
+        {gains.map((row) => (
+          <li key={row.name} className="rounded-lg bg-[#102820] px-3 py-2 text-[var(--accent)]">
+            <span className="font-semibold text-[var(--text)]">{row.name}</span>
+            {' · '}
+            {formatSeconds(row.from)} → {formatSeconds(row.to)}
+          </li>
+        ))}
+        {gains.length === 0 && (
+          <li className="text-[var(--muted)]">
+            Your progress will start showing here as you practice and your coach logs new work.
+          </li>
+        )}
+      </ul>
+    </CollapsibleSection>
+  )
+}
+
+export function AthleteActivityCard({ athlete, logs: logsProp }: Props) {
+  const { visits } = useAthleteDeskData(athlete, logsProp)
+  return (
+    <CollapsibleSection
+      title="Recently attended"
+      hint={visits.length ? `${visits.length} recent classes and lessons` : 'No recent visits'}
+    >
+      <ul className="mt-3 space-y-3 text-sm">
+        {visits.map((row) => (
+          <VisitRow key={row.id} row={row} />
+        ))}
+        {visits.length === 0 && (
+          <li className="text-[var(--muted)]">No classes or lessons on file yet.</li>
+        )}
+      </ul>
+    </CollapsibleSection>
+  )
+}
+
+export function AthleteDeskFeed({ athlete, logs: logsProp }: Props) {
   return (
     <div className="grid gap-4">
-      <CollapsibleSection
-        title="Upcoming with your coach"
-        hint={upcoming.length ? `${upcoming.length} scheduled` : 'No matched lessons'}
-        defaultOpen
-      >
-        <ul className="mt-3 space-y-2 text-sm">
-          {upcoming.map((row) => (
-            <li key={row.id} className="rounded-lg bg-[#0d1218] px-3 py-2">
-              <p className="font-medium">{row.title}</p>
-              <p className="text-[var(--muted)]">
-                {formatWhen(row.startAt)} · {row.coachName}
-                {row.location ? ` · ${row.location}` : ''}
-              </p>
-            </li>
-          ))}
-          {upcoming.length === 0 && (
-            <li className="text-[var(--muted)]">No matched lessons on the calendar yet.</li>
-          )}
-        </ul>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Recently attended"
-        hint={visits.length ? `${visits.length} recent classes and lessons` : 'No recent visits'}
-      >
-        <ul className="mt-3 space-y-3 text-sm">
-          {visits.map((row) => (
-            <VisitRow key={row.id} row={row} />
-          ))}
-          {visits.length === 0 && (
-            <li className="text-[var(--muted)]">No classes or lessons on file yet.</li>
-          )}
-        </ul>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Hold times going up"
-        hint={gains.length ? `${gains.length} recent improvement${gains.length === 1 ? '' : 's'}` : 'Progress appears after a longer hold'}
-      >
-        <ul className="mt-3 space-y-2 text-sm">
-          {gains.map((row) => (
-            <li key={row.name} className="rounded-lg bg-[#102820] px-3 py-2 text-[var(--accent)]">
-              <span className="font-semibold text-[var(--text)]">{row.name}</span>
-              {' · '}
-              {formatSeconds(row.from)} → {formatSeconds(row.to)}
-            </li>
-          ))}
-          {gains.length === 0 && (
-            <li className="text-[var(--muted)]">
-              Log another hold on a drill you already did. When the time is longer, it shows here.
-            </li>
-          )}
-        </ul>
-      </CollapsibleSection>
+      <AthleteUpcomingCard athlete={athlete} />
+      <AthleteActivityCard athlete={athlete} logs={logsProp} />
+      <AthleteProgressCard athlete={athlete} logs={logsProp} />
     </div>
   )
 }

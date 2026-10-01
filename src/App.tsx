@@ -65,6 +65,7 @@ import { loadDeskPreview, saveDeskPreview, type DeskPreview } from './lib/deskPr
 import { TEST_PARENT, TEST_ATHLETE } from './lib/testParentFixture'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
+import { AthleteViewBar } from './components/family/AthleteViewBar'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
@@ -168,6 +169,7 @@ import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
 import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
 import { childAthletes } from './lib/parentLink'
+import { resolveAthleteViewAthlete } from './lib/familyView'
 import { coachShareLabel } from './lib/coachShare'
 import {
   isOfficeOnlyTab,
@@ -255,6 +257,7 @@ export default function App() {
     return unlockedProfileId() || loadActiveAthleteId()
   })
   const [parentFocusId, setParentFocusId] = useState<string | null>(null)
+  const [athleteViewId, setAthleteViewId] = useState<string | null>(null)
   const [parentGuideArticleId, setParentGuideArticleId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
@@ -620,6 +623,31 @@ export default function App() {
 
   const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
 
+  // Family beta: athlete view through a parent login. Auth (authUser) stays
+  // the parent — this only changes which experience renders. The id is
+  // validated against the parent's linked athletes on every render.
+  // In the admin Test parent preview, the fixture parent stands in for the signed-in parent.
+  const familyParent =
+    activeProfile && profileRole(activeProfile) === 'parent'
+      ? activeProfile
+      : deskPreview === 'testParent' && sessionIsAdmin(authUser)
+        ? TEST_PARENT
+        : null
+  const familyAthletes =
+    deskPreview === 'testParent' && sessionIsAdmin(authUser) ? [TEST_ATHLETE] : athletes
+  const athleteViewAthlete = resolveAthleteViewAthlete(familyParent, athleteViewId, familyAthletes)
+  const previewRole: SessionRole | undefined = athleteViewAthlete
+    ? 'athlete'
+    : sessionIsAdmin(authUser) && deskPreview !== 'home'
+      ? deskPreview === 'gymOwner'
+        ? 'gymOwner'
+        : deskPreview === 'testParent' || deskPreview === 'parent'
+          ? 'parent'
+          : deskPreview === 'athlete'
+            ? 'athlete'
+            : 'coach'
+      : authUser?.role
+
   useEffect(() => {
     const pick =
       !settings.themeColor || settings.themeColor === 'auto'
@@ -640,20 +668,10 @@ export default function App() {
       deskPreview === 'home' && isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (!ryan && isRyanOnlyTab(tab)) setTab('today')
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(tab)) setTab('today')
-    const previewed: SessionRole | undefined =
-      sessionIsAdmin(authUser) && deskPreview !== 'home'
-        ? deskPreview === 'gymOwner'
-          ? 'gymOwner'
-          : deskPreview === 'testParent' || deskPreview === 'parent'
-            ? 'parent'
-            : deskPreview === 'athlete'
-              ? 'athlete'
-              : 'coach'
-        : authUser?.role
-    const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
+    const role = navRoleFromSession(previewRole, sessionIsKiosk(authUser))
     const ownerView = isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview)
     if (authUser && !tabAllowedForNavRole(tab, role, ryan, ownerView)) setTab('today')
-  }, [athletes, activeAthleteId, tab, authUser, deskPreview])
+  }, [athletes, activeAthleteId, tab, authUser, deskPreview, previewRole])
 
   // Admin default: opening the app in the admin home desk with the Learn tab
   // restored lands on Today instead. Once per boot — navigating to Learn
@@ -700,21 +718,41 @@ export default function App() {
     if (!cameraTab && camera.running) camera.stop()
   }, [cameraTab, camera.running, camera.stop])
 
+  const enterAthleteView = useCallback(
+    (id: string) => {
+      if (!resolveAthleteViewAthlete(familyParent, id, familyAthletes)) return
+      setAthleteViewId(id)
+      setTab('today')
+    },
+    [familyParent, familyAthletes],
+  )
+  const exitAthleteView = useCallback(() => setAthleteViewId(null), [])
+
+  // Return to the parent experience after 20 minutes without interaction
+  // while in athlete view.
+  useEffect(() => {
+    if (!athleteViewAthlete) return
+    let lastActive = Date.now()
+    const bump = () => {
+      lastActive = Date.now()
+    }
+    window.addEventListener('pointerdown', bump)
+    window.addEventListener('keydown', bump)
+    const timer = window.setInterval(() => {
+      if (Date.now() - lastActive > 20 * 60 * 1000) exitAthleteView()
+    }, 60 * 1000)
+    return () => {
+      window.removeEventListener('pointerdown', bump)
+      window.removeEventListener('keydown', bump)
+      window.clearInterval(timer)
+    }
+  }, [athleteViewAthlete, exitAthleteView])
+
   const goTab = (id: AppTab) => {
     const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
     if (isRyanOnlyTab(id) && !ryan) return
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(id)) return
-    const previewed: SessionRole | undefined =
-      sessionIsAdmin(authUser) && deskPreview !== 'home'
-        ? deskPreview === 'gymOwner'
-          ? 'gymOwner'
-          : deskPreview === 'testParent' || deskPreview === 'parent'
-            ? 'parent'
-            : deskPreview === 'athlete'
-              ? 'athlete'
-              : 'coach'
-        : authUser?.role
-    const role = navRoleFromSession(previewed, sessionIsKiosk(authUser))
+    const role = navRoleFromSession(previewRole, sessionIsKiosk(authUser))
     if (authUser && !tabAllowedForNavRole(id, role, ryan, isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview))) return
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
@@ -935,19 +973,8 @@ export default function App() {
       : activeProfile
         ? childAthletes(activeProfile, athletes)
         : []
-  const previewRole: SessionRole | undefined =
-    sessionIsAdmin(authUser) && deskPreview !== 'home'
-      ? deskPreview === 'gymOwner'
-        ? 'gymOwner'
-        : deskPreview === 'testParent' || deskPreview === 'parent'
-          ? 'parent'
-          : deskPreview === 'athlete'
-            ? 'athlete'
-            : 'coach'
-      : authUser?.role
   const deskRole = navRoleFromSession(previewRole, floorKiosk)
-  const previewProfile: Athlete | null =
-    deskPreview === 'testParent' && sessionIsAdmin(authUser)
+  const previewProfile: Athlete | null = athleteViewAthlete ?? (deskPreview === 'testParent' && sessionIsAdmin(authUser)
       ? TEST_PARENT
       : activeProfile && deskPreview === 'parent'
       ? { ...activeProfile, role: 'parent' }
@@ -957,10 +984,11 @@ export default function App() {
           ? { ...activeProfile, role: 'coach' }
           : activeProfile && deskPreview === 'gymOwner'
             ? { ...activeProfile, role: 'gym_owner' }
-            : activeProfile
+            : activeProfile)
   const ownerView = isOwnerView(activeProfile, deskPreview)
-  const homeworkAthleteId =
-    activeProfile && profileRole(activeProfile) === 'parent'
+  const homeworkAthleteId = athleteViewAthlete
+    ? athleteViewAthlete.id
+    : activeProfile && profileRole(activeProfile) === 'parent'
       ? parentFocusId && parentKids.some((k) => k.id === parentFocusId)
         ? parentFocusId
         : parentKids[0]?.id ?? null
@@ -1023,7 +1051,7 @@ export default function App() {
         tab={tab}
         onGo={goTab}
         authUser={authUser}
-        athlete={activeProfile}
+        athlete={athleteViewAthlete ?? activeProfile}
         athletes={athletes}
         activeAthleteId={activeAthleteId}
         settings={settings}
@@ -1037,6 +1065,7 @@ export default function App() {
         onDeskPreview={chooseDeskPreview}
         onSignOut={() => {
           void logoutSession().then(() => {
+            setAthleteViewId(null)
             clearSignedInDesk()
           })
         }}
@@ -1067,6 +1096,7 @@ export default function App() {
             className="mt-3 text-[10px] text-[var(--muted)]/70 underline decoration-transparent hover:decoration-current"
             onClick={() => {
               void logoutSession().then(() => {
+                setAthleteViewId(null)
                 clearSignedInDesk()
               })
             }}
@@ -1096,6 +1126,15 @@ export default function App() {
       </header>
 
       {floorKiosk && <FloorKioskBar user={authUser} onUser={setAuthUser} />}
+      {athleteViewAthlete && activeProfile && (
+        <AthleteViewBar
+          athlete={athleteViewAthlete}
+          siblings={childAthletes(familyParent, familyAthletes)}
+          parentName={activeProfile.firstName || ''}
+          onBackToParent={exitAthleteView}
+          onSwitchAthlete={enterAthleteView}
+        />
+      )}
 
       {tab === 'today' && deskRole === 'parent' && previewProfile && (
         <ParentHome
@@ -1105,11 +1144,11 @@ export default function App() {
           onFocus={setParentFocusId}
           onOpenAthletes={() => goTab('history')}
           onOpenLearn={() => goTab('learn')}
-          onOpenWellness={() => goTab('wellness')}
           onOpenArticle={(articleId) => {
             setParentGuideArticleId(articleId)
             goTab('learn')
           }}
+          onEnterAthleteView={enterAthleteView}
         />
       )}
       {tab === 'today' && deskRole === 'athlete' && (
@@ -1433,7 +1472,7 @@ export default function App() {
         <div className="flex min-h-[16rem] flex-col gap-3">
           {!hwStudio && activeAthleteId ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
-              {activeProfile && profileRole(activeProfile) === 'parent' ? (
+              {!athleteViewAthlete && activeProfile && profileRole(activeProfile) === 'parent' ? (
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="text-sm text-[var(--text)]">
                     Signed in as <strong>{activeProfile.name}</strong>
@@ -1472,13 +1511,15 @@ export default function App() {
                   </span>
                 </p>
               )}
-              <button
-                type="button"
-                onClick={() => requestSelectAthlete(null)}
-                className="text-xs text-[var(--muted)] underline"
-              >
-                Switch profile
-              </button>
+              {!athleteViewAthlete && (
+                <button
+                  type="button"
+                  onClick={() => requestSelectAthlete(null)}
+                  className="text-xs text-[var(--muted)] underline"
+                >
+                  Switch profile
+                </button>
+              )}
             </div>
           ) : null}
           {!hwStudio && !activeAthleteId ? (
@@ -2187,7 +2228,7 @@ export default function App() {
     )}
     {profileOpen && activeProfile && (
       <AthleteProfileCard
-        athlete={activeProfile}
+        athlete={athleteViewAthlete ?? activeProfile}
         viewer={activeProfile}
         athletes={athletes}
         variant="overlay"

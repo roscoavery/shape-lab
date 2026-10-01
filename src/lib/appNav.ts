@@ -40,21 +40,15 @@ export const APP_SECTIONS: { id: AppSection; label: string }[] = [
 const PARENT_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'today', label: 'Home' },
   { id: 'family', label: 'My Athletes' },
-  { id: 'videos', label: 'Videos' },
-  { id: 'team', label: 'Team' },
   { id: 'learn', label: 'Learn' },
-  { id: 'wellness', label: 'Body care' },
-  { id: 'more', label: 'Settings' },
+  { id: 'more', label: 'More' },
 ]
 
 const ATHLETE_SECTIONS: { id: AppSection; label: string }[] = [
   { id: 'today', label: 'Home' },
   { id: 'practice', label: 'Practice' },
   { id: 'progress', label: 'Progress' },
-  { id: 'videos', label: 'Videos' },
-  { id: 'team', label: 'Team' },
-  { id: 'learn', label: 'Learn' },
-  { id: 'more', label: 'Profile' },
+  { id: 'more', label: 'More' },
 ]
 
 const KIOSK_SECTIONS: { id: AppSection; label: string }[] = [
@@ -122,12 +116,32 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
 
 export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection {
   if (role === 'parent' && tab === 'history') return 'family'
-  if (role === 'parent' && (tab === 'consent' || tab === 'accounts' || tab === 'about')) return 'more'
-  if (role === 'parent' && (tab === 'feed' || tab === 'wins' || tab === 'network')) return 'team'
-  if (role === 'parent' && (tab === 'scroll' || tab === 'compare')) return 'videos'
-  if (role === 'athlete' && tab === 'history') return 'more'
-  if (role === 'athlete' && (tab === 'feed' || tab === 'wins' || tab === 'network')) return 'team'
-  if (role === 'athlete' && (tab === 'scroll' || tab === 'compare')) return 'videos'
+  if (
+    role === 'parent' &&
+    (tab === 'wellness' ||
+      tab === 'consent' ||
+      tab === 'accounts' ||
+      tab === 'about' ||
+      tab === 'scroll' ||
+      tab === 'compare' ||
+      tab === 'feed' ||
+      tab === 'wins' ||
+      tab === 'network')
+  )
+    return 'more'
+  if (
+    role === 'athlete' &&
+    (tab === 'history' ||
+      tab === 'compare' ||
+      tab === 'scroll' ||
+      tab === 'feed' ||
+      tab === 'wins' ||
+      tab === 'network' ||
+      tab === 'learn' ||
+      tab === 'chat' ||
+      tab === 'about')
+  )
+    return 'more'
   switch (tab) {
     case 'today':
       return 'today'
@@ -181,6 +195,40 @@ export function subnavForSection(
   role: NavRole = admin ? 'admin' : 'coach',
   isOwner = false,
 ) {
+  // Family beta: parent and athlete More sections are explicit curated lists
+  // so secondary features stay reachable without competing as top-level nav.
+  if (role === 'parent' && section === 'more') {
+    const list: { id: AppTab; label: string }[] = [
+      { id: 'wellness', label: 'Body care' },
+      { id: 'consent', label: 'Consent & privacy' },
+      { id: 'accounts', label: 'Account' },
+      { id: 'about', label: 'About' },
+      { id: 'scroll', label: 'Videos' },
+      { id: 'feed', label: 'Feed' },
+      { id: 'wins', label: 'Wins' },
+      { id: 'network', label: 'Network' },
+    ]
+    return list.filter((item) => {
+      if (!ryan && isRyanOnlyTab(item.id)) return false
+      return true
+    })
+  }
+  if (role === 'athlete' && section === 'more') {
+    const list: { id: AppTab; label: string }[] = [
+      { id: 'compare', label: 'Videos' },
+      { id: 'scroll', label: 'Reference scroll' },
+      { id: 'feed', label: 'Feed' },
+      { id: 'wins', label: 'Wins' },
+      { id: 'network', label: 'Network' },
+      { id: 'learn', label: 'Learn' },
+      { id: 'history', label: 'Profile' },
+      { id: 'about', label: 'About' },
+    ]
+    return list.filter((item) => {
+      if (!ryan && isRyanOnlyTab(item.id)) return false
+      return true
+    })
+  }
   const items = SECTION_SUBNAV[section] ?? []
   return items.filter((item) => {
     if (!ryan && isRyanOnlyTab(item.id)) return false
@@ -188,20 +236,11 @@ export function subnavForSection(
     if (!admin && isAdminOnlyTab(item.id)) return false
     if (item.id === 'owner' && !isOwner) return false
     if (role === 'parent') {
-      if (section === 'more') return item.id === 'consent' || item.id === 'accounts' || item.id === 'about'
       if (section === 'learn') return item.id === 'learn'
-      if (section === 'videos')
-        return item.id === 'scroll' || item.id === 'compare' || item.id === 'feed' || item.id === 'wins'
-      if (section === 'team') return item.id === 'network' || item.id === 'feed' || item.id === 'wins'
     }
     if (role === 'athlete') {
       if (section === 'practice')
         return item.id === 'homework' || item.id === 'tasks2' || item.id === 'classclock'
-      if (section === 'videos')
-        return item.id === 'compare' || item.id === 'scroll' || item.id === 'feed' || item.id === 'wins'
-      if (section === 'team') return item.id === 'network' || item.id === 'feed' || item.id === 'wins'
-      if (section === 'learn') return item.id === 'learn'
-      if (section === 'more') return item.id === 'history' || item.id === 'about'
     }
     if (role === 'kiosk') {
       if (section === 'practice') return item.id === 'homework' || item.id === 'tasks2'

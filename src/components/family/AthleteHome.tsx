@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { ensureAutoHomework, loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
-import { AthleteDeskFeed } from './AthleteDeskFeed'
+import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 
@@ -23,21 +23,39 @@ export function AthleteHome({
   onQuickLog?: () => void
 }) {
   if (!athlete) {
-    return <p className="text-sm text-[var(--muted)]">Sign in with your athlete login to see homework.</p>
+    return (
+      <p className="text-sm text-[var(--muted)]">
+        Your progress will start showing here as you practice and your coach logs new work.
+      </p>
+    )
   }
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Home</p>
-        <h2 className="mt-1 text-2xl font-semibold">{athlete.firstName || athlete.name}</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">Homework, practice, and your own progress.</p>
-        {athlete.skillGoals && athlete.skillGoals.length > 0 && (
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Goals: {athlete.skillGoals.map((g) => g.label || g.id).join(', ')}
-          </p>
-        )}
+      {/* TODAY — what should I work on? */}
+      <section className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Today</p>
+        <h2 className="mt-1 text-2xl font-semibold">What should I work on?</h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          {athlete.skillGoals && athlete.skillGoals.length > 0
+            ? `Working toward: ${athlete.skillGoals.map((g) => g.label || g.id).join(', ')}`
+            : 'Your coach will set goals with you.'}
+        </p>
+        <button
+          type="button"
+          onClick={onPractice}
+          className="mt-4 w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-base font-bold text-[var(--on-accent)] sm:w-auto sm:px-8"
+        >
+          Start Practice
+        </button>
       </section>
       <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
+      {/* Recent progress */}
+      <AthleteProgressCard athlete={athlete} />
+      {/* Coming up */}
+      <AthleteUpcomingCard athlete={athlete} />
+      {/* Secondary */}
+      <DeskMessageCarousel audience="athlete" surface="home" />
+      <AthleteActivityCard athlete={athlete} />
       <div className="flex flex-wrap gap-2 px-1">
         <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
           Progress
@@ -46,8 +64,6 @@ export function AthleteHome({
           Videos
         </button>
       </div>
-      <DeskMessageCarousel audience="athlete" surface="home" />
-      <AthleteDeskFeed athlete={athlete} />
     </div>
   )
 }

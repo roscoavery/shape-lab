@@ -23,6 +23,7 @@ export const TEST_PARENT: Athlete = {
   firstName: 'Test',
   createdAt: '2026-10-01T00:00:00.000Z',
   role: 'parent',
+  linkedAthleteIds: [TEST_ATHLETE_ID],
 }
 
 export const TEST_ATHLETE: Athlete = {
