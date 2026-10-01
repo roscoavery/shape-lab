@@ -254,6 +254,7 @@ export default function App() {
     return unlockedProfileId() || loadActiveAthleteId()
   })
   const [parentFocusId, setParentFocusId] = useState<string | null>(null)
+  const [parentGuideArticleId, setParentGuideArticleId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [saveFlash, setSaveFlash] = useState<string | null>(null)
@@ -1085,6 +1086,10 @@ export default function App() {
           onOpenAthletes={() => goTab('history')}
           onOpenLearn={() => goTab('learn')}
           onOpenWellness={() => goTab('wellness')}
+          onOpenArticle={(articleId) => {
+            setParentGuideArticleId(articleId)
+            goTab('learn')
+          }}
         />
       )}
       {tab === 'today' && deskRole === 'athlete' && (
@@ -1529,7 +1534,7 @@ export default function App() {
 
       {tab === 'warmup' && <WarmupPanel signedIn={activeProfile} />}
 
-      {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk />}
+      {tab === 'learn' && deskRole === 'parent' && <ParentEducationDesk initialArticleId={parentGuideArticleId} />}
       {tab === 'learn' && deskRole !== 'parent' && ryanEdit && (
         <details className="mb-4 rounded-xl border border-white/10 bg-white/5">
           <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-white/80">

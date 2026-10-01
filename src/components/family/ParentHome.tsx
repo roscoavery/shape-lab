@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { getAgeFromDateOfBirth, birthdayNeeded } from '../../lib/age'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { PARENT_EDUCATION, PARENT_EDUCATION_CATEGORIES } from '../../config/parentEducation'
 import { useParentGuide } from '../../lib/useParentGuide'
 import { ParentGuideArticle } from './ParentGuideArticle'
+import { HelpfulRightNow } from './HelpfulRightNow'
 import { AthleteDeskFeed } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { NutritionFactsBrowse } from '../learn/NutritionFactsBrowse'
@@ -20,6 +21,7 @@ type Props = {
   onOpenAthletes: () => void
   onOpenLearn: () => void
   onOpenWellness: () => void
+  onOpenArticle: (articleId: string) => void
 }
 
 export function ParentHome({
@@ -30,6 +32,7 @@ export function ParentHome({
   onOpenAthletes,
   onOpenLearn,
   onOpenWellness,
+  onOpenArticle,
 }: Props) {
   const child = kids.find((row) => row.id === (focusId || kids[0]?.id)) ?? kids[0] ?? null
   const homework = useMemo(
@@ -85,6 +88,7 @@ export function ParentHome({
       {child && (
         <>
           <ChildSnapshot child={child} homework={homework} logs={logs} />
+          <HelpfulRightNow child={child} homework={homework} logs={logs} onOpenArticle={onOpenArticle} />
           <AthleteDeskFeed athlete={child} logs={logs} />
           {birthdayNeeded(child.dateOfBirth) && (
             <p className="rounded-xl border border-[#6ec8d6]/40 bg-[#6ec8d6]/10 px-4 py-3 text-sm">
@@ -147,9 +151,12 @@ function ChildSnapshot({
   )
 }
 
-export function ParentEducationDesk() {
+export function ParentEducationDesk({ initialArticleId }: { initialArticleId?: string | null }) {
   const { articles, loading, live } = useParentGuide()
-  const [open, setOpen] = useState<string | null>(articles[0]?.id ?? null)
+  const [open, setOpen] = useState<string | null>(initialArticleId ?? articles[0]?.id ?? null)
+  useEffect(() => {
+    if (initialArticleId) setOpen(initialArticleId)
+  }, [initialArticleId])
   const article = articles.find((row) => row.id === open) ?? articles[0]
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
