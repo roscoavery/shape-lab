@@ -20,6 +20,7 @@ import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
+import { QuickAddAthlete } from '../today/QuickAddAthlete'
 import { CalendarDesk, happeningNow } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { PracticeNudge } from '../today/PracticeNudge'
@@ -154,6 +155,7 @@ export function HomeDashboard({
   const [startKind, setStartKind] = useState<TrainingEventKind | null>(null)
   const [groupView, setGroupView] = useState<'coach' | 'athlete'>('coach')
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddAthleteOpen, setQuickAddAthleteOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
   const [addQuery, setAddQuery] = useState('')
   const [nowEventId, setNowEventId] = useState<string | null>(null)
@@ -574,6 +576,15 @@ export function HomeDashboard({
               className="sl-btn-gold sl-btn-inline rounded-full px-4 py-2 text-sm"
             >
               My profile
+            </button>
+          )}
+          {coach && signedIn && onAthletesChange && (
+            <button
+              type="button"
+              onClick={() => setQuickAddAthleteOpen(true)}
+              className="sl-btn-inline rounded-full border border-white/15 px-4 py-2 text-sm font-semibold"
+            >
+              Quick add athlete
             </button>
           )}
         </div>
@@ -1292,6 +1303,15 @@ export function HomeDashboard({
         onAthletesChange={onAthletesChange}
         onViewProfile={onViewProfile}
       />
+      {quickAddAthleteOpen && coach && signedIn && onAthletesChange && (
+        <QuickAddAthlete
+          coach={signedIn}
+          athletes={athletes}
+          onAthletesChange={onAthletesChange}
+          onClose={() => setQuickAddAthleteOpen(false)}
+          onAdded={() => setRefresh((n) => n + 1)}
+        />
+      )}
       {quickAddOpen && activeGroup && signedIn && onAthletesChange && (
         <QuickGroupEnroll
           event={activeGroup}
