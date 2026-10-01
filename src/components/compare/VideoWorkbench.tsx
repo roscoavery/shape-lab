@@ -313,6 +313,23 @@ function VideoWorkbenchInner({
     [tapTogglesChrome, toggleChrome],
   )
 
+  // pointercancel = the browser hijacked the gesture (finger still down).
+  // Never resume here; only a real pointerup means the finger lifted.
+  const onGestureCancel = useCallback((e: PointerEvent) => {
+    const g = gestureRef.current
+    if (g && e.pointerId !== g.pointerId) return
+    gestureRef.current = null
+    if (g?.holdTimer) clearTimeout(g.holdTimer)
+    try {
+      if (g && frameRef.current?.hasPointerCapture(g.pointerId)) {
+        frameRef.current.releasePointerCapture(g.pointerId)
+      }
+    } catch {
+      /* noop */
+    }
+    tapStartRef.current = null
+  }, [])
+
   const onTapDown = onGestureDown
   const onTapUp = onGestureUp
   const frameRef = useRef<HTMLDivElement | null>(null)
@@ -864,9 +881,12 @@ function VideoWorkbenchInner({
         onPointerDown={onTapDown}
         onPointerMove={onGestureMove}
         onPointerUp={onTapUp}
-        onPointerCancel={onTapUp}
+        onPointerCancel={onGestureCancel}
         onContextMenu={(e) => e.preventDefault()}
-        className={`relative min-h-0 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [touch-action:pan-y] ${
+        className={`relative min-h-0 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] ${
+          // Fullscreen: the browser must never steal the gesture mid-scrub.
+          fill ? '[touch-action:none]' : '[touch-action:pan-y]'
+        } ${
           fill ? 'h-full w-full flex-1' : overlay ? 'rounded-lg' : 'rounded-lg border border-[var(--panel-border)]'
         }`}
       >
