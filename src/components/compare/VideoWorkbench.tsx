@@ -206,14 +206,10 @@ function VideoWorkbenchInner({
       const target = e.target as HTMLElement | null
       if (target?.closest('button, a, input, select, textarea')) return
       // Kill iOS long-press magnifier / text selection.
+      // NOTE: no setPointerCapture here — capturing on touch-down can stop
+      // iOS from ever starting a native scroll, making swipes feel stuck.
+      // Capture happens only once the hold engages (see below).
       e.preventDefault()
-      // Capture the pointer so drags keep firing even if the finger drifts
-      // off the frame.
-      try {
-        frameRef.current?.setPointerCapture(e.pointerId)
-      } catch {
-        /* noop */
-      }
       const v = videoRef.current
       const g = {
         x: e.clientX,
@@ -232,6 +228,13 @@ function VideoWorkbenchInner({
         const gg = gestureRef.current
         if (!gg || gg.pointerId !== e.pointerId) return
         gg.holding = true
+        // Now that we're committed to scrub mode, capture so drags keep
+        // firing even if the finger drifts off the frame.
+        try {
+          frameRef.current?.setPointerCapture(gg.pointerId)
+        } catch {
+          /* noop */
+        }
         const vv = videoRef.current
         if (vv) {
           // Anchor the scrub to the playhead at the moment the hold engages.
@@ -328,6 +331,19 @@ function VideoWorkbenchInner({
       /* noop */
     }
     tapStartRef.current = null
+  }, [])
+
+  // While holding to scrub, kill the browser's scroll takeover at the touch
+  // level so it can never fire pointercancel mid-scrub (React's touch
+  // listeners are passive, so this needs a manual non-passive binding).
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const onTouchMove = (e: TouchEvent) => {
+      if (gestureRef.current?.holding) e.preventDefault()
+    }
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
   }, [])
 
   const onTapDown = onGestureDown
