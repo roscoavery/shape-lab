@@ -86,7 +86,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "why-still-working-on-basics",
     category: 'guide',
-    title: "Lesson 1: Why Are We Still Working on Basics?",
+    title: "Why Are We Still Working on Basics?",
     summary: "The stronger the basics, the stronger the harder skills can be.",
     intro: [
     ],
@@ -120,7 +120,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "doing-it-once-vs-owning-it",
     category: 'guide',
-    title: "Lesson 2: Doing It Once and Owning It",
+    title: "Doing It Once vs. Owning It",
     summary: "Landing it once or even 3 times should be celebrated but does not equal having the skill.",
     intro: [
     ],
@@ -144,7 +144,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "why-not-just-try-the-skill",
     category: 'guide',
-    title: "Lesson 3: Why Doesn’t the Coach Just Let Them Try It?",
+    title: "Why Doesn’t the Coach Just Let Them Try It?",
     summary: "If I have 20 details to think about in 2 seconds, I will fail.",
     intro: [
     ],
@@ -177,7 +177,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "small-habits-big-skills",
     category: 'guide',
-    title: "Lesson 4: Small Habits Build Big Skills",
+    title: "Small Habits Build Big Skills",
     summary: "Perfection before progression does not contradict \"progress, not perfection\"",
     intro: [
     ],
@@ -208,7 +208,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "time-to-move-up",
     category: 'guide',
-    title: "Lesson 5: How Do We Know It Is Time to Move Up?",
+    title: "How Do We Know It’s Time to Move Up?",
     summary: "\"sometimes where an athlete wants to be is not where an athlete needs to be.\"",
     intro: [
     ],
@@ -239,7 +239,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "when-a-skill-feels-scary",
     category: 'guide',
-    title: "Lesson 6: When a Skill Suddenly Feels Scary",
+    title: "When a Skill Suddenly Feels Scary",
     summary: "be a safe place for them to talk. be their anchor.",
     intro: [
     ],
@@ -271,7 +271,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "what-to-praise",
     category: 'guide',
-    title: "Lesson 7: What Should I Praise After Practice?",
+    title: "What Should I Praise After Practice?",
     summary: "It always comes back to doing what is within our control and trying not to get too hung up on outcomes we can't control.",
     intro: [
     ],
@@ -295,7 +295,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "plateaus-are-information",
     category: 'guide',
-    title: "Lesson 8: Plateaus Are Information",
+    title: "Plateaus Are Information",
     summary: "You don’t have to figure out if you’re stuck.",
     intro: [
     ],
@@ -322,7 +322,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
   {
     id: "choosing-a-class",
     category: 'guide',
-    title: "Lesson 9: Choosing a Class That Serves the Athlete",
+    title: "Choosing a Class That Serves the Athlete",
     summary: "We do our best and forget the rest!",
     intro: [
     ],
