@@ -122,6 +122,11 @@ import { canAccessAthlete, canCoachAthlete, canEditAthlete, canParentAccessAthle
 import { writeAudit } from './auth/audit.ts'
 import type { AuthUser } from './auth/types.ts'
 import { appendHoldLog } from './holdLog.ts'
+import { ensureSkillCardVideoSeeds } from './skillCardVideoSeeds.ts'
+
+// One-time seed merge (idempotent): bundled skill-card videos land in
+// data/skill-card-videos.json on boot.
+ensureSkillCardVideoSeeds().catch((e) => console.error('[skill-card-video-seeds]', e))
 import { readParentWellness, writeParentWellness } from './parentWellnessStore.ts'
 import { patchStillTags, stillTagsForViewer } from './stillTags.ts'
 import { handleCalendarApi } from './calendar/apiRoutes.ts'
