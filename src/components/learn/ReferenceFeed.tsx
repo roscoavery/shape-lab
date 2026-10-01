@@ -7,6 +7,7 @@ import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
 import { PhoneReelViewer } from '../PhoneReelViewer'
+import { HudCircle, IconFullscreen } from '../compare/CompareHud'
 import { ShareReference } from '../share/ShareReference'
 import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
@@ -182,6 +183,11 @@ const FeedArticle = memo(function FeedArticle({
             markupSwipeSafe
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.url, next)}
+            hudCorner={
+              <HudCircle label="" onClick={() => onOpenReel(index)}>
+                <IconFullscreen />
+              </HudCircle>
+            }
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-white/40">
@@ -214,13 +220,7 @@ const FeedArticle = memo(function FeedArticle({
             <p className="text-[10px] text-white/40">
               {index + 1} / {total}
             </p>
-            <button
-              type="button"
-              onClick={() => onOpenReel(index)}
-              className="pointer-events-auto rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm"
-            >
-              Full screen
-            </button>
+
           </div>
           <p className="mt-1 text-[10px] text-white/35">
             Swipe for the next clip · tap Shot to crop a shape
