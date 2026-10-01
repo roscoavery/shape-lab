@@ -195,6 +195,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/darnell-back-25-triple-full.mp4',
       watchFor: 'Back 2.5 through to triple full.',
     },
+    {
+      who: 'Tracy California — Gymnastics Progressions',
+      url: 'https://www.instagram.com/reel/DdmF9Abx9un/',
+      watchFor: 'Back triple.',
+    },
   ],
   skl_kick_15: [
     {
