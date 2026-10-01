@@ -183,26 +183,151 @@ function VideoWorkbenchInner({
   // almost no movement; anything on a button / input / link / draw surface is
   // left alone, and swipes (reel scroll, scrub) exceed the movement budget.
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
-  const onTapDown = useCallback(
+  // Gesture recognizer for fullscreen reels:
+  // - Single tap: toggle play/pause (+ chrome if tapTogglesChrome)
+  // - Double tap: toggle 0.25x slo-mo (double tap again for full speed)
+  // - Tap and hold: freeze while held, resume on release
+  // - Tap, hold, and drag: scrub from the playhead
+  const gestureRef = useRef<{
+    x: number
+    y: number
+    t: number
+    holdTimer: ReturnType<typeof setTimeout> | null
+    holding: boolean
+    scrubbing: boolean
+    wasPlaying: boolean
+    lastTap: number
+  } | null>(null)
+
+  const onGestureDown = useCallback(
     (e: PointerEvent) => {
-      if (tapTogglesChrome) tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+      const target = e.target as HTMLElement | null
+      if (target?.closest('button, a, input, select, textarea')) return
+      // Kill iOS long-press magnifier / text selection.
+      e.preventDefault()
+      const now = Date.now()
+      const g = gestureRef.current
+      // Double tap detection: second tap within 300ms.
+      if (g && now - g.lastTap < 300 && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 30) {
+        if (g.holdTimer) clearTimeout(g.holdTimer)
+        gestureRef.current = null
+        // Double tap: toggle slo-mo.
+        const v = videoRef.current
+        if (v) {
+          const toSlow = v.playbackRate !== 0.25
+          v.playbackRate = toSlow ? 0.25 : 1
+          setSpeed(toSlow ? 0.25 : 1)
+        }
+        return
+      }
+      const v = videoRef.current
+      gestureRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        t: now,
+        holdTimer: null,
+        holding: false,
+        scrubbing: false,
+        wasPlaying: v ? !v.paused : false,
+        lastTap: g?.lastTap ?? 0,
+      }
+      const cur = gestureRef.current
+      // Hold threshold: 500ms without significant movement = freeze.
+      cur.holdTimer = setTimeout(() => {
+        const gg = gestureRef.current
+        if (!gg || gg.scrubbing) return
+        gg.holding = true
+        const vv = videoRef.current
+        if (vv && !vv.paused) {
+          vv.pause()
+          setPlaying(false)
+        }
+      }, 500)
+      if (tapTogglesChrome) tapStartRef.current = { x: e.clientX, y: e.clientY, t: now }
     },
     [tapTogglesChrome],
   )
-  const onTapUp = useCallback(
+
+  const onGestureMove = useCallback((e: PointerEvent) => {
+    const g = gestureRef.current
+    if (!g || !g.holding) {
+      // Check if we've moved enough to cancel the hold timer (it's a swipe, not a hold).
+      if (g && g.holdTimer && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 14) {
+        clearTimeout(g.holdTimer)
+        g.holdTimer = null
+      }
+      return
+    }
+    // We're in hold mode and moving: switch to scrub.
+    const dx = e.clientX - g.x
+    if (Math.abs(dx) > 10 && !g.scrubbing) {
+      g.scrubbing = true
+    }
+    if (g.scrubbing) {
+      const v = videoRef.current
+      if (v && v.duration) {
+        // Scrub: full width = full duration.
+        const frame = frameRef.current
+        const w = frame?.clientWidth || 300
+        // Anchor the scrub to where the hold started.
+        if ((g as any).scrubStart == null) {
+          ;(g as any).scrubStart = v.currentTime
+          ;(g as any).scrubX = g.x
+        }
+        const startT = (g as any).scrubStart as number
+        const startX = (g as any).scrubX as number
+        v.currentTime = Math.max(0, Math.min(v.duration, startT + ((e.clientX - startX) / w) * v.duration))
+      }
+      e.preventDefault()
+    }
+  }, [])
+
+  const onGestureUp = useCallback(
     (e: PointerEvent) => {
-      const start = tapStartRef.current
-      tapStartRef.current = null
-      if (!tapTogglesChrome || !start) return
-      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 14) return
-      if (Date.now() - start.t > 500) return
+      const g = gestureRef.current
+      gestureRef.current = null
+      if (g?.holdTimer) clearTimeout(g.holdTimer)
       const target = e.target as HTMLElement | null
-      if (!target || target.closest('button, a, input, select, textarea')) return
-      if (!target.closest('video')) return
-      toggleChrome()
+      if (g?.holding) {
+        // Was holding (freeze or scrub): resume if it was playing.
+        if (!g.scrubbing && g.wasPlaying) {
+          const v = videoRef.current
+          if (v) {
+            void v.play()
+            setPlaying(true)
+          }
+        }
+        if (g.scrubbing) {
+          // After scrub, stay paused so the coach can inspect the frame.
+          const v = videoRef.current
+          if (v) {
+            v.pause()
+            setPlaying(false)
+          }
+        }
+        tapStartRef.current = null
+        return
+      }
+      // Not a hold: single tap (if quick and didn't move much).
+      if (g && Math.hypot(e.clientX - g.x, e.clientY - g.y) <= 14 && Date.now() - g.t <= 500) {
+        if (!target?.closest('button, a, input, select, textarea') && target?.closest('video')) {
+          togglePlay()
+          if (tapTogglesChrome) toggleChrome()
+        }
+        // Record for double-tap detection.
+        gestureRef.current = { ...g, lastTap: Date.now(), holdTimer: null, holding: false, scrubbing: false, wasPlaying: false, x: e.clientX, y: e.clientY, t: Date.now() }
+        // Clear the stale record after the double-tap window.
+        setTimeout(() => {
+          if (gestureRef.current && Date.now() - gestureRef.current.lastTap >= 300) gestureRef.current = null
+        }, 350)
+      }
+      tapStartRef.current = null
     },
     [tapTogglesChrome, toggleChrome],
   )
+
+  const onTapDown = onGestureDown
+  const onTapUp = onGestureUp
   const frameRef = useRef<HTMLDivElement | null>(null)
   const pinchRef = useRef<{
     dist: number
@@ -747,8 +872,11 @@ function VideoWorkbenchInner({
       <div
         ref={frameRef}
         onPointerDown={onTapDown}
+        onPointerMove={onGestureMove}
         onPointerUp={onTapUp}
-        className={`relative min-h-0 overflow-hidden bg-black ${
+        onPointerCancel={onTapUp}
+        onContextMenu={(e) => e.preventDefault()}
+        className={`relative min-h-0 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [touch-action:pan-y] ${
           fill ? 'h-full w-full flex-1' : overlay ? 'rounded-lg' : 'rounded-lg border border-[var(--panel-border)]'
         }`}
       >
