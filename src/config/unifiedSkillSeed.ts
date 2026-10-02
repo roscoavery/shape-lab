@@ -54,6 +54,8 @@ export interface UnifiedSkill {
 export interface ShapeVariation {
   name: string
   detail?: string
+  /** Shape-library id whose still illustrates this variation, when one exists. */
+  shapeId?: string
 }
 
 /**
@@ -68,34 +70,35 @@ export const ARCH_HOLLOW_VARIATIONS: {
 } = {
   intro: 'Arch variations seem important to understand.',
   arch: [
-    { name: 'Tight arch' },
-    { name: 'Bridge' },
-    { name: 'Long bridge' },
+    { name: 'Tight arch', shapeId: 'arch' },
+    { name: 'Bridge', shapeId: 'bridge' },
+    { name: 'Long bridge', shapeId: 'long_bridge' },
     { name: 'Arch handstand' },
-    { name: 'Superman' },
+    { name: 'Superman', shapeId: 'superman' },
   ],
   hollow: [
     {
       name: 'Zombie',
+      shapeId: 'zombie',
       detail: 'Standing, which makes it the easiest hollow.',
     },
-    { name: 'Hollow tucked' },
+    { name: 'Hollow tucked', shapeId: 'tuck_open_shoulders' },
     { name: 'Hollow bent knees' },
     { name: 'Curl up' },
     { name: 'Mad cat' },
     { name: 'Elbow plank' },
-    { name: 'Front support' },
-    { name: 'Hollow arms down' },
+    { name: 'Front support', shapeId: 'front_plank' },
+    { name: 'Hollow arms down', shapeId: 'hollow_arms_down' },
     {
       name: 'Foam roller prone arch to hollow',
       detail:
         'Foam roller elevates the thighs, a couple layers of panel mat elevate the arms overhead. Going from arch to hollow here is hard.',
     },
-    { name: 'Hollow arms up' },
+    { name: 'Hollow arms up', shapeId: 'hollow_arms_up' },
     {
       name: 'Supine hollow, hands pinned',
       detail:
-        'Flip the athlete onto their back and put their hands under a big mat to hold them down; the foam roller elevates the middle to lower butt. Under the tailbone makes it harder. The athlete maintains open hips while pulling the ribs and low back toward the ground and lifting the toes in line with the hips and ribs.',
+        'Hands pinned under a big mat, foam roller under the mid-to-lower butt — under the tailbone is harder. Keep hips open while pulling the ribs and low back toward the ground, toes in line with hips and ribs.',
     },
   ],
 }

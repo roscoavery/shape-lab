@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CURRICULUM_TASKS, getTask } from '../config/curriculum'
 import { getShape } from '../config/shapes'
 import { ARCH_HOLLOW_VARIATIONS } from '../config/unifiedSkillSeed'
+import { listCoachStills, shippedStillUrl } from '../lib/shippedRefs'
+import { VariationCards } from './learn/VariationCards'
 import {
   criterionHowToHit,
   curriculumShapeIds,
@@ -1315,37 +1317,16 @@ function ShapeLibrary({
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
           Arch and hollow variations
         </p>
-        {ARCH_HOLLOW_VARIATIONS.intro && (
-          <p className="mt-1 text-sm text-[var(--text)]">{ARCH_HOLLOW_VARIATIONS.intro}</p>
-        )}
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
-              Arch, easiest first
-            </p>
-            <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm text-[var(--text)]">
-              {ARCH_HOLLOW_VARIATIONS.arch.map((v) => (
-                <li key={v.name}>
-                  <span className="font-semibold">{v.name}</span>
-                  {v.detail && <span className="block text-xs text-[var(--muted)]">{v.detail}</span>}
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
-              Hollow, easiest first
-            </p>
-            <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm text-[var(--text)]">
-              {ARCH_HOLLOW_VARIATIONS.hollow.map((v) => (
-                <li key={v.name}>
-                  <span className="font-semibold">{v.name}</span>
-                  {v.detail && <span className="block text-xs text-[var(--muted)]">{v.detail}</span>}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
+        <VariationCards
+          arch={ARCH_HOLLOW_VARIATIONS.arch}
+          hollow={ARCH_HOLLOW_VARIATIONS.hollow}
+          intro={ARCH_HOLLOW_VARIATIONS.intro}
+          getStillUrl={(shapeId) =>
+            listCoachStills(referencePhotos, shapeId).find((s) => s.dataUrl)?.dataUrl ??
+            shippedStillUrl(shapeId)
+          }
+          onOpenShape={onOpen}
+        />
       </div>
     </section>
   )
