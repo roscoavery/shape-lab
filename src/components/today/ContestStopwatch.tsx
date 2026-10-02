@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import {
-  CLASS_HOLD_DRILLS,
+  CONTEST_HOLD_DRILLS,
   logClassHoldForAthletes,
 } from '../../lib/classSessionLog'
 import { formatSeconds } from '../../hooks/useHoldTimer'
@@ -36,7 +36,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
   const startRef = useRef(0)
   const timerRef = useRef<number | null>(null)
 
-  const drill = CLASS_HOLD_DRILLS.find((d) => d.id === drillId) ?? CLASS_HOLD_DRILLS[0]
+  const drill = CONTEST_HOLD_DRILLS.find((d) => d.id === drillId) ?? CONTEST_HOLD_DRILLS[0]
   const holdName = drill.id === 'wall_handstand' ? 'Wall handstand contest' : `${drill.label} contest`
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">Hold</p>
             <div className="flex flex-wrap gap-2">
-              {CLASS_HOLD_DRILLS.map((d) => (
+              {CONTEST_HOLD_DRILLS.map((d) => (
                 <button
                   key={d.id}
                   type="button"

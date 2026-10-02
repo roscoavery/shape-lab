@@ -22,6 +22,22 @@ export const CLASS_SKILLS_TITLE = 'Class skills & wins'
 
 export const CLASS_HOLD_DRILLS: {
   id: string
+  autoKey: 'hollow' | 'superman' | 'side_plank' | 'wall_handstand'
+  label: string
+}[] = [
+  { id: 'hollow', autoKey: 'hollow', label: 'Hollow' },
+  { id: 'superman', autoKey: 'superman', label: 'Superman' },
+  { id: 'side_plank', autoKey: 'side_plank', label: 'Side plank' },
+  { id: 'wall_handstand', autoKey: 'wall_handstand', label: 'Wall handstand' },
+]
+
+/**
+ * The hold contest's drill list — the class clock's four plus front plank,
+ * tuck, and wall sit. Kept separate so the class clock stays exactly as it
+ * was before the contest existed.
+ */
+export const CONTEST_HOLD_DRILLS: {
+  id: string
   autoKey:
     | 'hollow'
     | 'superman'
