@@ -29,6 +29,7 @@ export const MUSE_SCOPES = [
   'skill-maps:write',
   'chalkboards:read',
   'chalkboards:write',
+  'homework:write',
 ] as const
 
 export type MuseScope = (typeof MUSE_SCOPES)[number]
@@ -59,6 +60,7 @@ export const COACH_PRESET_SCOPES: MuseScope[] = [
   'skill-maps:write',
   'chalkboards:read',
   'chalkboards:write',
+  'homework:write',
 ]
 
 /**
@@ -272,7 +274,13 @@ export async function verifyMuseKey(secret: string | null | undefined): Promise<
 }
 
 export function museKeyHasScope(key: MuseKeyRecord, scope: MuseScope): boolean {
-  return key.scopes.includes(scope)
+  if (key.scopes.includes(scope)) return true
+  // Backward compatibility: 'homework:write' was added after keys were first
+  // minted. Keys that already hold 'athlete-notes:write' (same trust tier —
+  // coach filing on athletes) inherit it, so existing coach/owner keys keep
+  // working without being reissued. Parent keys never hold that scope.
+  if (scope === 'homework:write') return key.scopes.includes('athlete-notes:write')
+  return false
 }
 
 /** Parent-scoped keys may only read their own athlete. Owner keys pass. */

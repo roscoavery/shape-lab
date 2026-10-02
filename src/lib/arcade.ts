@@ -26,6 +26,13 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     tagline: 'Take turns. Miss and you earn a letter. Spell S-T-I-C-K and you are out. Last one standing wins.',
     playable: true,
   },
+  {
+    id: 'distance',
+    name: 'Distance Challenge',
+    tagline:
+      'Jump-back distance showdown. Standing or round-off entry, flat back or handspring landing — furthest wins.',
+    playable: true,
+  },
   { id: 'handstand-circle', name: 'Handstand circle', tagline: 'Coming soon.', playable: false },
   { id: 'dice-game', name: "Coach Levi's dice game", tagline: 'Coming soon.', playable: false },
   { id: 'bhs-race', name: 'Back handspring race', tagline: 'Coming soon.', playable: false },
@@ -148,6 +155,197 @@ export type LeaderboardEntry = {
 /** Wins per player across Stick It records. */
 export function stickItLeaderboard(): LeaderboardEntry[] {
   const recs = loadArcadeRecords('stick-it')
+  const map = new Map<string, LeaderboardEntry>()
+  for (const r of recs) {
+    const key = r.winnerAthleteId ?? `guest:${r.winnerName.toLowerCase()}`
+    const cur = map.get(key)
+    if (cur) cur.wins += 1
+    else map.set(key, { key, name: r.winnerName, wins: 1 })
+  }
+  return [...map.values()].sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name))
+}
+
+// ---------------------------------------------------------------------------
+// Distance Challenge
+// ---------------------------------------------------------------------------
+
+export type DistanceEventId =
+  | 'standing-flat-back'
+  | 'roundoff-flat-back'
+  | 'standing-handspring'
+  | 'roundoff-handspring'
+
+export const DISTANCE_EVENTS: { id: DistanceEventId; label: string; hint: string }[] = [
+  {
+    id: 'standing-flat-back',
+    label: 'Standing flat back',
+    hint: 'Standing jump back, land on your back in a hollow, straight, or arch shape.',
+  },
+  {
+    id: 'roundoff-flat-back',
+    label: 'Round off flat back',
+    hint: 'Round off into the jump back, land on your back.',
+  },
+  {
+    id: 'standing-handspring',
+    label: 'Standing handspring',
+    hint: 'Standing back handspring for distance.',
+  },
+  {
+    id: 'roundoff-handspring',
+    label: 'Round off back handspring',
+    hint: 'Round off, back handspring for distance.',
+  },
+]
+
+/**
+ * Scoring modes.
+ * - raw: furthest distance wins.
+ * - body-lengths: distance divided by the athlete's body length — a shorter
+ *   athlete needs fewer absolute inches to score the same.
+ * - beat-best: biggest percent improvement over the athlete's own personal
+ *   best wins. Height cannot help you beat yourself — the fair mode when
+ *   athletes of very different sizes play together.
+ */
+export type DistanceMode = 'raw' | 'body-lengths' | 'beat-best'
+
+export const DISTANCE_MODES: { id: DistanceMode; label: string; blurb: string }[] = [
+  { id: 'raw', label: 'Furthest wins', blurb: 'Longest jump takes it. No adjustments.' },
+  {
+    id: 'body-lengths',
+    label: 'Body lengths',
+    blurb: 'Distance ÷ body length. Shorter athletes need fewer inches to match.',
+  },
+  {
+    id: 'beat-best',
+    label: 'Beat your best',
+    blurb: 'Biggest improvement over your own best wins. The fair one.',
+  },
+]
+
+export type DistancePlayer = {
+  /** profile athlete id, or `guest:<name>` */
+  id: string
+  name: string
+  athleteId?: string
+  /** body length in inches, measured lying down head to toe */
+  bodyLengthIn: number | null
+  /** attempts in inches, best counts */
+  attemptsIn: number[]
+}
+
+const DISTANCE_STORE_KEY = 'shapelab.arcade.distance.v1'
+
+type DistanceStore = {
+  /** playerId -> body length in inches */
+  bodyLengths: Record<string, number>
+  /** `${eventId}::${playerId}` -> personal best in inches */
+  bests: Record<string, number>
+}
+
+function readDistanceStore(): DistanceStore {
+  try {
+    const raw = localStorage.getItem(DISTANCE_STORE_KEY)
+    if (!raw) return { bodyLengths: {}, bests: {} }
+    const p = JSON.parse(raw) as Partial<DistanceStore>
+    return {
+      bodyLengths: p.bodyLengths && typeof p.bodyLengths === 'object' ? p.bodyLengths : {},
+      bests: p.bests && typeof p.bests === 'object' ? p.bests : {},
+    }
+  } catch {
+    return { bodyLengths: {}, bests: {} }
+  }
+}
+
+function writeDistanceStore(s: DistanceStore): void {
+  try {
+    localStorage.setItem(DISTANCE_STORE_KEY, JSON.stringify(s))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getBodyLengthIn(playerId: string): number | null {
+  const v = readDistanceStore().bodyLengths[playerId]
+  return typeof v === 'number' && v > 0 ? v : null
+}
+
+export function setBodyLengthIn(playerId: string, inches: number): void {
+  const s = readDistanceStore()
+  s.bodyLengths[playerId] = inches
+  writeDistanceStore(s)
+}
+
+export function getDistanceBest(eventId: DistanceEventId, playerId: string): number | null {
+  const v = readDistanceStore().bests[`${eventId}::${playerId}`]
+  return typeof v === 'number' && v > 0 ? v : null
+}
+
+export function recordDistanceBest(eventId: DistanceEventId, playerId: string, inches: number): void {
+  const s = readDistanceStore()
+  const k = `${eventId}::${playerId}`
+  s.bests[k] = Math.max(s.bests[k] ?? 0, inches)
+  writeDistanceStore(s)
+}
+
+export function distanceBestIn(p: DistancePlayer): number | null {
+  if (!p.attemptsIn.length) return null
+  return Math.max(...p.attemptsIn)
+}
+
+export type DistanceScore = {
+  playerId: string
+  /** higher wins */
+  score: number
+  display: string
+  /** beat-best only: no prior best, so this game sets the baseline */
+  isBaseline?: boolean
+}
+
+/** Score every player under the chosen mode. Returns sorted best-first. */
+export function scoreDistance(
+  eventId: DistanceEventId,
+  mode: DistanceMode,
+  players: DistancePlayer[],
+): DistanceScore[] {
+  const out: DistanceScore[] = []
+  for (const p of players) {
+    const best = distanceBestIn(p)
+    if (best == null) continue
+    if (mode === 'raw') {
+      out.push({ playerId: p.id, score: best, display: formatInches(best) })
+    } else if (mode === 'body-lengths') {
+      if (p.bodyLengthIn == null || p.bodyLengthIn <= 0) continue
+      const mult = best / p.bodyLengthIn
+      out.push({ playerId: p.id, score: mult, display: `${mult.toFixed(2)}× body` })
+    } else {
+      const prior = getDistanceBest(eventId, p.id)
+      if (prior == null || prior <= 0) {
+        out.push({ playerId: p.id, score: 0, display: `${formatInches(best)} · new baseline`, isBaseline: true })
+      } else {
+        const imp = (best - prior) / prior
+        const pct = imp * 100
+        out.push({
+          playerId: p.id,
+          score: imp,
+          display: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% (best ${formatInches(prior)})`,
+        })
+      }
+    }
+  }
+  return out.sort((a, b) => b.score - a.score)
+}
+
+export function formatInches(inches: number): string {
+  const ft = Math.floor(inches / 12)
+  const rem = Math.round(inches - ft * 12)
+  if (ft <= 0) return `${rem} in`
+  return rem === 0 ? `${ft} ft` : `${ft} ft ${rem} in`
+}
+
+/** Wins per player across Distance Challenge records. */
+export function distanceLeaderboard(): LeaderboardEntry[] {
+  const recs = loadArcadeRecords('distance')
   const map = new Map<string, LeaderboardEntry>()
   for (const r of recs) {
     const key = r.winnerAthleteId ?? `guest:${r.winnerName.toLowerCase()}`

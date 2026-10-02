@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Athlete } from '../../types'
 import { ARCADE_GAMES } from '../../lib/arcade'
 import { StickItGame } from './StickItGame'
+import { DistanceGame } from './DistanceGame'
 
 /**
  * Tumbling Arcade hub — lives in the admin section.
@@ -14,6 +15,14 @@ export function ArcadeHub({ athletes, onClose }: { athletes: Athlete[]; onClose:
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-6">
         <StickItGame athletes={athletes} onExit={() => setActiveGame(null)} />
+      </div>
+    )
+  }
+
+  if (activeGame === 'distance') {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <DistanceGame athletes={athletes} onExit={() => setActiveGame(null)} />
       </div>
     )
   }

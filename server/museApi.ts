@@ -36,6 +36,7 @@ import { readCoachContentFile, writeCoachContentFile } from './coachContentStore
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
+import { appendHoldLog, HOLD_LOG_SHAPES, roundHoldSecondsUp } from './holdLog.ts'
 
 const WINDOW_DAYS = 30
 
@@ -615,6 +616,127 @@ async function handleAthleteNotes(req: IncomingMessage, res: ServerResponse): Pr
 
 const FEED_CHANNELS = ['gym', 'wins', 'passes'] as const
 
+/**
+ * Log a hold time (or other homework result) for an athlete — lets a coach's
+ * Muse file hold times from old session notes without manual entry.
+ * Idempotent: an identical entry (athlete + shape + side + day + seconds)
+ * already on file is reported as a duplicate, never double-logged.
+ */
+async function handleHomeworkLog(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'homework:write')
+  if (!verified) return true
+  const body = await readJsonBody(req)
+  if (!body) {
+    sendJson(res, 400, {
+      error: 'Send JSON with athleteName or athleteId, shapeId, seconds, and performedAt (YYYY-MM-DD).',
+    })
+    return true
+  }
+  const athleteId = textField(body, 'athleteId', 120)
+  const athleteName = textField(body, 'athleteName', 120)
+  const shapeId = textField(body, 'shapeId', 60)
+  const seconds = typeof body.seconds === 'number' ? body.seconds : Number(body.seconds)
+  const performedAt = textField(body, 'performedAt', 40)
+  const side = body.side === 'left' || body.side === 'right' ? body.side : undefined
+  const note = textField(body, 'note', 200)
+
+  const shape = HOLD_LOG_SHAPES[shapeId]
+  if (!shape) {
+    sendJson(res, 400, {
+      error: `Unknown shapeId. Use one of: ${Object.keys(HOLD_LOG_SHAPES).join(', ')}.`,
+    })
+    return true
+  }
+  if (!Number.isFinite(seconds) || seconds < 0.2 || seconds > 3600) {
+    sendJson(res, 400, { error: 'seconds must be a number between 0.2 and 3600.' })
+    return true
+  }
+  const dayMatch = /^(\d{4}-\d{2}-\d{2})/.exec(performedAt)
+  if (!dayMatch) {
+    sendJson(res, 400, { error: 'performedAt must start with YYYY-MM-DD.' })
+    return true
+  }
+  const day = dayMatch[1]
+
+  const roster = await readRosterFile()
+  const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []) as Array<
+    Record<string, unknown>
+  >
+  let athlete = athleteId ? athletes.find((a) => a.id === athleteId) : undefined
+  if (!athlete && athleteName) {
+    const matches = athletes.filter(
+      (a) => sameName(a.name, athleteName) || sameName(a.firstName, athleteName),
+    )
+    if (matches.length > 1) {
+      sendJson(res, 400, {
+        error: `Multiple athletes match "${athleteName}". Send athleteId instead.`,
+        candidates: matches.slice(0, 8).map((m) => ({ id: m.id, name: m.name })),
+      })
+      return true
+    }
+    athlete = matches[0]
+  }
+  if (!athlete || typeof athlete.id !== 'string') {
+    sendJson(res, 404, { error: 'Athlete not found.' })
+    return true
+  }
+  if (!museKeyMayReadAthlete(verified.key, athlete.id)) {
+    sendJson(res, 403, { error: 'This key may only log for its own athlete.' })
+    return true
+  }
+  const creator = await keyCreator(verified.key)
+  if (!(await coachMayTouchAthlete(creator, athlete))) {
+    sendJson(res, 403, { error: 'This key may not log for that athlete.' })
+    return true
+  }
+
+  const rounded = roundHoldSecondsUp(seconds)
+  const logs = (Array.isArray(roster.homeworkLogs) ? roster.homeworkLogs : []) as Array<
+    Record<string, unknown>
+  >
+  const dup = logs.find(
+    (l) =>
+      l.athleteId === athlete!.id &&
+      l.shapeId === shape.shapeId &&
+      (l.side ?? null) === (side ?? null) &&
+      typeof l.date === 'string' &&
+      l.date.slice(0, 10) === day &&
+      Number(l.totalHoldSeconds) === rounded,
+  )
+  if (dup) {
+    await verified.touch()
+    sendJson(res, 200, { status: 'duplicate', logId: dup.id, athleteId: athlete.id })
+    return true
+  }
+
+  const row = await appendHoldLog({
+    athleteId: athlete.id as string,
+    shapeId: shape.shapeId,
+    seconds: rounded,
+    performedAt: day,
+    source: 'coach',
+    coachName: creator.displayName,
+    loggedFrom: 'muse',
+    ...(side ? { side } : {}),
+    ...(note ? { note } : {}),
+  })
+  await verified.touch()
+  sendJson(res, 201, {
+    status: 'logged',
+    logId: row?.id ?? null,
+    athleteId: athlete.id,
+    athleteName: athlete.name,
+    shapeId: shape.shapeId,
+    seconds: rounded,
+    performedAt: day,
+  })
+  return true
+}
+
 async function handleStories(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (req.method !== 'POST') {
     sendJson(res, 405, { error: 'Use POST' })
@@ -1012,6 +1134,7 @@ export async function handleMuseApi(  req: IncomingMessage,
   if (path === '/api/muse/roster/athletes') return handleRosterAdd(req, res)
   if (path === '/api/muse/classes') return handleClassesAdd(req, res)
   if (path === '/api/muse/athlete-notes') return handleAthleteNotes(req, res)
+  if (path === '/api/muse/homework-logs') return handleHomeworkLog(req, res)
   if (path === '/api/muse/stories') return handleStories(req, res)
   if (path === '/api/muse/drills') return handleDrills(req, res)
   if (path === '/api/muse/skill-maps') {

@@ -11,7 +11,10 @@ const CATALOG: Record<string, { shapeId: string; catalogId: string; label: strin
   wall_handstand: { shapeId: 'wall_handstand', catalogId: 'wall_handstand', label: 'Handstand hold' },
 }
 
-function roundHoldSecondsUp(s: number): number {
+/** Shapes the Muse API homework-log endpoint accepts. */
+export const HOLD_LOG_SHAPES = CATALOG
+
+export function roundHoldSecondsUp(s: number): number {
   if (!Number.isFinite(s) || s <= 0) return 0
   return Math.ceil(s * 100) / 100
 }
@@ -43,7 +46,9 @@ export type HoldLogInput = {
   className?: string
   side?: 'left' | 'right'
   logId?: string
-  loggedFrom?: 'lesson' | 'class' | 'profile' | 'today'
+  loggedFrom?: 'lesson' | 'class' | 'profile' | 'today' | 'muse'
+  /** Coach's form note from the session (e.g. "arched low back"). */
+  note?: string
 }
 
 export async function appendHoldLog(input: HoldLogInput): Promise<Record<string, unknown> | null> {
@@ -92,6 +97,7 @@ export async function appendHoldLog(input: HoldLogInput): Promise<Record<string,
     ...(input.coachName ? { coachName: input.coachName } : {}),
     ...(input.className ? { className: input.className } : {}),
     ...(input.side ? { side: input.side } : {}),
+    ...(input.note ? { note: input.note.slice(0, 200) } : {}),
     sourceLabel: input.lessonId
       ? `Lesson · ${shapeName}`
       : input.classMeetingId

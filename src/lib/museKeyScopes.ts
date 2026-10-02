@@ -18,6 +18,7 @@ export const SCOPE_LABELS: Record<string, string> = {
   'skill-maps:write': 'Build skill maps and paths',
   'chalkboards:read': 'Read chalkboards',
   'chalkboards:write': 'Manage chalkboards',
+  'homework:write': 'Log hold times and homework results for athletes',
 }
 
 export const OWNER_SCOPES = [
@@ -45,6 +46,7 @@ export const COACH_SCOPES = [
   'skill-maps:write',
   'chalkboards:read',
   'chalkboards:write',
+  'homework:write',
 ]
 
 export type KeyPreset = 'owner' | 'parent' | 'coach'
