@@ -3083,7 +3083,26 @@ export function Tasks2Panel({
               >
                 <div className="flex gap-2">
                   {s.url && (
-                    <img src={s.url} alt={s.shapeName} className="h-24 w-24 shrink-0 object-contain bg-black" />
+                    <figure className="relative h-24 w-24 shrink-0 bg-black">
+                      <img src={s.url} alt={s.shapeName} className="h-full w-full object-contain" />
+                      <span className="absolute left-1 top-1 rounded bg-black/75 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-white">
+                        You
+                      </span>
+                    </figure>
+                  )}
+                  {s.marker !== 'playhead' && (
+                    <figure className="relative h-24 w-24 shrink-0 bg-black">
+                      <ReferenceStill
+                        shapeId={s.shapeId}
+                        photos={referencePhotos}
+                        alt={`${s.shapeName} reference`}
+                        className="h-full w-full object-contain"
+                        emptyLabel="No reference yet"
+                      />
+                      <span className="absolute left-1 top-1 rounded bg-black/75 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-white">
+                        Reference
+                      </span>
+                    </figure>
                   )}
                   <div className="min-w-0 flex-1 p-2">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">

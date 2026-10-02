@@ -210,6 +210,12 @@ export function EducationPanel({
   }, [])
 
   useEffect(() => {
+    const jump = takeMobileSearchJump('shapes')
+    if (!jump || jump.kind !== 'shapes') return
+    setView({ kind: 'shapes' })
+  }, [])
+
+  useEffect(() => {
     if (!athleteId) {
       setHits([])
       return

@@ -1158,6 +1158,14 @@ export default function App() {
           onQuickLog={() => goTab('classclock')}
           onProgress={() => goTab('progress')}
           onVideos={() => goTab('compare')}
+          onOpenGuide={() => {
+            stashMobileSearchJump({ kind: 'skillPath' })
+            goTab('learn')
+          }}
+          onOpenShapes={() => {
+            stashMobileSearchJump({ kind: 'shapes' })
+            goTab('learn')
+          }}
         />
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (

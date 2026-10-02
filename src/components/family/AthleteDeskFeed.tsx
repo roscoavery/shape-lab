@@ -98,6 +98,14 @@ export function AthleteUpcomingCard({ athlete }: { athlete: Athlete }) {
 export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
   const { gains } = useAthleteDeskData(athlete, logsProp)
   return (
+    <div
+      className="rounded-2xl"
+      style={
+        gains.length
+          ? { boxShadow: '0 0 22px rgba(150, 110, 220, 0.28)', border: '1px solid rgba(180, 140, 232, 0.5)' }
+          : undefined
+      }
+    >
     <CollapsibleSection
       title="Hold times going up"
       hint={gains.length ? `${gains.length} recent improvement${gains.length === 1 ? '' : 's'}` : 'No progress yet'}
@@ -118,6 +126,7 @@ export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
         )}
       </ul>
     </CollapsibleSection>
+    </div>
   )
 }
 

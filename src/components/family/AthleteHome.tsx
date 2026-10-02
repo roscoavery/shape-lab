@@ -5,6 +5,7 @@ import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
+import { AthletePathStrip } from './AthletePathStrip'
 
 type Props = {
   athlete: Athlete | null
@@ -16,11 +17,15 @@ export function AthleteHome({
   onProgress,
   onVideos,
   onQuickLog,
+  onOpenGuide,
+  onOpenShapes,
 }: Props & {
   onPractice: () => void
   onProgress: () => void
   onVideos: () => void
   onQuickLog?: () => void
+  onOpenGuide: () => void
+  onOpenShapes: () => void
 }) {
   if (!athlete) {
     return (
@@ -43,11 +48,23 @@ export function AthleteHome({
         <button
           type="button"
           onClick={onPractice}
+          style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
           className="mt-4 w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-base font-bold text-[var(--on-accent)] sm:w-auto sm:px-8"
         >
           Start Practice
         </button>
       </section>
+      <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
+      <button
+        type="button"
+        onClick={onOpenShapes}
+        className="sl-skill-glow sl-left px-4 py-4"
+      >
+        <span className="block text-sm font-bold text-white">Study your shapes</span>
+        <span className="text-xs text-white/70">
+          The body positions every skill is built from — quiz yourself
+        </span>
+      </button>
       <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
       {/* Recent progress */}
       <AthleteProgressCard athlete={athlete} />

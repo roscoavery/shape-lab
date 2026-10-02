@@ -12,6 +12,7 @@ export type MobileSearchJump =
   | { kind: 'networkThread'; threadId: string }
   | { kind: 'skill'; skillId: string; section?: string }
   | { kind: 'skillPath' }
+  | { kind: 'shapes' }
 
 export function stashMobileSearchJump(jump: MobileSearchJump): void {
   try {
