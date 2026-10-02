@@ -77,17 +77,17 @@ const HW_TOUR_STEPS: TourStep[] = [
   {
     target: 'hw-tour-drills',
     title: 'Your homework lives here',
-    text: 'Drills from your coach, top to bottom. Start at the top — each one makes the next easier.',
+    text: 'Drills from your coach, top to bottom. Pick one to start with — the top drill is the easiest win. Tap the glowing list to continue.',
   },
   {
     target: 'hw-tour-train',
-    title: 'Tap Train to start',
-    text: 'The camera watches your form while you hold. Tap it on your first drill and follow along.',
+    title: 'This button starts the camera',
+    text: 'Tap Train on a drill and the camera watches your form while you hold. This is the button you will use most. Tap it to continue.',
   },
   {
     target: 'hw-tour-manual',
-    title: 'No camera? No problem',
-    text: 'Tap Log and type your time or reps instead. It still counts.',
+    title: 'Or log it by hand',
+    text: 'No camera? Tap Log and type your time or reps instead — it still counts. You are set: hit Done, then tap Train on your first drill for real.',
   },
 ]
 import { GestureBurstHost } from './components/GestureBurst'
@@ -691,12 +691,23 @@ export default function App() {
     if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
     if (tab !== 'homework') setHwStudio(false)
     // Guided homework tour: auto-offer once per device to non-coach viewers.
+    // Wait for the drill list to actually render before opening — opening
+    // on a fixed timer is what made the old tour cascade-skip its steps.
     if (tab === 'homework' && !hwTourAutoFired.current && !tourSeen()) {
       hwTourAutoFired.current = true
       const coachViewing = activeProfile != null && isCoachProfile(activeProfile)
       if (!coachViewing) {
-        const t = window.setTimeout(() => setHwTourOpen(true), 900)
-        return () => window.clearTimeout(t)
+        let tries = 0
+        const iv = window.setInterval(() => {
+          tries += 1
+          const list = document.getElementById('hw-tour-drills')
+          const ready = list != null && list.children.length > 0
+          if (ready || tries > 20) {
+            window.clearInterval(iv)
+            if (ready) setHwTourOpen(true)
+          }
+        }, 400)
+        return () => window.clearInterval(iv)
       }
     }
   }, [tab])

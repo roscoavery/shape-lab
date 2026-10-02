@@ -28,44 +28,60 @@ export function markTourSeen(): void {
 /**
  * Step-by-step spotlight tour. Dims the screen around the target element,
  * rings it with the signature glow pulse, and shows a coach-voiced tooltip.
- * Tapping the highlighted element advances the tour; Next/Back/Skip also work.
- * Steps whose target isn't on screen are skipped silently.
+ *
+ * User-paced: nothing auto-advances. Tapping the highlighted element (or
+ * Next) moves to the next step — the tap is swallowed so the underlying
+ * button doesn't fire mid-tour. Targets that haven't rendered yet are
+ * waited for (not skipped): the tour holds on a "getting ready" state
+ * until the element appears, so slow lists can't cascade-skip steps.
  */
 export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => void }) {
   const [idx, setIdx] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const [waiting, setWaiting] = useState(true)
 
   const step = steps[idx]
 
   const measure = useCallback(() => {
-    if (!step) return
+    if (!step) return false
     const el = document.getElementById(step.target)
-    setRect(el ? el.getBoundingClientRect() : null)
+    if (!el) return false
+    setRect(el.getBoundingClientRect())
+    setWaiting(false)
+    return true
   }, [step])
 
   useEffect(() => {
-    measure()
-    window.addEventListener('scroll', measure, true)
-    window.addEventListener('resize', measure)
-    // Re-measure shortly after mount — the list may still be rendering.
-    const t = window.setTimeout(measure, 400)
+    setRect(null)
+    setWaiting(true)
+    if (!step) return
+    // The target may render late (async list). Poll for it; only give up
+    // and move on after a long grace period — never rapid-skip.
+    if (measure()) return
+    let tries = 0
+    const iv = window.setInterval(() => {
+      tries += 1
+      if (measure() || tries > 48) {
+        window.clearInterval(iv)
+        if (tries > 48) {
+          // Target never showed: skip this step silently.
+          setIdx((i) => (i + 1 < steps.length ? i + 1 : i))
+          if (idx + 1 >= steps.length) {
+            markTourSeen()
+            onDone()
+          }
+        }
+      }
+    }, 250)
+    const onScroll = () => measure()
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
     return () => {
-      window.removeEventListener('scroll', measure, true)
-      window.removeEventListener('resize', measure)
-      window.clearTimeout(t)
+      window.clearInterval(iv)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
     }
-  }, [measure])
-
-  // Skip steps whose target isn't rendered.
-  useEffect(() => {
-    if (step && !rect) {
-      const t = window.setTimeout(() => {
-        const el = document.getElementById(step.target)
-        if (!el) setIdx((i) => (i + 1 < steps.length ? i + 1 : i))
-      }, 600)
-      return () => window.clearTimeout(t)
-    }
-  }, [step, rect, steps.length])
+  }, [step, measure, steps.length, idx, onDone])
 
   const next = useCallback(() => {
     if (idx + 1 >= steps.length) {
@@ -78,19 +94,23 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
 
   const back = useCallback(() => setIdx((i) => Math.max(0, i - 1)), [])
 
-  // Tapping the spotlighted element advances the tour.
+  // Tapping the spotlighted element advances the tour — and the tap is
+  // swallowed so the underlying button doesn't fire mid-tour. The tour is
+  // a walkthrough, not the real flow; the last step sends them off to tap
+  // for real.
   useEffect(() => {
-    if (!step) return
+    if (!step || waiting) return
     const onClick = (e: MouseEvent) => {
       const el = document.getElementById(step.target)
       if (el && el.contains(e.target as Node)) {
-        // Let the tap's own handler run first, then advance.
-        window.setTimeout(next, 350)
+        e.preventDefault()
+        e.stopPropagation()
+        window.setTimeout(next, 300)
       }
     }
     document.addEventListener('click', onClick, true)
     return () => document.removeEventListener('click', onClick, true)
-  }, [step, next])
+  }, [step, waiting, next])
 
   // Escape exits.
   useEffect(() => {
@@ -105,6 +125,27 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
   }, [onDone])
 
   if (!step) return null
+
+  if (waiting) {
+    return (
+      <div className="fixed inset-0 z-[90] bg-black/70" role="dialog" aria-label="Guided tour">
+        <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] px-5 py-4 text-center shadow-2xl">
+          <p className="text-sm font-bold text-[var(--text)]">Getting your homework ready…</p>
+          <p className="mt-1 text-xs text-white/50">The tour starts as soon as your list loads.</p>
+          <button
+            type="button"
+            onClick={() => {
+              markTourSeen()
+              onDone()
+            }}
+            className="mt-2 px-2 py-1 text-xs font-semibold text-white/50 underline"
+          >
+            Skip tour
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const pad = 8
   const r = rect

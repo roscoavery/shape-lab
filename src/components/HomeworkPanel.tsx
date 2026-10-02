@@ -1320,6 +1320,14 @@ export function HomeworkPanel({
   }
 
   const orderedDrills = fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems
+  // Guided tour spotlights the first hold-mode row so the glowing button
+  // actually says "Train" (rep rows say "Log", sequences say "Class flow").
+  const tourRowIdx = (() => {
+    const i = orderedDrills.findIndex(
+      (item) => !isSequenceHomework(item) && homeworkTrackMode(item) === 'hold',
+    )
+    return i >= 0 ? i : 0
+  })()
 
   return (
     <div className="flex flex-col gap-3">
@@ -2031,7 +2039,7 @@ export function HomeworkPanel({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    id={rowIdx === 0 ? 'hw-tour-train' : undefined}
+                    id={rowIdx === tourRowIdx ? 'hw-tour-train' : undefined}
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
                     title={
@@ -2050,7 +2058,7 @@ export function HomeworkPanel({
                   </button>
                   <button
                     type="button"
-                    id={rowIdx === 0 ? 'hw-tour-manual' : undefined}
+                    id={rowIdx === tourRowIdx ? 'hw-tour-manual' : undefined}
                     onClick={() => openManual(item)}
                     className="rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
                     title="No camera? Type a hold time instead"
