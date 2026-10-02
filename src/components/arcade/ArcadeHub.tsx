@@ -31,6 +31,13 @@ import { SpotDifferenceGame } from './lab/SpotDifferenceGame'
 import { TwistDetectiveGame } from './lab/TwistDetectiveGame'
 import { PhysicsPlaygroundGame } from './lab/PhysicsPlaygroundGame'
 import { TeamPowerUpGame } from './lab/TeamPowerUpGame'
+import { ShapeMatchGame } from './lab/ShapeMatchGame'
+import { ShapeShifterGame } from './lab/ShapeShifterGame'
+import { StickLabGame } from './lab/StickLabGame'
+import { HollowHeroGame } from './lab/HollowHeroGame'
+import { MirrorModeGame } from './lab/MirrorModeGame'
+import { ShapeDodgeGame } from './lab/ShapeDodgeGame'
+import { BalanceGalaxyGame } from './lab/BalanceGalaxyGame'
 
 /**
  * Tumbling Arcade hub — rooms of games.
@@ -414,6 +421,13 @@ export function ArcadeHub({
     'twist-detective': () => <TwistDetectiveGame onExit={() => setActiveGame(null)} />,
     'physics-playground': () => <PhysicsPlaygroundGame onExit={() => setActiveGame(null)} />,
     'team-power-up': () => <TeamPowerUpGame onExit={() => setActiveGame(null)} />,
+    'shape-match': () => <ShapeMatchGame onExit={() => setActiveGame(null)} />,
+    'shape-shifter': () => <ShapeShifterGame onExit={() => setActiveGame(null)} />,
+    'stick-lab': () => <StickLabGame onExit={() => setActiveGame(null)} />,
+    'hollow-hero': () => <HollowHeroGame onExit={() => setActiveGame(null)} />,
+    'mirror-mode': () => <MirrorModeGame onExit={() => setActiveGame(null)} />,
+    'shape-dodge': () => <ShapeDodgeGame onExit={() => setActiveGame(null)} />,
+    'balance-galaxy': () => <BalanceGalaxyGame onExit={() => setActiveGame(null)} />,
   }
   if (activeGame && labGames[activeGame]) {
     return <div className="mx-auto w-full max-w-2xl px-4 py-6">{labGames[activeGame]()}</div>
