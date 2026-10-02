@@ -59,6 +59,7 @@ import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { CoachSetupWizard } from './components/coach/CoachSetupWizard'
 import { MySystemPanel } from './components/coach/MySystemPanel'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
+import { ClockOverlay } from './components/today/ClockOverlay'
 import { ArcadeHub } from './components/arcade/ArcadeHub'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { ImproveNotesDock } from './components/ImproveNotesDock'
@@ -2317,11 +2318,10 @@ export default function App() {
       />
     )}
     {clockOpen && (
-      <ClassStopwatch
+      <ClockOverlay
         athletes={athletes}
         signedIn={activeProfile}
         coach={Boolean(activeProfile && isCoachProfile(activeProfile))}
-        variant="overlay"
         onClose={() => setClockOpen(false)}
       />
     )}

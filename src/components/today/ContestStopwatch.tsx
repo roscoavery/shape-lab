@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
-import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
+import { AthleteName } from '../AthleteAvatar'
+import { AthleteSearchField } from './AthleteSearchField'
 import {
   CONTEST_HOLD_DRILLS,
   logClassHoldForAthletes,
@@ -33,6 +34,9 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
   const [inIds, setInIds] = useState<string[]>([])
   const [down, setDown] = useState<DownEntry[]>([])
   const [elapsed, setElapsed] = useState(0)
+  const [query, setQuery] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [guestNames, setGuestNames] = useState<Record<string, string>>({})
   const startRef = useRef(0)
   const timerRef = useRef<number | null>(null)
 
@@ -45,8 +49,26 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
     }
   }, [])
 
-  const togglePick = (id: string) =>
-    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+  const isGuestId = (id: string) => id.startsWith('guest:')
+
+  const addAthlete = (a: Athlete) => {
+    if (!picked.includes(a.id)) setPicked((p) => [...p, a.id])
+    setQuery('')
+  }
+
+  const addGuest = () => {
+    const name = guestName.trim()
+    if (!name) return
+    const id = `guest:${name.toLowerCase()}`
+    setGuestNames((g) => ({ ...g, [id]: name }))
+    if (!picked.includes(id)) setPicked((p) => [...p, id])
+    setGuestName('')
+  }
+
+  const removePick = (id: string) => setPicked((p) => p.filter((x) => x !== id))
+
+  const pickLabel = (id: string) =>
+    isGuestId(id) ? (guestNames[id] ?? id.slice(6)) : (byId.get(id)?.name ?? '—')
 
   const start = () => {
     if (!picked.length) return
@@ -70,16 +92,19 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
   /** Athlete came down — freeze their time and log it to their homework now. */
   const tapDown = (athleteId: string) => {
     const seconds = (Date.now() - startRef.current) / 1000
-    logClassHoldForAthletes({
-      athleteIds: [athleteId],
-      autoKey: drill.autoKey,
-      seconds,
-      label: holdName,
-      className,
-      meetingId,
-      coachId: signedIn?.id,
-      coachName: signedIn?.name,
-    })
+    // Guests have no profile — their time shows in the results but isn't logged.
+    if (!isGuestId(athleteId)) {
+      logClassHoldForAthletes({
+        athleteIds: [athleteId],
+        autoKey: drill.autoKey,
+        seconds,
+        label: holdName,
+        className,
+        meetingId,
+        coachId: signedIn?.id,
+        coachName: signedIn?.name,
+      })
+    }
     setDown((d) => [...d, { athleteId, seconds }])
     setInIds((ids) => {
       const rest = ids.filter((x) => x !== athleteId)
@@ -94,7 +119,8 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
   /** End early — anyone still up keeps the current clock time. */
   const endEarly = () => {
     const seconds = (Date.now() - startRef.current) / 1000
-    for (const athleteId of inIds) {
+    const loggable = inIds.filter((id) => !isGuestId(id))
+    for (const athleteId of loggable) {
       logClassHoldForAthletes({
         athleteIds: [athleteId],
         autoKey: drill.autoKey,
@@ -123,6 +149,16 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
 
   const byId = new Map(athletes.map((a) => [a.id, a]))
   const ranked = [...down].sort((a, b) => b.seconds - a.seconds)
+
+  /** Profile athletes and guests alike, for the live/done phases. */
+  const playerOf = (id: string): { name: string; athlete: Athlete | null; guest: boolean } => {
+    if (isGuestId(id)) {
+      const name = guestNames[id] ?? id.slice('guest:'.length)
+      return { name, athlete: { id, name } as Athlete, guest: true }
+    }
+    const a = byId.get(id)
+    return { name: a?.name ?? '—', athlete: a ?? null, guest: false }
+  }
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -159,7 +195,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-                Athletes ({picked.length})
+                Who's in ({picked.length})
               </p>
               <div className="flex gap-2">
                 <button
@@ -178,26 +214,61 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {athletes.map((a) => {
-                const on = picked.includes(a.id)
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => togglePick(a.id)}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left ${
-                      on ? 'border-[var(--accent)] bg-[var(--accent)]/15' : 'border-white/10 bg-black/20'
-                    }`}
-                  >
-                    <AthleteAvatar athlete={a} size="sm" />
-                    <span className="truncate text-sm font-medium">
-                      <AthleteName athlete={a} />
-                    </span>
-                  </button>
-                )
-              })}
+            <AthleteSearchField
+              athletes={athletes}
+              query={query}
+              onQuery={setQuery}
+              onPick={addAthlete}
+              excludeIds={picked}
+              placeholder="Search athletes…"
+            />
+            <div className="mt-2 flex gap-2">
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addGuest()}
+                placeholder="Add someone without a profile"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={addGuest}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-bold"
+              >
+                Add
+              </button>
             </div>
+            {picked.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {picked.map((id) => {
+                  const a = byId.get(id)
+                  const guest = isGuestId(id)
+                  return (
+                    <li
+                      key={id}
+                      className="flex items-center gap-2 rounded-xl bg-black/25 px-3 py-2"
+                    >
+                      <span className="flex-1 truncate text-sm font-medium">
+                        {a && !guest ? <AthleteName athlete={a} /> : pickLabel(id)}
+                      </span>
+                      {guest && (
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                          Guest · won't log
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removePick(id)}
+                        className="text-sm font-bold text-white/40"
+                        aria-label={`Remove ${pickLabel(id)}`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </div>
           <button
             type="button"
@@ -222,8 +293,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {inIds.map((id) => {
-              const a = byId.get(id)
-              if (!a) return null
+              const p = playerOf(id)
               return (
                 <button
                   key={id}
@@ -231,10 +301,12 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
                   onClick={() => tapDown(id)}
                   className="sl-names-glow flex items-center gap-2 !rounded-xl px-3 py-3 text-left"
                 >
-                  <AthleteAvatar athlete={a} size="sm" />
-                  <span className="truncate text-sm font-bold">
-                    <AthleteName athlete={a} />
-                  </span>
+                  <AthleteName athlete={p.athlete} />
+                  {p.guest && (
+                    <span className="ml-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/50">
+                      Guest
+                    </span>
+                  )}
                 </button>
               )
             })}
@@ -246,13 +318,15 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
               </p>
               <ul className="flex flex-col gap-1">
                 {[...down].reverse().map((d) => {
-                  const a = byId.get(d.athleteId)
+                  const p = playerOf(d.athleteId)
                   return (
                     <li
                       key={d.athleteId}
                       className="flex items-center justify-between rounded-lg bg-black/25 px-3 py-1.5 text-sm"
                     >
-                      <span className="text-white/70">{a ? <AthleteName athlete={a} /> : '—'}</span>
+                      <span className="text-white/70">
+                        <AthleteName athlete={p.athlete} />
+                      </span>
                       <span className="font-mono font-bold tabular-nums">{formatSeconds(d.seconds)}</span>
                     </li>
                   )
@@ -274,7 +348,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
         <div className="mt-3 flex flex-col gap-3">
           <ol className="flex flex-col gap-1.5">
             {ranked.map((d, i) => {
-              const a = byId.get(d.athleteId)
+              const p = playerOf(d.athleteId)
               return (
                 <li
                   key={d.athleteId}
@@ -283,17 +357,21 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
                   <span className="w-6 text-center text-lg font-black text-[var(--accent)]">
                     {i + 1}
                   </span>
-                  <AthleteAvatar athlete={a ?? null} size="sm" />
                   <span className="flex-1 truncate text-sm font-medium">
-                    {a ? <AthleteName athlete={a} /> : '—'}
+                    <AthleteName athlete={p.athlete} />
                   </span>
+                  {p.guest && (
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                      Guest
+                    </span>
+                  )}
                   <span className="font-mono font-bold tabular-nums">{formatSeconds(d.seconds)}</span>
                 </li>
               )
             })}
           </ol>
           <p className="text-xs text-white/50">
-            Each time is logged to that athlete's homework as in class.
+            Each time is logged to that athlete's homework as in class. Guests aren't logged.
           </p>
           <button
             type="button"
