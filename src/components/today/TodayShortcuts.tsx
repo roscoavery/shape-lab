@@ -78,7 +78,7 @@ const TOOLS: {
     id: 'arcade',
     eyebrow: 'Class games',
     title: 'Tumbling Arcade',
-    hint: 'Stick It and more games with scoring built in.',
+    hint: 'Stick It, Hold Contest, Distance Challenge — games with scoring built in.',
   },
   {
     id: 'collages',
@@ -137,7 +137,12 @@ export function TodayShortcuts({ onGo, showStation = true, showNames = false }: 
       )}
       <div className="grid gap-2 sm:grid-cols-2">
         {TOOLS.filter((tool) => tool.id !== 'skillpaths' || showNames).map((tool) => (
-          <button key={tool.id} type="button" onClick={() => onGo(tool.id)} className="sl-card">
+          <button
+            key={tool.id}
+            type="button"
+            onClick={() => onGo(tool.id)}
+            className={tool.id === 'arcade' ? 'sl-card sl-arcade-glow' : 'sl-card'}
+          >
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
               {tool.eyebrow}
             </span>

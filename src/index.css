@@ -204,6 +204,43 @@ button {
 .sl-card-warn::before {
   background: #d4a84a;
 }
+/*
+ * Tumbling Arcade shortcut — animated marquee glow, like the lights on an
+ * arcade cabinet. Cycles pink → cyan → purple.
+ */
+@keyframes sl-arcade-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 16px rgba(255, 45, 120, 0.55),
+      0 0 44px rgba(255, 45, 120, 0.22);
+    border-color: #ff2d78;
+  }
+  33% {
+    box-shadow:
+      0 0 16px rgba(64, 224, 255, 0.55),
+      0 0 44px rgba(64, 224, 255, 0.22);
+    border-color: #40e0ff;
+  }
+  66% {
+    box-shadow:
+      0 0 16px rgba(190, 90, 255, 0.55),
+      0 0 44px rgba(190, 90, 255, 0.22);
+    border-color: #be5aff;
+  }
+}
+.sl-arcade-glow {
+  animation: sl-arcade-glow 2.6s ease-in-out infinite;
+  border-color: #ff2d78;
+}
+.sl-arcade-glow::before {
+  background: linear-gradient(180deg, #ff2d78, #40e0ff 55%, #be5aff);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-arcade-glow {
+    animation: none;
+  }
+}
 .sl-card-lg {
   padding: 1.15rem 1.2rem 1.2rem 1.3rem;
 }

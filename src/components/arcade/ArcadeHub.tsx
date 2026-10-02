@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import { ARCADE_GAMES } from '../../lib/arcade'
 import { StickItGame } from './StickItGame'
 import { DistanceGame } from './DistanceGame'
+import { ContestStopwatch } from '../today/ContestStopwatch'
 
 /**
  * Tumbling Arcade hub — lives in the admin section.
@@ -23,6 +24,29 @@ export function ArcadeHub({ athletes, onClose }: { athletes: Athlete[]; onClose:
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-6">
         <DistanceGame athletes={athletes} onExit={() => setActiveGame(null)} />
+      </div>
+    )
+  }
+
+  if (activeGame === 'hold-contest') {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Tumbling arcade
+            </p>
+            <h2 className="text-xl font-black">Hold Contest</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveGame(null)}
+            className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold"
+          >
+            All games
+          </button>
+        </div>
+        <ContestStopwatch athletes={athletes} signedIn={null} />
       </div>
     )
   }

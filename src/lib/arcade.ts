@@ -33,6 +33,13 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
       'Jump-back distance showdown. Standing or round-off entry, flat back or handspring landing — furthest wins.',
     playable: true,
   },
+  {
+    id: 'hold-contest',
+    name: 'Hold Contest',
+    tagline:
+      'Pick a hold, pick the athletes, start the clock. Tap each name as they come down — everyone keeps their own time.',
+    playable: true,
+  },
   { id: 'handstand-circle', name: 'Handstand circle', tagline: 'Coming soon.', playable: false },
   { id: 'dice-game', name: "Coach Levi's dice game", tagline: 'Coming soon.', playable: false },
   { id: 'bhs-race', name: 'Back handspring race', tagline: 'Coming soon.', playable: false },
