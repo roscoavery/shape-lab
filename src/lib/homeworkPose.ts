@@ -106,6 +106,31 @@ export function poseLooksWallSit(lm: Landmark[] | null | undefined): boolean {
   return true
 }
 
+/**
+ * Standing lever (side view): torso near parallel with the ground, one
+ * leg lifted long behind so the line runs from back foot toward the hands.
+ * Coarse gate for the Foundation lever challenge.
+ */
+export function poseLooksLever(lm: Landmark[] | null | undefined): boolean {
+  if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  const lAnk = lm[LM.LEFT_ANKLE]
+  const rAnk = lm[LM.RIGHT_ANKLE]
+  if (!hip || !sh || !visOk(lAnk) || !visOk(rAnk)) return false
+
+  // Torso near parallel with the ground (not upright, not folded).
+  const torsoLen = Math.hypot(sh.x - hip.x, sh.y - hip.y) + 1e-4
+  if (Math.abs(sh.y - hip.y) / torsoLen > 0.5) return false
+
+  // One foot clearly lifted above the other, lifted foot at/above hip height.
+  const lowY = Math.max(lAnk.y, rAnk.y)
+  const highY = Math.min(lAnk.y, rAnk.y)
+  if (lowY - highY < 0.2) return false
+  if (highY > hip.y - 0.03) return false
+  return true
+}
+
 /** Hands and feet down, hips the peak of a back-bridge arch. */
 function poseLooksBridgeSupport(lm: Landmark[] | null | undefined): boolean {  if (!lm || lm.length < 33) return false
   const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)

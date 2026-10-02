@@ -124,8 +124,8 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
       <div className="mt-4 rounded-xl border border-[var(--panel-border)] bg-black/30 p-4">
         <p className="text-sm font-bold text-[var(--text)]">Foundation challenges</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Hollow hold, plank, wall-sit on the camera — push-ups and v-ups as rep
-          battles. Beat your best.
+          Hollow, plank, wall-sit, superman, side plank, and lever on the
+          camera — push-ups and v-ups as rep battles. Beat your best.
         </p>
         <button
           type="button"

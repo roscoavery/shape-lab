@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete, HomeworkLog } from '../../types'
 import { createId, loadHomeworkLogs, saveHomeworkLogs } from '../../lib/storage'
 import { usePoseCamera } from '../../hooks/usePoseCamera'
-import { poseLooksHollow, poseLooksLongBody, poseLooksWallSit } from '../../lib/homeworkPose'
+import { poseLooksHollow, poseLooksLongBody, poseLooksWallSit, poseLooksSidePlank, poseLooksLever } from '../../lib/homeworkPose'
 import { perShapeHoldStats, formatSecondsShort } from '../../lib/holdStats'
 import {
   FOUNDATION_EXERCISES,
@@ -28,6 +28,8 @@ function gateCheck(ex: FoundationExercise, landmarks: any): boolean {
   if (ex.gate === 'hollow') return poseLooksHollow(landmarks)
   if (ex.gate === 'longbody') return poseLooksLongBody(landmarks)
   if (ex.gate === 'wallsit') return poseLooksWallSit(landmarks)
+  if (ex.gate === 'sideplank') return poseLooksSidePlank(landmarks)
+  if (ex.gate === 'lever') return poseLooksLever(landmarks)
   return false
 }
 

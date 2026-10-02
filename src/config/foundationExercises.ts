@@ -4,7 +4,7 @@
  * the phone up. Copy is drafted for Ryan's approval.
  */
 
-export type FoundationExerciseId = 'hollow' | 'plank' | 'wallsit' | 'pushup' | 'vup'
+export type FoundationExerciseId = 'hollow' | 'plank' | 'wallsit' | 'pushup' | 'vup' | 'superman' | 'sideplank' | 'lever'
 
 export type AngleOption = {
   label: string
@@ -21,7 +21,7 @@ export type FoundationExercise = {
   /** Display name written on logs. */
   sourceLabel: string
   /** Pose gate for camera holds; null = manual. */
-  gate: 'hollow' | 'longbody' | 'wallsit' | null
+  gate: 'hollow' | 'longbody' | 'wallsit' | 'sideplank' | 'lever' | null
   tagline: string
   angle: {
     best: string
@@ -116,6 +116,58 @@ export const FOUNDATION_EXERCISES: FoundationExercise[] = [
       options: [
         { label: 'Side view', bestFor: 'form', why: 'Hip fold and low-back position visible — best for checking your form.' },
         { label: 'Front 45°', bestFor: 'counting', why: 'The reach for the toes reads clearly — easier to count clean reps.' },
+      ],
+    },
+  },
+  {
+    id: 'superman',
+    name: 'Superman',
+    kind: 'hold',
+    shapeId: 'superman',
+    sourceLabel: 'Superman',
+    gate: 'longbody',
+    tagline: 'Chin up, arms and legs lifted. Posterior chain power.',
+    angle: {
+      best: 'Side view',
+      why: 'Chin, arms, legs, and the arch through your back all read from the side. From the front the camera cannot tell if your knees are off the ground.',
+      setup: 'Prop your phone on its side about 8 feet away, lens at floor height. Lie with your side to the camera.',
+      options: [
+        { label: 'Side view', bestFor: 'both', why: 'Limbs-off-ground and back arch visible — best for form checks and camera scoring.' },
+      ],
+    },
+  },
+  {
+    id: 'sideplank',
+    name: 'Side plank',
+    kind: 'hold',
+    shapeId: 'side_plank',
+    sourceLabel: 'Side plank',
+    gate: 'sideplank',
+    tagline: 'One arm, one edge of the feet. Lateral core that powers twists.',
+    angle: {
+      best: 'Front view',
+      why: 'The straight line from head to heels — and whether your hips sag — reads best from the front. Side view hides the sag.',
+      setup: 'Prop your phone upright about 8 feet away, lens at hip height. Face the camera.',
+      options: [
+        { label: 'Front view', bestFor: 'both', why: 'Body line and hip height visible — best for form checks and camera scoring.' },
+        { label: 'Side view', bestFor: 'form', why: 'Shows shoulder stacking over the elbow — useful second angle.' },
+      ],
+    },
+  },
+  {
+    id: 'lever',
+    name: 'Lever',
+    kind: 'hold',
+    shapeId: 'lever',
+    sourceLabel: 'Lever',
+    gate: 'lever',
+    tagline: 'Chest near parallel, back leg long. The sequence staple.',
+    angle: {
+      best: 'Side view',
+      why: 'The line from your back foot through your body toward your hands is a side-view read. That line is the whole shape.',
+      setup: 'Prop your phone on its side about 10 feet away, lens at hip height. Stand with your side to the camera.',
+      options: [
+        { label: 'Side view', bestFor: 'both', why: 'Torso angle and back-leg line visible — best for form checks and camera scoring.' },
       ],
     },
   },
