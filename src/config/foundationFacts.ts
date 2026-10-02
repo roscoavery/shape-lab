@@ -20,9 +20,9 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
   {
     id: 'ff_pushup_plank',
     exercise: 'Push-ups',
-    fact: 'Quality reps keep the same plank from the first to the last. That plank is the body you tumble with.',
+    fact: 'Push ups build stronger shoulder support for handstands, round offs and back handsprings.',
     builds: ['Front support', 'Plank body line'],
-    powers: ['Back handspring', 'Round-off rebound'],
+    powers: ['Handstand', 'Round-off', 'Back handspring'],
   },
   {
     id: 'ff_vup_hollow',
