@@ -41,7 +41,7 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
         Strengthen your foundation
       </p>
       <h2 className="mt-1 text-xl font-black text-[var(--text)]">
-        Know why it works
+        Know the benefits
       </h2>
 
       {/* Facts deck */}
