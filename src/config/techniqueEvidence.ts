@@ -123,6 +123,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Front aerial on floor, holding the landing position.',
     },
   ],
+  skl_front_25: [
+    {
+      who: 'Reference',
+      url: '/videos/randi-front-25-reference.mp4',
+      watchFor: 'Front 2.5 (Randi) on tumble track.',
+    },
+  ],
   skl_side_aerial: [
     {
       who: 'Sadie (athlete)',
