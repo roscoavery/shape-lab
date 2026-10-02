@@ -68,9 +68,11 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
         ))}
       </div>
 
-      {/* Entries */}
+      {/* Entries — the kind-leaderboard rule: top 3 get ranks and values.
+          Everyone else shows as names only, so nobody sees themselves
+          sitting in last place. */}
       <ol className="mt-3 space-y-1.5">
-        {entries.map((e, i) => (
+        {entries.slice(0, 3).map((e, i) => (
           <li
             key={e.athleteId}
             className={`flex items-baseline justify-between gap-2 rounded-xl px-3 py-2.5 ${
@@ -79,7 +81,7 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
             style={i === 0 ? { boxShadow: GOLD_GLOW } : e.isYou ? { boxShadow: GREEN_GLOW } : undefined}
           >
             <span className="flex min-w-0 items-baseline gap-2">
-              <span className="w-7 shrink-0 text-center text-base">{MEDALS[i] ?? <span className="text-xs font-bold text-[var(--muted)]">{i + 1}</span>}</span>
+              <span className="w-7 shrink-0 text-center text-base">{MEDALS[i]}</span>
               <span className={`truncate font-bold ${e.isYou ? 'text-green-200' : 'text-[var(--text)]'}`}>
                 {e.displayName}
                 {e.isYou && <span className="ml-1.5 text-[10px] font-black uppercase tracking-wide text-green-300/80">you</span>}
@@ -93,15 +95,42 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
             </span>
           </li>
         ))}
+        {entries.length > 3 && (
+          <li className="pt-1">
+            <p className="mb-1.5 px-1 text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">
+              Also on the board
+            </p>
+            <ul className="flex flex-wrap gap-1.5">
+              {entries.slice(3).map((e) => (
+                <li
+                  key={e.athleteId}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    e.isYou
+                      ? 'border border-green-300/40 bg-green-300/10 text-green-200'
+                      : 'bg-black/30 text-[var(--muted)]'
+                  }`}
+                >
+                  {e.displayName}
+                  {e.isYou && <span className="ml-1 text-[10px] font-black uppercase tracking-wide text-green-300/80">you</span>}
+                </li>
+              ))}
+            </ul>
+          </li>
+        )}
         {entries.length === 0 && (
           <li className="rounded-xl bg-black/30 px-3 py-4 text-center text-sm text-[var(--muted)]">
             No entries yet — be the first on the board.
           </li>
         )}
       </ol>
-      {myRank >= 0 && (
+      {myRank >= 0 && myRank < 3 && (
         <p className="mt-2 text-center text-xs font-bold text-[var(--muted)]">
           You're #{myRank + 1} on this board.
+        </p>
+      )}
+      {myRank >= 3 && (
+        <p className="mt-2 text-center text-xs font-bold text-[var(--muted)]">
+          You're on the board — keep climbing.
         </p>
       )}
 
