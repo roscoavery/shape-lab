@@ -27,13 +27,13 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
   {
     id: 'ff_vup_hollow',
     exercise: 'V-ups',
-    fact: 'Hollow body, reach for the toes, control the lower. Quality over speed — the hollow is what keeps you tight in the air.',
+    fact: 'Strong V ups lead to stronger standing tucks and stronger layouts. Build them early on!',
     builds: ['Hollow shape'],
-    powers: ['Back tuck', 'Layout'],
+    powers: ['Standing tuck', 'Layout'],
   },
   {
     id: 'ff_hollow_basics',
-    exercise: 'Hollow hold',
+    exercise: 'Handstand hold',
     fact: 'The handstand is a staple in tumbling. The stronger the basics, the stronger the harder skills can be.',
     builds: ['Hollow shape'],
     powers: ['Handstand', 'Back handspring', 'Layout'],
@@ -46,13 +46,6 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
     powers: ['Layout', 'Full', 'Double full'],
   },
   {
-    id: 'ff_backext_bridge',
-    exercise: 'Back extension hold',
-    fact: 'A strong back extension is the shape behind every backwards skill — it is the bridge you push through.',
-    builds: ['Bridge', 'Arch control'],
-    powers: ['Back handspring', 'Back tuck'],
-  },
-  {
     id: 'ff_wallsit_landings',
     exercise: 'Wall-sit',
     fact: 'Strong legs stick landings. The wall-sit builds the exact muscles that absorb a landing without collapsing.',
@@ -62,14 +55,14 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
   {
     id: 'ff_sideplank_twist',
     exercise: 'Side plank',
-    fact: 'Develops the lateral core — and it is a useful shape for twist drills. Twisting power starts on your side.',
+    fact: 'Develops the lateral core and is a useful shape for twist drills.',
     builds: ['Side plank'],
     powers: ['Full', 'Double full'],
   },
   {
     id: 'ff_plank_handstand',
     exercise: 'Front plank',
-    fact: 'Ribs in, glutes on, neck long. The plank is the handstand lying down — own it here first.',
+    fact: 'Strong planks lead to stronger hollows.',
     builds: ['Plank body line'],
     powers: ['Handstand', 'Front support'],
   },
@@ -83,7 +76,7 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
   {
     id: 'ff_bridge_pushup',
     exercise: 'Bridge push-ups',
-    fact: 'Hips stay the highest point. Push the floor away — that push is the block in your back handspring.',
+    fact: 'Bridge push-ups can build up blocking strength and help a ton with training the open shoulder angle most of us struggle with.',
     builds: ['Bridge'],
     powers: ['Back walkover', 'Back handspring'],
   },
