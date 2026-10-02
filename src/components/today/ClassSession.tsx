@@ -457,6 +457,7 @@ function LiveClass({
   const [pickId, setPickId] = useState('')
   const [classNote, setClassNote] = useState('')
   const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
+  const [contestOpen, setContestOpen] = useState(false)
   const pool = useMemo(() => {
     const roster = rosterAthletes(offering, athletes)
     if (roster.length > 0) return roster
@@ -643,13 +644,6 @@ function LiveClass({
         coach
       />
 
-      <ContestStopwatch
-        athletes={present}
-        signedIn={coach}
-        className={offering ? classLabel(offering) : undefined}
-        meetingId={meeting.id}
-      />
-
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Class notes
@@ -686,6 +680,42 @@ function LiveClass({
         >
           Save class note
         </button>
+      </div>
+
+      {/* Hold contest — its own opt-in feature, separate from the class clock. */}
+      <div className="rounded-2xl border border-amber-200/25 bg-[#171209] p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/70">
+          Separate game
+        </p>
+        <h3 className="mt-1 text-lg font-black">🏆 Hold contest</h3>
+        <p className="mt-1 text-xs text-white/55">
+          Tap-down timing — each athlete keeps their own time, logged straight to their homework.
+        </p>
+        {contestOpen ? (
+          <div className="mt-3">
+            <ContestStopwatch
+              athletes={present}
+              signedIn={coach}
+              className={offering ? classLabel(offering) : undefined}
+              meetingId={meeting.id}
+            />
+            <button
+              type="button"
+              onClick={() => setContestOpen(false)}
+              className="mt-2 w-full rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold"
+            >
+              Put the contest away
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setContestOpen(true)}
+            className="mt-3 w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black"
+          >
+            Run a hold contest
+          </button>
+        )}
       </div>
 
       <button

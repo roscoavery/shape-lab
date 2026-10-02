@@ -123,14 +123,9 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
           </li>
         )}
       </ol>
-      {myRank >= 0 && myRank < 3 && (
+      {myRank >= 0 && entries[myRank] && (
         <p className="mt-2 text-center text-xs font-bold text-[var(--muted)]">
-          You're #{myRank + 1} on this board.
-        </p>
-      )}
-      {myRank >= 3 && (
-        <p className="mt-2 text-center text-xs font-bold text-[var(--muted)]">
-          You're on the board — keep climbing.
+          Your best: {formatBoardValue(entries[myRank].value, board.unit)}
         </p>
       )}
 
