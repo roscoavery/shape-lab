@@ -41,7 +41,7 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
   {
     id: 'ff_layout_fulls',
     exercise: 'Hollow hold',
-    fact: 'The stronger my layout is, the stronger my fulls and dubs can be. It all starts with holding the hollow.',
+    fact: 'The stronger my layout is, the stronger my fulls and dubs can be. It all starts with a strong hollow.',
     builds: ['Hollow shape'],
     powers: ['Layout', 'Full', 'Double full'],
   },
