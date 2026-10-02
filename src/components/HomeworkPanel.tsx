@@ -135,6 +135,8 @@ type Props = {
   /** Practice camera + score, shown only while a train studio is open. */
   camSlot?: ReactNode
   onStudioChange?: (open: boolean) => void
+  /** Opens the guided spotlight tour of the homework hub. */
+  onTakeTour?: () => void
   /** Sequence homework opens Practice → Class flows on that assigned task. */
   onOpenClassFlow?: (flowId: string) => void
   openPage?: 'train' | 'add' | 'care' | null
@@ -616,6 +618,7 @@ export function HomeworkPanel({
   onEnsureCamera,
   camSlot = null,
   onStudioChange,
+  onTakeTour,
   onOpenClassFlow,
   openPage = null,
   onOpenPageConsumed,
@@ -1320,14 +1323,6 @@ export function HomeworkPanel({
   }
 
   const orderedDrills = fromCoach.length > 0 ? [...fromCoach, ...otherDrills] : visibleItems
-  // Guided tour spotlights the first hold-mode row so the glowing button
-  // actually says "Train" (rep rows say "Log", sequences say "Class flow").
-  const tourRowIdx = (() => {
-    const i = orderedDrills.findIndex(
-      (item) => !isSequenceHomework(item) && homeworkTrackMode(item) === 'hold',
-    )
-    return i >= 0 ? i : 0
-  })()
 
   return (
     <div className="flex flex-col gap-3">
@@ -1378,9 +1373,24 @@ export function HomeworkPanel({
           )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div id="hw-tour-hub" className="flex flex-col gap-3">
+        {onTakeTour && (
+          <button
+            type="button"
+            onClick={onTakeTour}
+            className="rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
+            style={{
+              animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
+              boxShadow:
+                '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
+            }}
+          >
+            ✨ Take the guided tour
+          </button>
+        )}
         <button
           type="button"
+          id="hw-tour-train-now"
           onClick={() => setHwPage('train')}
           className="sl-card sl-card-lg sl-left"
         >
@@ -1394,6 +1404,7 @@ export function HomeworkPanel({
         </button>
         <button
           type="button"
+          id="hw-tour-pick-drill"
           onClick={() => setHwPage('pick')}
           className="sl-card sl-left"
         >
@@ -1407,6 +1418,7 @@ export function HomeworkPanel({
         </button>
         <button
           type="button"
+          id="hw-tour-stopwatch"
           onClick={() => setHwPage('watch')}
           className="sl-card sl-left"
         >
@@ -1954,8 +1966,8 @@ export function HomeworkPanel({
           </button>
         </div>
       </div>
-      <div id="hw-tour-drills" className="space-y-2">
-        {orderedDrills.map((item, rowIdx) => {
+      <div className="space-y-2">
+        {orderedDrills.map((item) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
           const properValues = itemLogs
@@ -2039,7 +2051,6 @@ export function HomeworkPanel({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    id={rowIdx === tourRowIdx ? 'hw-tour-train' : undefined}
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
                     title={
@@ -2058,7 +2069,6 @@ export function HomeworkPanel({
                   </button>
                   <button
                     type="button"
-                    id={rowIdx === tourRowIdx ? 'hw-tour-manual' : undefined}
                     onClick={() => openManual(item)}
                     className="rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
                     title="No camera? Type a hold time instead"

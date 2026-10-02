@@ -75,19 +75,19 @@ import { GlowTour, tourSeen, type TourStep } from './components/homework/GlowTou
 
 const HW_TOUR_STEPS: TourStep[] = [
   {
-    target: 'hw-tour-drills',
-    title: 'Your homework lives here',
-    text: 'Drills from your coach, top to bottom. Pick one to start with — the top drill is the easiest win. Tap the glowing list to continue.',
+    target: 'hw-tour-train-now',
+    title: 'Train now',
+    text: 'Camera on. Start a hold or a drill from here — the camera watches your form while you work. Tap the glowing card to continue.',
   },
   {
-    target: 'hw-tour-train',
-    title: 'This button starts the camera',
-    text: 'Tap Train on a drill and the camera watches your form while you hold. This is the button you will use most. Tap it to continue.',
+    target: 'hw-tour-pick-drill',
+    title: 'Pick a drill',
+    text: 'Your coach\u2019s drills live here. Tap one to train it full screen — this is where your homework list lives. Tap the glowing card to continue.',
   },
   {
-    target: 'hw-tour-manual',
-    title: 'Or log it by hand',
-    text: 'No camera? Tap Log and type your time or reps instead — it still counts. You are set: hit Done, then tap Train on your first drill for real.',
+    target: 'hw-tour-stopwatch',
+    title: 'No camera? Stopwatch',
+    text: 'Time a hold or log reps and sets by hand. It still counts. You are set — tap Done, then pick a drill for real.',
   },
 ]
 import { GestureBurstHost } from './components/GestureBurst'
@@ -691,7 +691,7 @@ export default function App() {
     if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
     if (tab !== 'homework') setHwStudio(false)
     // Guided homework tour: auto-offer once per device to non-coach viewers.
-    // Wait for the drill list to actually render before opening — opening
+    // Wait for the homework hub to actually render before opening — opening
     // on a fixed timer is what made the old tour cascade-skip its steps.
     if (tab === 'homework' && !hwTourAutoFired.current && !tourSeen()) {
       hwTourAutoFired.current = true
@@ -700,8 +700,8 @@ export default function App() {
         let tries = 0
         const iv = window.setInterval(() => {
           tries += 1
-          const list = document.getElementById('hw-tour-drills')
-          const ready = list != null && list.children.length > 0
+          const hub = document.getElementById('hw-tour-hub')
+          const ready = hub != null && hub.children.length > 0
           if (ready || tries > 20) {
             window.clearInterval(iv)
             if (ready) setHwTourOpen(true)
@@ -1649,26 +1649,13 @@ export default function App() {
               )}
             </div>
           ) : null}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setHwTourOpen(true)}
-              className="rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
-              style={{
-                animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
-                boxShadow:
-                  '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
-              }}
-            >
-              ✨ Take the guided tour
-            </button>
-          </div>
           <HomeworkPanel
             athleteId={trainLogForAthleteId}
             athlete={trainLogForAthlete ?? homeworkAthlete}
             viewer={activeProfile}
             athletes={athletes}
             suspendWrites={trainGuest}
+            onTakeTour={() => setHwTourOpen(true)}
             onUpdateAthlete={(patch) => {
               if (!trainLogForAthleteId) return
               setAthleteRoster(
