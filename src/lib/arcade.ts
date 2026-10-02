@@ -45,7 +45,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
   { id: 'bhs-race', name: 'Back handspring race', tagline: 'Coming soon.', playable: false },
   { id: 'highest-tuck', name: 'Highest back tuck', tagline: 'Coming soon.', playable: false },
   { id: 'straightest-layout', name: 'Straightest layout', tagline: 'Coming soon.', playable: false },
-  { id: 'team-sticks', name: 'Team stick race', tagline: 'Two teams, one minute, most sticks wins. Coming soon.', playable: false },
+  { id: 'team-sticks', name: 'Team stick race', tagline: 'Two teams, one minute, most sticks wins.', playable: true },
 ]
 
 // ---------------------------------------------------------------------------
@@ -57,12 +57,36 @@ export type StickItSkillId =
   | 'standing-handspring'
   | 'standing-tuck'
   | 'standing-full'
+  | 'punch-front'
+  | 'roundoff-handspring'
+  | 'roundoff-tuck'
+  | 'roundoff-hs-tuck'
+  | 'layout'
+  | 'full'
+  | 'double-full'
+  | 'kick-full'
 
 export const STICK_IT_SKILLS: { id: StickItSkillId; label: string }[] = [
   { id: 'perfect-cartwheel', label: 'Perfect cartwheel' },
   { id: 'standing-handspring', label: 'Standing handspring' },
   { id: 'standing-tuck', label: 'Standing tuck' },
   { id: 'standing-full', label: 'Standing full' },
+  { id: 'punch-front', label: 'Punch front' },
+  { id: 'roundoff-handspring', label: 'Round off back handspring' },
+  { id: 'roundoff-tuck', label: 'RO tuck' },
+  { id: 'roundoff-hs-tuck', label: 'RO handspring tuck' },
+  { id: 'layout', label: 'Layout' },
+  { id: 'full', label: 'Full' },
+  { id: 'double-full', label: 'Double full' },
+  { id: 'kick-full', label: 'Kick full' },
+]
+
+/** Skills allowed in the team stick race (one minute, most sticks wins). */
+export const STICK_RACE_SKILLS: { id: string; label: string }[] = [
+  { id: 'standing-handspring', label: 'Standing handspring' },
+  { id: 'standing-tuck', label: 'Standing back tuck' },
+  { id: 'standing-full', label: 'Standing full' },
+  { id: 'perfect-cartwheel', label: 'Perfect cartwheel' },
 ]
 
 export const STICK_IT_LETTERS = ['S', 'T', 'I', 'C', 'K'] as const

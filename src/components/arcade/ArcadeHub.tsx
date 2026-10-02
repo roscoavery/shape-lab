@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import { ARCADE_GAMES } from '../../lib/arcade'
 import { StickItGame } from './StickItGame'
 import { DistanceGame } from './DistanceGame'
+import { TeamStickRaceGame } from './TeamStickRaceGame'
 import { ContestStopwatch } from '../today/ContestStopwatch'
 
 /**
@@ -24,6 +25,14 @@ export function ArcadeHub({ athletes, onClose }: { athletes: Athlete[]; onClose:
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-6">
         <DistanceGame athletes={athletes} onExit={() => setActiveGame(null)} />
+      </div>
+    )
+  }
+
+  if (activeGame === 'team-sticks') {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <TeamStickRaceGame onExit={() => setActiveGame(null)} />
       </div>
     )
   }

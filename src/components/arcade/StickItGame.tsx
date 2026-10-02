@@ -132,20 +132,17 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
               The skill
             </p>
-            <div className="flex flex-wrap gap-2">
+            <select
+              value={skillId}
+              onChange={(e) => setSkillId(e.target.value as StickItSkillId)}
+              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base font-semibold"
+            >
               {STICK_IT_SKILLS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSkillId(s.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    s.id === skillId ? 'bg-[var(--accent)] text-black' : 'bg-white/10 text-white/80'
-                  }`}
-                >
+                <option key={s.id} value={s.id}>
                   {s.label}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <div>
