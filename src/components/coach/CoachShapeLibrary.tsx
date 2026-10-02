@@ -19,6 +19,7 @@ import { compressImageFile } from '../../lib/mediaCompress'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { createId } from '../../lib/storage'
 import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { loadSocial, type SocialFile } from '../../lib/social'
 import type { Athlete, CoachShape, CoachShapeMedia, CoachSkillRef } from '../../types'
 import { FramedPhoto } from './FramedPhoto'
 import { ShapeSnapCamera } from './ShapeSnapCamera'
@@ -26,6 +27,8 @@ import { SimpleCropper } from './SimpleCropper'
 
 type Props = {
   signedIn: Athlete | null
+  athletes: Athlete[]
+  onOpenNetwork?: () => void
 }
 
 const SCORE_OPTIONS = [...SHAPES].sort((a, b) => a.name.localeCompare(b.name))
@@ -41,15 +44,20 @@ function groupByCoach<T extends { coachId: string; coachName: string }>(rows: T[
   return [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))
 }
 
-export function CoachShapeLibrary({ signedIn }: Props) {
+export function CoachShapeLibrary({ signedIn, athletes, onOpenNetwork }: Props) {
   const [tick, setTick] = useState(0)
   const [editing, setEditing] = useState<CoachShape | null>(null)
   const [editingRef, setEditingRef] = useState<CoachSkillRef | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [social, setSocial] = useState<SocialFile | null>(null)
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const admin = Boolean(signedIn && isGymAdmin(signedIn))
+  const athleteView = Boolean(signedIn && !coach)
 
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
+  useEffect(() => {
+    if (athleteView) void loadSocial().then(setSocial).catch(() => setSocial(null))
+  }, [athleteView, signedIn?.id])
   void tick
 
   const shapes = listCoachShapes()
@@ -62,18 +70,45 @@ export function CoachShapeLibrary({ signedIn }: Props) {
   const otherRefs =
     admin && signedIn ? refs.filter((r) => r.coachId !== signedIn.id) : []
 
+  // Athletes browse the libraries of the coaches they follow, by coach name.
+  const followedCoachIds = (() => {
+    if (!athleteView || !signedIn || !social) return new Set<string>()
+    const ids = social.follows
+      .filter((f) => f.followerId === signedIn.id)
+      .map((f) => f.followingId)
+    return new Set(
+      ids.filter((id) => {
+        const a = athletes.find((x) => x.id === id)
+        return a ? isCoachProfile(a) : true
+      }),
+    )
+  })()
+  const followedShapes = athleteView ? shapes.filter((s) => followedCoachIds.has(s.coachId)) : []
+  const followedRefs = athleteView ? refs.filter((r) => followedCoachIds.has(r.coachId)) : []
+
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Coach library</p>
-        <h2 className="text-xl font-semibold">Shapes and skill references</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Add a shape to the <strong className="text-[var(--text)]">gym library</strong> so
-          it appears in Learn and in homework assignment for everyone. Private
-          shapes stay on your coach card. Skill videos show up in Compare next
-          to the UG clips
-          {admin ? '. As gym admin, you can also view every coach’s private work' : ''}.
+        <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
+          {athleteView ? 'Coach libraries' : 'Coach library'}
         </p>
+        <h2 className="text-xl font-semibold">
+          {athleteView ? "Your coaches' libraries" : 'Shapes and skill references'}
+        </h2>
+        {athleteView ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Shapes and skill references from the coaches you follow — read-only,
+            in their words.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Add a shape to the <strong className="text-[var(--text)]">gym library</strong> so
+            it appears in Learn and in homework assignment for everyone. Private
+            shapes stay on your coach card. Skill videos show up in Compare next
+            to the UG clips
+            {admin ? '. As gym admin, you can also view every coach’s private work' : ''}.
+          </p>
+        )}
         {coach && signedIn && (
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -101,11 +136,25 @@ export function CoachShapeLibrary({ signedIn }: Props) {
         {!signedIn && (
           <p className="mt-3 text-sm text-[var(--muted)]">Unlock a coach profile to open its library.</p>
         )}
-        {signedIn && !coach && (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            Coach libraries stay private. Athlete examples shared by a coach will
-            appear in lessons and references where appropriate.
-          </p>
+        {athleteView && social && followedShapes.length === 0 && followedRefs.length === 0 && (
+          <div className="mt-3 rounded-lg bg-[#121820] p-3">
+            <p className="text-sm text-[var(--muted)]">
+              No libraries to show yet. Follow a coach on Network and their
+              shapes and skill references will appear here.
+            </p>
+            {onOpenNetwork && (
+              <button
+                type="button"
+                onClick={onOpenNetwork}
+                className="mt-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
+              >
+                Open Network
+              </button>
+            )}
+          </div>
+        )}
+        {athleteView && !social && (
+          <p className="mt-3 text-sm text-[var(--muted)]">Loading followed coaches…</p>
         )}
       </section>
 
@@ -196,6 +245,27 @@ export function CoachShapeLibrary({ signedIn }: Props) {
           onDelete={(id) => deleteCoachSkillRef(id)}
         />
       )}
+
+      {groupByCoach(followedShapes).map(([id, g]) => (
+        <ShapeList
+          key={`fsh-${id}`}
+          title={`${g.name}’s shapes`}
+          shapes={g.rows}
+          canEdit={false}
+          onEdit={setEditing}
+          onDelete={(sid) => deleteCoachShape(sid)}
+        />
+      ))}
+      {groupByCoach(followedRefs).map(([id, g]) => (
+        <SkillRefList
+          key={`frf-${id}`}
+          title={`${g.name}’s skill references`}
+          refs={g.rows}
+          canEdit={false}
+          onEdit={setEditingRef}
+          onDelete={(rid) => deleteCoachSkillRef(rid)}
+        />
+      ))}
 
       {groupByCoach(others).map(([id, g]) => (
         <ShapeList

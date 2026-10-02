@@ -88,11 +88,12 @@ function featureHits(needle: string, ryan: boolean, coach: boolean): AppSearchHi
       if (row.id === 'tasks' || row.id === 'coach' || row.id === 'drills') {
         if (!ryan) continue
       }
-      if (row.id === 'coachlib' && !coach) continue
+      // Athletes browse followed coaches' libraries — same tab, their label.
+      const title = row.id === 'coachlib' && !coach ? 'Coach libraries' : row.label
       out.push({
         id: `feature:${row.id}`,
         kind: 'feature',
-        title: row.label,
+        title,
         subtitle: 'Open in app',
         tab: row.id,
         score,
@@ -222,7 +223,6 @@ export function popularSearchHits(role: NavRole, ryan: boolean, coach: boolean):
   const out: AppSearchHit[] = []
   for (const tab of tabs) {
     if ((tab === 'tasks' || tab === 'coach' || tab === 'drills') && !ryan) continue
-    if (tab === 'coachlib' && !coach) continue
     const label =
       Object.values(SECTION_SUBNAV)
         .flat()
@@ -230,7 +230,7 @@ export function popularSearchHits(role: NavRole, ryan: boolean, coach: boolean):
     out.push({
       id: `feature:${tab}`,
       kind: 'feature',
-      title: label,
+      title: tab === 'coachlib' && !coach ? 'Coach libraries' : label,
       subtitle: 'Suggested',
       tab,
       score: 1,

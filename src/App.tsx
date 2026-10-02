@@ -1824,7 +1824,13 @@ export default function App() {
         />
       )}
 
-      {tab === 'coachlib' && <CoachShapeLibrary signedIn={activeProfile} />}
+      {tab === 'coachlib' && (
+        <CoachShapeLibrary
+          signedIn={activeProfile}
+          athletes={athletes}
+          onOpenNetwork={() => goTab('network')}
+        />
+      )}
 
       {tab === 'mysystem' && (
         <MySystemPanel

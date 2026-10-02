@@ -251,7 +251,12 @@ export function subnavForSection(
     if (role === 'coach' && (item.id === 'watch' || item.id === 'stills')) return false
     if (item.id === 'classclock' && role !== 'athlete') return false
     return true
-  })
+  }).map((item) =>
+    // Athletes browse followed coaches' libraries, not one generic library.
+    item.id === 'coachlib' && role === 'athlete'
+      ? { ...item, label: 'Coach libraries' }
+      : item,
+  )
 }
 
 export function defaultTabForSection(
@@ -295,6 +300,7 @@ export function tabAllowedForNavRole(tab: AppTab, role: NavRole, ryan: boolean, 
       tab === 'progress' ||
       tab === 'compare' ||
       tab === 'learn' ||
+      tab === 'coachlib' ||
       tab === 'history' ||
       tab === 'about' ||
       tab === 'wins' ||
