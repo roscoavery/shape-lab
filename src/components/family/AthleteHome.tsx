@@ -6,6 +6,7 @@ import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from '.
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 import { AthletePathStrip } from './AthletePathStrip'
+import { AthleteHoldStats } from './AthleteHoldStats'
 
 type Props = {
   athlete: Athlete | null
@@ -106,6 +107,14 @@ export function AthleteProgress({ athlete }: Props) {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Progress</p>
         <h2 className="mt-1 text-2xl font-semibold">{athlete.name}</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">Your holds and shape tests. Not anyone else’s.</p>
+      </section>
+      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Stats</p>
+        <h3 className="mt-1 font-semibold">Hold & rep analytics</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Longest, averages, totals, and how your training stacks up over time.</p>
+        <div className="mt-3">
+          <AthleteHoldStats logs={logs} />
+        </div>
       </section>
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h3 className="font-semibold">Hold logs</h3>

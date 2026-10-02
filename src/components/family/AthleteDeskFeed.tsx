@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete, HomeworkLog } from '../../types'
 import { loadHomeworkLogs } from '../../lib/storage'
-import { formatSeconds } from '../../hooks/useHoldTimer'
 import {
   formatWhen,
-  holdGains,
   loadUpcomingLessons,
   recentVisitsForAthlete,
   subscribeAthleteDesk,
   type RecentVisit,
   type UpcomingLesson,
 } from '../../lib/familySchedule'
+import { perShapeHoldStats, formatSecondsShort, shortDate } from '../../lib/holdStats'
 import { pushNotice } from '../../lib/notify'
 import { CollapsibleSection } from '../CollapsibleSection'
 
@@ -33,7 +32,6 @@ function useAthleteDeskData(athlete: Athlete, logsProp?: HomeworkLog[]) {
     void tick
     return recentVisitsForAthlete(athlete.id)
   }, [athlete.id, tick])
-  const gains = useMemo(() => holdGains(logs), [logs])
 
   useEffect(() => subscribeAthleteDesk(() => setTick((n) => n + 1)), [])
 
@@ -66,7 +64,7 @@ function useAthleteDeskData(athlete: Athlete, logsProp?: HomeworkLog[]) {
       cancelled = true
     }
   }, [athlete.id])
-  return { upcoming, visits, gains }
+  return { upcoming, visits, logs }
 }
 
 export function AthleteUpcomingCard({ athlete }: { athlete: Athlete }) {
@@ -96,35 +94,59 @@ export function AthleteUpcomingCard({ athlete }: { athlete: Athlete }) {
 }
 
 export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
-  const { gains } = useAthleteDeskData(athlete, logsProp)
+  const { logs } = useAthleteDeskData(athlete, logsProp)
+  const shapes = useMemo(() => perShapeHoldStats(logs), [logs])
+  const hasGains = shapes.some((s) => s.count > 1 && s.latestSeconds > s.firstSeconds)
   return (
     <div
       className="rounded-2xl"
       style={
-        gains.length
+        hasGains
           ? { boxShadow: '0 0 22px rgba(150, 110, 220, 0.28)', border: '1px solid rgba(180, 140, 232, 0.5)' }
           : undefined
       }
     >
     <CollapsibleSection
       title="Hold times going up"
-      hint={gains.length ? `${gains.length} recent improvement${gains.length === 1 ? '' : 's'}` : 'No progress yet'}
+      hint={shapes.length ? `${shapes.length} shape${shapes.length === 1 ? '' : 's'} tracked` : 'No progress yet'}
       defaultOpen
     >
       <ul className="mt-3 space-y-2 text-sm">
-        {gains.map((row) => (
-          <li key={row.name} className="rounded-lg bg-[#102820] px-3 py-2 text-[var(--accent)]">
-            <span className="font-semibold text-[var(--text)]">{row.name}</span>
-            {' · '}
-            {formatSeconds(row.from)} → {formatSeconds(row.to)}
-          </li>
-        ))}
-        {gains.length === 0 && (
+        {shapes.slice(0, 4).map((s) => {
+          const delta = s.latestSeconds - s.firstSeconds
+          return (
+            <li key={s.shapeId} className="rounded-lg bg-[#102820] px-3 py-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-semibold text-[var(--text)]">{s.name}</span>
+                <span className="text-xs tabular-nums text-[var(--accent)]">
+                  longest {formatSecondsShort(s.longest)} <span className="text-[var(--muted)]">· {shortDate(s.longestDate)}</span>
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                {s.count > 1 ? (
+                  delta > 0 ? (
+                    <>up {formatSecondsShort(delta)} since {shortDate(s.firstDate)} ({formatSecondsShort(s.firstSeconds)} → {formatSecondsShort(s.latestSeconds)})</>
+                  ) : delta < 0 ? (
+                    <>{formatSecondsShort(delta)} since {shortDate(s.firstDate)} — next one counts</>
+                  ) : (
+                    <>holding steady since {shortDate(s.firstDate)}</>
+                  )
+                ) : (
+                  <>first hold logged {shortDate(s.firstDate)} — keep going</>
+                )}
+              </p>
+            </li>
+          )
+        })}
+        {shapes.length === 0 && (
           <li className="text-[var(--muted)]">
             Your progress will start showing here as you practice and your coach logs new work.
           </li>
         )}
       </ul>
+      {shapes.length > 4 && (
+        <p className="mt-2 text-xs text-[var(--muted)]">+{shapes.length - 4} more in Progress →</p>
+      )}
     </CollapsibleSection>
     </div>
   )

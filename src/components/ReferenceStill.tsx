@@ -200,6 +200,8 @@ export function CoachStillGallery({
   const [flash, setFlash] = useState<string | null>(null)
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  /** Viewer-side mirror (e.g. left vs right cartwheel hand positions) — not persisted. */
+  const [mirrored, setMirrored] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const replaceRef = useRef<string | null>(null)
   const stills = canEdit ? listCoachStillSlots(photos, shapeId) : listCoachStills(photos, shapeId)
@@ -279,14 +281,16 @@ export function CoachStillGallery({
     ) : allowCrop ? (
       <StillCropEditor photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
     ) : (
-      <ReferenceStill
-        shapeId={shapeId}
-        photos={photos}
-        photo={p}
-        alt={p.label ? `${alt} — ${p.label}` : alt}
-        className={imgClass}
-        emptyLabel={emptyLabel}
-      />
+      <div style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
+        <ReferenceStill
+          shapeId={shapeId}
+          photos={photos}
+          photo={p}
+          alt={p.label ? `${alt} — ${p.label}` : alt}
+          className={imgClass}
+          emptyLabel={emptyLabel}
+        />
+      </div>
     )
     return (
       <figure key={`${p.id}-${mainTick}`} className="overflow-hidden rounded-md bg-[#0d1218]">
@@ -371,18 +375,33 @@ export function CoachStillGallery({
 
   return (
     <div className="space-y-3">
+      {stills.some((p) => isUsablePhotoSrc(p.dataUrl)) && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setMirrored((m) => !m)}
+            aria-pressed={mirrored}
+            className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--accent)]"
+            title="Flip the still left-to-right (e.g. other-side cartwheel)"
+          >
+            {mirrored ? '⇄ Unmirror' : '⇄ Mirror'}
+          </button>
+        </div>
+      )}
       {stills.length === 1 && !canEdit ? (
         allowCrop ? (
           <StillCropEditor photo={stills[0]!} alt={alt} imgClass={imgClass} />
         ) : (
-          <ReferenceStill
-            shapeId={shapeId}
-            photos={photos}
-            photo={stills[0]}
-            alt={alt}
-            className={imgClass}
-            emptyLabel={emptyLabel}
-          />
+          <div style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
+            <ReferenceStill
+              shapeId={shapeId}
+              photos={photos}
+              photo={stills[0]}
+              alt={alt}
+              className={imgClass}
+              emptyLabel={emptyLabel}
+            />
+          </div>
         )
       ) : stills.length > 0 ? (
         <div className={`grid gap-2 ${stills.length >= 3 ? 'sm:grid-cols-3' : stills.length > 1 ? 'sm:grid-cols-2' : ''}`}>
