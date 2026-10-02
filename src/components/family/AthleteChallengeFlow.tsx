@@ -3,6 +3,7 @@ import type { Athlete, HomeworkLog } from '../../types'
 import { createId, loadHomeworkLogs, saveHomeworkLogs } from '../../lib/storage'
 import { usePoseCamera } from '../../hooks/usePoseCamera'
 import { poseLooksHollow, poseLooksLongBody, poseLooksWallSit, poseLooksSidePlank, poseLooksLever } from '../../lib/homeworkPose'
+import { RepDetector, PUSHUP_REP_CONFIG, VUP_REP_CONFIG, elbowAngleDeg, hipFoldAngleDeg } from '../../lib/repDetect'
 import { perShapeHoldStats, formatSecondsShort } from '../../lib/holdStats'
 import {
   FOUNDATION_EXERCISES,
@@ -189,57 +190,217 @@ function RepChallenge({
   best: number
   onDone: (reps: number) => void
 }) {
+  const [mode, setMode] = useState<'manual' | 'camera'>('manual')
   const [reps, setReps] = useState(0)
-  const beatBest = best > 0 && reps > best
+  const [correction, setCorrection] = useState(0)
+  const beatBest = best > 0 && reps + correction > best
+  const total = Math.max(0, reps + correction)
+
   return (
-    <div className="space-y-4 text-center">
-      <p className="text-sm text-[var(--muted)]">
-        Do your {ex.name.toLowerCase()} — quality reps only — then count them here.
-      </p>
-      {best > 0 && (
-        <p className="text-xs font-bold uppercase tracking-widest text-amber-200">
-          Best so far: {best}
-        </p>
-      )}
-      <p
-        className="text-8xl font-black tabular-nums text-[var(--text)]"
-        style={{ textShadow: beatBest ? GREEN_GLOW : undefined }}
-      >
-        {reps}
-      </p>
-      {beatBest && (
-        <p className="text-sm font-black uppercase tracking-widest text-green-300" style={{ textShadow: GREEN_GLOW }}>
-          ★ New best!
-        </p>
-      )}
-      <div className="flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => setReps((r) => Math.max(0, r - 1))}
-          className="h-16 w-16 rounded-2xl border border-[var(--panel-border)] text-3xl font-black text-[var(--text)]"
-          aria-label="One fewer rep"
-        >
-          −
-        </button>
-        <button
-          type="button"
-          onClick={() => setReps((r) => r + 1)}
-          className="h-20 w-20 rounded-2xl bg-amber-300 text-4xl font-black text-black"
-          style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
-          aria-label="One more rep"
-        >
-          +
-        </button>
+    <div className="space-y-4">
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        {(['manual', 'camera'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={`flex-1 rounded-xl border px-3 py-2 text-sm font-black ${
+              mode === m
+                ? 'border-amber-300/60 bg-amber-300/15 text-amber-200'
+                : 'border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            {m === 'manual' ? 'Count myself' : 'Camera beta'}
+          </button>
+        ))}
       </div>
+
+      {mode === 'camera' ? (
+        <CameraRepCounter
+          ex={ex}
+          onRep={() => setReps((r) => r + 1)}
+          onCorrect={(d) => setCorrection((c) => c + d)}
+          total={total}
+          beatBest={beatBest}
+          best={best}
+        />
+      ) : (
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-[var(--muted)]">
+            Do your {ex.name.toLowerCase()} — quality reps only — then count them here.
+          </p>
+          {best > 0 && (
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-200">
+              Best so far: {best}
+            </p>
+          )}
+          <p
+            className="text-8xl font-black tabular-nums text-[var(--text)]"
+            style={{ textShadow: beatBest ? GREEN_GLOW : undefined }}
+          >
+            {total}
+          </p>
+          {beatBest && (
+            <p className="text-sm font-black uppercase tracking-widest text-green-300" style={{ textShadow: GREEN_GLOW }}>
+              ★ New best!
+            </p>
+          )}
+          <div className="flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setCorrection((c) => c - 1)}
+              className="h-16 w-16 rounded-2xl border border-[var(--panel-border)] text-3xl font-black text-[var(--text)]"
+              aria-label="One fewer rep"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setCorrection((c) => c + 1)}
+              className="h-20 w-20 rounded-2xl bg-amber-300 text-4xl font-black text-black"
+              style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
+              aria-label="One more rep"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={() => onDone(reps)}
-        disabled={reps <= 0}
+        onClick={() => onDone(total)}
+        disabled={total <= 0}
         className="w-full rounded-2xl bg-amber-300 px-4 py-4 text-lg font-black text-black disabled:opacity-40"
-        style={reps > 0 ? { animation: 'sl-skill-pulse 2.4s ease-in-out infinite' } : undefined}
+        style={total > 0 ? { animation: 'sl-skill-pulse 2.4s ease-in-out infinite' } : undefined}
       >
-        Log {reps} rep{reps === 1 ? '' : 's'}
+        Log {total} rep{total === 1 ? '' : 's'}
       </button>
+      {mode === 'camera' && (
+        <p className="text-center text-[11px] text-[var(--muted)]">
+          Beta: the camera can miscount. Tap − / + to fix the count before logging.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Camera rep counter (beta): pose-driven counting with manual correction. */
+function CameraRepCounter({
+  ex,
+  onRep,
+  onCorrect,
+  total,
+  beatBest,
+  best,
+}: {
+  ex: FoundationExercise
+  onRep: () => void
+  onCorrect: (d: number) => void
+  total: number
+  beatBest: boolean
+  best: number
+}) {
+  const pose = usePoseCamera()
+  const detectorRef = useRef<RepDetector | null>(null)
+  const [angle, setAngle] = useState<number | null>(null)
+  const [running, setRunning] = useState(false)
+
+  if (!detectorRef.current) {
+    detectorRef.current = new RepDetector(ex.id === 'pushup' ? PUSHUP_REP_CONFIG : VUP_REP_CONFIG)
+  }
+
+  useEffect(() => {
+    void pose.start()
+    return () => pose.stop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!running) return
+    let raf = 0
+    const tick = () => {
+      const lm = pose.landmarks
+      const a = ex.id === 'pushup' ? elbowAngleDeg(lm) : hipFoldAngleDeg(lm)
+      setAngle(a != null ? Math.round(a) : null)
+      if (detectorRef.current?.push(a, performance.now())) {
+        onRep()
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, pose.landmarks, ex.id])
+
+  return (
+    <div className="space-y-3">
+      <div className="relative overflow-hidden rounded-2xl bg-black">
+        <video
+          ref={pose.videoRef}
+          playsInline
+          muted
+          className="max-h-[36vh] w-full object-contain"
+          style={{ transform: 'scaleX(-1)' }}
+        />
+        <canvas ref={pose.canvasRef} className="hidden" />
+        <div className="absolute left-0 right-0 top-0 flex items-center justify-between p-3">
+          <span className="rounded-full bg-black/70 px-3 py-1 text-xs font-black uppercase tracking-widest text-amber-200">
+            Beta counter
+          </span>
+          {angle != null && (
+            <span className="rounded-full bg-black/70 px-3 py-1 text-xs font-bold tabular-nums text-white/80">
+              {ex.id === 'pushup' ? 'elbow' : 'hip'} {angle}°
+            </span>
+          )}
+        </div>
+        <div className="absolute bottom-3 left-0 right-0 text-center">
+          <p
+            className="text-6xl font-black tabular-nums text-white"
+            style={{ textShadow: beatBest ? GREEN_GLOW : '0 0 18px rgba(0,0,0,0.8)' }}
+          >
+            {total}
+          </p>
+          {best > 0 && (
+            <p className="mt-1 text-xs font-bold tabular-nums text-white/70">best {best}</p>
+          )}
+        </div>
+      </div>
+      {!running ? (
+        <button
+          type="button"
+          onClick={() => {
+            detectorRef.current?.reset()
+            setRunning(true)
+          }}
+          disabled={!pose.running}
+          className="w-full rounded-2xl bg-amber-300 px-4 py-3 text-base font-black text-black disabled:opacity-40"
+          style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
+        >
+          Start camera counting
+        </button>
+      ) : (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => onCorrect(-1)}
+            className="h-12 w-12 rounded-xl border border-[var(--panel-border)] text-2xl font-black text-[var(--text)]"
+            aria-label="Remove one rep"
+          >
+            −
+          </button>
+          <p className="text-xs text-[var(--muted)]">fix the count</p>
+          <button
+            type="button"
+            onClick={() => onCorrect(1)}
+            className="h-12 w-12 rounded-xl border border-[var(--panel-border)] text-2xl font-black text-[var(--text)]"
+            aria-label="Add one rep"
+          >
+            +
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -357,6 +518,19 @@ export function AthleteChallengeFlow({
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-black text-[var(--text)]">{ex.name}</h3>
+                {ex.demoVideoUrl ? (
+                  <video
+                    src={ex.demoVideoUrl}
+                    className="mt-2 max-h-56 w-full rounded-2xl bg-black object-contain"
+                    controls
+                    playsInline
+                    loop
+                  />
+                ) : (
+                  <p className="mt-2 rounded-xl border border-dashed border-[var(--panel-border)] bg-black/30 p-3 text-center text-xs text-[var(--muted)]">
+                    Coach Ryan's perfect {ex.name.toLowerCase()} demo goes here — coming soon.
+                  </p>
+                )}
                 <p className="mt-1 text-sm font-bold text-amber-200">📷 {ex.angle.best}</p>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">{ex.angle.why}</p>
                 <p className="mt-2 rounded-xl bg-black/40 p-3 text-xs leading-relaxed text-[var(--muted)]">

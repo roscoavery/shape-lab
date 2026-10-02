@@ -8,6 +8,7 @@ import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 import { AthletePathStrip } from './AthletePathStrip'
 import { AthleteHoldStats } from './AthleteHoldStats'
 import { AthleteFoundation } from './AthleteFoundation'
+import { AthleteLeaderboards } from './AthleteLeaderboards'
 
 type Props = {
   athlete: Athlete | null
@@ -57,7 +58,8 @@ export function AthleteHome({
         </button>
       </section>
       <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
-      <AthleteFoundation />
+      <AthleteFoundation athlete={athlete} />
+      <AthleteLeaderboards athlete={athlete} />
       <button
         type="button"
         onClick={onOpenShapes}

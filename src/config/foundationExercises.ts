@@ -22,6 +22,8 @@ export type FoundationExercise = {
   sourceLabel: string
   /** Pose gate for camera holds; null = manual. */
   gate: 'hollow' | 'longbody' | 'wallsit' | 'sideplank' | 'lever' | null
+  /** Coach Ryan's perfect demo video URL; empty until he films it. */
+  demoVideoUrl?: string
   tagline: string
   angle: {
     best: string

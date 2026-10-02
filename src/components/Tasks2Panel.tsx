@@ -3147,6 +3147,35 @@ export function Tasks2Panel({
               </li>
             ))}
           </ol>
+          {(() => {
+            // Foundation tie-in: shapes in this sequence that have a matching
+            // Foundation challenge. Points the athlete at strength work.
+            const shapeToExercise: Record<string, string> = {
+              lever: 'Lever',
+              hollow_arms_down: 'Hollow hold',
+              hollow: 'Hollow hold',
+              superman: 'Superman',
+              side_plank: 'Side plank',
+              plank: 'Front plank',
+            }
+            const matches = [...new Set(
+              snaps
+                .map((s) => shapeToExercise[s.shapeId])
+                .filter(Boolean) as string[],
+            )]
+            if (!matches.length) return null
+            return (
+              <div className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/5 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-200">
+                  Strengthen this sequence
+                </p>
+                <p className="mt-1 text-xs leading-snug text-[var(--text)]">
+                  {matches.join(' · ')} {matches.length === 1 ? 'has' : 'have'} a Foundation
+                  challenge. Find it under Foundation on your Today tab.
+                </p>
+              </div>
+            )
+          })()}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
