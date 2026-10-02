@@ -10,6 +10,7 @@ export type TodayShortcutId =
   | 'homework'
   | 'profile'
   | 'clock'
+  | 'arcade'
   | 'collages'
   | 'skillpaths'
 
@@ -72,6 +73,12 @@ const TOOLS: {
     eyebrow: 'Floor',
     title: 'Class clock',
     hint: 'Time a hold and log it for everyone here.',
+  },
+  {
+    id: 'arcade',
+    eyebrow: 'Class games',
+    title: 'Tumbling Arcade',
+    hint: 'Stick It and more games with scoring built in.',
   },
   {
     id: 'collages',

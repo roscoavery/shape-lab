@@ -1,0 +1,327 @@
+import { useMemo, useState } from 'react'
+import type { Athlete } from '../../types'
+import { AthleteSearchField } from '../today/AthleteSearchField'
+import {
+  STICK_IT_LETTERS,
+  STICK_IT_SKILLS,
+  saveArcadeRecord,
+  stickItActive,
+  stickItCurrent,
+  stickItIsOut,
+  stickItLeaderboard,
+  type StickItPlayer,
+  type StickItSkillId,
+} from '../../lib/arcade'
+import { KindLeaderboard } from './KindLeaderboard'
+
+type Phase = 'setup' | 'play' | 'done'
+
+function Letters({ count }: { count: number }) {
+  return (
+    <div className="flex gap-1.5">
+      {STICK_IT_LETTERS.map((L, i) => (
+        <span
+          key={L}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg text-lg font-black ${
+            i < count ? 'bg-red-500/80 text-white' : 'bg-white/10 text-white/30'
+          }`}
+        >
+          {L}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit: () => void }) {
+  const [phase, setPhase] = useState<Phase>('setup')
+  const [skillId, setSkillId] = useState<StickItSkillId>('perfect-cartwheel')
+  const [players, setPlayers] = useState<StickItPlayer[]>([])
+  const [query, setQuery] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [turn, setTurn] = useState(0)
+  const [showBoard, setShowBoard] = useState(false)
+  const [board, setBoard] = useState<ReturnType<typeof stickItLeaderboard>>([])
+
+  const skill = STICK_IT_SKILLS.find((s) => s.id === skillId) ?? STICK_IT_SKILLS[0]
+
+  const addAthlete = (a: Athlete) => {
+    if (players.some((p) => p.id === a.id)) return
+    setPlayers((ps) => [...ps, { id: a.id, name: a.name, athleteId: a.id, letters: 0 }])
+    setQuery('')
+  }
+
+  const addGuest = () => {
+    const name = guestName.trim()
+    if (!name) return
+    const id = `guest:${name.toLowerCase()}`
+    if (players.some((p) => p.id === id)) return
+    setPlayers((ps) => [...ps, { id, name, letters: 0 }])
+    setGuestName('')
+  }
+
+  const removePlayer = (id: string) => setPlayers((ps) => ps.filter((p) => p.id !== id))
+
+  const startGame = () => {
+    if (players.length < 2) return
+    setTurn(0)
+    setPhase('play')
+  }
+
+  const active = useMemo(() => stickItActive(players), [players])
+  const current = phase === 'play' ? stickItCurrent(players, turn) : null
+  const winner = phase === 'done' ? active[0] ?? null : null
+
+  const advance = (next: StickItPlayer[]) => {
+    const stillActive = stickItActive(next)
+    if (stillActive.length <= 1) {
+      // Game over — record the win.
+      const w = stillActive[0]
+      if (w) {
+        saveArcadeRecord({
+          gameId: 'stick-it',
+          skillLabel: skill.label,
+          playerNames: next.map((p) => p.name),
+          winnerName: w.name,
+          winnerAthleteId: w.athleteId,
+        })
+      }
+      setPlayers(next)
+      setBoard(stickItLeaderboard())
+      setPhase('done')
+    } else {
+      setPlayers(next)
+      setTurn((t) => t + 1)
+    }
+  }
+
+  const stuckIt = () => {
+    if (!current) return
+    advance(players)
+  }
+
+  const missed = () => {
+    if (!current) return
+    const next = players.map((p) =>
+      p.id === current.id ? { ...p, letters: Math.min(p.letters + 1, STICK_IT_LETTERS.length) } : p,
+    )
+    advance(next)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+            Tumbling arcade
+          </p>
+          <h2 className="text-xl font-black">Stick It</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onExit}
+          className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold"
+        >
+          All games
+        </button>
+      </div>
+
+      {phase === 'setup' && (
+        <>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+              The skill
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {STICK_IT_SKILLS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSkillId(s.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    s.id === skillId ? 'bg-[var(--accent)] text-black' : 'bg-white/10 text-white/80'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+              Who's playing ({players.length})
+            </p>
+            <AthleteSearchField
+              athletes={athletes}
+              query={query}
+              onQuery={setQuery}
+              onPick={addAthlete}
+              excludeIds={players.map((p) => p.id)}
+              placeholder="Type an athlete's name…"
+            />
+            <div className="mt-2 flex gap-2">
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addGuest()}
+                placeholder="Guest name (no profile needed)"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={addGuest}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-bold"
+              >
+                Add guest
+              </button>
+            </div>
+            {players.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {players.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-2 rounded-xl bg-black/25 px-3 py-2"
+                  >
+                    <span className="flex-1 truncate text-sm font-medium">{p.name}</span>
+                    {p.athleteId == null && (
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                        Guest
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePlayer(p.id)}
+                      className="text-sm font-bold text-white/40"
+                      aria-label={`Remove ${p.name}`}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button
+            type="button"
+            disabled={players.length < 2}
+            onClick={startGame}
+            className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black disabled:opacity-40"
+          >
+            Start — {skill.label}
+          </button>
+          <p className="text-center text-xs text-white/45">
+            Need at least 2 players. Take turns doing the skill — miss and you earn a letter.
+          </p>
+        </>
+      )}
+
+      {phase === 'play' && current && (
+        <>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
+              Up now · {skill.label}
+            </p>
+            <p className="mt-1 text-3xl font-black">{current.name}</p>
+            <div className="mt-3 flex justify-center">
+              <Letters count={current.letters} />
+            </div>
+            {current.letters > 0 && (
+              <p className="mt-2 text-xs text-white/50">
+                {STICK_IT_LETTERS.length - current.letters}{' '}
+                {STICK_IT_LETTERS.length - current.letters === 1 ? 'miss' : 'misses'} left
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={stuckIt}
+              className="rounded-2xl bg-emerald-500 px-4 py-5 text-lg font-black text-black"
+            >
+              Stuck it ✓
+            </button>
+            <button
+              type="button"
+              onClick={missed}
+              className="rounded-2xl bg-red-500/90 px-4 py-5 text-lg font-black text-white"
+            >
+              Missed — letter
+            </button>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+              Still in ({active.length})
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {players.map((p) => {
+                const out = stickItIsOut(p)
+                return (
+                  <li
+                    key={p.id}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
+                      out ? 'bg-black/20 opacity-40' : 'bg-black/25'
+                    } ${p.id === current.id ? 'ring-1 ring-[var(--accent)]' : ''}`}
+                  >
+                    <span className="flex-1 truncate text-sm font-medium">
+                      {p.name}
+                      {out && <span className="ml-2 text-xs text-white/40">out</span>}
+                    </span>
+                    <Letters count={p.letters} />
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </>
+      )}
+
+      {phase === 'done' && (
+        <>
+          <div className="rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-6 text-center">
+            <p className="text-4xl">🏆</p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+              Last one standing
+            </p>
+            <p className="mt-1 text-3xl font-black">{winner?.name ?? '—'}</p>
+            <p className="mt-1 text-sm text-white/60">{skill.label}</p>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                Stick It leaderboard
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setBoard(stickItLeaderboard())
+                  setShowBoard((s) => !s)
+                }}
+                className="text-xs font-semibold text-[var(--accent)]"
+              >
+                {showBoard ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {showBoard && <KindLeaderboard entries={board} scoreLabel="wins" />}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPlayers((ps) => ps.map((p) => ({ ...p, letters: 0 })))
+              setTurn(0)
+              setPhase('setup')
+            }}
+            className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black"
+          >
+            Play again
+          </button>
+        </>
+      )}
+    </div>
+  )
+}

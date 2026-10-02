@@ -58,6 +58,7 @@ import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { CoachSetupWizard } from './components/coach/CoachSetupWizard'
 import { MySystemPanel } from './components/coach/MySystemPanel'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
+import { ArcadeHub } from './components/arcade/ArcadeHub'
 import { AthleteProfileCard } from './components/AthleteProfileCard'
 import { ImproveNotesDock } from './components/ImproveNotesDock'
 import { DeskPreviewPicker } from './components/DeskPreviewPicker'
@@ -244,6 +245,7 @@ export default function App() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [storyComposerOpen, setStoryComposerOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
+  const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [skillPathsOpen, setSkillPathsOpen] = useState(false)
@@ -1289,6 +1291,8 @@ export default function App() {
                     else requestSelectAthlete(athletes[0]?.id ?? null)
                   } else if (id === 'clock') {
                     setClockOpen(true)
+                  } else if (id === 'arcade') {
+                    setArcadeOpen(true)
                   } else if (id === 'collages') {
                     goTab('classes')
                   }
@@ -2256,6 +2260,11 @@ export default function App() {
         variant="overlay"
         onClose={() => setClockOpen(false)}
       />
+    )}
+    {arcadeOpen && (
+      <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#07110e] text-[var(--text)]">
+        <ArcadeHub athletes={athletes} onClose={() => setArcadeOpen(false)} />
+      </div>
     )}
     {viewingAthleteId && (
       <AthleteProfileCard
