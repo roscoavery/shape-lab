@@ -123,6 +123,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Front aerial on floor, holding the landing position.',
     },
   ],
+  skl_side_aerial: [
+    {
+      who: 'Sadie (athlete)',
+      url: '/videos/sadie-standing-side-aerial.mov',
+      watchFor: 'Standing side aerial reference.',
+    },
+  ],
   'kick-full': [
     {
       who: 'Coach Ryan Williams',
