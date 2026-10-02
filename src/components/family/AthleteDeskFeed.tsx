@@ -115,19 +115,28 @@ export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
         {shapes.slice(0, 4).map((s) => {
           const delta = s.latestSeconds - s.firstSeconds
           return (
-            <li key={s.shapeId} className="rounded-lg bg-[#102820] px-3 py-2">
+            <li
+              key={s.shapeId}
+              className="rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2"
+            >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-semibold text-[var(--text)]">{s.name}</span>
-                <span className="text-xs tabular-nums text-[var(--accent)]">
-                  longest {formatSecondsShort(s.longest)} <span className="text-[var(--muted)]">· {shortDate(s.longestDate)}</span>
+                <span className="font-bold text-[var(--text)]">{s.name}</span>
+                <span className="text-xs tabular-nums">
+                  <span
+                    className="font-black text-amber-200"
+                    style={{ textShadow: '0 0 10px rgba(251,191,36,0.5)' }}
+                  >
+                    {formatSecondsShort(s.longest)}
+                  </span>
+                  <span className="text-[var(--muted)]"> best · {shortDate(s.longestDate)}</span>
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-[var(--muted)]">
                 {s.count > 1 ? (
                   delta > 0 ? (
-                    <>up {formatSecondsShort(delta)} since {shortDate(s.firstDate)} ({formatSecondsShort(s.firstSeconds)} → {formatSecondsShort(s.latestSeconds)})</>
+                    <>up <span className="font-black text-green-300" style={{ textShadow: '0 0 10px rgba(74,222,128,0.5)' }}>{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} <span className="tabular-nums">({formatSecondsShort(s.firstSeconds)} → {formatSecondsShort(s.latestSeconds)})</span></>
                   ) : delta < 0 ? (
-                    <>{formatSecondsShort(delta)} since {shortDate(s.firstDate)} — next one counts</>
+                    <><span className="font-black text-orange-300">{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} — next one counts</>
                   ) : (
                     <>holding steady since {shortDate(s.firstDate)}</>
                   )

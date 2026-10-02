@@ -1,6 +1,8 @@
 import type { HomeworkLog } from '../types'
 import { logsChrono, localDateKey } from './homeworkLogView'
 import { logProperHoldSeconds } from './storage'
+import { getShape } from '../config/shapes'
+import { getCatalogItem } from '../config/homeworkCatalog'
 
 /**
  * Hold analytics: turn raw homework logs into clear per-shape stats,
@@ -55,9 +57,25 @@ function shapeKey(log: HomeworkLog): string {
   return log.shapeId?.trim() || (log.sourceLabel ?? '').split(' (')[0]?.trim() || 'hold'
 }
 
+function prettifyId(id: string): string {
+  return id
+    .replace(/^catalog:/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/** Resolve a log to the display name an athlete should see — never a raw id. */
 function shapeName(log: HomeworkLog): string {
-  const raw = (log.sourceLabel || log.shapeId || 'Hold').replace(/^In class · /i, '')
-  return raw.split(' (')[0]?.trim() || 'Hold'
+  const label = (log.sourceLabel || '').replace(/^In class · /i, '').split(' (')[0]?.trim() ?? ''
+  // A clean label with no id-isms is already display-ready.
+  if (label && !label.includes(':') && !label.includes('_')) return label
+  const rawId = (label || log.shapeId || '').replace(/^catalog:/, '')
+  if (!rawId) return 'Hold'
+  const catalog = getCatalogItem(rawId)
+  if (catalog?.name) return catalog.name
+  const shape = getShape(rawId)
+  if (shape?.name) return shape.name
+  return prettifyId(rawId) || 'Hold'
 }
 
 function shortDate(iso: string): string {

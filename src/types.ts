@@ -975,6 +975,13 @@ export type ReferencePhoto = {
    * (coach still gallery / main still), not only the IG shapes shelf.
    */
   showInShapeLibrary?: boolean
+  /**
+   * Coach-placed annotation: vertical top→bottom arrow at this x position
+   * (0-1 across the still), e.g. through the velcro line on the
+   * cartwheel/roundoff hand-position stills. Placed by the coach in the
+   * still gallery; shown to everyone.
+   */
+  arrowX?: number
 }
 
 /** Coach-authored exercise that can be assigned as homework. */

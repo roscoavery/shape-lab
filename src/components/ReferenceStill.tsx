@@ -79,15 +79,42 @@ export function ReferenceStill({
   }
 
   const stillId = photo?.id ?? pickCoachStill(photos, shapeId)?.id ?? `default_${shapeId}_0`
+  const arrowPhoto = photo ?? coach
+  const arrowX = arrowPhoto?.arrowX
 
   return (
-    <CroppedStill
-      src={src}
-      stillId={stillId}
-      alt={alt}
-      className={className}
-      onError={() => setIndex((i) => i + 1)}
-    />
+    <span className="relative block h-full w-full">
+      <CroppedStill
+        src={src}
+        stillId={stillId}
+        alt={alt}
+        className={className}
+        onError={() => setIndex((i) => i + 1)}
+      />
+      {arrowX != null && (
+        <span
+          className="pointer-events-none absolute inset-y-0"
+          style={{ left: `${Math.min(0.98, Math.max(0.02, arrowX)) * 100}%` }}
+          aria-hidden
+        >
+          <span
+            className="absolute inset-y-[3%] left-1/2 w-[3px] -translate-x-1/2 rounded bg-amber-300"
+            style={{ boxShadow: '0 0 10px rgba(251,191,36,0.9)' }}
+          />
+          <span
+            className="absolute bottom-[1%] left-1/2 -translate-x-1/2"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '9px solid transparent',
+              borderRight: '9px solid transparent',
+              borderTop: '14px solid #fcd34d',
+              filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.9))',
+            }}
+          />
+        </span>
+      )}
+    </span>
   )
 }
 
@@ -202,6 +229,8 @@ export function CoachStillGallery({
   const [renameValue, setRenameValue] = useState('')
   /** Viewer-side mirror (e.g. left vs right cartwheel hand positions) — not persisted. */
   const [mirrored, setMirrored] = useState(false)
+  /** Coach is placing the top→bottom arrow on this still id. */
+  const [placingArrowId, setPlacingArrowId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const replaceRef = useRef<string | null>(null)
   const stills = canEdit ? listCoachStillSlots(photos, shapeId) : listCoachStills(photos, shapeId)
@@ -272,8 +301,17 @@ export function CoachStillGallery({
     )
   }
 
+  const placeArrow = (photoId: string, clientX: number, el: HTMLElement | null) => {
+    if (!el || !onPhotosChange) return
+    const rect = el.getBoundingClientRect()
+    if (rect.width <= 0) return
+    const x = Math.min(0.98, Math.max(0.02, (clientX - rect.left) / rect.width))
+    onPhotosChange(photos.map((p) => (p.id === photoId ? { ...p, arrowX: Math.round(x * 1000) / 1000 } : p)))
+  }
+
   const renderStill = (p: ReferencePhoto) => {
     const empty = !isUsablePhotoSrc(p.dataUrl)
+    const placing = placingArrowId === p.id
     const body = empty ? (
       <div className="flex min-h-48 items-center justify-center px-3 text-center text-xs text-[var(--muted)]">
         Drop a photo on this still
@@ -281,7 +319,25 @@ export function CoachStillGallery({
     ) : allowCrop ? (
       <StillCropEditor photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
     ) : (
-      <div style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
+      <div
+        style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
+        className={placing ? 'cursor-crosshair touch-none select-none' : undefined}
+        onPointerDown={
+          placing
+            ? (e) => {
+                ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+                placeArrow(p.id, e.clientX, e.currentTarget)
+              }
+            : undefined
+        }
+        onPointerMove={
+          placing && typeof PointerEvent !== 'undefined'
+            ? (e) => {
+                if (e.buttons > 0) placeArrow(p.id, e.clientX, e.currentTarget)
+              }
+            : undefined
+        }
+      >
         <ReferenceStill
           shapeId={shapeId}
           photos={photos}
@@ -337,6 +393,38 @@ export function CoachStillGallery({
             <span className="flex items-center gap-1">
               {tagAthletes.length > 0 && isUsablePhotoSrc(p.dataUrl) && (
                 <StillTagPicker stillId={p.id} athletes={tagAthletes} />
+              )}
+              {isUsablePhotoSrc(p.dataUrl) && onPhotosChange && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPlacingArrowId((id) => (id === p.id ? null : p.id))}
+                    aria-pressed={placingArrowId === p.id}
+                    className={`rounded px-1.5 py-0.5 font-semibold ${
+                      placingArrowId === p.id
+                        ? 'bg-amber-300 text-black'
+                        : 'bg-white/10 text-white/80 hover:bg-white/20'
+                    }`}
+                    title={p.arrowX != null ? 'Move the top-to-bottom arrow' : 'Place a top-to-bottom arrow on this still'}
+                  >
+                    {placingArrowId === p.id ? 'Placing… tap the still' : p.arrowX != null ? '↕ Arrow ✓' : '↕ Arrow'}
+                  </button>
+                  {p.arrowX != null && placingArrowId !== p.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onPhotosChange) {
+                          const { arrowX: _drop, ...rest } = p
+                          onPhotosChange(photos.map((q) => (q.id === p.id ? rest : q)))
+                        }
+                      }}
+                      className="rounded px-1 py-0.5 text-white/50 hover:text-white"
+                      title="Remove the arrow"
+                    >
+                      ×
+                    </button>
+                  )}
+                </>
               )}
               {p.id !== mainId && isUsablePhotoSrc(p.dataUrl) && (
                 <button

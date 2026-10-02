@@ -7,6 +7,7 @@ import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 import { AthletePathStrip } from './AthletePathStrip'
 import { AthleteHoldStats } from './AthleteHoldStats'
+import { AthleteFoundation } from './AthleteFoundation'
 
 type Props = {
   athlete: Athlete | null
@@ -56,6 +57,7 @@ export function AthleteHome({
         </button>
       </section>
       <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
+      <AthleteFoundation />
       <button
         type="button"
         onClick={onOpenShapes}
