@@ -39,6 +39,7 @@ import { ClassRecapList } from './ClassRecapList'
 import { EndClassPrompt } from './EndClassPrompt'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
+import { ClassRepCounter } from './ClassRepCounter'
 import { ContestStopwatch } from './ContestStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
@@ -457,7 +458,7 @@ function LiveClass({
   const [pickId, setPickId] = useState('')
   const [classNote, setClassNote] = useState('')
   const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
-  const [clockView, setClockView] = useState<'clock' | 'contest'>('clock')
+  const [clockView, setClockView] = useState<'clock' | 'contest' | 'reps'>('clock')
   const pool = useMemo(() => {
     const roster = rosterAthletes(offering, athletes)
     if (roster.length > 0) return roster
@@ -638,7 +639,7 @@ function LiveClass({
 
       <ChalkboardPanel viewer={coach} offeringId={offering?.id} />
 
-      {/* Class clock with an arcade switch — regular clock or hold contest. */}
+      {/* Class clock with arcade switches — clock, hold contest, or rep counter. */}
       <div className="flex flex-col gap-2">
         <div className="flex rounded-full border border-white/10 bg-black/30 p-1">
           <button
@@ -659,6 +660,15 @@ function LiveClass({
           >
             🏆 Hold contest
           </button>
+          <button
+            type="button"
+            onClick={() => setClockView('reps')}
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${
+              clockView === 'reps' ? 'bg-emerald-300 text-black' : 'text-white/60'
+            }`}
+          >
+            💪 Reps
+          </button>
         </div>
         {clockView === 'clock' ? (
           <ClassStopwatch
@@ -666,8 +676,15 @@ function LiveClass({
             signedIn={coach}
             coach
           />
-        ) : (
+        ) : clockView === 'contest' ? (
           <ContestStopwatch
+            athletes={present}
+            signedIn={coach}
+            className={offering ? classLabel(offering) : undefined}
+            meetingId={meeting.id}
+          />
+        ) : (
+          <ClassRepCounter
             athletes={present}
             signedIn={coach}
             className={offering ? classLabel(offering) : undefined}

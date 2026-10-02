@@ -70,6 +70,26 @@ import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
 import { AthleteViewBar } from './components/family/AthleteViewBar'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
+import { AthleteFoundation } from './components/family/AthleteFoundation'
+import { GlowTour, tourSeen, type TourStep } from './components/homework/GlowTour'
+
+const HW_TOUR_STEPS: TourStep[] = [
+  {
+    target: 'hw-tour-drills',
+    title: 'Your homework lives here',
+    text: 'Drills from your coach, top to bottom. Start at the top — each one makes the next easier.',
+  },
+  {
+    target: 'hw-tour-train',
+    title: 'Tap Train to start',
+    text: 'The camera watches your form while you hold. Tap it on your first drill and follow along.',
+  },
+  {
+    target: 'hw-tour-manual',
+    title: 'No camera? No problem',
+    text: 'Tap Log and type your time or reps instead. It still counts.',
+  },
+]
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
@@ -249,6 +269,8 @@ export default function App() {
   const [clockOpen, setClockOpen] = useState(false)
   const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
+  const [hwTourOpen, setHwTourOpen] = useState(false)
+  const hwTourAutoFired = useRef(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [trainLogForId, setTrainLogForId] = useState<string | null>(null)
   const [trainGuest, setTrainGuest] = useState(false)
@@ -668,6 +690,15 @@ export default function App() {
     if (tab === 'compare') setCompareOpened(true)
     if (tab !== 'tasks' && tab !== 'tasks2') setCamFullscreen(false)
     if (tab !== 'homework') setHwStudio(false)
+    // Guided homework tour: auto-offer once per device to non-coach viewers.
+    if (tab === 'homework' && !hwTourAutoFired.current && !tourSeen()) {
+      hwTourAutoFired.current = true
+      const coachViewing = activeProfile != null && isCoachProfile(activeProfile)
+      if (!coachViewing) {
+        const t = window.setTimeout(() => setHwTourOpen(true), 900)
+        return () => window.clearTimeout(t)
+      }
+    }
   }, [tab])
 
   useEffect(() => {
@@ -1607,6 +1638,15 @@ export default function App() {
               )}
             </div>
           ) : null}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setHwTourOpen(true)}
+              className="text-xs text-[var(--muted)] underline"
+            >
+              ✨ Take the guided tour
+            </button>
+          </div>
           <HomeworkPanel
             athleteId={trainLogForAthleteId}
             athlete={trainLogForAthlete ?? homeworkAthlete}
@@ -1666,6 +1706,12 @@ export default function App() {
               ) : null
             }
           />
+          {activeProfile && isCoachProfile(activeProfile) && (trainLogForAthlete ?? homeworkAthlete) && (
+            <div className="mt-2">
+              <AthleteFoundation athlete={(trainLogForAthlete ?? homeworkAthlete)!} />
+            </div>
+          )}
+          {hwTourOpen && <GlowTour steps={HW_TOUR_STEPS} onDone={() => setHwTourOpen(false)} />}
         </div>
         </PanelErrorBoundary>
       )}

@@ -1946,8 +1946,8 @@ export function HomeworkPanel({
           </button>
         </div>
       </div>
-      <div className="space-y-2">
-        {orderedDrills.map((item) => {
+      <div id="hw-tour-drills" className="space-y-2">
+        {orderedDrills.map((item, rowIdx) => {
           const shape = getShape(item.shapeId)
           const itemLogs = logsByItem.get(item.id) ?? []
           const properValues = itemLogs
@@ -2031,6 +2031,7 @@ export function HomeworkPanel({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    id={rowIdx === 0 ? 'hw-tour-train' : undefined}
                     onClick={() => startItem(item)}
                     className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-white"
                     title={
@@ -2049,6 +2050,7 @@ export function HomeworkPanel({
                   </button>
                   <button
                     type="button"
+                    id={rowIdx === 0 ? 'hw-tour-manual' : undefined}
                     onClick={() => openManual(item)}
                     className="rounded-lg border border-[var(--panel-border)] px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)]"
                     title="No camera? Type a hold time instead"
