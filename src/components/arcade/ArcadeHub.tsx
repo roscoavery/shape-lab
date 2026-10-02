@@ -27,6 +27,10 @@ import { ShapePasswordGame } from './lab/ShapePasswordGame'
 import { CoachesEyeGame } from './lab/CoachesEyeGame'
 import { SequenceMemoryGame } from './lab/SequenceMemoryGame'
 import { BuildASkillGame } from './lab/BuildASkillGame'
+import { SpotDifferenceGame } from './lab/SpotDifferenceGame'
+import { TwistDetectiveGame } from './lab/TwistDetectiveGame'
+import { PhysicsPlaygroundGame } from './lab/PhysicsPlaygroundGame'
+import { TeamPowerUpGame } from './lab/TeamPowerUpGame'
 
 /**
  * Tumbling Arcade hub — rooms of games.
@@ -406,6 +410,10 @@ export function ArcadeHub({
     'coachs-eye': () => <CoachesEyeGame onExit={() => setActiveGame(null)} />,
     'sequence-memory': () => <SequenceMemoryGame onExit={() => setActiveGame(null)} />,
     'build-a-skill': () => <BuildASkillGame onExit={() => setActiveGame(null)} />,
+    'spot-difference': () => <SpotDifferenceGame onExit={() => setActiveGame(null)} />,
+    'twist-detective': () => <TwistDetectiveGame onExit={() => setActiveGame(null)} />,
+    'physics-playground': () => <PhysicsPlaygroundGame onExit={() => setActiveGame(null)} />,
+    'team-power-up': () => <TeamPowerUpGame onExit={() => setActiveGame(null)} />,
   }
   if (activeGame && labGames[activeGame]) {
     return <div className="mx-auto w-full max-w-2xl px-4 py-6">{labGames[activeGame]()}</div>
