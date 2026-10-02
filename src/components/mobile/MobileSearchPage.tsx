@@ -8,6 +8,7 @@ import { navRoleFromSession, type NavRole } from '../../lib/appNav'
 import type { AuthSessionUser, SessionRole } from '../../lib/authSession'
 import { sessionIsKiosk } from '../../lib/authSession'
 import { isRyanAthlete } from '../../lib/ryanProfile'
+import { isCoachProfile } from '../../lib/profileRole'
 import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 import { IgSearchIcon } from './IgNavIcons'
 import { ChatPanel } from '../chat/ChatPanel'
@@ -56,13 +57,15 @@ export function MobileSearchPage({
   const [askMounted, setAskMounted] = useState(false)
   const { clips } = useGymLibrary()
   const role: NavRole = navRoleFromSession(authUser?.role, sessionIsKiosk(authUser))
-  const ryan = isRyanAthlete(athletes.find((a) => a.id === activeAthleteId) ?? null)
+  const activeAthlete = athletes.find((a) => a.id === activeAthleteId) ?? null
+  const ryan = isRyanAthlete(activeAthlete)
+  const coach = isCoachProfile(activeAthlete)
   // The Ask chatbot isn't available on the floor kiosk, so it stays search-only there.
   const showAsk = role !== 'kiosk'
 
   const hits = useMemo(
-    () => searchAppIndex(q, { athletes, clips, role, ryan, limit: 40 }),
-    [q, athletes, clips, role, ryan],
+    () => searchAppIndex(q, { athletes, clips, role, ryan, coach, limit: 40 }),
+    [q, athletes, clips, role, ryan, coach],
   )
 
 

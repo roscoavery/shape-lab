@@ -41,7 +41,7 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
         Strengthen your foundation
       </p>
       <h2 className="mt-1 text-xl font-black text-[var(--text)]">
-        Why this makes you better
+        Know why it works
       </h2>
 
       {/* Facts deck */}
@@ -140,10 +140,6 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
       {challengeOpen && (
         <AthleteChallengeFlow athlete={athlete} onClose={() => setChallengeOpen(false)} />
       )}
-
-      <p className="mt-3 text-[10px] text-[var(--muted)]">
-        Draft coaching notes — Coach Ryan approves every line.
-      </p>
     </section>
   )
 }

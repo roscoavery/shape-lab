@@ -59,6 +59,11 @@ export function NetworkPanel({ athletes, athlete, onViewProfile, initialPage = '
   const [threadToId, setThreadToId] = useState('')
   const coach = isCoachProfile(athlete)
 
+  // The lounge is coaches-only — an athlete viewer never sees the tab.
+  useEffect(() => {
+    if (!coach) setPage((p) => (p === 'lounge' ? 'people' : p))
+  }, [coach])
+
   useEffect(() => {
     void loadSocial().then(setSocial)
     void loadDiscuss().then(setDiscuss)
@@ -90,7 +95,7 @@ export function NetworkPanel({ athletes, athlete, onViewProfile, initialPage = '
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
           Network
         </p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">People, messages, lounge</h2>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text)]">{coach ? 'People, messages, lounge' : 'People, messages'}</h2>
         <div className="mt-3">
           <SegmentedTabs
             value={page}
@@ -98,7 +103,7 @@ export function NetworkPanel({ athletes, athlete, onViewProfile, initialPage = '
             tabs={[
               { id: 'people', label: 'People' },
               { id: 'messages', label: 'Messages' },
-              { id: 'lounge', label: 'Coach lounge' },
+              ...(coach ? [{ id: 'lounge', label: 'Coach lounge' } as const] : []),
             ]}
           />
         </div>

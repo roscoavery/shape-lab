@@ -74,7 +74,7 @@ function tokenScore(hay: string, needle: string): number {
   return 0
 }
 
-function featureHits(needle: string, ryan: boolean): AppSearchHit[] {
+function featureHits(needle: string, ryan: boolean, coach: boolean): AppSearchHit[] {
   const out: AppSearchHit[] = []
   const seen = new Set<AppTab>()
   for (const rows of Object.values(SECTION_SUBNAV)) {
@@ -88,6 +88,7 @@ function featureHits(needle: string, ryan: boolean): AppSearchHit[] {
       if (row.id === 'tasks' || row.id === 'coach' || row.id === 'drills') {
         if (!ryan) continue
       }
+      if (row.id === 'coachlib' && !coach) continue
       out.push({
         id: `feature:${row.id}`,
         kind: 'feature',
@@ -213,7 +214,7 @@ function skillHits(needle: string): AppSearchHit[] {
   return out
 }
 
-export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] {
+export function popularSearchHits(role: NavRole, ryan: boolean, coach: boolean): AppSearchHit[] {
   const tabs: AppTab[] =
     role === 'parent'
       ? ['today', 'homework', 'learn', 'wins', 'network', 'history']
@@ -221,6 +222,7 @@ export function popularSearchHits(role: NavRole, ryan: boolean): AppSearchHit[] 
   const out: AppSearchHit[] = []
   for (const tab of tabs) {
     if ((tab === 'tasks' || tab === 'coach' || tab === 'drills') && !ryan) continue
+    if (tab === 'coachlib' && !coach) continue
     const label =
       Object.values(SECTION_SUBNAV)
         .flat()
@@ -272,14 +274,15 @@ export function searchAppIndex(
     clips: GymClip[]
     role: NavRole
     ryan: boolean
+    coach: boolean
     limit?: number
   },
 ): AppSearchHit[] {
   const needle = query.trim()
-  if (!needle) return popularSearchHits(opts.role, opts.ryan)
+  if (!needle) return popularSearchHits(opts.role, opts.ryan, opts.coach)
 
   const merged = [
-    ...featureHits(needle, opts.ryan),
+    ...featureHits(needle, opts.ryan, opts.coach),
     ...shapeHits(needle),
     ...homeworkHits(needle),
     ...clipHits(needle, opts.clips),
