@@ -139,6 +139,12 @@ type Props = {
   onOpenClassFlow?: (flowId: string) => void
   openPage?: 'train' | 'add' | 'care' | null
   onOpenPageConsumed?: () => void
+  /**
+   * Guest try: the panel works normally but nothing is written —
+   * no hold logs, no new homework items. For when a coach hands the
+   * device to someone without a profile.
+   */
+  suspendWrites?: boolean
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -613,6 +619,7 @@ export function HomeworkPanel({
   onOpenClassFlow,
   openPage = null,
   onOpenPageConsumed,
+  suspendWrites = false,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -953,8 +960,10 @@ export function HomeworkPanel({
       ...(isPlank && plankSide !== 'both' ? { side: plankSide } : {}),
     }
     logLockRef.current = true
-    addHomeworkLog(log)
-    setLogs((prev) => [log, ...prev])
+    if (!suspendWrites) {
+      addHomeworkLog(log)
+      setLogs((prev) => [log, ...prev])
+    }
     resetSession()
     window.setTimeout(() => {
       logLockRef.current = false
@@ -965,7 +974,9 @@ export function HomeworkPanel({
       isPlank && plankSide !== 'both' ? plankSide : undefined,
     )
     showFlash(
-      `Logged ${shapeName} — ${formatSeconds(log.totalHoldSeconds)}${beatNote(log.totalHoldSeconds, prior)}`,
+      suspendWrites
+        ? `Guest try — ${shapeName} ${formatSeconds(log.totalHoldSeconds)}, not logged`
+        : `Logged ${shapeName} — ${formatSeconds(log.totalHoldSeconds)}${beatNote(log.totalHoldSeconds, prior)}`,
     )
   }
 
@@ -1030,10 +1041,12 @@ export function HomeworkPanel({
         : {}),
     }
     logLockRef.current = true
-    addHomeworkLog(log)
-    setLogs((prev) =>
-      [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
-    )
+    if (!suspendWrites) {
+      addHomeworkLog(log)
+      setLogs((prev) =>
+        [log, ...prev].sort((a, b) => b.date.localeCompare(a.date)),
+      )
+    }
     setManualItemId(null)
     window.setTimeout(() => {
       logLockRef.current = false
@@ -1043,10 +1056,18 @@ export function HomeworkPanel({
       isPlank && manualSide !== 'both' ? manualSide : undefined,
     )
     const shapeName = homeworkTitle(item)
-    showFlash(`Logged ${shapeName} — ${formatSeconds(secs)}${beatNote(secs, prior)}`)
+    showFlash(
+      suspendWrites
+        ? `Guest try — ${shapeName} ${formatSeconds(secs)}, not logged`
+        : `Logged ${shapeName} — ${formatSeconds(secs)}${beatNote(secs, prior)}`,
+    )
   }
 
   const changeStandard = (item: HomeworkItem, value: string | number) => {
+    if (suspendWrites) {
+      showFlash('Guest try — nothing is saved.')
+      return
+    }
     const v = Number(value)
     if (!Number.isFinite(v)) return
     const clamped = Math.min(100, Math.max(0, Math.round(v)))
@@ -1086,6 +1107,10 @@ export function HomeworkPanel({
       showFlash('That drill is already on this homework list.')
       return
     }
+    if (suspendWrites) {
+      showFlash('Guest try — nothing is saved.')
+      return
+    }
     setItems(addHomeworkItem(item))
     setAddNotes('')
     setAddMode('')
@@ -1120,6 +1145,10 @@ export function HomeworkPanel({
       allowWeight: cat.allowWeight,
       notes: cat.notes,
       createdAt: new Date().toISOString(),
+    }
+    if (suspendWrites) {
+      showFlash('Guest try — nothing is saved.')
+      return item
     }
     setItems(addHomeworkItem(item))
     showFlash(`Added ${cat.name}`)
@@ -1169,12 +1198,14 @@ export function HomeworkPanel({
       score: 0,
     }
     logLockRef.current = true
-    addHomeworkLog(log)
-    setLogs((prev) => [log, ...prev])
+    if (!suspendWrites) {
+      addHomeworkLog(log)
+      setLogs((prev) => [log, ...prev])
+    }
     window.setTimeout(() => {
       logLockRef.current = false
     }, 1500)
-    if (input.journal || input.painLevel != null) {
+    if (!suspendWrites && (input.journal || input.painLevel != null)) {
       addPainJournalEntry({
         id: createId('pj'),
         athleteId,
@@ -1207,7 +1238,11 @@ export function HomeworkPanel({
       speed,
     ].filter(Boolean)
     const together = input.holdSeconds && input.reps ? ' in one log' : ''
-    showFlash(`Logged ${homeworkTitle(item)} — ${bits.join(' + ')}${together}`)
+    showFlash(
+      suspendWrites
+        ? `Guest try — ${bits.join(' + ')}${together}, not logged`
+        : `Logged ${homeworkTitle(item)} — ${bits.join(' + ')}${together}`,
+    )
   }
 
   const logPickedSet = (
@@ -1260,6 +1295,10 @@ export function HomeworkPanel({
 
   const removeItem = (item: HomeworkItem) => {
     if (item.source === 'auto') return
+    if (suspendWrites) {
+      showFlash('Guest try — nothing is saved.')
+      return
+    }
     removeHomeworkItem(item.id)
     setItems((prev) => prev.filter((i) => i.id !== item.id))
     if (activeItemId === item.id) setActiveItemId(null)
@@ -1425,6 +1464,10 @@ export function HomeworkPanel({
         athletes={athletes}
         onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
         onRemove={(id) => {
+          if (suspendWrites) {
+            showFlash('Guest try — nothing is saved.')
+            return
+          }
           removeHomeworkLog(id)
           setLogs((prev) => prev.filter((row) => row.id !== id))
           showFlash('Removed that logged set.')
@@ -1633,6 +1676,10 @@ export function HomeworkPanel({
               athletes={athletes}
               onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
               onRemove={(id) => {
+                if (suspendWrites) {
+                  showFlash('Guest try — nothing is saved.')
+                  return
+                }
                 removeHomeworkLog(id)
                 setLogs((prev) => prev.filter((row) => row.id !== id))
                 showFlash('Removed that logged set.')
@@ -2021,6 +2068,10 @@ export function HomeworkPanel({
                 athletes={athletes}
                 onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
                 onRemove={(id) => {
+                  if (suspendWrites) {
+                    showFlash('Guest try — nothing is saved.')
+                    return
+                  }
                   removeHomeworkLog(id)
                   setLogs((prev) => prev.filter((row) => row.id !== id))
                   showFlash('Removed that logged set.')

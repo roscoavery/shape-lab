@@ -39,6 +39,7 @@ import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { SpottingPanel } from './components/learn/SpottingPanel'
 import { ChatPanel } from './components/chat/ChatPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
+import { LogForPicker } from './components/homework/LogForPicker'
 import { ProgressHistory } from './components/ProgressHistory'
 import { ScorePanel } from './components/ScorePanel'
 import { SequencePanel } from './components/SequencePanel'
@@ -248,6 +249,9 @@ export default function App() {
   const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
+  const [trainLogForId, setTrainLogForId] = useState<string | null>(null)
+  const [trainGuest, setTrainGuest] = useState(false)
+  const [logForOpen, setLogForOpen] = useState(false)
   const [skillPathsOpen, setSkillPathsOpen] = useState(false)
   const [skillBuilderStart, setSkillBuilderStart] = useState<string | null>(null)
   const [skillBuilderUnscoped, setSkillBuilderUnscoped] = useState(false)
@@ -996,6 +1000,13 @@ export default function App() {
         : parentKids[0]?.id ?? null
       : activeAthleteId
   const homeworkAthlete = athletes.find((a) => a.id === homeworkAthleteId) ?? null
+  // Coach/admin override: whose profile the Train view logs holds for.
+  // Lets a coach hand the device to an athlete (or a guest) without the
+  // hold landing on the coach's own profile.
+  const trainLogForAthleteId = trainGuest ? homeworkAthleteId : (trainLogForId ?? homeworkAthleteId)
+  const trainLogForAthlete = athletes.find((a) => a.id === trainLogForAthleteId) ?? null
+  const showLogForPicker =
+    (activeProfile != null && isCoachProfile(activeProfile)) || sessionIsAdmin(authUser)
   const personalCompare =
     Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
 
@@ -1543,15 +1554,68 @@ export default function App() {
               viewer={activeProfile}
             />
           ) : null}
+          {showLogForPicker && !hwStudio && activeAthleteId ? (
+            <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2">
+              {!logForOpen ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-[var(--text)]">
+                    Logging holds for{' '}
+                    <strong>
+                      {trainGuest
+                        ? 'a guest (nothing will log)'
+                        : (trainLogForAthlete?.name ?? 'this profile')}
+                    </strong>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setLogForOpen(true)}
+                    className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold"
+                  >
+                    Change who's training
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <LogForPicker
+                    athletes={athletes}
+                    selectedId={trainGuest ? null : trainLogForId}
+                    guest={trainGuest}
+                    onSelect={(id) => {
+                      setTrainLogForId(id)
+                      setTrainGuest(false)
+                      setLogForOpen(false)
+                    }}
+                    onGuest={() => {
+                      setTrainGuest(true)
+                      setLogForOpen(false)
+                    }}
+                    onReset={() => {
+                      setTrainLogForId(null)
+                      setTrainGuest(false)
+                      setLogForOpen(false)
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLogForOpen(false)}
+                    className="self-end text-xs text-[var(--muted)] underline"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
           <HomeworkPanel
-            athleteId={homeworkAthleteId}
-            athlete={homeworkAthlete}
+            athleteId={trainLogForAthleteId}
+            athlete={trainLogForAthlete ?? homeworkAthlete}
             viewer={activeProfile}
             athletes={athletes}
+            suspendWrites={trainGuest}
             onUpdateAthlete={(patch) => {
-              if (!homeworkAthleteId) return
+              if (!trainLogForAthleteId) return
               setAthleteRoster(
-                athletes.map((a) => (a.id === homeworkAthleteId ? { ...a, ...patch } : a)),
+                athletes.map((a) => (a.id === trainLogForAthleteId ? { ...a, ...patch } : a)),
               )
             }}
             score={score}
