@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import type { Athlete } from '../../types'
 import { FOUNDATION_FACTS_DRAFT } from '../../config/foundationFacts'
+import { AthleteChallengeFlow } from './AthleteChallengeFlow'
 
 /**
  * "Strengthen your foundation" — conditioning that athletes are driven
@@ -12,10 +14,11 @@ import { FOUNDATION_FACTS_DRAFT } from '../../config/foundationFacts'
 
 const AMBER_GLOW = '0 0 14px rgba(251,191,36,0.4), 0 0 36px rgba(251,191,36,0.18)'
 
-export function AthleteFoundation() {
+export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
   const facts = FOUNDATION_FACTS_DRAFT
   const [idx, setIdx] = useState(0)
   const [touchX, setTouchX] = useState<number | null>(null)
+  const [challengeOpen, setChallengeOpen] = useState(false)
   const fact = facts[idx]!
 
   const next = () => setIdx((i) => (i + 1) % facts.length)
@@ -117,14 +120,26 @@ export function AthleteFoundation() {
         </button>
       </div>
 
-      {/* Challenges entry (next build) */}
+      {/* Challenges entry */}
       <div className="mt-4 rounded-xl border border-[var(--panel-border)] bg-black/30 p-4">
         <p className="text-sm font-bold text-[var(--text)]">Foundation challenges</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Timed holds and rep challenges with the camera — coming next. Your
-          personal bests will live here.
+          Hollow hold, plank, wall-sit on the camera — push-ups and v-ups as rep
+          battles. Beat your best.
         </p>
+        <button
+          type="button"
+          onClick={() => setChallengeOpen(true)}
+          className="mt-3 w-full rounded-xl bg-amber-300 px-4 py-3 text-base font-black text-black"
+          style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
+        >
+          Start a challenge
+        </button>
       </div>
+
+      {challengeOpen && (
+        <AthleteChallengeFlow athlete={athlete} onClose={() => setChallengeOpen(false)} />
+      )}
 
       <p className="mt-3 text-[10px] text-[var(--muted)]">
         Draft coaching notes — Coach Ryan approves every line.

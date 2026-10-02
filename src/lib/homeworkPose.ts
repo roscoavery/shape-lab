@@ -74,9 +74,40 @@ function kneeAngleDeg(lm: Landmark[]): number | null {
   return (Math.acos(cos) * 180) / Math.PI
 }
 
-/** Hands and feet down, hips the peak of a back-bridge arch. */
-function poseLooksBridgeSupport(lm: Landmark[] | null | undefined): boolean {
+/**
+ * Wall-sit (side view): back upright against the wall, hips and knees
+ * bent near 90°, ankles roughly under the knees. Coarse gate for the
+ * Foundation wall-sit challenge — keeps honest people honest.
+ */
+export function poseLooksWallSit(lm: Landmark[] | null | undefined): boolean {
   if (!lm || lm.length < 33) return false
+  const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
+  const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
+  const knee = mergePair(lm[LM.LEFT_KNEE], lm[LM.RIGHT_KNEE], 0.06)
+  const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.06)
+  if (!hip || !sh || !knee || !ank) return false
+
+  // Torso upright: shoulders above hips, not leaning far forward.
+  if (sh.y > hip.y - 0.05) return false
+  const torsoLean = Math.abs(sh.x - hip.x)
+  const torsoLen = Math.abs(sh.y - hip.y) + 1e-4
+  if (torsoLean / torsoLen > 0.45) return false
+
+  // Seated: hip angle well under standing.
+  const hipA = hipAngleDeg(lm)
+  if (hipA == null || hipA < 55 || hipA > 125) return false
+
+  // Knees bent near 90°: not standing, not a deep squat.
+  const kneeA = kneeAngleDeg(lm)
+  if (kneeA == null || kneeA < 60 || kneeA > 125) return false
+
+  // Hips low: clearly below standing height relative to knees.
+  if (hip.y < knee.y - 0.12) return false
+  return true
+}
+
+/** Hands and feet down, hips the peak of a back-bridge arch. */
+function poseLooksBridgeSupport(lm: Landmark[] | null | undefined): boolean {  if (!lm || lm.length < 33) return false
   const hip = mergePair(lm[LM.LEFT_HIP], lm[LM.RIGHT_HIP], 0.08)
   const sh = mergePair(lm[LM.LEFT_SHOULDER], lm[LM.RIGHT_SHOULDER], 0.08)
   const ank = mergePair(lm[LM.LEFT_ANKLE], lm[LM.RIGHT_ANKLE], 0.08)
