@@ -1653,7 +1653,12 @@ export default function App() {
             <button
               type="button"
               onClick={() => setHwTourOpen(true)}
-              className="text-xs text-[var(--muted)] underline"
+              className="rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
+              style={{
+                animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
+                boxShadow:
+                  '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
+              }}
             >
               ✨ Take the guided tour
             </button>

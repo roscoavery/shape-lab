@@ -55,9 +55,15 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
     setRect(null)
     setWaiting(true)
     if (!step) return
+    const onScroll = () => measure()
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    if (measure()) return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
     // The target may render late (async list). Poll for it; only give up
     // and move on after a long grace period — never rapid-skip.
-    if (measure()) return
     let tries = 0
     const iv = window.setInterval(() => {
       tries += 1
@@ -65,17 +71,15 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
         window.clearInterval(iv)
         if (tries > 48) {
           // Target never showed: skip this step silently.
-          setIdx((i) => (i + 1 < steps.length ? i + 1 : i))
           if (idx + 1 >= steps.length) {
             markTourSeen()
             onDone()
+          } else {
+            setIdx(idx + 1)
           }
         }
       }
     }, 250)
-    const onScroll = () => measure()
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
     return () => {
       window.clearInterval(iv)
       window.removeEventListener('scroll', onScroll, true)
