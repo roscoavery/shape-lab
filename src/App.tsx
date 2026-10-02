@@ -2327,7 +2327,11 @@ export default function App() {
     )}
     {arcadeOpen && (
       <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#07110e] text-[var(--text)]">
-        <ArcadeHub athletes={athletes} onClose={() => setArcadeOpen(false)} />
+        <ArcadeHub
+          athletes={athletes}
+          coach={Boolean(activeProfile && isCoachProfile(activeProfile))}
+          onClose={() => setArcadeOpen(false)}
+        />
       </div>
     )}
     {viewingAthleteId && (

@@ -17,6 +17,18 @@ export type ArcadeGameDef = {
   name: string
   tagline: string
   playable: boolean
+  /** Default room placement. null = unplaced (shows as coming soon). */
+  defaultRoom: 'main' | 'lab' | null
+  /** What kind of play this is. */
+  kind?: 'physical' | 'knowledge' | 'team' | 'mixed'
+  /** How the game takes input. 'none' = pure knowledge/turn-taking. */
+  inputModes?: ('manual' | 'camera' | 'none')[]
+  /** No physical activity — safe to do at home. */
+  atHome?: boolean
+  /** Works as a class station rotation. */
+  stationSuitable?: boolean
+  /** Starter content review state. */
+  contentStatus?: 'draft' | 'reviewed' | 'n/a'
 }
 
 export const ARCADE_GAMES: ArcadeGameDef[] = [
@@ -25,6 +37,11 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     name: 'Stick It',
     tagline: 'Take turns. Miss and you earn a letter. Spell S-T-I-C-K and you are out. Last one standing wins.',
     playable: true,
+    defaultRoom: 'main',
+    kind: 'physical',
+    inputModes: ['manual'],
+    stationSuitable: true,
+    contentStatus: 'n/a',
   },
   {
     id: 'distance',
@@ -32,6 +49,11 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     tagline:
       'Jump-back distance showdown. Standing or round-off entry, flat back or handspring landing — furthest wins.',
     playable: true,
+    defaultRoom: 'main',
+    kind: 'physical',
+    inputModes: ['manual'],
+    stationSuitable: true,
+    contentStatus: 'n/a',
   },
   {
     id: 'hold-contest',
@@ -39,14 +61,103 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     tagline:
       'Pick a hold, pick the athletes, start the clock. Tap each name as they come down — everyone keeps their own time.',
     playable: true,
+    defaultRoom: 'main',
+    kind: 'physical',
+    inputModes: ['manual'],
+    stationSuitable: true,
+    contentStatus: 'n/a',
   },
-  { id: 'handstand-circle', name: 'Handstand circle', tagline: 'Coming soon.', playable: false },
-  { id: 'dice-game', name: "Coach Levi's dice game", tagline: 'Coming soon.', playable: false },
-  { id: 'bhs-race', name: 'Back handspring race', tagline: 'Coming soon.', playable: false },
-  { id: 'highest-tuck', name: 'Highest back tuck', tagline: 'Coming soon.', playable: false },
-  { id: 'straightest-layout', name: 'Straightest layout', tagline: 'Coming soon.', playable: false },
-  { id: 'team-sticks', name: 'Team stick race', tagline: 'Two teams, one minute, most sticks wins.', playable: true },
+  {
+    id: 'team-sticks',
+    name: 'Team stick race',
+    tagline: 'Two teams, one minute, most sticks wins.',
+    playable: true,
+    defaultRoom: 'main',
+    kind: 'team',
+    inputModes: ['manual'],
+    stationSuitable: true,
+    contentStatus: 'n/a',
+  },
+  { id: 'handstand-circle', name: 'Handstand circle', tagline: 'Coming soon.', playable: false, defaultRoom: null },
+  { id: 'dice-game', name: "Coach Levi's dice game", tagline: 'Coming soon.', playable: false, defaultRoom: null },
+  { id: 'bhs-race', name: 'Back handspring race', tagline: 'Coming soon.', playable: false, defaultRoom: null },
+  { id: 'highest-tuck', name: 'Highest back tuck', tagline: 'Coming soon.', playable: false, defaultRoom: null },
+  { id: 'straightest-layout', name: 'Straightest layout', tagline: 'Coming soon.', playable: false, defaultRoom: null },
+  // --- Experimental Lab games (coach testing room) ---
+  {
+    id: 'cue-quest',
+    name: 'Cue Quest',
+    tagline: 'Match the cue to the shape it fixes. Five rounds, 100 points each.',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
+  {
+    id: 'memory-mats',
+    name: 'Memory Mats',
+    tagline: 'Flip and match shape names to their cues. No timer, no pressure.',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
+  {
+    id: 'shape-password',
+    name: 'Shape Password',
+    tagline: 'Describe the shape without saying its name. Partner guesses.',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
+  {
+    id: "coachs-eye",
+    name: "Coach's Eye",
+    tagline: 'Read the scenario. What would you focus on first?',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
+  {
+    id: 'sequence-memory',
+    name: 'Sequence Memory',
+    tagline: 'Watch the shape order, then rebuild it from memory.',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
+  {
+    id: 'build-a-skill',
+    name: 'Build a Skill',
+    tagline: 'Put the phases in the right order, then watch it play.',
+    playable: true,
+    defaultRoom: 'lab',
+    kind: 'knowledge',
+    inputModes: ['none'],
+    atHome: true,
+    stationSuitable: true,
+    contentStatus: 'draft',
+  },
 ]
+
 
 // ---------------------------------------------------------------------------
 // Stick It
@@ -385,4 +496,157 @@ export function distanceLeaderboard(): LeaderboardEntry[] {
     else map.set(key, { key, name: r.winnerName, wins: 1 })
   }
   return [...map.values()].sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name))
+}
+
+// ---------------------------------------------------------------------------
+// Rooms, placement, and coach testing notes (localStorage — gym device)
+// ---------------------------------------------------------------------------
+
+export type ArcadeRoom = {
+  id: string
+  name: string
+  blurb: string
+  /** Built-in rooms can't be renamed or deleted. */
+  builtin: boolean
+}
+
+export const BUILTIN_ROOMS: ArcadeRoom[] = [
+  {
+    id: 'main',
+    name: 'Main Room',
+    blurb: 'The games everyone can play.',
+    builtin: true,
+  },
+  {
+    id: 'lab',
+    name: 'Experimental Lab',
+    blurb: 'Coach testing room. Try games here before they go anywhere else.',
+    builtin: true,
+  },
+]
+
+const ROOMS_KEY = 'shapelab.arcade.rooms.v1'
+const PLACEMENT_KEY = 'shapelab.arcade.placement.v1'
+const NOTES_KEY = 'shapelab.arcade.notes.v1'
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function writeJson(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* quota — config just won't persist */
+  }
+}
+
+/** All rooms: built-in plus coach-created. */
+export function listRooms(): ArcadeRoom[] {
+  const custom = readJson<ArcadeRoom[]>(ROOMS_KEY, [])
+  return [...BUILTIN_ROOMS, ...custom.filter((r) => r && !r.builtin && r.id && r.name)]
+}
+
+export function addRoom(name: string, blurb = ''): ArcadeRoom {
+  const room: ArcadeRoom = {
+    id: `room_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+    name: name.trim() || 'Untitled room',
+    blurb,
+    builtin: false,
+  }
+  const custom = readJson<ArcadeRoom[]>(ROOMS_KEY, [])
+  custom.push(room)
+  writeJson(ROOMS_KEY, custom)
+  return room
+}
+
+export function renameRoom(id: string, name: string): void {
+  const custom = readJson<ArcadeRoom[]>(ROOMS_KEY, [])
+  const next = custom.map((r) => (r.id === id && !r.builtin ? { ...r, name } : r))
+  writeJson(ROOMS_KEY, next)
+}
+
+export function deleteRoom(id: string): void {
+  if (BUILTIN_ROOMS.some((r) => r.id === id)) return
+  writeJson(
+    ROOMS_KEY,
+    readJson<ArcadeRoom[]>(ROOMS_KEY, []).filter((r) => r.id !== id)
+  )
+  // Pull the deleted room's games back to the lab so nothing is orphaned.
+  const placement = readJson<Record<string, string[]>>(PLACEMENT_KEY, {})
+  for (const gameId of Object.keys(placement)) {
+    const rooms = placement[gameId].filter((r) => r !== id)
+    placement[gameId] = rooms.length ? rooms : ['lab']
+  }
+  writeJson(PLACEMENT_KEY, placement)
+}
+
+/** Room ids a game currently sits in. Falls back to the registry default. */
+export function gameRooms(gameId: string): string[] {
+  const placement = readJson<Record<string, string[]>>(PLACEMENT_KEY, {})
+  if (placement[gameId]) return placement[gameId]
+  const def = ARCADE_GAMES.find((g) => g.id === gameId)
+  return def?.defaultRoom ? [def.defaultRoom] : []
+}
+
+export function setGameRooms(gameId: string, roomIds: string[]): void {
+  const placement = readJson<Record<string, string[]>>(PLACEMENT_KEY, {})
+  placement[gameId] = roomIds
+  writeJson(PLACEMENT_KEY, placement)
+}
+
+/** Move a game into exactly one room (the common case). */
+export function moveGameToRoom(gameId: string, roomId: string): void {
+  setGameRooms(gameId, [roomId])
+}
+
+export function addGameToRoom(gameId: string, roomId: string): void {
+  const rooms = gameRooms(gameId)
+  if (!rooms.includes(roomId)) setGameRooms(gameId, [...rooms, roomId])
+}
+
+export function removeGameFromRoom(gameId: string, roomId: string): void {
+  const rooms = gameRooms(gameId).filter((r) => r !== roomId)
+  setGameRooms(gameId, rooms.length ? rooms : ['lab'])
+}
+
+export function gamesInRoom(roomId: string): ArcadeGameDef[] {
+  return ARCADE_GAMES.filter((g) => g.playable && gameRooms(g.id).includes(roomId))
+}
+
+export function unplacedGames(): ArcadeGameDef[] {
+  return ARCADE_GAMES.filter((g) => !g.playable && gameRooms(g.id).length === 0)
+}
+
+// --- Testing notes ----------------------------------------------------------
+
+export type GameVerdict = 'undecided' | 'keep' | 'revise' | 'archive'
+
+export type GameNotes = {
+  fun: number // 1-5
+  usefulness: number // 1-5
+  verdict: GameVerdict
+  text: string
+  updatedAt: string
+}
+
+const EMPTY_NOTES: GameNotes = { fun: 3, usefulness: 3, verdict: 'undecided', text: '', updatedAt: '' }
+
+export function getGameNotes(gameId: string): GameNotes {
+  const all = readJson<Record<string, GameNotes>>(NOTES_KEY, {})
+  return all[gameId] ?? EMPTY_NOTES
+}
+
+export function saveGameNotes(gameId: string, notes: Omit<GameNotes, 'updatedAt'>): GameNotes {
+  const all = readJson<Record<string, GameNotes>>(NOTES_KEY, {})
+  const full: GameNotes = { ...notes, updatedAt: new Date().toISOString() }
+  all[gameId] = full
+  writeJson(NOTES_KEY, all)
+  return full
 }
