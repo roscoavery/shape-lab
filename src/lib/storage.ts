@@ -470,6 +470,27 @@ export const AUTO_HOMEWORK_DEFS: {
     notes:
       'Wall handstand: walk feet up chest-to-wall (preferred) or kick toward the wall. Same body standards as freestanding. Work toward a full minute.',
   },
+  {
+    autoKey: 'front_plank',
+    shapeId: 'front_plank',
+    targetSeconds: 60,
+    notes:
+      'DRAFT: Forearm front plank — straight line head to heels, elbows under the shoulders, no sagging or piking. Strong planks lead to stronger hollows. Work toward a full minute.',
+  },
+  {
+    autoKey: 'tuck',
+    shapeId: 'tuck_open_shoulders',
+    targetSeconds: 60,
+    notes:
+      'Seated tuck: knees bent, feet in and flexed, arms reaching behind the ears, slightly rounded hollow back. Work toward a full minute.',
+  },
+  {
+    autoKey: 'wall_sit',
+    shapeId: 'wall_sit',
+    targetSeconds: 60,
+    notes:
+      'DRAFT: Back flat against the wall, thighs parallel to the floor, knees over the ankles, hands off the thighs. Work toward a full minute.',
+  },
 ]
 
 function inferAutoKey(item: HomeworkItem): string | undefined {

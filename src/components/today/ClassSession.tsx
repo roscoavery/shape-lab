@@ -39,6 +39,7 @@ import { ClassRecapList } from './ClassRecapList'
 import { EndClassPrompt } from './EndClassPrompt'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from './ClassStopwatch'
+import { ContestStopwatch } from './ContestStopwatch'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
 import { ClassExtraPicker } from './ClassExtraPicker'
@@ -640,6 +641,13 @@ function LiveClass({
         athletes={athletes}
         signedIn={coach}
         coach
+      />
+
+      <ContestStopwatch
+        athletes={present}
+        signedIn={coach}
+        className={offering ? classLabel(offering) : undefined}
+        meetingId={meeting.id}
       />
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3">

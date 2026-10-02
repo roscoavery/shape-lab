@@ -3266,6 +3266,79 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // FRONT PLANK — DRAFT copy (Ermith), needs Ryan's wording pass.
+  // Added for the hold-contest feature (2026-10-02).
+  // ===========================================================================
+  {
+    id: 'front_plank',
+    name: 'Front plank',
+    description:
+      'DRAFT: Forearm front plank for conditioning — straight line from head to heels, core tight, no sagging or piking at the hips. Elbows under the shoulders.',
+    bodyPosition:
+      'SIDE VIEW. Forearms on the mat, elbows under the shoulders. Straight line from head to heels — squeeze the glutes, brace the core. No sagging at the hips, no piking up. Head and neck in line with the spine.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Elbows under the shoulders.',
+      'Straight line head to heels — no sag, no pike.',
+      'Squeeze the glutes and brace the core.',
+      'Head and neck in line with the spine.',
+    ],
+    coachNotes:
+      'DRAFT: Conditioning staple. Strong planks lead to stronger hollows. Work toward a full minute.',
+    criteria: [
+      {
+        id: 'body_line',
+        label: 'Straight line',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_ANKLE],
+        target: 0,
+        tolerance: 20,
+        falloff: 40,
+        weight: 60,
+        feedbackHigh: 'Straight line head to heels — no sag, no pike ({delta}°).',
+      },
+    ],
+  },
+
+  // ===========================================================================
+  // WALL SIT — DRAFT copy (Ermith), needs Ryan's wording pass.
+  // Added for the hold-contest feature (2026-10-02).
+  // ===========================================================================
+  {
+    id: 'wall_sit',
+    name: 'Wall sit',
+    description:
+      'DRAFT: Back flat against the wall, thighs parallel to the floor, knees over the ankles. Hold the seated position without using the hands.',
+    bodyPosition:
+      'SIDE VIEW. Back flat against the wall, slide down until the thighs are parallel to the floor. Knees stacked over the ankles. Arms crossed at the chest or by the sides — no pushing on the thighs.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Back flat against the wall.',
+      'Thighs parallel to the floor.',
+      'Knees over the ankles.',
+      'Hands off the thighs.',
+    ],
+    coachNotes: 'DRAFT: Leg conditioning. Work toward a full minute.',
+    criteria: [
+      {
+        id: 'thigh_parallel',
+        label: 'Thighs parallel',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_HIP, LM.LEFT_KNEE],
+        target: 0,
+        tolerance: 20,
+        falloff: 40,
+        weight: 60,
+        feedbackHigh: 'Thighs parallel to the floor ({delta}°).',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // ARM POSITIONS (lesson) — standing, then reused on lunges
   // ===========================================================================
   {

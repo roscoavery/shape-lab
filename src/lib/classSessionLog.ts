@@ -22,13 +22,23 @@ export const CLASS_SKILLS_TITLE = 'Class skills & wins'
 
 export const CLASS_HOLD_DRILLS: {
   id: string
-  autoKey: 'hollow' | 'superman' | 'side_plank' | 'wall_handstand'
+  autoKey:
+    | 'hollow'
+    | 'superman'
+    | 'side_plank'
+    | 'wall_handstand'
+    | 'front_plank'
+    | 'tuck'
+    | 'wall_sit'
   label: string
 }[] = [
   { id: 'hollow', autoKey: 'hollow', label: 'Hollow' },
   { id: 'superman', autoKey: 'superman', label: 'Superman' },
+  { id: 'front_plank', autoKey: 'front_plank', label: 'Front plank' },
+  { id: 'tuck', autoKey: 'tuck', label: 'Tuck' },
   { id: 'side_plank', autoKey: 'side_plank', label: 'Side plank' },
   { id: 'wall_handstand', autoKey: 'wall_handstand', label: 'Wall handstand' },
+  { id: 'wall_sit', autoKey: 'wall_sit', label: 'Wall sit' },
 ]
 
 function classLabel(label: string, className?: string): string {
@@ -77,7 +87,7 @@ export function ensureClassSkillsHomework(athleteId: string): HomeworkItem {
 
 export function logClassHoldForAthletes(opts: {
   athleteIds: string[]
-  autoKey: 'hollow' | 'superman' | 'side_plank' | 'wall_handstand'
+  autoKey: 'hollow' | 'superman' | 'side_plank' | 'wall_handstand' | 'front_plank' | 'tuck' | 'wall_sit'
   seconds: number
   label: string
   className?: string
