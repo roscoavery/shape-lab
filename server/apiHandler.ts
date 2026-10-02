@@ -155,6 +155,8 @@ function isMuseBearerPath(path: string): boolean {
     path === '/api/muse/stories' ||
     path === '/api/muse/drills' ||
     path === '/api/muse/skill-maps' ||
+    path === '/api/muse/chalkboards' ||
+    path.startsWith('/api/muse/chalkboards/') ||
     path.startsWith('/api/muse/progress/')
   )
 }

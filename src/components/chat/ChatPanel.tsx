@@ -30,6 +30,7 @@ import {
 } from '../../lib/chatBrain'
 import { listFaq, addFaqQuestion, answerFaq, removeFaq, type FaqItem } from '../../lib/chatFaq'
 import { createId } from '../../lib/storage'
+import type { SessionRole } from '../../lib/authSession'
 
 type Quote = { title: string; excerpt: string; link?: ChatLink; linkLabel: string }
 
@@ -75,22 +76,60 @@ function linkLabel(link: ChatLink, title: string): string {
   return TAB_LABELS[link.tab] ?? 'Open'
 }
 
-const SUGGESTIONS = [
-  'How do you spot a back tuck?',
-  'What do you tell parents about basics?',
-  'Add candlestick drill to my roundoff path',
-]
+type SuggestionBucket = 'coach' | 'athlete' | 'parent'
+
+/** Starter prompts tailored to who's asking — an athlete shouldn't get spotting prompts. */
+const SUGGESTIONS: Record<SuggestionBucket, string[]> = {
+  coach: [
+    'How do you spot a back tuck?',
+    'What do you tell parents about basics?',
+    'Add candlestick drill to my roundoff path',
+  ],
+  athlete: [
+    'What drills help my back handspring?',
+    'How do I stop bending my knees in my roundoff?',
+    'What should I work on for my back tuck?',
+  ],
+  parent: [
+    'Why is my athlete still working on basics?',
+    'How can I help my kid at home?',
+    'What does progress look like?',
+  ],
+}
+
+const INTRO_COPY: Record<SuggestionBucket, string> = {
+  coach: 'Ask about technique, spotting, or drills — or tell me to add a drill to a skill path, like "add candlestick drill to my roundoff path".',
+  athlete: 'Ask about technique or drills — like "what drills help my back handspring?"',
+  parent: "Ask about your athlete's training, progress, or how to support them at home.",
+}
+
+const INPUT_PLACEHOLDER: Record<SuggestionBucket, string> = {
+  coach: 'Ask or tell me to add a drill…',
+  athlete: 'Ask about technique or drills…',
+  parent: "Ask about your athlete's training…",
+}
+
+/** Collapse every signed-in role (and signed-out) onto the three suggestion sets. */
+function suggestionBucket(role: SessionRole | undefined): SuggestionBucket {
+  if (role === 'athlete') return 'athlete'
+  if (role === 'parent') return 'parent'
+  return 'coach'
+}
 
 export function ChatPanel({
   onOpenTab,
   canEditFaq,
   bare = false,
+  viewerRole,
 }: {
   onOpenTab: (tab: AppTab) => void
   canEditFaq: boolean
   /** Hide the title header when embedded inside another page (e.g. the mobile Search page). */
   bare?: boolean
+  /** Who's asking — picks the suggestion set. Follows athlete-view previews, not just the login. */
+  viewerRole?: SessionRole
 }) {
+  const bucket = suggestionBucket(viewerRole)
   const [docs, setDocs] = useState<CorpusDoc[] | null>(null)
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
@@ -417,12 +456,9 @@ export function ChatPanel({
             ) : null}
             {messages.length === 0 && docs !== null ? (
               <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-                <p className="text-sm leading-relaxed">
-                  Ask about technique, spotting, or drills — or tell me to add a drill to a
-                  skill path, like "add candlestick drill to my roundoff path".
-                </p>
+                <p className="text-sm leading-relaxed">{INTRO_COPY[bucket]}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {SUGGESTIONS.map((s) => (
+                  {SUGGESTIONS[bucket].map((s) => (
                     <button
                       key={s}
                       type="button"
@@ -497,8 +533,8 @@ export function ChatPanel({
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={docs === null ? 'Loading…' : 'Ask or tell me to add a drill…'}
-              aria-label="Ask the coach chat"
+              placeholder={docs === null ? 'Loading…' : INPUT_PLACEHOLDER[bucket]}
+              aria-label="Ask a question"
               disabled={docs === null}
               className="min-w-0 flex-1 rounded-full border border-[var(--panel-border)] bg-[#0d1218] px-4 py-2.5 text-sm disabled:opacity-50"
             />

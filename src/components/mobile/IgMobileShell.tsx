@@ -231,6 +231,7 @@ export function IgMobileShell({
           onViewProfile={onViewProfile}
           onClose={() => setMobileSearch(false)}
           canEditFaq={ryan}
+          viewerRole={navRole ?? authUser.role}
         />
       ) : (
         children

@@ -1720,7 +1720,7 @@ export default function App() {
       {tab === 'drills' && <DrillLibraryPanel signedIn={activeProfile} />}
 
       {tab === 'spotting' && <SpottingPanel />}
-      {tab === 'chat' && <ChatPanel onOpenTab={goTab} canEditFaq={ryanEdit} />}
+      {tab === 'chat' && <ChatPanel onOpenTab={goTab} canEditFaq={ryanEdit} viewerRole={previewRole} />}
 
       {(compareOpened || tab === 'compare') && (
         <div className={tab === 'compare' ? '' : 'hidden'} hidden={tab !== 'compare'}>

@@ -5,7 +5,7 @@ import { saveTab } from '../../lib/storage'
 import { searchAppIndex, type AppSearchHit } from '../../lib/appSearchIndex'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import { navRoleFromSession, type NavRole } from '../../lib/appNav'
-import type { AuthSessionUser } from '../../lib/authSession'
+import type { AuthSessionUser, SessionRole } from '../../lib/authSession'
 import { sessionIsKiosk } from '../../lib/authSession'
 import { isRyanAthlete } from '../../lib/ryanProfile'
 import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
@@ -20,6 +20,8 @@ type Props = {
   onViewProfile?: (id: string) => void
   onClose: () => void
   canEditFaq: boolean
+  /** Preview-aware role (athlete view, desk previews) — picks the Ask suggestion set. */
+  viewerRole?: SessionRole
 }
 
 function hitIcon(kind: AppSearchHit['kind']): string {
@@ -47,6 +49,7 @@ export function MobileSearchPage({
   onViewProfile,
   onClose,
   canEditFaq,
+  viewerRole,
 }: Props) {
   const [q, setQ] = useState('')
   const [mode, setMode] = useState<'search' | 'ask'>('search')
@@ -179,6 +182,7 @@ export function MobileSearchPage({
           <ChatPanel
             bare
             canEditFaq={canEditFaq}
+            viewerRole={viewerRole}
             onOpenTab={(t) => {
               onGo(t)
               onClose()

@@ -227,6 +227,17 @@ async function handleLibraryAdd(req: IncomingMessage, res: ServerResponse): Prom
   const canonical = canonicalSocialUrl(url)
   const key = itemUrlKey(canonical)
   const library = await readLibraryFile()
+  // One-time backfill: connection-filed items never got a createdAt stamp,
+  // so they sink to the bottom of "last added" sorts. Stamp the missing ones
+  // now; afterwards this is a no-op because every item carries createdAt.
+  const now = new Date().toISOString()
+  for (const col of library.collections as Array<{ items?: Array<Record<string, unknown>> }>) {
+    for (const item of col.items ?? []) {
+      if (item && typeof item === 'object' && item.addedVia === 'muse-connection' && !item.createdAt) {
+        item.createdAt = now
+      }
+    }
+  }
   for (const col of library.collections as Array<{ items?: Array<{ url?: string }> }>) {
     for (const item of col.items ?? []) {
       if (typeof item.url === 'string' && itemUrlKey(item.url) === key) {
@@ -244,6 +255,7 @@ async function handleLibraryAdd(req: IncomingMessage, res: ServerResponse): Prom
     ...(platform ? { kind: platform } : {}),
     ...(keywords.length > 0 ? { keywords } : {}),
     addedVia: 'muse-connection',
+    createdAt: now,
   }
 
   const collections = library.collections as Array<{
