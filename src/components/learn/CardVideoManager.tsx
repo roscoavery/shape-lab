@@ -4,6 +4,7 @@ import { TRACK_LABELS, guideSkillsInOrder, guidelessSkills, searchSkills } from 
 import { systemSkillCards } from '../../lib/coachSystems'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
+import { useClipLoopsOptional, type ClipLoopPreset } from '../../lib/clipLoops'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 
 function isLocalVideo(url: string): boolean {
@@ -303,15 +304,17 @@ export function AddToSkillCardModal({
     return [...guideSkillsInOrder(), ...guidelessSkills()]
   }, [coachId, isAdmin])
   const [query, setQuery] = useState('')
-  const [evidenceKey, setEvidenceKey] = useState(() => {
-    const first = guideSkillsInOrder()[0]
-    return first ? evidenceKeyForSkill(first) : ''
-  })
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [alreadyOn, setAlreadyOn] = useState<Set<string>>(new Set())
   const [loopA, setLoopA] = useState('')
   const [loopB, setLoopB] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [doneCount, setDoneCount] = useState(0)
+  const [presetId, setPresetId] = useState<string | null>(null)
+  const clipLoops = useClipLoopsOptional()
+  const presets: ClipLoopPreset[] = clipLoops?.getSet(video.url)?.presets ?? []
 
   // Lock the page behind the sheet while it's open: a swipe inside the sheet
   // must scroll the sheet itself, never the feed underneath it.
@@ -328,6 +331,25 @@ export function AddToSkillCardModal({
 
   const local = isLocalVideo(video.url)
 
+  // Which cards already have this video — shown checked and unselectable.
+  useEffect(() => {
+    let live = true
+    fetch('/api/skill-card-videos')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => {
+        if (!live) return
+        const on: string[] = []
+        for (const [key, list] of Object.entries(data as Record<string, ProofVideo[]>)) {
+          if (Array.isArray(list) && list.some((v) => v.url === video.url)) on.push(key)
+        }
+        setAlreadyOn(new Set(on))
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [video.url])
+
   /** Every skill on the map, guided first; search narrows across all of them. */
   const matches = useMemo(() => {
     const q = query.trim()
@@ -335,23 +357,39 @@ export function AddToSkillCardModal({
     return searchSkills(q, 60).map((h) => h.skill)
   }, [query, allSkills])
 
-  const selectedName = useMemo(() => {
-    const byGuide = allSkills.find((s) => s.guideId === evidenceKey)
-    if (byGuide) return byGuide.name
-    return allSkills.find((s) => evidenceKeyForSkill(s) === evidenceKey)?.name ?? ''
-  }, [allSkills, evidenceKey])
+  const selectedNames = useMemo(() => {
+    return allSkills
+      .filter((s) => selectedKeys.has(evidenceKeyForSkill(s)))
+      .map((s) => s.name)
+  }, [allSkills, selectedKeys])
+
+  const toggleKey = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   const handleAdd = async () => {
-    if (!evidenceKey) return
+    if (selectedKeys.size === 0) return
     setSaving(true)
     setError(null)
     try {
-      const a = loopA.trim() === '' ? undefined : Number(loopA)
-      const b = loopB.trim() === '' ? undefined : Number(loopB)
+      const preset = presets.find((p) => p.id === presetId)
+      const a = preset ? preset.a : loopA.trim() === '' ? undefined : Number(loopA)
+      const b = preset ? preset.b : loopB.trim() === '' ? undefined : Number(loopB)
       const v: ProofVideo = { url: video.url, who: video.who, watchFor: video.watchFor }
       if (a !== undefined && !Number.isNaN(a)) v.startAt = a
       if (b !== undefined && !Number.isNaN(b)) v.endAt = b
-      await addVideoToSkillCard(evidenceKey, v)
+      let count = 0
+      for (const key of selectedKeys) {
+        if (alreadyOn.has(key)) continue
+        await addVideoToSkillCard(key, v)
+        count += 1
+      }
+      setDoneCount(count)
       setDone(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add video')
@@ -378,7 +416,10 @@ export function AddToSkillCardModal({
         {done ? (
           <div className="py-6 text-center">
             <p className="text-base font-bold text-emerald-400">Added ✓</p>
-            <p className="mt-1 text-sm text-white/60">{selectedName}</p>
+            <p className="mt-1 text-sm text-white/60">
+              {doneCount} card{doneCount === 1 ? '' : 's'}: {selectedNames.slice(0, 3).join(', ')}
+              {selectedNames.length > 3 ? ` +${selectedNames.length - 3} more` : ''}
+            </p>
             <button
               type="button"
               onClick={onClose}
@@ -398,7 +439,7 @@ export function AddToSkillCardModal({
             </div>
             <p className="mb-3 text-center text-xs text-white/60">{video.watchFor || video.who}</p>
 
-            <label className="mb-1 block text-xs font-bold text-white/70">Skill card</label>
+            <label className="mb-1 block text-xs font-bold text-white/70">Skill cards — tap to select, already-added show ✓</label>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -408,19 +449,32 @@ export function AddToSkillCardModal({
             <div className="mb-3 max-h-56 overflow-y-auto rounded-lg bg-neutral-800">
               {matches.map((s) => {
                 const key = evidenceKeyForSkill(s)
-                const selected = key === evidenceKey
+                const onCard = alreadyOn.has(key)
+                const selected = selectedKeys.has(key)
                 return (
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setEvidenceKey(key)}
-                    className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm ${
-                      selected ? 'bg-emerald-600 font-bold text-white' : 'text-white/85 hover:bg-neutral-700'
+                    disabled={onCard}
+                    onClick={() => toggleKey(key)}
+                    className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm ${
+                      onCard
+                        ? 'cursor-default text-white/40'
+                        : selected
+                          ? 'bg-emerald-600 font-bold text-white'
+                          : 'text-white/85 hover:bg-neutral-700'
                     }`}
                   >
-                    <span>{s.name}</span>
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-black ${
+                        onCard || selected ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-white/30 text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    <span className="flex-1">{s.name}</span>
                     <span className={`text-[10px] font-bold uppercase tracking-wider ${selected ? 'text-white/80' : 'text-white/40'}`}>
-                      {s.guideId ? TRACK_LABELS[s.track] : 'Guide coming'}
+                      {onCard ? 'On card' : s.guideId ? TRACK_LABELS[s.track] : 'Guide coming'}
                     </span>
                   </button>
                 )
@@ -429,6 +483,37 @@ export function AddToSkillCardModal({
                 <p className="px-3 py-4 text-center text-sm text-white/50">No skills match.</p>
               )}
             </div>
+
+            {presets.length > 0 && (
+              <>
+                <label className="mb-1 block text-xs font-bold text-white/70">
+                  Saved A/B loop <span className="font-normal text-white/40">(or enter manually below)</span>
+                </label>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPresetId(null)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+                      presetId === null ? 'bg-emerald-600 text-white' : 'bg-neutral-800 text-white/60'
+                    }`}
+                  >
+                    None
+                  </button>
+                  {presets.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPresetId(presetId === p.id ? null : p.id)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+                        presetId === p.id ? 'bg-emerald-600 text-white' : 'bg-neutral-800 text-white/60'
+                      }`}
+                    >
+                      {p.name} ({p.a.toFixed(1)}–{p.b.toFixed(1)}s)
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             <label className="mb-1 block text-xs font-bold text-white/70">
               Loop points <span className="font-normal text-white/40">(seconds, optional)</span>
@@ -452,11 +537,11 @@ export function AddToSkillCardModal({
 
             <button
               type="button"
-              disabled={saving || !evidenceKey}
+              disabled={saving || selectedKeys.size === 0}
               onClick={handleAdd}
               className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
             >
-              {saving ? 'Adding…' : 'Add to this card'}
+              {saving ? 'Adding…' : selectedKeys.size === 0 ? 'Select cards above' : `Add to ${selectedKeys.size} card${selectedKeys.size === 1 ? '' : 's'}`}
             </button>
           </>
         )}
