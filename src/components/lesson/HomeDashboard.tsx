@@ -28,6 +28,7 @@ import { BackCheckin } from '../today/BackCheckin'
 import { isRyanAthlete } from '../../lib/ryanProfile'
 import { AthleteName } from '../AthleteAvatar'
 import { ClassStopwatch } from '../today/ClassStopwatch'
+import { ClassClockToggle } from '../today/ClassClockToggle'
 import { EndClassPrompt } from '../today/EndClassPrompt'
 import { ChalkboardPanel } from '../today/ChalkboardPanel'
 import { TodayCollages } from '../today/TodayCollages'
@@ -1255,7 +1256,7 @@ export function HomeDashboard({
           title="Holds & stopwatch"
           hint="Time it. Log it. No camera grade."
         >
-          <ClassStopwatch athletes={athletes} signedIn={signedIn} coach embed />
+          <ClassClockToggle athletes={athletes} signedIn={signedIn} />
         </TodayDock>
         </div>
       )}

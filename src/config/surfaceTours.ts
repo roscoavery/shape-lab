@@ -70,6 +70,7 @@ export const SCROLL_TOUR: TourStep[] = [
     target: 'tour-player-scrub',
     title: 'Scrub bar',
     text: 'Drag the scrub bar to move through the clip. But there is a better way — tap the glowing card to continue.',
+    needsChrome: true,
   },
   {
     target: 'tour-player-video',
@@ -80,26 +81,31 @@ export const SCROLL_TOUR: TourStep[] = [
     target: 'tour-player-markup',
     title: 'Line, draw, arrow',
     text: 'Draw on the frozen frame — lines, freehand, arrows — to show an athlete exactly what you mean. Tap the glowing card to continue.',
+    needsChrome: true,
   },
   {
     target: 'tour-player-shot',
     title: 'Screenshot stills',
     text: 'Grab a still of any shape while you scroll — it goes to your shape stills for the library. Tap the glowing card to continue.',
+    needsChrome: true,
   },
   {
     target: 'tour-player-share',
     title: 'Share',
     text: 'Send the clip, save it to a collection, or add it to a collage from here. Tap the glowing card to continue.',
+    needsChrome: true,
   },
   {
     target: 'tour-player-ab',
     title: 'A/B loop',
     text: 'Set A where the piece starts and B where it ends — it loops just that part until you clear it. Tap the glowing card to continue.',
+    needsChrome: true,
   },
   {
     target: 'tour-player-speed',
     title: 'Slow motion',
     text: 'Drop the speed to slow-mo to study the mechanics, back to full speed to feel the rhythm. You are set — tap Done.',
+    needsChrome: true,
   },
 ]
 

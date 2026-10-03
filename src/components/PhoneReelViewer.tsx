@@ -17,6 +17,7 @@ import type { OrganizeEditor } from '../lib/organizeLibrary'
 import { prefetchNeighborClips } from '../lib/igCache'
 import { postedByFromUrl } from '../lib/socialUrls'
 import { useGymLibrary } from '../lib/gymLibrary'
+import { TOUR_CHROME_EVENT } from './homework/GlowTour'
 
 export type PhoneReelClip = {
   id: string
@@ -94,6 +95,15 @@ const ReelSection = memo(function ReelSection({
   // IG-style chrome: hidden while scrolling, tap the video to show/hide.
   const [chrome, setChrome] = useState(false)
   const toggleChrome = useCallback(() => setChrome((c) => !c), [])
+  // The guided tour can pin chrome open for steps that spotlight controls —
+  // otherwise a stray tap closes chrome mid-tour and orphans every later target.
+  const [chromePinned, setChromePinned] = useState(false)
+  useEffect(() => {
+    const onTourChrome = (e: Event) => setChromePinned(!!(e as CustomEvent).detail)
+    window.addEventListener(TOUR_CHROME_EVENT, onTourChrome)
+    return () => window.removeEventListener(TOUR_CHROME_EVENT, onTourChrome)
+  }, [])
+  const chromeOpen = chrome || chromePinned
   const clipForCard = useMemo(() => ({ ...clip, postedBy: handle || clip.postedBy }), [clip, handle])
   return (
     <section
@@ -119,7 +129,7 @@ const ReelSection = memo(function ReelSection({
             markupSwipeSafe
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.id, clip.url, next)}
-            chromeOpen={chrome}
+            chromeOpen={chromeOpen}
             onToggleChrome={toggleChrome}
             tapTogglesChrome
           />
@@ -129,7 +139,7 @@ const ReelSection = memo(function ReelSection({
           </div>
         )}
       </div>
-      {chrome && near ? (
+      {chromeOpen && near ? (
         <>
           {/* Caption overlays the bottom of the video, above the scrub bar. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-36 pt-14">

@@ -7,7 +7,12 @@ export type TourStep = {
   text: string
   /** When true, tapping the card also lets its own action fire (e.g. navigating to the next screen) instead of being swallowed. */
   tapThrough?: boolean
+  /** When true, the video player's chrome (controls) is forced open for this step. */
+  needsChrome?: boolean
 }
+
+/** Event fired when the tour needs the video chrome forced open/closed. */
+export const TOUR_CHROME_EVENT = 'sl-tour-chrome'
 
 const TOUR_KEY = 'sl-hw-tour-v1'
 
@@ -85,17 +90,16 @@ export function GlowTour({
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onScroll)
     }
-    // The target may render late (async list). Poll for it; only show the
-    // waiting dialog after a grace period, and only give up and move on
-    // after a long grace period — never rapid-skip.
+    // The target may render late (async list). Poll for it briefly; if it
+    // never shows, skip the step and move on — never stall the tour.
     let tries = 0
     const waitTimer = window.setTimeout(() => setWaiting(true), 800)
     const iv = window.setInterval(() => {
       tries += 1
-      if (measure() || tries > 48) {
+      if (measure() || tries > 8) {
         window.clearInterval(iv)
         window.clearTimeout(waitTimer)
-        if (tries > 48) {
+        if (tries > 8) {
           // Target never showed: skip this step silently.
           if (idx + 1 >= steps.length) {
             markTourSeen()
@@ -113,6 +117,17 @@ export function GlowTour({
       window.removeEventListener('resize', onScroll)
     }
   }, [step, measure, steps.length, idx, onDone])
+
+  // Force the video chrome open for steps that spotlight chrome controls.
+  // Without this, a tap that closes chrome mid-tour orphans every later
+  // chrome-dependent target and the tour stalls on "Getting the tour ready…".
+  useEffect(() => {
+    const need = !!step?.needsChrome
+    window.dispatchEvent(new CustomEvent(TOUR_CHROME_EVENT, { detail: need }))
+    return () => {
+      window.dispatchEvent(new CustomEvent(TOUR_CHROME_EVENT, { detail: false }))
+    }
+  }, [step])
 
   const next = useCallback(() => {
     if (idx + 1 >= steps.length) {
