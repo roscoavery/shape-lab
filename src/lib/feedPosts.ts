@@ -5,7 +5,7 @@ import { feedBlobPath, uploadGymMedia } from './mediaUpload'
 
 export const FEED_CAPTION_MAX = 800
 
-export type FeedChannel = 'gym' | 'wins' | 'passes'
+export type FeedChannel = 'gym' | 'wins' | 'passes' | 'all'
 
 export type FeedPost = {
   id: string
@@ -35,6 +35,10 @@ export function postChannels(post: Pick<FeedPost, 'channels'>): FeedChannel[] {
 }
 
 export function postOnChannel(post: Pick<FeedPost, 'channels'>, channel: FeedChannel): boolean {
+  if (channel === 'all') {
+    const channels = postChannels(post)
+    return channels.includes('gym') || channels.includes('wins')
+  }
   return postChannels(post).includes(channel)
 }
 

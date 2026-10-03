@@ -253,11 +253,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
       )}
       <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-          {wins ? 'Wins' : 'Gym feed'}
+          {wins ? 'Wins' : channel === 'all' ? 'All' : 'Gym feed'}
         </p>
         <div className="mt-1 flex items-center gap-2">
           <h2 className="text-xl font-semibold tracking-tight text-[var(--text)]">
-            {wins ? 'Wins' : 'Accomplishments'}
+            {wins ? 'Wins' : channel === 'all' ? 'Everything' : 'Accomplishments'}
           </h2>
           <InfoHint>
             {wins

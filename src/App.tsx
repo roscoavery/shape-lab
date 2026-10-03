@@ -171,6 +171,7 @@ import {
   noteRemovedAthlete,
   type AppTab,
 } from './lib/storage'
+import { takeDiscoverTarget } from './lib/mobileDiscover'
 import { hydrateGymAtBoot, localHasGymRoster, type PersistInfo } from './lib/gymHydrate'
 import { syncGymIfChanged } from './lib/gymLive'
 import {
@@ -282,6 +283,13 @@ export default function App() {
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
+  // Discover sheet "All" → combined gym+wins feed. Consumed once on entry.
+  const [feedChannel, setFeedChannel] = useState<'gym' | 'all'>('gym')
+  useEffect(() => {
+    if (tab === 'feed') {
+      setFeedChannel(takeDiscoverTarget() === 'all' ? 'all' : 'gym')
+    }
+  }, [tab])
   const [learnIntent, setLearnIntent] = useState<LearnIntent | null>(null)
   const [quizPreset, setQuizPreset] = useState<{
     firstName: string
@@ -1995,7 +2003,7 @@ export default function App() {
         <FeedPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
-          channel="gym"
+          channel={feedChannel}
         />
       )}
 
