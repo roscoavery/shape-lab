@@ -129,6 +129,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/randi-front-25-reference.mp4',
       watchFor: 'Front 2.5 (Randi) on tumble track.',
     },
+    {
+      who: 'Reference',
+      url: '/videos/randi-front-25-reference-angle2.mp4',
+      watchFor: 'Front 2.5 (Randi) on tumble track — another angle.',
+    },
   ],
   skl_side_aerial: [
     {
