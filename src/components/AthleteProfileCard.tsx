@@ -80,6 +80,7 @@ import { playGestureBurst } from '../lib/gestureBurst'
 import { isRyanAthlete } from '../lib/ryanProfile'
 import { birthdayNeeded } from '../lib/age'
 import { CoachHoldEntry } from './family/CoachHoldEntry'
+import { TourOfferButton } from './tour/TourOfferButton'
 
 type Tab = 'posts' | 'passes' | 'stories'
 type Compose = 'story' | 'post' | 'pass' | null
@@ -95,6 +96,8 @@ type Props = {
   onAthleteChange?: (next: Athlete) => void
   /** Gym admin only — delete this profile after an are-you-sure. */
   onDeleteProfile?: (id: string) => void
+  /** Opens a guided tour of this profile surface. */
+  onOpenTour?: () => void
 }
 
 export function AthleteProfileCard({
@@ -107,6 +110,7 @@ export function AthleteProfileCard({
   onAddWin,
   onAthleteChange,
   onDeleteProfile,
+  onOpenTour,
 }: Props) {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [storiesFile, setStoriesFile] = useState<StoriesFile>({ stories: [], highlights: [] })
@@ -269,7 +273,7 @@ export function AthleteProfileCard({
 
   const body = (
     <div className="flex flex-col gap-5">
-      <header className="flex items-start gap-4">
+      <header id="tour-profile-header" className="flex items-start gap-4">
         <button type="button" onClick={openStories} className="shrink-0">
           <span
             className={`block rounded-full p-[3px] ${
@@ -418,7 +422,7 @@ export function AthleteProfileCard({
         </div>
       )}
       {canEditProfile && onAthleteChange && (
-        <div className="flex flex-col gap-3">
+        <div id="tour-profile-edit" className="flex flex-col gap-3">
           <button
             type="button"
             onClick={() => setEditAnswers((v) => !v)}
@@ -657,7 +661,7 @@ export function AthleteProfileCard({
       </details>
 
       {viewer && (privateOk || notes.length > 0) && (coach || notes.length > 0) && (
-        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+        <details id="tour-profile-coach" className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
           <summary className="cursor-pointer text-sm font-semibold">
             ✎ Notes
             <span className="ml-2 text-xs font-medium text-[var(--muted)]">
@@ -833,6 +837,11 @@ export function AthleteProfileCard({
           className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))] [touch-action:pan-y]"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
+          {onOpenTour && (
+            <div className="mb-3 flex justify-end">
+              <TourOfferButton onTakeTour={onOpenTour} label="✨ Tour this profile" />
+            </div>
+          )}
           {page}
         </div>
       </div>

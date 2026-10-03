@@ -69,6 +69,9 @@ import { shapeStillDraft } from '../lib/shareReference'
 import type { Athlete, ReferencePhoto, ShapeDef, ShapeTestRecord } from '../types'
 import type { QuizTaker } from './learn/QuizWho'
 import { takeMobileSearchJump } from '../lib/mobileSearchNav'
+import { TourOfferButton } from './tour/TourOfferButton'
+import { LEARN_TOUR, SCROLL_TOUR } from '../config/surfaceTours'
+import type { TourStep } from './homework/GlowTour'
 
 type EduView =
   | { kind: 'home' }
@@ -122,6 +125,7 @@ type Props = {
   onOpenSkillPaths?: () => void
   /** Videos tab only needs the reference scroll. */
   surface?: 'learn' | 'videos'
+  onOpenTour?: (steps: TourStep[]) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -148,6 +152,7 @@ export function EducationPanel({
   onOpenNamesTest,
   onOpenSkillPaths,
   surface = 'learn',
+  onOpenTour,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: surface === 'videos' ? 'scroll' : 'home' })
   const [query, setQuery] = useState('')
@@ -265,7 +270,11 @@ export function EducationPanel({
   const openTask = (taskId: string) => setView({ kind: 'task', taskId })
 
   return (
-    <div className={`mx-auto space-y-4 ${view.kind === 'scroll' && surface !== 'videos' ? 'max-w-xl' : 'max-w-4xl'}`}>
+    <div id="tour-learn-home" className={`mx-auto space-y-4 ${view.kind === 'scroll' && surface !== 'videos' ? 'max-w-xl' : 'max-w-4xl'}`}>
+      <TourOfferButton
+        onTakeTour={() => onOpenTour?.(surface === 'videos' ? SCROLL_TOUR : LEARN_TOUR)}
+        label={surface === 'videos' ? '✨ Tour reference scroll' : '✨ Tour learn'}
+      />
       {surface === 'videos' ? (
         <header className="learn-masthead">
           <div className="relative z-[1]">
@@ -469,7 +478,7 @@ export function EducationPanel({
       )}
 
       {view.kind === 'shapes' && (
-        <>
+        <div id="tour-learn-shapes">
           {canAddGymShape && signedIn && (
             <AddGymShapeForm signedIn={signedIn} />
           )}
@@ -488,7 +497,7 @@ export function EducationPanel({
             canDeleteGym={canAddGymShape}
             canEdit={canAddGymShape}
           />
-        </>
+        </div>
       )}
 
       {view.kind === 'shape' && (
@@ -509,7 +518,9 @@ export function EducationPanel({
       )}
 
       {view.kind === 'pathways' && (
-        <PathwayList onOpen={openTask} onOpenShape={openShape} />
+        <div id="tour-learn-path">
+          <PathwayList onOpen={openTask} onOpenShape={openShape} />
+        </div>
       )}
 
       {view.kind === 'coachStudy' && (
@@ -599,7 +610,11 @@ export function EducationPanel({
         />
       )}
 
-      {view.kind === 'scroll' && <ReferenceFeed athlete={signedIn} athletes={athletes} />}
+      {view.kind === 'scroll' && (
+        <div id="tour-scroll-feed">
+          <ReferenceFeed athlete={signedIn} athletes={athletes} />
+        </div>
+      )}
 
       {view.kind === 'glossary' && (
         <ShapeGlossary

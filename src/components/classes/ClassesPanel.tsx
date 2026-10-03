@@ -33,9 +33,13 @@ import { PhoneReelViewer } from '../PhoneReelViewer'
 import { ShareReference } from '../share/ShareReference'
 import { TodayChalkboards } from '../today/TodayChalkboards'
 import type { Athlete } from '../../types'
+import { TourOfferButton } from '../tour/TourOfferButton'
+import { CLASSES_TOUR } from '../../config/surfaceTours'
+import type { TourStep } from '../homework/GlowTour'
 
 type Props = {
   athlete: Athlete | null
+  onOpenTour?: (steps: TourStep[]) => void
 }
 
 type Draft = {
@@ -59,7 +63,7 @@ function clipToSlot(clip: GymClip, keep?: CollageSlot): CollageSlot {
   }
 }
 
-export function ClassesPanel({ athlete }: Props) {
+export function ClassesPanel({ athlete, onOpenTour }: Props) {
   const { clips, collections, loading, nameForUrl } = useGymLibrary()
   const favorites = useFavorites()
   const [collages, setCollages] = useState<Collage[]>([])
@@ -377,8 +381,11 @@ export function ClassesPanel({ athlete }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <TodayChalkboards viewer={athlete} />
-      <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
+      <TourOfferButton onTakeTour={() => onOpenTour?.(CLASSES_TOUR)} label="✨ Tour classes" />
+      <div id="tour-classes-chalkboards">
+        <TodayChalkboards viewer={athlete} />
+      </div>
+      <section id="tour-classes-collages" className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
           Class drills
         </p>
@@ -696,7 +703,9 @@ export function ClassesPanel({ athlete }: Props) {
       )}
 
       {myBoards.length > 0 && (
-        <CollageList title="My class library" collages={myBoards} {...listProps} />
+        <div id="tour-classes-library">
+          <CollageList title="My class library" collages={myBoards} {...listProps} />
+        </div>
       )}
       {gymBoards.length > 0 && (
         <CollageList title="Gym boards" collages={gymBoards} {...listProps} />

@@ -53,6 +53,8 @@ import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { CoachReminderBanners } from './components/today/CoachReminderBanners'
+import { TourOfferButton } from './components/tour/TourOfferButton'
+import { TODAY_COACH_TOUR, LEARN_TOUR, SCROLL_TOUR, PROFILE_TOUR } from './config/surfaceTours'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { NamesQuiz } from './components/coach/NamesQuiz'
@@ -293,9 +295,17 @@ export default function App() {
   const [clockOpen, setClockOpen] = useState(false)
   const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
-  const [hwTourOpen, setHwTourOpen] = useState(false)
-  const [hwTourStartIdx, setHwTourStartIdx] = useState(0)
-  const closeHwTour = useCallback(() => setHwTourOpen(false), [])
+  const [tourOpen, setTourOpen] = useState(false)
+  const [tourStartIdx, setTourStartIdx] = useState(0)
+  const [tourSteps, setTourSteps] = useState<TourStep[]>([])
+  const closeTour = useCallback(() => setTourOpen(false), [])
+  /** Open the spotlight tour with any step list (homework, today, surfaces). */
+  const openTour = useCallback((steps: TourStep[], startTarget?: string) => {
+    const i = startTarget ? steps.findIndex((s) => s.target === startTarget) : 0
+    setTourSteps(steps)
+    setTourStartIdx(i >= 0 ? i : 0)
+    setTourOpen(true)
+  }, [])
   const hwTourAutoFired = useRef(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [trainLogForId, setTrainLogForId] = useState<string | null>(null)
@@ -731,8 +741,7 @@ export default function App() {
           if (ready || tries > 20) {
             window.clearInterval(iv)
             if (ready) {
-              setHwTourStartIdx(0)
-              setHwTourOpen(true)
+              openTour(buildHwTourSteps(foundationVisible))
             }
           }
         }, 400)
@@ -1081,17 +1090,9 @@ export default function App() {
   const foundationVisible = Boolean(
     activeProfile && isCoachProfile(activeProfile) && (trainLogForAthlete ?? homeworkAthlete),
   )
-  const hwTourSteps = useMemo(
-    () => buildHwTourSteps(foundationVisible),
-    [foundationVisible],
-  )
   const openHwTour = useCallback(
-    (startTarget?: string) => {
-      const i = startTarget ? hwTourSteps.findIndex((s) => s.target === startTarget) : 0
-      setHwTourStartIdx(i >= 0 ? i : 0)
-      setHwTourOpen(true)
-    },
-    [hwTourSteps],
+    (startTarget?: string) => openTour(buildHwTourSteps(foundationVisible), startTarget),
+    [openTour, foundationVisible],
   )
   const showLogForPicker =
     (activeProfile != null && isCoachProfile(activeProfile)) || sessionIsAdmin(authUser)
@@ -1271,13 +1272,16 @@ export default function App() {
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
         <div className="flex min-w-0 flex-col gap-4">
+          <TourOfferButton onTakeTour={() => openTour(TODAY_COACH_TOUR)} label="✨ Tour this page" />
           {activeProfile && isCoachProfile(activeProfile) && (
+            <div id="tour-today-banners">
             <CoachReminderBanners
               coachId={activeProfile.id}
               onJumpToRecaps={() =>
                 document.getElementById('today-recaps')?.scrollIntoView({ behavior: 'smooth' })
               }
             />
+            </div>
           )}
         <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
@@ -1540,6 +1544,7 @@ export default function App() {
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
               athletes={athletes}
+              onOpenTour={openTour}
               assignedSequenceId={assignedFlowId}
               onAssignedSequenceConsumed={consumeAssignedFlow}
               score={score}
@@ -1784,8 +1789,8 @@ export default function App() {
               ) : null
             }
           />
-          {hwTourOpen && (
-            <GlowTour steps={hwTourSteps} startIdx={hwTourStartIdx} onDone={closeHwTour} />
+          {tourOpen && (
+            <GlowTour steps={tourSteps} startIdx={tourStartIdx} onDone={closeTour} />
           )}
         </div>
         </PanelErrorBoundary>
@@ -1882,6 +1887,7 @@ export default function App() {
             goTab('today')
             setStationOpen(true)
           }}
+          onOpenTour={() => openTour(LEARN_TOUR)}
         />
       )}
 
@@ -1896,6 +1902,7 @@ export default function App() {
           athletes={athletes}
           intent="scroll"
           surface="videos"
+          onOpenTour={() => openTour(SCROLL_TOUR)}
         />
       )}
 
@@ -1912,6 +1919,7 @@ export default function App() {
           signedIn={activeProfile}
           athletes={athletes}
           ryanEdit={ryanEdit}
+          onOpenTour={openTour}
           onOpenWizard={() => setCoachWizardOpen(true)}
           onOpenBuilder={(skillId, unscoped) => {
             setSkillBuilderStart(skillId)
@@ -1972,6 +1980,7 @@ export default function App() {
       {tab === 'classes' && (
         <ClassesPanel
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+          onOpenTour={openTour}
         />
       )}
 
@@ -2437,6 +2446,7 @@ export default function App() {
         athletes={athletes}
         variant="overlay"
         onClose={() => setProfileOpen(false)}
+        onOpenTour={() => openTour(PROFILE_TOUR)}
         onDeleteProfile={ryanEdit ? removeProfile : undefined}
         onAthleteChange={(next) => {
           setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))

@@ -399,7 +399,11 @@ export function HomeDashboard({
             <p className="mt-3 text-sm text-[var(--muted)]">No profiles on the network yet.</p>
           )}
         </section>
-        {onShortcut && <TodayShortcuts onGo={onShortcut} showStation />}
+        {onShortcut && (
+          <div id="tour-today-shortcuts">
+            <TodayShortcuts onGo={onShortcut} showStation />
+          </div>
+        )}
       </div>
     )
   }

@@ -36,6 +36,9 @@ import {
   type SystemVisibility,
 } from '../../lib/coachSystems'
 import { SystemSwitcher } from './SystemSwitcher'
+import { TourOfferButton } from '../tour/TourOfferButton'
+import { SYSTEM_TOUR } from '../../config/surfaceTours'
+import type { TourStep } from '../homework/GlowTour'
 
 function useSystems() {
   const [, setTick] = useState(0)
@@ -57,12 +60,14 @@ export function MySystemPanel({
   ryanEdit,
   onOpenWizard,
   onOpenBuilder,
+  onOpenTour,
 }: {
   signedIn: Athlete | null
   athletes: Athlete[]
   ryanEdit: boolean
   onOpenWizard: () => void
   onOpenBuilder: (skillId: string, unscoped: boolean) => void
+  onOpenTour?: (steps: TourStep[]) => void
 }) {
   useSystems()
   const [query, setQuery] = useState('')
@@ -92,7 +97,8 @@ export function MySystemPanel({
   const following = Boolean(active && viewer && active.followers.includes(viewer.id))
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+    <div id="tour-system-builder" className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+      <TourOfferButton onTakeTour={() => onOpenTour?.(SYSTEM_TOUR)} label="✨ Tour my system" />
       <SystemSwitcher signedIn={signedIn} />
 
       {!mine && isCoach && (
@@ -127,7 +133,7 @@ export function MySystemPanel({
       )}
 
       {active && isMine && (
-        <section className="flex flex-col gap-2">
+        <section id="tour-system-skills" className="flex flex-col gap-2">
           <h3 className="text-sm font-black uppercase tracking-wider text-white/60">Your cards</h3>
           {myCards.length === 0 && (
             <p className="text-xs text-white/50">
@@ -231,7 +237,7 @@ export function MySystemPanel({
       )}
 
       {isMine && (
-        <section className="flex flex-col gap-2">
+        <section id="tour-system-share" className="flex flex-col gap-2">
           <h3 className="text-sm font-black uppercase tracking-wider text-white/60">Adopt a card</h3>
           <p className="text-xs text-white/45">
             Copy any card into your system as a starting point. Later edits on either side never ripple.

@@ -89,6 +89,9 @@ import { FlowShareActions } from './FlowShareActions'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { ReferenceStill } from './ReferenceStill'
 import { LogForPicker } from './homework/LogForPicker'
+import { TourOfferButton } from './tour/TourOfferButton'
+import { FLOWS_TOUR } from '../config/surfaceTours'
+import type { TourStep } from './homework/GlowTour'
 
 type Phase = 'idle' | 'preview' | 'running' | 'holding' | 'finishing' | 'replay' | 'review'
 
@@ -116,6 +119,8 @@ type Props = {
   onCue?: (line: string | null) => void
   onPreviewItems?: (items: { shapeId: string; label: string }[] | null) => void
   onHitPreview?: (blob: Blob) => void
+  /** Open the spotlight tour for this surface. */
+  onOpenTour?: (steps: TourStep[]) => void
   /** Jump the live camera to fullscreen when the sequence starts. */
   onRequestFullscreen?: () => void
   onExitFullscreen?: () => void
@@ -332,6 +337,7 @@ export function Tasks2Panel({
   onHoldChallenge,
   onRegisterStart,
   onRegisterHoldDone,
+  onOpenTour,
 }: Props) {
   // Who's doing this flow — a coach running a class can switch profiles or
   // hand the device to a guest (guest runs log nothing).
@@ -2242,6 +2248,7 @@ export function Tasks2Panel({
             <>
               <label className="mt-1 block text-[11px] text-white/70">
                 Sequence
+                <div id="tour-flows-run">
                 <select
                   className="mt-1 w-full rounded-lg border border-white/20 bg-black/70 px-2 py-1.5 text-sm text-white"
                   value={seq.id}
@@ -2253,6 +2260,7 @@ export function Tasks2Panel({
                     </option>
                   ))}
                 </select>
+                </div>
               </label>
               <p className="mt-1 text-[11px] text-white/60">{seq.previewSpeak}</p>
               {seq.setupSpeak && (
@@ -2305,8 +2313,11 @@ export function Tasks2Panel({
           document.body,
         )}
 
-    <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
-      <div className="mb-3 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+    <section id="tour-flows" className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+      <div className="mb-3">
+        <TourOfferButton onTakeTour={() => onOpenTour?.(FLOWS_TOUR)} label="✨ Tour class flows" />
+      </div>
+      <div id="tour-flows-who" className="mb-3 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
           Who's doing this flow{flowGuest ? ' · guest (nothing logs)' : ''}
         </p>
