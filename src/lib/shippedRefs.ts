@@ -32,7 +32,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   candlestick: ['candlestick.jpg', 'candlestick_drill.jpg', 'candlestick_arms_down.jpg'],
   tucked_candle: ['tucked_candle.jpg', 'tucked_candle_b.jpg'],
   arch: 'arch.jpg',
-  hollow_arms_down: 'hollow_arms_down.jpg',
+  hollow_arms_down: ['hollow_arms_down.jpg', 'hollow_tucked.jpg'],
   hollow_arms_up: 'hollow_arms_up.jpg',
   zombie: ['zombie.jpg', 'hands_push_through.jpg'],
   seated_pike: ['pike_zombie_arms.jpg', 'hands_push_through.jpg'],
@@ -52,6 +52,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   front_plank: 'front_plank.jpg',
   glute_bridge: 'glute_bridge.png',
   single_leg_glute_bridge: ['single_leg_glute_bridge.png', 'single_leg_glute_bridge_b.png'],
+  bird_dog: 'bird_dog.jpg',
 }
 
 /** Caption on a second (or later) shipped still for the same shape. */
@@ -71,6 +72,7 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'candlestick.jpg': 'Handstand roll',
   'candlestick_drill.jpg': 'Shoulder stand',
   'candlestick_arms_down.jpg': 'Arms down',
+  'hollow_tucked.jpg': 'Easier version',
   'wall_handstand.jpg': 'Chest to wall',
   'single_leg_glute_bridge.png': 'Leg extended',
   'single_leg_glute_bridge_b.png': 'Leg lifted',

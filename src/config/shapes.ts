@@ -2371,6 +2371,75 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // BIRD DOG — opposite arm and leg extended, back flat
+  // ===========================================================================
+  {
+    id: 'bird_dog',
+    name: 'Bird dog',
+    description:
+      'Bird dog: on hands and knees, extend the opposite arm and leg to one long line while the back stays flat and the hips stay square. Core stability and cross-body control — no rotating open or sagging through the middle.',
+    bodyPosition:
+      'SIDE VIEW. Start on hands and knees — hands under shoulders, knees under hips. Extend one arm straight forward and the opposite leg straight back, both reaching long. Back stays flat, hips square to the floor, head neutral. Hold without tipping or sagging.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Hands under shoulders, knees under hips to start.',
+      'Reach the arm and opposite leg long — one line.',
+      'Back flat, hips square, no rotating open.',
+      'Head neutral, eyes down.',
+    ],
+    coachNotes:
+      'Cross-body stability that carries into twisting and single-leg takeoffs. The tell is the hips — if they rotate open or the low back sags, the core checked out and the limbs are doing all the work.',
+    criteria: [
+      {
+        id: 'back_flat',
+        label: 'Back flat',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 160,
+        targetMax: 180,
+        tolerance: 12,
+        weight: 35,
+        feedbackLow: 'Flatten the back — hips in line with shoulders.',
+      },
+      {
+        id: 'arm_extended',
+        label: 'Arm extended',
+        kind: 'joint_angle',
+        points: L_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 25,
+        feedbackLow: 'Reach the arm straight forward.',
+      },
+      {
+        id: 'leg_extended',
+        label: 'Leg extended',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 25,
+        feedbackLow: 'Straighten the extended leg.',
+      },
+      {
+        id: 'support_arm',
+        label: 'Support arm straight',
+        kind: 'joint_angle',
+        points: R_ELBOW,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 10,
+        weight: 15,
+        feedbackLow: 'Keep the support arm straight under the shoulder.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // CANDLESTICK — shoulder stand; open hips + ribs in (handstand forward roll / BER)
   // ===========================================================================
   {
