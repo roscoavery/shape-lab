@@ -159,6 +159,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Kick full on the tumble track.',
     },
     {
+      who: 'Camp TumbleSmart 2024',
+      url: '/videos/switch-kick-full-camp-2024.mp4',
+      watchFor: 'Switch kick full.',
+    },
+    {
       who: 'Drill',
       url: '/videos/gainer-quarter-drill-twisting.mp4',
       watchFor: 'Gainer 1/4 drill for twisting.',
