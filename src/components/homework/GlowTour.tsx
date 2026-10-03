@@ -98,23 +98,13 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
 
   const back = useCallback(() => setIdx((i) => Math.max(0, i - 1)), [])
 
-  // Tapping the spotlighted element advances the tour — and the tap is
-  // swallowed so the underlying button doesn't fire mid-tour. The tour is
-  // a walkthrough, not the real flow; the last step sends them off to tap
-  // for real.
-  useEffect(() => {
-    if (!step || waiting) return
-    const onClick = (e: MouseEvent) => {
-      const el = document.getElementById(step.target)
-      if (el && el.contains(e.target as Node)) {
-        e.preventDefault()
-        e.stopPropagation()
-        window.setTimeout(next, 300)
-      }
-    }
-    document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
-  }, [step, waiting, next])
+  // The glow ring doubles as the tap target: tapping the highlighted card
+  // advances the tour, and the card underneath never sees the tap (so its
+  // own button can't fire mid-tour). Rendered as a real element instead of
+  // a document-level capture listener — reliable on iOS.
+  const advance = useCallback(() => {
+    next()
+  }, [next])
 
   // Escape exits.
   useEffect(() => {
@@ -189,9 +179,15 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
               right: 0,
             }}
           />
-          {/* The glow ring */}
+          {/* The glow ring — also the tap target that advances the tour */}
           <div
-            className="pointer-events-none absolute rounded-2xl"
+            role="button"
+            aria-label="Continue the guided tour"
+            onClick={(e) => {
+              e.stopPropagation()
+              advance()
+            }}
+            className="absolute cursor-pointer rounded-2xl"
             style={{
               top: r.top,
               left: r.left,

@@ -270,6 +270,8 @@ export default function App() {
   const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [hwTourOpen, setHwTourOpen] = useState(false)
+  const closeHwTour = useCallback(() => setHwTourOpen(false), [])
+  const openHwTour = useCallback(() => setHwTourOpen(true), [])
   const hwTourAutoFired = useRef(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [trainLogForId, setTrainLogForId] = useState<string | null>(null)
@@ -1655,7 +1657,7 @@ export default function App() {
             viewer={activeProfile}
             athletes={athletes}
             suspendWrites={trainGuest}
-            onTakeTour={() => setHwTourOpen(true)}
+            onTakeTour={openHwTour}
             onUpdateAthlete={(patch) => {
               if (!trainLogForAthleteId) return
               setAthleteRoster(
@@ -1714,7 +1716,7 @@ export default function App() {
               <AthleteFoundation athlete={(trainLogForAthlete ?? homeworkAthlete)!} />
             </div>
           )}
-          {hwTourOpen && <GlowTour steps={HW_TOUR_STEPS} onDone={() => setHwTourOpen(false)} />}
+          {hwTourOpen && <GlowTour steps={HW_TOUR_STEPS} onDone={closeHwTour} />}
         </div>
         </PanelErrorBoundary>
       )}
