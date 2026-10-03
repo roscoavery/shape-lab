@@ -51,14 +51,50 @@ export const TODAY_COACH_TOUR: TourStep[] = [
 
 export const SCROLL_TOUR: TourStep[] = [
   {
-    target: 'tour-scroll-feed',
-    title: 'Reference scroll',
-    text: 'Swipe through proof and reference clips — finished skills, drills, and shapes. Tap the glowing card to continue.',
+    target: 'tour-scroll-search',
+    title: 'Search the libraries',
+    text: 'Type a skill — it pulls clips from the main reference library and your own reference library together. Tap the glowing card to continue.',
   },
   {
-    target: 'tour-learn-home',
-    title: 'Save and compare',
-    text: 'Bookmark the clips you coach from, and open any clip in compare against your athlete. You are set — tap Done.',
+    target: 'tour-scroll-fullscreen',
+    title: 'Open the player',
+    text: 'Tap the fullscreen button on any clip to open the full player. Tap the glowing button now — it opens the player and the tour keeps going.',
+    tapThrough: true,
+  },
+  {
+    target: 'tour-player-video',
+    title: 'Tap to show controls',
+    text: 'Tap the video once to show the controls, tap again to hide them and watch clean. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-scrub',
+    title: 'Scrub the details',
+    text: 'Drag the scrub bar to move frame by frame. Tap and hold the video, then drag, to scrub from where you are holding — good for freezing on the exact shape. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-markup',
+    title: 'Line, draw, arrow',
+    text: 'Draw on the frozen frame — lines, freehand, arrows — to show an athlete exactly what you mean. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-shot',
+    title: 'Screenshot stills',
+    text: 'Grab a still of any shape while you scroll — it goes to your shape stills for the library. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-share',
+    title: 'Share',
+    text: 'Send the clip, save it to a collection, or add it to a collage from here. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-ab',
+    title: 'A/B loop',
+    text: 'Set A where the piece starts and B where it ends — it loops just that part until you clear it. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-speed',
+    title: 'Slow motion',
+    text: 'Drop the speed to slow-mo to study the mechanics, back to full speed to feel the rhythm. You are set — tap Done.',
   },
 ]
 

@@ -141,7 +141,7 @@ export function GlowTour({
 
   if (waiting) {
     return (
-      <div className="fixed inset-0 z-[300] bg-black/70" role="dialog" aria-label="Guided tour">
+      <div className="fixed inset-0 z-[400] bg-black/70" role="dialog" aria-label="Guided tour">
         <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] px-5 py-4 text-center shadow-2xl">
           <p className="text-sm font-bold text-[var(--text)]">Getting the tour ready…</p>
           <p className="mt-1 text-xs text-white/50">The tour starts as soon as this page loads.</p>
@@ -173,7 +173,7 @@ export function GlowTour({
   const tooltipBelow = !r || r.bottom + 190 < window.innerHeight
 
   return (
-    <div className="fixed inset-0 z-[300]" role="dialog" aria-label="Guided tour">
+    <div className="fixed inset-0 z-[400]" role="dialog" aria-label="Guided tour">
       {r ? (
         <>
           {/* Dim everything except the spotlight box */}
@@ -203,7 +203,15 @@ export function GlowTour({
             role="button"
             aria-label="Continue the guided tour"
             onClick={(e) => {
-              if (!step.tapThrough) e.stopPropagation()
+              if (step.tapThrough) {
+                // Let the underlying control fire too (e.g. opening fullscreen):
+                // click it programmatically since the ring sits above it.
+                const el = document.getElementById(step.target)
+                const clickable = el?.querySelector('button') ?? (el as HTMLElement | null)
+                ;(clickable as HTMLElement | null)?.click()
+              } else {
+                e.stopPropagation()
+              }
               advance()
             }}
             className="absolute cursor-pointer rounded-2xl"

@@ -693,6 +693,7 @@ function VideoWorkbenchInner({
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
     >
+      <div id="tour-player-scrub">
       <input
         type="range"
         min={0}
@@ -704,6 +705,7 @@ function VideoWorkbenchInner({
         className="w-full accent-[var(--accent)]"
         aria-label="Scrub video"
       />
+      </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
         <button type="button" onClick={togglePlay} className={btn}>
@@ -711,6 +713,7 @@ function VideoWorkbenchInner({
         </button>
         {allowAbLoop && (
           <>
+            <div id="tour-player-ab" className="contents">
             <button
               type="button"
               onClick={markA}
@@ -727,6 +730,7 @@ function VideoWorkbenchInner({
             >
               B{pointB !== null ? ` ${fmt(pointB)}` : ''}
             </button>
+            </div>
             {(pointA !== null || pointB !== null) && (
               <button type="button" onClick={clearAb} className={btn}>
                 Clear A/B
@@ -762,7 +766,7 @@ function VideoWorkbenchInner({
           {fmt(Math.max(0, time - windowStart))}s / {fmt(windowLen)}s
           {loopingAb && !tailSeconds ? ` · loop ${fmt(pointA!)}–${fmt(pointB!)}` : ''}
         </span>
-        <span className="ml-auto flex items-center gap-1">
+        <span id="tour-player-speed" className="ml-auto flex items-center gap-1">
           {SPEEDS.map((s) => (
             <button
               key={s}

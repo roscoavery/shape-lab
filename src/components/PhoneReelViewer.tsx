@@ -101,7 +101,7 @@ const ReelSection = memo(function ReelSection({
       className="relative h-full snap-start snap-always overflow-hidden bg-black"
     >
       {/* The video fills the whole card, like IG — no caption bar shrinking it. */}
-      <div className="absolute inset-0">
+      <div id="tour-player-video" className="absolute inset-0">
         {near ? (
           <GymClipPlayer
             url={clip.url}
@@ -158,6 +158,7 @@ const ReelSection = memo(function ReelSection({
           </div>
           {/* Action rail floats above the scrub bar. Collect / Collage live in Share. */}
           <div className="absolute bottom-40 right-2 z-20 flex flex-col items-center gap-3">
+            <div id="tour-player-share">
             <ShareReference
               variant="story"
               draft={clipShareDraft(clip.name, clip.url, clip.loopA, clip.loopB)}
@@ -184,6 +185,7 @@ const ReelSection = memo(function ReelSection({
                 />
               }
             />
+            </div>
             <FavoriteStar
               fill
               on={favOn}

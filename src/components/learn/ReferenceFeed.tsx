@@ -184,9 +184,11 @@ const FeedArticle = memo(function FeedArticle({
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.url, next)}
             hudCorner={
+              <span id="tour-scroll-fullscreen" className="inline-flex">
               <HudCircle label="" onClick={() => onOpenReel(index)}>
                 <IconFullscreen />
               </HudCircle>
+              </span>
             }
           />
         ) : (
@@ -495,6 +497,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           on a clip to loop that piece — it saves for Classes and Compare too.
         </p>
       </CollapsibleSection>
+      <div id="tour-scroll-search">
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -502,6 +505,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
         aria-label="Search reference videos"
         className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
       />
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"

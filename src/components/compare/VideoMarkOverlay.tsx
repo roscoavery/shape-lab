@@ -739,19 +739,27 @@ export function VideoMarkOverlay({
   )
 
   const toolHud = (
-    <div className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2 ${hudOffsetClass}`}>
+    <div id="tour-player-markup" className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2 ${hudOffsetClass}`}>
+      <span id="tour-player-line" className="inline-flex">
       <HudCircle label="Line" active={tool === 'line'} onClick={() => pickTool('line')}>
         <IconLine />
       </HudCircle>
+      </span>
+      <span id="tour-player-draw" className="inline-flex">
       <HudCircle label="Draw" active={tool === 'draw'} onClick={() => pickTool('draw')}>
         <IconDraw />
       </HudCircle>
+      </span>
+      <span id="tour-player-arrow" className="inline-flex">
       <HudCircle label="Arrow" active={tool === 'arrow'} onClick={() => pickTool('arrow')}>
         <IconArrow />
       </HudCircle>
+      </span>
+      <span id="tour-player-shot" className="inline-flex">
       <HudCircle label="Shot" active={tool === 'crop'} onClick={() => pickTool('crop')}>
         <IconShot />
       </HudCircle>
+      </span>
       <HudCircle label="Clear" onClick={clearAll}>
         <IconX />
       </HudCircle>
