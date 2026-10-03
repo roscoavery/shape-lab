@@ -68,8 +68,13 @@ export const SCROLL_TOUR: TourStep[] = [
   },
   {
     target: 'tour-player-scrub',
-    title: 'Scrub the details',
-    text: 'Drag the scrub bar to move frame by frame. Tap and hold the video, then drag, to scrub from where you are holding — good for freezing on the exact shape. Tap the glowing card to continue.',
+    title: 'Scrub bar',
+    text: 'Drag the scrub bar to move through the clip. But there is a better way — tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-player-video',
+    title: 'Hold and drag to scrub',
+    text: 'Touch the video and hold still — after a beat it pauses, then drag left or right to scrub frame by frame from right where you are holding. Let go to resume. Tap the glowing card to continue.',
   },
   {
     target: 'tour-player-markup',
