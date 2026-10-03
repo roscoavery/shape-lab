@@ -70,8 +70,24 @@ export function GlowTour({
 
   const measure = useCallback(() => {
     if (!step) return false
-    const el = document.getElementById(step.target)
-    if (!el) return false
+    // Multiple reels can be mounted for swipe (each with the same tour ids).
+    // Pick the visible instance — the one with the largest on-screen rect —
+    // not the first match, which may be an off-screen reel.
+    const candidates = Array.from(document.querySelectorAll(`[id="${step.target}"]`))
+    let best: Element | null = null
+    let bestArea = 0
+    for (const el of candidates) {
+      const rect = el.getBoundingClientRect()
+      const visibleW = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0))
+      const visibleH = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0))
+      const area = visibleW * visibleH
+      if (area > bestArea) {
+        bestArea = area
+        best = el
+      }
+    }
+    if (!best || bestArea === 0) return false
+    const el = best as HTMLElement
     setRect(el.getBoundingClientRect())
     setWaiting(false)
     // Bring off-screen targets (foundation above the hub, the watch
@@ -213,7 +229,18 @@ export function GlowTour({
               if (step.tapThrough) {
                 // Let the underlying control fire too (e.g. opening fullscreen):
                 // click it programmatically since the ring sits above it.
-                const el = document.getElementById(step.target)
+                // Use the visible instance when duplicates exist (multi-reel).
+                const els = Array.from(document.querySelectorAll(`[id="${step.target}"]`))
+                let el: Element | null = null
+                let bestArea = 0
+                for (const cand of els) {
+                  const rc = cand.getBoundingClientRect()
+                  const area = Math.max(0, rc.width) * Math.max(0, rc.height)
+                  if (area > bestArea) {
+                    bestArea = area
+                    el = cand
+                  }
+                }
                 const clickable = el?.querySelector('button') ?? (el as HTMLElement | null)
                 ;(clickable as HTMLElement | null)?.click()
               } else {
