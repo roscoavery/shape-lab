@@ -88,6 +88,7 @@ import type {
 import { FlowShareActions } from './FlowShareActions'
 import { ShapeStillStrip } from './ShapeStillStrip'
 import { ReferenceStill } from './ReferenceStill'
+import { LogForPicker } from './homework/LogForPicker'
 
 type Phase = 'idle' | 'preview' | 'running' | 'holding' | 'finishing' | 'replay' | 'review'
 
@@ -96,6 +97,8 @@ type SnapView = FlowStepSnap & { url: string | null }
 type Props = {
   athleteId: string | null
   athlete?: Athlete | null
+  /** Roster for the "who's doing this flow" picker. */
+  athletes?: Athlete[]
   score: ScoreResult
   scoredShapeId: string
   onRequestShape: (
@@ -300,8 +303,9 @@ function writeLastFlowId(id: string) {
 }
 
 export function Tasks2Panel({
-  athleteId,
-  athlete = null,
+  athleteId: athleteIdProp,
+  athlete: athleteProp = null,
+  athletes = [],
   score,
   scoredShapeId,
   onRequestShape,
@@ -329,6 +333,18 @@ export function Tasks2Panel({
   onRegisterStart,
   onRegisterHoldDone,
 }: Props) {
+  // Who's doing this flow — a coach running a class can switch profiles or
+  // hand the device to a guest (guest runs log nothing).
+  const [flowAthleteId, setFlowAthleteId] = useState<string | null>(athleteIdProp)
+  const [flowGuest, setFlowGuest] = useState(false)
+  useEffect(() => {
+    setFlowAthleteId(athleteIdProp)
+    setFlowGuest(false)
+  }, [athleteIdProp])
+  const athleteId = flowGuest ? null : flowAthleteId
+  const athlete = flowGuest
+    ? null
+    : (athletes.find((a) => a.id === athleteId) ?? athleteProp)
   const [progress, setProgress] = useState<FlowProgress | null>(null)
   const [seqId, setSeqId] = useState(() => readLastFlowId() ?? FLOW_SEQUENCES[0]!.id)
   const [runSeq, setRunSeq] = useState<FlowSequence | null>(null)
@@ -2290,6 +2306,27 @@ export function Tasks2Panel({
         )}
 
     <section className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3">
+      <div className="mb-3 rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+          Who's doing this flow{flowGuest ? ' · guest (nothing logs)' : ''}
+        </p>
+        <div className="mt-1">
+          <LogForPicker
+            athletes={athletes}
+            selectedId={flowAthleteId}
+            guest={flowGuest}
+            onSelect={(id) => {
+              setFlowAthleteId(id)
+              setFlowGuest(false)
+            }}
+            onGuest={() => setFlowGuest(true)}
+            onReset={() => {
+              setFlowAthleteId(athleteIdProp)
+              setFlowGuest(false)
+            }}
+          />
+        </div>
+      </div>
       <div className="sticky top-0 z-30 -mx-1 mb-3 rounded-2xl border border-white/10 bg-[#121820] p-3 shadow-lg">
         <div className="flex flex-wrap items-center gap-2">
           <p

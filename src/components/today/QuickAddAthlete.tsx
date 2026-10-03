@@ -60,7 +60,13 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-[80] overflow-y-auto overscroll-contain bg-black/60 p-4"
+      style={{ touchAction: 'pan-y' }}
+      role="dialog"
+      aria-modal
+    >
+      <div className="flex min-h-full items-end justify-center sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -169,6 +175,7 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
             </button>
           </>
         )}
+      </div>
       </div>
     </div>
   )

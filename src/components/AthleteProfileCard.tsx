@@ -424,7 +424,7 @@ export function AthleteProfileCard({
             onClick={() => setEditAnswers((v) => !v)}
             className="self-start rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
           >
-            {editAnswers ? 'Done editing' : 'Edit photo and answers'}
+            {editAnswers ? 'Done editing' : 'Edit name, photo and answers'}
           </button>
           {editAnswers && (
             <div className="rounded-2xl border border-white/10 bg-black/25 p-3">

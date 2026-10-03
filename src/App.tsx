@@ -1528,6 +1528,7 @@ export default function App() {
             <Tasks2Panel
               athleteId={activeAthleteId}
               athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
+              athletes={athletes}
               assignedSequenceId={assignedFlowId}
               onAssignedSequenceConsumed={consumeAssignedFlow}
               score={score}
