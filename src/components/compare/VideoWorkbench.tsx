@@ -797,7 +797,7 @@ function VideoWorkbenchInner({
         </span>
       </div>
       {persistUrl && allowAbLoop && presets.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className={`text-[10px] font-semibold uppercase tracking-wider ${fill ? 'text-white/50' : 'text-[var(--muted)]'}`}>
             Saved loops
           </span>
@@ -823,7 +823,7 @@ function VideoWorkbenchInner({
             ) : (
               <span
                 key={p.id}
-                className={`inline-flex items-center overflow-hidden rounded-md ${
+                className={`inline-flex shrink-0 items-center overflow-hidden rounded-md ${
                   activeLoopId === p.id
                     ? fill
                       ? 'bg-[var(--accent)] text-[var(--on-accent)]'
