@@ -49,7 +49,7 @@ export function GlowTour({
 }) {
   const [idx, setIdx] = useState(startIdx)
   const [rect, setRect] = useState<DOMRect | null>(null)
-  const [waiting, setWaiting] = useState(true)
+  const [waiting, setWaiting] = useState(false)
   /** Tracks which step we've already scrolled to, so scroll listeners don't re-scroll. */
   const scrolledFor = useRef<string | null>(null)
 
@@ -72,7 +72,11 @@ export function GlowTour({
 
   useEffect(() => {
     setRect(null)
-    setWaiting(true)
+    // Don't flash the waiting dialog on every step change — the next
+    // target is usually already in the DOM and just needs a frame.
+    // Only show "Getting the tour ready…" if it's still missing after
+    // a grace period.
+    setWaiting(false)
     if (!step) return
     const onScroll = () => measure()
     window.addEventListener('scroll', onScroll, true)
@@ -81,13 +85,16 @@ export function GlowTour({
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onScroll)
     }
-    // The target may render late (async list). Poll for it; only give up
-    // and move on after a long grace period — never rapid-skip.
+    // The target may render late (async list). Poll for it; only show the
+    // waiting dialog after a grace period, and only give up and move on
+    // after a long grace period — never rapid-skip.
     let tries = 0
+    const waitTimer = window.setTimeout(() => setWaiting(true), 800)
     const iv = window.setInterval(() => {
       tries += 1
       if (measure() || tries > 48) {
         window.clearInterval(iv)
+        window.clearTimeout(waitTimer)
         if (tries > 48) {
           // Target never showed: skip this step silently.
           if (idx + 1 >= steps.length) {
@@ -101,6 +108,7 @@ export function GlowTour({
     }, 250)
     return () => {
       window.clearInterval(iv)
+      window.clearTimeout(waitTimer)
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onScroll)
     }
