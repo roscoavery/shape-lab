@@ -332,6 +332,8 @@ export type StickItPlayer = {
   name: string
   athleteId?: string
   letters: number
+  /** Per-player skill for handicap mode. Defaults to the game's skill. */
+  skillId?: StickItSkillId
 }
 
 export function stickItPlayerName(p: StickItPlayer): string {

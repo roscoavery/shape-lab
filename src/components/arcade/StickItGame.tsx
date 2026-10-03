@@ -36,6 +36,8 @@ function Letters({ count }: { count: number }) {
 export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit: () => void }) {
   const [phase, setPhase] = useState<Phase>('setup')
   const [skillId, setSkillId] = useState<StickItSkillId>('perfect-cartwheel')
+  const [mode, setMode] = useState<'single' | 'handicap' | 'rotate'>('single')
+  const [roundSkillId, setRoundSkillId] = useState<StickItSkillId>('perfect-cartwheel')
   const [players, setPlayers] = useState<StickItPlayer[]>([])
   const [query, setQuery] = useState('')
   const [guestName, setGuestName] = useState('')
@@ -72,6 +74,18 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
   const current = phase === 'play' ? stickItCurrent(players, turn) : null
   const winner = phase === 'done' ? active[0] ?? null : null
 
+  const skillLabelFor = (p: StickItPlayer): string => {
+    if (mode === 'handicap') {
+      const s = STICK_IT_SKILLS.find((x) => x.id === (p.skillId ?? skillId))
+      return s?.label ?? skill.label
+    }
+    if (mode === 'rotate') {
+      const s = STICK_IT_SKILLS.find((x) => x.id === roundSkillId)
+      return s?.label ?? skill.label
+    }
+    return skill.label
+  }
+
   const advance = (next: StickItPlayer[]) => {
     const stillActive = stickItActive(next)
     if (stillActive.length <= 1) {
@@ -80,7 +94,7 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
       if (w) {
         saveArcadeRecord({
           gameId: 'stick-it',
-          skillLabel: skill.label,
+          skillLabel: mode === 'single' ? skill.label : mode === 'handicap' ? 'handicap' : 'rotating',
           playerNames: next.map((p) => p.name),
           winnerName: w.name,
           winnerAthleteId: w.athleteId,
@@ -130,20 +144,51 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
         <>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
-              The skill
+              Skill mode
             </p>
-            <select
-              value={skillId}
-              onChange={(e) => setSkillId(e.target.value as StickItSkillId)}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base font-semibold"
-            >
-              {STICK_IT_SKILLS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ['single', 'One skill', 'Everyone, all game'],
+                  ['handicap', 'Handicap', 'Each player\'s own'],
+                  ['rotate', 'Rotate', 'New skill each round'],
+                ] as const
+              ).map(([m, label, sub]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={`rounded-xl border px-3 py-2.5 text-left ${
+                    mode === m
+                      ? 'border-[var(--accent)] bg-[var(--accent)]/15'
+                      : 'border-white/10 bg-black/30'
+                  }`}
+                >
+                  <span className="block text-sm font-bold">{label}</span>
+                  <span className="block text-[10px] text-white/50">{sub}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
+
+          {mode !== 'rotate' && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+                {mode === 'handicap' ? 'Default skill' : 'The skill'}
+              </p>
+              <select
+                value={skillId}
+                onChange={(e) => setSkillId(e.target.value as StickItSkillId)}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base font-semibold"
+              >
+                {STICK_IT_SKILLS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
@@ -182,6 +227,26 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
                     className="flex items-center gap-2 rounded-xl bg-black/25 px-3 py-2"
                   >
                     <span className="flex-1 truncate text-sm font-medium">{p.name}</span>
+                    {mode === 'handicap' && (
+                      <select
+                        value={p.skillId ?? skillId}
+                        onChange={(e) =>
+                          setPlayers((ps) =>
+                            ps.map((x) =>
+                              x.id === p.id ? { ...x, skillId: e.target.value as StickItSkillId } : x,
+                            ),
+                          )
+                        }
+                        className="max-w-[140px] truncate rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs"
+                        aria-label={`${p.name}'s skill`}
+                      >
+                        {STICK_IT_SKILLS.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     {p.athleteId == null && (
                       <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
                         Guest
@@ -204,10 +269,13 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
           <button
             type="button"
             disabled={players.length < 2}
-            onClick={startGame}
+            onClick={() => {
+              if (mode === 'rotate') setRoundSkillId(skillId)
+              startGame()
+            }}
             className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black disabled:opacity-40"
           >
-            Start — {skill.label}
+            Start — {mode === 'rotate' ? 'rotating skills' : skill.label}
           </button>
           <p className="text-center text-xs text-white/45">
             Need at least 2 players. Take turns doing the skill — miss and you earn a letter.
@@ -219,9 +287,27 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
         <>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-              Up now · {skill.label}
+              Up now · {skillLabelFor(current)}
             </p>
             <p className="mt-1 text-3xl font-black">{current.name}</p>
+            {mode === 'rotate' && (
+              <div className="mx-auto mt-3 max-w-[240px]">
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  Next round's skill
+                </label>
+                <select
+                  value={roundSkillId}
+                  onChange={(e) => setRoundSkillId(e.target.value as StickItSkillId)}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm font-semibold"
+                >
+                  {STICK_IT_SKILLS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="mt-3 flex justify-center">
               <Letters count={current.letters} />
             </div>
@@ -266,6 +352,9 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
                   >
                     <span className="flex-1 truncate text-sm font-medium">
                       {p.name}
+                      {mode === 'handicap' && (
+                        <span className="ml-2 text-xs text-white/40">{skillLabelFor(p)}</span>
+                      )}
                       {out && <span className="ml-2 text-xs text-white/40">out</span>}
                     </span>
                     <Letters count={p.letters} />
@@ -285,7 +374,9 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
               Last one standing
             </p>
             <p className="mt-1 text-3xl font-black">{winner?.name ?? '—'}</p>
-            <p className="mt-1 text-sm text-white/60">{skill.label}</p>
+            <p className="mt-1 text-sm text-white/60">
+              {mode === 'single' ? skill.label : mode === 'handicap' ? 'handicap game' : 'rotating skills'}
+            </p>
           </div>
 
           <div>
