@@ -86,6 +86,25 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
     return skill.label
   }
 
+  /** Quick-change the skill mid-game without leaving the play screen. */
+  const currentSkillId = current
+    ? mode === 'handicap'
+      ? (current.skillId ?? skillId)
+      : mode === 'rotate'
+        ? roundSkillId
+        : skillId
+    : skillId
+  const setCurrentSkill = (id: StickItSkillId) => {
+    if (!current) return
+    if (mode === 'handicap') {
+      setPlayers((ps) => ps.map((x) => (x.id === current.id ? { ...x, skillId: id } : x)))
+    } else if (mode === 'rotate') {
+      setRoundSkillId(id)
+    } else {
+      setSkillId(id)
+    }
+  }
+
   const advance = (next: StickItPlayer[]) => {
     const stillActive = stickItActive(next)
     if (stillActive.length <= 1) {
@@ -286,28 +305,33 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
       {phase === 'play' && current && (
         <>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-              Up now · {skillLabelFor(current)}
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Up now</p>
             <p className="mt-1 text-3xl font-black">{current.name}</p>
-            {mode === 'rotate' && (
-              <div className="mx-auto mt-3 max-w-[240px]">
-                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                  Next round's skill
-                </label>
-                <select
-                  value={roundSkillId}
-                  onChange={(e) => setRoundSkillId(e.target.value as StickItSkillId)}
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm font-semibold"
-                >
-                  {STICK_IT_SKILLS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="mx-auto mt-3 max-w-[260px]">
+              <select
+                value={currentSkillId}
+                onChange={(e) => setCurrentSkill(e.target.value as StickItSkillId)}
+                className="w-full rounded-xl border border-[var(--accent)]/40 bg-black/40 px-3 py-2.5 text-center text-base font-bold"
+                aria-label={
+                  mode === 'handicap'
+                    ? `${current.name}'s skill — tap to change`
+                    : 'Skill — tap to change'
+                }
+              >
+                {STICK_IT_SKILLS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[10px] text-white/40">
+                {mode === 'handicap'
+                  ? `tap to change ${current.name.split(' ')[0]}'s skill`
+                  : mode === 'rotate'
+                    ? 'tap to change this round\u2019s skill'
+                    : 'tap to change the skill'}
+              </p>
+            </div>
             <div className="mt-3 flex justify-center">
               <Letters count={current.letters} />
             </div>
