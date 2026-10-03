@@ -70,10 +70,13 @@ export function GlowTour({
 
   const measure = useCallback(() => {
     if (!step) return false
-    // Multiple reels can be mounted for swipe (each with the same tour ids).
-    // Pick the visible instance — the one with the largest on-screen rect —
-    // not the first match, which may be an off-screen reel.
-    const candidates = Array.from(document.querySelectorAll(`[id="${step.target}"]`))
+    // Prefer the target inside the active reel — swipe mounts multiple reels
+    // with duplicate tour ids, and visible-area guessing can pick wrong.
+    const activeReel = document.querySelector('[data-tour-active="true"]')
+    const scoped = activeReel?.querySelector(`[id="${step.target}"]`)
+    const candidates = scoped
+      ? [scoped]
+      : Array.from(document.querySelectorAll(`[id="${step.target}"]`))
     let best: Element | null = null
     let bestArea = 0
     for (const el of candidates) {
@@ -229,18 +232,10 @@ export function GlowTour({
               if (step.tapThrough) {
                 // Let the underlying control fire too (e.g. opening fullscreen):
                 // click it programmatically since the ring sits above it.
-                // Use the visible instance when duplicates exist (multi-reel).
-                const els = Array.from(document.querySelectorAll(`[id="${step.target}"]`))
-                let el: Element | null = null
-                let bestArea = 0
-                for (const cand of els) {
-                  const rc = cand.getBoundingClientRect()
-                  const area = Math.max(0, rc.width) * Math.max(0, rc.height)
-                  if (area > bestArea) {
-                    bestArea = area
-                    el = cand
-                  }
-                }
+                // Prefer the active reel's instance when duplicates exist.
+                const activeReel = document.querySelector('[data-tour-active="true"]')
+                const el = activeReel?.querySelector(`[id="${step.target}"]`)
+                  ?? document.querySelector(`[id="${step.target}"]`)
                 const clickable = el?.querySelector('button') ?? (el as HTMLElement | null)
                 ;(clickable as HTMLElement | null)?.click()
               } else {

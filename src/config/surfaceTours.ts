@@ -75,8 +75,7 @@ export const SCROLL_TOUR: TourStep[] = [
   {
     target: 'tour-player-video',
     title: 'Hold and drag to scrub',
-    text: 'Try it now — touch the video and hold still until it pauses, then drag left or right to scrub. The tour is not blocking you. Tap Next when you are ready to move on.',
-    passthrough: true,
+    text: 'The tour blocks this one — touch the video and hold still until it pauses, then drag left or right to scrub. Try it after the tour ends.',
   },
   {
     target: 'tour-player-markup',
