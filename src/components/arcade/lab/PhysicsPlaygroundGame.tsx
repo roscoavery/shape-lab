@@ -9,7 +9,7 @@ export function PhysicsPlaygroundGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="physics-playground"
       title="Physics Playground"
-      tagline="Sliders, not textbooks — feel how shape changes spin."
+      tagline="Sliders, not textbooks. Feel how shape changes spin."
       rules={
         <>
           <p>
@@ -18,7 +18,7 @@ export function PhysicsPlaygroundGame({ onExit }: { onExit: () => void }) {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
               <strong>Predict (50 pts):</strong> answer the question first. A wrong first guess
-              costs nothing — it is never punished.
+              costs nothing. It is never punished.
             </li>
             <li>
               <strong>Explore (50 pts):</strong> drag the slider, then press "Play outcome" to run
@@ -27,15 +27,15 @@ export function PhysicsPlaygroundGame({ onExit }: { onExit: () => void }) {
           </ul>
           <p className="mt-2">
             Every scenario states its assumptions up front. The demos are simple illustrative
-            models — they show a relationship, not a full simulation, and they say nothing about
+            models. They show a relationship, not a full simulation, and they say nothing about
             any athlete's real capability.
           </p>
           <p className="mt-2 text-white/50">
-            Practice note: unlimited replay — predictions are never punished.
+            Practice note: unlimited replay. Predictions are never punished.
           </p>
         </>
       }
-      whatPracticed="How shape changes rotation speed and flight — the physics behind tucks, layouts, and takeoffs."
+      whatPracticed="How shape changes rotation speed and flight. The physics behind tucks, layouts, and takeoffs."
       onExit={onExit}
     >
       {({ finish }) => <PhysicsPlaygroundPlay onFinish={finish} />}
@@ -141,8 +141,8 @@ function PhysicsPlaygroundPlay({ onFinish }: { onFinish: (r: { score: number; to
             <div className="flex flex-col gap-3">
               <p className="text-sm text-white/60">
                 {chosen === scenario.answer
-                  ? 'Right — +50.'
-                  : 'Not quite — no penalty, that is the point. +0.'}
+                  ? 'Right. +50.'
+                  : 'Not quite. No penalty, that is the point. +0.'}
               </p>
               <button
                 type="button"
@@ -231,7 +231,7 @@ function Demo({ scenario, value, played }: { scenario: PhysicsScenario; value: n
         )}
       </div>
       <p className="mt-2 text-center text-[11px] text-white/35">
-        Illustrative model — shows the relationship, not a full simulation or any athlete's real
+        Illustrative model. Shows the relationship, not a full simulation or any athlete's real
         capability.
       </p>
     </div>

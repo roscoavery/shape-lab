@@ -12,7 +12,7 @@ export type BalanceGalaxyBalance = {
 
 /**
  * Draft balances for Balance Galaxy. Standing only, low-risk. The figure is
- * a rough reference for single-leg shapes — the cue describes the real
+ * a rough reference for single-leg shapes. The cue describes the real
  * position.
  */
 export const BALANCE_GALAXY_BALANCES: BalanceGalaxyBalance[] = [
@@ -21,27 +21,27 @@ export const BALANCE_GALAXY_BALANCES: BalanceGalaxyBalance[] = [
     shapeName: 'Passé hold',
     pose: { arms: 't', knees: 'bent', back: 'flat', head: 'neutral', feet: 'together' },
     sides: true,
-    cue: 'Toe at the knee, standing leg straight, T arms steady — pick the steadier leg.',
+    cue: 'Toe at the knee, standing leg straight, T arms steady. Pick the steadier leg.',
   },
   {
     id: 'bgb-lever',
     shapeName: 'Standing lever',
     pose: { arms: 'front', knees: 'straight', back: 'flat', head: 'neutral', feet: 'together' },
     sides: false,
-    cue: 'Hinge forward, one leg lifts behind you — one long line from head to heel.',
+    cue: 'Hinge forward, one leg lifts behind you. One long line from head to heel.',
   },
   {
     id: 'bgb-lunge-hold',
     shapeName: 'Lunge hold',
     pose: { arms: 'up', knees: 'bent', back: 'flat', head: 'neutral', feet: 'apart' },
     sides: true,
-    cue: 'Sink into the lunge and freeze — front knee over the ankle, arms tall.',
+    cue: 'Sink into the lunge and freeze. Front knee over the ankle, arms tall.',
   },
   {
     id: 'bgb-arabesque',
     shapeName: 'Arabesque stand',
     pose: { arms: 't', knees: 'straight', back: 'flat', head: 'neutral', feet: 'apart' },
     sides: true,
-    cue: 'Stand on one leg, lift the other behind you — hips square, chest open.',
+    cue: 'Stand on one leg, lift the other behind you. Hips square, chest open.',
   },
 ]

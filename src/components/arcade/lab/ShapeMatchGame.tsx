@@ -16,7 +16,7 @@ export function ShapeMatchGame({ onExit }: { onExit: () => void }) {
         <>
           <p className="font-semibold text-[var(--text)]">How it plays</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
-            <li>You get a target shape — a figure, the name, and the coach cues.</li>
+            <li>You get a target shape: a figure, the name, and the coach cues.</li>
             <li>Enter the shape and hold it for {HOLD_GOAL} steady seconds. The bar fills as you hold.</li>
             <li>
               <span className="font-semibold text-[var(--text)]">Partner confirm:</span> a partner or
@@ -27,11 +27,11 @@ export function ShapeMatchGame({ onExit }: { onExit: () => void }) {
               <span className="font-semibold text-[var(--text)]">Simulation:</span> the coach feeds
               scripted signals to test the game loop. Simulation earns no real practice credit.
             </li>
-            <li>There is no camera scoring here — the partner is the judge.</li>
+            <li>There is no camera scoring here. The partner is the judge.</li>
           </ul>
         </>
       }
-      whatPracticed="Entering a shape and holding it steady — the basis of every clean skill."
+      whatPracticed="Entering a shape and holding it steady. The basis of every clean skill."
       onExit={onExit}
     >
       {({ finish }) => <ShapeMatchPlay onFinish={finish} />}
@@ -115,7 +115,7 @@ function ShapeMatchPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
   const completeRef = useRef(completeTarget)
   completeRef.current = completeTarget
 
-  // Accumulation tick — only while actively holding.
+  // Accumulation tick. Only while actively holding.
   useEffect(() => {
     if (status !== 'holding') return
     const id = window.setInterval(() => {
@@ -237,7 +237,7 @@ function ShapeMatchPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
         <div className="rounded-xl border border-red-400/40 bg-red-400/10 p-4 text-center">
           <p className="text-lg font-black text-red-200">Step into view</p>
           <p className="mt-1 text-sm text-red-200/70">
-            Tracking lost — get back in position, then keep holding.
+            Tracking lost. Get back in position, then keep holding.
           </p>
         </div>
       )}
@@ -257,7 +257,7 @@ function ShapeMatchPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
         </div>
         {brokeNote && (
           <p className="mt-1.5 text-xs font-semibold text-amber-200">
-            Form broke — hold paused. Reset the shape and resume.
+            Form broke. Hold paused. Reset the shape and resume.
           </p>
         )}
       </div>

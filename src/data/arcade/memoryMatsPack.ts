@@ -1,5 +1,5 @@
 /**
- * Memory Mats pack — shape name ↔ cue pairs, both verbatim from the
+ * Memory Mats pack: shape name and cue pairs, both verbatim from the
  * coach's shape tips. Draft content.
  */
 export type MemoryMatsPair = {
@@ -17,7 +17,7 @@ export const MEMORY_MATS_PAIRS: MemoryMatsPair[] = [
   {
     id: 'mm-02',
     shapeName: 'Tight arch',
-    cue: 'On the back — this is a tight arch, not a Superman.',
+    cue: 'On the back. This is a tight arch, not a Superman.',
   },
   {
     id: 'mm-03',
@@ -27,12 +27,12 @@ export const MEMORY_MATS_PAIRS: MemoryMatsPair[] = [
   {
     id: 'mm-04',
     shapeName: 'Candlestick',
-    cue: 'Open hips, ribs in — same stacked body as a good handstand, just on the shoulders.',
+    cue: 'Open hips, ribs in. Same stacked body as a good handstand, just on the shoulders.',
   },
   {
     id: 'mm-05',
     shapeName: 'C shape',
-    cue: 'Hips under, chest hollow — round the back, do not arch.',
+    cue: 'Hips under, chest hollow. Round the back, do not arch.',
   },
   {
     id: 'mm-06',
@@ -42,7 +42,7 @@ export const MEMORY_MATS_PAIRS: MemoryMatsPair[] = [
   {
     id: 'mm-07',
     shapeName: 'Front plank',
-    cue: 'Straight line head to heels — no sag, no pike.',
+    cue: 'Straight line head to heels. No sag, no pike.',
   },
   {
     id: 'mm-08',
@@ -57,12 +57,12 @@ export const MEMORY_MATS_PAIRS: MemoryMatsPair[] = [
   {
     id: 'mm-10',
     shapeName: 'Mountain climber',
-    cue: 'C plus one medium step — not as big as a lunge.',
+    cue: 'C plus one medium step. Not as big as a lunge.',
   },
   {
     id: 'mm-11',
     shapeName: 'Landing lunge',
-    cue: 'Press the back heel flat — no rolling in on the arch.',
+    cue: 'Press the back heel flat. No rolling in on the arch.',
   },
   {
     id: 'mm-12',

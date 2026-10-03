@@ -27,11 +27,11 @@ export function SequenceMemoryGame({ onExit }: { onExit: () => void }) {
           <p>Watch the shape sequence, then rebuild it in order from the shuffled cards.</p>
           <p>
             Start at 2 shapes, +1 each fully-correct round, up to 6. 100 points per correct
-            position. A miss shows you the right answer — retry the round, no elimination.
+            position. A miss shows you the right answer. Retry the round, no elimination.
           </p>
         </>
       }
-      whatPracticed="Holding a sequence of shapes in working memory — the mental side of choreography and pass planning."
+      whatPracticed="Holding a sequence of shapes in working memory. The mental side of choreography and pass planning."
       onExit={onExit}
     >
       {({ finish }) => <SequenceMemoryPlay onFinish={finish} />}
@@ -222,7 +222,7 @@ function SequenceMemoryPlay({ onFinish }: { onFinish: (r: LabGameResult) => void
       {phase === 'reveal' && (
         <div className="flex flex-col gap-3">
           <p className="text-sm font-bold text-red-300">
-            Not quite — the missed {wrongAt.length === 1 ? 'spot is' : 'spots are'} highlighted.
+            Not quite. The missed {wrongAt.length === 1 ? 'spot is' : 'spots are'} highlighted.
           </p>
           <ol className="flex flex-col gap-2">
             {sequence.map((s, i) => (

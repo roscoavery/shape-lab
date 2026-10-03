@@ -5,7 +5,7 @@ import { HOLLOW_HERO_PRESETS } from '../../../data/arcade/hollowHeroPack'
 
 const VARIATIONS = [
   { id: 'hollow-arms-down', label: 'Hollow (arms down)' },
-  { id: 'tucked-hollow', label: 'Tucked hollow — less demanding' },
+  { id: 'tucked-hollow', label: 'Tucked hollow (less demanding)' },
 ]
 
 export function HollowHeroGame({ onExit }: { onExit: () => void }) {
@@ -18,32 +18,32 @@ export function HollowHeroGame({ onExit }: { onExit: () => void }) {
         <>
           <p>
             Pick a preset and a hollow variation, then work through the bouts. Hold the shape
-            while the clock runs — <strong>1 energy for every completed second</strong>, up to
+            while the clock runs. <strong>1 energy for every completed second</strong>, up to
             the bout goal.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
               <strong>
-                Short bouts with real rests. This is not a hold-to-failure contest — stop if form
+                Short bouts with real rests. This is not a hold-to-failure contest. Stop if form
                 goes.
               </strong>
             </li>
             <li>
-              Partner taps <strong>Pause — form broke</strong> the moment the shape goes, then{' '}
+              Partner taps <strong>Pause: form broke</strong> the moment the shape goes, then{' '}
               <strong>Resume</strong> when it's set again. Earned energy is never drained by
               resting or pausing.
             </li>
             <li>
-              The meter is labeled <strong>Stillness</strong> on purpose — a timer can't measure
+              The meter is labeled <strong>Stillness</strong> on purpose. A timer can't measure
               muscle work or safety. Your partner's eyes do that.
             </li>
             <li>
-              Simulation mode is for testing the game loop only — it earns no real credit.
+              Simulation mode is for testing the game loop only. It earns no real credit.
             </li>
           </ul>
         </>
       }
-      whatPracticed="Charging the hollow in short, honest bouts — control over endurance."
+      whatPracticed="Charging the hollow in short, honest bouts. Control over endurance."
       onExit={onExit}
     >
       {({ finish }) => <HollowHeroPlay onFinish={finish} />}
@@ -92,7 +92,7 @@ function HollowHeroPlay({
         score: finalBanked,
         total,
         detail: `shield charged ${Math.round((finalBanked / total) * 100)}%${
-          mode === 'sim' ? ' (simulation — no real credit)' : ''
+          mode === 'sim' ? ' (simulation, no real credit)' : ''
         }`,
       })
       return
@@ -146,7 +146,7 @@ function HollowHeroPlay({
     } else {
       setSimPaused(true)
       setPauseNote(
-        s === 'lost' ? 'Step into view, then resume.' : 'Form check — reset the shape, then resume.'
+        s === 'lost' ? 'Step into view, then resume.' : 'Form check. Reset the shape, then resume.'
       )
     }
   }
@@ -210,7 +210,7 @@ function HollowHeroPlay({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-          {variation.label} — bout {Math.min(boutIdx + 1, preset.bouts)} of {preset.bouts}
+          {variation.label}: bout {Math.min(boutIdx + 1, preset.bouts)} of {preset.bouts}
         </p>
         <p className="font-mono text-sm font-bold tabular-nums text-[var(--accent)]">
           {energy} / {total}
@@ -225,21 +225,21 @@ function HollowHeroPlay({
           />
         </div>
         <p className="mt-1 text-center text-xs text-white/50">
-          Shield charged {pct}% · Stillness meter — rests never drain it
+          Shield charged {pct}% · Stillness meter. Rests never drain it
         </p>
       </div>
 
       {phase === 'ready' && (
         <div className="flex flex-col gap-3 rounded-xl bg-black/25 p-4 text-center">
           <p className="text-sm text-white/70">
-            Set the {variation.label.toLowerCase()} — lower back down, shape locked.
+            Set the {variation.label.toLowerCase()}. Lower back down, shape locked.
           </p>
           <button
             type="button"
             onClick={startBout}
             className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black"
           >
-            Start bout — {preset.seconds}s
+            Start bout: {preset.seconds}s
           </button>
         </div>
       )}
@@ -254,7 +254,7 @@ function HollowHeroPlay({
                 onClick={cd.pause}
                 className="rounded-xl bg-amber-300/15 px-4 py-3 text-sm font-bold text-amber-200"
               >
-                Pause — form broke
+                Pause: form broke
               </button>
             ) : (
               <div className="flex flex-col gap-2">

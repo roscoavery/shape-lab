@@ -29,21 +29,21 @@ export function BalanceGalaxyGame({ onExit }: { onExit: () => void }) {
         <>
           <p>
             <strong>{BOUTS} bouts</strong>, one balance each. Tap <strong>Launch</strong> for an{' '}
-            <strong>{BOUT_SECONDS}-second</strong> flight — every {MS_PER_STAR / 1000} steady seconds
+            <strong>{BOUT_SECONDS}-second</strong> flight. Every {MS_PER_STAR / 1000} steady seconds
             earns a star (up to {STARS_PER_BOUT} per bout). <strong>{ROUTE_STARS} stars</strong> flies
             the full route.
           </p>
           <p className="mt-2">
-            Sway pauses the ship — that's the game working, not failing. Both sides available;
+            Sway pauses the ship. That's the game working, not failing. Both sides available;
             pick the steadier one.
           </p>
           <p className="mt-2">
             Make sure you have clear space around you and a soft surface nearby. A partner watches
-            and taps <strong>Wobble — pause</strong> when the balance breaks.
+            and taps <strong>Wobble: pause</strong> when the balance breaks.
           </p>
         </>
       }
-      whatPracticed="Steady balances that travel — control you can feel."
+      whatPracticed="Steady balances that travel. Control you can feel."
       onExit={onExit}
     >
       {({ finish }) => <BalanceGalaxyPlay onFinish={finish} />}
@@ -76,7 +76,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
     return () => window.clearInterval(id)
   }, [stage, running, steady])
 
-  // Bout clock ran out — bank the stars.
+  // Bout clock ran out. Bank the stars.
   useEffect(() => {
     if (stage !== 'flying' || running || left > 0) return
     const stars = Math.min(STARS_PER_BOUT, Math.floor(validMs / MS_PER_STAR))
@@ -186,7 +186,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
           {balance.sides && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
-                Side — pick the steadier one
+                Side: pick the steadier one
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {(['left', 'right'] as const).map((s) => (
@@ -209,7 +209,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
             <ShapeFigure pose={balance.pose} className="mx-auto h-36 w-auto" />
             <p className="mt-2 text-center text-sm font-bold text-[var(--text)]">
               {balance.shapeName}
-              {balance.sides ? ` — ${side} side` : ''}
+              {balance.sides ? ` (${side} side)` : ''}
             </p>
             <p className="mt-1 text-center text-sm text-white/65">{balance.cue}</p>
           </div>
@@ -219,7 +219,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
             onClick={launch}
             className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black active:scale-95"
           >
-            Launch — {BOUT_SECONDS} seconds
+            Launch: {BOUT_SECONDS} seconds
           </button>
         </div>
       )}
@@ -229,7 +229,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
           <BoutClock left={left} urgentAt={3} />
           <p className="text-center text-sm font-bold text-white/70">
             {balance.shapeName}
-            {balance.sides ? ` — ${side} side` : ''}
+            {balance.sides ? ` (${side} side)` : ''}
           </p>
 
           {/* Stars earned this bout so far. */}
@@ -248,7 +248,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
           {!steady && (
             <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-center">
               <p className="text-sm font-bold text-amber-200">
-                {lostView ? 'Step into view, then steady up to keep flying.' : 'Wobble — ship paused.'}
+                {lostView ? 'Step into view, then steady up to keep flying.' : 'Wobble. Ship paused.'}
               </p>
             </div>
           )}
@@ -260,7 +260,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
                 onClick={wobble}
                 className="rounded-2xl bg-white/10 px-6 py-4 text-base font-black text-white/80 active:scale-95"
               >
-                Wobble — pause
+                Wobble: pause
               </button>
             ) : (
               <button
@@ -268,7 +268,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
                 onClick={recover}
                 className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-base font-black text-black active:scale-95"
               >
-                Steady — resume
+                Steady: resume
               </button>
             )
           ) : (
@@ -280,7 +280,7 @@ function BalanceGalaxyPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
       {stage === 'rest' && !last && (
         <div className="rounded-xl border border-white/15 bg-black/30 p-4 text-center">
           <p className="text-sm font-black text-[var(--text)]">
-            Bout {bout + 1} done — {lastBoutStars} of {STARS_PER_BOUT} stars.
+            Bout {bout + 1} done. {lastBoutStars} of {STARS_PER_BOUT} stars.
           </p>
           <p className="mt-1 text-sm text-white/60">
             Rest, shake it out, breathe. Pick your next balance when you're ready.

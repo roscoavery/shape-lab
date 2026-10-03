@@ -58,7 +58,7 @@ function ShapePasswordPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          {describer} describes — Partner B guesses out loud
+          {describer} describes. Partner B guesses out loud
         </p>
         <h4 className="mt-2 text-2xl font-black text-[var(--text)]">{card.shapeName}</h4>
 
@@ -104,7 +104,7 @@ function ShapePasswordPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
       ) : (
         <div className="flex flex-col gap-3">
           <p className="rounded-xl bg-black/25 px-4 py-3 text-center text-sm font-semibold text-white/80">
-            {answer === 'got' ? 'Got it —' : 'Skipped —'} that was {card.shapeName}.
+            {answer === 'got' ? 'Got it.' : 'Skipped.'} that was {card.shapeName}.
           </p>
           <button
             type="button"
@@ -115,7 +115,7 @@ function ShapePasswordPlay({ onFinish }: { onFinish: (r: LabGameResult) => void 
           </button>
           {!last && (
             <p className="text-center text-xs text-white/50">
-              Hand the phone over — {index % 2 === 0 ? 'Partner B' : 'Partner A'} describes next.
+              Hand the phone over. {index % 2 === 0 ? 'Partner B' : 'Partner A'} describes next.
             </p>
           )}
         </div>
@@ -136,7 +136,7 @@ export function ShapePasswordGame({ onExit }: { onExit: () => void }) {
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>Two partners. One holds the phone and describes, the other guesses out loud.</li>
             <li>
-              Say anything except the shape name and the forbidden words — describe what the
+              Say anything except the shape name and the forbidden words. Describe what the
               body actually does.
             </li>
             <li>
@@ -144,13 +144,13 @@ export function ShapePasswordGame({ onExit }: { onExit: () => void }) {
             </li>
             <li>Tap "They got it" for 100 points, or "Skip" for 0. Six cards per round.</li>
             <li>
-              There is no speech recognition — partners confirm the guess honestly, on the honor
+              There is no speech recognition. Partners confirm the guess honestly, on the honor
               system.
             </li>
           </ul>
         </>
       }
-      whatPracticed="Describing shapes by what the body actually does — the skill behind every good correction."
+      whatPracticed="Describing shapes by what the body actually does. The skill behind every good correction."
       onExit={onExit}
     >
       {({ finish }) => <ShapePasswordPlay onFinish={finish} />}

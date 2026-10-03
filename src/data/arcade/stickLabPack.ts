@@ -1,5 +1,5 @@
 /**
- * Stick Lab drill pack — low-impact landing drills only.
+ * Stick Lab drill pack: low-impact landing drills only.
  * No flips, no height. Everything here is DRAFT content.
  */
 
@@ -15,7 +15,7 @@ export const STICK_LAB_DRILLS: StickLabDrill[] = [
     id: 'step-down-stick',
     name: 'Step-down stick',
     setup:
-      'Step off the edge of a panel mat onto a landing mat — land on two feet and freeze. Clear space around the mat, coach or partner watching.',
+      'Step off the edge of a panel mat onto a landing mat. Land on two feet and freeze. Clear space around the mat, coach or partner watching.',
   },
   {
     id: 'hop-and-hold',
@@ -27,6 +27,6 @@ export const STICK_LAB_DRILLS: StickLabDrill[] = [
     id: 'lunge-landing',
     name: 'Lunge landing',
     setup:
-      'Step forward into a landing lunge — front knee over the ankle, back knee soft — and freeze. Switch legs each attempt. Flat floor or mat.',
+      'Step forward into a landing lunge: front knee over the ankle, back knee soft, and freeze. Switch legs each attempt. Flat floor or mat.',
   },
 ]

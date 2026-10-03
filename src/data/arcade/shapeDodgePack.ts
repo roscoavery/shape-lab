@@ -12,28 +12,28 @@ export type ShapeDodgeWall = {
 
 /**
  * Draft walls for Shape Dodge. The figure shows the target shape; for floor
- * shapes the note says so plainly — the cue does the coaching.
+ * shapes the note says so plainly. The cue does the coaching.
  */
 export const SHAPE_DODGE_WALLS: ShapeDodgeWall[] = [
   {
     id: 'sdw-hollow-stand',
     shapeName: 'Hollow stand',
     pose: { arms: 'up', knees: 'straight', back: 'hollow', head: 'neutral', feet: 'together' },
-    cue: 'Arms up, ribs down, pelvis tucked — one tall hollow line.',
+    cue: 'Arms up, ribs down, pelvis tucked. One tall hollow line.',
   },
   {
     id: 'sdw-tuck-sit',
     shapeName: 'Tuck sit',
     pose: { arms: 'front', knees: 'bent', back: 'hollow', head: 'neutral', feet: 'together' },
-    cue: 'Sit tall, knees pulled to your chest, back rounded — hug the tuck.',
-    note: 'The figure shows the tuck upright — do it seated on the floor.',
+    cue: 'Sit tall, knees pulled to your chest, back rounded. Hug the tuck.',
+    note: 'The figure shows the tuck upright. Do it seated on the floor.',
   },
   {
     id: 'sdw-front-support',
     shapeName: 'Front support',
     pose: { arms: 'front', knees: 'straight', back: 'flat', head: 'neutral', feet: 'together' },
     cue: 'Hands under shoulders, body one straight line, squeeze everything tight.',
-    note: 'The figure shows the line upright — hold it as a plank on the floor.',
+    note: 'The figure shows the line upright. Hold it as a plank on the floor.',
   },
   {
     id: 'sdw-lunge',
@@ -45,13 +45,13 @@ export const SHAPE_DODGE_WALLS: ShapeDodgeWall[] = [
     id: 'sdw-pike-fold',
     shapeName: 'Pike fold',
     pose: { arms: 'down', knees: 'straight', back: 'flat', head: 'neutral', feet: 'together' },
-    cue: 'Hinge at the hips, legs straight, fold forward — nose toward your knees.',
+    cue: 'Hinge at the hips, legs straight, fold forward. Nose toward your knees.',
     note: 'Fold at the hips; the figure stands tall so you can see the straight-leg line.',
   },
   {
     id: 'sdw-c-shape',
     shapeName: 'C shape',
     pose: { arms: 'front', knees: 'straight', back: 'hollow', head: 'neutral', feet: 'together' },
-    cue: 'Round the whole body into a C — arms reaching forward, ribs pulled in.',
+    cue: 'Round the whole body into a C. Arms reaching forward, ribs pulled in.',
   },
 ]

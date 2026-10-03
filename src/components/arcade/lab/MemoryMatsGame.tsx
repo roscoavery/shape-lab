@@ -30,7 +30,7 @@ export function MemoryMatsGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="memory-mats"
       title="Memory Mats"
-      tagline="Flip the mats — match each shape to its cue."
+      tagline="Flip the mats. Match each shape to its cue."
       rules={
         <>
           <p>
@@ -39,12 +39,12 @@ export function MemoryMatsGame({ onExit }: { onExit: () => void }) {
             shape library.
           </p>
           <p className="mt-2">
-            <strong>100 points</strong> per pair. No timer — fewer attempts is
+            <strong>100 points</strong> per pair. No timer. Fewer attempts is
             better.
           </p>
         </>
       }
-      whatPracticed="Linking shape names to their cues from memory — the fastest way to make corrections stick."
+      whatPracticed="Linking shape names to their cues from memory. The fastest way to make corrections stick."
       onExit={onExit}
     >
       {({ finish }) => <MemoryMatsPlay onFinish={finish} />}
@@ -203,7 +203,7 @@ function MemoryMatsPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
         })}
       </div>
       {allMatched && (
-        <p className="text-center text-sm text-white/50">All matched — wrapping up…</p>
+        <p className="text-center text-sm text-white/50">All matched. Wrapping up…</p>
       )}
     </div>
   )

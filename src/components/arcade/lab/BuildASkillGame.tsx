@@ -31,7 +31,7 @@ export function BuildASkillGame({ onExit }: { onExit: () => void }) {
           </p>
         </>
       }
-      whatPracticed="Seeing skills as ordered phases — the prerequisite thinking behind safe progressions."
+      whatPracticed="Seeing skills as ordered phases. The prerequisite thinking behind safe progressions."
       onExit={onExit}
     >
       {({ finish }) => <BuildASkillPlay onFinish={finish} />}
@@ -177,7 +177,7 @@ function BuildASkillPlay({ onFinish }: { onFinish: (r: LabGameResult) => void })
       {verdict === 'correct' && (
         <div className="flex flex-col gap-3">
           <p className="font-bold text-[var(--accent)]">
-            {attempts === 0 ? 'Correct — 100 points.' : 'Correct with help — 50 points.'}
+            {attempts === 0 ? 'Correct. 100 points.' : 'Correct with help. 50 points.'}
           </p>
           <div className="rounded-xl border border-white/10 bg-black/25 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/50">

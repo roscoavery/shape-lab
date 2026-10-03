@@ -31,21 +31,21 @@ export function ShapeDodgeGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="shape-dodge"
       title="Shape Dodge"
-      tagline="A wall drops — hit the shape before it closes."
+      tagline="A wall drops. Hit the shape before it closes."
       rules={
         <>
           <p>
             A wall shows a <strong>shaped opening</strong>. Tap <strong>I'm set</strong> when you're
             ready, then you have a <strong>{MATCH_SECONDS}-second window</strong> to be in the
-            shape. A partner taps <strong>Fit!</strong> if you're in it — {POINTS} points per wall.
+            shape. A partner taps <strong>Fit!</strong> if you're in it. {POINTS} points per wall.
           </p>
           <p className="mt-2">
-            Miss the window and it's just <strong>reset — no rush</strong>. Retry the wall, no
+            Miss the window and it's just <strong>reset, no rush</strong>. Retry the wall, no
             penalty. Generous and paced: speed never forces unsafe movement.
           </p>
         </>
       }
-      whatPracticed="Hitting a shape on demand — calm, quick positioning."
+      whatPracticed="Hitting a shape on demand. Calm, quick positioning."
       onExit={onExit}
     >
       {({ finish }) => <ShapeDodgePlay onFinish={finish} />}
@@ -127,7 +127,7 @@ function ShapeDodgePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
         <span className="font-mono font-bold tabular-nums text-[var(--text)]">{score} pts</span>
       </div>
 
-      {/* The wall: a card with a shaped opening — the figure is the target. */}
+      {/* The wall: a card with a shaped opening. The figure is the target. */}
       <div
         className={`rounded-2xl border-2 bg-black/40 p-4 transition ${
           stage === 'counting' ? 'border-[var(--accent)]' : 'border-white/15'
@@ -152,7 +152,7 @@ function ShapeDodgePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
           onClick={beginWindow}
           className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black active:scale-95"
         >
-          I'm set — drop the wall
+          I'm set. Drop the wall
         </button>
       )}
 
@@ -179,7 +179,7 @@ function ShapeDodgePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
 
       {stage === 'matched' && !last && (
         <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-3">
-          <p className="text-sm font-black text-[var(--text)]">Fit — {POINTS} points.</p>
+          <p className="text-sm font-black text-[var(--text)]">Fit. {POINTS} points.</p>
           <button
             type="button"
             onClick={next}
@@ -192,9 +192,9 @@ function ShapeDodgePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
 
       {stage === 'expired' && (
         <div className="rounded-xl border border-white/15 bg-black/30 p-3">
-          <p className="text-sm font-black text-[var(--text)]">Reset — no rush.</p>
+          <p className="text-sm font-black text-[var(--text)]">Reset. No rush.</p>
           <p className="mt-1 text-sm text-white/65">
-            The window closed without a confirmed fit. Take your time and try this wall again — no
+            The window closed without a confirmed fit. Take your time and try this wall again. No
             penalty.
           </p>
           <button

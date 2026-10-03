@@ -17,10 +17,10 @@ export function ShapeShifterGame({ onExit }: { onExit: () => void }) {
           <p className="font-semibold text-[var(--text)]">How it plays</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>Pick a sequence (or surprise me). The full order is shown up top.</li>
-            <li>Move through the positions one at a time — only the current step counts.</li>
+            <li>Move through the positions one at a time. Only the current step counts.</li>
             <li>
               <span className="font-semibold text-[var(--text)]">Partner confirm:</span> when you
-              match the shown shape, the partner taps "Matched — next". Honest self-report works
+              match the shown shape, the partner taps "Matched. Next". Honest self-report works
               too.
             </li>
             <li>
@@ -28,11 +28,11 @@ export function ShapeShifterGame({ onExit }: { onExit: () => void }) {
               scripted signals to test the game loop. Simulation earns no real practice credit.
             </li>
             <li>100 points per position, plus 100 bonus for finishing a sequence.</li>
-            <li>There is no camera scoring here — the partner is the judge.</li>
+            <li>There is no camera scoring here. The partner is the judge.</li>
           </ul>
         </>
       }
-      whatPracticed="Moving between shapes in order — control through transitions, not just positions."
+      whatPracticed="Moving between shapes in order. Control through transitions, not just positions."
       onExit={onExit}
     >
       {({ finish }) => <ShapeShifterPlay onFinish={finish} />}
@@ -158,7 +158,7 @@ function ShapeShifterPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }
           >
             <p className="text-sm font-bold text-white/60">{seq.name}</p>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
-              Coach supervised only — not in the rotation
+              Coach supervised only. Not in the rotation
             </p>
           </div>
         ))}
@@ -173,14 +173,14 @@ function ShapeShifterPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-          {current.name} — position {stepIdx + 1} of {current.shapes.length}
+          {current.name}: position {stepIdx + 1} of {current.shapes.length}
         </p>
         <p className="font-mono text-sm font-bold tabular-nums text-[var(--accent)]">
           {score} pts
         </p>
       </div>
 
-      {/* Full ordered sequence — context, not clickable */}
+      {/* Full ordered sequence. Context, not clickable */}
       <div className="flex items-center justify-center gap-3 rounded-xl bg-black/25 px-3 py-2">
         {current.shapes.map((p, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -206,7 +206,7 @@ function ShapeShifterPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }
         <div className="rounded-xl border border-red-400/40 bg-red-400/10 p-6 text-center">
           <p className="text-lg font-black text-red-200">Step into view</p>
           <p className="mt-1 text-sm text-red-200/70">
-            Tracking lost — get back in position for{' '}
+            Tracking lost. Get back in position for{' '}
             <span className="font-bold">{position.shapeName}</span>, then match it again.
           </p>
         </div>
@@ -219,7 +219,7 @@ function ShapeShifterPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }
           </p>
           {flag === 'bad' && (
             <p className="mt-2 text-xs font-semibold text-amber-200">
-              Not quite — check the cue and match the shape again.
+              Not quite. Check the cue and match the shape again.
             </p>
           )}
         </div>
@@ -231,7 +231,7 @@ function ShapeShifterPlay({ onFinish }: { onFinish: (r: LabGameResult) => void }
           onClick={advance}
           className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black"
         >
-          Matched — next
+          Matched. Next
         </button>
       ) : (
         <SimPanel onSignal={onSignal} />

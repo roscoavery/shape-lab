@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
  *
  * Honest modes only: "Partner confirm" (a coach/partner confirms what they see,
  * or the athlete self-reports) and "Simulation" (scripted signals for testing
- * the game loop — earns no real practice credit). There is deliberately no
+ * the game loop. It earns no real practice credit). There is deliberately no
  * camera scoring here yet; when real pose scoring lands it will be a third
  * mode with its own verified status.
  */
@@ -89,7 +89,7 @@ export function SimPanel({ onSignal }: { onSignal: (s: SimSignal) => void }) {
   return (
     <div className="rounded-xl border border-dashed border-white/20 bg-black/20 p-3">
       <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-        Simulation — coach testing only, no real credit
+        Simulation: coach testing only, no real credit
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button

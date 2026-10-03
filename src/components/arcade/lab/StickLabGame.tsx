@@ -17,30 +17,30 @@ export function StickLabGame({ onExit }: { onExit: () => void }) {
         <>
           <p>
             Pick a landing drill and take {ATTEMPTS} attempts. Land, freeze, then the partner
-            starts a {STABILITY_SECONDS}-second stability countdown. Hold the freeze — the clock
+            starts a {STABILITY_SECONDS}-second stability countdown. Hold the freeze. The clock
             is measuring stillness, nothing else.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
               When the countdown ends, the partner taps <strong>Stuck it</strong> (100 pts) or{' '}
-              <strong>Didn't stick</strong> (0 — "reset and try again", no shame).
+              <strong>Didn't stick</strong> (0, "reset and try again", no shame).
             </li>
             <li>
-              Shake it out between attempts. Low-impact drills only here — no flips, no height.
+              Shake it out between attempts. Low-impact drills only here. No flips, no height.
             </li>
             <li>
               <strong>
-                The game scores stillness after landing — it can't judge landing force or safety.
+                The game scores stillness after landing. It can't judge landing force or safety.
                 Coach's eyes do that.
               </strong>
             </li>
             <li>
-              Simulation mode is for testing the game loop only — it earns no real credit.
+              Simulation mode is for testing the game loop only. It earns no real credit.
             </li>
           </ul>
         </>
       }
-      whatPracticed="Freezing the landing — stillness is a skill."
+      whatPracticed="Freezing the landing. Stillness is a skill."
       onExit={onExit}
     >
       {({ finish }) => <StickLabPlay onFinish={finish} />}
@@ -90,8 +90,8 @@ function StickLabPlay({
       onFinish({
         score: finalScore,
         total: ATTEMPTS * POINTS_PER_STICK,
-        detail: `${finalScore / POINTS_PER_STICK} of ${ATTEMPTS} landings stuck — ${drill.name}${
-          mode === 'sim' ? ' (simulation — no real credit)' : ''
+        detail: `${finalScore / POINTS_PER_STICK} of ${ATTEMPTS} landings stuck: ${drill.name}${
+          mode === 'sim' ? ' (simulation, no real credit)' : ''
         }`,
       })
       return
@@ -155,7 +155,7 @@ function StickLabPlay({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
-          {drill.name} — attempt {Math.min(attemptIdx + 1, ATTEMPTS)} of {ATTEMPTS}
+          {drill.name}: attempt {Math.min(attemptIdx + 1, ATTEMPTS)} of {ATTEMPTS}
         </p>
         <p className="font-mono text-sm font-bold tabular-nums text-[var(--accent)]">
           {score} pts
@@ -166,7 +166,7 @@ function StickLabPlay({
         <div className="flex flex-col gap-3 rounded-xl bg-black/25 p-4">
           <p className="text-sm text-white/70">{drill.setup}</p>
           <p className="text-sm font-semibold text-[var(--text)]">
-            Land the drill and freeze — then start the {STABILITY_SECONDS}-second stillness check.
+            Land the drill and freeze. Then start the {STABILITY_SECONDS}-second stillness check.
           </p>
           <button
             type="button"
@@ -182,7 +182,7 @@ function StickLabPlay({
         <div className="flex flex-col gap-3">
           <BoutClock left={cd.left} urgentAt={1} />
           <p className="text-center text-sm text-white/60">
-            {simPaused ? 'Paused — step into view, then resume.' : 'Freeze… stay still.'}
+            {simPaused ? 'Paused. Step into view, then resume.' : 'Freeze… stay still.'}
           </p>
           {mode === 'sim' &&
             (simPaused ? (
@@ -205,7 +205,7 @@ function StickLabPlay({
       {phase === 'judging' && (
         <div className="flex flex-col gap-3">
           <p className="text-center text-sm font-semibold text-[var(--text)]">
-            {STABILITY_SECONDS} seconds up — did it stick?
+            {STABILITY_SECONDS} seconds up. Did it stick?
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -234,7 +234,7 @@ function StickLabPlay({
           <p className="text-sm font-semibold text-[var(--text)]">
             {results[results.length - 1] === 'stuck'
               ? 'Stuck. Nice freeze.'
-              : "Didn't stick — reset and try again."}
+              : "Didn't stick. Reset and try again."}
           </p>
           <p className="text-sm text-white/60">Shake it out. Next attempt when ready.</p>
           <button

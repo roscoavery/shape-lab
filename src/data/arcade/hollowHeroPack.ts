@@ -1,5 +1,5 @@
 /**
- * Hollow Hero presets — short bouts with real rests.
+ * Hollow Hero presets: short bouts with real rests.
  * Bounds: bouts 2–4, seconds 3–8. No endurance-to-failure mode exists.
  * Everything here is DRAFT content.
  */

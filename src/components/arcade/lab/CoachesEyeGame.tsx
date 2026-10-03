@@ -96,7 +96,7 @@ function CoachesEyePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
               }`}
             >
               {isRight
-                ? "That's the coach's call — 100 points."
+                ? "That's the coach's call. 100 points."
                 : 'Not the first priority this time.'}
             </p>
             <div className="rounded-xl bg-black/25 p-3">
@@ -134,14 +134,14 @@ export function CoachesEyeGame({ onExit }: { onExit: () => void }) {
         <>
           <p className="font-semibold text-white/90">How to play</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
-            <li>Read the scene — a real gym moment.</li>
+            <li>Read the scene. A real gym moment.</li>
             <li>Pick the ONE thing you would focus on first. 100 points if it matches the coach's call.</li>
             <li>Every scenario has one priority answer; the rationale explains why it comes first.</li>
-            <li>Five scenarios per round. No physical activity needed — play it anywhere.</li>
+            <li>Five scenarios per round. No physical activity needed. Play it anywhere.</li>
           </ul>
         </>
       }
-      whatPracticed="Prioritizing corrections — seeing what matters first, the way a coach does."
+      whatPracticed="Prioritizing corrections. Seeing what matters first, the way a coach does."
       onExit={onExit}
     >
       {({ finish }) => <CoachesEyePlay onFinish={finish} />}

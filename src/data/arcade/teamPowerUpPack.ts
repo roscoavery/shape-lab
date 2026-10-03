@@ -1,5 +1,5 @@
 /**
- * Team Power Up pack — 6 circuits that alternate knowledge tasks (real
+ * Team Power Up pack: 6 circuits that alternate knowledge tasks (real
  * items from the cue-quest and coach's-eye packs, looked up at runtime)
  * with low-risk move tasks (short floor/standing shape holds).
  * Draft content.
@@ -42,7 +42,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-hh-2',
         kind: 'move',
-        title: 'Hold Hollow (arms down) — 5 seconds',
+        title: 'Hold Hollow (arms down): 5 seconds',
         detail: 'On your back, low back pressed flat, feet just off the floor. Breathe.',
         source: { shapeName: 'Hollow (arms down)', seconds: 5 },
       },
@@ -56,8 +56,8 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-hh-4',
         kind: 'move',
-        title: 'Hold C shape — 5 seconds',
-        detail: 'Hips under, chest rounded — round the back, do not arch.',
+        title: 'Hold C shape: 5 seconds',
+        detail: 'Hips under, chest rounded. Round the back, do not arch.',
         source: { shapeName: 'C shape', seconds: 5 },
       },
       {
@@ -83,8 +83,8 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-aa-2',
         kind: 'move',
-        title: 'Hold Tight arch — 5 seconds',
-        detail: 'On your back, tight arch — long and lifted, not a Superman.',
+        title: 'Hold Tight arch: 5 seconds',
+        detail: 'On your back, tight arch. Long and lifted, not a Superman.',
         source: { shapeName: 'Tight arch', seconds: 5 },
       },
       {
@@ -97,7 +97,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-aa-4',
         kind: 'move',
-        title: 'Hold Superman — 5 seconds',
+        title: 'Hold Superman: 5 seconds',
         detail: 'On your stomach, chin up, straight arms behind the ears.',
         source: { shapeName: 'Superman', seconds: 5 },
       },
@@ -124,8 +124,8 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ll-2',
         kind: 'move',
-        title: 'Hold Candlestick — 5 seconds',
-        detail: 'On the shoulders, open hips, ribs in — stacked like a handstand.',
+        title: 'Hold Candlestick: 5 seconds',
+        detail: 'On the shoulders, open hips, ribs in. Stacked like a handstand.',
         source: { shapeName: 'Candlestick', seconds: 5 },
       },
       {
@@ -138,7 +138,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ll-4',
         kind: 'move',
-        title: 'Hold Front support — 10 seconds',
+        title: 'Hold Front support: 10 seconds',
         detail: 'Straight line head to heels, ribs in. Knees down is fine.',
         source: { shapeName: 'Front plank', seconds: 10 },
       },
@@ -152,7 +152,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ll-6',
         kind: 'move',
-        title: 'Stand in Zombie shape — 5 seconds',
+        title: 'Stand in Zombie shape: 5 seconds',
         detail: 'Standing hollow: armpits in front of toes, ribs in.',
         source: { shapeName: 'Zombie', seconds: 5 },
       },
@@ -172,7 +172,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-sb-2',
         kind: 'move',
-        title: 'Lunge hold — 5 seconds each side',
+        title: 'Lunge hold: 5 seconds each side',
         detail: 'Tall chest, front knee over ankle. Switch sides when ready.',
         source: { shapeName: 'Lunge', seconds: 10 },
       },
@@ -186,8 +186,8 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-sb-4',
         kind: 'move',
-        title: 'Hold Side plank — 5 seconds each side',
-        detail: 'Be a pencil — straightest line you can squeeze. Knees down is fine.',
+        title: 'Hold Side plank: 5 seconds each side',
+        detail: 'Be a pencil. Straightest line you can squeeze. Knees down is fine.',
         source: { shapeName: 'Side plank', seconds: 10 },
       },
       {
@@ -213,7 +213,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-tt-2',
         kind: 'move',
-        title: 'Hold Front support — 10 seconds',
+        title: 'Hold Front support: 10 seconds',
         detail: 'Blocking strength starts here: straight arms, ribs in, hold the line.',
         source: { shapeName: 'Front plank', seconds: 10 },
       },
@@ -227,7 +227,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-tt-4',
         kind: 'move',
-        title: 'Hold Hollow (arms down) — 5 seconds',
+        title: 'Hold Hollow (arms down): 5 seconds',
         detail: 'Low back flat, feet inch off the ground. This is the shape you block through.',
         source: { shapeName: 'Hollow (arms down)', seconds: 5 },
       },
@@ -247,7 +247,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ff-2',
         kind: 'move',
-        title: 'Hold Tucked candle — 5 seconds',
+        title: 'Hold Tucked candle: 5 seconds',
         detail: 'On the shoulders, knees tucked tight to the chest.',
         source: { shapeName: 'Tucked candle', seconds: 5 },
       },
@@ -261,7 +261,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ff-4',
         kind: 'move',
-        title: 'Hold Superman — 5 seconds',
+        title: 'Hold Superman: 5 seconds',
         detail: 'Chin up, arms behind the ears. Finish long.',
         source: { shapeName: 'Superman', seconds: 5 },
       },
@@ -275,7 +275,7 @@ export const TEAM_POWER_UP_CIRCUITS: PowerUpCircuit[] = [
       {
         id: 'tp-ff-6',
         kind: 'move',
-        title: 'Hold Hollow (arms down) — 5 seconds',
+        title: 'Hold Hollow (arms down): 5 seconds',
         detail: 'Last one: low back flat, breathe, hold the shape.',
         source: { shapeName: 'Hollow (arms down)', seconds: 5 },
       },

@@ -52,7 +52,7 @@ export function TwistDetectiveGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="twist-detective"
       title="Twist Detective"
-      tagline="Track which way she faces — from any viewpoint."
+      tagline="Track which way she faces. From any viewpoint."
       rules={
         <>
           <p>
@@ -62,15 +62,15 @@ export function TwistDetectiveGame({ onExit }: { onExit: () => void }) {
           <p className="mt-2">
             Use the wrist dots: <strong className="text-[#60a5fa]">blue = her left</strong>,{' '}
             <strong className="text-[#4ade80]">green = her right</strong>. Her left and right never
-            change — the camera does.
+            change. The camera does.
           </p>
           <p className="mt-2">
-            <strong>100 points</strong> per correct answer. Orientation puzzles only — this doesn't
+            <strong>100 points</strong> per correct answer. Orientation puzzles only. This doesn't
             teach you how to initiate a twist in the air.
           </p>
         </>
       }
-      whatPracticed="Tracking orientation and twist direction from any viewpoint — the mental model behind clean twisting."
+      whatPracticed="Tracking orientation and twist direction from any viewpoint. The mental model behind clean twisting."
       onExit={onExit}
     >
       {({ finish }) => <TwistDetectivePlay onFinish={finish} />}
@@ -193,8 +193,8 @@ function TwistDetectivePlay({ onFinish }: { onFinish: (r: LabGameResult) => void
         >
           <p className="text-sm font-black text-[var(--text)]">
             {picked === round.answerIdx
-              ? 'Correct — 100 points.'
-              : `Not quite — the answer was ${round.options[round.answerIdx]}.`}
+              ? 'Correct. 100 points.'
+              : `Not quite. The answer was ${round.options[round.answerIdx]}.`}
           </p>
           <p className="mt-1 text-sm text-white/70">{round.puzzle.explanation}</p>
           <button

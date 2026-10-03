@@ -1,5 +1,5 @@
 /**
- * Shape Match targets — low-risk floor/standing shapes only.
+ * Shape Match targets: low-risk floor/standing shapes only.
  * Cues are verbatim from Coach Ryan's shape tips (shape-tips.json).
  * Draft content.
  */
@@ -42,7 +42,7 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeName: 'Front plank',
     cues: [
       'Elbows under the shoulders.',
-      'Straight line head to heels — no sag, no pike.',
+      'Straight line head to heels. No sag, no pike.',
       'Squeeze the glutes and brace the core.',
     ],
     pose: { arms: 'down', knees: 'straight', back: 'flat', head: 'neutral', feet: 'together' },
@@ -64,7 +64,7 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeName: 'Tuck',
     cues: [
       'From an open-shoulder pike: bend the knees and pull the feet in.',
-      'Flex the feet — toes to the shins, not pointed.',
+      'Flex the feet. Toes to the shins, not pointed.',
       'Keep reaching. Arms behind the ears, shoulders open.',
     ],
     pose: { arms: 'up', knees: 'bent', back: 'hollow', head: 'neutral', feet: 'together' },
@@ -74,7 +74,7 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeId: 'c_shape',
     shapeName: 'C shape',
     cues: [
-      'Hips under, chest hollow — round the back, do not arch.',
+      'Hips under, chest hollow. Round the back, do not arch.',
       'Arms reach forward (not by the ears). Elbows straight.',
       'This C plus one medium step forward is a mountain climber.',
     ],
@@ -97,8 +97,8 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeName: 'Lever',
     cues: [
       'Tilt the chest toward parallel with the floor.',
-      'Open shoulders as far as you can — slightly closed does not ruin it.',
-      'Slight bend in the front knee — not locked, not sitting.',
+      'Open shoulders as far as you can. Slightly closed does not ruin it.',
+      'Slight bend in the front knee. Not locked, not sitting.',
     ],
     pose: { arms: 't', knees: 'straight', back: 'flat', head: 'up', feet: 'apart' },
   },
@@ -107,7 +107,7 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeId: 'candlestick',
     shapeName: 'Candlestick',
     cues: [
-      'Open hips, ribs in — same stacked body as a good handstand, just on the shoulders.',
+      'Open hips, ribs in. Same stacked body as a good handstand, just on the shoulders.',
       'Straight knees, pointed toes.',
       'SIDE or 3/4 so the vertical line is obvious.',
     ],
@@ -136,7 +136,7 @@ export const SHAPE_MATCH_PACK: ShapeMatchTarget[] = [
     shapeId: 'pike_zombie',
     shapeName: 'Pike',
     cues: [
-      'Sit in a pike — do not fold over the legs.',
+      'Sit in a pike. Do not fold over the legs.',
       'Toes pointed. Straight knees. Legs glued.',
       'Torso upright and rounded hollow. Shoulders shrug.',
     ],

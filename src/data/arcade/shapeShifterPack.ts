@@ -1,5 +1,5 @@
 /**
- * Shape Shifter sequences — moving between shapes in order.
+ * Shape Shifter sequences: moving between shapes in order.
  * Floor/standing, safe transitions only. The handstand-through sequence is
  * flagged supervised: true and is excluded from the playable rotation.
  * Cues are verbatim from Coach Ryan's shape tips (shape-tips.json).
@@ -67,12 +67,12 @@ export const SHAPE_SHIFTER_SEQUENCES: ShapeShifterSequence[] = [
       {
         shapeName: 'Front support',
         pose: FRONT_SUPPORT,
-        cue: 'Straight line head to heels — no sag, no pike.',
+        cue: 'Straight line head to heels. No sag, no pike.',
       },
       {
         shapeName: 'Mad cat',
         pose: MAD_CAT,
-        cue: 'Hips under, chest hollow — round the back, do not arch.',
+        cue: 'Hips under, chest hollow. Round the back, do not arch.',
       },
       {
         shapeName: 'Front support',
@@ -119,7 +119,7 @@ export const SHAPE_SHIFTER_SEQUENCES: ShapeShifterSequence[] = [
       {
         shapeName: 'Pike',
         pose: PIKE,
-        cue: 'Sit in a pike — do not fold over the legs.',
+        cue: 'Sit in a pike. Do not fold over the legs.',
       },
     ],
   },

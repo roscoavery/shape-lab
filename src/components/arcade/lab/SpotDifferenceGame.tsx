@@ -23,12 +23,12 @@ export function SpotDifferenceGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="spot-difference"
       title="Spot the Difference"
-      tagline="Two figures, one difference — which one is stronger?"
+      tagline="Two figures, one difference. Which one is stronger?"
       rules={
         <>
           <p>
             You get <strong>{ROUNDS} pairs</strong> per round. Study both figures and tap the one
-            that answers the prompt — or tap <strong>Both fine</strong> if neither is wrong.
+            that answers the prompt, or tap <strong>Both fine</strong> if neither is wrong.
           </p>
           <p className="mt-2">
             <strong>100 points</strong> for a correct first tap. Miss once and you get a hint, then
@@ -36,7 +36,7 @@ export function SpotDifferenceGame({ onExit }: { onExit: () => void }) {
           </p>
         </>
       }
-      whatPracticed="Reading body positions the way a coach does — seeing what actually matters in a shape."
+      whatPracticed="Reading body positions the way a coach does. Seeing what actually matters in a shape."
       onExit={onExit}
     >
       {({ finish }) => <SpotDifferencePlay onFinish={finish} />}
@@ -128,7 +128,7 @@ function SpotDifferencePlay({ onFinish }: { onFinish: (r: LabGameResult) => void
 
       {attempts > 0 && !resolved && (
         <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-200">Hint — one more try for 50</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-200">Hint: one more try for 50</p>
           <p className="mt-1 text-sm text-white/80">{pair.difference}</p>
         </div>
       )}
@@ -144,11 +144,11 @@ function SpotDifferencePlay({ onFinish }: { onFinish: (r: LabGameResult) => void
           <p className="text-sm font-black text-[var(--text)]">
             {resolved === 'correct'
               ? attempts === 0
-                ? 'Nailed it — 100 points.'
-                : 'Got it on the retry — 50 points.'
+                ? 'Nailed it. 100 points.'
+                : 'Got it on the retry. 50 points.'
               : pair.correctSide === 'both'
-                ? 'Both were fine — 0 points this time.'
-                : `The answer was Figure ${pair.correctSide} — 0 points this time.`}
+                ? 'Both were fine. 0 points this time.'
+                : `The answer was Figure ${pair.correctSide}. 0 points this time.`}
           </p>
           <p className="mt-1 text-sm text-white/70">{pair.why}</p>
           <button

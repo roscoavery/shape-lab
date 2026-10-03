@@ -1,5 +1,5 @@
 /**
- * Sequence Memory pools — each pool is 6 real shape names forming a
+ * Sequence Memory pools: each pool is 6 real shape names forming a
  * sensible floor/standing flow. Rounds use the first N shapes, so the
  * prefix of every pool must itself be a sensible order.
  */

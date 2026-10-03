@@ -25,7 +25,7 @@ export function CueQuestGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="cue-quest"
       title="Cue Quest"
-      tagline="Read the coach's cue — name the shape it belongs to."
+      tagline="Read the coach's cue. Name the shape it belongs to."
       rules={
         <>
           <p>
@@ -38,7 +38,7 @@ export function CueQuestGame({ onExit }: { onExit: () => void }) {
           </p>
         </>
       }
-      whatPracticed="Connecting coaching cues to the shapes and body positions they fix — the language coaches use on the floor."
+      whatPracticed="Connecting coaching cues to the shapes and body positions they fix. The language coaches use on the floor."
       onExit={onExit}
     >
       {({ finish }) => <CueQuestPlay onFinish={finish} />}

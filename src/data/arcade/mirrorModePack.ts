@@ -19,7 +19,7 @@ const STAND: FigurePose = {
 
 /**
  * Draft prompts for Mirror Mode. Isolated positions first, then combined.
- * All standing and low-risk. The figure is a rough reference — the tip
+ * All standing and low-risk. The figure is a rough reference. The tip
  * names the detail that makes the copy exact.
  */
 export const MIRROR_MODE_PROMPTS: MirrorPrompt[] = [
@@ -33,7 +33,7 @@ export const MIRROR_MODE_PROMPTS: MirrorPrompt[] = [
     id: 'mm-arms-up',
     label: 'Arms overhead',
     pose: { ...STAND, arms: 'up' },
-    tip: 'Tall through the fingertips, ribs stacked over your hips — no arching.',
+    tip: 'Tall through the fingertips, ribs stacked over your hips. No arching.',
   },
   {
     id: 'mm-lunge',
@@ -57,18 +57,18 @@ export const MIRROR_MODE_PROMPTS: MirrorPrompt[] = [
     id: 'mm-wide-up',
     label: 'Wide stand, arms up',
     pose: { ...STAND, arms: 'up', feet: 'apart' },
-    tip: 'Feet wide, arms tall — big and long in both directions at once.',
+    tip: 'Feet wide, arms tall. Big and long in both directions at once.',
   },
   {
     id: 'mm-hollow-stand',
     label: 'Hollow stand',
     pose: { ...STAND, arms: 'up', back: 'hollow' },
-    tip: 'Ribs down, pelvis tucked, arms overhead — squeeze the whole line.',
+    tip: 'Ribs down, pelvis tucked, arms overhead. Squeeze the whole line.',
   },
   {
     id: 'mm-t-hollow',
     label: 'T with a hollow body',
     pose: { ...STAND, arms: 't', back: 'hollow' },
-    tip: 'T arms plus a hollow body — the squeeze is what makes it strong.',
+    tip: 'T arms plus a hollow body. The squeeze is what makes it strong.',
   },
 ]

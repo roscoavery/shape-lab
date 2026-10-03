@@ -12,11 +12,11 @@ export function TeamPowerUpGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="team-power-up"
       title="Team Power Up"
-      tagline="One robot, one team — every task done well charges it up."
+      tagline="One robot, one team. Every task done well charges it up."
       rules={
         <>
           <p>
-            Pick a circuit of 4–6 tasks that alternate thinking and moving, then take turns — one
+            Pick a circuit of 4–6 tasks that alternate thinking and moving, then take turns. One
             active player at a time, rotating through the team.
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -26,20 +26,20 @@ export function TeamPowerUpGame({ onExit }: { onExit: () => void }) {
             </li>
             <li>
               <strong>Move tasks:</strong> short, low-risk shape holds with a timer. A partner
-              confirms it — "Done" banks the energy, "Not quite" just means try again.
+              confirms it. "Done" banks the energy, "Not quite" just means try again.
             </li>
             <li>
-              <strong>Every completed task = 25 energy</strong> for the shared robot — equal for
+              <strong>Every completed task = 25 energy</strong> for the shared robot. Equal for
               everyone, so nobody can dominate. Skip any task, no penalty.
             </li>
           </ul>
           <p className="mt-2 font-semibold text-[var(--text)]">
-            Score completion, not speed or max effort. Rest whenever you need — it never penalizes
+            Score completion, not speed or max effort. Rest whenever you need. It never penalizes
             the team.
           </p>
         </>
       }
-      whatPracticed="Powering through fundamentals together — every task done well moves the whole team."
+      whatPracticed="Powering through fundamentals together. Every task done well moves the whole team."
       onExit={onExit}
     >
       {({ finish }) => <TeamPowerUpPlay onFinish={finish} />}
@@ -80,7 +80,7 @@ function TeamPowerUpPlay({
       onFinish({
         score: finalTotal,
         total: maxEnergy,
-        detail: `${finalTotal} energy banked by ${players.length} teammates — no rankings, all contributors`,
+        detail: `${finalTotal} energy banked by ${players.length} teammates. No rankings, all contributors`,
       })
       return
     }
@@ -114,7 +114,7 @@ function TeamPowerUpPlay({
                 key={i}
                 value={n}
                 onChange={(e) => setNames(names.map((x, j) => (j === i ? e.target.value : x)))}
-                placeholder={`Teammate ${i + 1} — name, nickname, or color`}
+                placeholder={`Teammate ${i + 1}: name, nickname, or color`}
                 className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold"
               />
             ))}
@@ -129,7 +129,7 @@ function TeamPowerUpPlay({
           >
             {TEAM_POWER_UP_CIRCUITS.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} — {c.tasks.length} tasks
+                {c.name}: {c.tasks.length} tasks
               </option>
             ))}
           </select>
@@ -203,7 +203,7 @@ function RobotBar({ pct }: { pct: number }) {
 function SkipButton({ onSkip }: { onSkip: () => void }) {
   return (
     <button type="button" onClick={onSkip} className="text-xs font-semibold text-white/40 underline underline-offset-2">
-      Skip — no penalty
+      Skip. No penalty
     </button>
   )
 }
@@ -289,7 +289,7 @@ function EyeCard({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 p-4">
       <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-        {title} — {scenario.title}
+        {title}: {scenario.title}
       </p>
       <p className="text-sm leading-relaxed text-white/80">{scenario.context}</p>
       <p className="text-sm font-semibold">{scenario.question}</p>
@@ -353,7 +353,7 @@ function MoveCard({ task, onDone, onSkip }: { task: PowerUpTask & { kind: 'move'
 
       {phase === 'ready' && (
         <div className="flex flex-col gap-3">
-          {retried && <p className="text-sm text-white/55">No stress — catch your breath and go again when ready.</p>}
+          {retried && <p className="text-sm text-white/55">No stress. Catch your breath and go again when ready.</p>}
           <button type="button" onClick={begin} className="rounded-2xl bg-[var(--accent)] px-6 py-3 text-base font-black text-black">
             Start {seconds}-second hold
           </button>
@@ -364,7 +364,7 @@ function MoveCard({ task, onDone, onSkip }: { task: PowerUpTask & { kind: 'move'
       {phase === 'holding' && (
         <div className="flex flex-col items-center gap-3 py-2">
           <BoutClock left={left} urgentAt={3} />
-          <p className="text-xs text-white/50">Hold the shape — {task.source.shapeName}</p>
+          <p className="text-xs text-white/50">Hold the shape: {task.source.shapeName}</p>
         </div>
       )}
 
@@ -372,7 +372,7 @@ function MoveCard({ task, onDone, onSkip }: { task: PowerUpTask & { kind: 'move'
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-white/75">How did the hold look?</p>
           <button type="button" onClick={onDone} className="rounded-2xl bg-[var(--accent)] px-6 py-3 text-base font-black text-black">
-            Done — partner confirms (+{ENERGY_PER_TASK})
+            Done. Partner confirms (+{ENERGY_PER_TASK})
           </button>
           <button
             type="button"
@@ -382,7 +382,7 @@ function MoveCard({ task, onDone, onSkip }: { task: PowerUpTask & { kind: 'move'
             }}
             className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white/75"
           >
-            Not quite — try again
+            Not quite. Try again
           </button>
           <SkipButton onSkip={onSkip} />
         </div>

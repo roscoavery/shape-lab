@@ -29,16 +29,16 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, back: 'hollow', knees: 'bent' },
     correctSide: 'A',
     difference: "Figure B's knees are bent.",
-    why: 'Bent knees shorten the lever and dump the hollow — straight legs keep the tension long.',
+    why: 'Bent knees shorten the lever and dump the hollow. Straight legs keep the tension long.',
   },
   {
     id: 'sd-hollow-arch',
-    prompt: 'Which figure is in a hollow — not an arch?',
+    prompt: 'Which figure is in a hollow, not an arch?',
     poseA: { ...BASE, back: 'hollow' },
     poseB: { ...BASE, back: 'arch' },
     correctSide: 'A',
     difference: "Figure B's back is arched.",
-    why: 'An arch breaks the hollow line — ribs down and pelvis tucked is what keeps it hollow.',
+    why: 'An arch breaks the hollow line. Ribs down and pelvis tucked is what keeps it hollow.',
   },
   {
     id: 'sd-finish-arms',
@@ -47,7 +47,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'down' },
     correctSide: 'A',
     difference: "Figure B's arms are down at the sides.",
-    why: 'Arms up finishes the line through the fingertips — dropping them shortens the whole shape.',
+    why: 'Arms up finishes the line through the fingertips. Dropping them shortens the whole shape.',
   },
   {
     id: 'sd-feet-line',
@@ -56,7 +56,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, feet: 'apart' },
     correctSide: 'A',
     difference: "Figure B's feet are apart.",
-    why: 'Feet together keeps one clean line — apart splits the tension and reads unfinished.',
+    why: 'Feet together keeps one clean line. Apart splits the tension and reads unfinished.',
   },
   {
     id: 'sd-tuck-knees',
@@ -65,7 +65,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'front', back: 'hollow' },
     correctSide: 'A',
     difference: "Figure B's legs are straight.",
-    why: 'A tuck needs the knees bent and drawn in — straight legs is a different shape entirely.',
+    why: 'A tuck needs the knees bent and drawn in. Straight legs is a different shape entirely.',
   },
   {
     id: 'sd-arch-head',
@@ -83,7 +83,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'down' },
     correctSide: 'A',
     difference: "Figure B's arms are down at the sides.",
-    why: 'A T needs the arms out at shoulder height — down at the sides is not a T at all.',
+    why: 'A T needs the arms out at shoulder height. Down at the sides is not a T at all.',
   },
   {
     id: 'sd-stand-knees',
@@ -92,7 +92,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'down', knees: 'bent' },
     correctSide: 'A',
     difference: "Figure B's knees are bent.",
-    why: 'Soft knees in a standing shape leak tension — straight legs stack the joints.',
+    why: 'Soft knees in a standing shape leak tension. Straight legs stack the joints.',
   },
   {
     id: 'sd-hollow-arms',
@@ -101,7 +101,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, back: 'hollow', arms: 'front' },
     correctSide: 'A',
     difference: "Figure B's arms reach forward instead of up.",
-    why: 'Arms overhead complete the hollow line — reaching forward shortens it.',
+    why: 'Arms overhead complete the hollow line. Reaching forward shortens it.',
   },
   {
     id: 'sd-straight-arch',
@@ -110,7 +110,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, back: 'arch' },
     correctSide: 'A',
     difference: "Figure B's back is arched.",
-    why: 'An arch bends the line — a straight shape needs the ribs stacked over the hips.',
+    why: 'An arch bends the line. A straight shape needs the ribs stacked over the hips.',
   },
   {
     id: 'sd-neutral-head',
@@ -119,7 +119,7 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'down', head: 'up' },
     correctSide: 'both',
     difference: "Figure B's head is lifted.",
-    why: 'In a neutral stand this is just a style choice — not every visible difference is an error. Context decides what matters.',
+    why: 'In a neutral stand this is just a style choice. Not every visible difference is an error. Context decides what matters.',
   },
   {
     id: 'sd-neutral-feet',
@@ -128,6 +128,6 @@ export const SPOT_DIFFERENCE_PAIRS: SpotDifferencePair[] = [
     poseB: { ...BASE, arms: 'down', feet: 'apart' },
     correctSide: 'both',
     difference: "Figure B's feet are apart.",
-    why: 'A relaxed stance is fine either way — it only becomes an error when the shape is being judged, like a finish position.',
+    why: 'A relaxed stance is fine either way. It only becomes an error when the shape is being judged, like a finish position.',
   },
 ]

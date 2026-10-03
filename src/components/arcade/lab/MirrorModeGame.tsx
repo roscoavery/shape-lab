@@ -25,22 +25,22 @@ export function MirrorModeGame({ onExit }: { onExit: () => void }) {
     <LabGameShell
       gameId="mirror-mode"
       title="Mirror Mode"
-      tagline="Copy the avatar's position — exactly."
+      tagline="Copy the avatar's position. Exactly."
       rules={
         <>
           <p>
             The avatar shows you <strong>{PROMPTS_PER_ROUND} positions</strong> per round. Get into
-            the position, hold it, and confirm the match — <strong>{POINTS} points</strong> each.
+            the position, hold it, and confirm the match. <strong>{POINTS} points</strong> each.
           </p>
           <p className="mt-2">
             Pick your convention first: <strong>mirror the avatar</strong> (like a mirror image) or{' '}
             <strong>same side</strong> (her right is your right). The blue dot is her left wrist,
             the green dot is her right.
           </p>
-          <p className="mt-2">No rushing, no camera scoring — precision is the whole game.</p>
+          <p className="mt-2">No rushing, no camera scoring. Precision is the whole game.</p>
         </>
       }
-      whatPracticed="Copying positions precisely — the observation skill behind fast learning."
+      whatPracticed="Copying positions precisely. The observation skill behind fast learning."
       onExit={onExit}
     >
       {({ finish }) => <MirrorModePlay onFinish={finish} />}
@@ -119,8 +119,8 @@ function MirrorModePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
           </div>
           <p className="mt-1.5 text-xs text-white/45">
             {convention === 'mirror'
-              ? 'Copy as a mirror — her right (green dot) is on your left.'
-              : 'Copy same-side — her right (green dot) is on your right.'}
+              ? 'Copy as a mirror. Her right (green dot) is on your left.'
+              : 'Copy same-side. Her right (green dot) is on your right.'}
           </p>
         </div>
         <button
@@ -128,7 +128,7 @@ function MirrorModePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
           onClick={() => setBegun(true)}
           className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black"
         >
-          Start copying — {PROMPTS_PER_ROUND} positions
+          Start copying: {PROMPTS_PER_ROUND} positions
         </button>
       </div>
     )
@@ -159,7 +159,7 @@ function MirrorModePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
         }`}
       >
         <p className="text-xs font-bold uppercase tracking-wider text-white/45">
-          {tipReplay ? 'Look again — the detail' : 'The detail'}
+          {tipReplay ? 'Look again. The detail' : 'The detail'}
         </p>
         <p className="mt-1 text-sm leading-relaxed text-white/85">{prompt.tip}</p>
       </div>
@@ -182,7 +182,7 @@ function MirrorModePlay({ onFinish }: { onFinish: (r: LabGameResult) => void }) 
           onClick={advance}
           className="rounded-2xl bg-[var(--accent)] px-6 py-4 text-lg font-black text-black active:scale-95"
         >
-          Matched — next
+          Matched. Next
         </button>
       ) : (
         <SimPanel onSignal={onSignal} />
