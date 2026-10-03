@@ -9,10 +9,18 @@ export type TourStep = {
   tapThrough?: boolean
   /** When true, the video player's chrome (controls) is forced open for this step. */
   needsChrome?: boolean
+  /**
+   * When true, the spotlight ring doesn't capture touches — the user can
+   * interact with the underlying UI (e.g. try the hold-drag gesture) and
+   * advances via the card's Next button.
+   */
+  passthrough?: boolean
 }
 
 /** Event fired when the tour needs the video chrome forced open/closed. */
 export const TOUR_CHROME_EVENT = 'sl-tour-chrome'
+/** Global flag — true while any tour step needs video chrome open. */
+export const tourChromeNeeded = { current: false }
 
 const TOUR_KEY = 'sl-hw-tour-v1'
 
@@ -113,8 +121,10 @@ export function GlowTour({
   // chrome-dependent target and the tour stalls on "Getting the tour ready…".
   useEffect(() => {
     const need = !!step?.needsChrome
+    tourChromeNeeded.current = need
     window.dispatchEvent(new CustomEvent(TOUR_CHROME_EVENT, { detail: need }))
     return () => {
+      tourChromeNeeded.current = false
       window.dispatchEvent(new CustomEvent(TOUR_CHROME_EVENT, { detail: false }))
     }
   }, [step])
@@ -173,19 +183,19 @@ export function GlowTour({
         <>
           {/* Dim everything except the spotlight box */}
           <div
-            className="absolute left-0 right-0 top-0 bg-black/70"
+            className={`absolute left-0 right-0 top-0 bg-black/70 ${step.passthrough ? 'pointer-events-none' : ''}`}
             style={{ height: r.top }}
           />
           <div
-            className="absolute left-0 right-0 bg-black/70"
+            className={`absolute left-0 right-0 bg-black/70 ${step.passthrough ? 'pointer-events-none' : ''}`}
             style={{ top: r.bottom, bottom: 0 }}
           />
           <div
-            className="absolute bg-black/70"
+            className={`absolute bg-black/70 ${step.passthrough ? 'pointer-events-none' : ''}`}
             style={{ top: r.top, bottom: window.innerHeight - r.bottom, left: 0, width: r.left }}
           />
           <div
-            className="absolute bg-black/70"
+            className={`absolute bg-black/70 ${step.passthrough ? 'pointer-events-none' : ''}`}
             style={{
               top: r.top,
               bottom: window.innerHeight - r.bottom,
@@ -193,11 +203,13 @@ export function GlowTour({
               right: 0,
             }}
           />
-          {/* The glow ring — also the tap target that advances the tour */}
+          {/* The glow ring — also the tap target that advances the tour.
+              In passthrough mode it doesn't capture touches, so the user can
+              interact with the highlighted UI (e.g. try the hold-drag gesture). */}
           <div
-            role="button"
-            aria-label="Continue the guided tour"
-            onClick={(e) => {
+            role={step.passthrough ? undefined : 'button'}
+            aria-label={step.passthrough ? undefined : 'Continue the guided tour'}
+            onClick={step.passthrough ? undefined : (e) => {
               if (step.tapThrough) {
                 // Let the underlying control fire too (e.g. opening fullscreen):
                 // click it programmatically since the ring sits above it.
@@ -209,7 +221,7 @@ export function GlowTour({
               }
               advance()
             }}
-            className="absolute cursor-pointer rounded-2xl"
+            className={`absolute rounded-2xl ${step.passthrough ? 'pointer-events-none' : 'cursor-pointer'}`}
             style={{
               top: r.top,
               left: r.left,

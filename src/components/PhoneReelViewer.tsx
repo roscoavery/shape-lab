@@ -17,7 +17,7 @@ import type { OrganizeEditor } from '../lib/organizeLibrary'
 import { prefetchNeighborClips } from '../lib/igCache'
 import { postedByFromUrl } from '../lib/socialUrls'
 import { useGymLibrary } from '../lib/gymLibrary'
-import { TOUR_CHROME_EVENT } from './homework/GlowTour'
+import { TOUR_CHROME_EVENT, tourChromeNeeded } from './homework/GlowTour'
 
 export type PhoneReelClip = {
   id: string
@@ -101,9 +101,11 @@ const ReelSection = memo(function ReelSection({
   useEffect(() => {
     const onTourChrome = (e: Event) => setChromePinned(!!(e as CustomEvent).detail)
     window.addEventListener(TOUR_CHROME_EVENT, onTourChrome)
+    // Catch the case where the event fired before this mounted.
+    if (tourChromeNeeded.current) setChromePinned(true)
     return () => window.removeEventListener(TOUR_CHROME_EVENT, onTourChrome)
   }, [])
-  const chromeOpen = chrome || chromePinned
+  const chromeOpen = chrome || chromePinned || tourChromeNeeded.current
   const clipForCard = useMemo(() => ({ ...clip, postedBy: handle || clip.postedBy }), [clip, handle])
   return (
     <section
