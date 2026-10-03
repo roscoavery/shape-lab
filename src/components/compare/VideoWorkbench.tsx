@@ -59,6 +59,8 @@ type Props = {
   onToggleChrome?: () => void
   /** Tapping the video itself toggles the chrome; markup tools hide with it. Used by fullscreen reels. */
   tapTogglesChrome?: boolean
+  /** Start with sound on. The opener tap counts as interaction, so unmuted playback is allowed. */
+  startUnmuted?: boolean
   /** Two-finger pinch-zoom on phones (Replay Last). */
   pinchZoom?: boolean
   /** Scrub window currently looping — used to save that exact clip to Photos. */
@@ -123,6 +125,7 @@ function VideoWorkbenchInner({
   chromeOpen: controlledChromeOpen,
   onToggleChrome: onToggleChromeProp,
   tapTogglesChrome = false,
+  startUnmuted = false,
   pinchZoom = false,
   onWindowChange,
   overlayActions,
@@ -163,6 +166,12 @@ function VideoWorkbenchInner({
   const [autoFit, setAutoFit] = useState<'cover' | 'contain'>(objectFit)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [muted, setMuted] = useState(!startUnmuted)
+  // Keep the video element's muted flag in sync with state.
+  useEffect(() => {
+    const v = videoRef.current
+    if (v) v.muted = muted
+  }, [muted])
   const [speed, setSpeed] = useState<number>(1)
   const [loop, setLoop] = useState(true)
   const [pointA, setPointA] = useState<number | null>(() => loopA ?? stored?.a ?? null)
@@ -384,7 +393,7 @@ function VideoWorkbenchInner({
     if (!v) return
     if (playWhenVisible) {
       // Visibility owns playback; skip the kick autoplay.
-      v.muted = true
+      v.muted = muted
       const wantPlayRef = { current: false }
       const tryPlay = () => {
         // Never resume while the coach is holding the screen to scrub.
@@ -412,7 +421,7 @@ function VideoWorkbenchInner({
       if (active === false) v.pause()
       return
     }
-    v.muted = true
+    v.muted = muted
     v.playsInline = true
     v.setAttribute('playsinline', 'true')
     v.setAttribute('webkit-playsinline', 'true')
@@ -711,6 +720,14 @@ function VideoWorkbenchInner({
         <button type="button" onClick={togglePlay} className={btn}>
           {playing ? 'Pause' : 'Play'}
         </button>
+        <button
+          type="button"
+          onClick={() => setMuted((m) => !m)}
+          className={btn}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
         {allowAbLoop && (
           <>
             <div id="tour-player-ab" className="contents">
@@ -911,7 +928,7 @@ function VideoWorkbenchInner({
           ref={videoRef}
           src={src}
           loop={loop && !loopingAb}
-          muted
+          muted={muted}
           playsInline
           autoPlay={autoPlay}
           preload="auto"

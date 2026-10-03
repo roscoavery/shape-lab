@@ -34,6 +34,8 @@ type Props = {
   chromeOpen?: boolean
   onToggleChrome?: () => void
   tapTogglesChrome?: boolean
+  /** Start with sound on (fullscreen reels — the open tap is interaction). */
+  startUnmuted?: boolean
   /** Letterbox the full frame instead of cropping. */
   fit?: 'cover' | 'contain'
   /** 9:16 cover / other contain. Off when `fit` is set. */
@@ -63,6 +65,7 @@ export function GymClipPlayer({
   chromeOpen,
   onToggleChrome,
   tapTogglesChrome,
+  startUnmuted,
   fit,
   smartFit,
 }: Props) {
@@ -173,6 +176,7 @@ export function GymClipPlayer({
       chromeOpen={chromeOpen}
       onToggleChrome={onToggleChrome}
       tapTogglesChrome={tapTogglesChrome}
+      startUnmuted={startUnmuted}
     />
   )
   return fill ? (

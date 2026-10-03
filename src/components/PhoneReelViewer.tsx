@@ -129,6 +129,7 @@ const ReelSection = memo(function ReelSection({
             shareChrome={false}
             markup
             markupSwipeSafe
+            startUnmuted
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.id, clip.url, next)}
             chromeOpen={chromeOpen}
