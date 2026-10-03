@@ -52,6 +52,7 @@ import { ShapeCopyProvider } from './components/ShapeCopyContext'
 import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
+import { CoachReminderBanners } from './components/today/CoachReminderBanners'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { NamesQuiz } from './components/coach/NamesQuiz'
@@ -1269,6 +1270,15 @@ export default function App() {
         />
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
+        <div className="flex min-w-0 flex-col gap-4">
+          {activeProfile && isCoachProfile(activeProfile) && (
+            <CoachReminderBanners
+              coachId={activeProfile.id}
+              onJumpToRecaps={() =>
+                document.getElementById('today-recaps')?.scrollIntoView({ behavior: 'smooth' })
+              }
+            />
+          )}
         <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
@@ -1416,6 +1426,7 @@ export default function App() {
               }
             />
           </TodayDock>
+        </div>
         </div>
       )}
 

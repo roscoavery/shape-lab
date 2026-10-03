@@ -1285,6 +1285,7 @@ export function HomeDashboard({
         />
       )}
 
+      <div id="today-recaps" className="flex min-w-0 flex-col gap-4">
       <ClassRecapList
         athletes={athletes}
         viewer={signedIn}
@@ -1303,6 +1304,7 @@ export function HomeDashboard({
         onAthletesChange={onAthletesChange}
         onViewProfile={onViewProfile}
       />
+      </div>
       {quickAddAthleteOpen && coach && signedIn && onAthletesChange && (
         <QuickAddAthlete
           coach={signedIn}
