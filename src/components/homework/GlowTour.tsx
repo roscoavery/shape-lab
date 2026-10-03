@@ -143,8 +143,8 @@ export function GlowTour({
     return (
       <div className="fixed inset-0 z-[300] bg-black/70" role="dialog" aria-label="Guided tour">
         <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] px-5 py-4 text-center shadow-2xl">
-          <p className="text-sm font-bold text-[var(--text)]">Getting your homework ready…</p>
-          <p className="mt-1 text-xs text-white/50">The tour starts as soon as your homework loads.</p>
+          <p className="text-sm font-bold text-[var(--text)]">Getting the tour ready…</p>
+          <p className="mt-1 text-xs text-white/50">The tour starts as soon as this page loads.</p>
           <button
             type="button"
             onClick={() => {

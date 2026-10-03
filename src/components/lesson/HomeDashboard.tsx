@@ -400,9 +400,7 @@ export function HomeDashboard({
           )}
         </section>
         {onShortcut && (
-          <div id="tour-today-shortcuts">
-            <TodayShortcuts onGo={onShortcut} showStation />
-          </div>
+          <TodayShortcuts onGo={onShortcut} showStation />
         )}
       </div>
     )
@@ -1282,11 +1280,13 @@ export function HomeDashboard({
       )}
 
       {onShortcut && (
-        <TodayShortcuts
-          onGo={onShortcut}
-          showStation
-          showNames={false}
-        />
+        <div id="tour-today-shortcuts">
+          <TodayShortcuts
+            onGo={onShortcut}
+            showStation
+            showNames={false}
+          />
+        </div>
       )}
 
       <div id="today-recaps" className="flex min-w-0 flex-col gap-4">
