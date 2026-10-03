@@ -90,24 +90,14 @@ export function GlowTour({
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onScroll)
     }
-    // The target may render late (async list). Poll for it briefly; if it
-    // never shows, skip the step and move on — never stall the tour.
-    let tries = 0
+    // The target may render late (async list). Keep polling until it shows —
+    // the card stays visible with the step content meanwhile, so the flow
+    // never breaks. No auto-skip: every step shows.
     const waitTimer = window.setTimeout(() => setWaiting(true), 800)
     const iv = window.setInterval(() => {
-      tries += 1
-      if (measure() || tries > 8) {
+      if (measure()) {
         window.clearInterval(iv)
         window.clearTimeout(waitTimer)
-        if (tries > 8) {
-          // Target never showed: skip this step silently.
-          if (idx + 1 >= steps.length) {
-            markTourSeen()
-            onDone()
-          } else {
-            setIdx(idx + 1)
-          }
-        }
       }
     }, 250)
     return () => {
@@ -162,27 +152,6 @@ export function GlowTour({
 
   if (!step) return null
 
-  if (waiting) {
-    return (
-      <div className="fixed inset-0 z-[400] bg-black/70" role="dialog" aria-label="Guided tour">
-        <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] px-5 py-4 text-center shadow-2xl">
-          <p className="text-sm font-bold text-[var(--text)]">Getting the tour ready…</p>
-          <p className="mt-1 text-xs text-white/50">The tour starts as soon as this page loads.</p>
-          <button
-            type="button"
-            onClick={() => {
-              markTourSeen()
-              onDone()
-            }}
-            className="mt-2 px-2 py-1 text-xs font-semibold text-white/50 underline"
-          >
-            Skip tour
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   const pad = 8
   const r = rect
     ? {
@@ -194,6 +163,9 @@ export function GlowTour({
     : null
 
   const tooltipBelow = !r || r.bottom + 190 < window.innerHeight
+  // Fullscreen targets (the video itself): no room above or below, so the
+  // card overlays centered instead of getting pushed off-screen.
+  const tooltipOverlay = !!r && r.bottom - r.top > window.innerHeight * 0.6
 
   return (
     <div className="fixed inset-0 z-[400]" role="dialog" aria-label="Guided tour">
@@ -258,14 +230,17 @@ export function GlowTour({
         className="absolute left-4 right-4 mx-auto max-w-sm rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] p-4 shadow-2xl"
         style={
           r
-            ? tooltipBelow
-              ? { top: Math.min(r.bottom + 12, window.innerHeight - 190) }
-              : { bottom: window.innerHeight - r.top + 12 }
+            ? tooltipOverlay
+              ? { top: '50%', transform: 'translateY(-50%)' }
+              : tooltipBelow
+                ? { top: Math.min(r.bottom + 12, window.innerHeight - 190) }
+                : { bottom: window.innerHeight - r.top + 12 }
             : { top: '30%' }
         }
       >
         <p className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)]">
           Step {idx + 1} of {steps.length}
+          {waiting && !r && <span className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />}
         </p>
         <p className="mt-1 text-base font-black text-[var(--text)]">{step.title}</p>
         <p className="mt-1 text-sm leading-relaxed text-white/70">{step.text}</p>
