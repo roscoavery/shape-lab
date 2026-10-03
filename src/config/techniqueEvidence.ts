@@ -362,6 +362,16 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-ro-hs-tuck-spring-floor.mp4',
       watchFor: 'Nice spring floor round off handspring tuck reference from the sensei.',
     },
+    {
+      who: 'TumbleSmart athlete',
+      url: '/videos/ro-hs-tuck-tramp-deconstructed.mp4',
+      watchFor: 'Round off tuck on tramp — deconstructed spotting method: set, shape, flip.',
+    },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/back-tuck-tramp-quick-process.mp4',
+      watchFor: 'Fairly quick and easy trampoline back tuck process.',
+    },
   ],
   'barani': [
     {
