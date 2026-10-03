@@ -156,6 +156,7 @@ export function StickItGame({ athletes, onExit }: { athletes: Athlete[]; onExit:
               onPick={addAthlete}
               excludeIds={players.map((p) => p.id)}
               placeholder="Type an athlete's name…"
+              anyRole
             />
             <div className="mt-2 flex gap-2">
               <input
