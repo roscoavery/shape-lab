@@ -724,7 +724,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Some kids have trampolined all their life and some have never been on one. The starting point moves. The scaling in the app exists for this."
     ],
     "ask": "Ask your coach which basic is the weak link under your current skill. Basics done right are what make higher skills learnable.",
-    "ryanNote": "Some basics go a super long way with creating habits and mental resilience for higher level tumbling. That is something many athletes and coaches do not understand."
+    "ryanNote": "Some basics go a super long way with creating habits and mental resilience for higher level tumbling."
   },
   {
     "id": "skl_front_tuck",
