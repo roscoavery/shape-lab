@@ -198,3 +198,56 @@ export const FLOWS_TOUR: TourStep[] = [
     text: 'Finish the flow to log the run. You are set — tap Done.',
   },
 ]
+
+export const ATHLETE_HOME_TOUR: TourStep[] = [
+  {
+    target: 'tour-athlete-today',
+    title: 'Your training day',
+    text: 'This is your home base. It shows what you are working toward, and the big button starts your practice. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-path',
+    title: 'Your path',
+    text: 'Your skill path — the skill you are chasing glows brightest, and everything underneath it is what builds toward it. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-foundation',
+    title: 'Strengthen your foundation',
+    text: 'The basics that make hard skills possible. Shapes, holds, and control work your coach assigned. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-bests',
+    title: 'Gym bests',
+    text: 'The leaderboard for your gym — longest holds, best scores. See where you stand. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-shapes',
+    title: 'Study your shapes',
+    text: 'The body positions every skill is built from. Quiz yourself until you can name them cold. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-homework',
+    title: 'Homework plan',
+    text: 'What your coach wants you doing outside the gym. Work the plan, log it when you are done. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-progress',
+    title: 'Recent progress',
+    text: 'Your recent work — holds, reps, and what has been improving. This is your proof that the work is working. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-upcoming',
+    title: 'Coming up',
+    text: 'What is next on your calendar — lessons, classes, events. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-messages',
+    title: 'Messages',
+    text: 'Notes from your coach and the gym. Check here so nothing slips past you. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-athlete-activity',
+    title: 'Activity',
+    text: 'Your recent training activity, all in one feed. You are set — tap Done.',
+  },
+]

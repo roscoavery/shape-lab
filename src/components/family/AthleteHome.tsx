@@ -41,7 +41,7 @@ export function AthleteHome({
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
       {/* TODAY — what should I work on? */}
-      <section className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
+      <section id="tour-athlete-today" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Today</p>
         <h2 className="mt-1 text-2xl font-semibold">What should I work on?</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
@@ -58,16 +58,23 @@ export function AthleteHome({
           Start Practice
         </button>
       </section>
+      <div id="tour-athlete-path">
       <CollapsibleSection title="Your path">
         <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
       </CollapsibleSection>
+      </div>
+      <div id="tour-athlete-foundation">
       <CollapsibleSection title="Strengthen your foundation">
         <AthleteFoundation athlete={athlete} />
       </CollapsibleSection>
+      </div>
+      <div id="tour-athlete-bests">
       <CollapsibleSection title="Gym bests">
         <AthleteLeaderboards athlete={athlete} />
       </CollapsibleSection>
+      </div>
       <button
+        id="tour-athlete-shapes"
         type="button"
         onClick={onOpenShapes}
         className="sl-skill-glow sl-left px-4 py-4"
@@ -77,20 +84,30 @@ export function AthleteHome({
           The body positions every skill is built from — quiz yourself
         </span>
       </button>
+      <div id="tour-athlete-homework">
       <CollapsibleSection title="Homework plan">
         <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
       </CollapsibleSection>
+      </div>
       {/* Recent progress */}
+      <div id="tour-athlete-progress">
       <CollapsibleSection title="Recent progress">
         <AthleteProgressCard athlete={athlete} />
       </CollapsibleSection>
+      </div>
       {/* Coming up */}
+      <div id="tour-athlete-upcoming">
       <AthleteUpcomingCard athlete={athlete} defaultOpen={false} />
+      </div>
       {/* Secondary */}
+      <div id="tour-athlete-messages">
       <CollapsibleSection title="Messages">
         <DeskMessageCarousel audience="athlete" surface="home" />
       </CollapsibleSection>
+      </div>
+      <div id="tour-athlete-activity">
       <AthleteActivityCard athlete={athlete} />
+      </div>
       <div className="flex flex-wrap gap-2 px-1">
         <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">
           Progress
