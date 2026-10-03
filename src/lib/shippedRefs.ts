@@ -29,7 +29,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   handstand: 'handstand.jpg',
   // Chest-to-wall (stomach-to-wall) handstand — placeholder still Ryan can replace.
   wall_handstand: 'wall_handstand.jpg',
-  candlestick: ['candlestick.jpg', 'candlestick_drill.jpg'],
+  candlestick: ['candlestick.jpg', 'candlestick_drill.jpg', 'candlestick_arms_down.jpg'],
   tucked_candle: ['tucked_candle.jpg', 'tucked_candle_b.jpg'],
   arch: 'arch.jpg',
   hollow_arms_down: 'hollow_arms_down.jpg',
@@ -49,6 +49,9 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   rainbow_bridge: 'rainbow_bridge.jpg',
   long_bridge: 'long_bridge.jpg',
   side_plank: ['side_plank_left.jpg', 'side_plank_right.jpg'],
+  front_plank: 'front_plank.jpg',
+  glute_bridge: 'glute_bridge.png',
+  single_leg_glute_bridge: ['single_leg_glute_bridge.png', 'single_leg_glute_bridge_b.png'],
 }
 
 /** Caption on a second (or later) shipped still for the same shape. */
@@ -67,7 +70,10 @@ const SHIPPED_STILL_LABELS: Record<string, string> = {
   'tucked_candle_b.jpg': 'Second view',
   'candlestick.jpg': 'Handstand roll',
   'candlestick_drill.jpg': 'Shoulder stand',
+  'candlestick_arms_down.jpg': 'Arms down',
   'wall_handstand.jpg': 'Chest to wall',
+  'single_leg_glute_bridge.png': 'Leg extended',
+  'single_leg_glute_bridge_b.png': 'Leg lifted',
 }
 
 export function shippedFileList(shapeId: string): string[] {

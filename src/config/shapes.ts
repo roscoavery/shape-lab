@@ -2264,6 +2264,113 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
+  // GLUTE BRIDGE — hips high, knees bent, shoulders on the floor
+  // ===========================================================================
+  {
+    id: 'glute_bridge',
+    name: 'Glute bridge',
+    description:
+      'Glute bridge: lying on the back, knees bent, feet flat — drive the hips up to a straight line from shoulders to knees. Squeeze the glutes at the top. Builds the hip extension strength tumbling takeoffs run on.',
+    bodyPosition:
+      'SIDE VIEW. Lying on the back, knees bent, feet flat on the floor hip-width apart. Arms resting by the sides. Drive the hips up until the body makes one straight line from shoulders to knees. Squeeze the glutes at the top — no arching the low back.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Feet flat, hip-width apart.',
+      'Drive the hips up to a straight shoulders-to-knees line.',
+      'Squeeze the glutes at the top.',
+      'No arching the low back.',
+    ],
+    coachNotes:
+      'Hip extension strength for tumbling takeoffs. The top position should read as one straight line from shoulders to knees — hips sagging or ribs flaring means the glutes checked out.',
+    criteria: [
+      {
+        id: 'hips_up',
+        label: 'Hips lifted',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 150,
+        targetMax: 180,
+        tolerance: 15,
+        weight: 40,
+        feedbackLow: 'Drive the hips higher — straight line from shoulders to knees.',
+      },
+      {
+        id: 'knees_bent',
+        label: 'Knees bent',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 70,
+        targetMax: 110,
+        tolerance: 15,
+        weight: 30,
+        feedbackLow: 'Feet closer — knees bent, not straight legs.',
+        feedbackHigh: 'Feet a little farther out — open the knee angle.',
+      },
+      {
+        id: 'knee_symmetry',
+        label: 'Leg symmetry',
+        kind: 'symmetry',
+        leftPoints: L_KNEE,
+        rightPoints: R_KNEE,
+        target: 0,
+        tolerance: 15,
+        falloff: 40,
+        weight: 30,
+        feedbackHigh: 'Even the legs — difference {delta}°.',
+      },
+    ],
+  },
+
+  // ===========================================================================
+  // SINGLE LEG GLUTE BRIDGE — one leg extended or lifted, hips level
+  // ===========================================================================
+  {
+    id: 'single_leg_glute_bridge',
+    name: 'Single leg glute bridge',
+    description:
+      'Single leg glute bridge: same bridge on one foot, the other leg extended or lifted straight. Hips stay level — no dropping or rotating to the free side. Single-leg hip strength and pelvic control.',
+    bodyPosition:
+      'SIDE VIEW. Lying on the back, one knee bent with the foot flat, the other leg extended straight (or lifted toward the ceiling). Arms resting by the sides. Drive the hips up on the standing leg — keep the hips level, no tipping toward the free side. Squeeze the glute at the top.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Standing foot flat, knee bent.',
+      'Free leg straight — extended out or lifted up.',
+      'Hips level, no tipping to the free side.',
+      'Squeeze the glute of the standing leg at the top.',
+    ],
+    coachNotes:
+      'Single-leg hip strength plus pelvic control — the hips staying level is the whole rep. Watch for the free-side hip dropping or the low back arching to fake the height.',
+    criteria: [
+      {
+        id: 'hips_up',
+        label: 'Hips lifted',
+        kind: 'joint_angle',
+        points: L_HIP,
+        targetMin: 150,
+        targetMax: 180,
+        tolerance: 15,
+        weight: 50,
+        feedbackLow: 'Drive the hips higher on the standing leg.',
+      },
+      {
+        id: 'free_leg_straight',
+        label: 'Free leg straight',
+        kind: 'joint_angle',
+        points: R_KNEE,
+        targetMin: 155,
+        targetMax: 180,
+        tolerance: 12,
+        weight: 50,
+        feedbackLow: 'Straighten the free leg.',
+      },
+    ],
+  },
+
+  // ===========================================================================
   // CANDLESTICK — shoulder stand; open hips + ribs in (handstand forward roll / BER)
   // ===========================================================================
   {
