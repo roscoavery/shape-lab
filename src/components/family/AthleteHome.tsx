@@ -9,6 +9,7 @@ import { AthletePathStrip } from './AthletePathStrip'
 import { AthleteHoldStats } from './AthleteHoldStats'
 import { AthleteFoundation } from './AthleteFoundation'
 import { AthleteLeaderboards } from './AthleteLeaderboards'
+import { CollapsibleSection } from '../CollapsibleSection'
 
 type Props = {
   athlete: Athlete | null
@@ -57,9 +58,15 @@ export function AthleteHome({
           Start Practice
         </button>
       </section>
-      <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
-      <AthleteFoundation athlete={athlete} />
-      <AthleteLeaderboards athlete={athlete} />
+      <CollapsibleSection title="Your path">
+        <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Strengthen your foundation">
+        <AthleteFoundation athlete={athlete} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Gym bests">
+        <AthleteLeaderboards athlete={athlete} />
+      </CollapsibleSection>
       <button
         type="button"
         onClick={onOpenShapes}
@@ -70,13 +77,19 @@ export function AthleteHome({
           The body positions every skill is built from — quiz yourself
         </span>
       </button>
-      <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
+      <CollapsibleSection title="Homework plan">
+        <AthleteHomeworkGuide athlete={athlete} onPractice={onPractice} onQuickLog={onQuickLog} />
+      </CollapsibleSection>
       {/* Recent progress */}
-      <AthleteProgressCard athlete={athlete} />
+      <CollapsibleSection title="Recent progress">
+        <AthleteProgressCard athlete={athlete} />
+      </CollapsibleSection>
       {/* Coming up */}
-      <AthleteUpcomingCard athlete={athlete} />
+      <AthleteUpcomingCard athlete={athlete} defaultOpen={false} />
       {/* Secondary */}
-      <DeskMessageCarousel audience="athlete" surface="home" />
+      <CollapsibleSection title="Messages">
+        <DeskMessageCarousel audience="athlete" surface="home" />
+      </CollapsibleSection>
       <AthleteActivityCard athlete={athlete} />
       <div className="flex flex-wrap gap-2 px-1">
         <button type="button" onClick={onProgress} className="rounded-full bg-white/10 px-3 py-1.5 text-sm">

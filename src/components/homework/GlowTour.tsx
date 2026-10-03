@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type TourStep = {
   /** DOM id of the element to spotlight. */
   target: string
   title: string
   text: string
+  /** When true, tapping the card also lets its own action fire (e.g. navigating to the next screen) instead of being swallowed. */
+  tapThrough?: boolean
 }
 
 const TOUR_KEY = 'sl-hw-tour-v1'
@@ -35,10 +37,21 @@ export function markTourSeen(): void {
  * waited for (not skipped): the tour holds on a "getting ready" state
  * until the element appears, so slow lists can't cascade-skip steps.
  */
-export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => void }) {
-  const [idx, setIdx] = useState(0)
+export function GlowTour({
+  steps,
+  onDone,
+  startIdx = 0,
+}: {
+  steps: TourStep[]
+  onDone: () => void
+  /** Start mid-tour (e.g. the stopwatch-screen button starts at the watch steps). */
+  startIdx?: number
+}) {
+  const [idx, setIdx] = useState(startIdx)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const [waiting, setWaiting] = useState(true)
+  /** Tracks which step we've already scrolled to, so scroll listeners don't re-scroll. */
+  const scrolledFor = useRef<string | null>(null)
 
   const step = steps[idx]
 
@@ -48,6 +61,12 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
     if (!el) return false
     setRect(el.getBoundingClientRect())
     setWaiting(false)
+    // Bring off-screen targets (foundation above the hub, the watch
+    // overlay's form) into view — once per step.
+    if (scrolledFor.current !== step.target) {
+      scrolledFor.current = step.target
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
     return true
   }, [step])
 
@@ -96,7 +115,7 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
     }
   }, [idx, steps.length, onDone])
 
-  const back = useCallback(() => setIdx((i) => Math.max(0, i - 1)), [])
+  const back = useCallback(() => setIdx((i) => Math.max(startIdx, i - 1)), [startIdx])
 
   // The glow ring doubles as the tap target: tapping the highlighted card
   // advances the tour, and the card underneath never sees the tap (so its
@@ -122,7 +141,7 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
 
   if (waiting) {
     return (
-      <div className="fixed inset-0 z-[90] bg-black/70" role="dialog" aria-label="Guided tour">
+      <div className="fixed inset-0 z-[300] bg-black/70" role="dialog" aria-label="Guided tour">
         <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-2xl border border-[var(--accent)]/40 bg-[#0b1512] px-5 py-4 text-center shadow-2xl">
           <p className="text-sm font-bold text-[var(--text)]">Getting your homework ready…</p>
           <p className="mt-1 text-xs text-white/50">The tour starts as soon as your homework loads.</p>
@@ -154,7 +173,7 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
   const tooltipBelow = !r || r.bottom + 190 < window.innerHeight
 
   return (
-    <div className="fixed inset-0 z-[90]" role="dialog" aria-label="Guided tour">
+    <div className="fixed inset-0 z-[300]" role="dialog" aria-label="Guided tour">
       {r ? (
         <>
           {/* Dim everything except the spotlight box */}
@@ -184,7 +203,7 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
             role="button"
             aria-label="Continue the guided tour"
             onClick={(e) => {
-              e.stopPropagation()
+              if (!step.tapThrough) e.stopPropagation()
               advance()
             }}
             className="absolute cursor-pointer rounded-2xl"
@@ -220,7 +239,7 @@ export function GlowTour({ steps, onDone }: { steps: TourStep[]; onDone: () => v
         <p className="mt-1 text-base font-black text-[var(--text)]">{step.title}</p>
         <p className="mt-1 text-sm leading-relaxed text-white/70">{step.text}</p>
         <div className="mt-3 flex items-center gap-2">
-          {idx > 0 && (
+          {idx > startIdx && (
             <button
               type="button"
               onClick={back}

@@ -73,23 +73,46 @@ import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
 import { AthleteFoundation } from './components/family/AthleteFoundation'
 import { GlowTour, tourSeen, type TourStep } from './components/homework/GlowTour'
 
-const HW_TOUR_STEPS: TourStep[] = [
-  {
-    target: 'hw-tour-train-now',
-    title: 'Train now',
-    text: 'Camera on. Start a hold or a drill from here — the camera watches your form while you work. Tap the glowing card to continue.',
-  },
-  {
-    target: 'hw-tour-pick-drill',
-    title: 'Pick a drill',
-    text: 'Your coach\u2019s drills live here. Tap one to train it full screen — this is where your homework list lives. Tap the glowing card to continue.',
-  },
-  {
-    target: 'hw-tour-stopwatch',
-    title: 'No camera? Stopwatch',
-    text: 'Time a hold or log reps and sets by hand. It still counts. You are set — tap Done, then pick a drill for real.',
-  },
-]
+/** Full walkthrough: foundation → homework hub → stopwatch screen. */
+function buildHwTourSteps(foundationVisible: boolean): TourStep[] {
+  return [
+    ...(foundationVisible
+      ? [
+          {
+            target: 'hw-tour-foundation',
+            title: 'Strengthen your foundation',
+            text: 'This is the engine room. Swipe through why each exercise matters — then tap Start a challenge and beat your best. Tap the glowing card to continue.',
+          } satisfies TourStep,
+        ]
+      : []),
+    {
+      target: 'hw-tour-train-now',
+      title: 'Train now',
+      text: 'Camera on. Start a hold or a drill from here — the camera watches your form while you work. Tap the glowing card to continue.',
+    },
+    {
+      target: 'hw-tour-pick-drill',
+      title: 'Pick a drill',
+      text: 'Your coach\u2019s drills live here. Tap one to train it full screen — this is where your homework list lives. Tap the glowing card to continue.',
+    },
+    {
+      target: 'hw-tour-stopwatch',
+      title: 'No camera? Stopwatch',
+      text: 'Time a hold or log reps and sets by hand. It still counts. Tap the glowing card to go there.',
+      tapThrough: true,
+    },
+    {
+      target: 'hw-tour-watch-start',
+      title: 'Start the watch',
+      text: 'Tap Start, do your hold, tap Stop. Your time drops straight into the log form below.',
+    },
+    {
+      target: 'hw-tour-watch-quality',
+      title: 'Rate it honestly',
+      text: 'Slide your rep speed from fast to slow, tap your quality — low, medium, or high. Holds get a 1 to 5. Then Log set. You are set — tap Done, then train for real.',
+    },
+  ]
+}
 import { GestureBurstHost } from './components/GestureBurst'
 import { addCoachNotesToAthletes } from './lib/athleteNotes'
 import { logClassSkillForAthlete } from './lib/classSessionLog'
@@ -270,8 +293,8 @@ export default function App() {
   const [arcadeOpen, setArcadeOpen] = useState(false)
   const [namesQuizOpen, setNamesQuizOpen] = useState(false)
   const [hwTourOpen, setHwTourOpen] = useState(false)
+  const [hwTourStartIdx, setHwTourStartIdx] = useState(0)
   const closeHwTour = useCallback(() => setHwTourOpen(false), [])
-  const openHwTour = useCallback(() => setHwTourOpen(true), [])
   const hwTourAutoFired = useRef(false)
   const [namesQuizGroupId, setNamesQuizGroupId] = useState<string | null>(null)
   const [trainLogForId, setTrainLogForId] = useState<string | null>(null)
@@ -706,7 +729,10 @@ export default function App() {
           const ready = hub != null && hub.children.length > 0
           if (ready || tries > 20) {
             window.clearInterval(iv)
-            if (ready) setHwTourOpen(true)
+            if (ready) {
+              setHwTourStartIdx(0)
+              setHwTourOpen(true)
+            }
           }
         }, 400)
         return () => window.clearInterval(iv)
@@ -1050,6 +1076,22 @@ export default function App() {
   // hold landing on the coach's own profile.
   const trainLogForAthleteId = trainGuest ? homeworkAthleteId : (trainLogForId ?? homeworkAthleteId)
   const trainLogForAthlete = athletes.find((a) => a.id === trainLogForAthleteId) ?? null
+  // "Strengthen your foundation" sits above the homework hub for coach viewers.
+  const foundationVisible = Boolean(
+    activeProfile && isCoachProfile(activeProfile) && (trainLogForAthlete ?? homeworkAthlete),
+  )
+  const hwTourSteps = useMemo(
+    () => buildHwTourSteps(foundationVisible),
+    [foundationVisible],
+  )
+  const openHwTour = useCallback(
+    (startTarget?: string) => {
+      const i = startTarget ? hwTourSteps.findIndex((s) => s.target === startTarget) : 0
+      setHwTourStartIdx(i >= 0 ? i : 0)
+      setHwTourOpen(true)
+    },
+    [hwTourSteps],
+  )
   const showLogForPicker =
     (activeProfile != null && isCoachProfile(activeProfile)) || sessionIsAdmin(authUser)
   const personalCompare =
@@ -1651,6 +1693,25 @@ export default function App() {
               )}
             </div>
           ) : null}
+          {!hwStudio && (
+            <button
+              type="button"
+              onClick={() => openHwTour()}
+              className="rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
+              style={{
+                animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
+                boxShadow:
+                  '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
+              }}
+            >
+              ✨ Take the guided tour
+            </button>
+          )}
+          {foundationVisible && (
+            <div>
+              <AthleteFoundation athlete={(trainLogForAthlete ?? homeworkAthlete)!} />
+            </div>
+          )}
           <HomeworkPanel
             athleteId={trainLogForAthleteId}
             athlete={trainLogForAthlete ?? homeworkAthlete}
@@ -1711,12 +1772,9 @@ export default function App() {
               ) : null
             }
           />
-          {activeProfile && isCoachProfile(activeProfile) && (trainLogForAthlete ?? homeworkAthlete) && (
-            <div className="mt-2">
-              <AthleteFoundation athlete={(trainLogForAthlete ?? homeworkAthlete)!} />
-            </div>
+          {hwTourOpen && (
+            <GlowTour steps={hwTourSteps} startIdx={hwTourStartIdx} onDone={closeHwTour} />
           )}
-          {hwTourOpen && <GlowTour steps={HW_TOUR_STEPS} onDone={closeHwTour} />}
         </div>
         </PanelErrorBoundary>
       )}

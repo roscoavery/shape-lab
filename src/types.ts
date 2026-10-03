@@ -709,6 +709,8 @@ export type HomeworkLog = {
   incomplete?: boolean
   /** Reps the athlete counted as quality (form they would show a coach). */
   qualityReps?: number
+  /** Quality rating 1–5 (reps: low = 1, medium = 3, high = 5; holds: 1–5 scale). */
+  quality?: number
   /** Back-extension rep speed: 0 = fast, 100 = slow. */
   repSpeed?: number
   grip?: string

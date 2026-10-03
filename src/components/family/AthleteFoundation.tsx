@@ -31,6 +31,7 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
 
   return (
     <section
+      id="hw-tour-foundation"
       className="rounded-2xl border bg-[#141008] p-5"
       style={{ borderColor: 'rgba(251,191,36,0.4)', boxShadow: '0 0 24px rgba(251,191,36,0.10)' }}
     >

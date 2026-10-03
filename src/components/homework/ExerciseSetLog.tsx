@@ -8,10 +8,13 @@ export const OTHER_EXERCISE = '__other__'
 export type ExerciseSetInput = {
   item: HomeworkItem
   reps: number
-  qualityReps: number
   sets: number
   holdSeconds?: number
   trackMode: HomeworkTrackMode
+  /** Quality rating 1–5 (reps: low = 1, medium = 3, high = 5). */
+  quality?: number
+  /** Rep speed 0 = fast, 100 = slow (reps only). */
+  repSpeed?: number
 }
 
 type Props = {
@@ -24,9 +27,10 @@ type Props = {
     name: string
     trackMode: HomeworkTrackMode
     reps: number
-    qualityReps: number
     sets: number
     holdSeconds?: number
+    quality?: number
+    repSpeed?: number
   }) => void
   onLog: (input: Omit<ExerciseSetInput, 'item'> & { itemId: string }) => void
   /** Prefill hold seconds from a stopped watch. */
@@ -34,6 +38,16 @@ type Props = {
   onHoldSeconds?: (value: string) => void
   tone?: 'panel' | 'studio'
   allowOther?: boolean
+  /** DOM id for the guided tour to spotlight this form. */
+  tourId?: string
+}
+
+function speedLabel(v: number): string {
+  return v <= 33 ? 'fast' : v >= 67 ? 'slow' : 'steady'
+}
+
+function qualityLabel(q: number): string {
+  return q <= 2 ? 'low' : q >= 4 ? 'high' : 'medium'
 }
 
 export function ExerciseSetLog({
@@ -46,10 +60,12 @@ export function ExerciseSetLog({
   onHoldSeconds,
   tone = 'panel',
   allowOther = true,
+  tourId,
 }: Props) {
   const [kind, setKind] = useState<'hold' | 'reps'>('reps')
   const [reps, setReps] = useState('')
-  const [quality, setQuality] = useState('')
+  const [quality, setQuality] = useState<number | undefined>(undefined)
+  const [repSpeed, setRepSpeed] = useState(50)
   const [sets, setSets] = useState('1')
   const [typedHold, setTypedHold] = useState('')
   const [otherName, setOtherName] = useState('')
@@ -65,7 +81,6 @@ export function ExerciseSetLog({
     const holdRaw = holdSeconds ?? typedHold
     const hold = holdRaw === '' ? undefined : Number(holdRaw)
     const r = Number(reps)
-    const q = quality === '' ? r : Number(quality)
     const s = Number(sets)
     const hasHold = hold != null && Number.isFinite(hold) && hold > 0
     const hasReps = Number.isFinite(r) && r > 0
@@ -79,10 +94,11 @@ export function ExerciseSetLog({
     }
     const payload = {
       reps: hasReps ? r : 0,
-      qualityReps: hasReps && Number.isFinite(q) ? Math.min(q, r || q) : 0,
       sets: Number.isFinite(s) && s > 0 ? Math.round(s) : 1,
       holdSeconds: hasHold ? hold : undefined,
       trackMode: (kind === 'hold' && hasReps ? 'hold_or_reps' : kind) as HomeworkTrackMode,
+      quality,
+      repSpeed: kind === 'reps' ? repSpeed : undefined,
     }
     if (other) {
       const name = otherName.trim() || HOMEWORK_CATALOG.find((c) => c.id === otherCatalog)?.name || ''
@@ -99,7 +115,7 @@ export function ExerciseSetLog({
       setOtherName('')
       setOtherCatalog('')
       setReps('')
-      setQuality('')
+      setQuality(undefined)
       return
     }
     if (!selectedId) {
@@ -109,11 +125,11 @@ export function ExerciseSetLog({
     setError(null)
     onLog({ itemId: selectedId, ...payload })
     setReps('')
-    setQuality('')
+    setQuality(undefined)
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" id={tourId}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
         What did you just do?
       </p>
@@ -190,8 +206,32 @@ export function ExerciseSetLog({
           />
         </label>
       )}
+      {kind === 'hold' && (
+        <div>
+          <p className="text-xs text-[var(--muted)]">
+            Quality{quality != null ? ` · ${qualityLabel(quality)} (${quality}/5)` : ''}
+          </p>
+          <div className="mt-1 flex gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setQuality(quality === n ? undefined : n)}
+                aria-pressed={quality === n}
+                className={`h-10 flex-1 rounded-lg text-sm font-bold ${
+                  quality === n
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                    : 'bg-white/8 text-[var(--text)]'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {kind === 'reps' && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-[var(--muted)]">
             Sets
             <input
@@ -210,16 +250,52 @@ export function ExerciseSetLog({
               onChange={(e) => setReps(e.target.value)}
             />
           </label>
-          <label className="text-xs text-[var(--muted)]">
-            Quality
+        </div>
+      )}
+      {kind === 'reps' && (
+        <div>
+          <p className="text-xs text-[var(--muted)]">
+            Rep speed · <span className="font-semibold text-[var(--text)]">{speedLabel(repSpeed)}</span>
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-xs text-[var(--muted)]">fast</span>
             <input
-              inputMode="numeric"
-              className={`mt-1 ${input}`}
-              value={quality}
-              onChange={(e) => setQuality(e.target.value)}
-              placeholder="same"
+              type="range"
+              min={0}
+              max={100}
+              value={repSpeed}
+              onChange={(e) => setRepSpeed(Number(e.target.value))}
+              className="flex-1"
+              aria-label="Rep speed, fast to slow"
             />
-          </label>
+            <span className="text-xs text-[var(--muted)]">slow</span>
+          </div>
+        </div>
+      )}
+      {kind === 'reps' && (
+        <div>
+          <p className="text-xs text-[var(--muted)]">Quality</p>
+          <div className="mt-1 flex gap-1.5">
+            {[
+              { label: 'Low', value: 1 },
+              { label: 'Medium', value: 3 },
+              { label: 'High', value: 5 },
+            ].map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setQuality(quality === opt.value ? undefined : opt.value)}
+                aria-pressed={quality === opt.value}
+                className={`h-10 flex-1 rounded-lg text-sm font-semibold ${
+                  quality === opt.value
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                    : 'bg-white/8 text-[var(--text)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {error && <p className="text-sm text-[var(--bad)]">{error}</p>}

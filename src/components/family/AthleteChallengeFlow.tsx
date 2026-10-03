@@ -452,7 +452,12 @@ export function AthleteChallengeFlow({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4" role="dialog" aria-modal>
+    <div
+      className="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-black/80 px-4 pb-36 pt-4"
+      style={{ touchAction: 'pan-y' }}
+      role="dialog"
+      aria-modal
+    >
       <div className="mx-auto max-w-lg rounded-3xl border border-amber-300/30 bg-[#141008] p-5">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-300">

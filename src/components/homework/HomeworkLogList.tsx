@@ -161,11 +161,29 @@ export function HomeworkLogList({
 
   const pep = useMemo(() => encouragement(chrono), [chrono])
   const bests = useMemo(() => previousBests(chrono, items), [chrono, items])
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-bold text-[var(--text)]">Training log</p>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <p className="text-sm font-bold text-[var(--text)]">
+          Training log{chrono.length ? ` · ${chrono.length}` : ''}
+        </p>
+        <span
+          className={`shrink-0 text-[var(--muted)] transition ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        >
+          ▾
+        </span>
+      </button>
+      {open && (
+      <>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex rounded-full bg-black/30 p-0.5">
           {(
             [
@@ -268,6 +286,8 @@ export function HomeworkLogList({
             </section>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   )

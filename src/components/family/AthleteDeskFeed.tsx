@@ -67,13 +67,13 @@ function useAthleteDeskData(athlete: Athlete, logsProp?: HomeworkLog[]) {
   return { upcoming, visits, logs }
 }
 
-export function AthleteUpcomingCard({ athlete }: { athlete: Athlete }) {
+export function AthleteUpcomingCard({ athlete, defaultOpen = true }: { athlete: Athlete; defaultOpen?: boolean }) {
   const { upcoming } = useAthleteDeskData(athlete)
   return (
     <CollapsibleSection
       title="Upcoming with your coach"
       hint={upcoming.length ? `${upcoming.length} scheduled` : 'No upcoming lesson is matched yet'}
-      defaultOpen
+      defaultOpen={defaultOpen}
     >
       <ul className="mt-3 space-y-2 text-sm">
         {upcoming.map((row) => (

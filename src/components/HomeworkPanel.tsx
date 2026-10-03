@@ -135,8 +135,8 @@ type Props = {
   /** Practice camera + score, shown only while a train studio is open. */
   camSlot?: ReactNode
   onStudioChange?: (open: boolean) => void
-  /** Opens the guided spotlight tour of the homework hub. */
-  onTakeTour?: () => void
+  /** Opens the guided spotlight tour of homework. Pass a step target to start mid-tour. */
+  onTakeTour?: (startTarget?: string) => void
   /** Sequence homework opens Practice → Class flows on that assigned task. */
   onOpenClassFlow?: (flowId: string) => void
   openPage?: 'train' | 'add' | 'care' | null
@@ -360,14 +360,20 @@ function HoldTimesBoard({
                     {log.totalHoldSeconds && log.reps
                       ? ` · ${log.totalHoldSeconds}s hold + ${
                           log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} reps`
+                        }${
+                          log.quality != null
+                            ? ` (${log.quality <= 2 ? 'low' : log.quality >= 4 ? 'high' : 'medium'} quality)`
+                            : ''
                         }`
                       : log.reps
                       ? ` · ${
                           log.sets && log.sets > 1 ? `${log.sets}×${log.reps}` : `${log.reps} rep${log.reps === 1 ? '' : 's'}`
                         }${
-                          log.qualityReps != null && log.repSpeed == null
-                            ? ` (${log.qualityReps} quality)`
-                            : ''
+                          log.quality != null
+                            ? ` (${log.quality <= 2 ? 'low' : log.quality >= 4 ? 'high' : 'medium'} quality)`
+                            : log.qualityReps != null && log.repSpeed == null
+                              ? ` (${log.qualityReps} quality)`
+                              : ''
                         }`
                       : ''}
                     {log.repSpeed != null
@@ -1162,7 +1168,6 @@ export function HomeworkPanel({
     item: HomeworkItem,
     input: {
       reps: number
-      qualityReps: number
       sets?: number
       holdSeconds?: number
       grip?: string
@@ -1171,6 +1176,7 @@ export function HomeworkPanel({
       journal?: string
       trackMode: HomeworkTrackMode
       repSpeed?: number
+      quality?: number
     },
   ) => {
     if (!athleteId) return
@@ -1191,7 +1197,7 @@ export function HomeworkPanel({
       totalHoldSeconds: input.holdSeconds ? roundHoldSecondsUp(input.holdSeconds) : 0,
       reps: input.reps || undefined,
       sets: input.sets && input.sets > 1 ? input.sets : undefined,
-      qualityReps: input.qualityReps || undefined,
+      quality: input.quality,
       grip: input.grip,
       weightLb: input.weightLb,
       painLevel: input.painLevel,
@@ -1231,6 +1237,10 @@ export function HomeworkPanel({
             ? 'slow'
             : 'steady'
         : null
+    const qualityBit =
+      input.quality != null
+        ? `${input.quality <= 2 ? 'low' : input.quality >= 4 ? 'high' : 'medium'} quality`
+        : null
     const bits = [
       input.holdSeconds ? `${input.holdSeconds}s hold` : null,
       input.reps
@@ -1239,6 +1249,7 @@ export function HomeworkPanel({
           : `${input.reps} reps`
         : null,
       speed,
+      qualityBit,
     ].filter(Boolean)
     const together = input.holdSeconds && input.reps ? ' in one log' : ''
     showFlash(
@@ -1252,10 +1263,11 @@ export function HomeworkPanel({
     itemId: string,
     input: {
       reps: number
-      qualityReps: number
       sets: number
       holdSeconds?: number
       trackMode: HomeworkTrackMode
+      quality?: number
+      repSpeed?: number
     },
   ) => {
     const item = items.find((row) => row.id === itemId) ?? visibleItems.find((row) => row.id === itemId)
@@ -1271,9 +1283,10 @@ export function HomeworkPanel({
     name: string
     trackMode: HomeworkTrackMode
     reps: number
-    qualityReps: number
     sets: number
     holdSeconds?: number
+    quality?: number
+    repSpeed?: number
   }) => {
     if (!athleteId) return
     const pick = input.catalogId
@@ -1374,20 +1387,6 @@ export function HomeworkPanel({
       </div>
 
       <div id="hw-tour-hub" className="flex flex-col gap-3">
-        {onTakeTour && (
-          <button
-            type="button"
-            onClick={onTakeTour}
-            className="rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
-            style={{
-              animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
-              boxShadow:
-                '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
-            }}
-          >
-            ✨ Take the guided tour
-          </button>
-        )}
         <button
           type="button"
           id="hw-tour-train-now"
@@ -1618,6 +1617,20 @@ export function HomeworkPanel({
         >
 
       <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
+        {onTakeTour && (
+          <button
+            type="button"
+            onClick={() => onTakeTour('hw-tour-watch-start')}
+            className="mb-3 w-full rounded-xl border border-[var(--accent)]/60 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-black text-[var(--accent)]"
+            style={{
+              animation: 'sl-skill-pulse 2.4s ease-in-out infinite',
+              boxShadow:
+                '0 0 18px rgba(52,211,153,0.35), 0 0 44px rgba(52,211,153,0.15)',
+            }}
+          >
+            ✨ Take the guided tour
+          </button>
+        )}
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
           Stopwatch
         </p>
@@ -1632,7 +1645,7 @@ export function HomeworkPanel({
             />
           </div>
         )}
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div id="hw-tour-watch-start" className="mt-2 flex flex-wrap gap-2">
           {!watchRunning ? (
             <button
               type="button"
@@ -1670,6 +1683,7 @@ export function HomeworkPanel({
             onSelectId={setManualItemId}
             holdSeconds={manualSeconds}
             onHoldSeconds={setManualSeconds}
+            tourId="hw-tour-watch-quality"
             onLog={(input) => {
               logPickedSet(input.itemId, input)
               if (input.holdSeconds) {
