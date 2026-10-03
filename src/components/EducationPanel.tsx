@@ -478,7 +478,7 @@ export function EducationPanel({
       )}
 
       {view.kind === 'shapes' && (
-        <div id="tour-learn-shapes">
+        <>
           {canAddGymShape && signedIn && (
             <AddGymShapeForm signedIn={signedIn} />
           )}
@@ -497,7 +497,7 @@ export function EducationPanel({
             canDeleteGym={canAddGymShape}
             canEdit={canAddGymShape}
           />
-        </div>
+        </>
       )}
 
       {view.kind === 'shape' && (
@@ -518,9 +518,9 @@ export function EducationPanel({
       )}
 
       {view.kind === 'pathways' && (
-        <div id="tour-learn-path">
+        <>
           <PathwayList onOpen={openTask} onOpenShape={openShape} />
-        </div>
+        </>
       )}
 
       {view.kind === 'coachStudy' && (
@@ -950,6 +950,7 @@ function HomeView({
           </span>
         </button>
       )}
+      <div id="tour-learn-shapes-entry">
       <button type="button" onClick={onShapes} className="learn-hero">
         <div className="learn-hero-strip" aria-hidden>
           {mosaic.map((shape) => (
@@ -979,6 +980,7 @@ function HomeView({
           </span>
         </div>
       </button>
+      </div>
 
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -1025,6 +1027,7 @@ function HomeView({
             Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.
           </p>
         </button>
+        <div id="tour-learn-path-entry">
         <button type="button" onClick={onSkillPath} className="learn-tile p-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Skills</p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">Path guide</h3>
@@ -1032,6 +1035,7 @@ function HomeView({
             The skill path, top down. What each skill needs underneath it, what can bend, and what to ask your coach.
           </p>
         </button>
+        </div>
         <button type="button" onClick={onProgressionLevels} className="learn-tile p-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">4 levels</h3>

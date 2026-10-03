@@ -105,14 +105,14 @@ export const LEARN_TOUR: TourStep[] = [
     text: 'Every skill, broken into shapes, drills, and prerequisites. Tap the glowing card to continue.',
   },
   {
-    target: 'tour-learn-path',
+    target: 'tour-learn-path-entry',
     title: 'Skill path guide',
-    text: 'Follow the progression chain — what to train before what, and why. Tap the glowing card to continue.',
+    text: 'The skill path, top down — what each skill needs underneath it, what can bend, and what to ask your coach. Tap the glowing card to continue.',
   },
   {
-    target: 'tour-learn-shapes',
-    title: 'Shapes',
-    text: 'The body positions every skill is built from. Quiz yourself here. You are set — tap Done.',
+    target: 'tour-learn-shapes-entry',
+    title: 'Shape library',
+    text: 'Every position with coach stills. Hollow, lunge, and the shapes that look alike until you know where the hips sit. You are set — tap Done.',
   },
 ]
 
