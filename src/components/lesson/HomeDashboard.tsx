@@ -565,7 +565,7 @@ export function HomeDashboard({
         />
         </div>
       </CollapsibleSection>
-      <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <section id="tour-today-start" className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
@@ -1202,6 +1202,7 @@ export function HomeDashboard({
               Quick add athlete
             </button>
           )}
+          <div id="tour-today-clock-floor">
           <TodayDock
             id="clock-floor"
             icon="⏱️"
@@ -1219,6 +1220,7 @@ export function HomeDashboard({
               candidates={groupAthletes}
             />
           </TodayDock>
+          </div>
           <TodayDock
             id="chalk-floor"
             icon="📋"
@@ -1245,6 +1247,7 @@ export function HomeDashboard({
       )}
 
       {(!activeGroup || groupView === 'coach') && coach && (
+        <div id="tour-today-clock">
         <TodayDock
           id="clock"
           icon="⏱️"
@@ -1254,9 +1257,11 @@ export function HomeDashboard({
         >
           <ClassStopwatch athletes={athletes} signedIn={signedIn} coach embed />
         </TodayDock>
+        </div>
       )}
 
       {(!activeGroup || groupView === 'coach') && (
+      <div id="tour-today-chalk">
       <TodayDock
         id="chalk"
         icon="📋"
@@ -1266,8 +1271,10 @@ export function HomeDashboard({
       >
         <ChalkboardPanel viewer={signedIn} onToday embed />
       </TodayDock>
+      </div>
       )}
       {(!activeGroup || groupView === 'coach') && onShortcut && (
+        <div id="tour-today-collage">
         <TodayDock
           id="collage"
           icon="🎬"
@@ -1277,6 +1284,7 @@ export function HomeDashboard({
         >
           <TodayCollages viewer={signedIn} onOpenLibrary={() => onShortcut('collages')} embed />
         </TodayDock>
+        </div>
       )}
 
       {onShortcut && (

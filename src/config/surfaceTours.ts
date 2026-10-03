@@ -8,19 +8,44 @@ import type { TourStep } from '../components/homework/GlowTour'
 
 export const TODAY_COACH_TOUR: TourStep[] = [
   {
+    target: 'tour-today-banners',
+    title: 'Coach reminders',
+    text: 'Nudges live here — log wins in the evening after classes, plan lessons that have no plan. Dismiss one and it stays gone for the day. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-today-start',
+    title: 'Start the session',
+    text: 'Lesson is who you are with — one athlete or several. Class is the roster. Pick one and the homework goes to the right athletes. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-today-clock-floor',
+    title: 'Floor hold clock',
+    text: 'Search a name, pick the hold, start the clock — right there on the floor, no camera grade. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-today-clock',
+    title: 'Class clock',
+    text: 'Time it, log it. Holds and stopwatch for the whole class, kept simple. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-today-chalk',
+    title: 'Chalkboard',
+    text: 'Pin the clips and drills tonight runs on. One board per class type, kept current. Tap the glowing card to continue.',
+  },
+  {
+    target: 'tour-today-collage',
+    title: 'Class collages',
+    text: 'Your drill boards — play them on the floor, save them, keep editing later. Tap the glowing card to continue.',
+  },
+  {
     target: 'tour-today-shortcuts',
-    title: 'Today shortcuts',
-    text: 'Everything you do on the floor lives here — start a lesson, open the class clock, run a flow. Tap the glowing card to continue.',
+    title: 'Shortcuts',
+    text: 'Everything else one tap away — station, flows, names quiz, skill paths. Tap the glowing card to continue.',
   },
   {
     target: 'today-recaps',
     title: 'Recaps',
-    text: 'Class and lesson recaps land here. This is where the evening reminder sends you to log wins. Tap the glowing card to continue.',
-  },
-  {
-    target: 'tour-today-banners',
-    title: 'Reminders',
-    text: 'Coach nudges appear here — log wins in the evening, plan lessons with no plan. You are set — tap Done.',
+    text: 'Class and lesson recaps land here at the bottom. This is where the evening reminder sends you to log the wins. You are set — tap Done.',
   },
 ]
 
