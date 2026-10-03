@@ -477,6 +477,8 @@ export type AppSettings = {
   notificationsEnabled: boolean
   /** App chrome color. auto = signed-in favorite color. */
   themeColor?: FavoriteColor | 'auto'
+  /** Show the ✨ tour guide buttons on each surface. */
+  tourGuidesEnabled: boolean
 }
 
 /**

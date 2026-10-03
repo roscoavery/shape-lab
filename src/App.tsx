@@ -1019,6 +1019,16 @@ export default function App() {
         Reminders
       </label>
       <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+        <input
+          type="checkbox"
+          checked={settings.tourGuidesEnabled}
+          onChange={(e) =>
+            setSettings((s) => ({ ...s, tourGuidesEnabled: e.target.checked }))
+          }
+        />
+        Tour guide buttons
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
         Quality threshold
         <input
           type="number"
@@ -1789,9 +1799,6 @@ export default function App() {
               ) : null
             }
           />
-          {tourOpen && (
-            <GlowTour steps={tourSteps} startIdx={tourStartIdx} onDone={closeTour} />
-          )}
         </div>
         </PanelErrorBoundary>
       )}
@@ -2453,6 +2460,9 @@ export default function App() {
           void syncAthleteProfileToResearch(next, next.id)
         }}
       />
+    )}
+    {tourOpen && (
+      <GlowTour steps={tourSteps} startIdx={tourStartIdx} onDone={closeTour} />
     )}
     {clockOpen && (
       <ClockOverlay

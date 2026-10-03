@@ -196,6 +196,7 @@ export function loadSettings(): AppSettings {
     voiceEnabled: true,
     notificationsEnabled: true,
     themeColor: 'auto',
+    tourGuidesEnabled: true,
   }
   const raw = readJson<Partial<AppSettings> & { voiceCoaching?: boolean }>(SETTINGS_KEY, {})
   // Migrate older voiceCoaching key if present
@@ -208,6 +209,7 @@ export function loadSettings(): AppSettings {
     voiceEnabled,
     notificationsEnabled: raw.notificationsEnabled ?? true,
     themeColor: raw.themeColor ?? 'auto',
+    tourGuidesEnabled: raw.tourGuidesEnabled ?? true,
   }
 }
 

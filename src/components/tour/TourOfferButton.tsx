@@ -1,7 +1,10 @@
 /**
  * Compact glowing tour offer button — "show me how to use this."
  * Drops into any surface; opens that surface's spotlight tour.
+ * Hidden entirely when the user turns tour guides off in settings.
  */
+import { loadSettings } from '../../lib/storage'
+
 export function TourOfferButton({
   onTakeTour,
   label = '✨ Take the tour',
@@ -9,6 +12,13 @@ export function TourOfferButton({
   onTakeTour: () => void
   label?: string
 }) {
+  let enabled = true
+  try {
+    enabled = loadSettings().tourGuidesEnabled !== false
+  } catch {
+    /* show by default */
+  }
+  if (!enabled) return null
   return (
     <button
       type="button"
