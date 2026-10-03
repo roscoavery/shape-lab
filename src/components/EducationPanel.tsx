@@ -1037,14 +1037,14 @@ function HomeView({
         </button>
         </div>
         <button type="button" onClick={onProgressionLevels} className="learn-tile p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Levels</p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">4 levels</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
             The four levels of progression. Where you are and what it takes to move up.
           </p>
         </button>
         <button type="button" onClick={onConcepts} className="learn-tile p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Watch</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Ideas</p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">Concepts</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
             The ideas behind the training. Two gears, the S-curve, control, and why slow is fast.
