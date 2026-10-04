@@ -569,9 +569,11 @@ export function findDuplicateLessonGroups(): DuplicateLessonGroup[] {
     if (ids.length === 0) continue
     const day = (s.startedAt ?? '').slice(0, 10)
     if (!day) continue
-    // Group key uses the first athlete id; multi-athlete sessions are rare
-    // and still consolidate under their primary athlete.
-    const key = `${ids[0]}|${day}`
+    // Group key uses the FULL sorted athlete id set: a lesson with Alexis
+    // never merges with a lesson with Sadie, even on the same day. Sessions
+    // must have identical athlete sets to be offered as duplicates.
+    const athleteKey = [...ids].sort().join(',')
+    const key = `${athleteKey}|${day}`
     let g = byKey.get(key)
     if (!g) {
       g = { athleteId: ids[0], day, sessions: [] }
@@ -589,6 +591,13 @@ export function findDuplicateLessonGroups(): DuplicateLessonGroup[] {
  */
 export function mergeLessonGroup(sessions: LessonSession[]): LessonSession | null {
   if (sessions.length < 2) return null
+  // Safety: refuse to merge sessions with different athletes or different
+  // days. A lesson with Alexis never merges with a lesson with Sadie.
+  const athleteKeys = new Set(
+    sessions.map((s) => [...lessonAthleteIds(s)].sort().join(',')),
+  )
+  const days = new Set(sessions.map((s) => (s.startedAt ?? '').slice(0, 10)))
+  if (athleteKeys.size !== 1 || days.size !== 1) return null
   const sorted = [...sessions].sort((x, y) =>
     (x.startedAt ?? '').localeCompare(y.startedAt ?? ''),
   )

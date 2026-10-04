@@ -1115,3 +1115,140 @@ export async function hydrateCoachClasses(): Promise<void> {
     if (read().offerings.length > 0) await pushCoachClasses()
   }
 }
+
+/**
+ * Duplicate class meetings: same offering, same calendar day, all ended.
+ * One group per offering+day with 2+ meetings, so the UI shows a single
+ * merge prompt per group instead of one per pair.
+ */
+export interface DuplicateClassMeetingGroup {
+  offeringId: string
+  offeringName: string
+  /** Scheduled time of the offering (e.g. "5:00 PM"), shown on the prompt. */
+  offeringTime: string
+  day: string
+  meetings: ClassMeeting[]
+}
+
+export function findDuplicateClassMeetingGroups(): DuplicateClassMeetingGroup[] {
+  const file = read()
+  const removed = new Set(file.removedMeetingIds ?? [])
+  const meetings = file.meetings.filter((m) => m.endedAt && !removed.has(m.id))
+  const byKey = new Map<string, DuplicateClassMeetingGroup>()
+  for (const m of meetings) {
+    const day = (m.startedAt ?? '').slice(0, 10)
+    if (!day || !m.offeringId) continue
+    const key = `${m.offeringId}|${day}`
+    let g = byKey.get(key)
+    if (!g) {
+      const offering = file.offerings.find((o) => o.id === m.offeringId)
+      g = {
+        offeringId: m.offeringId,
+        offeringName: offering?.name ?? 'class',
+        offeringTime: offering?.time?.trim() ?? '',
+        day,
+        meetings: [],
+      }
+      byKey.set(key, g)
+    }
+    g.meetings.push(m)
+  }
+  return [...byKey.values()].filter((g) => {
+    if (g.meetings.length < 2) return false
+    // Hard safeguard: never offer a merge across different offerings, even
+    // if the key logic above changes. A Connections 5pm must never merge
+    // with a Connections 6pm.
+    const ids = new Set(g.meetings.map((m) => m.offeringId))
+    return ids.size === 1
+  })
+}
+
+/**
+ * Merge every meeting in a duplicate group into the earliest-started one:
+ * unions attendees (earliest check-in wins), concatenates notes chronologically,
+ * unions coach presence (max fraction per coach wins), keeps the earliest
+ * start and latest end. Absorbed meetings are deleted through
+ * deleteClassMeeting so their tombstones are recorded and the deletes sync.
+ */
+export function mergeClassMeetingGroup(meetings: ClassMeeting[]): ClassMeeting | null {
+  if (meetings.length < 2) return null
+  // Hard safeguard: never merge across different offerings.
+  if (new Set(meetings.map((m) => m.offeringId)).size !== 1) return null
+  const sorted = [...meetings].sort((x, y) =>
+    (x.startedAt ?? '').localeCompare(y.startedAt ?? ''),
+  )
+  const base = sorted[0]
+  const rest = sorted.slice(1)
+
+  const attendeeByKey = new Map<string, ClassAttendee>()
+  for (const m of sorted) {
+    for (const a of m.attendees ?? []) {
+      const key = attendeeKey(a)
+      const keep = attendeeByKey.get(key)
+      if (!keep || (a.at ?? '') < (keep.at ?? '')) attendeeByKey.set(key, a)
+    }
+  }
+  const attendees = [...attendeeByKey.values()].sort((x, y) =>
+    (x.at ?? '').localeCompare(y.at ?? ''),
+  )
+
+  const notes = sorted
+    .flatMap((m) => m.notes ?? [])
+    .sort((x, y) => (x.createdAt ?? '').localeCompare(y.createdAt ?? ''))
+
+  const presenceByCoach = new Map<string, { coachId: string; fraction: number; at: string }>()
+  for (const m of sorted) {
+    for (const c of m.coachPresence ?? []) {
+      if (!c.coachId) continue
+      const keep = presenceByCoach.get(c.coachId)
+      if (!keep || (c.fraction ?? 0) > (keep.fraction ?? 0)) {
+        presenceByCoach.set(c.coachId, { coachId: c.coachId, fraction: c.fraction ?? 0, at: c.at ?? '' })
+      }
+    }
+  }
+  const coachPresence = [...presenceByCoach.values()].sort((x, y) =>
+    (x.at ?? '').localeCompare(y.at ?? ''),
+  )
+
+  const startedAt = sorted.map((m) => m.startedAt).filter(Boolean).sort()[0] ?? base.startedAt
+  const endedAt = sorted.map((m) => m.endedAt).filter(Boolean).sort().pop() ?? base.endedAt
+
+  const file = read()
+  const target = file.meetings.find((m) => m.id === base.id)
+  if (!target) return null
+  target.attendees = attendees
+  target.notes = notes
+  target.coachPresence = coachPresence
+  target.startedAt = startedAt
+  target.endedAt = endedAt
+  write(file)
+  for (const m of rest) deleteClassMeeting(m.id)
+  return target
+}
+
+/** Hide a duplicate class group from the merge prompt without merging. */
+const CLASS_MERGE_DISMISSED_KEY = 'sl-class-merge-dismissed'
+
+export function dismissClassMergeGroup(offeringId: string, day: string): void {
+  try {
+    const raw = localStorage.getItem(CLASS_MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    const key = `group|${offeringId}|${day}`
+    if (!list.includes(key)) {
+      list.push(key)
+      localStorage.setItem(CLASS_MERGE_DISMISSED_KEY, JSON.stringify(list.slice(-50)))
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isClassMergeGroupDismissed(offeringId: string, day: string): boolean {
+  try {
+    const raw = localStorage.getItem(CLASS_MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    return list.includes(`group|${offeringId}|${day}`)
+  } catch {
+    return false
+  }
+}

@@ -21,6 +21,7 @@ import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { LessonMergePrompt } from './LessonMergePrompt'
+import { ClassMergePrompt } from '../today/ClassMergePrompt'
 import { LiveClassRoll } from '../today/LiveClassRoll'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
@@ -1331,6 +1332,8 @@ export function HomeDashboard({
       )}
 
       <div id="today-recaps" className="flex min-w-0 flex-col gap-4">
+      <ClassMergePrompt />
+
       <ClassRecapList
         athletes={athletes}
         viewer={signedIn}
