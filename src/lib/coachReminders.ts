@@ -1,10 +1,12 @@
 import type { LessonSession } from '../types'
 import { loadLessonSessions } from './lessonStore'
 import { loadMeetings } from './coachClasses'
+import type { TodayCalendarEvent } from './calendarClient'
 
 export type CoachReminder =
   | { kind: 'log-wins'; meetings: number; lessons: number }
   | { kind: 'plan-lessons'; sessions: LessonSession[] }
+  | { kind: 'plan-calendar-lessons'; events: TodayCalendarEvent[] }
 
 const dateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -37,7 +39,11 @@ export function dismissReminder(kind: string, d: Date = new Date()): void {
  *
  * Dismissals are per-day; the banner returns tomorrow if the condition holds.
  */
-export function getCoachReminders(coachId: string, now: Date = new Date()): CoachReminder[] {
+export function getCoachReminders(
+  coachId: string,
+  now: Date = new Date(),
+  calendarEvents: TodayCalendarEvent[] = [],
+): CoachReminder[] {
   const out: CoachReminder[] = []
   const today = dateKey(now)
   const tomorrow = new Date(now)
@@ -54,6 +60,31 @@ export function getCoachReminders(coachId: string, now: Date = new Date()): Coac
   })
   if (unplanned.length > 0 && !dismissed('plan-lessons', now)) {
     out.push({ kind: 'plan-lessons', sessions: unplanned })
+  }
+
+  // --- Calendar lessons with no linked lesson session (not yet in the app) ---
+  const linkedEventIds = new Set<string>()
+  for (const s of sessions) {
+    if (s.calendarEventId) linkedEventIds.add(s.calendarEventId)
+  }
+  const unlinkedLessons = calendarEvents.filter((ev) => {
+    if (linkedEventIds.has(ev.id)) return false
+    if (ev.lessonLinks.length > 0) return false
+    const day = ev.startAt.slice(0, 10)
+    if (day !== today && day !== tomorrowKey) return false
+    // Heuristic: lesson-like titles (private, lesson, athlete names).
+    // Classes are handled separately via meetings.
+    const t = ev.title.toLowerCase()
+    return (
+      t.includes('lesson') ||
+      t.includes('private') ||
+      t.includes('1:1') ||
+      t.includes('1-1') ||
+      ev.matchedAthleteId != null
+    )
+  })
+  if (unlinkedLessons.length > 0 && !dismissed('plan-calendar-lessons', now)) {
+    out.push({ kind: 'plan-calendar-lessons', events: unlinkedLessons })
   }
 
   // --- End-of-day wins nudge ---

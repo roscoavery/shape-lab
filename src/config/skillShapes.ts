@@ -75,6 +75,7 @@ export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
   ],
   'cart-full': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }, { shapeId: 'handstand' }],
   'cart-dub': [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }, { shapeId: 'handstand' }],
+  'skl_ro_bhs_tuck': [{ shapeId: 'arch' }, { shapeId: 'tucked_candle' }],
   basics: [
     { shapeId: 'superman' },
     { shapeId: 'side_plank' },

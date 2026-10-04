@@ -55,7 +55,7 @@ export function practiceRecsFor(athlete: Athlete, homework: HomeworkItem[]): Pra
       why: 'Iso holds can get you out of pain and help keep you out of pain.',
       action: 'train',
       shapeId: 'hollow_arms_down',
-      notes: 'Easy hollow and Superman holds. Stop if anything sharp shows up — this is care, not a max out.',
+      notes: 'Easy hollow and Superman holds. Stop if anything sharp shows up, this is care, not a max out.',
       targetSeconds: 20,
     })
   }
@@ -112,7 +112,7 @@ export function homeworkNudgeCopy(athlete: Athlete): string {
     return `${athlete.name.split(' ')[0]}, Superman should feel as easy as hollow. A few holds today close that gap.`
   }
   if ((athlete.openShoulderHardness ?? 0) >= 4) {
-    return `Open shoulders get easier with bridge and handstand work — not with hoping. One round today.`
+    return `Open shoulders get easier with bridge and handstand work. One round today.`
   }
   if (athlete.hasBackPain) {
     return `Iso holds are how you stay out of pain. Hollow or Superman for a minute beats skipping.`

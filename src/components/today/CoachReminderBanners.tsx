@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { dismissReminder, getCoachReminders } from '../../lib/coachReminders'
+import { fetchCalendarRange, type TodayCalendarEvent } from '../../lib/calendarClient'
 
 /**
  * Smart banners at the top of the coach Today tab.
@@ -15,7 +16,26 @@ export function CoachReminderBanners({
   onJumpToRecaps: () => void
 }) {
   const [tick, setTick] = useState(0)
-  const reminders = getCoachReminders(coachId)
+  const [calEvents, setCalEvents] = useState<TodayCalendarEvent[]>([])
+  const reminders = getCoachReminders(coachId, new Date(), calEvents)
+
+  useEffect(() => {
+    let cancelled = false
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(23, 59, 59, 999)
+    fetchCalendarRange(now, tomorrow)
+      .then(({ events }) => {
+        if (!cancelled) setCalEvents(events)
+      })
+      .catch(() => {
+        /* calendar unavailable — session-based reminders still work */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tick])
 
   const dismiss = (kind: string) => {
     dismissReminder(kind)
@@ -40,7 +60,7 @@ export function CoachReminderBanners({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-[var(--text)]">
-                    Day's done — log the wins
+                    Day's done, log the wins
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--muted)]">
                     {bits.join(' · ')} today. Drop the wins in the recaps below.
@@ -65,35 +85,75 @@ export function CoachReminderBanners({
             </div>
           )
         }
+        if (r.kind === 'plan-lessons') {
+          return (
+            <div
+              key="plan-lessons"
+              className="rounded-xl border border-sky-300/40 bg-sky-300/10 px-4 py-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-[var(--text)]">
+                    {r.sessions.length} lesson{r.sessions.length === 1 ? '' : 's'} need{r.sessions.length === 1 ? 's' : ''} a plan
+                  </p>
+                  <ul className="mt-1 space-y-0.5 text-xs text-[var(--muted)]">
+                    {r.sessions.slice(0, 4).map((s) => (
+                      <li key={s.id}>
+                        {(s.calendarTitle ?? 'Lesson')} ·{' '}
+                        {new Date(s.calendarStartAt ?? s.startedAt).toLocaleString([], {
+                          weekday: 'short',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </li>
+                    ))}
+                    {r.sessions.length > 4 && (
+                      <li>+{r.sessions.length - 4} more</li>
+                    )}
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dismiss('plan-lessons')}
+                  className="shrink-0 rounded-full px-2 py-1 text-xs text-[var(--muted)]"
+                  aria-label="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )
+        }
+        // Calendar lessons not yet linked to a lesson session in the app.
         return (
           <div
-            key="plan-lessons"
+            key="plan-calendar-lessons"
             className="rounded-xl border border-sky-300/40 bg-sky-300/10 px-4 py-3"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-[var(--text)]">
-                  {r.sessions.length} lesson{r.sessions.length === 1 ? '' : 's'} need{r.sessions.length === 1 ? 's' : ''} a plan
+                  {r.events.length} lesson{r.events.length === 1 ? '' : 's'} on your calendar need{r.events.length === 1 ? 's' : ''} a plan
                 </p>
                 <ul className="mt-1 space-y-0.5 text-xs text-[var(--muted)]">
-                  {r.sessions.slice(0, 4).map((s) => (
-                    <li key={s.id}>
-                      {(s.calendarTitle ?? 'Lesson')} ·{' '}
-                      {new Date(s.calendarStartAt ?? s.startedAt).toLocaleString([], {
+                  {r.events.slice(0, 4).map((ev) => (
+                    <li key={ev.id}>
+                      {ev.title} ·{' '}
+                      {new Date(ev.startAt).toLocaleString([], {
                         weekday: 'short',
                         hour: 'numeric',
                         minute: '2-digit',
                       })}
                     </li>
                   ))}
-                  {r.sessions.length > 4 && (
-                    <li>+{r.sessions.length - 4} more</li>
+                  {r.events.length > 4 && (
+                    <li>+{r.events.length - 4} more</li>
                   )}
                 </ul>
               </div>
               <button
                 type="button"
-                onClick={() => dismiss('plan-lessons')}
+                onClick={() => dismiss('plan-calendar-lessons')}
                 className="shrink-0 rounded-full px-2 py-1 text-xs text-[var(--muted)]"
                 aria-label="Dismiss"
               >

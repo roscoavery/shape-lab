@@ -86,7 +86,9 @@ function SharePlayer({
     if (loopA != null && Number.isFinite(loopA)) {
       const apply = () => {
         try {
-          v.currentTime = Math.min(loopA, Math.max(0, (v.duration || loopA + 1) - 0.1))
+          const dur = v.duration
+          const safeDur = Number.isFinite(dur) && dur > 0 ? dur : loopA + 1
+          v.currentTime = Math.min(loopA, Math.max(0, safeDur - 0.1))
         } catch {
           /* ignore */
         }
@@ -489,7 +491,7 @@ export default function PublicSharePage({ cardId }: { cardId: string }) {
                         &ldquo;{b.text}&rdquo;
                         {b.source && (
                           <div className="mt-1 text-xs not-italic text-white/60">
-                            — {b.source}
+                           , {b.source}
                           </div>
                         )}
                       </blockquote>
