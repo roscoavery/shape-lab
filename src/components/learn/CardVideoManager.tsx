@@ -5,7 +5,7 @@ import { systemSkillCards } from '../../lib/coachSystems'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
 import { useClipLoopsOptional, type ClipLoopPreset } from '../../lib/clipLoops'
-import { normalizeVideoUrl } from '../../lib/socialUrls'
+import { normalizeVideoUrl, postedByFromUrl } from '../../lib/socialUrls'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 
 function isLocalVideo(url: string): boolean {
@@ -107,6 +107,7 @@ export function AddCardVideoModal({
   const [query, setQuery] = useState('')
   const [who, setWho] = useState('')
   const [watchFor, setWatchFor] = useState('')
+  const [creator, setCreator] = useState('')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [compareVideos, setCompareVideos] = useState<PickerVideo[]>([])
@@ -220,7 +221,10 @@ export function AddCardVideoModal({
               <div key={v.url} className="overflow-hidden rounded-lg bg-neutral-800">
                 <button
                   type="button"
-                  onClick={() => setExpandedUrl(expanded ? null : v.url)}
+                  onClick={() => {
+                    setExpandedUrl(expanded ? null : v.url)
+                    if (!expanded) setCreator(postedByFromUrl(v.url) ?? '')
+                  }}
                   className="w-full p-2.5 text-left"
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -257,6 +261,12 @@ export function AddCardVideoModal({
                         placeholder="What to watch for (one line)"
                         className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-white/40"
                       />
+                      <input
+                        value={creator}
+                        onChange={(e) => setCreator(e.target.value)}
+                        placeholder="Creator IG handle (optional, no @ needed)"
+                        className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                      />
                       <button
                         type="button"
                         onClick={() =>
@@ -264,6 +274,9 @@ export function AddCardVideoModal({
                             url: v.url,
                             who: who.trim() || v.who,
                             watchFor: watchFor.trim() || v.watchFor,
+                            ...(creator.trim()
+                              ? { creator: creator.trim().replace(/^@+/, '') }
+                              : {}),
                           })
                         }
                         className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white"
@@ -314,6 +327,7 @@ export function AddToSkillCardModal({
   const [alreadyOn, setAlreadyOn] = useState<Set<string>>(new Set())
   const [loopA, setLoopA] = useState('')
   const [loopB, setLoopB] = useState('')
+  const [creator, setCreator] = useState(() => postedByFromUrl(video.url) ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -397,6 +411,8 @@ export function AddToSkillCardModal({
       const v: ProofVideo = { url: video.url, who: video.who, watchFor: video.watchFor }
       if (a !== undefined && !Number.isNaN(a)) v.startAt = a
       if (b !== undefined && !Number.isNaN(b)) v.endAt = b
+      const handle = creator.trim().replace(/^@+/, '')
+      if (handle) v.creator = handle
       let count = 0
       for (const key of selectedKeys) {
         if (alreadyOn.has(key)) continue
@@ -548,6 +564,16 @@ export function AddToSkillCardModal({
                 className="rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
               />
             </div>
+
+            <label className="mb-1 block text-xs font-bold text-white/70">
+              Creator IG handle <span className="font-normal text-white/40">(optional, shown as a tag on the card)</span>
+            </label>
+            <input
+              value={creator}
+              onChange={(e) => setCreator(e.target.value)}
+              placeholder="username, no @ needed"
+              className="mb-4 w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
 
             <button
               type="button"

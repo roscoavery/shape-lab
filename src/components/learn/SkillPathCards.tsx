@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVideo } from '../../config/techniqueEvidence'
-import { normalizeVideoUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
+import { normalizeVideoUrl, postedByFromUrl, socialProfileUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
 import { shippedStillUrl, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
@@ -284,6 +284,35 @@ function SkillPhotoStrip({ skillId }: { skillId: string }) {
   )
 }
 
+/**
+ * Creator handle for a skill-card video: the stored creator tag first,
+ * otherwise the handle parsed from the share URL when it has one.
+ * Never invents a name; returns null when there is nothing factual to show.
+ */
+function videoCreator(v: ProofVideo): string | null {
+  const stored = v.creator?.trim().replace(/^@+/, '')
+  if (stored) return stored
+  return postedByFromUrl(v.url)
+}
+
+/** Tappable @handle tag linking to the creator's Instagram profile. */
+function CreatorTag({ handle }: { handle: string }) {
+  const h = handle.replace(/^@+/, '')
+  const href = socialProfileUrl(h, 'instagram')
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="shrink-0 text-[11px] font-semibold text-[var(--accent)] hover:underline"
+      title={`Open @${h} on Instagram`}
+    >
+      @{h}
+    </a>
+  )
+}
+
 export function ProofStrip({
   evidenceKey,
   matchName,
@@ -545,6 +574,7 @@ export function ProofStrip({
             const loopA = override?.a ?? v.startAt ?? null
             const loopB = override?.b ?? v.endAt ?? null
             const local = isLocalVideo(v.url)
+            const creator = videoCreator(v)
             return (
               <div key={v.url} className="mt-2 max-w-[420px]">
                 <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black">
@@ -557,6 +587,7 @@ export function ProofStrip({
                       bare
                       quiet
                       playWhenVisible
+                      postedBy={v.creator}
                       loopA={loopA}
                       loopB={loopB}
                       fit="contain"
@@ -574,7 +605,10 @@ export function ProofStrip({
                     ⛶
                   </button>
                 </div>
-                <div className="mt-1 text-xs font-bold">{v.who}</div>
+                <div className="mt-1 flex items-center gap-2 text-xs font-bold">
+                  <span className="min-w-0 truncate">{v.who}</span>
+                  {creator && <CreatorTag handle={creator} />}
+                </div>
                 <div className="text-[11px] opacity-70">{v.watchFor}</div>
                 {canEdit && (
                   <button
@@ -608,6 +642,7 @@ export function ProofStrip({
               bare
               quiet
               playWhenVisible
+              postedBy={featured.creator}
               fit="contain"
               fill
               posterFirst
@@ -622,7 +657,10 @@ export function ProofStrip({
               ⛶
             </button>
           </div>
-          <div className="mt-1 text-xs font-bold">{featured.who}</div>
+          <div className="mt-1 flex items-center gap-2 text-xs font-bold">
+            <span className="min-w-0 truncate">{featured.who}</span>
+            {videoCreator(featured) && <CreatorTag handle={videoCreator(featured)!} />}
+          </div>
           <div className="text-[11px] opacity-70">{featured.watchFor}</div>
         </div>
       )}
@@ -636,6 +674,7 @@ export function ProofStrip({
           const bust = bustMap[v.url]
           const playUrl = bust ? `${v.url}?t=${bust}` : v.url
           const isPinned = pinSet.has(v.url)
+          const creator = videoCreator(v)
           return (
             <div key={v.url} className="w-64 shrink-0">
               {editing ? (
@@ -669,6 +708,7 @@ export function ProofStrip({
                       bare
                       quiet
                       playWhenVisible
+                      postedBy={v.creator}
                       loopA={loopA}
                       loopB={loopB}
                       fit="contain"
@@ -689,7 +729,10 @@ export function ProofStrip({
                   </button>
                 </div>
               )}
-              <div className="mt-1 text-xs font-bold">{v.who}</div>
+              <div className="mt-1 flex items-center gap-2 text-xs font-bold">
+                <span className="min-w-0 truncate">{v.who}</span>
+                {creator && <CreatorTag handle={creator} />}
+              </div>
               <div className="text-[11px] opacity-70">{v.watchFor}</div>
               {(loopA != null || loopB != null) && !editing && (
                 <div className="text-[10px] opacity-60">

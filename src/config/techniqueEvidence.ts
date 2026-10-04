@@ -17,6 +17,8 @@ export interface ProofVideo {
   /** Optional A/B loop points in seconds — only this segment plays. */
   startAt?: number
   endAt?: number
+  /** IG handle of the original poster, without @. Shown as a creator tag on the card. */
+  creator?: string
 }
 
 /**

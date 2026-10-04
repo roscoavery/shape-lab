@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
-import { youtubeEmbedSrc } from '../../lib/socialUrls'
+import { postedByFromUrl, socialProfileUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import {
   useAdjustment,
   useVideoAdjustmentsOptional,
@@ -1162,6 +1162,7 @@ export function ProofFullscreenPlayer({
                 fit="contain"
                 markup
                 markupSwipeSafe
+                postedBy={video.creator}
               />
             </div>
           )}
@@ -1169,7 +1170,24 @@ export function ProofFullscreenPlayer({
       </div>
 
       <div className={`px-4 py-3 text-center ${chromeCls}`}>
-        <div className="text-sm font-bold text-white">{video.who}</div>
+        <div className="flex items-center justify-center gap-2 text-sm font-bold text-white">
+          <span className="min-w-0 truncate">{video.who}</span>
+          {(() => {
+            const creator = video.creator?.trim().replace(/^@+/, '') || postedByFromUrl(video.url)
+            return creator ? (
+              <a
+                href={socialProfileUrl(creator, 'instagram')}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 text-xs font-semibold text-[var(--accent)] hover:underline"
+                title={`Open @${creator} on Instagram`}
+              >
+                @{creator}
+              </a>
+            ) : null
+          })()}
+        </div>
         {video.watchFor && <div className="mx-auto mt-0.5 max-w-xl text-xs text-white/70">{video.watchFor}</div>}
         {videoHidden && (
           <button

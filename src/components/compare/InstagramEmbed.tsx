@@ -41,6 +41,7 @@ import { reelObjectFit } from '../../lib/reelFit'
 import { putBlob } from '../../lib/clipStore'
 import { isGymHostedClipUrl, persistLibraryClipBlob } from '../../lib/persistLibraryClip'
 import { VideoWorkbench } from './VideoWorkbench'
+import { IgOpenButton } from './IgOpenButton'
 
 /** Keep carousel chevrons out of the left markup stack / right Show HUD. */
 const HUD_LEFT_CLEAR = 52
@@ -800,6 +801,12 @@ export function InstagramEmbed({
         }}
       >
         {player}
+        {platform === 'instagram' && (
+          <IgOpenButton
+            url={url}
+            className="absolute left-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+          />
+        )}
       </div>
       {!fill && !quiet && (
         <p className="text-xs text-[var(--muted)]">
