@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { getCatalogItem } from '../../config/homeworkCatalog'
 import { AUTO_HOMEWORK_DEFS, loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
+import { getAthleteBatteries } from '../../lib/holdBattery'
+import { HoldBatteryBar } from './HoldBatteryBar'
 
 const WEEKLY_HOLD_GOAL = 3
 
@@ -95,6 +97,11 @@ export function AthleteHomeworkGuide({
 
   const holdRows = rows.filter((r) => r.hold)
 
+  const batteries = useMemo(
+    () => getAthleteBatteries(athlete.id),
+    [athlete.id, rows.length],
+  )
+
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">This week</p>
@@ -143,6 +150,24 @@ export function AthleteHomeworkGuide({
           )
         })}
       </ul>
+      {batteries.length > 0 && (
+        <>
+          <h4 className="mt-6 text-sm font-bold text-[var(--text)]">Strength battery</h4>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">
+            How close your best is to the standard. Train each one regularly or the charge drains.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {batteries.map(({ item, status }) => (
+              <li key={item.id}>
+                <HoldBatteryBar
+                  name={rows.find((r) => r.item.id === item.id)?.label ?? item.shapeId}
+                  status={status}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {rows.some((r) => !r.hold) && (
         <p className="mt-4 text-xs text-[var(--muted)]">
           Reps and skills: open Practice for coach-assigned work beyond these holds.

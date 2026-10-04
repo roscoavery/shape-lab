@@ -81,6 +81,12 @@ export type ClassMeeting = {
   notes: LessonNote[]
   /** Set when the coach chooses Log / Don’t log at End class. */
   attendanceLogged?: boolean
+  /**
+   * Coaches marked present for this class, with the fraction of the class
+   * they covered (1 = whole, 0.75, 0.5, 0.25). Used for coach hours tracking.
+   * Coaches are never auto-selected for hold logging.
+   */
+  coachPresence?: Array<{ coachId: string; fraction: number; at: string }>
 }
 
 export type CoachClassFile = {
@@ -815,6 +821,72 @@ export function setMeetingOffering(meetingId: string, offeringId: string): Class
   meeting.offeringId = offeringId
   write(file)
   return meeting
+}
+
+/** Valid fractions of a class a coach can be marked present for. */
+export const COACH_FRACTIONS = [1, 0.75, 0.5, 0.25] as const
+export type CoachFraction = (typeof COACH_FRACTIONS)[number]
+
+export function coachFractionLabel(fraction: number): string {
+  if (fraction >= 1) return 'Whole class'
+  if (fraction >= 0.75) return '3/4 of class'
+  if (fraction >= 0.5) return 'Half of class'
+  return '1/4 of class'
+}
+
+/** Mark a coach present for a class. Defaults to the whole class. */
+export function markCoachPresent(
+  meetingId: string,
+  coachId: string,
+  fraction: number = 1,
+): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === meetingId)
+  if (!meeting) return null
+  const list = meeting.coachPresence ?? []
+  const existing = list.find((c) => c.coachId === coachId)
+  if (existing) {
+    existing.fraction = fraction
+  } else {
+    list.push({ coachId, fraction, at: new Date().toISOString() })
+  }
+  meeting.coachPresence = list
+  write(file)
+  return meeting
+}
+
+/** Change how much of the class a present coach covered. */
+export function setCoachPresenceFraction(
+  meetingId: string,
+  coachId: string,
+  fraction: number,
+): ClassMeeting | null {
+  return markCoachPresent(meetingId, coachId, fraction)
+}
+
+/** Remove a coach from the present list for a class. */
+export function unmarkCoachPresent(meetingId: string, coachId: string): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === meetingId)
+  if (!meeting) return null
+  meeting.coachPresence = (meeting.coachPresence ?? []).filter((c) => c.coachId !== coachId)
+  write(file)
+  return meeting
+}
+
+/** Coach profiles marked present for this meeting, in attendance order. */
+export function resolvePresentCoaches(meeting: ClassMeeting, athletes: Athlete[]): Athlete[] {
+  const out: Athlete[] = []
+  for (const row of meeting.coachPresence ?? []) {
+    const match = athletes.find((a) => a.id === row.coachId)
+    if (match && !out.some((a) => a.id === match.id)) out.push(match)
+  }
+  return out
+}
+
+/** Fraction of the class a coach was present for, or 0 if not marked present. */
+export function coachPresenceFraction(meeting: ClassMeeting, coachId: string): number {
+  return meeting.coachPresence?.find((c) => c.coachId === coachId)?.fraction ?? 0
 }
 
 export function removeClassAttendance(meetingId: string, athleteId: string): ClassMeeting | null {

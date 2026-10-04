@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
+import { isCoachProfile } from '../../lib/profileRole'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
 import {
   classLabel,
@@ -189,7 +190,11 @@ export function ClassStopwatch({
     () => (sessionPool ? sessionPool : meeting ? resolveAttendeeAthletes(meeting, athletes) : []),
     [meeting, athletes, sessionPool],
   )
-  const pool = sessionOpen ? present : []
+  /**
+   * Coaches are never auto-selected for hold logging, even if marked present.
+   * They can be added manually via the search below.
+   */
+  const pool = sessionOpen ? present.filter((a) => !isCoachProfile(a)) : []
 
   const extras = extrasProp ?? offering?.extraExercises ?? []
   /** 'class' everywhere it used to say class; 'lesson' in a lesson session. */
@@ -255,7 +260,7 @@ export function ClassStopwatch({
   const startRef = useRef<number | null>(null)
   const accRef = useRef(0)
 
-  const logPool = sessionOpen ? pool : extraPicks
+  const logPool = sessionOpen ? [...pool, ...extraPicks.filter((e) => !pool.some((p) => p.id === e.id))] : extraPicks
   const catalogTrack =
     catalogPick?.track === 'hold_or_reps'
       ? catalogTrackPick
@@ -1702,18 +1707,37 @@ function LogWho({
     )
   }
   return (
-    <RosterPicks
-      athletes={pool}
-      selected={selected}
-      onToggle={onToggle}
-      onSelectAll={onSelectAll}
-      onSelectNone={onSelectNone}
-      emptyText={
-        className
-          ? `Mark who is present on this ${sessionNoun} to log holds.`
-          : 'No one marked present yet.'
-      }
-    />
+    <>
+      <RosterPicks
+        athletes={pool}
+        selected={selected}
+        onToggle={onToggle}
+        onSelectAll={onSelectAll}
+        onSelectNone={onSelectNone}
+        emptyText={
+          className
+            ? `Mark who is present on this ${sessionNoun} to log holds.`
+            : 'No one marked present yet.'
+        }
+      />
+      <div className="mt-2">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-white/45">
+          Add a coach
+        </p>
+        <p className="mb-1 text-xs text-white/45">
+          Coaches are not auto-selected. Search to log a hold for a coach who
+          joined in.
+        </p>
+        <AthleteSearchField
+          athletes={allAthletes}
+          query={pickQuery}
+          onQuery={onPickQuery}
+          onPick={onAddPick}
+          excludeIds={pool.map((a) => a.id)}
+          placeholder="Search a coach to log"
+        />
+      </div>
+    </>
   )
 }
 

@@ -21,6 +21,7 @@ import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { LessonMergePrompt } from './LessonMergePrompt'
+import { LiveClassRoll } from '../today/LiveClassRoll'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
 import { CalendarDesk } from '../calendar/CalendarDesk'
@@ -615,7 +616,10 @@ export function HomeDashboard({
             it over.
           </p>
         </details>
-        {onStartClass && liveClass && liveOffering && (
+        {onStartClass && liveClass && liveOffering && liveClass.coachId !== signedIn?.id && (
+          <LiveClassRoll meeting={liveClass} offering={liveOffering} />
+        )}
+        {onStartClass && liveClass && liveOffering && liveClass.coachId === signedIn?.id && (
           <div className="mt-3 rounded-2xl border border-[var(--accent)] bg-[#102820] px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Class is running

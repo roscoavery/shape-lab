@@ -7,12 +7,16 @@ import {
   addClassNote,
   attendeeLabel,
   classLabel,
+  coachFractionLabel,
+  coachPresenceFraction,
+  COACH_FRACTIONS,
   endClassMeeting,
   getActiveMeeting,
   getMeeting,
   hydrateCoachClasses,
   loadOfferingsForCoach,
   markClassAttendance,
+  markCoachPresent,
   offeringHelperCoachIds,
   offeringLeadCoachId,
   priorOfferingAthleteIds,
@@ -20,15 +24,18 @@ import {
   removeClassAttendance,
   removeOffering,
   resolveAttendeeAthletes,
+  resolvePresentCoaches,
   rosterAthletes,
   classCoachesLabel,
   saveOffering,
+  setCoachPresenceFraction,
   setOfferingCoachRoles,
   setOfferingExtras,
   setOfferingRoster,
   startClassMeeting,
   subscribeCoachClasses,
   toggleOfferingRoster,
+  unmarkCoachPresent,
   type ClassMeeting,
   type CoachClassOffering,
   type Weekday,
@@ -306,9 +313,13 @@ function ClassRollCall({
   const presentIds = new Set(present.map((a) => a.id))
   const priorIds = priorOfferingAthleteIds(offering?.id)
   const rosterIds = new Set(offering?.rosterIds ?? [])
+  const coaches = athletes.filter((a) => isCoachProfile(a))
+  const presentCoaches = resolvePresentCoaches(meeting, athletes)
+  const presentCoachIds = new Set(presentCoaches.map((a) => a.id))
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
   const q = query.trim().toLowerCase()
   const matches = kids.filter((a) => !q || a.name.toLowerCase().includes(q))
+  const coachMatches = coaches.filter((a) => !q || a.name.toLowerCase().includes(q))
 
   const checkIn = (a: Athlete) => {
     if (presentIds.has(a.id)) return
@@ -322,6 +333,22 @@ function ClassRollCall({
       logged: false,
     })
     onAthletesChange?.(linkAthleteToCoach(a.id, coachId))
+    onChanged()
+  }
+
+  const checkInCoach = (a: Athlete) => {
+    if (presentCoachIds.has(a.id)) return
+    markCoachPresent(meeting.id, a.id, 1)
+    onChanged()
+  }
+
+  const setCoachFraction = (coachId: string, fraction: number) => {
+    setCoachPresenceFraction(meeting.id, coachId, fraction)
+    onChanged()
+  }
+
+  const removeCoach = (coachId: string) => {
+    unmarkCoachPresent(meeting.id, coachId)
     onChanged()
   }
 
@@ -399,6 +426,80 @@ function ClassRollCall({
           Type a few letters if you do not see your name. New tonight? Use New
           athlete · shape test.
         </p>
+      )}
+      {coachMatches.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+            Coaches
+          </p>
+          <p className="mt-1 text-xs text-white/45">
+            Mark which coaches are here. Coaches are not auto-selected when
+            logging holds.
+          </p>
+          <ul className="mt-2 grid gap-2">
+            {coachMatches.map((a) => {
+              const here = presentCoachIds.has(a.id)
+              const fraction = coachPresenceFraction(meeting, a.id)
+              return (
+                <li key={a.id}>
+                  <div
+                    className={`rounded-2xl px-4 py-3 ${
+                      here
+                        ? 'border border-[var(--accent)]/40 bg-[#102820]'
+                        : 'bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <AthleteAvatar athlete={a} size="md" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-lg font-bold">{a.name}</span>
+                        <span className="text-sm font-medium opacity-80">
+                          {here ? coachFractionLabel(fraction) : 'Coach'}
+                        </span>
+                      </span>
+                      {here ? (
+                        <button
+                          type="button"
+                          onClick={() => removeCoach(a.id)}
+                          className="shrink-0 rounded-full px-2 py-1 text-xs text-white/55"
+                          aria-label={`Remove ${a.name}`}
+                        >
+                          ✕
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => checkInCoach(a)}
+                          className="shrink-0 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold"
+                        >
+                          Here
+                        </button>
+                      )}
+                    </div>
+                    {here && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {COACH_FRACTIONS.map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setCoachFraction(a.id, f)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                              fraction === f
+                                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                                : 'bg-white/10 text-white/70'
+                            }`}
+                          >
+                            {coachFractionLabel(f)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
       <div className="grid gap-2 sm:grid-cols-2">
         <button
@@ -486,7 +587,10 @@ function LiveClass({
           {offering ? classLabel(offering) : 'Class'}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          {meeting.attendees.length} checked in. Leave the iPad on roll call
+          {meeting.attendees.length} checked in
+          {(meeting.coachPresence?.length ?? 0) > 0 &&
+            ` · ${meeting.coachPresence!.length} coach${meeting.coachPresence!.length === 1 ? '' : 'es'}`}
+          . Leave the iPad on roll call
           so they tap their name. Shape test and New athlete · shape test
           also mark roll while this class is open. Roster is not auto-checked.
         </p>
@@ -631,6 +735,42 @@ function LiveClass({
           </ul>
         )}
       </div>
+      {(() => {
+        const presentCoaches = resolvePresentCoaches(meeting, athletes)
+        if (presentCoaches.length === 0) return null
+        return (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+              Coaches here
+            </p>
+            <ul className="mt-2 space-y-2">
+              {presentCoaches.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AthleteName athlete={a} />
+                    <span className="ml-1 shrink-0 text-xs text-white/45">
+                      {coachFractionLabel(coachPresenceFraction(meeting, a.id))}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs text-[var(--bad)] underline"
+                    onClick={() => {
+                      unmarkCoachPresent(meeting.id, a.id)
+                      onChanged()
+                    }}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })()}
 
       <ClassAthleteDesk
         athletes={athletes}
