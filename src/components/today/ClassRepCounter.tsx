@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Athlete } from '../../types'
 import { AthleteName } from '../AthleteAvatar'
 import { AthleteSearchField } from './AthleteSearchField'
-import { logClassRepsForAthletes } from '../../lib/classSessionLog'
+import { logSessionReps, type LessonClockContext } from '../../lib/sessionClockLog'
 
 type Phase = 'setup' | 'live' | 'done'
 
@@ -20,11 +20,17 @@ export function ClassRepCounter({
   signedIn,
   className,
   meetingId,
+  lesson,
+  onLessonActivity,
 }: {
   athletes: Athlete[]
   signedIn: Athlete | null
   className?: string
   meetingId?: string
+  /** Lesson context: reps log as lesson work instead of class work. */
+  lesson?: LessonClockContext
+  /** Fired after lesson-mode logging so the host can refresh. */
+  onLessonActivity?: () => void
 }) {
   const [phase, setPhase] = useState<Phase>('setup')
   const [catalogId, setCatalogId] = useState<string>('pushup')
@@ -49,14 +55,16 @@ export function ClassRepCounter({
 
   const logAll = () => {
     if (reps <= 0) return
-    const n = logClassRepsForAthletes({
+    const n = logSessionReps({
       athleteIds: picked,
       catalogId,
       reps,
       label: exercise.label,
+      lesson,
       className,
       meetingId,
     })
+    if (lesson && n > 0) onLessonActivity?.()
     setLogged(n)
     setPhase('done')
   }
@@ -168,7 +176,7 @@ export function ClassRepCounter({
           </button>
           <p className="text-xs text-white/50">
             Everyone does the reps together. You tap the count, then it logs to
-            each athlete's homework as in class.
+            each athlete's homework as {lesson ? 'in this lesson' : 'in class'}.
           </p>
         </div>
       )}
@@ -225,7 +233,7 @@ export function ClassRepCounter({
               <span className="text-lg text-white/40"> reps</span>
             </p>
             <p className="mt-1 text-sm text-white/60">
-              Logged for {logged} athlete{logged === 1 ? '' : 's'} as in class
+              Logged for {logged} athlete{logged === 1 ? '' : 's'} as {lesson ? 'in this lesson' : 'in class'}
               {signedIn ? ` · counted by ${signedIn.name}` : ''}.
             </p>
           </div>

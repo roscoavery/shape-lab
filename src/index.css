@@ -447,3 +447,19 @@ button {
   border-radius: 0 3px 3px 0;
   background: #6ec8d6;
 }
+/* Glowing class offering on the Start class picker: guides the coach to the
+   class closest to right now. Keeps the green gradient, adds a pulsing ring. */
+.sl-offering-glow {
+  position: relative;
+  background: linear-gradient(to bottom right, #5cf0c8, #2dd4a8, #147a62);
+  animation: sl-offering-pulse 2.4s ease-in-out infinite;
+}
+@keyframes sl-offering-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #5cf0c8, 0 0 18px rgba(92, 240, 200, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 3px #8ff5d6, 0 0 32px rgba(92, 240, 200, 0.75);
+  }
+}

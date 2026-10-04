@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import { ensureAutoHomework, loadHomeworkLogs } from '../../lib/storage'
+import { pendingIntake } from '../../lib/intakeQuestions'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
@@ -15,6 +16,27 @@ type Props = {
   athlete: Athlete | null
 }
 
+/** Per-day dismissal key for the onboarding nudge. */
+function onboardingDismissed(athleteId: string): boolean {
+  try {
+    const d = new Date()
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localStorage.getItem(`sl-onboarding-nudge-${athleteId}-${key}`) === '1'
+  } catch {
+    return false
+  }
+}
+
+function dismissOnboardingNudge(athleteId: string): void {
+  try {
+    const d = new Date()
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    localStorage.setItem(`sl-onboarding-nudge-${athleteId}-${key}`, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
 export function AthleteHome({
   athlete,
   onPractice,
@@ -23,6 +45,7 @@ export function AthleteHome({
   onQuickLog,
   onOpenGuide,
   onOpenShapes,
+  onOpenShapeTest,
 }: Props & {
   onPractice: () => void
   onProgress: () => void
@@ -30,7 +53,19 @@ export function AthleteHome({
   onQuickLog?: () => void
   onOpenGuide: () => void
   onOpenShapes: () => void
+  onOpenShapeTest: () => void
 }) {
+  const [nudgeTick, setNudgeTick] = useState(0)
+  const pendingCount = useMemo(
+    () => (athlete ? pendingIntake(athlete).filter((q) => !q.weekly).length : 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [athlete, nudgeTick],
+  )
+  const showNudge =
+    athlete != null &&
+    pendingCount > 0 &&
+    !onboardingDismissed(athlete.id)
+
   if (!athlete) {
     return (
       <p className="text-sm text-[var(--muted)]">
@@ -40,6 +75,41 @@ export function AthleteHome({
   }
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
+      {showNudge && (
+        <section className="rounded-xl border border-sky-300/40 bg-sky-300/10 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+                Finish setting up your profile
+              </p>
+              <h2 className="mt-1 text-lg font-semibold">
+                {pendingCount} question{pendingCount === 1 ? '' : 's'} left
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Answer the rest so your coach knows where you are starting from.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                dismissOnboardingNudge(athlete.id)
+                setNudgeTick((t) => t + 1)
+              }}
+              className="shrink-0 rounded-full px-2 py-1 text-xs text-[var(--muted)]"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenShapeTest}
+            className="mt-3 w-full rounded-xl bg-sky-400 px-4 py-2.5 text-sm font-bold text-black"
+          >
+            Answer questions
+          </button>
+        </section>
+      )}
       {/* TODAY, what should I work on? */}
       <section id="tour-athlete-today" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Today</p>

@@ -21,8 +21,9 @@ import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
-import { CalendarDesk, happeningNow } from '../calendar/CalendarDesk'
+import { CalendarDesk } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
+import { getSessionGlow, type SessionKind } from '../../lib/sessionGlow'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { BackCheckin } from '../today/BackCheckin'
 import { isRyanAthlete } from '../../lib/ryanProfile'
@@ -159,7 +160,7 @@ export function HomeDashboard({
   const [quickAddAthleteOpen, setQuickAddAthleteOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
   const [addQuery, setAddQuery] = useState('')
-  const [nowEventId, setNowEventId] = useState<string | null>(null)
+  const [glowingKinds, setGlowingKinds] = useState<Set<SessionKind>>(new Set())
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -175,18 +176,23 @@ export function HomeDashboard({
   useEffect(() => {
     if (!coach || !signedIn) return
     let cancelled = false
-    void (async () => {
+    const check = async () => {
       if (!hasCalendarApiToken()) await authorizeCalendarFromSession()
       const { events } = await fetchTodayEvents()
       if (cancelled) return
-      const now = happeningNow(events)
-      setNowEventId(now?.id ?? null)
-      if (now?.matchedAthleteId) {
-        setWithIds((prev) => (prev.length ? prev : [now.matchedAthleteId!]))
+      const glow = getSessionGlow(events)
+      setGlowingKinds(glow.glowing)
+      const lessonEvent = glow.closest.lesson
+      if (lessonEvent?.matchedAthleteId) {
+        setWithIds((prev) => (prev.length ? prev : [lessonEvent.matchedAthleteId!]))
       }
-    })()
+    }
+    void check()
+    // Re-check every minute so the glow kicks in as the 5-minute window opens.
+    const timer = window.setInterval(() => void check(), 60_000)
     return () => {
       cancelled = true
+      window.clearInterval(timer)
     }
   }, [coach, signedIn?.id, refresh])
   const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
@@ -683,7 +689,15 @@ export function HomeDashboard({
         {!(activeGroup && groupView === 'athlete') && (
         <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
           {onStartClass && !liveClass && (
-            <button type="button" onClick={onStartClass} className="sl-card sl-left px-4 py-4">
+            <button
+              type="button"
+              onClick={onStartClass}
+              className={
+                glowingKinds.has('class')
+                  ? 'sl-names-glow sl-left px-4 py-4'
+                  : 'sl-card sl-left px-4 py-4'
+              }
+            >
               <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
                 Floor
               </span>
@@ -704,7 +718,7 @@ export function HomeDashboard({
               onStartLesson(withAthletes.map((a) => a.id), plans[0]?.id ?? null)
             }}
             className={
-              nowEventId && !liveClass && !liveLesson
+              glowingKinds.has('lesson') && !liveClass && !liveLesson
                 ? 'sl-names-glow sl-left px-4 py-4'
                 : 'sl-card sl-left px-4 py-4'
             }
@@ -738,7 +752,11 @@ export function HomeDashboard({
           <button
             type="button"
             onClick={() => startTrainingKind('school')}
-            className="rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left"
+            className={
+              glowingKinds.has('school') && !liveClass && !liveLesson
+                ? 'sl-names-glow sl-left px-3 py-2.5 text-left'
+                : 'rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left'
+            }
           >
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
               Group
@@ -748,7 +766,11 @@ export function HomeDashboard({
           <button
             type="button"
             onClick={() => startTrainingKind('camp')}
-            className="rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left"
+            className={
+              glowingKinds.has('camp') && !liveClass && !liveLesson
+                ? 'sl-names-glow sl-left px-3 py-2.5 text-left'
+                : 'rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left'
+            }
           >
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
               Group

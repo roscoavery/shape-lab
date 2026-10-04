@@ -38,9 +38,7 @@ import { AssignClassHomework } from './AssignClassHomework'
 import { ClassRecapList } from './ClassRecapList'
 import { EndClassPrompt } from './EndClassPrompt'
 import { AthleteAvatar, AthleteName } from '../AthleteAvatar'
-import { ClassStopwatch } from './ClassStopwatch'
-import { ClassRepCounter } from './ClassRepCounter'
-import { ContestStopwatch } from './ContestStopwatch'
+import { SessionClock } from './SessionClock'
 import { ClassAthleteDesk } from './ClassAthleteDesk'
 import { ChalkboardPanel } from './ChalkboardPanel'
 import { ClassExtraPicker } from './ClassExtraPicker'
@@ -57,6 +55,8 @@ type Props = {
   onClose: () => void
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
+  /** Offering id to glow on the picker, guiding the coach to the right class. */
+  highlightOfferingId?: string | null
 }
 
 type Screen = 'pick' | 'roll' | 'live' | 'assign' | 'schedule'
@@ -70,6 +70,7 @@ export function ClassSession({
   onClose,
   onAthletesChange,
   onViewProfile,
+  highlightOfferingId,
 }: Props) {
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() =>
     loadOfferingsForCoach(coach.id),
@@ -174,7 +175,11 @@ export function ClassSession({
                         startingRef.current = false
                       }, 800)
                     }}
-                    className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[var(--on-accent)]"
+                    className={
+                      o.id === highlightOfferingId
+                        ? 'sl-offering-glow flex items-center gap-3 rounded-2xl px-4 py-4 text-left text-[var(--on-accent)]'
+                        : 'flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-4 py-4 text-left text-[var(--on-accent)]'
+                    }
                   >
                     <CoachPhotoStack offering={o} athletes={athletes} />
                     <span className="min-w-0 flex-1">
@@ -458,7 +463,6 @@ function LiveClass({
   const [pickId, setPickId] = useState('')
   const [classNote, setClassNote] = useState('')
   const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
-  const [clockView, setClockView] = useState<'clock' | 'contest' | 'reps'>('clock')
   const pool = useMemo(() => {
     const roster = rosterAthletes(offering, athletes)
     if (roster.length > 0) return roster
@@ -640,58 +644,14 @@ function LiveClass({
       <ChalkboardPanel viewer={coach} offeringId={offering?.id} />
 
       {/* Class clock with arcade switches, clock, hold contest, or rep counter. */}
-      <div className="flex flex-col gap-2">
-        <div className="flex rounded-full border border-white/10 bg-black/30 p-1">
-          <button
-            type="button"
-            onClick={() => setClockView('clock')}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${
-              clockView === 'clock' ? 'bg-[var(--accent)] text-black' : 'text-white/60'
-            }`}
-          >
-            ⏱ Class clock
-          </button>
-          <button
-            type="button"
-            onClick={() => setClockView('contest')}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${
-              clockView === 'contest' ? 'bg-amber-300 text-black' : 'text-white/60'
-            }`}
-          >
-            🏆 Hold contest
-          </button>
-          <button
-            type="button"
-            onClick={() => setClockView('reps')}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${
-              clockView === 'reps' ? 'bg-emerald-300 text-black' : 'text-white/60'
-            }`}
-          >
-            💪 Reps
-          </button>
-        </div>
-        {clockView === 'clock' ? (
-          <ClassStopwatch
-            athletes={athletes}
-            signedIn={coach}
-            coach
-          />
-        ) : clockView === 'contest' ? (
-          <ContestStopwatch
-            athletes={present}
-            signedIn={coach}
-            className={offering ? classLabel(offering) : undefined}
-            meetingId={meeting.id}
-          />
-        ) : (
-          <ClassRepCounter
-            athletes={present}
-            signedIn={coach}
-            className={offering ? classLabel(offering) : undefined}
-            meetingId={meeting.id}
-          />
-        )}
-      </div>
+      <SessionClock
+        athletes={athletes}
+        present={present}
+        signedIn={coach}
+        coach
+        className={offering ? classLabel(offering) : undefined}
+        meetingId={meeting.id}
+      />
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">

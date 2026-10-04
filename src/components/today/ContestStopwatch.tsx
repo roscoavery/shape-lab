@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { AthleteName } from '../AthleteAvatar'
 import { AthleteSearchField } from './AthleteSearchField'
-import {
-  CONTEST_HOLD_DRILLS,
-  logClassHoldForAthletes,
-} from '../../lib/classSessionLog'
+import { CONTEST_HOLD_DRILLS } from '../../lib/classSessionLog'
+import { logSessionHold, type LessonClockContext } from '../../lib/sessionClockLog'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
 type Phase = 'setup' | 'live' | 'done'
@@ -15,6 +13,10 @@ type Props = {
   signedIn: Athlete | null
   className?: string
   meetingId?: string
+  /** Lesson context: contest times log as lesson work instead of class work. */
+  lesson?: LessonClockContext
+  /** Fired after lesson-mode logging so the host can refresh. */
+  onLessonActivity?: () => void
 }
 
 type DownEntry = { athleteId: string; seconds: number }
@@ -27,7 +29,7 @@ type DownEntry = { athleteId: string; seconds: number }
  * Here the coach taps each athlete's name the moment they come down and
  * that athlete's own time is logged to their homework on the spot.
  */
-export function ContestStopwatch({ athletes, signedIn, className, meetingId }: Props) {
+export function ContestStopwatch({ athletes, signedIn, className, meetingId, lesson, onLessonActivity }: Props) {
   const [phase, setPhase] = useState<Phase>('setup')
   const [drillId, setDrillId] = useState<string>('wall_handstand')
   const [picked, setPicked] = useState<string[]>([])
@@ -94,16 +96,18 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
     const seconds = (Date.now() - startRef.current) / 1000
     // Guests have no profile — their time shows in the results but isn't logged.
     if (!isGuestId(athleteId)) {
-      logClassHoldForAthletes({
+      const n = logSessionHold({
         athleteIds: [athleteId],
         autoKey: drill.autoKey,
         seconds,
         label: holdName,
+        lesson,
         className,
         meetingId,
         coachId: signedIn?.id,
         coachName: signedIn?.name,
       })
+      if (lesson && n > 0) onLessonActivity?.()
     }
     setDown((d) => [...d, { athleteId, seconds }])
     setInIds((ids) => {
@@ -121,16 +125,18 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
     const seconds = (Date.now() - startRef.current) / 1000
     const loggable = inIds.filter((id) => !isGuestId(id))
     for (const athleteId of loggable) {
-      logClassHoldForAthletes({
+      const n = logSessionHold({
         athleteIds: [athleteId],
         autoKey: drill.autoKey,
         seconds,
         label: holdName,
+        lesson,
         className,
         meetingId,
         coachId: signedIn?.id,
         coachName: signedIn?.name,
       })
+      if (lesson && n > 0) onLessonActivity?.()
     }
     setDown((d) => [...d, ...inIds.map((athleteId) => ({ athleteId, seconds }))])
     setInIds([])
@@ -371,7 +377,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId }: P
             })}
           </ol>
           <p className="text-xs text-white/50">
-            Each time is logged to that athlete's homework as in class. Guests aren't logged.
+            Each time is logged to that athlete's homework as {lesson ? 'in this lesson' : 'in class'}. Guests aren't logged.
           </p>
           <button
             type="button"

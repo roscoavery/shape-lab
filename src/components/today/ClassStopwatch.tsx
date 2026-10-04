@@ -10,11 +10,14 @@ import {
 } from '../../lib/coachClasses'
 import {
   CLASS_HOLD_DRILLS,
-  logClassExtraForAthletes,
-  logClassHoldForAthletes,
-  logClassRepsForAthletes,
   logClassSkillForAthlete,
 } from '../../lib/classSessionLog'
+import {
+  logSessionExtra,
+  logSessionHold,
+  logSessionReps,
+  type LessonClockContext,
+} from '../../lib/sessionClockLog'
 import type { ClassExtraExercise } from '../../types'
 import { makeClassExtra } from '../../lib/classExercises'
 import { publishFeedPostResult, publishTextPostResult } from '../../lib/feedPosts'
@@ -142,6 +145,14 @@ type Props = {
   candidates?: Athlete[]
   /** Athlete-facing hold: search who, pick the hold, log one person. */
   floorMode?: boolean
+  /** Pre-selected athlete pool for non-meeting sessions (lessons). */
+  sessionPool?: Athlete[]
+  /** Lesson context: logs land as lesson work instead of class work. */
+  lesson?: LessonClockContext
+  /** Class extras for non-meeting sessions (lesson plan extras). */
+  extras?: ClassExtraExercise[]
+  /** Fired after lesson-mode logging so the host can refresh. */
+  onLessonActivity?: () => void
 }
 
 function formatWatch(ms: number): string {
@@ -160,22 +171,36 @@ export function ClassStopwatch({
   embed = false,
   candidates,
   floorMode = false,
+  sessionPool,
+  lesson,
+  extras: extrasProp,
+  onLessonActivity,
 }: Props) {
   const [, setClassTick] = useState(0)
   useEffect(() => subscribeCoachClasses(() => setClassTick((n) => n + 1)), [])
-  const meeting = getActiveMeeting(signedIn?.id)
+  /** Lesson mode never borrows the class meeting — the lesson athletes are the roster. */
+  const meeting = lesson ? null : getActiveMeeting(signedIn?.id)
   const offering = meeting ? getOffering(meeting.offeringId) : null
   const className = offering ? classLabel(offering) : undefined
   const searchPool = candidates ?? athletes
-  const classOpen = Boolean(meeting) && !floorMode
+  /** Open class or lesson session: present roster only. No session / floor: empty until they search. */
+  const sessionOpen = (Boolean(meeting) || Boolean(sessionPool)) && !floorMode
   const present = useMemo(
-    () => (meeting ? resolveAttendeeAthletes(meeting, athletes) : []),
-    [meeting, athletes],
+    () => (sessionPool ? sessionPool : meeting ? resolveAttendeeAthletes(meeting, athletes) : []),
+    [meeting, athletes, sessionPool],
   )
-  /** Open class: present roster only. No class / floor: empty until they search. */
-  const pool = classOpen ? present : []
+  const pool = sessionOpen ? present : []
 
-  const extras = offering?.extraExercises ?? []
+  const extras = extrasProp ?? offering?.extraExercises ?? []
+  /** 'class' everywhere it used to say class; 'lesson' in a lesson session. */
+  const sessionNoun = lesson ? 'lesson' : 'class'
+  const homeworkAs = lesson
+    ? 'It shows on their homework as in this lesson.'
+    : 'It shows on their homework as in class.'
+  /** Notify the lesson host after lesson-mode logging so it can refresh. */
+  const afterLog = (n: number) => {
+    if (lesson && n > 0) onLessonActivity?.()
+  }
   const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
   const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
   const [mode, setMode] = useState<Mode>('hold')
@@ -230,7 +255,7 @@ export function ClassStopwatch({
   const startRef = useRef<number | null>(null)
   const accRef = useRef(0)
 
-  const logPool = classOpen ? pool : extraPicks
+  const logPool = sessionOpen ? pool : extraPicks
   const catalogTrack =
     catalogPick?.track === 'hold_or_reps'
       ? catalogTrackPick
@@ -241,14 +266,14 @@ export function ClassStopwatch({
           : null
 
   useEffect(() => {
-    if (classOpen) {
+    if (sessionOpen) {
       setSelected(pool.map((a) => a.id))
       if (!skillAthleteId && pool[0]) setSkillAthleteId(pool[0].id)
       setExtraPicks([])
       return
     }
     setSelected(extraPicks.map((a) => a.id))
-  }, [classOpen, pool.map((a) => a.id).join('|'), extraPicks.map((a) => a.id).join('|')])
+  }, [sessionOpen, pool.map((a) => a.id).join('|'), extraPicks.map((a) => a.id).join('|')])
 
   useEffect(() => {
     if (!floorMode || !signedIn) return
@@ -314,7 +339,8 @@ export function ClassStopwatch({
 
   const logWho = (
     <LogWho
-      classOpen={classOpen}
+      sessionOpen={sessionOpen}
+      sessionNoun={sessionNoun}
       className={className}
       pool={logPool}
       selected={selected}
@@ -345,16 +371,18 @@ export function ClassStopwatch({
     }
     const pinned = extraHoldId ? activeExtra(extraHoldId) : undefined
     if (pinned && pinned.trackMode === 'hold') {
-      const n = logClassExtraForAthletes({
+      const n = logSessionExtra({
         athleteIds: selected,
         extra: pinned,
         seconds: secs,
+        lesson,
         className,
         meetingId: meeting?.id,
       })
+      afterLog(n)
       reset()
       setFlash(
-        `Logged ${pinned.label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+        `Logged ${pinned.label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. ${homeworkAs}`,
       )
       return
     }
@@ -369,20 +397,22 @@ export function ClassStopwatch({
     ]
       .filter(Boolean)
       .join(' · ')
-    const n = logClassHoldForAthletes({
+    const n = logSessionHold({
       athleteIds: selected,
       autoKey: drill.autoKey,
       seconds: secs,
       label: holdName,
+      lesson,
       className,
       meetingId: meeting?.id,
       side: drill.autoKey === 'side_plank' ? side : undefined,
       coachId: signedIn?.id,
       coachName: signedIn?.name,
     })
+    afterLog(n)
     reset()
     setFlash(
-      `Logged ${holdName}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+      `Logged ${holdName}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. ${homeworkAs}`,
     )
   }
 
@@ -397,14 +427,16 @@ export function ClassStopwatch({
       return
     }
     const nSets = Number(sets)
-    const n = logClassExtraForAthletes({
+    const n = logSessionExtra({
       athleteIds: selected,
       extra,
       reps: nReps,
       sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
+      lesson,
       className,
       meetingId: meeting?.id,
     })
+    afterLog(n)
     setFlash(
       `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${extra.label} for ${n} athlete${n === 1 ? '' : 's'}.`,
     )
@@ -428,13 +460,15 @@ export function ClassStopwatch({
         setFlash('Type how many seconds they held.')
         return
       }
-      const n = logClassExtraForAthletes({
+      const n = logSessionExtra({
         athleteIds: selected,
         extra,
         seconds: secs,
+        lesson,
         className,
         meetingId: meeting?.id,
       })
+      afterLog(n)
       reset()
       setFlash(`Logged ${label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
       return
@@ -445,14 +479,16 @@ export function ClassStopwatch({
       setFlash(`Enter how many ${label} they did.`)
       return
     }
-    const n = logClassExtraForAthletes({
+    const n = logSessionExtra({
       athleteIds: selected,
       extra,
       reps: nReps,
       sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
+      lesson,
       className,
       meetingId: meeting?.id,
     })
+    afterLog(n)
     setOtherName('')
     setFlash(
       `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
@@ -473,15 +509,17 @@ export function ClassStopwatch({
       return
     }
     const nSets = Number(sets)
-    const n = logClassRepsForAthletes({
+    const n = logSessionReps({
       athleteIds: selected,
       catalogId: repsCatalog,
       sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
       reps: nReps,
       label: `${label} · ${nReps} reps`,
+      lesson,
       className,
       meetingId: meeting?.id,
     })
+    afterLog(n)
     setFlash(
       `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
     )
@@ -516,14 +554,16 @@ export function ClassStopwatch({
         trackMode: 'hold',
       })
       if (!extra) return
-      const n = logClassExtraForAthletes({
+      const n = logSessionExtra({
         athleteIds: selected,
         extra,
         seconds: secs,
+        lesson,
         className,
         meetingId: meeting?.id,
         weightLb: weight,
       })
+      afterLog(n)
       reset()
       setFlash(`Logged ${label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
       return
@@ -534,16 +574,18 @@ export function ClassStopwatch({
       return
     }
     const nSets = Number(sets)
-    const n = logClassRepsForAthletes({
+    const n = logSessionReps({
       athleteIds: selected,
       catalogId: catalogPick.id,
       sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
       reps: nReps,
       label,
+      lesson,
       className,
       meetingId: meeting?.id,
       weightLb: weight,
     })
+    afterLog(n)
     setFlash(
       `Logged ${Number.isFinite(nSets) && nSets > 1 ? `${nSets}×` : ''}${nReps} ${label} for ${n} athlete${n === 1 ? '' : 's'}.`,
     )
@@ -560,6 +602,7 @@ export function ClassStopwatch({
       text: text || 'Video win',
       className,
       meetingId: meeting?.id,
+      lesson,
     })
     if (!log) return
     const who = athletes.find((a) => a.id === skillAthleteId)
@@ -920,7 +963,7 @@ export function ClassStopwatch({
           {extraHolds.length > 0 && (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
-                Also on this class
+                Also on this {sessionNoun}
               </p>
               <div className="flex flex-wrap gap-2">
                 {extraHolds.map((ex) => {
@@ -971,6 +1014,7 @@ export function ClassStopwatch({
                       label,
                       side: holdId === 'side_plank' && !extra ? side : null,
                       excludeClassMeetingId: meeting?.id,
+                      excludeLessonId: lesson?.lessonId,
                     })
                   })()
                 : null
@@ -994,7 +1038,7 @@ export function ClassStopwatch({
         return (
           <>
             <p className="text-sm text-white/60">
-              {extra.label} counts change by class. Type how many this group just did.
+              {extra.label} counts change by {sessionNoun}. Type how many this group just did.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-sm">
@@ -1117,7 +1161,7 @@ export function ClassStopwatch({
       {mode === 'vups' && (
         <>
           <p className="text-sm text-white/60">
-            {(repsCatalog === 'pushup' ? 'Push-up' : 'V-up')} counts change by class. Type the number this group just did.
+            {(repsCatalog === 'pushup' ? 'Push-up' : 'V-up')} counts change by {sessionNoun}. Type the number this group just did.
           </p>
           {repsCatalog === 'pushup' && HOLD_SPECS.pushup && (
             <div>
@@ -1348,7 +1392,7 @@ export function ClassStopwatch({
               Pick the athlete, type what they did, and post to Wins. Check big win only when it also belongs on the gym feed.
             </InfoHint>
           </div>
-          {classOpen ? (
+          {sessionOpen ? (
             <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
               {logPool.map((a) => (
                 <button
@@ -1366,7 +1410,7 @@ export function ClassStopwatch({
                 </button>
               ))}
               {logPool.length === 0 && (
-                <p className="text-sm text-white/55">Mark who is present on this class first.</p>
+                <p className="text-sm text-white/55">Mark who is present on this {sessionNoun} first.</p>
               )}
             </div>
           ) : (
@@ -1382,7 +1426,7 @@ export function ClassStopwatch({
               placeholder="Search who hit this"
             />
           )}
-          {skillAthleteId && !classOpen && (
+          {skillAthleteId && !sessionOpen && (
             <p className="text-sm">
               {athletes.find((a) => a.id === skillAthleteId)?.name ?? 'Selected'}
             </p>
@@ -1469,8 +1513,8 @@ export function ClassStopwatch({
         <p className="mb-3 flex items-center gap-2 text-sm text-white/55">
           {className ? `Holds for ${className}` : 'Stopwatch'}
           <InfoHint>
-            {classOpen
-              ? 'Logs go to athletes marked present on this class.'
+            {sessionOpen
+              ? `Logs go to athletes marked present on this ${sessionNoun}.`
               : 'Search a name to log a hold. Older holds belong in an open lesson, not here.'}
           </InfoHint>
         </p>
@@ -1490,8 +1534,10 @@ export function ClassStopwatch({
       <p className="mt-1 flex items-center gap-2 text-sm text-[var(--muted)]">
         Time a hold, then log it.
         <InfoHint>
-          {classOpen
-            ? 'Everyone selected on the present roster gets it as in class.'
+          {sessionOpen
+            ? lesson
+              ? 'Everyone selected gets it as lesson work.'
+              : 'Everyone selected on the present roster gets it as in class.'
             : 'When no class is open, search who to log. Historical times go in a lesson.'}
         </InfoHint>
       </p>
@@ -1583,7 +1629,8 @@ function HoldClock({
 }
 
 function LogWho({
-  classOpen,
+  sessionOpen,
+  sessionNoun,
   className,
   pool,
   selected,
@@ -1597,7 +1644,8 @@ function LogWho({
   onRemovePick,
   floorMode = false,
 }: {
-  classOpen: boolean
+  sessionOpen: boolean
+  sessionNoun: 'class' | 'lesson'
   className?: string
   pool: Athlete[]
   selected: string[]
@@ -1611,7 +1659,7 @@ function LogWho({
   onRemovePick: (id: string) => void
   floorMode?: boolean
 }) {
-  if (!classOpen) {
+  if (!sessionOpen) {
     return (
       <div>
         <div className="mb-1 flex items-center gap-2">
@@ -1662,7 +1710,7 @@ function LogWho({
       onSelectNone={onSelectNone}
       emptyText={
         className
-          ? 'Mark who is present on this class to log holds.'
+          ? `Mark who is present on this ${sessionNoun} to log holds.`
           : 'No one marked present yet.'
       }
     />

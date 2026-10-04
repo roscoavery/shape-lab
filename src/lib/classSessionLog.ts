@@ -302,11 +302,13 @@ export function logClassSkillForAthlete(opts: {
   text: string
   className?: string
   meetingId?: string
+  /** Lesson context: log as lesson work instead of class work. */
+  lesson?: { lessonId: string; coachId: string; coachName: string }
 }): HomeworkLog | null {
   const text = opts.text.trim()
   if (!text) return null
   const hw = ensureClassSkillsHomework(opts.athleteId)
-  const sourceLabel = classLabel('New skill', opts.className)
+  const sourceLabel = opts.lesson ? 'Lesson · New skill' : classLabel('New skill', opts.className)
   const log: HomeworkLog = {
     id: createId('hwlog'),
     athleteId: opts.athleteId,
@@ -319,8 +321,11 @@ export function logClassSkillForAthlete(opts: {
     score: 0,
     journal: text,
     trackMode: 'journal',
-    loggedFrom: 'class',
+    loggedFrom: opts.lesson ? 'lesson' : 'class',
     sourceLabel,
+    ...(opts.lesson
+      ? { lessonId: opts.lesson.lessonId, coachId: opts.lesson.coachId, coachName: opts.lesson.coachName }
+      : {}),
     ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
     ...(opts.className ? { className: opts.className } : {}),
   }

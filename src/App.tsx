@@ -203,10 +203,12 @@ import {
   getActiveMeeting,
   getOffering,
   hydrateCoachClasses,
+  loadOfferingsForCoach,
   markClassAttendance,
   priorOfferingAthleteIds,
   subscribeCoachClasses,
 } from './lib/coachClasses'
+import { closestOfferingToNow } from './lib/sessionGlow'
 import {
   addIgStill,
   hydrateIgStills,
@@ -1286,6 +1288,10 @@ export default function App() {
           }}
           onOpenShapes={() => {
             stashMobileSearchJump({ kind: 'shapes' })
+            goTab('learn')
+          }}
+          onOpenShapeTest={() => {
+            setLearnIntent('quiz')
             goTab('learn')
           }}
         />
@@ -2549,6 +2555,9 @@ export default function App() {
         onAthletesChange={setAthleteRoster}
         onViewProfile={openProfile}
         onClose={() => setClassSessionOpen(false)}
+        highlightOfferingId={
+          closestOfferingToNow(loadOfferingsForCoach(activeProfile.id))?.id ?? null
+        }
         onOpenStation={() => {
           setClassSessionOpen(false)
           setStationOpen(true)

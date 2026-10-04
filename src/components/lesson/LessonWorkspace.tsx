@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { getShape } from '../../config/shapes'
-import { logLessonHoldOnAthleteHomework, logLessonRepsOnAthleteHomework } from '../../lib/lessonHomework'
-import { makeClassExtra, mergeExtras } from '../../lib/classExercises'
+import { useMemo, useState } from 'react'
+import { mergeExtras } from '../../lib/classExercises'
 import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
 import {
-  addLessonHold,
   addLessonNote,
   endLessonSession,
+  getLessonSession,
   lessonAthleteIds,
 } from '../../lib/lessonStore'
 import { HoldProperTimes } from '../HoldProperTimes'
@@ -20,9 +18,7 @@ import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { AssignHomeworkBar } from './AssignHomeworkBar'
 import { LessonNoteBar } from './LessonNoteBar'
 import { rememberTypedHold } from '../../lib/typedHolds'
-import { SkillPicker, emptySkillTopic, groupLessonWork, type SkillTopic } from './SkillPicker'
-import { SkillTopicStill, ShapeIdStill } from './SkillTopicStill'
-import { holdLastAndBest } from '../../lib/holdBest'
+import { groupLessonWork } from './SkillPicker'
 import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteProfileCard } from '../AthleteProfileCard'
@@ -31,14 +27,7 @@ import { logClassSkillForAthlete } from '../../lib/classSessionLog'
 import { publishTextPost } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { CoachHoldEntry } from '../family/CoachHoldEntry'
-
-/** Class-clock style readout: m:ss.t */
-function formatWatch(ms: number): string {
-  const total = Math.max(0, ms) / 1000
-  const m = Math.floor(total / 60)
-  const s = total - m * 60
-  return `${m}:${s.toFixed(1).padStart(4, '0')}`
-}
+import { SessionClock } from '../today/SessionClock'
 
 type Props = {
   session: LessonSession
@@ -75,130 +64,17 @@ export function LessonWorkspace({
   onSessionChange,
   onEnded,
 }: Props) {
-  const [holdTopic, setHoldTopic] = useState<SkillTopic>(() => {
-    const first = plan?.blocks.find((b) => b.kind === 'hold')
-    if (first?.shapeId) {
-      return {
-        kind: 'shape',
-        id: first.shapeId,
-        label: first.title || getShape(first.shapeId)?.name || first.shapeId,
-      }
-    }
-    return emptySkillTopic()
-  })
   const [tick, setTick] = useState(0)
-  const [watchRunning, setWatchRunning] = useState(false)
-  const [watchMs, setWatchMs] = useState(0)
-  const watchStartRef = useRef<number | null>(null)
-  const watchAccRef = useRef(0)
-  useEffect(() => {
-    if (!watchRunning) return
-    const id = window.setInterval(() => {
-      const start = watchStartRef.current
-      if (start == null) return
-      setWatchMs(watchAccRef.current + (performance.now() - start))
-    }, 80)
-    return () => window.clearInterval(id)
-  }, [watchRunning])
 
-  const startWatch = () => {
-    watchStartRef.current = performance.now()
-    setWatchRunning(true)
-  }
-
-  const stopWatch = () => {
-    const start = watchStartRef.current
-    if (start != null) watchAccRef.current += performance.now() - start
-    watchStartRef.current = null
-    setWatchRunning(false)
-    setWatchMs(watchAccRef.current)
-  }
-
-  const resetWatch = () => {
-    watchStartRef.current = watchRunning ? performance.now() : null
-    watchAccRef.current = 0
-    setWatchMs(0)
-  }
-
-  const pickHold = (topic: SkillTopic) => {
-    setHoldTopic(topic)
-  }
-
-  const logHold = (seconds: number, method: 'camera' | 'manual', proper = 0, scoreValue = 0) => {
-    const label = holdTopic.label.trim()
-    if (!label) return
-    const manualSecs = Number(manualSeconds)
-    const secs = Number.isFinite(manualSecs) && manualSecs > 0 ? manualSecs : seconds
-    const next = addLessonHold(session.id, {
-      shapeId: holdTopic.id || `custom:${label.toLowerCase()}`,
-      shapeName: label,
-      totalHoldSeconds: Number(secs.toFixed(1)),
-      properHoldSeconds: Number(proper.toFixed(1)),
-      score: scoreValue,
-      method,
-      topicKind: holdTopic.kind,
-      ...(holdTopic.side ? { side: holdTopic.side } : {}),
-    })
-    if (next) {
-      if (holdTopic.kind === 'custom') rememberTypedHold(session.coachId, label)
-      for (const id of peopleIds) {
-        logLessonHoldOnAthleteHomework({
-          athleteId: id,
-          coachId: session.coachId,
-          coachName,
-          lessonId: session.id,
-          shapeId: holdTopic.id || `custom:${label.toLowerCase()}`,
-          shapeName: label,
-          totalHoldSeconds: Number(secs.toFixed(1)),
-          properHoldSeconds: Number(proper.toFixed(1)),
-          score: scoreValue,
-          method,
-          ...(holdTopic.side ? { side: holdTopic.side } : {}),
-          ...(holdWhen === 'past' && holdPast ? { performedAt: holdPast } : {}),
-        })
-      }
-      onSessionChange(next)
-      setManualSeconds('')
-      setHistoryTick((n) => n + 1)
-      if (method === 'manual') resetWatch()
-    }
-  }
-
-  const [repCounts, setRepCounts] = useState<Record<string, string>>({})
-  const [repFlash, setRepFlash] = useState<string | null>(null)
-  const [otherName, setOtherName] = useState('')
-  const [otherReps, setOtherReps] = useState('')
-  const [otherSets, setOtherSets] = useState('1')
-  const [holdWhen, setHoldWhen] = useState<'today' | 'past'>('today')
-  const [holdPast, setHoldPast] = useState('')
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()
     const offering = meeting ? getOffering(meeting.offeringId) : null
     return mergeExtras(plan?.extraExercises, offering?.extraExercises)
   }, [plan?.extraExercises, tick])
-  const extraHolds = extras.filter((ex) => ex.trackMode === 'hold')
-  const extraReps = extras.filter((ex) => ex.trackMode === 'reps')
 
   const grouped = useMemo(() => groupLessonWork(session), [session])
   const people = lessonAthletes?.length ? lessonAthletes : athlete ? [athlete] : []
   const peopleIds = people.length ? people.map((a) => a.id) : lessonAthleteIds(session)
-  const [manualSeconds, setManualSeconds] = useState('')
-  const [historyTick, setHistoryTick] = useState(0)
-
-  /** Last-time + PR for each lesson athlete on the currently selected hold. */
-  const holdMarks = useMemo(() => {
-    const topic = holdTopic
-    const shapeId =
-      topic.kind === 'shape' ? topic.id ?? null : topic.kind === 'coach' ? topic.scoreShapeId ?? null : null
-    return peopleIds.map((id) => ({
-      id,
-      marks: holdLastAndBest(
-        id,
-        { shapeId, label: topic.label, side: topic.side ?? null, excludeLessonId: session.id },
-      ),
-    }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holdTopic, peopleIds.join('|'), historyTick, session.id])
   const [videoAthleteId, setVideoAthleteId] = useState(peopleIds[0] ?? session.athleteId)
   const [boardAthleteId, setBoardAthleteId] = useState(peopleIds[0] ?? session.athleteId)
   const videoAthlete = people.find((a) => a.id === videoAthleteId) ?? people[0] ?? athlete
@@ -288,11 +164,9 @@ export function LessonWorkspace({
                     <button
                       type="button"
                       onClick={() =>
-                        pickHold({
-                          kind: b.shapeId ? 'shape' : 'custom',
-                          id: b.shapeId,
-                          label: b.title,
-                        })
+                        document
+                          .getElementById('lesson-clock')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }
                       className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
                     >
@@ -378,95 +252,21 @@ export function LessonWorkspace({
         title="Holds & stopwatch"
         hint="Time it. Log it. No camera grade."
       >
-        <p className="text-sm text-white/55">
-          Pick the hold, Start, Stop, Log. It lands on {athleteName}’s homework as
-          a lesson with {coachName}.
-        </p>
-        <div className="mt-3 flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <SkillPicker
-              value={holdTopic}
-              onChange={setHoldTopic}
-              label="What are you holding"
-              compactHolds
-              allowSequence={false}
-              coachId={session.coachId}
-              extraHolds={extraHolds}
-            />
-          </div>
-          <SkillTopicStill topic={holdTopic} />
-        </div>
-        <div className="mt-2 space-y-1">
-          {holdMarks.map(({ id, marks }) => {
-            const { last, best } = marks
-            if (!last) return null
-            const person = people.find((p) => p.id === id)
-            const who = people.length > 1 && person ? `${person.name.split(' ')[0]} · ` : ''
-            return (
-              <p
-                key={id}
-                className="text-center text-xs font-semibold uppercase tracking-wider text-[var(--warn)]"
-              >
-                {who}Beat last · {last.seconds.toFixed(1)}s
-                {best && best.seconds > last.seconds + 0.05 ? ` · PR ${best.seconds.toFixed(1)}s` : ''}
-              </p>
-            )
-          })}
-          {holdMarks.every(({ marks }) => !marks.last && !marks.best) && holdTopic.label.trim() && (
-            <p className="text-center text-xs text-white/45">
-              First hold on this drill becomes the mark to beat.
-            </p>
-          )}
-        </div>
-        <p className="mt-1 text-center font-mono text-5xl font-bold tabular-nums">
-          {formatWatch(watchMs)}
-        </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
-          {!watchRunning ? (
-            <button
-              type="button"
-              onClick={startWatch}
-              className="rounded-xl bg-[var(--accent)] px-5 py-2 text-sm font-bold text-[var(--on-accent)]"
-            >
-              Start
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={stopWatch}
-              className="rounded-xl bg-[var(--bad)] px-5 py-2 text-sm font-bold text-white"
-            >
-              Stop
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={resetWatch}
-            className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold"
-          >
-            Reset
-          </button>
-        </div>
-        <label className="mt-2 block text-sm">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-white/45">
-            Seconds to log
-          </span>
-          <input
-            inputMode="decimal"
-            value={manualSeconds}
-            onChange={(e) => setManualSeconds(e.target.value)}
-            placeholder="Or type the time"
-            className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-3"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={!holdTopic.label.trim() || (watchMs < 200 && !(Number(manualSeconds) > 0))}
-          onClick={() => logHold(watchMs / 1000, 'manual')}
-          className="mt-2 h-12 w-full rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
-        >
-          Log hold{people.length > 1 ? ` · ${people.length}` : ''}
-        </button>
+        <SessionClock
+          athletes={athletes}
+          present={people}
+          signedIn={coach}
+          coach
+          embedClock
+          className={plan?.title}
+          lesson={{ lessonId: session.id, coachId: session.coachId, coachName }}
+          extras={extras}
+          onLessonActivity={() => {
+            const next = getLessonSession(session.id)
+            if (next) onSessionChange(next)
+            setTick((t) => t + 1)
+          }}
+        />
         <details className="mt-3 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
           <summary className="cursor-pointer text-sm font-semibold">
             Hold history & homework logs
@@ -497,30 +297,6 @@ export function LessonWorkspace({
           <p className="mt-1 text-xs text-[var(--muted)]">
             From notes or a previous date. One athlete at a time.
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <label>
-              <span className="text-[11px] uppercase text-[var(--muted)]">When</span>
-              <select
-                value={holdWhen}
-                onChange={(e) => setHoldWhen(e.target.value as 'today' | 'past')}
-                className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-              >
-                <option value="today">Performed today</option>
-                <option value="past">Choose previous date</option>
-              </select>
-            </label>
-            {holdWhen === 'past' && (
-              <label>
-                <span className="text-[11px] uppercase text-[var(--muted)]">Date</span>
-                <input
-                  type="date"
-                  value={holdPast}
-                  onChange={(e) => setHoldPast(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-                />
-              </label>
-            )}
-          </div>
           {people.map((row) => (
             <div key={row.id} className="mt-2">
               <CoachHoldEntry
@@ -532,122 +308,6 @@ export function LessonWorkspace({
             </div>
           ))}
         </details>
-        <div className="mt-4 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] p-3">
-            <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Also count reps / sets</p>
-            {repFlash && (
-              <p className="mt-1 text-sm font-semibold text-[var(--accent)]">{repFlash}</p>
-            )}
-            <ul className="mt-2 flex flex-col gap-2">
-              {extraReps.map((ex) => (
-                <li key={ex.id} className="flex flex-wrap items-center gap-2">
-                  {ex.kind === 'shape' && ex.refId ? <ShapeIdStill shapeId={ex.refId} /> : null}
-                  <span className="min-w-[7rem] text-sm font-semibold">{ex.label}</span>
-                  <input
-                    inputMode="numeric"
-                    value={repCounts[ex.id] ?? ''}
-                    onChange={(e) =>
-                      setRepCounts((prev) => ({ ...prev, [ex.id]: e.target.value }))
-                    }
-                    placeholder="Reps"
-                    className="h-10 w-20 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-xs font-semibold text-white"
-                    onClick={() => {
-                      const n = Number(repCounts[ex.id])
-                      if (!Number.isFinite(n) || n <= 0) {
-                        setRepFlash(`Type how many ${ex.label} they did.`)
-                        return
-                      }
-                      let logged = 0
-                      for (const id of peopleIds) {
-                        const row = logLessonRepsOnAthleteHomework({
-                          athleteId: id,
-                          coachId: session.coachId,
-                          coachName,
-                          lessonId: session.id,
-                          extra: ex,
-                          reps: n,
-                        })
-                        if (row) logged += 1
-                      }
-                      setTick((t) => t + 1)
-                      setRepFlash(
-                        `Logged ${n} ${ex.label} for ${logged} athlete${logged === 1 ? '' : 's'}.`,
-                      )
-                    }}
-                  >
-                    Log for {athleteName}
-                  </button>
-                </li>
-              ))}
-              <li className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-2">
-                <input
-                  className="h-10 min-w-[8rem] flex-1 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                  placeholder="Other exercise"
-                  value={otherName}
-                  onChange={(e) => setOtherName(e.target.value)}
-                />
-                <input
-                  inputMode="numeric"
-                  value={otherSets}
-                  onChange={(e) => setOtherSets(e.target.value)}
-                  placeholder="Sets"
-                  className="h-10 w-16 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                />
-                <input
-                  inputMode="numeric"
-                  value={otherReps}
-                  onChange={(e) => setOtherReps(e.target.value)}
-                  placeholder="Reps"
-                  className="h-10 w-16 rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
-                />
-                <button
-                  type="button"
-                  className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-xs font-semibold text-white"
-                  onClick={() => {
-                    const label = otherName.trim()
-                    const n = Number(otherReps)
-                    if (!label) {
-                      setRepFlash('Type the exercise they just did.')
-                      return
-                    }
-                    if (!Number.isFinite(n) || n <= 0) {
-                      setRepFlash(`Type how many ${label} they did.`)
-                      return
-                    }
-                    const extra = makeClassExtra({ kind: 'custom', label, trackMode: 'reps' })
-                    if (!extra) return
-                    const nSets = Number(otherSets)
-                    let logged = 0
-                    for (const id of peopleIds) {
-                      const row = logLessonRepsOnAthleteHomework({
-                        athleteId: id,
-                        coachId: session.coachId,
-                        coachName,
-                        lessonId: session.id,
-                        extra,
-                        reps: n,
-                        sets: Number.isFinite(nSets) && nSets > 1 ? nSets : undefined,
-                      })
-                      if (row) logged += 1
-                    }
-                    setTick((t) => t + 1)
-                    setOtherName('')
-                    setRepFlash(
-                      `Logged ${Number(otherSets) > 1 ? `${otherSets}×` : ''}${n} ${label} for ${logged} athlete${logged === 1 ? '' : 's'}.`,
-                    )
-                  }}
-                >
-                  Log other
-                </button>
-              </li>
-            </ul>
-          </div>
-        {!holdTopic.label.trim() && (
-          <p className="mt-2 text-xs text-[var(--muted)]">Select or type the skill before you log.</p>
-        )}
       </TodayDock>
 
       <TodayDock
@@ -664,7 +324,6 @@ export function LessonWorkspace({
         </p>
         <div className="mt-3">
           <LessonNoteBar
-            preset={holdTopic.label.trim() ? holdTopic : undefined}
             coachId={session.coachId}
             onAdd={(text, topic, audience) => {
               if (topic.kind === 'custom') rememberTypedHold(session.coachId, topic.label)
