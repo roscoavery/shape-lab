@@ -34,7 +34,11 @@ export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }
   const guests = loadQuizGuests()
 
   const roster = useMemo(
-    () => athletes.filter((a) => profileRole(a) === 'athlete' || !a.role),
+    () =>
+      athletes.filter((a) => {
+        const role = profileRole(a)
+        return role === 'athlete' || role === 'coach' || role === 'gym_owner' || !a.role
+      }),
     [athletes],
   )
   const q = filter.trim().toLowerCase()
