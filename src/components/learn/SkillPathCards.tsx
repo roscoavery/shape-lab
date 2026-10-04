@@ -46,6 +46,7 @@ import {
   usePathTick,
   type PathHighlight,
 } from '../../lib/skillPathHighlight'
+import { toggleKeyHelperWiggle } from '../../lib/keyHelperOverrides'
 import { FAMILY_BY_SKILL, SkillMapView, hlGlowStyle, type SkillFamily } from './SkillMapView'
 import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
@@ -1032,6 +1033,46 @@ function PathNode({
 }
 
 /**
+ * Coach-only wiggle toggle for one path node. Toggles whether this skill
+ * rocks on the skill map as a key helper for the card's target skill.
+ */
+function WiggleToggle({
+  targetId,
+  skillId,
+  on,
+}: {
+  targetId: string
+  skillId: string
+  on: boolean
+}) {
+  const [saving, setSaving] = useState(false)
+  return (
+    <button
+      type="button"
+      disabled={saving}
+      onClick={async (e) => {
+        e.stopPropagation()
+        setSaving(true)
+        try {
+          await toggleKeyHelperWiggle(targetId, skillId, !on)
+        } finally {
+          setSaving(false)
+        }
+      }}
+      title={on ? 'Wiggle is on. This skill rocks on the map.' : 'Turn wiggle on for this skill'}
+      aria-pressed={on}
+      className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+        on
+          ? 'border-amber-300/70 bg-amber-300/15 text-amber-200'
+          : 'border-white/15 text-white/40 hover:text-white/70'
+      } ${saving ? 'opacity-50' : ''}`}
+    >
+      <span aria-hidden>{on ? '●' : '○'}</span> Wiggle
+    </button>
+  )
+}
+
+/**
  * Drill list on the card. Videos are optional on purpose — Ryan adds them
  * later, when uploading is less of a burden.
  */
@@ -1342,6 +1383,11 @@ function PathTab({
             ? 'Brightest at the top, work it from the bottom up.'
             : 'No path pieces mapped yet.'}
         </p>
+        {canEdit && required.length > 0 && (
+          <p className="mt-1 text-[11px] text-white/50">
+            Coach: tap Wiggle on any skill to make it rock on the map for this target.
+          </p>
+        )}
       </div>
 
       {hl && (
@@ -1350,13 +1396,24 @@ function PathTab({
           {required.map(([id]) => (
             <div key={id}>
               <div aria-hidden className="mx-auto h-2.5 w-0.5 bg-white/20" />
-              <PathNode
-                skillId={id}
-                dist={hl.required.get(id) ?? 1}
-                hl={hl}
-                role="required"
-                onSelectSkill={onSelectSkill}
-              />
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <PathNode
+                    skillId={id}
+                    dist={hl.required.get(id) ?? 1}
+                    hl={hl}
+                    role="required"
+                    onSelectSkill={onSelectSkill}
+                  />
+                </div>
+                {canEdit && (
+                  <WiggleToggle
+                    targetId={canon}
+                    skillId={id}
+                    on={hl.keyHelpers.has(canonicalSkillId(id))}
+                  />
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -1392,7 +1449,18 @@ function PathTab({
           <Label>Also helps</Label>
           <div className="mt-1.5 space-y-1.5">
             {helpful.map(([id, dist]) => (
-              <PathNode key={id} skillId={id} dist={dist} hl={hl} role="helpful" onSelectSkill={onSelectSkill} />
+              <div key={id} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <PathNode skillId={id} dist={dist} hl={hl} role="helpful" onSelectSkill={onSelectSkill} />
+                </div>
+                {canEdit && (
+                  <WiggleToggle
+                    targetId={canon}
+                    skillId={id}
+                    on={hl.keyHelpers.has(canonicalSkillId(id))}
+                  />
+                )}
+              </div>
             ))}
           </div>
         </div>

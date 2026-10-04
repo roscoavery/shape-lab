@@ -142,6 +142,27 @@ export async function resetKeyHelperCombos(targetSkillId: string): Promise<boole
   }
 }
 
+/**
+ * Toggle one skill's wiggle for a target. Reads the current merged combos,
+ * flattens them into a single group, adds or removes the skill, and saves
+ * as the coach's explicit override. Multi-combo shipped defaults collapse
+ * into the single edited group.
+ */
+export async function toggleKeyHelperWiggle(
+  targetSkillId: string,
+  skillId: string,
+  on: boolean,
+): Promise<boolean> {
+  const canon = canonical(targetSkillId)
+  const skill = canonical(skillId)
+  if (!canon || !skill || !getRegistrySkill(skill)) return false
+  const current = keyHelperCombosForTarget(canon, (id) => !!getRegistrySkill(id))
+  const set = new Set(current.flat())
+  if (on) set.add(skill)
+  else set.delete(skill)
+  return saveKeyHelperCombos(canon, [[...set]])
+}
+
 /** Skill-name lookup for the editor and combo labels. */
 export function skillNameFor(id: string): string {
   return getRegistrySkill(canonical(id))?.name ?? id

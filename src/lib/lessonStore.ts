@@ -9,6 +9,8 @@ import { gymWriteFetch } from './gymWritePace'
 const PLANS_KEY = 'shape-lab.lessonPlans.v1'
 const SESSIONS_KEY = 'shape-lab.lessonSessions.v1'
 const ACTIVE_KEY = 'shape-lab.activeLesson.v1'
+const REMOVED_SESSIONS_KEY = 'shape-lab.removedLessonSessions.v1'
+const REMOVED_PLANS_KEY = 'shape-lab.removedLessonPlans.v1'
 
 export type LessonFile = {
   kind: 'shape-lab-lessons'
@@ -16,6 +18,10 @@ export type LessonFile = {
   exportedAt: string
   plans: LessonPlan[]
   sessions: LessonSession[]
+  /** Session ids dropped on any device — do not resurrect on merge. */
+  removedSessionIds?: string[]
+  /** Plan ids dropped on any device — do not resurrect on merge. */
+  removedPlanIds?: string[]
 }
 
 const listeners = new Set<() => void>()
@@ -57,6 +63,33 @@ export function loadLessonSessions(): LessonSession[] {
   return Array.isArray(list) ? list : []
 }
 
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function mergeIdLists(...lists: Array<string[] | undefined>): string[] {
+  return asIdList(lists.flatMap((list) => list ?? []))
+}
+
+export function loadRemovedSessionIds(): string[] {
+  return asIdList(readJson<string[]>(REMOVED_SESSIONS_KEY, []))
+}
+
+export function loadRemovedPlanIds(): string[] {
+  return asIdList(readJson<string[]>(REMOVED_PLANS_KEY, []))
+}
+
+/** Record dropped ids as tombstones so union merges can't resurrect them. */
+function recordRemoved(sessionIds: string[], planIds: string[]) {
+  if (sessionIds.length > 0) {
+    writeJson(REMOVED_SESSIONS_KEY, mergeIdLists(loadRemovedSessionIds(), sessionIds))
+  }
+  if (planIds.length > 0) {
+    writeJson(REMOVED_PLANS_KEY, mergeIdLists(loadRemovedPlanIds(), planIds))
+  }
+}
+
 function persist(plans: LessonPlan[], sessions: LessonSession[]) {
   writeJson(PLANS_KEY, plans)
   writeJson(SESSIONS_KEY, sessions.slice(0, 200))
@@ -77,6 +110,8 @@ function ensureLessonFlush() {
         exportedAt: new Date().toISOString(),
         plans: loadLessonPlans(),
         sessions: loadLessonSessions(),
+        removedSessionIds: loadRemovedSessionIds(),
+        removedPlanIds: loadRemovedPlanIds(),
       } satisfies LessonFile)
       void gymWriteFetch('/api/lessons', {
         method: 'PUT',
@@ -101,6 +136,8 @@ async function pushLessons() {
     exportedAt: new Date().toISOString(),
     plans: loadLessonPlans(),
     sessions: loadLessonSessions(),
+    removedSessionIds: loadRemovedSessionIds(),
+    removedPlanIds: loadRemovedPlanIds(),
   }
   try {
     await gymWriteFetch('/api/lessons', {
@@ -119,11 +156,31 @@ export async function hydrateLessons(): Promise<void> {
     if (!res.ok) return
     const data = (await res.json()) as LessonFile
     if (data?.kind !== 'shape-lab-lessons') return
-    const localPlans = loadLessonPlans()
-    const localSessions = loadLessonSessions()
-    const plans = mergeById(localPlans, data.plans ?? [], (p) => p.updatedAt)
-    const sessions = mergeById(localSessions, data.sessions ?? [], sessionStamp)
+    // Tombstones merge monotonically and win over union: a dropped id stays
+    // dropped even if a stale copy (local or remote) still carries the row.
+    const removedSessionIds = mergeIdLists(loadRemovedSessionIds(), data.removedSessionIds)
+    const removedPlanIds = mergeIdLists(loadRemovedPlanIds(), data.removedPlanIds)
+    writeJson(REMOVED_SESSIONS_KEY, removedSessionIds)
+    writeJson(REMOVED_PLANS_KEY, removedPlanIds)
+    const goneSessions = new Set(removedSessionIds)
+    const gonePlans = new Set(removedPlanIds)
+    const localPlans = loadLessonPlans().filter((p) => p?.id && !gonePlans.has(p.id))
+    const localSessions = loadLessonSessions().filter((s) => s?.id && !goneSessions.has(s.id))
+    const plans = mergeById(localPlans, data.plans ?? [], (p) => p.updatedAt).filter(
+      (p) => p?.id && !gonePlans.has(p.id),
+    )
+    const sessions = mergeById(localSessions, data.sessions ?? [], sessionStamp).filter(
+      (s) => s?.id && !goneSessions.has(s.id),
+    )
     persist(plans, sessions)
+    // If the server is missing any local tombstone ids, teach it so other
+    // devices learn the deletes on their next poll.
+    const serverRemovedSessions = asIdList(data.removedSessionIds)
+    const serverRemovedPlans = asIdList(data.removedPlanIds)
+    const serverLacks =
+      removedSessionIds.some((id) => !serverRemovedSessions.includes(id)) ||
+      removedPlanIds.some((id) => !serverRemovedPlans.includes(id))
+    if (serverLacks) await pushLessons()
   } catch {
     /* first load */
   }
@@ -151,6 +208,7 @@ export function upsertLessonPlan(plan: LessonPlan): LessonPlan {
 }
 
 export function deleteLessonPlan(id: string) {
+  recordRemoved([], [id])
   persist(
     loadLessonPlans().filter((p) => p.id !== id),
     loadLessonSessions(),
@@ -563,6 +621,7 @@ export function mergeLessonGroup(sessions: LessonSession[]): LessonSession | nul
   }
   const removeIds = new Set(rest.map((s) => s.id))
   const remaining = loadLessonSessions().filter((s) => !removeIds.has(s.id) && s.id !== base.id)
+  recordRemoved([...removeIds], [])
   persist(loadLessonPlans(), [merged, ...remaining])
   return merged
 }
@@ -628,6 +687,7 @@ export function mergeLessonSessions(aId: string, bId: string): LessonSession | n
     calendarTitle: a.calendarTitle ?? b.calendarTitle,
   }
   const rest = loadLessonSessions().filter((s) => s.id !== aId && s.id !== bId)
+  recordRemoved([bId], [])
   persist(loadLessonPlans(), [merged, ...rest])
   return merged
 }

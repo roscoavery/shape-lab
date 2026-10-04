@@ -8,6 +8,10 @@ export type DiskLessons = {
   exportedAt: string
   plans: unknown[]
   sessions: unknown[]
+  /** Session ids dropped on any device — do not resurrect on merge. */
+  removedSessionIds?: string[]
+  /** Plan ids dropped on any device — do not resurrect on merge. */
+  removedPlanIds?: string[]
 }
 
 const EMPTY: DiskLessons = {
@@ -16,18 +20,52 @@ const EMPTY: DiskLessons = {
   exportedAt: '',
   plans: [],
   sessions: [],
+  removedSessionIds: [],
+  removedPlanIds: [],
+}
+
+function asIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+function applyTombstones(file: DiskLessons): DiskLessons {
+  const removedSessionIds = asIdList(file.removedSessionIds)
+  const removedPlanIds = asIdList(file.removedPlanIds)
+  const goneSessions = new Set(removedSessionIds)
+  const gonePlans = new Set(removedPlanIds)
+  const idOf = (raw: unknown): string | null => {
+    if (!raw || typeof raw !== 'object') return null
+    const id = (raw as { id?: unknown }).id
+    return typeof id === 'string' && id ? id : null
+  }
+  return {
+    ...file,
+    plans: file.plans.filter((raw) => {
+      const id = idOf(raw)
+      return id !== null && !gonePlans.has(id)
+    }),
+    sessions: file.sessions.filter((raw) => {
+      const id = idOf(raw)
+      return id !== null && !goneSessions.has(id)
+    }),
+    removedSessionIds,
+    removedPlanIds,
+  }
 }
 
 export async function readLessonsFile(): Promise<DiskLessons> {
   const data = await readJson<DiskLessons>(FILE, { ...EMPTY })
   if (!data || data.kind !== 'shape-lab-lessons') return { ...EMPTY }
-  return {
+  return applyTombstones({
     kind: 'shape-lab-lessons',
     version: 1,
     exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
     plans: Array.isArray(data.plans) ? data.plans : [],
     sessions: Array.isArray(data.sessions) ? data.sessions : [],
-  }
+    removedSessionIds: asIdList(data.removedSessionIds),
+    removedPlanIds: asIdList(data.removedPlanIds),
+  })
 }
 
 function byId(list: unknown[]): Map<string, Record<string, unknown>> {
@@ -64,13 +102,15 @@ function union(existing: unknown[], incoming: unknown[]): unknown[] {
 export async function writeLessonsFile(raw: unknown): Promise<DiskLessons> {
   const body = raw && typeof raw === 'object' ? (raw as DiskLessons) : EMPTY
   const current = await readLessonsFile()
-  const next: DiskLessons = {
+  const next: DiskLessons = applyTombstones({
     kind: 'shape-lab-lessons',
     version: 1,
     exportedAt: new Date().toISOString(),
     plans: union(current.plans, Array.isArray(body.plans) ? body.plans : []),
     sessions: union(current.sessions, Array.isArray(body.sessions) ? body.sessions : []),
-  }
+    removedSessionIds: asIdList(current.removedSessionIds).concat(asIdList(body.removedSessionIds)),
+    removedPlanIds: asIdList(current.removedPlanIds).concat(asIdList(body.removedPlanIds)),
+  })
   await writeJson(FILE, next)
   return next
 }
