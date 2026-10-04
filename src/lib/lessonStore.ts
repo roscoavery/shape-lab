@@ -492,6 +492,82 @@ export function emptyPlan(athleteId: string, coachId: string): LessonPlan {
 }
 
 /**
+ * Find groups of duplicate lesson sessions: same athlete, same calendar day,
+ * all ended. Returns one group per athlete+day with 2+ sessions, so the UI
+ * shows a single merge prompt per group instead of one per pair (which
+ * explodes combinatorially and never converges as pairs are merged).
+ */
+export interface DuplicateLessonGroup {
+  athleteId: string
+  day: string
+  sessions: LessonSession[]
+}
+
+export function findDuplicateLessonGroups(): DuplicateLessonGroup[] {
+  const sessions = loadLessonSessions().filter((s) => s.endedAt && !s.hiddenAt)
+  const byKey = new Map<string, DuplicateLessonGroup>()
+  for (const s of sessions) {
+    const ids = lessonAthleteIds(s)
+    if (ids.length === 0) continue
+    const day = (s.startedAt ?? '').slice(0, 10)
+    if (!day) continue
+    // Group key uses the first athlete id; multi-athlete sessions are rare
+    // and still consolidate under their primary athlete.
+    const key = `${ids[0]}|${day}`
+    let g = byKey.get(key)
+    if (!g) {
+      g = { athleteId: ids[0], day, sessions: [] }
+      byKey.set(key, g)
+    }
+    g.sessions.push(s)
+  }
+  return [...byKey.values()].filter((g) => g.sessions.length >= 2)
+}
+
+/**
+ * Merge every session in a duplicate group into one: combines notes, holds,
+ * athlete lists, keeps the earliest start / latest end. The surviving session
+ * keeps the earliest session's id. All others are deleted.
+ */
+export function mergeLessonGroup(sessions: LessonSession[]): LessonSession | null {
+  if (sessions.length < 2) return null
+  const sorted = [...sessions].sort((x, y) =>
+    (x.startedAt ?? '').localeCompare(y.startedAt ?? ''),
+  )
+  const base = sorted[0]
+  const rest = sorted.slice(1)
+
+  const athleteIds = Array.from(
+    new Set(sorted.flatMap((s) => lessonAthleteIds(s))),
+  )
+  const notes = sorted
+    .flatMap((s) => s.notes ?? [])
+    .sort((x, y) => (x.createdAt ?? '').localeCompare(y.createdAt ?? ''))
+  const holds = sorted
+    .flatMap((s) => s.holds ?? [])
+    .sort((x, y) => (x.createdAt ?? '').localeCompare(y.createdAt ?? ''))
+  const startedAt = sorted.map((s) => s.startedAt).filter(Boolean).sort()[0] ?? base.startedAt
+  const endedAt = sorted.map((s) => s.endedAt).filter(Boolean).sort().pop() ?? base.endedAt
+
+  const merged: LessonSession = {
+    ...base,
+    athleteIds,
+    notes,
+    holds,
+    startedAt,
+    endedAt,
+    planId: base.planId ?? rest.find((s) => s.planId)?.planId ?? null,
+    planSnapshot: base.planSnapshot ?? rest.find((s) => s.planSnapshot)?.planSnapshot,
+    calendarEventId: base.calendarEventId ?? rest.find((s) => s.calendarEventId)?.calendarEventId ?? null,
+    calendarTitle: base.calendarTitle ?? rest.find((s) => s.calendarTitle)?.calendarTitle ?? null,
+  }
+  const removeIds = new Set(rest.map((s) => s.id))
+  const remaining = loadLessonSessions().filter((s) => !removeIds.has(s.id) && s.id !== base.id)
+  persist(loadLessonPlans(), [merged, ...remaining])
+  return merged
+}
+
+/**
  * Find lesson sessions that look like duplicates: same athlete, same calendar
  * day, both ended. Used to offer consolidation when a lesson was accidentally
  * started twice (e.g., on two devices).
@@ -577,6 +653,31 @@ export function isLessonMergeDismissed(aId: string, bId: string): boolean {
     const raw = localStorage.getItem(MERGE_DISMISSED_KEY)
     const list: string[] = raw ? JSON.parse(raw) : []
     return list.includes([aId, bId].sort().join('|'))
+  } catch {
+    return false
+  }
+}
+
+/** Hide a duplicate group from the merge prompt without merging. */
+export function dismissLessonMergeGroup(athleteId: string, day: string): void {
+  try {
+    const raw = localStorage.getItem(MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    const key = `group|${athleteId}|${day}`
+    if (!list.includes(key)) {
+      list.push(key)
+      localStorage.setItem(MERGE_DISMISSED_KEY, JSON.stringify(list.slice(-50)))
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isLessonMergeGroupDismissed(athleteId: string, day: string): boolean {
+  try {
+    const raw = localStorage.getItem(MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    return list.includes(`group|${athleteId}|${day}`)
   } catch {
     return false
   }
