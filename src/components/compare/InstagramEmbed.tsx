@@ -804,7 +804,7 @@ export function InstagramEmbed({
         {platform === 'instagram' && (
           <IgOpenButton
             url={url}
-            className="absolute left-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+            className="absolute right-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
           />
         )}
       </div>
