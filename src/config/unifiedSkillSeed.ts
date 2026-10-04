@@ -461,7 +461,6 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Strong hollow and handstand shapes"
     ],
     "canBend": [],
-    "ask": "Ask your coach to watch your eyes and arms out of the round off. Eyes down, then eyes forward with arms carrying back for everything that connects after it. The shape you hit the ground with matters more than where your eyes are, although visual cues can be extremely helpful.\n\nSome coaches teach different visual cues for the same skills. Eyes on the ground, hollow body with arms horizontal is common for rebounds out of round offs and back handsprings when we are not drilling for a blocking skill. Staying down like that can help stop power from creating angular momentum on a rebound that is not meant to flip. When rebounds become a drill for a blocking skill, eyes forward open shoulders is something we also train. I train it on a soft mat and have them pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.",
     "noteBlocks": [
       {
         "kind": "quote",

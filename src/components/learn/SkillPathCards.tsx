@@ -599,7 +599,7 @@ export function ProofStrip({
                   <button
                     type="button"
                     onClick={() => openFullView(pinnedVideos, i)}
-                    className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+                    className="absolute left-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
                     title="Full screen, scrub, slow-mo, flip"
                   >
@@ -651,7 +651,7 @@ export function ProofStrip({
             <button
               type="button"
               onClick={() => openFullView([featured], 0)}
-              className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+              className="absolute left-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
               aria-label={`Open ${featured.who} fullscreen`}
               title="Full screen"
             >
@@ -722,7 +722,7 @@ export function ProofStrip({
                     onClick={() =>
                       openFullView(stripVideos, stripVideos.findIndex((x) => x.url === v.url))
                     }
-                    className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+                    className="absolute left-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
                     title="Full screen, scrub, slow-mo, flip"
                   >
