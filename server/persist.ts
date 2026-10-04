@@ -398,6 +398,7 @@ export type GymRevisionStores = {
   notices: string
   stills: string
   igStills: string
+  lessons: string
 }
 
 export type GymRevision = {
@@ -418,6 +419,7 @@ const FILE_TO_STORE: Record<string, keyof GymRevisionStores> = {
   'data/notices.json': 'notices',
   'data/coach-stills.json': 'stills',
   'data/ig-stills.json': 'igStills',
+  'data/lessons.json': 'lessons',
 }
 
 function emptyRevision(): GymRevision {
@@ -434,6 +436,7 @@ function emptyRevision(): GymRevision {
       notices: '',
       stills: '',
       igStills: '',
+      lessons: '',
     },
   }
 }
@@ -486,7 +489,7 @@ export async function readRevision(): Promise<GymRevision> {
   const stores: GymRevisionStores = { ...emptyRevision().stores, ...(stored.stores ?? {}) }
   const hasAny = Object.values(stores).some(Boolean)
   if (!hasAny && !revMem) {
-    const [roster, photos, feed, classes, content, chalkboards, notices] = await Promise.all([
+    const [roster, photos, feed, classes, content, chalkboards, notices, lessons] = await Promise.all([
       readText('data/roster.json'),
       readText('data/roster-photos.json'),
       readText('data/feed-posts.json'),
@@ -494,6 +497,7 @@ export async function readRevision(): Promise<GymRevision> {
       readText('data/coach-content.json'),
       readText('data/chalkboards.json'),
       readText('data/notices.json'),
+      readText('data/lessons.json'),
     ])
     stores.roster = stampFromJson(roster)
     stores.photos = stampFromJson(photos)
@@ -502,6 +506,7 @@ export async function readRevision(): Promise<GymRevision> {
     stores.content = stampFromJson(content)
     stores.chalkboards = stampFromJson(chalkboards)
     stores.notices = stampFromJson(notices)
+    stores.lessons = stampFromJson(lessons)
   }
   const next: GymRevision = { kind: 'shape-lab-revision', version: 1, stores }
   revMem = next

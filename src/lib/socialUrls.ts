@@ -278,3 +278,31 @@ export function socialOpenLabel(platform: SocialPlatform): string {
   if (platform === 'facebook') return 'Open on Facebook'
   return 'Open on Instagram'
 }
+
+/**
+ * Stable identity key for a video URL, for dedup across the app.
+ * Same post with different URL forms (trailing slash, utm params, share
+ * links) maps to the same key. Instagram -> ig:<shortcode>, YouTube ->
+ * yt:<videoId>, TikTok -> tt:<id>, Facebook -> fb:<id>. Everything else
+ * normalizes to host + path without query/hash/trailing slash.
+ */
+export function normalizeVideoUrl(url: string): string {
+  const trimmed = (url || '').trim()
+  if (!trimmed) return ''
+  const ig = parseInstagramUrl(trimmed)
+  if (ig) return `ig:${ig.code}`
+  const yt = youtubeVideoId(trimmed)
+  if (yt) return `yt:${yt}`
+  const tt = parseTikTokUrl(trimmed)
+  if (tt) return `tt:${tt.id}`
+  const fb = parseFacebookUrl(trimmed)
+  if (fb) return `fb:${fb.id}`
+  try {
+    const u = new URL(trimmed)
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+    const path = u.pathname.replace(/\/+$/, '') || '/'
+    return `${host}${path}`.toLowerCase()
+  } catch {
+    return trimmed.toLowerCase().replace(/\/+$/, '')
+  }
+}

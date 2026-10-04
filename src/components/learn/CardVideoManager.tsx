@@ -5,6 +5,7 @@ import { systemSkillCards } from '../../lib/coachSystems'
 import { markedFetch } from '../../lib/authSession'
 import { getCollections } from '../../lib/clipStore'
 import { useClipLoopsOptional, type ClipLoopPreset } from '../../lib/clipLoops'
+import { normalizeVideoUrl } from '../../lib/socialUrls'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 
 function isLocalVideo(url: string): boolean {
@@ -17,8 +18,9 @@ export function libraryVideos(): ProofVideo[] {
   const out: ProofVideo[] = []
   for (const list of Object.values(TECHNIQUE_EVIDENCE)) {
     for (const v of list) {
-      if (seen.has(v.url)) continue
-      seen.add(v.url)
+      const key = normalizeVideoUrl(v.url)
+      if (seen.has(key)) continue
+      seen.add(key)
       out.push(v)
     }
   }
@@ -76,7 +78,11 @@ export async function addVideoToSkillCard(evidenceKey: string, video: ProofVideo
   const current = await fetch('/api/skill-card-videos').then((r) => (r.ok ? r.json() : {}))
   const data = current as Record<string, ProofVideo[]>
   const list = data[evidenceKey] ?? []
-  if (list.some((v) => v.url === video.url)) return
+  const key = normalizeVideoUrl(video.url)
+  if (list.some((v) => normalizeVideoUrl(v.url) === key)) return
+  // Also skip if the video is already in the card's built-in evidence.
+  const base = TECHNIQUE_EVIDENCE[evidenceKey] ?? []
+  if (base.some((v) => normalizeVideoUrl(v.url) === key)) return
   const next = { ...data, [evidenceKey]: [...list, video] }
   await markedFetch('/api/admin/skill-card-videos', {
     method: 'POST',
@@ -332,15 +338,23 @@ export function AddToSkillCardModal({
   const local = isLocalVideo(video.url)
 
   // Which cards already have this video — shown checked and unselectable.
+  // Compares by normalized URL so the same IG post with different URL
+  // forms still matches, and checks both admin-added videos and the
+  // card's built-in evidence list.
   useEffect(() => {
     let live = true
+    const key = normalizeVideoUrl(video.url)
     fetch('/api/skill-card-videos')
       .then((r) => (r.ok ? r.json() : {}))
       .then((data) => {
         if (!live) return
         const on: string[] = []
-        for (const [key, list] of Object.entries(data as Record<string, ProofVideo[]>)) {
-          if (Array.isArray(list) && list.some((v) => v.url === video.url)) on.push(key)
+        for (const [k, list] of Object.entries(data as Record<string, ProofVideo[]>)) {
+          if (Array.isArray(list) && list.some((v) => normalizeVideoUrl(v.url) === key)) on.push(k)
+        }
+        for (const [k, list] of Object.entries(TECHNIQUE_EVIDENCE)) {
+          if (on.includes(k)) continue
+          if (list.some((v) => normalizeVideoUrl(v.url) === key)) on.push(k)
         }
         setAlreadyOn(new Set(on))
       })

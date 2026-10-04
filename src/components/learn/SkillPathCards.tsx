@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RYAN_CUE_SWAPS } from '../../config/skillCues'
 import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVideo } from '../../config/techniqueEvidence'
-import { youtubeEmbedSrc } from '../../lib/socialUrls'
+import { normalizeVideoUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
 import { shippedStillUrl, shippedFileCandidates } from '../../lib/shippedRefs'
@@ -379,10 +379,21 @@ export function ProofStrip({
   // card): shown bigger at the top, excluded from the strip below.
   const featured = FEATURED_PROOF[evidenceKey]
   const featuredYouTube = featured ? youtubeEmbedSrc(featured.url) : null
-  const videos = [
+  const rawVideos = [
     ...baseVideos.filter((v) => !hiddenSet.has(v.url) && v.url !== featured?.url && !isAdjHidden(v.url)),
     ...adminVideos.filter((v) => !isAdjHidden(v.url)),
   ]
+  // Dedup: the same video can arrive via the seed list and an admin add
+  // (or be added twice with different URL forms). Same normalized URL
+  // renders once, first occurrence wins.
+  const videos: ProofVideo[] = []
+  const seenVideoKeys = new Set<string>()
+  for (const v of rawVideos) {
+    const key = normalizeVideoUrl(v.url)
+    if (seenVideoKeys.has(key)) continue
+    seenVideoKeys.add(key)
+    videos.push(v)
+  }
   // Pinned videos render above everything else in a bigger player.
   const pinnedVideos = videos.filter((v) => pinSet.has(v.url))
   const stripVideos = videos.filter((v) => !pinSet.has(v.url))

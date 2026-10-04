@@ -490,3 +490,94 @@ export function emptyPlan(athleteId: string, coachId: string): LessonPlan {
     updatedAt: now,
   }
 }
+
+/**
+ * Find lesson sessions that look like duplicates: same athlete, same calendar
+ * day, both ended. Used to offer consolidation when a lesson was accidentally
+ * started twice (e.g., on two devices).
+ */
+export function findDuplicateLessons(): Array<{ a: LessonSession; b: LessonSession }> {
+  const sessions = loadLessonSessions().filter((s) => s.endedAt && !s.hiddenAt)
+  const pairs: Array<{ a: LessonSession; b: LessonSession }> = []
+  const seen = new Set<string>()
+  for (let i = 0; i < sessions.length; i++) {
+    for (let j = i + 1; j < sessions.length; j++) {
+      const a = sessions[i]
+      const b = sessions[j]
+      if (a.athleteId !== b.athleteId) continue
+      const dayA = (a.startedAt ?? '').slice(0, 10)
+      const dayB = (b.startedAt ?? '').slice(0, 10)
+      if (!dayA || dayA !== dayB) continue
+      const key = [a.id, b.id].sort().join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      pairs.push({ a, b })
+    }
+  }
+  return pairs
+}
+
+/**
+ * Merge session `b` into session `a`: combines notes, holds, athlete lists,
+ * and keeps the earliest start / latest end. Deletes `b`.
+ * The surviving session keeps `a`'s id.
+ */
+export function mergeLessonSessions(aId: string, bId: string): LessonSession | null {
+  const a = getLessonSession(aId)
+  const b = getLessonSession(bId)
+  if (!a || !b) return null
+
+  const athleteIds = Array.from(
+    new Set([...lessonAthleteIds(a), ...lessonAthleteIds(b)]),
+  )
+  const notes = [...(a.notes ?? []), ...(b.notes ?? [])].sort((x, y) =>
+    (x.createdAt ?? '').localeCompare(y.createdAt ?? ''),
+  )
+  const holds = [...(a.holds ?? []), ...(b.holds ?? [])].sort((x, y) =>
+    (x.createdAt ?? '').localeCompare(y.createdAt ?? ''),
+  )
+  const startedAt = [a.startedAt, b.startedAt].filter(Boolean).sort()[0] ?? a.startedAt
+  const endedAt = [a.endedAt, b.endedAt].filter(Boolean).sort().pop() ?? a.endedAt
+
+  const merged: LessonSession = {
+    ...a,
+    athleteIds,
+    notes,
+    holds,
+    startedAt,
+    endedAt,
+    planId: a.planId ?? b.planId,
+    planSnapshot: a.planSnapshot ?? b.planSnapshot,
+    calendarEventId: a.calendarEventId ?? b.calendarEventId,
+    calendarTitle: a.calendarTitle ?? b.calendarTitle,
+  }
+  const rest = loadLessonSessions().filter((s) => s.id !== aId && s.id !== bId)
+  persist(loadLessonPlans(), [merged, ...rest])
+  return merged
+}
+
+/** Hide a duplicate pair from the merge prompt without merging. */
+const MERGE_DISMISSED_KEY = 'sl-lesson-merge-dismissed'
+export function dismissLessonMergePair(aId: string, bId: string): void {
+  try {
+    const raw = localStorage.getItem(MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    const key = [aId, bId].sort().join('|')
+    if (!list.includes(key)) {
+      list.push(key)
+      localStorage.setItem(MERGE_DISMISSED_KEY, JSON.stringify(list.slice(-50)))
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isLessonMergeDismissed(aId: string, bId: string): boolean {
+  try {
+    const raw = localStorage.getItem(MERGE_DISMISSED_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    return list.includes([aId, bId].sort().join('|'))
+  } catch {
+    return false
+  }
+}

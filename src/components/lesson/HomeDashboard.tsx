@@ -8,6 +8,7 @@ import {
   findLiveLesson,
   lessonAthleteIds,
   lessonNameList,
+  loadActiveLessonId,
   plansForAthlete,
   sessionsForAthlete,
   sessionsForCoach,
@@ -19,6 +20,7 @@ import { InfoHint } from '../ui/InfoHint'
 import { IconAction } from '../ui/IconAction'
 import { LessonPlanEditor } from './LessonPlanEditor'
 import { LessonReviewList } from './LessonReviewList'
+import { LessonMergePrompt } from './LessonMergePrompt'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
 import { CalendarDesk } from '../calendar/CalendarDesk'
@@ -198,6 +200,10 @@ export function HomeDashboard({
   const liveClass = coach && signedIn ? getActiveMeeting(signedIn.id) : null
   const liveOffering = liveClass ? getOffering(liveClass.offeringId) : null
   const liveLesson = coach && signedIn ? findLiveLesson(signedIn.id) : null
+  // A live lesson this device didn't start came from another device via sync.
+  const liveLessonIsRemote = Boolean(
+    liveLesson && liveLesson.id !== loadActiveLessonId(),
+  )
   const liveLessonNames = liveLesson
     ? lessonNameList(
         lessonAthleteIds(liveLesson)
@@ -642,7 +648,7 @@ export function HomeDashboard({
         {liveLesson && (
           <div className="mt-3 rounded-2xl border border-[#3aa8e8] bg-[#0d2430] px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7ad4ff]">
-              Lesson is still open
+              {liveLessonIsRemote ? 'Lesson in progress' : 'Lesson is still open'}
             </p>
             <p className="mt-1 text-xl font-bold text-[var(--text)]">{liveLessonNames}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -655,7 +661,7 @@ export function HomeDashboard({
                 onClick={() => onOpenLesson?.(liveLesson)}
                 className="rounded-lg bg-[#3aa8e8] px-4 py-2 text-sm font-semibold text-[#042433]"
               >
-                Resume lesson
+                {liveLessonIsRemote ? 'Open lesson' : 'Resume lesson'}
               </button>
               <button
                 type="button"
@@ -1327,6 +1333,8 @@ export function HomeDashboard({
         classInSession={Boolean(liveClass)}
         onAthletesChange={onAthletesChange}
       />
+
+      <LessonMergePrompt athletes={athletes} />
 
       <LessonReviewList
         sessions={coachRecapSessions(signedIn.id, athletes)}

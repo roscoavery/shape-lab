@@ -185,7 +185,6 @@ import {
   addLessonNote,
   hydrateLessons,
   loadActiveLessonId,
-  findLiveLesson,
   planForSession,
   resumeLessonSession,
   startLessonSession,
@@ -790,10 +789,11 @@ export default function App() {
   )
 
   const liveLesson = (() => {
+    // Only the lesson this device has active (started or explicitly opened here).
+    // A lesson started on another device shows as a "Lesson in progress" banner
+    // on Today with a join button; it must not yank this device into the workspace.
     const pointed = getLessonSession(loadActiveLessonId())
     if (pointed && !pointed.endedAt) return pointed
-    const coach = athletes.find((a) => a.id === activeAthleteId)
-    if (coach && isCoachProfile(coach)) return findLiveLesson(coach.id)
     return null
   })()
   const liveLessonPlan = planForSession(liveLesson)
@@ -860,7 +860,7 @@ export default function App() {
     setCompareFullTick((tick) => tick + 1)
   }
 
-  const startLesson = (
+  const startLesson = async (
     athleteIds: string[],
     planId?: string | null,
     calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
@@ -869,6 +869,9 @@ export default function App() {
     if (!coach || !isCoachProfile(coach)) return
     const ids = athleteIds.filter(Boolean)
     if (ids.length === 0) return
+    // Pull the latest first: if another device just started a lesson for these
+    // athletes, join that session instead of creating a duplicate.
+    await hydrateLessons()
     const primaryId = ids[0]!
     const existing = getLessonSession(loadActiveLessonId())
     if (
