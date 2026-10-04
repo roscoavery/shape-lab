@@ -168,7 +168,7 @@ export function AddHomeworkForm({
         </p>
         <h3 className="mt-1 text-2xl font-semibold text-[var(--text)]">Add homework</h3>
         <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-          Type a skill. If it already exists, tap it — you do not have to hunt
+          Type a skill. If it already exists, tap it, you do not have to hunt
           the list. Or add a new name if this one is yours.
         </p>
       </div>

@@ -230,7 +230,7 @@ export function ComparePanel({
                   Athlete camera
                 </span>
                 <span className="mt-2 max-w-lg text-sm font-medium text-[var(--on-accent)]/80">
-                  Full-screen delay cam — no reference pane in the way.
+                  Full-screen delay cam, no reference pane in the way.
                 </span>
               </button>
               <button
@@ -346,7 +346,7 @@ export function ComparePanel({
             >
               <p className="text-sm leading-relaxed text-[var(--muted)]">
                 Each Videos button opens a full-screen viewer. Replay with reference
-                cam is top / bottom — drag the bar so the reference or delay cam
+                cam is top / bottom, drag the bar so the reference or delay cam
                 takes more of the window. Reference library is the player and clip
                 list with Done in the corner. On delay cam, tap{' '}
                 <strong className="text-[var(--text)]">Record</strong> after the skill;
@@ -355,9 +355,9 @@ export function ComparePanel({
                 clip: press one corner, drag to the opposite corner, and it lands in{' '}
                 <strong className="text-[var(--text)]">Learn → IG shapes</strong>
                 {gymEditor
-                  ? '. Ryan is unlocked — gym Compare URLs save into the shared library. After you add or rename, tap Save into the app so every link and browser has them.'
+                  ? '. Ryan is unlocked, gym Compare URLs save into the shared library. After you add or rename, tap Save into the app so every link and browser has them.'
                   : personalEditor
-                    ? '. Your Compare collections save on this profile only. Gym collections stay as Ryan left them — watch, don’t edit.'
+                    ? '. Your Compare collections save on this profile only. Gym collections stay as Ryan left them, watch, don’t edit.'
                     : '. Anyone can watch the gym library. Unlock a coach profile to add URLs in your own collections, or unlock Ryan to edit the gym list.'}
               </p>
             </CollapsibleSection>
@@ -376,8 +376,8 @@ export function ComparePanel({
               title="Video library"
               hint={
                 athleteName
-                  ? `${athleteName} · delay cam and Compare clips — open to play`
-                  : 'Delay cam and Compare clips — open to play'
+                  ? `${athleteName} · delay cam and Compare clips, open to play`
+                  : 'Delay cam and Compare clips, open to play'
               }
               defaultOpen={false}
             >
@@ -423,7 +423,7 @@ export function ComparePanel({
                 Reference library
               </p>
               <p className="truncate text-sm text-white/65">
-                Player and list — make your own collections from Add
+                Player and list, make your own collections from Add
               </p>
             </div>
           </header>

@@ -136,7 +136,7 @@ export async function dropStillOntoShape(opts: {
     opts.onPhotosChange([kept, ...opts.photos.filter((p) => p.id !== kept.id)])
   }
   if (!remote.ok) return remote.error ?? 'Gym did not keep that still.'
-  return 'Saved on this gym — other devices pick it up on the next pull.'
+  return 'Saved on this gym, other devices pick it up on the next pull.'
 }
 
 /** Drop a photo onto a listed still or shape card. */
@@ -246,7 +246,7 @@ export function CoachStillGallery({
     const label = id.startsWith('default_') ? 'shipped shape library still' : 'coach still'
     if (
       !confirm(
-        `Remove this ${label} from the gym library? This needs to be intentional — it will hide on every device.`,
+        `Remove this ${label} from the gym library? This needs to be intentional, it will hide on every device.`,
       )
     ) {
       return
@@ -317,7 +317,7 @@ export function CoachStillGallery({
         Drop a photo on this still
       </div>
     ) : allowCrop ? (
-      <StillCropEditor photo={p} alt={p.label ? `${alt} — ${p.label}` : alt} imgClass={imgClass} />
+      <StillCropEditor photo={p} alt={p.label ? `${alt}, ${p.label}` : alt} imgClass={imgClass} />
     ) : (
       <div
         style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
@@ -342,7 +342,7 @@ export function CoachStillGallery({
           shapeId={shapeId}
           photos={photos}
           photo={p}
-          alt={p.label ? `${alt} — ${p.label}` : alt}
+          alt={p.label ? `${alt}, ${p.label}` : alt}
           className={imgClass}
           emptyLabel={emptyLabel}
         />

@@ -163,7 +163,7 @@ export function getParentEducationRecommendations(
   if (ctx.homework.length > 0) {
     recs.push({
       articleId: 'small-habits-big-skills',
-      reason: `${name} has homework on file — this connects with making the most of it.`,
+      reason: `${name} has homework on file, this connects with making the most of it.`,
       priority: 70,
     })
   }

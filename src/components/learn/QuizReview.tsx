@@ -63,7 +63,7 @@ export function QuizReview({
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{blurb}</p>
         {misses.length > 0 && (
           <p className="mt-2 text-sm text-[var(--text)]">
-            {misses.length} miss{misses.length === 1 ? '' : 'es'} below — your answer, the
+            {misses.length} miss{misses.length === 1 ? '' : 'es'} below, your answer, the
             right one, and why.
           </p>
         )}

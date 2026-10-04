@@ -221,12 +221,12 @@ export const QUIZ_FORMATS: { id: QuizFormat; title: string; blurb: string }[] = 
   {
     id: 'picture',
     title: 'Pictures',
-    blurb: 'Name what you see. Coach stills only — no written notes.',
+    blurb: 'Name what you see. Coach stills only, no written notes.',
   },
   {
     id: 'describe',
     title: 'Descriptions',
-    blurb: 'Name what is being described. Body position only — the notes do not say the shape’s name.',
+    blurb: 'Name what is being described. Body position only, the notes do not say the shape’s name.',
   },
   {
     id: 'mixed',

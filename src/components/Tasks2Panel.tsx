@@ -272,20 +272,20 @@ function summaryFor(seq: FlowSequence, steps: FlowStepSnap[]): string {
   if (hsReps.length > 1) {
     const bits = hsReps.map((s) => `${s.rep}: ${s.overall}`)
     const avg = Math.round(hsReps.reduce((n, s) => n + s.overall, 0) / hsReps.length)
-    return `${seq.name}. ${bits.join(' · ')}. Average ${avg}/100. Assisted or not — we grade the tallest, straightest line on each kick. Not a gate.`
+    return `${seq.name}. ${bits.join(' · ')}. Average ${avg}/100. Assisted or not, we grade the tallest, straightest line on each kick. Not a gate.`
   }
   if (seq.reviewShapeIds?.length === 1 && seq.reviewShapeIds[0] === 'handstand') {
     const hs = graded.find((s) => s.shapeId === 'handstand')
     const score = hs ? `${hs.overall}/100` : 'no clear snapshot'
     const cues = hs?.cues?.length ? ` ${hs.cues.join(' ')}` : ''
-    return `${seq.name}. Handstand form ${score}.${cues} Mountain climber and landing lunge are not graded on this run. Not a gate — read the handstand cues and go again.`
+    return `${seq.name}. Handstand form ${score}.${cues} Mountain climber and landing lunge are not graded on this run. Not a gate, read the handstand cues and go again.`
   }
   const bits = graded.map((s) => `${s.shapeName} ${s.overall}`)
   const avg =
     graded.length > 0
       ? Math.round(graded.reduce((n, s) => n + s.overall, 0) / graded.length)
       : 0
-  return `${seq.name}. Average ${avg}/100. ${bits.join(', ')}. These grades do not block you — read the cues and go again.`
+  return `${seq.name}. Average ${avg}/100. ${bits.join(', ')}. These grades do not block you, read the cues and go again.`
 }
 
 const LAST_FLOW_KEY = 'shape-lab.tasks2.lastSeq'
@@ -829,7 +829,7 @@ export function Tasks2Panel({
         seqRun.id === 'flow_mc_hs_5reps'
           ? 'Watch your 5 reps. Each handstand is numbered in the grades. After that, choose whether to keep the clip.'
           : seqRun.id === 'flow_mc_hs_lg_assist'
-            ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade and choose whether to keep the video.'
+            ? 'Watch your run, mountain climber through landing lunge. Then read the handstand grade and choose whether to keep the video.'
             : 'Watch your run. Then read the grades and choose whether to keep the clip.',
       )
     },
@@ -1119,7 +1119,7 @@ export function Tasks2Panel({
   const startSequence = useCallback(
     async (seqRun: FlowSequence) => {
       if (!athleteId) {
-        setFlash('Select or create an athlete first — then tap Start.')
+        setFlash('Select or create an athlete first, then tap Start.')
         window.setTimeout(() => setFlash(null), 5000)
         setRunSeq(null)
         return
@@ -1235,9 +1235,9 @@ export function Tasks2Panel({
               ? 'Get into the shape when you are ready. Hold as long as you can. Tap Done when you are finished.'
               : holdWallRef.current
                 ? holdWallStyleRef.current === 'walk'
-                  ? 'Walk your feet up the wall — chest faces the wall. Hold as long as you can. Tap Done when finished.'
+                  ? 'Walk your feet up the wall, chest faces the wall. Hold as long as you can. Tap Done when finished.'
                   : 'Kick toward the wall into your handstand when you are ready. Hold as long as you can. Tap Done when finished.'
-                : 'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed — try not to. Tap Done when you are finished.',
+                : 'Kick to a handstand when you are ready. Hold as long as you can. Walking is allowed, try not to. Tap Done when you are finished.',
           )
           let rolling = false
           try {
@@ -1410,19 +1410,19 @@ export function Tasks2Panel({
         if (!view) return
         if (!sawMatch && shapeId === 'handstand') {
           view.cues = [
-            'No clear handstand picture in this kick — this still is the closest frame. Push tall through the ground, ears covered, ribs in, butt in, legs together.',
+            'No clear handstand picture in this kick, this still is the closest frame. Push tall through the ground, ears covered, ribs in, butt in, legs together.',
             ...view.cues,
           ].slice(0, 6)
         }
         if (!sawMatch && shapeId === 'lever') {
           view.cues = [
-            'No clear lever picture in this pass — chest toward parallel, support foot down, back leg lifting. This still is the closest frame, not a hit.',
+            'No clear lever picture in this pass, chest toward parallel, support foot down, back leg lifting. This still is the closest frame, not a hit.',
             ...view.cues,
           ].slice(0, 3)
         }
         if (!sawMatch && shapeId === 'stand_clean') {
           view.cues = [
-            'Stand clean is feet together, arms pinned. This still is the closest frame after the landing lunge — we map the replay to the last standing moment we can.',
+            'Stand clean is feet together, arms pinned. This still is the closest frame after the landing lunge, we map the replay to the last standing moment we can.',
             ...view.cues,
           ].slice(0, 3)
         }
@@ -1555,7 +1555,7 @@ export function Tasks2Panel({
         seqRun.id === 'flow_mc_hs_5reps'
           ? 'Watch your 5 reps. Each handstand is numbered in the grades.'
           : seqRun.id === 'flow_mc_hs_lg_assist'
-            ? 'Watch your run — mountain climber through landing lunge. Then read the handstand grade.'
+            ? 'Watch your run, mountain climber through landing lunge. Then read the handstand grade.'
             : 'Watch your run. Scrub, then continue to the grades.',
       )
       await finishRun(seqRun, forReview, replayBlob)
@@ -1792,7 +1792,7 @@ export function Tasks2Panel({
       })
       setFlash(
         result === 'shared'
-          ? 'On the Photos sheet — pick Save Video. This recap stays here.'
+          ? 'On the Photos sheet, pick Save Video. This recap stays here.'
           : saveResultMessage(result),
       )
     }
@@ -1820,7 +1820,7 @@ export function Tasks2Panel({
     }
     const blob = hitsAsk?.blob ?? deviceSave?.blob
     if (!blob || !blob.type.startsWith('video')) {
-      setFlash('No video to put in the library — keep stills in My shapes if you want them.')
+      setFlash('No video to put in the library, keep stills in My shapes if you want them.')
       window.setTimeout(() => setFlash(null), 4000)
       return
     }
@@ -2004,7 +2004,7 @@ export function Tasks2Panel({
       }
       const file = getRememberedBlob(clipId)
       if (!file) {
-        setFlash('Clip is still loading — wait a moment, then tap Save again.')
+        setFlash('Clip is still loading, wait a moment, then tap Save again.')
         window.setTimeout(() => setFlash(null), 3500)
         return
       }
@@ -2024,7 +2024,7 @@ export function Tasks2Panel({
         })
         setFlash(
           result === 'shared'
-            ? 'On the Photos sheet — pick Save Video. This recap stays here.'
+            ? 'On the Photos sheet, pick Save Video. This recap stays here.'
             : saveResultMessage(result),
         )
       } catch {
@@ -2157,7 +2157,7 @@ export function Tasks2Panel({
               aria-busy={phase === 'finishing'}
               className={`h-14 min-w-[12rem] flex-1 rounded-2xl px-4 text-base font-bold disabled:opacity-80 ${HOLD_PINK_BTN}`}
             >
-              {phase === 'finishing' ? 'Opening…' : 'Done — see my holds'}
+              {phase === 'finishing' ? 'Opening…' : 'Done, see my holds'}
             </button>
           )}
           <button
@@ -2227,11 +2227,11 @@ export function Tasks2Panel({
                   ? holdTick.inverted
                     ? ' · Starting the clock…'
                     : holdTick.handsDown && holdTick.feetOff
-                      ? ' · Hands down, feet up — lining up the handstand'
+                      ? ' · Hands down, feet up, lining up the handstand'
                       : holdTick.handsDown
-                        ? ' · Hands down — kick your feet up'
+                        ? ' · Hands down, kick your feet up'
                         : holdTick.feetOff
-                          ? ' · Feet are up — plant both hands'
+                          ? ' · Feet are up, plant both hands'
                           : ' · Place both hands on the floor, then kick up'
                   : ''}
               </p>
@@ -2242,7 +2242,7 @@ export function Tasks2Panel({
               {cameraError && (
                 <p className="mt-1 text-[12px] text-[#f07178]">{cameraError}</p>
               )}
-              <p className="mt-1 text-[11px] text-white/60">Listen — follow the spoken script.</p>
+              <p className="mt-1 text-[11px] text-white/60">Listen, follow the spoken script.</p>
             </>
           ) : (
             <>
@@ -2307,7 +2307,7 @@ export function Tasks2Panel({
             />
             <p className="mt-4 text-xl font-black">Getting your clips…</p>
             <p className="mt-2 max-w-sm text-sm leading-snug text-white/75">
-              Almost there — then watch, save, or go again.
+              Almost there, then watch, save, or go again.
             </p>
           </div>,
           document.body,
@@ -2403,7 +2403,7 @@ export function Tasks2Panel({
             <p className="w-full text-sm leading-snug text-[var(--text)]/80">
               {holdWall
                 ? holdWallStyle === 'walk'
-                  ? 'Preferred: belly faces the wall — walk feet up, then hold. Same stopwatch.'
+                  ? 'Preferred: belly faces the wall, walk feet up, then hold. Same stopwatch.'
                   : 'Kick up toward the wall, then hold. Same stopwatch.'
                 : 'Logs a freestanding handstand hold.'}
             </p>
@@ -2435,8 +2435,8 @@ export function Tasks2Panel({
             </button>
             <p className="w-full text-[12px] text-[var(--muted)]">
               {holdLunge === 'land'
-                ? 'Hold the landing lunge — the stick after you come down.'
-                : 'Hold the starting lunge — the lunge you kick from.'}
+                ? 'Hold the landing lunge, the stick after you come down.'
+                : 'Hold the starting lunge, the lunge you kick from.'}
             </p>
           </div>
         )}
@@ -2775,12 +2775,12 @@ export function Tasks2Panel({
               }`}
             >
               {phase === 'preview'
-                ? 'Get set — then the sequence starts'
+                ? 'Get set, then the sequence starts'
                 : phase === 'finishing'
                   ? 'Loading your hold clips'
                 : phase === 'holding'
-                  ? 'Hold challenge — clock runs in the handstand'
-                  : 'Class flow — stay with the voice'}
+                  ? 'Hold challenge, clock runs in the handstand'
+                  : 'Class flow, stay with the voice'}
             </p>
             <p className="text-sm font-semibold leading-snug text-[var(--text)]">{cue}</p>
             {phase === 'holding' && holdTick && (
@@ -2799,9 +2799,9 @@ export function Tasks2Panel({
             {phase === 'holding' && holdTick && !holdTick.running && (
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {holdTick.handsDown && holdTick.feetOff
-                  ? 'Stacked — stay there for the clock'
+                  ? 'Stacked, stay there for the clock'
                   : holdTick.handsDown
-                    ? 'Hands are on the floor — kick both feet off'
+                    ? 'Hands are on the floor, kick both feet off'
                     : 'Clock waits until both hands are on the floor'}
               </p>
             )}
@@ -2907,7 +2907,7 @@ export function Tasks2Panel({
                   </p>
                 ) : (
                   <p className="flex h-full items-center justify-center px-6 text-center text-sm text-white/70">
-                    No video this time — keep the camera on for the whole hold.
+                    No video this time, keep the camera on for the whole hold.
                   </p>
                 )}
               </div>
@@ -2971,10 +2971,10 @@ export function Tasks2Panel({
             <>
           <div className="flex shrink-0 flex-col gap-2 px-3 py-2 text-white">
             <p className="text-sm font-medium leading-snug">
-              {`Your run · ${seq.nickname} — scrub the delay-cam replay`}
+              {`Your run · ${seq.nickname}, scrub the delay-cam replay`}
             </p>
             <p className="text-[11px] leading-snug text-white/70">
-              Watch first. Grades stay on the next screen — then choose whether to keep the clip.
+              Watch first. Grades stay on the next screen, then choose whether to keep the clip.
             </p>
             {lemonAsk && (
               <LemonSqueezeCheck
@@ -3039,7 +3039,7 @@ export function Tasks2Panel({
             />
           ) : (
             <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-white/70">
-              No video this time — keep the camera on for the whole run. Your snapshots and grades are
+              No video this time, keep the camera on for the whole run. Your snapshots and grades are
               still saved.
             </p>
           )}
@@ -3047,20 +3047,20 @@ export function Tasks2Panel({
             <div className="shrink-0 border-t border-white/15 bg-black/80 px-3 py-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">
                 {seq.id === 'flow_mc_hs_5reps'
-                  ? 'Handstand 1–5 — tap to jump in the replay'
+                  ? 'Handstand 1–5, tap to jump in the replay'
                   : seq.id === 'flow_long_bridge'
-                    ? 'Two stills — long bridge, then chin to chest'
+                    ? 'Two stills, long bridge, then chin to chest'
                     : seq.id === 'flow_pike_hollow_arch'
-                    ? 'Three stills — pike, hollow, arch'
+                    ? 'Three stills, pike, hollow, arch'
                     : seq.id === 'flow_pike_tuck_hollow_arch'
-                    ? 'Four stills — pike, tuck, hollow, arch'
+                    ? 'Four stills, pike, tuck, hollow, arch'
                     : seq.id === 'flow_lemon_squeezes'
-                    ? 'Stills — hollow and tuck (lemon squeezes)'
+                    ? 'Stills, hollow and tuck (lemon squeezes)'
                     : seq.id === 'flow_core_home'
-                    ? 'Home core — pike, tuck, side plank, Superman, hollow'
+                    ? 'Home core, pike, tuck, side plank, Superman, hollow'
                     : seq.reviewShapeIds?.includes('handstand')
-                    ? 'Handstand snapshot — tap to jump in the replay'
-                    : 'Snapshots — tap to jump in the replay'}
+                    ? 'Handstand snapshot, tap to jump in the replay'
+                    : 'Snapshots, tap to jump in the replay'}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {snaps.map((s, i) => (
@@ -3172,9 +3172,9 @@ export function Tasks2Panel({
                     ) : (
                       <p className="mt-1 text-[12px] text-[var(--good)]">
                         {s.marker === 'playhead'
-                          ? 'Best matching frame in the pass-through — tap to jump the replay here.'
+                          ? 'Best matching frame in the pass-through, tap to jump the replay here.'
                           : s.shapeId === 'handstand'
-                            ? 'Handstand picture looks in on this snapshot — push tall, ears covered, ribs in, butt in, legs together, pointed toes.'
+                            ? 'Handstand picture looks in on this snapshot, push tall, ears covered, ribs in, butt in, legs together, pointed toes.'
                             : 'Lines look in on this snapshot. Keep that body position next time.'}
                       </p>
                     )}
@@ -3272,7 +3272,7 @@ export function Tasks2Panel({
               </p>
               <p className="mt-1 text-[12px] leading-snug text-white/80">
                 Your grades stay either way. Clips fill up phones if we keep every sequence, so pick a
-                home for this one — Photos, the video library, or Learn → My shapes — or dump it.
+                home for this one, Photos, the video library, or Learn → My shapes, or dump it.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button

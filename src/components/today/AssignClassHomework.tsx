@@ -100,7 +100,7 @@ export function AssignClassHomework({
           Homework{offering ? ` · ${classLabel(offering)}` : ''}
         </h2>
         <p className="mt-2 text-sm text-white/65">
-          The class roster starts checked for homework — not roll. Core
+          The class roster starts checked for homework. Core
           drills become coach-assigned on the card they already have. Do
           not assign back extensions or glute bridges here; those stay on
           the coach back-pain path. Candlestick, core, and study shapes
@@ -162,7 +162,7 @@ export function AssignClassHomework({
         )}
         {guests.length > 0 && (
           <p className="mt-2 text-xs text-white/45">
-            Name only — make a profile to assign homework:{' '}
+            Name only, make a profile to assign homework:{' '}
             {guests.map((g) => attendeeLabel(g, athletes)).join(', ')}
           </p>
         )}

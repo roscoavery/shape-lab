@@ -27,14 +27,14 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     prompt:
       'After a round-off, the back handspring should treat leftover travel and rotation as:',
     choices: [
-      { id: 'a', label: 'Something to kill — pause until the body is at a dead stop' },
-      { id: 'b', label: 'Motion to use — the connection redirects what inertia already built' },
+      { id: 'a', label: 'Something to kill, pause until the body is at a dead stop' },
+      { id: 'b', label: 'Motion to use, the connection redirects what inertia already built' },
       { id: 'c', label: 'A problem only the arms can solve by staying glued overhead' },
       { id: 'd', label: 'New flip that starts from zero once the feet land' },
     ],
     answerId: 'b',
     explain:
-      'Inertia: a body keeps doing what it is doing until a force changes it. The round-off already put travel and rotation in the system. Hands, shoulders, and the block redirect that — they do not start a new skill from rest.',
+      'Inertia: a body keeps doing what it is doing until a force changes it. The round-off already put travel and rotation in the system. Hands, shoulders, and the block redirect that, they do not start a new skill from rest.',
   },
   {
     id: 'inertia-fight',
@@ -62,7 +62,7 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'Angular momentum (L) is largely decided on takeoff. In flight, L stays about the same. Tucking and opening change how that L is spent — they do not mint new flip from nothing.',
+      'Angular momentum (L) is largely decided on takeoff. In flight, L stays about the same. Tucking and opening change how that L is spent, they do not mint new flip from nothing.',
   },
   {
     id: 'l-tuck-spend',
@@ -104,15 +104,15 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'Chin in, knees in, arms in: mass closer to the axis, smaller I, higher spin rate. “Stay long” is the opposite cue — and it only works if the set already put enough L in the system.',
+      'Chin in, knees in, arms in: mass closer to the axis, smaller I, higher spin rate. “Stay long” is the opposite cue, and it only works if the set already put enough L in the system.',
   },
   {
     id: 'spin-faster',
     lessonId: 'speed-rotation',
     prompt: 'To spin faster once they are in the air, the useful dial is:',
     choices: [
-      { id: 'a', label: 'Increase I — reach longer, open the hips' },
-      { id: 'b', label: 'Decrease I — tuck, arms in, knees in' },
+      { id: 'a', label: 'Increase I, reach longer, open the hips' },
+      { id: 'b', label: 'Decrease I, tuck, arms in, knees in' },
       { id: 'c', label: 'Wait for gravity to add flip' },
       { id: 'd', label: 'Pike the chest on the floor after they have already left' },
     ],
@@ -133,7 +133,7 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'They looked long, then they cheated I down. The same L now turns a smaller package. That is why a slightly piked layout can finish when a true long one would hang — not because they found new L.',
+      'They looked long, then they cheated I down. The same L now turns a smaller package. That is why a slightly piked layout can finish when a true long one would hang.',
   },
   {
     id: 'ro-arm-drop',
@@ -163,7 +163,7 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'Large I means slow turnover. The feet stay behind. The coaching target is a controlled drop that speeds the feet, then a strong reach — not arms glued up, and not a crash that loses the block.',
+      'Large I means slow turnover. The feet stay behind. The coaching target is a controlled drop that speeds the feet, then a strong reach, and not a crash that loses the block.',
   },
   {
     id: 'layout-exposes-set',
@@ -171,7 +171,7 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     prompt: 'Layouts expose a weak set more than tucks do because:',
     choices: [
       { id: 'a', label: 'Pretty shapes need less angular momentum' },
-      { id: 'b', label: 'Large I means the same L spins slower — not enough L shows up' },
+      { id: 'b', label: 'Large I means the same L spins slower' },
       { id: 'c', label: 'Tucks hide extra L the layout does not have' },
       { id: 'd', label: 'Layouts have smaller I than tucks' },
     ],
@@ -247,6 +247,6 @@ export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [
     ],
     answerId: 'b',
     explain:
-      'Tilt: if the body is a little off the true flip axis, some flip L shows up as twist. Arms in: smaller I around the long axis, faster twist rate — same Iω story as a tuck. Cat twist is a wrap (upper, then lower) without needing a corkscrew set.',
+      'Tilt: if the body is a little off the true flip axis, some flip L shows up as twist. Arms in: smaller I around the long axis, faster twist rate, same Iω story as a tuck. Cat twist is a wrap (upper, then lower) without needing a corkscrew set.',
   },
 ]

@@ -64,14 +64,14 @@ export function StoryComposer({ athlete, athletes = [], onClose, onPosted }: Pro
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           maxLength={120}
-          placeholder='Optional caption — @handle or @"Full Name"'
+          placeholder='Optional caption, @handle or @"Full Name"'
           className="mt-3 w-full rounded-lg border border-[var(--panel-border)] bg-black/40 px-3 py-2 text-sm"
         />
         <input
           value={highlightName}
           onChange={(e) => setHighlightName(e.target.value)}
           maxLength={40}
-          placeholder="Optional highlight — Cartwheels, Whip…"
+          placeholder="Optional highlight, Cartwheels, Whip…"
           className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-black/40 px-3 py-2 text-sm"
         />
         <div className="mt-3 flex flex-wrap gap-2">

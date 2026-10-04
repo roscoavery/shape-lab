@@ -110,7 +110,7 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
             {own ? 'Your training' : `${athlete.name.split(' ')[0]}’s training`}
           </p>
           <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-            Homework, class nights, and lessons — only coaches they work with
+            Homework, class nights, and lessons, only coaches they work with
             {own ? ' (and you)' : ''}.
           </p>
 

@@ -38,7 +38,7 @@ export function OwnerDashboard({ owner, athletes }: Props) {
       <div className="mb-4">
         <h1 className="text-xl font-extrabold text-[var(--text)]">Gym owner</h1>
         <p className="mt-0.5 text-sm text-[var(--muted)]">
-          Standards, visibility, and people — the coaching layer on top of what the gym already runs.
+          Standards, visibility, and people, the coaching layer on top of what the gym already runs.
         </p>
       </div>
       <nav aria-label="Owner sections" className="mb-4 flex max-w-full gap-1.5 overflow-x-auto pb-1">

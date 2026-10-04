@@ -81,7 +81,7 @@ export function TaskDelayCam({
       setReplayTail(Math.min(delaySec, capturedFor))
       setMode('replay')
       const shown = Math.max(1, Math.round(Math.min(delaySec, capturedFor)))
-      setFlash(`Last ${shown}s — pause or scrub`)
+      setFlash(`Last ${shown}s, pause or scrub`)
       window.setTimeout(() => setFlash(null), 2500)
     } finally {
       setBuilding(false)
@@ -141,7 +141,7 @@ export function TaskDelayCam({
       )}
       {!cameraOn && mode !== 'replay' && (
         <p className={`px-3 ${pip ? 'py-4' : 'py-8'} text-center text-xs text-[var(--muted)]`}>
-          {pip ? 'Camera off' : 'Start the pathway to turn the camera on — delay cam uses the same feed.'}
+          {pip ? 'Camera off' : 'Start the pathway to turn the camera on, delay cam uses the same feed.'}
         </p>
       )}
       {pip && (

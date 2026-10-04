@@ -706,7 +706,7 @@ export function InstagramEmbed({
   }
 
   const footer = fromCache
-    ? 'Saved in this app — plays without re-fetching the original site.'
+    ? 'Saved in this app, plays without re-fetching the original site.'
     : quotaWarn
       ? 'Playing this copy, but it could not be saved (device storage may be full).'
       : saved

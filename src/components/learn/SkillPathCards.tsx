@@ -558,7 +558,7 @@ export function ProofStrip({
                     onClick={() => openFullView(pinnedVideos, i)}
                     className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
-                    title="Full screen — scrub, slow-mo, flip"
+                    title="Full screen, scrub, slow-mo, flip"
                   >
                     ⛶
                   </button>
@@ -672,7 +672,7 @@ export function ProofStrip({
                     }
                     className="absolute right-2 top-2 z-20 touch-manipulation rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
                     aria-label={`Open ${v.who} fullscreen`}
-                    title="Full screen — scrub, slow-mo, flip"
+                    title="Full screen, scrub, slow-mo, flip"
                   >
                     ⛶
                   </button>
@@ -829,7 +829,7 @@ function SaveIndicator({ save }: { save: CardSave }) {
       {save.state === 'saving' && 'Saving…'}
       {save.state === 'saved' && 'Saved ✓'}
       {save.state === 'error' &&
-        `Couldn't reach the gym server — ${save.message ?? 'sync failed'}. Your edit is saved on this device and will sync when the connection is back.`}
+        `Couldn't reach the gym server, ${save.message ?? 'sync failed'}. Your edit is saved on this device and will sync when the connection is back.`}
     </p>
   )
 }
@@ -1050,7 +1050,7 @@ function SkillDrills({ skillId, canEdit }: { skillId: string; canEdit: boolean }
             <input
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="Video link (optional — add later)"
+              placeholder="Video link (optional, add later)"
               aria-label="Drill video link"
               className="min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3 py-1.5 text-sm text-white placeholder-white/40 outline-none"
             />
@@ -1111,7 +1111,7 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
       <Label>Path pieces</Label>
-      <p className="mt-1 text-xs opacity-70">Choose what this skill needs — and what just helps.</p>
+      <p className="mt-1 text-xs opacity-70">Choose what this skill needs, and what just helps.</p>
 
       {needs.length > 0 && (
         <ul className="mt-2 space-y-1.5">
@@ -1285,7 +1285,7 @@ function PathTab({
         <Label>The path to {skill.name}</Label>
         <p className="mt-1 text-xs opacity-70">
           {required.length > 0
-            ? 'Brightest at the top — work it from the bottom up.'
+            ? 'Brightest at the top, work it from the bottom up.'
             : 'No path pieces mapped yet.'}
         </p>
       </div>

@@ -132,7 +132,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
       setNote('Could not post that to the chalkboard.')
       return
     }
-    setNote(`On ${boardPickerLabel(target.board, offerings)}${pin ? ' — pinned' : ''}.`)
+    setNote(`On ${boardPickerLabel(target.board, offerings)}${pin ? ', pinned' : ''}.`)
     setNewName('')
     setBoardId(target.board.id)
     setOpen(false)
@@ -192,7 +192,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
                 setNewName(e.target.value)
                 if (e.target.value.trim()) setBoardId('')
               }}
-              placeholder="Name — e.g. Valeri, whip, handstand hold"
+              placeholder="Name, e.g. Valeri, whip, handstand hold"
               className="h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
             />
             <div className="flex flex-wrap gap-2">
@@ -256,7 +256,7 @@ export function PostToChalkboard({ viewer, draft, compact = false, embedded = fa
           </div>
           <label className="flex items-center gap-2 text-xs text-[var(--text)]">
             <input type="checkbox" checked={pin} onChange={(e) => setPin(e.target.checked)} />
-            Pin — stays on the board even before class starts
+            Pin, stays on the board even before class starts
           </label>
           <button
             type="button"

@@ -105,7 +105,7 @@ export function MySystemPanel({
         <div className="rounded-2xl border border-[#6ec8d6]/30 bg-[#6ec8d6]/5 p-5 text-center">
           <h2 className="text-xl font-bold">Build your coaching system</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-white/65">
-            Your own skill cards, drills, and maps — separate from everyone else's. The guided setup walks
+            Your own skill cards, drills, and maps, separate from everyone else's. The guided setup walks
             you through it in five steps.
           </p>
           <button
@@ -197,7 +197,7 @@ export function MySystemPanel({
           <h3 className="text-sm font-black uppercase tracking-wider text-white/60">Edit the default system</h3>
           {!isMine && (
             <p className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
-              Ryan granted you edit access — changes here edit the default system directly.
+              Ryan granted you edit access, changes here edit the default system directly.
             </p>
           )}
           <p className="text-xs text-white/45">Search a card, then edit it in the builder.</p>
@@ -211,7 +211,7 @@ export function MySystemPanel({
             {active.ownerName}'s cards
           </h3>
           <p className="text-xs text-white/45">
-            You're viewing {active.ownerName}'s system. Adopt a card to get your own copy — your edits never
+            You're viewing {active.ownerName}'s system. Adopt a card to get your own copy, your edits never
             touch theirs.
           </p>
           {activeCards.slice(0, 12).map((card) => (
@@ -382,7 +382,7 @@ function SystemHeader({
           <p className="text-xs text-white/50">
             @{system.handle} · by {system.ownerName} · {VISIBILITY_LABELS[system.mapVisibility]}
             {system.mapVisibility !== 'public' && (
-              <span className="text-white/35"> — {VISIBILITY_BLURBS[system.mapVisibility]}</span>
+              <span className="text-white/35">, {VISIBILITY_BLURBS[system.mapVisibility]}</span>
             )}
           </p>
           {system.tagline && <p className="mt-1 text-sm text-white/65">{system.tagline}</p>}

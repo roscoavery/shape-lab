@@ -106,7 +106,7 @@ export function MobileNavDrawer({
                 >
                   Back to gym desk
                   <span className="mt-0.5 block text-xs font-normal opacity-80">
-                    Leave {PREVIEW_LABEL[deskPreview]} preview — still {authUser.email}
+                    Leave {PREVIEW_LABEL[deskPreview]} preview, still {authUser.email}
                   </span>
                 </button>
               )}

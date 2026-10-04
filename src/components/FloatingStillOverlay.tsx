@@ -76,7 +76,7 @@ export function FloatingStillOverlay() {
   return (
     <div
       role="img"
-      aria-label={`${selected.name} overlay — drag anywhere, hide when done`}
+      aria-label={`${selected.name} overlay, drag anywhere, hide when done`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

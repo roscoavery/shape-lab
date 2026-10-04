@@ -187,7 +187,7 @@ export function SkillPicker({
         )}
         <input
           className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          placeholder="Or type another skill name — saved for you only"
+          placeholder="Or type another skill name, saved for you only"
           value={value.kind === 'custom' ? value.label : ''}
           onChange={(e) => onChange({ kind: 'custom', label: e.target.value })}
           onBlur={(e) => keepTyped(e.target.value)}

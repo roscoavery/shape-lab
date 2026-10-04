@@ -229,7 +229,7 @@ export function ReferencePane({
       )
     } catch {
       setSaveState('dirty')
-      setError('Could not save the library into the app — try again.')
+      setError('Could not save the library into the app, try again.')
     }
   }
 
@@ -282,7 +282,7 @@ export function ReferencePane({
         } else if (personalEditor) {
           setNotice(
             mineCount > 0
-              ? `${gymCount} gym clip${gymCount === 1 ? '' : 's'} (watch only) · ${mineCount} in your collections. New URLs save on this profile — they do not change Ryan’s library.`
+              ? `${gymCount} gym clip${gymCount === 1 ? '' : 's'} (watch only) · ${mineCount} in your collections. New URLs save on this profile, they do not change Ryan’s library.`
               : `${gymCount} gym clip${gymCount === 1 ? '' : 's'} (watch only). Create a collection or paste a URL to start yours. Ryan’s gym list stays as he left it.`,
           )
         } else if (gymCount > 0) {
@@ -292,7 +292,7 @@ export function ReferencePane({
         }
       } catch {
         if (!cancelled) {
-          setError('IndexedDB is unavailable in this browser — collections cannot be saved.')
+          setError('IndexedDB is unavailable in this browser, collections cannot be saved.')
         }
       } finally {
         if (!cancelled) setLibraryReady(true)
@@ -379,7 +379,7 @@ export function ReferencePane({
     } else if (item.kind === 'file' || !item.url) {
       const blob = await getBlob(item.id)
       if (!blob) {
-        setError('Stored video not found — it may have been cleared by the browser.')
+        setError('Stored video not found, it may have been cleared by the browser.')
         setItemSrc(null)
         return
       }
@@ -546,7 +546,7 @@ export function ReferencePane({
     if (items.length === 0 && taggedExisting === 0) {
       setNotice(
         skipped
-          ? `Already in this collection — skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.`
+          ? `Already in this collection, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.`
           : null,
       )
       setUrlInput('')
@@ -596,7 +596,7 @@ export function ReferencePane({
     try {
       await putBlob(item.id, file)
     } catch {
-      setError('Could not store the video — device storage may be full.')
+      setError('Could not store the video, device storage may be full.')
       return
     }
     await updateCollection({
@@ -617,7 +617,7 @@ export function ReferencePane({
     if (!collection || !canDeleteItem(item, collection)) return
     const who = gymEditor
       ? 'This removes it from the gym library after you save into the app.'
-      : 'This only removes it from your collection — Ryan’s gym clips stay.'
+      : 'This only removes it from your collection, Ryan’s gym clips stay.'
     if (!confirm(`Remove “${item.name}” from ${collection.name}?\n\n${who}`)) return
     noteRemovedLibraryItem(item.id, item.url)
     await deleteBlob(item.id)
@@ -664,7 +664,7 @@ export function ReferencePane({
     if (gymEditor) {
       setNotice('Renamed. Save into the app so every link and browser keeps this name.')
     } else if (personalEditor) {
-      setNotice('Renamed. This name stays on your profile — not Ryan’s gym library.')
+      setNotice('Renamed. This name stays on your profile.')
     }
   }
 
@@ -763,7 +763,7 @@ export function ReferencePane({
         } catch (err) {
           failures.push(item.name)
           if (err instanceof Error && /storage|quota/i.test(err.message)) {
-            setError('Device storage is full — some videos could not be saved in the app.')
+            setError('Device storage is full, some videos could not be saved in the app.')
             stop = true
             return
           }
@@ -790,7 +790,7 @@ export function ReferencePane({
         ? collections.filter((c) => c.athleteId === profileId)
         : collections
     if (exportCols.every((c) => c.items.length === 0)) {
-      setNotice('Nothing to export yet — add URLs first.')
+      setNotice('Nothing to export yet, add URLs first.')
       return
     }
     downloadBackupFile(exportCols)
@@ -802,7 +802,7 @@ export function ReferencePane({
     setNotice(
       personalEditor
         ? `Downloaded a backup of ${n} URL${n === 1 ? '' : 's'} from your collections.`
-        : `Downloaded a backup of ${n} saved URL${n === 1 ? '' : 's'}. Keep that JSON file — it outlives any tunnel link.`,
+        : `Downloaded a backup of ${n} saved URL${n === 1 ? '' : 's'}. Keep that JSON file, it outlives any tunnel link.`,
     )
   }
 
@@ -816,7 +816,7 @@ export function ReferencePane({
       await navigator.clipboard.writeText(text)
       setNotice('Copied every saved name + URL. Paste that somewhere safe.')
     } catch {
-      setError('Could not copy — use Export library instead.')
+      setError('Could not copy, use Export library instead.')
     }
   }
 
@@ -1671,7 +1671,7 @@ export function ReferencePane({
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search a shape — handstand, whip…"
+              placeholder="Search a shape, handstand, whip…"
               className={`${inputCls} min-w-0 flex-1`}
               aria-label="Search saved references by name, URL, or keyword"
             />
@@ -1837,7 +1837,7 @@ export function ReferencePane({
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void addUrl()}
               list="shape-keyword-suggestions"
-              placeholder="Keywords — handstand, whip"
+              placeholder="Keywords, handstand, whip"
               className={`${inputCls} min-w-0 flex-1`}
               aria-label="Shape keywords for this URL"
             />
@@ -1939,7 +1939,7 @@ export function ReferencePane({
             <div className="space-y-2 text-xs leading-relaxed text-[var(--muted)]">
               <p>
                 <strong className="text-[var(--text)]">Create.</strong> Add a collection, then paste
-                Instagram, TikTok, or Facebook links. Keywords — handstand, whip, roundoff — list
+                Instagram, TikTok, or Facebook links. Keywords, handstand, whip, roundoff, list
                 every clip with that tag.
               </p>
               <p>

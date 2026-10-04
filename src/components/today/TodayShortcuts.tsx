@@ -54,7 +54,7 @@ const TOOLS: {
     id: 'feed',
     eyebrow: 'Gym',
     title: 'Feed',
-    hint: 'What the gym posted — collages and hits.',
+    hint: 'What the gym posted, collages and hits.',
   },
   {
     id: 'wins',
@@ -78,7 +78,7 @@ const TOOLS: {
     id: 'arcade',
     eyebrow: 'Class games',
     title: 'Tumbling Arcade',
-    hint: 'Stick It, Hold Contest, Distance Challenge — games with scoring built in.',
+    hint: 'Stick It, Hold Contest, Distance Challenge, games with scoring built in.',
   },
   {
     id: 'collages',
@@ -118,7 +118,7 @@ export function TodayShortcuts({ onGo, showStation = true, showNames = false }: 
             Names test
           </span>
           <span className="mt-1.5 block max-w-lg text-sm text-[var(--muted)]">
-            Every face on a class, camp, or school. Keeps going until you get them all right — and leads with the names you miss most.
+            Every face on a class, camp, or school. Keeps going until you get them all right, and leads with the names you miss most.
           </span>
         </button>
       )}

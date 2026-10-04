@@ -49,7 +49,7 @@ export const COACH_INTERVIEW: InterviewSection[] = [
   {
     lessonId: 'why-still-working-on-basics',
     lessonTitle: 'Lesson 1: Why Are We Still Working on Basics?',
-    intro: 'Perfection before progression — the order skills get built.',
+    intro: 'Perfection before progression, the order skills get built.',
     questions: [
       {
         id: 'basics-parent-asks',
@@ -114,7 +114,7 @@ export const COACH_INTERVIEW: InterviewSection[] = [
   {
     lessonId: 'small-habits-big-skills',
     lessonTitle: 'Lesson 4: Small Habits Build Big Skills',
-    intro: 'Progress, not perfection — the athlete’s mindset.',
+    intro: 'Progress, not perfection, the athlete’s mindset.',
     questions: [
       {
         id: 'useful-homework',

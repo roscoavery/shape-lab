@@ -692,7 +692,7 @@ export function VideoMarkOverlay({
       setTool(null)
       setCursor('default')
     }
-    setNotice('Saved into IG shapes — every gym link will have this still.')
+    setNotice('Saved into IG shapes, every gym link will have this still.')
     window.setTimeout(() => setNotice(null), 4000)
     afterShot(true)
   }
@@ -814,12 +814,12 @@ export function VideoMarkOverlay({
       )}
       {!hud && tool === 'draw' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
-          Press and drag — a smooth stroke, not a line of dots.
+          Press and drag, a smooth stroke, not a line of dots.
         </p>
       )}
       {!hud && tool === 'arrow' && !pending && (
         <p className="pointer-events-none absolute inset-x-2 top-9 z-20 rounded bg-black/65 px-2 py-1 text-center text-[10px] text-white/90 sm:text-[11px]">
-          Press, draw the path, let go — the arrowhead lands where you release.
+          Press, draw the path, let go, the arrowhead lands where you release.
         </p>
       )}
       {notice && (

@@ -71,11 +71,11 @@ export function HitFolder({ captures, athleteName, onChange }: Props) {
   return (
     <div className="rounded-lg border border-[var(--panel-border)] bg-[#121820] p-3">
       <p className="mb-1 text-xs uppercase tracking-wider text-[var(--muted)]">
-        {athleteName ? `${athleteName}'s shapes` : 'Your shapes'} — hit folder
+        {athleteName ? `${athleteName}'s shapes` : 'Your shapes'}, hit folder
       </p>
       {!groups.length ? (
         <p className="text-xs text-[var(--muted)]">
-          When you hit a shape, a still is saved here — one folder per position, so you can
+          When you hit a shape, a still is saved here, one folder per position, so you can
           see what your body looked like on the hit.
         </p>
       ) : (

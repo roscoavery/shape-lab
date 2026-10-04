@@ -18,7 +18,7 @@ export function FaceSnapshotField({ photoDataUrl, athleteId, name, hint, onCaptu
       <h4 className="mt-1 text-lg font-semibold text-[var(--text)]">Snapshot for {who}</h4>
       <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted)]">
         {hint ??
-          'Take a snapshot so we can pair this face with this name. The names test uses these pictures — without a face, coaches cannot practice who is who.'}
+          'Take a snapshot so we can pair this face with this name. The names test uses these pictures, without a face, coaches cannot practice who is who.'}
       </p>
       <div className="mt-3">
         <StationSnapshot

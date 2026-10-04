@@ -159,7 +159,7 @@ export async function runQualityHoldSession(opts: QualityHoldSessionOpts): Promi
     let holdSeconds = 0
     let exit = 0
 
-    opts.onCue('Holding — clock is running. Clock stops when you come out of the shape.')
+    opts.onCue('Holding, clock is running. Clock stops when you come out of the shape.')
     playHoldEnterBeep()
     tick({ seconds: 0, running: true, inverted: true, handsDown: true, feetOff: true })
 

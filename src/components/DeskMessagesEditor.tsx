@@ -66,7 +66,7 @@ export function DeskMessagesEditor({ admin }: Props) {
       defaultOpen={false}
     >
       <p className="text-sm leading-relaxed text-[var(--muted)]">
-        Add as many lines as you want. Athletes and parents see them on Home and Learn — one at a
+        Add as many lines as you want. Athletes and parents see them on Home and Learn, one at a
         time, rotating every few seconds.
       </p>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
@@ -148,7 +148,7 @@ export function DeskMessagesEditor({ admin }: Props) {
           </li>
         ))}
         {messages.length === 0 && (
-          <li className="text-sm text-[var(--muted)]">No messages yet — add one above.</li>
+          <li className="text-sm text-[var(--muted)]">No messages yet, add one above.</li>
         )}
       </ul>
     </CollapsibleSection>

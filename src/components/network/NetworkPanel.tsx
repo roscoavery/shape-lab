@@ -491,7 +491,7 @@ function MessagesPage({
             <input
               value={groupTitle}
               onChange={(e) => setGroupTitle(e.target.value)}
-              placeholder="Group name — Ellie’s parents…"
+              placeholder="Group name, Ellie’s parents…"
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
             />
             <div className="flex max-h-32 flex-col gap-1 overflow-y-auto">
@@ -583,7 +583,7 @@ function MessagesPage({
             {coachShareOnly ? (
               <>
                 <p className="mb-2 text-sm text-[var(--muted)]">
-                  Coaches share a reference with athletes — or give a high five, fist bump, or like on a win. Direct messages stay off.
+                  Coaches share a reference with athletes, or give a high five, fist bump, or like on a win. Direct messages stay off.
                 </p>
                 <input
                   value={shareUrl}
@@ -616,7 +616,7 @@ function MessagesPage({
                 <input
                   value={shareUrl}
                   onChange={(e) => setShareUrl(e.target.value)}
-                  placeholder="Optional — paste a public video URL to share"
+                  placeholder="Optional, paste a public video URL to share"
                   className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
                 />
               </>
@@ -684,7 +684,7 @@ function LoungePage({
     return (
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-4 text-sm text-[var(--muted)]">
         The lounge is for coach profiles. Unlock a coach profile to post. Research
-        still counts the threads — {digest.threadCount} so far
+        still counts the threads, {digest.threadCount} so far
         {digest.postCount ? `, ${digest.postCount} posts` : ''}.
       </section>
     )
@@ -728,7 +728,7 @@ function LoungePage({
           onChange={(e) => setReasoning(e.target.value)}
           maxLength={DISCUSS_REASON_MAX}
           rows={2}
-          placeholder="Why — the gym reason, not just the slogan"
+          placeholder="Why, the gym reason, not just the slogan"
           className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
         />
         <button

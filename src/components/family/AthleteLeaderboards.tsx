@@ -68,7 +68,7 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
         ))}
       </div>
 
-      {/* Entries — the kind-leaderboard rule: top 3 get ranks and values.
+      {/* Entries, the kind-leaderboard rule: top 3 get ranks and values.
           Everyone else shows as names only, so nobody sees themselves
           sitting in last place. */}
       <ol className="mt-3 space-y-1.5">
@@ -119,7 +119,7 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
         )}
         {entries.length === 0 && (
           <li className="rounded-xl bg-black/30 px-3 py-4 text-center text-sm text-[var(--muted)]">
-            No entries yet — be the first on the board.
+            No entries yet, be the first on the board.
           </li>
         )}
       </ol>
@@ -133,7 +133,7 @@ export function AthleteLeaderboards({ athlete }: { athlete: Athlete }) {
       <div className="mt-4 rounded-xl border border-[var(--panel-border)] bg-black/30 p-3">
         <p className="text-xs font-bold text-[var(--text)]">Your board name</p>
         <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-          Pick a gamer tag — it shows instead of your name.
+          Pick a gamer tag, it shows instead of your name.
         </p>
         <div className="mt-2 flex gap-2">
           <input

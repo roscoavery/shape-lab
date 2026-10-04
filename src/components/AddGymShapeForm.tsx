@@ -77,7 +77,7 @@ export function AddGymShapeForm({ signedIn, onSaved }: Props) {
         <textarea
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           rows={2}
-          placeholder="Body position — what the finished shape is"
+          placeholder="Body position, what the finished shape is"
           value={bodyPosition}
           onChange={(e) => setBodyPosition(e.target.value)}
         />

@@ -159,7 +159,7 @@ export function StoryViewer({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Highlight name — Cartwheels, Whip, Camp…"
+              placeholder="Highlight name, Cartwheels, Whip, Camp…"
               className="w-full rounded-lg border border-white/20 bg-black px-3 py-2 text-sm"
             />
           )}

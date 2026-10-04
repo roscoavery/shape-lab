@@ -99,7 +99,7 @@ export function WarmupPanel({ signedIn }: Props) {
             setNotice(
               savedToGym
                 ? 'Saved to this gym link. Every phone and iPad will see it.'
-                : 'Saved on this device. The gym link did not take it — stay on this URL and save again.',
+                : 'Saved on this device. The gym link did not take it, stay on this URL and save again.',
             )
           }}
           onError={setErr}
@@ -123,7 +123,7 @@ export function WarmupPanel({ signedIn }: Props) {
               setNotice(
                 ok
                   ? 'Deleted from this gym link.'
-                  : 'Removed on this device. The gym link did not take it — stay on this URL and delete again.',
+                  : 'Removed on this device. The gym link did not take it, stay on this URL and delete again.',
               )
             })
           }}

@@ -221,7 +221,7 @@ export function AddCardVideoModal({
                     <div className="min-w-0">
                       <div className="truncate text-sm font-bold text-white">{v.who}</div>
                       <div className="truncate text-xs text-white/60">
-                        {[v.watchFor, v.keywords.slice(0, 3).join(' · ')].filter(Boolean).join(' — ') || v.url}
+                        {[v.watchFor, v.keywords.slice(0, 3).join(' · ')].filter(Boolean).join(', ') || v.url}
                       </div>
                     </div>
                     <span className="shrink-0 text-xs text-white/40">
@@ -439,7 +439,7 @@ export function AddToSkillCardModal({
             </div>
             <p className="mb-3 text-center text-xs text-white/60">{video.watchFor || video.who}</p>
 
-            <label className="mb-1 block text-xs font-bold text-white/70">Skill cards — tap to select, already-added show ✓</label>
+            <label className="mb-1 block text-xs font-bold text-white/70">Skill cards, tap to select, already-added show ✓</label>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}

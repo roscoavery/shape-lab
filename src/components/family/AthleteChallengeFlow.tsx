@@ -145,7 +145,7 @@ function HoldChallenge({
       )}
       {pose.error && (
         <p className="text-center text-sm text-[var(--bad)]">
-          Camera unavailable — you can still time yourself with any stopwatch and log it manually.
+          Camera unavailable, you can still time yourself with any stopwatch and log it manually.
         </p>
       )}
       {!started ? (
@@ -171,7 +171,7 @@ function HoldChallenge({
           }}
           className="w-full rounded-2xl border border-[var(--panel-border)] px-4 py-4 text-lg font-black text-[var(--text)]"
         >
-          Finish — log {formatSecondsShort(accRef.current)}
+          Finish, log {formatSecondsShort(accRef.current)}
         </button>
       )}
       <p className="text-center text-xs text-[var(--muted)]">
@@ -228,7 +228,7 @@ function RepChallenge({
       ) : (
         <div className="space-y-4 text-center">
           <p className="text-sm text-[var(--muted)]">
-            Do your {ex.name.toLowerCase()} — quality reps only — then count them here.
+            Do your {ex.name.toLowerCase()}, quality reps only, then count them here.
           </p>
           {best > 0 && (
             <p className="text-xs font-bold uppercase tracking-widest text-amber-200">
@@ -533,7 +533,7 @@ export function AthleteChallengeFlow({
                   />
                 ) : (
                   <p className="mt-2 rounded-xl border border-dashed border-[var(--panel-border)] bg-black/30 p-3 text-center text-xs text-[var(--muted)]">
-                    Coach Ryan's perfect {ex.name.toLowerCase()} demo goes here — coming soon.
+                    Coach Ryan's perfect {ex.name.toLowerCase()} demo goes here, coming soon.
                   </p>
                 )}
                 <p className="mt-1 text-sm font-bold text-amber-200">📷 {ex.angle.best}</p>
@@ -563,7 +563,7 @@ export function AthleteChallengeFlow({
                 className="w-full rounded-2xl bg-amber-300 px-4 py-4 text-lg font-black text-black"
                 style={{ animation: 'sl-skill-pulse 2.4s ease-in-out infinite' }}
               >
-                I'm set up — start
+                I'm set up, start
               </button>
               <button
                 type="button"

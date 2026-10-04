@@ -98,7 +98,7 @@ export const ARCH_HOLLOW_VARIATIONS: {
     {
       name: 'Supine hollow, hands pinned',
       detail:
-        'Hands pinned under a big mat, foam roller under the mid-to-lower butt — under the tailbone is harder. Keep hips open while pulling the ribs and low back toward the ground, toes in line with hips and ribs.',
+        'Hands pinned under a big mat, foam roller under the mid-to-lower butt, under the tailbone is harder. Keep hips open while pulling the ribs and low back toward the ground, toes in line with hips and ribs.',
     },
   ],
 }
@@ -171,7 +171,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "A strong standing tuck first",
       "An open tuck shape",
       "A back tuck up to a knee-high surface",
-      "Cart fulls help build toward this — more power first, then work down to less"
+      "Cart fulls help build toward this, more power first, then work down to less"
     ],
     "canBend": [],
     "ask": "Ask your coach whether your standing tuck and cart full are solid enough to start twisting from standing.",
@@ -229,7 +229,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "track": "running",
     "guideNeeds": [
       "A strong round off before touching it",
-      "Build it as round off 2, then round off 3 — a strong 2 leads to a strong 3"
+      "Build it as round off 2, then round off 3, a strong 2 leads to a strong 3"
     ],
     "canBend": [
       "Athletes can show a useful round off while the cartwheel is still rough. Ryan has watched athletes build a decent series while still spending five minutes on cartwheels at the start of the lesson."
@@ -255,7 +255,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Many of Ryan's athletes get a nice round off handspring on the mats or floor while the standing handspring is still being refined on the trampoline."
     ],
     "ask": "Ask your coach whether your round off is strong enough to connect. That is the only gate here.",
-    "ryanNote": "We get round off handsprings from a passe fall and the standing handsprings get stronger. During approximation and acquisition, teach a strong round off back handspring zombie shape falling down to a pike hollow arch shape — the athlete learns to carry momentum backwards into a connection drill before acquiring the round off back handspring. A strong round off is required for this to work. Plenty of athletes can flip by themselves but lack the shaping and round off to build a handspring that becomes a series. Training it right from the start drastically increases what they can get later. Cheer tryouts rush this: athletes chase the handspring without a mental grasp of how it works or the physical feeling of the shapes it was designed around.",
+    "ryanNote": "We get round off handsprings from a passe fall and the standing handsprings get stronger. During approximation and acquisition, teach a strong round off back handspring zombie shape falling down to a pike hollow arch shape, the athlete learns to carry momentum backwards into a connection drill before acquiring the round off back handspring. A strong round off is required for this to work. Plenty of athletes can flip by themselves but lack the shaping and round off to build a handspring that becomes a series. Training it right from the start drastically increases what they can get later. Cheer tryouts rush this: athletes chase the handspring without a mental grasp of how it works or the physical feeling of the shapes it was designed around.",
     "noteBlocks": [
       {
         "kind": "quote",
@@ -437,7 +437,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "canBend": [],
     "ask": "Ask your coach to check your bridge first, same as the back walkover.",
-    "ryanNote": "Front and back walkovers and cartwheels are walking tumbling — the middle ground between running and standing."
+    "ryanNote": "Front and back walkovers and cartwheels are walking tumbling, the middle ground between running and standing."
   },
   {
     "id": "skl_strong_round_off",
@@ -453,7 +453,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "ryanNote": "What is a strong round off?\n\nWe use the reference videos on this card to set a clear objective. Check the examples first. That is the target.\n\nA strong round off means blocking through a surface with enough power to jump off your hands adequately. You should come off the block high enough to keep your momentum carrying backwards, and land with minimal bend in your legs.\n\nThis is the hard part. Getting your feet all the way in front for a handspring connection takes real power. Even finishing a round off by itself takes holding one clean shape from your hands to your feet, without your body breaking apart anywhere in between. That is exactly why round offs get so many reps in back handspring classes.\n\nThe second half of the round off is the second half of the back handspring. Same shapes, same block, same finish.\n\nThe video below is coach-approved education for athletes, parents, and coaches. These are the same conclusions and principles I coach from.\n\nMountain climber, lunge, lever, hollow and zombie shapes are building blocks.\n\nZombie is the landing shape for the round off. It sets the athlete up for less segmentation in the hips and knees through the second half, and the arm drop helps the feet get in front for the connection. Some coaches teach the landing as a lightning bolt instead and build connections that way. Coach Ryan taught it that way himself for several years before switching.\n\nA note on the snap down drill in the video: it is done off a raised surface, and it is shown with more advanced gymnasts. It is not recommended for athletes in the approximation or early acquisition phase.\n\nTraining round off back handsprings on soft surfaces while the back handspring is still being acquired protects athletes in so many ways. It greatly reduces the chance of an athlete being traumatized by a mistake in the early phases and developing a fear that lasts long after the mistake itself is fixed. Rushing the skill can create a long-term roadblock, like a mental barrier or an injury. Be patient and trust the process.\n\nThis is one of those places where what we prioritize in training can change the trajectory of an athlete’s long-term success. Cheer tryouts often push athletes to skip the part where we build their long-term tumbling success during back handspring and round off back handspring training. That shortcut risks injuries, getting stuck, or fear that comes from never understanding what the skill physically requires to work as designed.\n\nMost of the success or failure in harder tumbling combinations comes down to how the round off back handspring is executed.",
     "guideNeeds": [
       "Strong cartwheel step-in to zombie shape or C shape",
-      "Strong round off from a passe fall — round offs, handsprings, and whips should build power rather than spend it",
+      "Strong round off from a passe fall, round offs, handsprings, and whips should build power rather than spend it",
       "Strong lunge lever handstand, cartwheels, and cartwheel step-in zombie mastery before training it on hard surfaces",
       "Strong hollow and handstand shapes"
     ],
@@ -649,7 +649,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "track": "running",
     "guideNeeds": [
-      "Late twisting progressions — never train it off how a round off feels",
+      "Late twisting progressions, never train it off how a round off feels",
       "A front pike helps more than a front layout (more cat twist, more twist speed)"
     ],
     "canBend": [],
@@ -679,7 +679,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "canBend": [],
     "ask": "Ask your coach whether your cartwheel is clean enough to add a full. Cart fulls are the bridge to standing fulls.",
-    "ryanNote": "Walking tumbling lives between running and standing. Cart fulls help with standing fulls — more power first, then work down to less."
+    "ryanNote": "Walking tumbling lives between running and standing. Cart fulls help with standing fulls, more power first, then work down to less."
   },
   {
     "id": "skl_cart_tuck",
@@ -692,7 +692,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "canBend": [],
     "ask": "Ask your coach whether your cartwheel is clean enough to tuck out of. Cart tucks are the bridge to standing tucks.",
-    "ryanNote": "Cart tucks help with standing tucks — more power first, then work down to less."
+    "ryanNote": "Cart tucks help with standing tucks, more power first, then work down to less."
   },
   {
     "id": "skl_cartwheel_handspring",
@@ -705,7 +705,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     ],
     "canBend": [],
     "ask": "Ask your coach to watch your cartwheel entry. The handspring only works if the cartwheel sets it up.",
-    "ryanNote": "Same idea as a standing handspring tuck or handspring full — the walking version builds the standing one."
+    "ryanNote": "Same idea as a standing handspring tuck or handspring full, the walking version builds the standing one."
   },
   {
     "id": "skl_foundations",
@@ -717,7 +717,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Meet the athlete where they are: growth spurts, surgeries, and comebacks all scale further down than average",
       "Straight arm handstand forward rolls (builds tolerance for unnatural corrections, teaches the hips to stay open when hollow is needed)",
       "Handstand to candle with open hips (translates to arch-to-hollow in handsprings and layout sets)",
-      "Handstands and handstand shoulder taps — the building blocks for cartwheels",
+      "Handstands and handstand shoulder taps, the building blocks for cartwheels",
       "Hollow holds, handstands on the wall, cartwheels, trampoline air awareness where available"
     ],
     "canBend": [
@@ -842,14 +842,14 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "guideNeeds": [
       "A strong layout first. Non-negotiable.",
       "Layout standards before twisting: solid blocking angle to convert travel to height; shape deadline at 3 o’clock (first quarter of flip); set with head in; enough rotation to keep hips open all the way through (no piking)",
-      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better — the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land",
+      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better, the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land",
       "Front halves (barani) and back halves can both help build toward a full"
     ],
     "canBend": [
       "Ryan sometimes bends the strong-layout rule if it is close or the athlete already has the skill, but it messes with what he is trying to build."
     ],
     "ask": "Ask your coach about your twist timing and whether your layout is strong enough to twist out of. A full on a shaky layout teaches a shaky full.",
-    "ryanNote": "Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section. The arm-drop method he uses: master a consistent 3/4 layout to belly (5 good reps, pit pillow if you have one), then add the arm drop late — drop the right arm, squeeze the left against the ear, stay rigid and do not think about twisting. Move the drop a little earlier and deeper, then both arms, working the twist into 11 to 1. Then add the handspring or round off and take the layout all the way to the feet."
+    "ryanNote": "Teach it in this order: layout to belly, half to back, full to belly, then full to feet. Opposite side spotting can preserve the set and bridge the gap between a spotted half and a spotted full. Twist mechanics live in the physics section. The arm-drop method he uses: master a consistent 3/4 layout to belly (5 good reps, pit pillow if you have one), then add the arm drop late, drop the right arm, squeeze the left against the ear, stay rigid and do not think about twisting. Move the drop a little earlier and deeper, then both arms, working the twist into 11 to 1. Then add the handspring or round off and take the layout all the way to the feet."
   },
   {
     "id": "skl_cartwheel_open_tuck",

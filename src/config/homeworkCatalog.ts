@@ -58,7 +58,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
       'At home: go through the shape library, then take the shape test. Log when you finish so the coach can see it.',
     cues: [
       'Open Learn → Shape library. Read the still and the written standard.',
-      'Then take the shape test — pictures or descriptions.',
+      'Then take the shape test, pictures or descriptions.',
       'Write which shapes you studied if you want the coach to see it.',
     ],
   },
@@ -96,7 +96,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     notes: 'Plank line. Chest to a fist-height if full range is not there yet. Specs: elbows in (triceps), wide hands, piked, or handstand push-ups.',
     cues: [
       'Ribs in, glutes on, neck long.',
-      'Default: elbows track about 45° — not flared to the ears.',
+      'Default: elbows track about 45°.',
       'Elbows in keeps the upper arm against the ribs. Wide hands open the chest.',
       'Piked and handstand versions load the shoulders more than the chest.',
       'Quality reps keep the same plank from the first to the last.',
@@ -125,12 +125,12 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     standardLabel: 'Work toward 2:00 holds, then 30 full-range reps',
     allowWeight: true,
     notes:
-      'The iso hold standard is 2 minutes before moving to reps. Once you can hold 2 minutes with no flare, start reps — the standard eventually becomes 30 full-range reps. Build tissue tolerance without chasing pain. If you cannot get on the machine, stay off a few days, then ease back in from a slight arch toward a straight body.',
+      'The iso hold standard is 2 minutes before moving to reps. Once you can hold 2 minutes with no flare, start reps, the standard eventually becomes 30 full-range reps. Build tissue tolerance without chasing pain. If you cannot get on the machine, stay off a few days, then ease back in from a slight arch toward a straight body.',
     cues: [
       'Goal: expose the back to what it can handle today, then stop.',
       'Iso hold first. Two flare-free minutes unlocks slow, full-range reps.',
       'Reps are slow. No bouncing.',
-      'If it hurts, that is information — write it in the journal and do less, not more.',
+      'If it hurts, that is information, write it in the journal and do less, not more.',
     ],
   },
   {
@@ -143,7 +143,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     standardLabel: 'Work toward 30 reps, then a 1:00 hold',
     allowWeight: true,
     notes:
-      'Reps come before the iso standard here. Push for 30 reps, then push for a minute hold. Training guide: a 10 to 15-second hold at the top of a bridge is the core stability test — if you can hold it cleanly with no low back arching, no pelvis tilting, and no hamstrings cramping, your glutes are awake and ready for reps. A solid 30-second hold with perfect form is the endurance standard before advanced variations like single-leg bridges or weighted hip thrusts.',
+      'Reps come before the iso standard here. Push for 30 reps, then push for a minute hold. Training guide: a 10 to 15-second hold at the top of a bridge is the core stability test, if you can hold it cleanly with no low back arching, no pelvis tilting, and no hamstrings cramping, your glutes are awake and ready for reps. A solid 30-second hold with perfect form is the endurance standard before advanced variations like single-leg bridges or weighted hip thrusts.',
     cues: [
       'Drive through the heels. Do not crank the low back.',
       'Pause at the top of a quality rep.',
@@ -156,7 +156,7 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
     trackMode: 'hold',
     audience: 'class',
     targetSeconds: 30,
-    notes: 'Back on the wall, knees about 90°. Specs (on toes, single leg) are optional — none selected by default.',
+    notes: 'Back on the wall, knees about 90°. Specs (on toes, single leg) are optional, none selected by default.',
     cues: [
       'Weight in the heels unless you chose on-toes.',
       'Ribs quiet. Do not slide down as you fatigue.',
@@ -265,10 +265,10 @@ export function stockCatalogFor(audience: HomeworkCatalogAudience | 'class'): Ho
 }
 
 export const CORE_HOMEWORK_PICKS: { autoKey: string; name: string; hint: string }[] = [
-  { autoKey: 'hollow', name: 'Hollow', hint: 'Core drill already on every athlete — coach assigned, no second card' },
-  { autoKey: 'superman', name: 'Superman', hint: 'Core drill already on every athlete — coach assigned, no second card' },
-  { autoKey: 'side_plank', name: 'Side plank', hint: 'Core drill already on every athlete — coach assigned, no second card' },
-  { autoKey: 'wall_handstand', name: 'Wall handstand', hint: 'Core drill already on every athlete — coach assigned, no second card' },
+  { autoKey: 'hollow', name: 'Hollow', hint: 'Core drill already on every athlete, coach assigned, no second card' },
+  { autoKey: 'superman', name: 'Superman', hint: 'Core drill already on every athlete, coach assigned, no second card' },
+  { autoKey: 'side_plank', name: 'Side plank', hint: 'Core drill already on every athlete, coach assigned, no second card' },
+  { autoKey: 'wall_handstand', name: 'Wall handstand', hint: 'Core drill already on every athlete, coach assigned, no second card' },
 ]
 
 export function getCatalogItem(id: string | undefined | null): HomeworkCatalogItem | undefined {
@@ -298,7 +298,7 @@ export const CARE_RESOURCES = {
     name: 'Ben Patrick · Knees Over Toes Guy',
     why: 'Free and paid knee-strength work that meets you where you are.',
     links: [
-      { label: 'YouTube — Kneesovertoesguy', href: 'https://www.youtube.com/@Kneesovertoesguy' },
+      { label: 'YouTube, Kneesovertoesguy', href: 'https://www.youtube.com/@Kneesovertoesguy' },
       { label: 'ATG Online Coaching', href: 'https://www.atgonlinecoaching.com/' },
       { label: 'Instagram', href: 'https://www.instagram.com/kneesovertoesguy/' },
     ],

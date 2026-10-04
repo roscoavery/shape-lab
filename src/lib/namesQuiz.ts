@@ -245,7 +245,7 @@ export function makeNamesQuestion(
         id: a.id,
         label: givenName(a),
       })),
-      explain: `That’s ${who} — ${answer.name}.`,
+      explain: `That’s ${who}, ${answer.name}.`,
     }
   }
   const decoys = shuffle(faces.filter((a) => a.id !== answer.id)).slice(0, faceChoiceN - 1)
@@ -260,7 +260,7 @@ export function makeNamesQuestion(
       label: a.name,
       photoDataUrl: a.photoDataUrl,
     })),
-    explain: `${who} is this face — ${answer.name}.`,
+    explain: `${who} is this face, ${answer.name}.`,
   }
 }
 

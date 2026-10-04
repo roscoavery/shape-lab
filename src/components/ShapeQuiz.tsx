@@ -247,7 +247,7 @@ export function ShapeQuiz({
         </div>
         <h3 className="mt-1 text-xl font-semibold text-[var(--text)]">How do you want to take it?</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Pictures are the easy way — name the coach stills. Descriptions and mixed
+          Pictures are the easy way, name the coach stills. Descriptions and mixed
           sit underneath if you want a harder test.
         </p>
         <div className="mt-4 flex flex-col gap-2">
@@ -325,7 +325,7 @@ export function ShapeQuiz({
           score={score}
           total={total}
           items={items}
-          passCopy="Perfect — you know these positions."
+          passCopy="Perfect, you know these positions."
           midCopy="Solid. The misses below name the right shape. Review those cards, then try again."
           failCopy="Study the correct names on each miss, then retake."
           retryLabel="New quiz, same type"

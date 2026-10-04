@@ -488,7 +488,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
         attempts.push(salvaged)
         tick({ seconds: salvaged.holdSeconds, running: false, inverted: false })
         opts.onCue(
-          `Kept your hold — ${formatSeconds(salvaged.holdSeconds)}. The clock missed the kick-up, so this is the recorded clip.`,
+          `Kept your hold, ${formatSeconds(salvaged.holdSeconds)}. The clock missed the kick-up, so this is the recorded clip.`,
         )
       } else if (rec.session) {
         void rec.session.stop()
@@ -506,7 +506,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     let lastPeakSample = 0
     let holdSeconds = 0
 
-    opts.onCue('Holding — clock is running. Walking is allowed. Clock stops when you come down.')
+    opts.onCue('Holding, clock is running. Walking is allowed. Clock stops when you come down.')
     playHoldEnterBeep()
     tick({ seconds: 0, running: true, inverted: true, handsDown: true, feetOff: true })
 
@@ -580,7 +580,7 @@ export async function runHandstandHoldSession(opts: HoldSessionOpts): Promise<Ra
     playHoldExitBeep()
     opts.onCue(
       holdSeconds >= MIN_HOLD_SEC
-        ? `Foot down — ${formatSeconds(holdSeconds)}. Kick up again when you are ready, or tap Done.`
+        ? `Foot down, ${formatSeconds(holdSeconds)}. Kick up again when you are ready, or tap Done.`
         : 'That kick did not stick. Kick up again when you are ready, or tap Done.',
     )
 

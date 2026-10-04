@@ -79,7 +79,7 @@ export function ClassRecapList({
       {meetings.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
           When a class ends, each athlete’s shape-test grades and notes show
-          here — grouped by who wrote them.
+          here, grouped by who wrote them.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -219,7 +219,7 @@ function ClassRecapCard({
               Class notes
             </p>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Notes for this hour — not tied to one athlete.
+              Notes for this hour.
             </p>
             {(meeting.notes ?? []).length === 0 ? (
               <p className="mt-2 text-sm text-[var(--muted)]">No class notes yet.</p>
@@ -300,7 +300,7 @@ function ClassRecapCard({
           ))}
           {guests.map((row) => (
             <p key={`${row.firstName}-${row.lastName}`} className="text-sm text-[var(--muted)]">
-              {attendeeLabel(row, athletes)} — no profile, so no saved grades or notes.
+              {attendeeLabel(row, athletes)}, no profile, so no saved grades or notes.
             </p>
           ))}
           {canEdit && addable.length > 0 && (
@@ -522,7 +522,7 @@ function AthleteRecap({
                 />
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={bigWin} onChange={(e) => setBigWin(e.target.checked)} />
-                  Big win — also the gym feed
+                  Big win, also the gym feed
                 </label>
                 <button
                   type="button"

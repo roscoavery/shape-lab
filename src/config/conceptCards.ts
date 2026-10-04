@@ -37,7 +37,7 @@ export const CONCEPT_CARDS: ConceptCard[] = [
             'Walk before you run',
             'Set high standards with prerequisites',
             'Stronger basics make harder skills easier to learn',
-            'Nothing is ever perfect — the expression is a reminder of order',
+            'Nothing is ever perfect, the expression is a reminder of order',
           ],
           quote: 'This is an order of operation.',
         },
@@ -60,7 +60,7 @@ export const CONCEPT_CARDS: ConceptCard[] = [
   {
     id: 's-curve',
     title: 'The S-curve of progress',
-    subtitle: 'Progress compounds like interest — exponential growth until the pocket shrinks.',
+    subtitle: 'Progress compounds like interest, exponential growth until the pocket shrinks.',
     kind: 'scurve',
     data: {
       phases: [
@@ -262,7 +262,7 @@ export const CONCEPT_CARDS: ConceptCard[] = [
           n: 3,
           name: 'Skill acquisition',
           color: '#d9732b',
-          text: 'The athlete can land it. Celebrate it — but landing it is not the same as owning it.',
+          text: 'The athlete can land it. Celebrate it, but landing it is not the same as owning it.',
         },
         {
           n: 4,
@@ -271,7 +271,7 @@ export const CONCEPT_CARDS: ConceptCard[] = [
           text: 'Hundreds to thousands of intentional reps later, it starts to feel like second nature.',
         },
       ],
-      takeaway: 'Most of the work — and most of the growth — lives in stages 2 and 3.',
+      takeaway: 'Most of the work, and most of the growth, lives in stages 2 and 3.',
     },
   },
 ]

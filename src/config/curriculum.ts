@@ -183,7 +183,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_handstand',
     name: '6. Handstand (practice)',
     description:
-      'Kick up to the best handstand you can. Three tries. We grade the line you hit — ribs in, butt in, ears covered — but you do not need a perfect handstand to move on. Wall handstand stays on Homework.',
+      'Kick up to the best handstand you can. Three tries. We grade the line you hit, ribs in, butt in, ears covered, but you do not need a perfect handstand to move on. Wall handstand stays on Homework.',
     requiresTaskId: 'task_lever',
     masterAfterCompletions: 1,
     steps: [
@@ -221,7 +221,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         shapeId: 'feet_together_open_shoulders',
         ...SEQ_HOLD,
         profileOk: true,
-        note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
+        note: 'Stay in profile, do not turn to face the camera · arms by ears · ribs in',
       },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'right', note: 'Pull one leg to passé · hold 3' },
       { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'right', note: 'Fall to starting lunge · right foot forward · open and count 3-2-1' },
@@ -240,7 +240,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         shapeId: 'feet_together_open_shoulders',
         ...SEQ_HOLD,
         profileOk: true,
-        note: 'Stay in profile — do not turn to face the camera · arms by ears · ribs in',
+        note: 'Stay in profile, do not turn to face the camera · arms by ears · ribs in',
       },
       { shapeId: 'passe', ...PASSE_HOLD, stance: 'left', note: 'Pull one leg to passé · hold 3' },
       { shapeId: 'lunge_start', ...LUNGE_WINDOW, stance: 'left', note: 'Fall to starting lunge · left foot forward · open and count 3-2-1' },
@@ -303,7 +303,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_mountain_climber',
     name: '13. Mountain climber',
     description:
-      'C plus one medium step — or a lunge with the back knee bent and a C upper body. Two bent knees for power. Reach from the middle out. Pass-through for handstands, cartwheels, round-offs, and aerials. We never finish a skill here.',
+      'C plus one medium step, or a lunge with the back knee bent and a C upper body. Two bent knees for power. Reach from the middle out. Pass-through for handstands, cartwheels, round-offs, and aerials. We never finish a skill here.',
     requiresTaskId: 'task_c_shape',
     masterAfterCompletions: 2,
     steps: [
@@ -335,7 +335,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
         masteredSeconds: 0.8,
         passThrough: true,
         speakCorrections: true,
-        note: 'Pass through — hit lever and continue to landing lunge unless you can hold',
+        note: 'Pass through, hit lever and continue to landing lunge unless you can hold',
       },
       { shapeId: 'lunge_land', ...LUNGE_WINDOW },
     ],

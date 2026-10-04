@@ -61,7 +61,7 @@ export const CAMERA_VIEW_COPY: Record<
   side: {
     label: 'Side view',
     instruction:
-      'Stand in profile (3/4 is OK). Stay sideways — you do not need to face the camera. We grade the body line from the landmarks we can see.',
+      'Stand in profile (3/4 is OK). Stay sideways, you do not need to face the camera. We grade the body line from the landmarks we can see.',
   },
   front: {
     label: 'Front view required',

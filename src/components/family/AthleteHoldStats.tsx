@@ -42,7 +42,7 @@ export function AthleteHoldStats({ logs }: { logs: HomeworkLog[] }) {
   if (shapes.length === 0 && reps.length === 0) {
     return (
       <p className="text-sm text-[var(--muted)]">
-        No holds or reps logged yet — your stats will light up here as you train.
+        No holds or reps logged yet, your stats will light up here as you train.
       </p>
     )
   }
@@ -117,7 +117,7 @@ export function AthleteHoldStats({ logs }: { logs: HomeworkLog[] }) {
                       {delta > 0 ? (
                         <>Up <span className="font-black text-green-300" style={{ textShadow: NEON_GREEN }}>{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} <span className="tabular-nums">({formatSecondsShort(s.firstSeconds)} → {formatSecondsShort(s.latestSeconds)})</span></>
                       ) : delta < 0 ? (
-                        <><span className="font-black text-orange-300">{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} — off days happen, next one counts</>
+                        <><span className="font-black text-orange-300">{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)}, off days happen, next one counts</>
                       ) : (
                         <>Holding steady since {shortDate(s.firstDate)}</>
                       )}
@@ -212,7 +212,7 @@ export function AthleteHoldStats({ logs }: { logs: HomeworkLog[] }) {
             )
           })}
         </div>
-        <p className="mt-1 text-[11px] text-[var(--muted)]">Total hold time per month — your training electric bill.</p>
+        <p className="mt-1 text-[11px] text-[var(--muted)]">Total hold time per month, your training electric bill.</p>
       </div>
 
       {/* Rep totals */}

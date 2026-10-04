@@ -134,12 +134,12 @@ export function cameraPermissionMessage(err: unknown): string {
 export function cameraPromptCue(kind: 'starting' | 'waiting' | 'blocked' | 'homework'): string {
   if (isAndroid()) {
     if (kind === 'starting') return 'Starting camera… Allow it if Chrome asks.'
-    if (kind === 'waiting') return 'Allow the camera if Chrome asks — waiting…'
+    if (kind === 'waiting') return 'Allow the camera if Chrome asks, waiting…'
     if (kind === 'homework') return 'Allow the camera if Chrome asks'
     return 'Allow the camera in Chrome, then tap Start again. Stay on this page.'
   }
   if (kind === 'starting') return 'Starting camera… Allow it if Safari asks.'
-  if (kind === 'waiting') return 'Allow the camera if Safari asks — waiting…'
+  if (kind === 'waiting') return 'Allow the camera if Safari asks, waiting…'
   if (kind === 'homework') return 'Allow the camera if Safari asks'
   return 'Allow the camera in Safari, then tap Start again. Stay on this page.'
 }

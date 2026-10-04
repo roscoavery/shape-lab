@@ -18,7 +18,7 @@ export function NutritionFactsBrowse({ compact = false }: { compact?: boolean })
       <h3 className="font-semibold">NutritionFacts.org</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Short readings from public NutritionFacts.org topics and Dr. Michael Greger videos. For
-        anything beyond these cards, the search below jumps to their full site search — not medical
+        anything beyond these cards, the search below jumps to their full site search, not medical
         advice.
       </p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">

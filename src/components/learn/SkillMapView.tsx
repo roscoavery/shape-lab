@@ -392,12 +392,12 @@ export function HlMarker({ role, className = '' }: { role: HlRole; className?: s
  * visibly dimmer so the lit trail reads at a glance. */
 function glowShadow(rgb: string, distance: number): string {
   const specs = [
-    { a1: 0.95, b1: 2, s1: 1, a2: 0.35, b2: 14, s2: 4 }, // 0 — the destination, brightest
-    { a1: 0.85, b1: 2, s1: 1, a2: 0.28, b2: 12, s2: 3 }, // 1 — strong, on the trail
-    { a1: 0.7, b1: 1, s1: 1, a2: 0.22, b2: 10, s2: 3 }, // 2 — clearly lit
+    { a1: 0.95, b1: 2, s1: 1, a2: 0.35, b2: 14, s2: 4 }, // 0, the destination, brightest
+    { a1: 0.85, b1: 2, s1: 1, a2: 0.28, b2: 12, s2: 3 }, // 1, strong, on the trail
+    { a1: 0.7, b1: 1, s1: 1, a2: 0.22, b2: 10, s2: 3 }, // 2, clearly lit
     { a1: 0.5, b1: 1, s1: 1, a2: 0.15, b2: 8, s2: 2 }, // 3
     { a1: 0.35, b1: 1, s1: 0, a2: 0.1, b2: 6, s2: 2 }, // 4
-    { a1: 0.25, b1: 1, s1: 0, a2: 0.06, b2: 5, s2: 1 }, // 5 — faint shimmer
+    { a1: 0.25, b1: 1, s1: 0, a2: 0.06, b2: 5, s2: 1 }, // 5, faint shimmer
   ]
   const s = specs[Math.min(distance, MAX_GLOW_DISTANCE)]
   return (
@@ -544,12 +544,12 @@ function tileVisuals(theme: MapTheme, family: SkillFamily, state: TileState): Ti
       ? 'rgba(251,191,36,0.55)'
       : state.glowing
         ? d === 0
-          ? `rgba(${rgb},1)` // destination — full-strength border
+          ? `rgba(${rgb},1)` // destination, full-strength border
           : d <= 2
-            ? `rgba(${rgb},0.95)` // on the trail — near-full so the path reads continuous
+            ? `rgba(${rgb},0.95)` // on the trail, near-full so the path reads continuous
             : `rgba(${rgb},0.7)`
         : state.highlighted
-          ? `rgba(${rgb},0.55)` // relevant, not required — softer + dashed below
+          ? `rgba(${rgb},0.55)` // relevant, not required, softer + dashed below
           : state.featured
             ? `rgba(${rgb},0.75)`
             : style.border,
@@ -1376,7 +1376,7 @@ function LevelBar({ beyondOpen, theme }: { beyondOpen: boolean; theme: MapTheme 
           open ? 'w-20' : 'w-4'
         }`}
       >
-        {/* gradient strip — always visible, the closed tab */}
+        {/* gradient strip, always visible, the closed tab */}
         <div
           aria-hidden
           className="absolute bottom-0 right-1 top-0 w-2 rounded-full opacity-70"
@@ -1391,7 +1391,7 @@ function LevelBar({ beyondOpen, theme }: { beyondOpen: boolean; theme: MapTheme 
         >
           ‹
         </span>
-        {/* zone labels — fade in when open */}
+        {/* zone labels, fade in when open */}
         <div
           aria-hidden
           className={`absolute inset-0 transition-opacity duration-300 ${
@@ -1778,7 +1778,7 @@ function GlowNote({
       <span aria-hidden>✦ </span>
       {classGlow
         ? `Lighting the way for ${glowNames.slice(0, 3).join(', ')}${glowNames.length > 3 ? ' and others' : ''}`
-        : 'Your goals light the way — follow the glow upward'}
+        : 'Your goals light the way, follow the glow upward'}
       <span aria-hidden> ✦</span>
     </p>
   )
@@ -2374,7 +2374,7 @@ export function SkillMapView({
       }}
     >
       {/* Pulse keyframes for the goal tile (distance 0). Pulses the neon edge
-          (brightness + saturation) — no halo bloom; the static box-shadow
+          (brightness + saturation), no halo bloom; the static box-shadow
           carries the glow. Cheap on phones. */}
       <style>{`@keyframes skill-glow-pulse { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.18) saturate(1.35); } }
 @keyframes foundations-beam { 0%,100% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,0.8), 0 0 18px 4px rgba(251,191,36,0.25); } 50% { box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.22), 0 0 2px 1px rgba(251,191,36,1), 0 0 26px 6px rgba(251,191,36,0.35); } }`}</style>

@@ -561,7 +561,7 @@ export function ClassStation({
         {draft.step === 'dateOfBirth' && (
           <Question
             title="Birthday"
-            hint="Used for age-appropriate account access, privacy, and safety settings. It stays private — we do not show it on profiles or the feed."
+            hint="Used for age-appropriate account access, privacy, and safety settings. It stays private, we do not show it on profiles or the feed."
             onBack={() => go('parentPhone')}
           >
             <BirthdayQuickPick
@@ -608,7 +608,7 @@ export function ClassStation({
         {draft.step === 'harder' && (
           <Question
             title="Which one is harder?"
-            hint="Hollow or Superman — tap the one that feels tougher."
+            hint="Hollow or Superman, tap the one that feels tougher."
             onBack={() => go('cartwheel')}
           >
             <div className="grid gap-3">
@@ -687,7 +687,7 @@ export function ClassStation({
         {draft.step === 'twistBetter' && (
           <Question
             title="Which is your better side?"
-            hint="You can twist both ways — pick the stronger one."
+            hint="You can twist both ways, pick the stronger one."
             onBack={() => go('twist')}
           >
             <div className="grid gap-3">

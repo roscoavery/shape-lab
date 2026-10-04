@@ -89,7 +89,7 @@ export function TodayCollages({ viewer, onOpenLibrary, embed = false }: Props) {
       ) : null}
       {collages.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--muted)]">
-          No collages yet. Build one on Classes — up to six gym clips on one board.
+          No collages yet. Build one on Classes, up to six gym clips on one board.
         </p>
       ) : (
         <ul className="mt-3 grid gap-3 sm:grid-cols-2">

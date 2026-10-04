@@ -315,7 +315,7 @@ function DrillEditor({
         <textarea
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           rows={3}
-          placeholder="Cues — one idea per line"
+          placeholder="Cues, one idea per line"
           value={draft.notes}
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />

@@ -128,7 +128,7 @@ export function GymRecords({ athletes, onAthletes }: Props) {
       flash(
         persist?.lasting
           ? `Sent ${result.profiles} profiles, ${result.photos} face${result.photos === 1 ? '' : 's'}, and ${stills.sent} shape still${stills.sent === 1 ? '' : 's'} from this device.`
-          : `Saved ${result.profiles} profiles on this link. This project still needs its existing Blob connected — do not create a second one.`,
+          : `Saved ${result.profiles} profiles on this link. This project still needs its existing Blob connected, do not create a second one.`,
       )
     } catch {
       flash('Could not reach the gym link from this phone. Stay on the same URL and try again.')
@@ -169,14 +169,14 @@ export function GymRecords({ athletes, onAthletes }: Props) {
       {persist?.lasting && localOnlyPhotos === 0 && (gymPhotoCount ?? 0) > 0 && (
         <p className="mt-3 rounded-lg border border-[var(--accent)]/30 bg-[#102820] px-3 py-2 text-sm text-[var(--accent)]">
           {persist.homeGym
-            ? 'This computer is the gym file. Pictures load from this PC — hard-refresh the phone on this same home URL if a face is still missing.'
-            : 'Those shared pictures should show on the phone after a hard-refresh on this same URL. If a face is still missing, that crop never left this iPad — tap Send again.'}
+            ? 'This computer is the gym file. Pictures load from this PC, hard-refresh the phone on this same home URL if a face is still missing.'
+            : 'Those shared pictures should show on the phone after a hard-refresh on this same URL. If a face is still missing, that crop never left this iPad, tap Send again.'}
         </p>
       )}
       {localOnlyPhotos > 0 && (
         <p className="mt-3 rounded-lg border border-[var(--warn)]/40 bg-[#2a2410] px-3 py-2 text-sm text-[var(--warn)]">
           {leftoverNames.length > 0 ? leftoverNames.join(' and ') : `${localOnlyPhotos} picture${localOnlyPhotos === 1 ? '' : 's'}`}{' '}
-          still live only on this iPad. Tap <strong className="text-[var(--text)]">Save leftover pictures</strong> so they land in Files / Photos — then you can move on and put them back later. Do not clear this site’s Safari data.
+          still live only on this iPad. Tap <strong className="text-[var(--text)]">Save leftover pictures</strong> so they land in Files / Photos, then you can move on and put them back later. Do not clear this site’s Safari data.
         </p>
       )}
 
@@ -275,13 +275,13 @@ export function GymRecords({ athletes, onAthletes }: Props) {
                 .then((result) => {
                   if (result.saved.length > 0) {
                     flash(
-                      `Share sheet for ${result.saved.join(' and ')} — tap Save Image or Save to Files. ${result.failed.length ? `${result.failed.join(' and ')} did not export.` : 'You can retake later if you need to.'}`,
+                      `Share sheet for ${result.saved.join(' and ')}, tap Save Image or Save to Files. ${result.failed.length ? `${result.failed.join(' and ')} did not export.` : 'You can retake later if you need to.'}`,
                     )
                     return
                   }
                   flash(
                     result.failed.length
-                      ? `Could not export ${result.failed.join(' and ')}. Keep this tab open — Download gym file still has those crops.`
+                      ? `Could not export ${result.failed.join(' and ')}. Keep this tab open, Download gym file still has those crops.`
                       : 'No leftover pictures on this tab.',
                   )
                 })

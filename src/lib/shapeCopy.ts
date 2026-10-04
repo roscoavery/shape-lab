@@ -82,7 +82,7 @@ export function defaultAppNotes(shape: ShapeDef): string {
   const bits: string[] = []
   const view =
     shape.cameraView === 'side'
-      ? 'Camera: side or 3/4 — not face-on. Scoring needs the body line.'
+      ? 'Camera: side or 3/4. Scoring needs the body line.'
       : shape.cameraView === 'front'
         ? 'Camera: front so both arms and legs are visible.'
         : 'Camera: any angle works for this shape.'

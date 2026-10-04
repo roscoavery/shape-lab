@@ -164,7 +164,7 @@ export function ExerciseSetLog({
           </option>
         ))}
         {allowOther && (
-          <option value={OTHER_EXERCISE}>Other — type or pick another exercise</option>
+          <option value={OTHER_EXERCISE}>Other, type or pick another exercise</option>
         )}
       </select>
       {other && (
@@ -187,7 +187,7 @@ export function ExerciseSetLog({
           </select>
           <input
             className={input}
-            placeholder="Or type it — bear crawls, 10 push-ups…"
+            placeholder="Or type it, bear crawls, 10 push-ups…"
             value={otherName}
             onChange={(e) => setOtherName(e.target.value)}
           />

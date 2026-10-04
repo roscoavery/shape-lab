@@ -105,7 +105,7 @@ export function AthleteHomeworkGuide({
       </p>
       <ul className="mt-4 space-y-3">
         {holdRows.length === 0 && (
-          <li className="text-sm text-[var(--muted)]">No holds on your card yet — your coach will add them.</li>
+          <li className="text-sm text-[var(--muted)]">No holds on your card yet, your coach will add them.</li>
         )}
         {holdRows.map((row) => {
           const pct = Math.min(100, Math.round((row.done / row.goal) * 100))

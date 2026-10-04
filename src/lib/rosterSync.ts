@@ -632,7 +632,7 @@ export async function pushThisDeviceToGym(): Promise<{
     remainingPhotos: remaining,
     error: ok
       ? remaining > 0
-        ? `${remaining} picture${remaining === 1 ? '' : 's'} still only on this device — stay on this URL and tap Send again.`
+        ? `${remaining} picture${remaining === 1 ? '' : 's'} still only on this device, stay on this URL and tap Send again.`
         : null
       : 'Could not reach the gym file from this device.',
   }

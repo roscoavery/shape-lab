@@ -14,6 +14,6 @@ export function noteAudienceLabel(note: { audience?: NoteAudience } | null | und
 
 export function noteAudienceHint(audience: NoteAudience): string {
   return audience === 'coach'
-    ? 'Only coaches see this — it stays off the athlete recap.'
+    ? 'Only coaches see this, it stays off the athlete recap.'
     : 'They will see this on their lesson recap.'
 }

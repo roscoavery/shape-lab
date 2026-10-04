@@ -219,7 +219,7 @@ function lungePicture(landmarks: Landmark[]): { looksLikeLunge: boolean; reason:
   }
   const stance = Math.hypot(la.x - ra.x, la.y - ra.y)
   if (stance < 0.1) {
-    return { looksLikeLunge: false, reason: 'Step the feet apart — that is still standing.' }
+    return { looksLikeLunge: false, reason: 'Step the feet apart, that is still standing.' }
   }
   const leftKnee = jointAngle(landmarks, LM.LEFT_HIP, LM.LEFT_KNEE, LM.LEFT_ANKLE)
   const rightKnee = jointAngle(landmarks, LM.RIGHT_HIP, LM.RIGHT_KNEE, LM.RIGHT_ANKLE)
@@ -657,7 +657,7 @@ function scoreOnce(
     if (!pic.backLegLifted) {
       overall = Math.min(overall, 52)
       pictureMiss = pic.supportOnFloor
-        ? 'Lift the back leg — this is still a lunge, not a lever. Chest toward parallel, one line from the back foot through the hands.'
+        ? 'Lift the back leg, this is still a lunge, not a lever. Chest toward parallel, one line from the back foot through the hands.'
         : 'That is not a lever picture. Chest toward parallel, weight on the support foot, back leg lifting into a line toward the hands.'
       const lift = results.find((c) => c.id === 'line_foot_hands')
       if (lift) {
@@ -683,8 +683,8 @@ function scoreOnce(
       pictureMiss = !lift.handsOff && !lift.feetOff
         ? 'Lift the hands and the feet off the ground. Arms behind the ears, knees straight.'
         : !lift.handsOff
-          ? 'Lift both hands off the ground — arms behind the ears, not resting on the mat.'
-          : 'Lift both feet off the ground — straight knees, toes pointed.'
+          ? 'Lift both hands off the ground, arms behind the ears, not resting on the mat.'
+          : 'Lift both feet off the ground, straight knees, toes pointed.'
     }
   }
 
@@ -694,16 +694,16 @@ function scoreOnce(
       overall = Math.min(overall, 30)
       pictureMiss = !pic.backFlat
         ? 'Flatten the low back to the floor, then lift the hands and feet.'
-        : 'Lift the feet off the ground — low back stays flat.'
+        : 'Lift the feet off the ground, low back stays flat.'
     } else if (!pic.handsOff && shape.id === 'hollow_arms_up') {
       overall = Math.min(overall, 42)
-      pictureMiss = 'Hands off the ground — arms by the ears, low back flat.'
+      pictureMiss = 'Hands off the ground, arms by the ears, low back flat.'
     }
   }
 
   if (shape.id === 'passe' && !passeLegLifted(landmarks)) {
     overall = Math.min(overall, 32)
-    pictureMiss = 'Lift one knee into passé — both feet on the floor is not a passé.'
+    pictureMiss = 'Lift one knee into passé, both feet on the floor is not a passé.'
     const height = results.find((c) => c.id === 'passe_height')
     if (height) {
       height.score = Math.min(height.score, 20)
@@ -713,7 +713,7 @@ function scoreOnce(
 
   if (shape.id === 'stand_clean' && !standCleanArmsDown(landmarks)) {
     overall = Math.min(overall, 34)
-    pictureMiss = 'Arms pinned to your sides — that is still a T.'
+    pictureMiss = 'Arms pinned to your sides, that is still a T.'
     const arms = results.find((c) => c.id === 'arms_down')
     if (arms) {
       arms.score = Math.min(arms.score, 18)
@@ -746,8 +746,8 @@ function scoreOnce(
     if (!pictureMiss) {
       pictureMiss =
         shape.id === 'mountain_climber' || shape.id === 'c_shape'
-          ? 'Ribs in — hollow the chest into a C. Do not keep a straight-back open-shoulder line.'
-          : 'Ribs in — press the low back down. Do not flare the ribs.'
+          ? 'Ribs in, hollow the chest into a C. Do not keep a straight-back open-shoulder line.'
+          : 'Ribs in, press the low back down. Do not flare the ribs.'
     }
   }
 
@@ -759,7 +759,7 @@ function scoreOnce(
 
   if (viewWrong && shape.cameraView === 'front' && detected === 'side') {
     viewWarning =
-      'Face the camera — both arms and legs need to be visible for this shape.'
+      'Face the camera, both arms and legs need to be visible for this shape.'
   }
 
   for (const r of sorted) {
@@ -782,7 +782,7 @@ function scoreOnce(
       : 'Adjust body line to raise score'
   }
   if (!pictureMiss && overall >= 95) {
-    mainCorrection = 'Excellent shape — hold it!'
+    mainCorrection = 'Excellent shape, hold it!'
   }
 
   const important = results.filter((r) => r.weight >= 10)

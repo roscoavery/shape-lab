@@ -34,9 +34,9 @@ export function FlowShareActions({ report, athlete, onUpdated, compact }: Props)
 
   const shareStory = async () => {
     const result = await shareToInstagramStory(report, athlete)
-    if (result === 'shared') note('Share sheet opened. Caption is copied — pick Instagram Stories.')
+    if (result === 'shared') note('Share sheet opened. Caption is copied, pick Instagram Stories.')
     else if (result === 'downloaded')
-      note('Video and analysis downloaded. Caption copied. Instagram should open — add the video to your Story.')
+      note('Video and analysis downloaded. Caption copied. Instagram should open, add the video to your Story.')
     else note('Caption ready, but there is no video to share yet.')
   }
 

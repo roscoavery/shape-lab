@@ -113,7 +113,7 @@ export function LessonNoteBar({
           </p>
           {filed && (
             <p className="mt-2 rounded-lg border border-[var(--accent)]/50 bg-[#102820] px-3 py-2 text-sm font-semibold text-[var(--accent)]">
-              Filed — {filed}
+              Filed, {filed}
             </p>
           )}
           <input
@@ -164,7 +164,7 @@ export function LessonNoteBar({
       )}
       {!label && (
         <p className="text-xs text-[var(--muted)]">
-          Pick the shape first. Then tap a cue under the box — or type a new one.
+          Pick the shape first. Then tap a cue under the box, or type a new one.
         </p>
       )}
     </form>

@@ -151,13 +151,13 @@ export function ResearchPanel({ athletes, athlete }: Props) {
         <div className="mt-3">
           <CollapsibleSection
             title="How studies work"
-            hint="Ask, log, then look at counts — n is this gym"
+            hint="Ask, log, then look at counts, n is this gym"
             defaultOpen={false}
             inset
           >
             <p className="text-sm leading-relaxed text-[var(--muted)]">
               Ask a question, state what we think, log what this gym actually does, then look
-              at the counts. n is this gym — not a world census, and not a cause. Anyone can
+              at the counts. n is this gym, and not a cause. Anyone can
               read findings. Unlock a profile to log. Coaches log for any athlete; athletes
               log for themselves. The lounge digest counts what coaches argue about and how
               often they wrote the “why.”
@@ -234,7 +234,7 @@ function StudyList({
         {facts.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--muted)]">
             No station or pre-test answers logged yet. Finish later or start the
-            shape test — cartwheel, harder hold, twist, handstand guesses, and
+            shape test, cartwheel, harder hold, twist, handstand guesses, and
             weekly energy show up here as counts.
           </p>
         ) : (
@@ -249,7 +249,7 @@ function StudyList({
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-[var(--muted)]">n is this gym — not a cause.</p>
+        <p className="mt-3 text-xs text-[var(--muted)]">n is this gym.</p>
       </section>
       <ul className="space-y-3">
         {RESEARCH_STUDIES.map((study) => {
@@ -446,7 +446,7 @@ function CollectForm({
       <h4 className="text-sm font-semibold text-[var(--text)]">Collect</h4>
       <p className="mt-1 text-xs text-[var(--muted)]">
         {coach
-          ? 'Log for any athlete. One record per person — saving again updates it.'
+          ? 'Log for any athlete. One record per person, saving again updates it.'
           : 'This log is for you. Saving again updates it.'}
       </p>
       <form
@@ -1060,7 +1060,7 @@ function IdeasPage({
         <h3 className="text-lg font-semibold text-[var(--text)]">Ideas inbox</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Dump a tumbling / gymnastics / cheer / acro question here until it becomes a
-          study. Philosophical notes welcome — we will turn the ones that can be counted
+          study. Philosophical notes welcome, we will turn the ones that can be counted
           into a form later.
         </p>
         {athlete ? (
@@ -1075,7 +1075,7 @@ function IdeasPage({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              placeholder="What else should this gym count — and what do we think we will find?"
+              placeholder="What else should this gym count, and what do we think we will find?"
               className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
             />
             {formError && <p className="text-sm text-[var(--bad)]">{formError}</p>}

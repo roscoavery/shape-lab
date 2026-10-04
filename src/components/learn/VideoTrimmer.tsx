@@ -237,7 +237,7 @@ export function VideoTrimmer({ src, label, onClose, onSaved }: Props) {
           </button>
         </div>
         <p className="mb-3 text-xs opacity-70">
-          {label} — drag the sliders to pick the segment, then save. The trimmed clip replaces the
+          {label}, drag the sliders to pick the segment, then save. The trimmed clip replaces the
           original everywhere.
         </p>
 

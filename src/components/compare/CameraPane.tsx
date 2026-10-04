@@ -541,7 +541,7 @@ export function CameraPane({
     if (!stream) {
       setError(
         mode === 'delay'
-          ? 'Wait until the delay-cam picture is up, then tap Record. That records the buffered view — not the whole screen.'
+          ? 'Wait until the delay-cam picture is up, then tap Record. That records the buffered view.'
           : 'Start the camera first, then tap Record.',
       )
       return
@@ -584,7 +584,7 @@ export function CameraPane({
           setFlash(`Saved ${meta.name}`)
           setTimeout(() => setFlash(null), 2500)
         })
-        .catch(() => setError('Could not save the clip — device storage may be full.'))
+        .catch(() => setError('Could not save the clip, device storage may be full.'))
       const ext = extForVideoType(blob.type)
       void saveVideoToDevice(blob, `shape-lab-delay-${Math.max(1, Math.round(durationSec))}s.${ext}`).then(
         (result) => {
@@ -674,7 +674,7 @@ export function CameraPane({
       replayWindowRef.current = { start: Math.max(0, capturedFor - tail), end: capturedFor }
       setMode('replay')
       const shown = Math.max(1, Math.round(tail))
-      setFlash(`Last ${shown}s of buffer — pinch to zoom, hide the bar, or save`)
+      setFlash(`Last ${shown}s of buffer, pinch to zoom, hide the bar, or save`)
       window.setTimeout(() => setFlash(null), 2500)
     } finally {
       setReplayBuilding(false)
@@ -710,7 +710,7 @@ export function CameraPane({
       const blob = await blobForReplaySave()
       if (!blob) {
         setReplayBusy(false)
-        setError('Nothing to save — open a replay first.')
+        setError('Nothing to save, open a replay first.')
         return
       }
       const seconds = replayTailSec ?? delaySec
@@ -729,7 +729,7 @@ export function CameraPane({
           setFlash(`Saved in the app: ${meta.name}`)
           setTimeout(() => setFlash(null), 2500)
         })
-        .catch(() => setError('Could not save the clip — device storage may be full.'))
+        .catch(() => setError('Could not save the clip, device storage may be full.'))
         .finally(() => setReplayBusy(false))
       if (athleteId) {
         void uploadAthleteVideo({
@@ -758,7 +758,7 @@ export function CameraPane({
   ) => {
     const blob = await blobForReplaySave()
     if (!blob) {
-      setError('Nothing to save — open a replay first.')
+      setError('Nothing to save, open a replay first.')
       return
     }
     const name = `Replay ${new Date().toLocaleTimeString()}`
@@ -771,7 +771,7 @@ export function CameraPane({
         try {
           await putBlob(id, blob)
         } catch {
-          setError('Could not keep that replay on this device — storage may be full.')
+          setError('Could not keep that replay on this device, storage may be full.')
           return
         }
         const cols = await getCollections()
@@ -808,7 +808,7 @@ export function CameraPane({
             await putBlob(id, blob)
             src = URL.createObjectURL(blob)
           } catch {
-            setError('Could not save to the drill library — the upload failed and this device is out of room.')
+            setError('Could not save to the drill library, the upload failed and this device is out of room.')
             return
           }
         }
@@ -819,7 +819,7 @@ export function CameraPane({
         try {
           await putBlob(id, blob)
         } catch {
-          setError('Could not keep that replay on this device — storage may be full.')
+          setError('Could not keep that replay on this device, storage may be full.')
           return
         }
         const cols = await getCollections()
@@ -877,7 +877,7 @@ export function CameraPane({
       const blob = await blobForReplaySave()
       if (!blob) {
         setSavingPhotos(false)
-        setError('Nothing to download — open a replay first.')
+        setError('Nothing to download, open a replay first.')
         return
       }
       const seconds = replayTailSec ?? delaySec
@@ -983,7 +983,7 @@ export function CameraPane({
       <button
         type="button"
         disabled={!running || (librarySaving && !recording)}
-        title="Start or stop a recording of the delay-cam picture — not a screen recording"
+        title="Start or stop a recording of the delay-cam picture, not a screen recording"
         onClick={() => (recording ? stopRecording() : startRecording())}
         className={
           rail
@@ -1072,7 +1072,7 @@ export function CameraPane({
       {!fullscreen && cameraChrome}
       {rail && camRail && mode === 'replay' ? createPortal(cameraChrome, camRail) : null}
 
-      {/* Video area — live video stays mounted (even during replay) so the stream keeps running */}
+      {/* Video area, live video stays mounted (even during replay) so the stream keeps running */}
       <div
         className={
           mode === 'replay' && clipSrc
@@ -1133,7 +1133,7 @@ export function CameraPane({
         )}
         {!running && mode !== 'replay' && !fullscreen && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--muted)]">
-            Camera off — press Start camera
+            Camera off, press Start camera
           </div>
         )}
         {mode === 'delay' && running && delayBuffering && !fullscreen && (

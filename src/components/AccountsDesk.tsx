@@ -275,7 +275,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Coaches only see athletes assigned to them. Parents only see the
             child you link. Athletes only see themselves. Leave the password
-            blank to copy a one-time sign-in link — they choose their own
+            blank to copy a one-time sign-in link, they choose their own
             password. Email is off on this gym until SMTP is set on the Mac.
           </p>
           {mailEnabled && (
@@ -418,8 +418,8 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
                       await navigator.clipboard.writeText(result.inviteUrl)
                       flash(
                         result.mailed
-                          ? 'Login created. Sign-in link emailed and copied — it works for 7 days.'
-                          : 'Login created. Sign-in link copied — it works for 7 days. Email is off on this gym.',
+                          ? 'Login created. Sign-in link emailed and copied, it works for 7 days.'
+                          : 'Login created. Sign-in link copied, it works for 7 days. Email is off on this gym.',
                       )
                     } catch {
                       flash(`Login created. Send them this link: ${result.inviteUrl}`)

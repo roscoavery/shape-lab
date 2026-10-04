@@ -463,7 +463,7 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'side_plank',
     targetSeconds: 60,
     notes:
-      'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Guide: beginner 15–30s per side, intermediate 30–45s, advanced 45–60s, elite 60s+.',
+      'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other, top hand on the hip or up. Head in line, no dangling head, no ribs flaring, no closed hips. Straight knees if you can; otherwise bend them and put weight on the bottom knee. Train BOTH sides. Guide: beginner 15–30s per side, intermediate 30–45s, advanced 45–60s, elite 60s+.',
   },
   {
     autoKey: 'wall_handstand',
@@ -477,7 +477,7 @@ export const AUTO_HOMEWORK_DEFS: {
     shapeId: 'front_plank',
     targetSeconds: 60,
     notes:
-      'DRAFT: Forearm front plank — straight line head to heels, elbows under the shoulders, no sagging or piking. Strong planks lead to stronger hollows. Work toward a full minute.',
+      'DRAFT: Forearm front plank, straight line head to heels, elbows under the shoulders, no sagging or piking. Strong planks lead to stronger hollows. Work toward a full minute.',
   },
   {
     autoKey: 'tuck',
@@ -823,7 +823,7 @@ export function progressHollowHomework(homeworkId: string): HomeworkItem | null 
   item.shapeId = 'hollow_arms_up'
   item.progressedAt = new Date().toISOString()
   item.notes =
-    'Leveled up to arms up. Same hollow — lower back flat, arms by the ears. Do not skip the arms-down minute.'
+    'Leveled up to arms up. Same hollow, lower back flat, arms by the ears. Do not skip the arms-down minute.'
   saveAllHomework(all)
   return { ...item }
 }

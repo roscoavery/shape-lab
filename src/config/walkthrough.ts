@@ -27,7 +27,7 @@ const FIRST_SEQ: TaskGuide = {
   steps: {
     feet_together_open_shoulders: {
       intro:
-        'Feet together, open shoulders. Stay in profile — you do not need to face the camera. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up. I will count 3, 2, 1.',
+        'Feet together, open shoulders. Stay in profile, you do not need to face the camera. Arms tight by the ears. Squeeze ribs in, squeeze butt in. Chin stays up. I will count 3, 2, 1.',
     },
     passe: {
       intro: 'Pull one leg to passé and hold. I will count 3, 2, 1 and snapshot your best.',
@@ -41,7 +41,7 @@ const FIRST_SEQ: TaskGuide = {
     },
     lunge_land: {
       intro:
-        'Landing lunge — back heel flat. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1 and snapshot your best open.',
+        'Landing lunge, back heel flat. When I see the lunge, open your shoulders as far as you can. I will count 3, 2, 1 and snapshot your best open.',
       outro: 'And clean.',
     },
   },
@@ -61,7 +61,7 @@ const HS_PRACTICE: TaskGuide = {
   steps: {
     handstand: {
       intro:
-        'Kick up to the best handstand you can hit. Three tries. We will grade the line — you do not need a perfect handstand to move on.',
+        'Kick up to the best handstand you can hit. Three tries. We will grade the line, you do not need a perfect handstand to move on.',
     },
   },
 }
@@ -70,7 +70,7 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
   task_stand_clean: {
     steps: {
       stand_clean: {
-        intro: 'Stand clean. Cheer ready. Feet together, arms down by your sides — fists or blades.',
+        intro: 'Stand clean. Cheer ready. Feet together, arms down by your sides, fists or blades.',
       },
     },
   },
@@ -99,7 +99,7 @@ export const TASK_GUIDES: Record<string, TaskGuide> = {
     steps: {
       mountain_climber: {
         intro:
-          'Mountain climber. Take a C and step one medium step forward. Both knees bent. Reach the arms forward and out from the middle. This is a pass-through — we never finish a skill here.',
+          'Mountain climber. Take a C and step one medium step forward. Both knees bent. Reach the arms forward and out from the middle. This is a pass-through, we never finish a skill here.',
       },
     },
   },

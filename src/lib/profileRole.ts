@@ -70,12 +70,12 @@ export function roleLabel(athlete: Athlete | null | undefined): string {
 export function roleHint(kind: ProfileKind): string {
   switch (kind) {
     case 'gym_owner':
-      return 'Gym owners unlock Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections — they stay on this profile. Ryan’s gym list stays as he left it.'
+      return 'Gym owners unlock Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections, they stay on this profile. Ryan’s gym list stays as he left it.'
     case 'coach':
-      return 'Coaches unlock to use Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections — they show on this profile only. Ryan’s gym collections, shape descriptions, and picture sizes stay as he left them.'
+      return 'Coaches unlock to use Compare, Classes, Feed, Network, and Research. Paste Instagram URLs into your own collections, they show on this profile only. Ryan’s gym collections, shape descriptions, and picture sizes stay as he left them.'
     case 'parent':
       return 'Parents unlock to follow their athlete, watch Compare, and use Homework / Learn. Select who your athlete is so coaches know you are their parent, and so you can see their wins, homework, and activity.'
     default:
-      return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember. Pick the coaches you work with so they see homework you log, sequences, class nights, and lessons — and can hi-5 or fist bump those logs. Wins, posts, and stories stay public to the gym.'
+      return 'Athletes unlock homework, hold times, the video library, and Learn. Add your gym if you train somewhere we should remember. Pick the coaches you work with so they see homework you log, sequences, class nights, and lessons, and can hi-5 or fist bump those logs. Wins, posts, and stories stay public to the gym.'
   }
 }

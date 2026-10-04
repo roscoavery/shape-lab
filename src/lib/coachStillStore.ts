@@ -424,7 +424,7 @@ export async function hideCoachStill(
   if (!opts?.intentional) {
     return {
       ok: false,
-      error: 'Removal cancelled — confirm you mean to remove this library still.',
+      error: 'Removal cancelled, confirm you mean to remove this library still.',
     }
   }
   if (!id) return { ok: false, error: 'Still is missing.' }

@@ -143,7 +143,7 @@ export const TRAINING_SURFACES: { id: TrainingSurface; label: string; short: str
 
 export const NEED_KIND_LABEL: Record<SkillNeedKind, string> = {
   required: 'Usually needed',
-  helpful: 'Helps — not required',
+  helpful: 'Helps',
   alt: 'Another path',
 }
 
@@ -151,7 +151,7 @@ export const SKILL_GOAL_DISCLAIMER =
   'This is a hope, not a booking. Naming a skill does not mean the coach will work that skill with you today. Most people need the smaller pieces first.'
 
 export const SKILL_GOAL_COACH_NOTE =
-  'Athletes often name a skill harder than they are ready for. Use this to group people by the pieces they need — not as a promise to throw that skill today.'
+  'Athletes often name a skill harder than they are ready for. Use this to group people by the pieces they need.'
 
 const KEY = 'shape-lab.skillPaths.v1'
 const listeners = new Set<() => void>()

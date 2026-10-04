@@ -81,7 +81,7 @@ function encouragement(logs: HomeworkLog[]): { headline: string; sub: string } |
   if (streak >= 7)
     return {
       headline: `🔥 ${streak}-day streak`,
-      sub: 'A full week of showing up — that is how skills get built.',
+      sub: 'A full week of showing up, that is how skills get built.',
     }
   if (streak >= 3)
     return {
@@ -91,7 +91,7 @@ function encouragement(logs: HomeworkLog[]): { headline: string; sub: string } |
         : 'Consistency is the whole game. Keep it rolling.',
     }
   if (streak === 2)
-    return { headline: 'Two days running', sub: 'Nice rhythm — one more makes a streak.' }
+    return { headline: 'Two days running', sub: 'Nice rhythm, one more makes a streak.' }
   if (improving)
     return {
       headline: 'Trending up 📈',
@@ -247,7 +247,7 @@ export function HomeworkLogList({
           </p>
           <p className="mx-auto mt-1 max-w-xs text-xs text-[var(--text)]/65">
             {chrono.length === 0
-              ? 'Log your first hold or set and it will show up here — streaks start with one session.'
+              ? 'Log your first hold or set and it will show up here, streaks start with one session.'
               : 'Try a different search, or switch between Today and All.'}
           </p>
         </div>
@@ -627,7 +627,7 @@ function EditLogForm({
   return (
     <div className="rounded-lg border border-[var(--accent)]/40 bg-[#121820] p-3">
       <p className="text-sm font-semibold text-[var(--text)]">Fix this log</p>
-      <p className="mt-1 text-xs text-[var(--text)]/65">Wrong exercise? Change it here — holds round up to 0.01s.</p>
+      <p className="mt-1 text-xs text-[var(--text)]/65">Wrong exercise? Change it here, holds round up to 0.01s.</p>
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       <label className="mt-3 block text-xs font-semibold text-[var(--text)]/70">
         Exercise

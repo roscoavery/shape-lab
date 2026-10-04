@@ -32,9 +32,9 @@ export function ShapeCopyEditor({ shapeId, shapeName }: Props) {
     setFlash(null)
     try {
       await saveCopy(shapeId, { athlete, app })
-      setFlash('Saved into the app — every browser using this gym computer has it.')
+      setFlash('Saved into the app, every browser using this gym computer has it.')
     } catch {
-      setFlash('Could not save — keep the Shape Lab server running.')
+      setFlash('Could not save, keep the Shape Lab server running.')
     } finally {
       setBusy(false)
     }
@@ -50,7 +50,7 @@ export function ShapeCopyEditor({ shapeId, shapeName }: Props) {
       </h4>
       <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--muted)]">
         Athletes read the tumbling notes in the library and on the shape test. The
-        app notes stay with scoring — camera angle, SIDE VIEW, quality threshold,
+        app notes stay with scoring, camera angle, SIDE VIEW, quality threshold,
         stance. Saving writes both into this gym computer.
       </p>
       <label className="mt-4 block">

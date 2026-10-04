@@ -109,7 +109,7 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
   return (
     <CollapsibleSection
       title={athleteFacing ? 'Hopes' : 'Skill hopes'}
-      hint={value.length ? `${value.length} on this profile` : 'Collapsed — open to add or edit'}
+      hint={value.length ? `${value.length} on this profile` : 'Collapsed, open to add or edit'}
       defaultOpen={false}
     >
     <div className="space-y-3">
@@ -204,7 +204,7 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
         <input
           ref={inputRef}
           className="h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
-          placeholder="Type a skill — back tuck, aerial, handstand…"
+          placeholder="Type a skill, back tuck, aerial, handstand…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -264,7 +264,7 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
             ))}
             {hits.length === 0 && (
               <p className="px-3 py-2 text-xs text-[var(--muted)]">
-                No matching skill — add it as a custom hope below.
+                No matching skill, add it as a custom hope below.
               </p>
             )}
             <button

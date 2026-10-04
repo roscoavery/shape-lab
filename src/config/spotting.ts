@@ -60,27 +60,27 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       {
         url: '/videos/layout-safety-spot.mp4',
         caption:
-          "Spotted layout — the spot is a safety spot. I put my left hand on the lower back tailbone area and my right hand on the athlete's right lat. My right fingers are pointing towards where the athlete came from and my right palm facing outward. As the athlete gets their toes up to about 10 or 11 o'clock, my right hand can sort of grip the ribs and I can add flip to what they have so they can hold their shape. If the athlete is smaller, you can do this with hands like how I did in the video. If the athlete is bigger you may put more of your left forearm across the low back almost with the elbow behind the athlete so you can get under their weight a bit more. Allows hands on for the entire flip.",
+          "Spotted layout, the spot is a safety spot. I put my left hand on the lower back tailbone area and my right hand on the athlete's right lat. My right fingers are pointing towards where the athlete came from and my right palm facing outward. As the athlete gets their toes up to about 10 or 11 o'clock, my right hand can sort of grip the ribs and I can add flip to what they have so they can hold their shape. If the athlete is smaller, you can do this with hands like how I did in the video. If the athlete is bigger you may put more of your left forearm across the low back almost with the elbow behind the athlete so you can get under their weight a bit more. Allows hands on for the entire flip.",
       },
       {
         url: '/videos/layout-safety-spot-full-grown.mp4',
         caption:
-          'Safety spot on a layout — full-grown athlete example. Another spotted layout using the safety spot.',
+          'Safety spot on a layout, full-grown athlete example. Another spotted layout using the safety spot.',
       },
       {
         url: '/videos/layout-teach-next-step.mp4',
         caption:
-          'First step. She sets up and we pause in the hollow straight shape to make corrections before passing through. This allows the spotting to become the teaching method and the drilling method. For small athletes like this, using the hands: right hand on the upper back almost at the neck area, left hand can bump the thighs to assist the rotation or go straight to the lower back area to act as a base of support when pausing. With full-grown athletes, you will use arms instead of hands with the same placements for bases of support. Pause, check shape, then flip — as the athlete gets consistent with hitting the shape without technical mistakes by the moment you pause, you can begin to pass through rather than pause. On this one we pause for less time and then pass through. It becomes way harder to do this with full-grown athletes but it can be done. This method seamlessly allows for an easy safety spot when you start passing through.',
+          'First step. She sets up and we pause in the hollow straight shape to make corrections before passing through. This allows the spotting to become the teaching method and the drilling method. For small athletes like this, using the hands: right hand on the upper back almost at the neck area, left hand can bump the thighs to assist the rotation or go straight to the lower back area to act as a base of support when pausing. With full-grown athletes, you will use arms instead of hands with the same placements for bases of support. Pause, check shape, then flip, as the athlete gets consistent with hitting the shape without technical mistakes by the moment you pause, you can begin to pass through rather than pause. On this one we pause for less time and then pass through. It becomes way harder to do this with full-grown athletes but it can be done. This method seamlessly allows for an easy safety spot when you start passing through.',
       },
       {
         url: '/videos/layout-decent-looking.mp4',
         caption:
-          'Same athlete, same session — this one was the last one we did that day and turned into a decent looking layout.',
+          'Same athlete, same session, this one was the last one we did that day and turned into a decent looking layout.',
       },
       {
         url: '/videos/layout-pass-through.mp4',
         caption:
-          'Same athlete, same session — passing through. Getting a little faster with passing through, same spot.',
+          'Same athlete, same session, passing through. Getting a little faster with passing through, same spot.',
       },
       {
         url: '/videos/layout-safety-spot-hands.mp4',
@@ -90,7 +90,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       {
         url: '/videos/safety-spot-crossover-grip-tuck.mp4',
         caption:
-          'Safety spot with crossover grip for hands on all the way through the skill — on a round off handspring tuck on the tumble track.',
+          'Safety spot with crossover grip for hands on all the way through the skill, on a round off handspring tuck on the tumble track.',
       },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:safety-spot and it will show up here.',
@@ -107,7 +107,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     demoVideo: {
       url: '/videos/back-tuck-bump-and-catch-tramp.mp4',
       caption:
-        'Bump and catch on a round off back tuck on tramp — more of a lift and catch. Lift for height on the takeoff, tailbone forward and ribcage back, then switch to a safety spot with left hand on back and right hand on ribs.',
+        'Bump and catch on a round off back tuck on tramp, more of a lift and catch. Lift for height on the takeoff, tailbone forward and ribcage back, then switch to a safety spot with left hand on back and right hand on ribs.',
     },
     demoVideos: [
       {
@@ -123,7 +123,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       {
         url: '/videos/bump-and-catch-analysis-cut.mp4',
         caption:
-          'Analysis cut — slowed rebound, freeze on the block into tuck, freeze upside down, slowed tuck descent, zoomed in on the spot during the catch.',
+          'Analysis cut, slowed rebound, freeze on the block into tuck, freeze upside down, slowed tuck descent, zoomed in on the spot during the catch.',
       },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bump-and-catch and it will show up here.',
@@ -136,7 +136,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     appliesTo: ['back-half', 'back-full', 'back-1-5', 'double-full'],
     appliesToNote: 'Also usable for arabians.',
     watchOuts: [
-      'Only do this one with a super soft landing surface — I am not assisting the landing.',
+      'Only do this one with a super soft landing surface, I am not assisting the landing.',
       'The athlete needs to be kind of close already.',
     ],
     demoVideo: {
@@ -148,7 +148,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
       {
         url: '/videos/opposite-side-full-spot-ro-hs.mp4',
         caption:
-          "Opposite side full spot from a round off handspring on spring floor (example 1 — more coming). Athlete requires minimal spotting already and we have already ensured consistency onto a mat. Keeps spotter out of the athlete's vision and prevents them from twisting straight into the spotter.",
+          "Opposite side full spot from a round off handspring on spring floor (example 1, more coming). Athlete requires minimal spotting already and we have already ensured consistency onto a mat. Keeps spotter out of the athlete's vision and prevents them from twisting straight into the spotter.",
       },
       {
         url: '/videos/opposite-side-spot-arabian.mp4',
@@ -180,7 +180,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     id: 'bhs-deconstruction',
     name: 'Back handspring deconstruction method',
     description:
-      'A deconstruction method for the back handspring. Credit to Coach Lain — he ties in verbal cues and a step by step process with motions.',
+      'A deconstruction method for the back handspring. Credit to Coach Lain, he ties in verbal cues and a step by step process with motions.',
     appliesTo: ['back-handspring'],
     credit: 'Coach Lain',
     demoVideos: [
@@ -208,7 +208,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     demoVideo: {
       url: '/videos/ro-bhs-late-spot-grip.mp4',
       caption:
-        "Late spot grip for a round off back handspring — the athlete needs the skill over 75% by themselves first. Gradually help later and later on the shape change until you're only softening the handstand pressure.",
+        "Late spot grip for a round off back handspring, the athlete needs the skill over 75% by themselves first. Gradually help later and later on the shape change until you're only softening the handstand pressure.",
     },
     demoVideos: [
       {
@@ -269,7 +269,7 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     appliesToNote: 'Also used for lunges, levers, handstands, and bridges.',
     demoVideo: {
       url: '/videos/spotted-back-extension-roll-averie.mp4',
-      caption: 'Averie — spotted back extension roll.',
+      caption: 'Averie, spotted back extension roll.',
     },
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:hands-on-shapes and it will show up here.',
   },

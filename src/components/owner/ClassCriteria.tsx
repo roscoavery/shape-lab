@@ -67,7 +67,7 @@ function LevelEditor({
       <div className="mt-3 space-y-2.5">
         <input
           className={inputCls}
-          placeholder="Level name — e.g. Bronze, Silver"
+          placeholder="Level name, e.g. Bronze, Silver"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -85,7 +85,7 @@ function LevelEditor({
                 <span className="text-xs font-bold tabular-nums text-[var(--muted)]">{i + 1}</span>
                 <input
                   className={`${inputCls} !py-1.5`}
-                  placeholder="Requirement — e.g. Round off with eyes down"
+                  placeholder="Requirement, e.g. Round off with eyes down"
                   value={req.label}
                   onChange={(e) => setReq(req.id, { label: e.target.value })}
                 />
@@ -284,7 +284,7 @@ export function ClassCriteria({ athletes }: Props) {
 
       {levels.length === 0 && !editing && (
         <p className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4 text-sm text-[var(--muted)]">
-          Define your gym's levels — Bronze, Silver, Gold, whatever you call them — with the skills each
+          Define your gym's levels, Bronze, Silver, Gold, whatever you call them, with the skills each
           one requires. Progress matching is a v1 heuristic based on homework logs and wins.
         </p>
       )}

@@ -123,7 +123,7 @@ export function ProfileFieldsEditor({
           </h3>
           <p className="text-xs text-[var(--muted)]">
             Used for age-appropriate account access, privacy, and safety settings.
-            It stays private — not shown on the feed or public profile.
+            It stays private.
           </p>
           <BirthdayQuickPick
             value={athlete.dateOfBirth ?? ''}
@@ -148,7 +148,7 @@ export function ProfileFieldsEditor({
               onChange={(e) => patch({ profilePublic: e.target.checked })}
               className="mt-1"
             />
-            <span>Public — anyone at the gym can open this page</span>
+            <span>Public, anyone at the gym can open this page</span>
           </label>
         </section>
       )}

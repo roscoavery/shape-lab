@@ -106,19 +106,19 @@ export function ScorePanel({
             <span className="text-[var(--text)]">{qualityThreshold}</span>
           </div>
           <div className={inQuality ? 'text-[var(--good)] font-semibold' : 'text-[var(--warn)]'}>
-            {inQuality ? 'HOLDING — stay there' : score.nearHit ? 'ALMOST — one piece off' : 'Looking'}
+            {inQuality ? 'HOLDING, stay there' : score.nearHit ? 'ALMOST, one piece off' : 'Looking'}
           </div>
         </div>
       </div>
 
       {inQuality && (
         <div className="rounded-lg border border-[var(--good)] bg-[#102820] px-3 py-2 text-lg font-bold text-[var(--good)]">
-          HOLDING — keep that {shape.name}
+          HOLDING, keep that {shape.name}
         </div>
       )}
       {!inQuality && score.nearHit && (
         <div className="rounded-lg border border-[var(--warn)] bg-[#2a2410] px-3 py-2 text-base font-semibold text-[var(--warn)]">
-          ALMOST — {score.mainCorrection ?? 'one piece off'}
+          ALMOST, {score.mainCorrection ?? 'one piece off'}
         </div>
       )}
 

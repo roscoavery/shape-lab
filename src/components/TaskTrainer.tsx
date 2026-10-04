@@ -116,7 +116,7 @@ export function TaskTrainer({
   const [flash, setFlash] = useState<string | null>(null)
   const [captures, setCaptures] = useState<TaskCapture[]>([])
   const [liveKind, setLiveKind] = useState<'looking' | 'close' | 'holding' | 'gotit'>('looking')
-  const [banner, setBanner] = useState('Start the pathway — keep listening and hit each shape.')
+  const [banner, setBanner] = useState('Start the pathway, keep listening and hit each shape.')
   const [analysis, setAnalysis] = useState<TaskRunReport | null>(null)
   const [tryDisplay, setTryDisplay] = useState(0)
   const holdAccumRef = useRef(0)
@@ -414,7 +414,7 @@ export function TaskTrainer({
     if (nextUnlocked && nextTask) {
       const doneLine = [
         prefix,
-        `That's ${task.name.replace(/^\d+\.\s*/, '')}. Keep going — next is ${nextTask.name.replace(/^\d+\.\s*/, '')}.`,
+        `That's ${task.name.replace(/^\d+\.\s*/, '')}. Keep going, next is ${nextTask.name.replace(/^\d+\.\s*/, '')}.`,
       ]
         .filter(Boolean)
         .join(' ')
@@ -432,7 +432,7 @@ export function TaskTrainer({
       setActive(false)
       const doneLine = [
         prefix,
-        "That's the whole pathway. Read your analysis — great work.",
+        "That's the whole pathway. Read your analysis, great work.",
       ]
         .filter(Boolean)
         .join(' ')
@@ -677,7 +677,7 @@ export function TaskTrainer({
             }
             setLiveKind('holding')
             setBanner(
-              `Try ${Math.min(tryCountRef.current + 1, maxTries)} of ${maxTries} — best kick-up`,
+              `Try ${Math.min(tryCountRef.current + 1, maxTries)} of ${maxTries}, best kick-up`,
             )
           }
           const windowDone = tryAccumRef.current >= tryWindow
@@ -694,7 +694,7 @@ export function TaskTrainer({
               completeStep()
               return
             }
-            const again = `That's ${n}. Kick up again — best handstand you can hit.`
+            const again = `That's ${n}. Kick up again, best handstand you can hit.`
             setBanner(again)
             setLiveKind('looking')
             speakEvent(again)
@@ -715,13 +715,13 @@ export function TaskTrainer({
               setBanner(line)
               speakEvent(line)
             } else if (stepShape.id === 'stand_clean') {
-              setBanner('Stand clean — that’s it.')
+              setBanner('Stand clean, that’s it.')
               speakEvent('Stand clean.')
             } else if (countdownHold) {
-              setBanner(`HOLDING — that's a ${stepShape.name}`)
+              setBanner(`HOLDING, that's a ${stepShape.name}`)
               speakEvent('Hold it.')
             } else {
-              setBanner(`HOLDING — that's a ${stepShape.name}`)
+              setBanner(`HOLDING, that's a ${stepShape.name}`)
               speakEvent('Hold it.')
             }
           }
@@ -734,7 +734,7 @@ export function TaskTrainer({
             setBanner(
               shoulderWindow
                 ? `Open as far as you can. ${n}`
-                : `HOLDING — that's a ${stepShape.name}  ${n}`,
+                : `HOLDING, that's a ${stepShape.name}  ${n}`,
             )
             speakCountdown(remaining)
           } else {
@@ -774,7 +774,7 @@ export function TaskTrainer({
             spokenBeatsRef.current = new Set()
             if (!scripted && stepShape.id !== 'stand_clean' && !isOpenShoulderCue(mainCorrection)) speakLost(mainCorrection)
             setLiveKind(close ? 'close' : 'looking')
-            setBanner(close ? `Almost — ${mainCorrection ?? 'find it again'}` : 'Find the shape again')
+            setBanner(close ? `Almost, ${mainCorrection ?? 'find it again'}` : 'Find the shape again')
           } else if (close) {
             setLiveKind((k) => (k === 'close' ? k : 'close'))
             if (
@@ -889,7 +889,7 @@ export function TaskTrainer({
                 disabled={!isTaskUnlocked(task, completions, skipped)}
                 className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
               >
-                Start pathway — full screen
+                Start pathway, full screen
               </button>
             ) : (
               <button
@@ -990,7 +990,7 @@ export function TaskTrainer({
             <p className="font-semibold text-[var(--text)]">{task.name}</p>
             <p className="text-xs text-[var(--muted)]">
               {task.steps.some((s) => s.gradeOnly)
-                ? 'Handstand: 3 graded kick-up tries — not required to move on'
+                ? 'Handstand: 3 graded kick-up tries, not required to move on'
                 : taskCompletions >= task.masterAfterCompletions
                   ? `Holds: ${task.steps[0]?.masteredSeconds ?? 3}s (mastered)`
                   : `Holds: ${task.steps[0]?.beginnerSeconds ?? 5}s → ${task.steps[0]?.masteredSeconds ?? 3}s after ${task.masterAfterCompletions} clears`}
@@ -1023,11 +1023,11 @@ export function TaskTrainer({
             >
               <p className="text-[10px] font-semibold uppercase tracking-wider opacity-80">
                 {liveKind === 'holding'
-                  ? 'Holding — stay there'
+                  ? 'Holding, stay there'
                   : liveKind === 'close'
                     ? 'Close'
                     : liveKind === 'gotit'
-                      ? 'Got it — next shape'
+                      ? 'Got it, next shape'
                       : 'Listening'}
               </p>
               <p className="text-sm font-semibold leading-snug">{banner}</p>
@@ -1107,7 +1107,7 @@ export function TaskTrainer({
                 disabled={!isTaskUnlocked(task, completions, skipped)}
                 className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
               >
-                Start pathway — camera + voice
+                Start pathway, camera + voice
               </button>
             ) : (
               <button
@@ -1147,7 +1147,7 @@ export function TaskTrainer({
           </div>
           <p className="mt-2 text-[11px] text-[var(--muted)]">
             Voice talks you through each shape and starts the next task on its
-            own — no extra Start tap. On 3-second holds we count 3, 2, 1 and
+            own, no extra Start tap. On 3-second holds we count 3, 2, 1 and
             snapshot your best. A green check flashes when you hit the shape.
             Full screen on the camera puts delay cam bottom-right and the
             reference bottom-left. The arrow on the camera skips to the next
@@ -1187,7 +1187,7 @@ export function TaskTrainer({
             </p>
           )}
           <p className="mb-2 text-[11px] text-[var(--muted)]">
-            Hits go in the folder below — they never replace the coach still.
+            Hits go in the folder below, they never replace the coach still.
           </p>
           <label className="cursor-pointer rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm hover:bg-[#243040]">
             Replace coach still

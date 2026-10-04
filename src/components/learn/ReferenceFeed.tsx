@@ -494,7 +494,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
       >
         <p className="text-sm leading-relaxed text-[var(--muted)]">
           A rename in Compare shows here. Star a URL or a saved A/B loop. Set A and B
-          on a clip to loop that piece — it saves for Classes and Compare too.
+          on a clip to loop that piece, it saves for Classes and Compare too.
         </p>
       </CollapsibleSection>
       <div id="tour-scroll-search">

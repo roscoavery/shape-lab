@@ -36,7 +36,7 @@ export function CoachOnboardingCard({ coachId }: Props) {
     <div className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4">
       <h2 className="text-sm font-bold text-[var(--text)]">Coach onboarding</h2>
       <p className="mt-0.5 text-xs text-[var(--muted)]">
-        Work through your track — check items off as you finish them.
+        Work through your track, check items off as you finish them.
       </p>
       <div className="mt-3 space-y-3">
         {active.map((a) => {

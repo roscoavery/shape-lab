@@ -549,7 +549,7 @@ function CleanScreen({
             ? `First pass, all ${log.length} cards. That roster is in your head.`
             : `You finished ${log.length} cards. ${missIds.length} name${
                 missIds.length === 1 ? '' : 's'
-              } needed a second look — those stay at the front next time.`}
+              } needed a second look, those stay at the front next time.`}
         </p>
       </div>
       {missIds.length > 0 && (

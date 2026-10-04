@@ -60,7 +60,7 @@ export function DraggableStillOverlay({ className = '' }: Props) {
   return (
     <div
       role="img"
-      aria-label={`${selected.name} overlay — drag to move`}
+      aria-label={`${selected.name} overlay, drag to move`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

@@ -75,7 +75,7 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
             </p>
             <h3 className="mt-1 text-lg font-semibold">New profile</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Name is enough — birthday and snapshot are optional. They can answer
+              Name is enough, birthday and snapshot are optional. They can answer
               the rest at the shape test station later.
             </p>
           </div>

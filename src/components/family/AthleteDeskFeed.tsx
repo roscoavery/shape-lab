@@ -136,12 +136,12 @@ export function AthleteProgressCard({ athlete, logs: logsProp }: Props) {
                   delta > 0 ? (
                     <>up <span className="font-black text-green-300" style={{ textShadow: '0 0 10px rgba(74,222,128,0.5)' }}>{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} <span className="tabular-nums">({formatSecondsShort(s.firstSeconds)} → {formatSecondsShort(s.latestSeconds)})</span></>
                   ) : delta < 0 ? (
-                    <><span className="font-black text-orange-300">{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)} — next one counts</>
+                    <><span className="font-black text-orange-300">{formatSecondsShort(delta)}</span> since {shortDate(s.firstDate)}, next one counts</>
                   ) : (
                     <>holding steady since {shortDate(s.firstDate)}</>
                   )
                 ) : (
-                  <>first hold logged {shortDate(s.firstDate)} — keep going</>
+                  <>first hold logged {shortDate(s.firstDate)}, keep going</>
                 )}
               </p>
             </li>

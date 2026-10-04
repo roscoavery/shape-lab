@@ -673,7 +673,7 @@ export function AthleteProfileCard({
           </p>
           {classLive && coach && (
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Class is running — add a note now. Edit after the hour ends.
+              Class is running, add a note now. Edit after the hour ends.
             </p>
           )}
           {notes.length === 0 ? (
@@ -742,7 +742,7 @@ export function AthleteProfileCard({
             />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={big} onChange={(e) => setBig(e.target.checked)} />
-              Big win — also the gym feed
+              Big win, also the gym feed
             </label>
             {winError && <p className="text-sm text-[var(--bad)]">{winError}</p>}
             <button
@@ -1126,7 +1126,7 @@ function PassesGrid({
   if (items.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-[var(--muted)]">
-        No passes yet. A pass is a short vertical clip — shapelab’s take on a reel.
+        No passes yet. A pass is a short vertical clip, shapelab’s take on a reel.
       </p>
     )
   }
@@ -1303,14 +1303,14 @@ function PassComposer({
         </button>
       </div>
       <p className="text-sm text-[var(--muted)]">
-        A short vertical clip — shapelab’s version of a reel or Short. It lands
+        A short vertical clip, shapelab’s version of a reel or Short. It lands
         on this profile under Passes and on the gym feed.
       </p>
       <input
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
         maxLength={180}
-        placeholder='Caption — @handle or @"Name"'
+        placeholder='Caption, @handle or @"Name"'
         className="mt-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
       />
       <div className="mt-3 flex flex-wrap gap-2">

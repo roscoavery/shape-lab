@@ -286,7 +286,7 @@ export function EducationPanel({
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
               Swipe stills the way you swipe a story. Same gym library as Compare
-              and Learn — reference scroll, not a camera grade.
+              and Learn, reference scroll, not a camera grade.
             </p>
           </div>
         </header>
@@ -687,7 +687,7 @@ export function EducationPanel({
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
           {!athleteId ? (
             <p className="text-sm text-[var(--muted)]">
-              Unlock a profile first — their hit photos show up here, grouped by shape.
+              Unlock a profile first, their hit photos show up here, grouped by shape.
             </p>
           ) : (
             <HitFolder
@@ -765,7 +765,7 @@ function CoachStudyRoom({
         <h3 className="learn-serif mt-2 text-3xl font-semibold tracking-tight">A room for coaches</h3>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#e8d9a8]/80">
           Physics, anatomy, and progressions live here so the athlete Learn tab stays
-          about shapes. Each test draws a new mix — joints, tissues, or deeper cases —
+          about shapes. Each test draws a new mix, joints, tissues, or deeper cases,
           so the same Q&A does not come back every time.
         </p>
       </section>
@@ -1059,7 +1059,7 @@ function HomeView({
           </p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">NutritionFacts.org</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Search protein, dairy, sleep, and more — short summaries with links to the source.
+            Search protein, dairy, sleep, and more, short summaries with links to the source.
           </p>
         </button>
       )}
@@ -1092,7 +1092,7 @@ function HomeView({
           </p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">My shapes</h3>
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-            Hit photos and clips, filed by shape — the ones you actually made.
+            Hit photos and clips, filed by shape, the ones you actually made.
           </p>
         </button>
       </div>
@@ -1104,7 +1104,7 @@ function HomeView({
           </p>
           <h3 className="learn-serif mt-1 text-2xl font-semibold">Skill paths</h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
-            Write what usually comes before a bigger hope — required pieces,
+            Write what usually comes before a bigger hope, required pieces,
             helpful ones, other orders, and body standards. Keep adding as you
             learn what actually gets kids there.
           </p>
@@ -1222,7 +1222,7 @@ function ShapeLibrary({
           {shapes.length} shape{shapes.length === 1 ? '' : 's'} as pictures. Tap a
           still for notes, or open full screen to swipe, tap through, or play a slideshow.
           {canEdit
-            ? ' Drag a photo onto a card to fill that still — you do not have to retype the name.'
+            ? ' Drag a photo onto a card to fill that still, you do not have to retype the name.'
             : ''}
         </p>
         {shapes.length > 0 && (
@@ -1659,7 +1659,7 @@ function ShapeDetail({
       <ShapeCopyEditor shapeId={shape.id} shapeName={shape.name} />
 
       {canEdit && (
-        <CollapsibleSection title="What the app knows" hint="Scoring notes — hide this from the floor">
+        <CollapsibleSection title="What the app knows" hint="Scoring notes, hide this from the floor">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted)]">
             {appCopy}
           </p>
@@ -1687,7 +1687,7 @@ function ShapeDetail({
       </CollapsibleSection>
 
       {canEdit && (
-      <CollapsibleSection title="Scoring criteria" hint="App weights — coaches only">
+      <CollapsibleSection title="Scoring criteria" hint="App weights, coaches only">
         <ul className="space-y-3">
           {criteria.map((c) => {
             const cues = criterionHowToHit(c)
@@ -1777,7 +1777,7 @@ function PathwayList({
                   {next ? ` · Next: ${next.name}` : ' · End of pathway'}
                 </p>
               </button>
-              {/* Keep shape chips clickable without nesting buttons — secondary row */}
+              {/* Keep shape chips clickable without nesting buttons, secondary row */}
               <div className="mt-1 flex flex-wrap gap-2 pl-1">
                 {task.steps.map((step, si) => {
                   const s = getShape(step.shapeId)
@@ -1917,7 +1917,7 @@ function TaskDetail({
                     <span>Voice corrections on during Tasks practice</span>
                   )}
                   {step.passThrough && (
-                    <span>Brief quality hit counts — full hold optional</span>
+                    <span>Brief quality hit counts, full hold optional</span>
                   )}
                 </div>
                 <button
@@ -2051,13 +2051,13 @@ function IgShapesLibrary({
         <h3 className="text-lg font-semibold text-[var(--text)]">IG shapes library</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {total === 0
-            ? 'None saved on this gym yet. Screenshot a clip (Shot on Compare, Learn scroll, or a reel) — it lands here. If a gym file lost the pixels, Shot it again from Compare and it will stay.'
+            ? 'None saved on this gym yet. Screenshot a clip (Shot on Compare, Learn scroll, or a reel), it lands here. If a gym file lost the pixels, Shot it again from Compare and it will stay.'
             : `${total} still${total === 1 ? '' : 's'} in ${groups.length} shape${groups.length === 1 ? '' : 's'}.`}
         </p>
         <div className="mt-3">
           <CollapsibleSection
             title="Where these stills come from"
-            hint="Cropped from Compare — they don’t replace coach stills"
+            hint="Cropped from Compare, they don’t replace coach stills"
             defaultOpen={false}
             inset
           >

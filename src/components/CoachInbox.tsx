@@ -41,7 +41,7 @@ export function CoachInbox({ athletes }: Props) {
       <h2 className="text-sm font-semibold text-[var(--text)]">Runs sent to Ryan</h2>
       <p className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
         These stay on this device. If an athlete trains on their own phone, they download the
-        video and analysis and DM you — then it is not on this list until you open it here.
+        video and analysis and DM you, then it is not on this list until you open it here.
       </p>
       {posts.length === 0 ? (
         <p className="mt-2 text-sm text-[var(--muted)]">Nothing sent yet.</p>

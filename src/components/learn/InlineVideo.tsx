@@ -420,7 +420,7 @@ export function InlineVideo({
         </div>
       )}
       {/* Slim progress line while playing with the chrome hidden: bottom edge
-          only, purely indicative — tapping the video pauses it and brings the
+          only, purely indicative, tapping the video pauses it and brings the
           full scrub bar back. */}
       {!chromeOpen && playing && duration > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[3px] bg-white/15" aria-hidden>

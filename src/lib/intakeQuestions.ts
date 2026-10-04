@@ -72,7 +72,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
   },
   {
     id: 'parentPhone',
-    prompt: 'Parent phone — skip if you do not know it yet.',
+    prompt: 'Parent phone, skip if you do not know it yet.',
     kind: 'skip-phone',
     once: true,
   },

@@ -72,7 +72,7 @@ export const RESEARCH_STUDIES: StudyDef[] = [
     hypothesis:
       'Handedness, the foot in front when tumbling, and twist direction often travel together. Skateboarding stance often matches tumble front foot. Athletes who have a double full or a triple usually twist the same way they already twist. Twisting both ways is uncommon.',
     method:
-      'One log per athlete. Record what they actually do — not what they wish they did. A coach can log for anyone; an athlete logs for themselves. Skip a field if you do not know yet.',
+      'One log per athlete. Record what they actually do. A coach can log for anyone; an athlete logs for themselves. Skip a field if you do not know yet.',
     caveats:
       'This is this gym’s sample, not a world census. Counts are not causes. “Right-hand dominant” is what the athlete reports.',
     fields: [
@@ -286,7 +286,7 @@ export const RESEARCH_STUDIES: StudyDef[] = [
     question:
       'How many athletes experience fear when tumbling, and how many have had a mental block caused by emotionally shutting down?',
     hypothesis:
-      'Fear while tumbling is common. Some mental blocks follow an emotional shutdown — going blank, freezing, or checking out — not only a physical miss.',
+      'Fear while tumbling is common. Some mental blocks follow an emotional shutdown, going blank, freezing, or checking out.',
     method:
       'Ask yes / no / not sure. This is not a clinical screen. Notes are optional and stay on this gym computer.',
     caveats:

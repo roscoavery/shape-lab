@@ -126,7 +126,7 @@ export function ParentHome({
           <div className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
             <p className="font-semibold text-[var(--text)]">One profile, always</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              If they get their own login later, they&apos;ll see this same profile — nothing is
+              If they get their own login later, they&apos;ll see this same profile, nothing is
               duplicated or lost.
             </p>
           </div>
@@ -156,7 +156,7 @@ export function ParentHome({
                   <p className="font-semibold text-[var(--text)]">{kid.firstName || kid.name}</p>
                   {level === 'independent' && (
                     <p className="text-xs text-[var(--muted)]">
-                      Adult athlete — they can also sign in with their own account.
+                      Adult athlete, they can also sign in with their own account.
                     </p>
                   )}
                 </div>
@@ -171,7 +171,7 @@ export function ParentHome({
             )
           })}
           <p className="text-xs text-[var(--muted)]">
-            This opens their practice view on this device — no separate login needed. You stay
+            This opens their practice view on this device, no separate login needed. You stay
             signed in as the parent.
           </p>
         </section>
@@ -245,7 +245,7 @@ function ChildFocus({ child }: { child: Athlete }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-[var(--muted)]">No goals set yet — the coach can add them.</p>
+        <p className="mt-3 text-sm text-[var(--muted)]">No goals set yet, the coach can add them.</p>
       )}
     </section>
   )
@@ -316,7 +316,7 @@ export function ParentEducationDesk({ initialArticleId }: { initialArticleId?: s
         )}
         {!loading && !live && (
           <p className="rounded-lg bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200/80">
-            Showing saved answers — could not reach the gym computer for the latest.
+            Showing saved answers, could not reach the gym computer for the latest.
           </p>
         )}
         {article && <ParentGuideArticle article={article} />}

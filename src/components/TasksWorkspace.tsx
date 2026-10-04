@@ -158,7 +158,7 @@ export function TasksWorkspace({
     : holding
       ? 'HOLDING'
       : close
-        ? 'ALMOST — one piece off'
+        ? 'ALMOST, one piece off'
         : 'Looking'
   const snapshotShoulders = score.criteria.find(
     (c) => c.id === 'shoulders' || c.id === 'shoulders_open',
@@ -236,7 +236,7 @@ export function TasksWorkspace({
             : 'px-3 py-1.5 text-[10px] text-[var(--muted)]'
         }`}
       >
-        {fullscreen ? `${pipLibrary} — ${pipShapeName}` : `${pipLibrary} — ${pipShapeName}`}
+        {fullscreen ? `${pipLibrary}, ${pipShapeName}` : `${pipLibrary}, ${pipShapeName}`}
       </p>
       <div className="relative">
         {overlayStill ? (
@@ -329,12 +329,12 @@ export function TasksWorkspace({
         )}
         {!flowMode && (
         <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted)]">
-          {'Pass when this body position is true. The still is a picture of the idea — you do not have to match the photo.'}
+          {'Pass when this body position is true. The still is a picture of the idea, you do not have to match the photo.'}
           {shape.id === 'lunge_start' || shape.id === 'lunge_land' || shape.id === 'lever'
-            ? ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open — open shoulders do not block the pass. Legs need 85%.'
+            ? ' Starting and landing lunges: hit the lunge first, then open your shoulders as far as you can. We count 3, 2, 1 and snapshot your best open, open shoulders do not block the pass. Legs need 85%.'
             : ''}
           {shape.id === 'mountain_climber'
-            ? ' Mountain climber: both knees bent, C upper body, reach forward and out — not a lunge.'
+            ? ' Mountain climber: both knees bent, C upper body, reach forward and out.'
             : ''}
           {shape.id === 'passe'
             ? ' Passé: pull the knee up and keep the stance leg straight. Open shoulders are graded on the snapshot, not required to move on.'
@@ -349,7 +349,7 @@ export function TasksWorkspace({
         )}
         {showShoulderNote && snapshotShoulders && !flowMode && (
           <p className="mt-1 text-sm text-[var(--warn)]">
-            Open shoulders {snapshotShoulders.score}/100 on this snapshot — keep reaching
+            Open shoulders {snapshotShoulders.score}/100 on this snapshot, keep reaching
             arms by the ears. This does not block the pass.
           </p>
         )}
@@ -475,7 +475,7 @@ export function TasksWorkspace({
                         aria-busy={holdDoneBusy}
                         className={`h-14 min-w-[16rem] rounded-2xl px-6 text-lg font-black shadow-2xl disabled:opacity-80 ${HOLD_PINK_BTN}`}
                       >
-                        {holdDoneBusy ? 'Opening…' : `Done — ${HOLD_BUILD_LABEL}`}
+                        {holdDoneBusy ? 'Opening…' : `Done, ${HOLD_BUILD_LABEL}`}
                       </button>
                     </div>
                   )}

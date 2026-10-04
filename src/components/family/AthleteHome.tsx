@@ -40,7 +40,7 @@ export function AthleteHome({
   }
   return (
     <div className="mx-auto grid max-w-3xl gap-4">
-      {/* TODAY — what should I work on? */}
+      {/* TODAY, what should I work on? */}
       <section id="tour-athlete-today" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Today</p>
         <h2 className="mt-1 text-2xl font-semibold">What should I work on?</h2>
@@ -81,7 +81,7 @@ export function AthleteHome({
       >
         <span className="block text-sm font-bold text-white">Study your shapes</span>
         <span className="text-xs text-white/70">
-          The body positions every skill is built from — quiz yourself
+          The body positions every skill is built from, quiz yourself
         </span>
       </button>
       <div id="tour-athlete-homework">

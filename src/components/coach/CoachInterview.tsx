@@ -64,7 +64,7 @@ export function CoachInterview() {
       } catch {}
     } else {
       setSaveError(
-        'Could not reach the gym computer. Your answers are backed up on this device — they will not be lost. Check your connection and try again.',
+        'Could not reach the gym computer. Your answers are backed up on this device, they will not be lost. Check your connection and try again.',
       )
     }
   }

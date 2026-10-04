@@ -165,7 +165,7 @@ export function QuickGroupEnroll({
         : step === 'last'
           ? 'Last name as it should appear on the roster.'
           : step === 'phone'
-            ? 'We text when shapelab is ready to share — not to call during class.'
+            ? 'We text when shapelab is ready to share.'
             : step === 'photo'
               ? 'Snap a face now. That is the main thing after the name.'
               : step === 'more'
@@ -361,7 +361,7 @@ export function QuickGroupEnroll({
             <>
               <button
                 type="button"
-                onClick={() => resetForm(`${first.trim() || 'Next'} — ready for the next athlete.`)}
+                onClick={() => resetForm(`${first.trim() || 'Next'}, ready for the next athlete.`)}
                 className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
               >
                 Next athlete

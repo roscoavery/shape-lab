@@ -68,7 +68,7 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
         </p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           {admin
-            ? 'Gym admin on this device uses the signed-in account. A leftover profile PIN only unlocks this name locally — it cannot open the private roster by itself.'
+            ? 'Gym admin on this device uses the signed-in account. A leftover profile PIN only unlocks this name locally, it cannot open the private roster by itself.'
             : 'Enter the 4-digit passcode set when this profile was created. That loads homework, hold times, Compare, and the video library on this device. Only one profile stays unlocked at a time.'}
         </p>
         <label className="mt-4 block">

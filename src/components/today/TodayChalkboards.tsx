@@ -38,7 +38,7 @@ export function TodayChalkboards({ viewer, onOpenLibrary, embed = false }: Props
     if (!viewer || !coach) return
     const name = newName.trim()
     if (!name) {
-      setNote('Name the skill board first — e.g. Valeri or whip.')
+      setNote('Name the skill board first, e.g. Valeri or whip.')
       return
     }
     const board = createLibraryBoard({ name, createdById: viewer.id })

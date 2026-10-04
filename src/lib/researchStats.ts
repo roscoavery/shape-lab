@@ -337,7 +337,7 @@ export function lateralityCrosstabs(
         foot,
         skate,
         'Tumble front foot × skate stance',
-        'Among people who also skate — does the same foot stay in front?',
+        'Among people who also skate, does the same foot stay in front?',
       ),
     )
   }
@@ -370,7 +370,7 @@ export function lateralityCrosstabs(
         twist,
         better,
         'Usual twist × better side',
-        'For athletes who can twist both ways — which side they call better.',
+        'For athletes who can twist both ways, which side they call better.',
       ),
     )
   }
@@ -407,7 +407,7 @@ export function lateralityCrosstabs(
           twist,
           hasFear,
           'Twist × fear',
-          'Athletes logged in both laterality and fear — counts only, not a cause.',
+          'Athletes logged in both laterality and fear, counts only, not a cause.',
         ),
       )
     }
@@ -589,7 +589,7 @@ export function gymFacts(params: {
             (o) => o.answers.handstandFloor === 'contest' && o.answers.handstandWall === 'over_min',
           )
           if (paired.length > 0) {
-            line += ` — ${paired.length} of them also hold a wall minute`
+            line += `, ${paired.length} of them also hold a wall minute`
           }
         }
         out.push(`${line}.`)

@@ -241,7 +241,7 @@ export function prerequisitesExtra(plan: AnswerPlan): AnswerExtra | null {
   const needs = (s?.guideNeeds ?? []).filter(Boolean)
   if (!s || needs.length === 0) return null
   return {
-    title: `${s.name} — prerequisites`,
+    title: `${s.name}, prerequisites`,
     text: `His card lists the prerequisites for ${s.name}: ${needs.join('; ')}.`,
     link: { kind: 'skill', skillId: s.id, section: 'path' },
     linkLabel: `Open ${s.name} path`,
@@ -306,7 +306,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
       docs.push({
         id: `skill:${s.id}:ryan`,
         kind: 'skill',
-        title: `${s.name} — Ryan's note`,
+        title: `${s.name}, Ryan's note`,
         text: `Ryan: ${s.ryanNote}.${aliasText}`,
         link: secLink('ryan'),
       })
@@ -315,10 +315,10 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
       docs.push({
         id: `skill:${s.id}:breakdown`,
         kind: 'skill',
-        title: `${s.name} — breaking down the video`,
+        title: `${s.name}, breaking down the video`,
         text: s.noteBlocks
           .map((b) =>
-            b.kind === 'quote' ? `"${b.text}" — ${b.source}.` : `Ryan: ${b.text}.`,
+            b.kind === 'quote' ? `"${b.text}", ${b.source}.` : `Ryan: ${b.text}.`,
           )
           .join(' '),
         link: secLink('breakdown'),
@@ -328,7 +328,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
       docs.push({
         id: `skill:${s.id}:ask`,
         kind: 'skill',
-        title: `${s.name} — ask your coach`,
+        title: `${s.name}, ask your coach`,
         text: `${s.ask}.${aliasText}`,
         link: secLink('ask'),
       })
@@ -337,7 +337,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
       docs.push({
         id: `skill:${s.id}:canbend`,
         kind: 'skill',
-        title: `${s.name} — can bend`,
+        title: `${s.name}, can bend`,
         text: s.canBend.join(' '),
         link: secLink('canbend'),
       })
@@ -369,7 +369,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
   for (const d of [...SHIPPED_DRILLS, ...listDrills()]) {
     if (seenDrills.has(d.id)) continue
     seenDrills.add(d.id)
-    const text = [d.title, d.notes].filter(Boolean).join(' — ').trim()
+    const text = [d.title, d.notes].filter(Boolean).join(', ').trim()
     if (!text) continue
     drillDocs.push({
       id: `drill:${d.id}`,
@@ -444,7 +444,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
       docs.push({
         id: `proof:${key}:${v.url}`,
         kind: 'proof',
-        title: `${v.who} — ${skill?.name ?? key}`,
+        title: `${v.who}, ${skill?.name ?? key}`,
         text: v.watchFor,
         link: skill ? { kind: 'skill', skillId: skill.id } : { kind: 'tab', tab: 'learn' },
       })

@@ -154,7 +154,7 @@ export function BackCheckin({ athlete, onTrain }: Props) {
       {answered === 'rough' && (
         <>
           <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
-            Noted. Easy iso holds only, no hero sets — stop if anything sharp
+            Noted. Easy iso holds only, no hero sets, stop if anything sharp
             shows up.
           </p>
           <DoneButton onDone={() => setDismissed(true)} />

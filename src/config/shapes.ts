@@ -96,8 +96,8 @@ const LANDING_CLOSER_STEP: CriterionDef = {
   tolerance: 0.04,
   falloff: 0.22,
   weight: 12,
-  feedbackLow: 'Take a small step — still shorter than a starting lunge.',
-  feedbackHigh: 'Bring the feet closer — shorter than the starting lunge.',
+  feedbackLow: 'Take a small step, still shorter than a starting lunge.',
+  feedbackHigh: 'Bring the feet closer, shorter than the starting lunge.',
 }
 
 /** Lunges/lever: a long line from the BACK FOOT to the SHOULDERS (not the still). */
@@ -112,8 +112,8 @@ const LUNGE_DIAGONAL: CriterionDef = {
   falloff: 40,
   weight: 10,
   needsView: 'side',
-  feedbackLow: 'Tilt the chest a bit — long line from the back foot through the hips.',
-  feedbackHigh: 'Keep a long diagonal from the back foot through the body — this is not a lever yet.',
+  feedbackLow: 'Tilt the chest a bit, long line from the back foot through the hips.',
+  feedbackHigh: 'Keep a long diagonal from the back foot through the body, this is not a lever yet.',
 }
 
 /**
@@ -130,7 +130,7 @@ const LUNGE_OPEN_SHOULDERS: CriterionDef = {
   tolerance: 20,
   falloff: 48,
   weight: 16,
-  feedbackLow: 'Open shoulders — arms by ears.',
+  feedbackLow: 'Open shoulders, arms by ears.',
 }
 const LUNGE_STRAIGHT_BACK: CriterionDef = {
   id: 'straight_back',
@@ -142,7 +142,7 @@ const LUNGE_STRAIGHT_BACK: CriterionDef = {
   tolerance: 10,
   falloff: 40,
   weight: 12,
-  feedbackLow: 'Straighten the back — this is a lunge, not a mountain climber C.',
+  feedbackLow: 'Straighten the back, this is a lunge, not a mountain climber C.',
 }
 
 /**
@@ -160,12 +160,12 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Fully straight line, ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes. Push through the ground and stand tall.',
     bodyPosition:
-      'SIDE or 3/4. Hands on the floor. Straight elbows, open shoulders, ears covered. Ribs in, butt in, hips stacked, knees straight, toes pointed. One long vertical line from hands to toes — push through the ground and stand tall. Looking up toward the hands is fine if the ears stay covered. Goal: cover the ears and see the thumbs through the eyebrows. Looking at the wall behind you is only a temporary cue if it straightens the line.',
+      'SIDE or 3/4. Hands on the floor. Straight elbows, open shoulders, ears covered. Ribs in, butt in, hips stacked, knees straight, toes pointed. One long vertical line from hands to toes, push through the ground and stand tall. Looking up toward the hands is fine if the ears stay covered. Goal: cover the ears and see the thumbs through the eyebrows. Looking at the wall behind you is only a temporary cue if it straightens the line.',
     category: 'hold',
     qualityThreshold: 70,
     cameraView: 'side',
     tips: [
-      'Side or 3/4 view — not face-on. We need to see the body line.',
+      'Side or 3/4 view. We need to see the body line.',
       'Push through the ground. Stand tall in a straight line.',
       'Ribs in, butt in. Straight elbows, open shoulders, straight knees, pointed toes.',
       'Cover the ears. Seeing the thumbs through the eyebrows is the goal.',
@@ -300,8 +300,8 @@ export const SHAPES: ShapeDef[] = [
         of: ['_left_hip', '_right_hip'],
         tolerance: 0,
         weight: 18,
-        feedbackLow: 'Ribs in — reduce pike.',
-        feedbackHigh: 'Butt in — reduce the arch.',
+        feedbackLow: 'Ribs in, reduce pike.',
+        feedbackHigh: 'Butt in, reduce the arch.',
       },
       {
         id: 'knees',
@@ -322,7 +322,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 16,
         needsView: 'side',
-        feedbackHigh: 'Push through the ground — stand tall in a straight line ({delta}° off).',
+        feedbackHigh: 'Push through the ground, stand tall in a straight line ({delta}° off).',
       },
       {
         id: 'head',
@@ -335,7 +335,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 14,
         falloff: 50,
         weight: 4,
-        feedbackHigh: 'Cover the ears — see the thumbs through the eyebrows if you can.',
+        feedbackHigh: 'Cover the ears, see the thumbs through the eyebrows if you can.',
       },
       {
         id: 'feet_together',
@@ -377,10 +377,10 @@ export const SHAPES: ShapeDef[] = [
     qualityThreshold: 50,
     cameraView: 'any',
     tips: [
-      'Cheer ready — this is the start before counts.',
+      'Cheer ready, this is the start before counts.',
       'Feet together, legs squeezed.',
       'Arms pinned to the sides. Fists or blades.',
-      'Standalone is easiest from the front. In a sequence, just finish clean — we still see it in profile.',
+      'Standalone is easiest from the front. In a sequence, just finish clean, we still see it in profile.',
       'Once we see that, we move on.',
     ],
     coachNotes:
@@ -407,7 +407,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 28,
         weight: 40,
-        feedbackHigh: 'Pin the arms to your sides — not a T.',
+        feedbackHigh: 'Pin the arms to your sides.',
       },
       {
         id: 'standing',
@@ -434,13 +434,13 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Feet together, straight knees, open hips, ribs in, open shoulders, chin up and neutral, straight elbows, hands reaching to the ceiling.',
     bodyPosition:
-      'Feet glued. Knees straight. Hips open. Ribs in (no arch). Shoulders fully open, arms covering the ears, elbows locked, hands reaching to the ceiling. Chin up and neutral — look straight ahead. This is the same long body you take into passé. Standalone: front or 3/4 is easiest to see both arms. In a sequence, stay in profile — you do not need to face the camera.',
+      'Feet glued. Knees straight. Hips open. Ribs in (no arch). Shoulders fully open, arms covering the ears, elbows locked, hands reaching to the ceiling. Chin up and neutral, look straight ahead. This is the same long body you take into passé. Standalone: front or 3/4 is easiest to see both arms. In a sequence, stay in profile, you do not need to face the camera.',
     category: 'static',
     qualityThreshold: 70,
     cameraView: 'any',
     tips: [
       'Standalone: front or 3/4 is easiest to see both arms.',
-      'In a sequence, stay in profile — do not turn to face the camera.',
+      'In a sequence, stay in profile, do not turn to face the camera.',
       'Feet together, knees straight, hips open, ribs in.',
       'Open shoulders, elbows straight, hands to the ceiling.',
       'Chin up and neutral.',
@@ -528,7 +528,7 @@ export const SHAPES: ShapeDef[] = [
         of: ['_ftos_ls', '_ftos_rs'],
         tolerance: 0,
         weight: 22,
-        feedbackLow: 'Open shoulders — arms by ears.',
+        feedbackLow: 'Open shoulders, arms by ears.',
       },
       {
         id: '_ftos_ls',
@@ -606,7 +606,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 8,
-        feedbackHigh: 'Even the arms — left/right differ by {delta}°.',
+        feedbackHigh: 'Even the arms, left/right differ by {delta}°.',
       },
       {
         id: 'ribs_in',
@@ -617,7 +617,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 10,
         falloff: 35,
         weight: 10,
-        feedbackHigh: 'Ribs in — stand stacked, no arch ({delta}°).',
+        feedbackHigh: 'Ribs in, stand stacked, no arch ({delta}°).',
       },
       {
         id: 'chin',
@@ -629,7 +629,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 10,
         falloff: 40,
         weight: 8,
-        feedbackHigh: 'Chin up and neutral — look straight ahead ({delta}°).',
+        feedbackHigh: 'Chin up and neutral, look straight ahead ({delta}°).',
       },
     ],
   },
@@ -702,7 +702,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 15,
         falloff: 40,
         weight: 20,
-        feedbackHigh: 'Stand taller — torso is {delta}° off vertical.',
+        feedbackHigh: 'Stand taller, torso is {delta}° off vertical.',
       },
       {
         id: 'shoulders_open',
@@ -713,7 +713,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 18,
-        feedbackLow: 'Cover ears with arms — open shoulders {delta}°.',
+        feedbackLow: 'Cover ears with arms, open shoulders {delta}°.',
       },
       {
         id: 'elbows',
@@ -736,7 +736,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 20,
         falloff: 50,
         weight: 8,
-        feedbackHigh: 'Square the hips — left/right differ by {delta}°.',
+        feedbackHigh: 'Square the hips, left/right differ by {delta}°.',
       },
     ],
   },
@@ -751,16 +751,16 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Starting lunge: back heel UP, back leg straight, back straight, shoulders open. Longer stance than the landing lunge. Fall here from passé; usual cartwheel start.',
     bodyPosition:
-      'SIDE VIEW. Fall forward from passé into this lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot — this is the only lunge that requires heel up. Back stays STRAIGHT (not a C). Shoulders OPEN, arms by the ears, one diagonal from the back foot through the body to the hands. Longer stance than a landing lunge. This is not a mountain climber.',
+      'SIDE VIEW. Fall forward from passé into this lunge. Front knee bent. Back leg long and STRAIGHT. Back heel UP on the ball of the foot, this is the only lunge that requires heel up. Back stays STRAIGHT (not a C). Shoulders OPEN, arms by the ears, one diagonal from the back foot through the body to the hands. Longer stance than a landing lunge. This is not a mountain climber.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'SIDE VIEW — stand in profile. Do not face the camera.',
+      'SIDE VIEW, stand in profile. Do not face the camera.',
       'Back heel up. Back leg straight. Back straight. Shoulders open.',
       'Longer stance than the landing lunge.',
-      'Not a mountain climber — do not bend the back knee or round into a C.',
+      'Not a mountain climber, do not bend the back knee or round into a C.',
     ],
     coachNotes:
       'Land here from falling forward on a passé. Cartwheels usually start from this shape or from a mountain climber. Know the difference: on lunges the back leg is straight, the back is straight, and the shoulders are open. A mountain climber is a C plus one medium step (or a lunge with the back knee bent and a C upper body). We never finish a skill in a mountain climber.',
@@ -790,7 +790,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 14,
         needsView: 'side',
-        feedbackLow: 'Lift the back heel — stay on the ball of the foot.',
+        feedbackLow: 'Lift the back heel, stay on the ball of the foot.',
         feedbackHigh: 'Keep heel up but stable.',
       },
       {
@@ -803,8 +803,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.05,
         falloff: 0.25,
         weight: 10,
-        feedbackLow: 'Take a longer step — bigger than the landing lunge.',
-        feedbackHigh: 'A bit smaller — still longer than the landing lunge.',
+        feedbackLow: 'Take a longer step, bigger than the landing lunge.',
+        feedbackHigh: 'A bit smaller, still longer than the landing lunge.',
       },
       LUNGE_DIAGONAL,
       LUNGE_OPEN_SHOULDERS,
@@ -832,9 +832,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'lunge_land',
     name: 'Landing lunge',
     description:
-      'Landing lunge: shorter stance than the start, back heel FLAT, back leg straight, open shoulders. Same position as Lunge · open shoulders — they share this still.',
+      'Landing lunge: shorter stance than the start, back heel FLAT, back leg straight, open shoulders. Same position as Lunge · open shoulders, they share this still.',
     bodyPosition:
-      'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor — do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side. This is the same shape as Lunge · open shoulders.',
+      'SIDE VIEW. Front knee bent, back leg long and STRAIGHT. Back stays STRAIGHT (not a C). Shoulders OPEN. Back HEEL FLAT on the floor, do not roll in on the arch. Feet closer together than a starting lunge. One diagonal from the back heel through the hips and shoulders to the hands. Either leg forward unless the task specifies a side. This is the same shape as Lunge · open shoulders.',
     category: 'static',
     qualityThreshold: 65,
     cameraView: 'side',
@@ -842,11 +842,11 @@ export const SHAPES: ShapeDef[] = [
     tips: [
       'SIDE VIEW required.',
       'Shorter stance than the starting lunge.',
-      'Press the back heel flat — no rolling in on the arch.',
-      'Back leg straight, back straight, shoulders open — not a mountain climber.',
+      'Press the back heel flat, no rolling in on the arch.',
+      'Back leg straight, back straight, shoulders open.',
     ],
     coachNotes:
-      'Usual cartwheels finish in this landing lunge. Cartwheel step-ins (the round-off prep) finish in a zombie instead — train that landing before round-offs. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge. In the library this is the same picture as Lunge · open shoulders — keep both names. Tasks says landing lunge; the arm-positions test says lunge · open shoulders.',
+      'Usual cartwheels finish in this landing lunge. Cartwheel step-ins (the round-off prep) finish in a zombie instead, train that landing before round-offs. Every lunge → lever → handstand → lunge sequence finishes here. All lunge arm-position drills use this same stance: back heel flat, feet closer than a starting lunge. In the library this is the same picture as Lunge · open shoulders, keep both names. Tasks says landing lunge; the arm-positions test says lunge · open shoulders.',
     criteria: [
       {
         id: 'front_knee',
@@ -882,7 +882,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 18,
         falloff: 50,
         weight: 8,
-        feedbackLow: 'Keep the back long — don’t round into a C.',
+        feedbackLow: 'Keep the back long, don’t round into a C.',
       },
     ],
   },
@@ -896,17 +896,17 @@ export const SHAPES: ShapeDef[] = [
     description:
         'Front knee slightly bent. Chest tilts near parallel. Back leg lifts so the idea of a line runs from back foot toward the hands. A little arch / slightly Superman-esque is still a good lever. Open shoulders as far as you can.',
     bodyPosition:
-      'SIDE VIEW. Weight on the front/support foot with a SLIGHT bend in that knee (not locked, not a deep squat). Chest tilts forward until it is near parallel with the ground. Back leg lifts and stays long so the idea of a line runs from the back foot through the body toward the hands. A little arch / slightly Superman-esque is still a good lever for most athletes — we do not need a perfectly straight stick. Shoulders open as far as they can; slightly closed shoulders do not ruin the shape.',
+      'SIDE VIEW. Weight on the front/support foot with a SLIGHT bend in that knee (not locked, not a deep squat). Chest tilts forward until it is near parallel with the ground. Back leg lifts and stays long so the idea of a line runs from the back foot through the body toward the hands. A little arch / slightly Superman-esque is still a good lever for most athletes, we do not need a perfectly straight stick. Shoulders open as far as they can; slightly closed shoulders do not ruin the shape.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     stanceAware: true,
     tips: [
       'SIDE VIEW required.',
-      'Slight bend in the front knee — not locked, not sitting.',
+      'Slight bend in the front knee, not sitting.',
       'Tilt the chest toward parallel with the floor.',
       'Lift the back leg. A little arch is still a lever.',
-      'Open shoulders as far as you can — slightly closed does not ruin it.',
+      'Open shoulders as far as you can, slightly closed does not ruin it.',
     ],
     coachNotes:
       'Front knee should be slightly bent. Chest tilts forward until parallel with the ground. The back leg lifts up to keep a straight line from back foot to hands, with that whole line parallel with the ground. Open shoulders.',
@@ -921,8 +921,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 6,
         falloff: 36,
         weight: 18,
-        feedbackLow: 'Don’t sit so deep — only a slight bend in the front knee.',
-        feedbackHigh: 'Soften the front knee — not locked straight.',
+        feedbackLow: 'Don’t sit so deep, only a slight bend in the front knee.',
+        feedbackHigh: 'Soften the front knee.',
       },
       {
         id: 'chest_parallel',
@@ -946,7 +946,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 48,
         weight: 18,
         needsView: 'side',
-        feedbackHigh: 'Lift the back leg — keep the idea of a line from back foot to shoulders. A little arch is OK.',
+        feedbackHigh: 'Lift the back leg, keep the idea of a line from back foot to shoulders. A little arch is OK.',
       },
       {
         ...LUNGE_OPEN_SHOULDERS,
@@ -988,22 +988,22 @@ export const SHAPES: ShapeDef[] = [
     id: 'mountain_climber',
     name: 'Mountain climber',
     description:
-      'A tumbling C plus one medium step forward — or a lunge with the back knee bent and a C upper body. Two bent knees. Reach from the middle out. Pass-through only; never a finish.',
+      'A tumbling C plus one medium step forward, or a lunge with the back knee bent and a C upper body. Two bent knees. Reach from the middle out. Pass-through only; never a finish.',
     bodyPosition:
-      'SIDE VIEW. Take a C shape and step one medium step forward — not as big as a lunge. Or take a lunge, bend the back knee, and C-shape the upper half. Both knees BEND (two bent knees to generate speed and power into a kick and push). Upper body is the tumbling C: hips under, chest hollow, rounded back. Arms reach forward and out from the middle — not from the top down after a hurdle. Either leg forward. We never finish a skill here.',
+      'SIDE VIEW. Take a C shape and step one medium step forward. Or take a lunge, bend the back knee, and C-shape the upper half. Both knees BEND (two bent knees to generate speed and power into a kick and push). Upper body is the tumbling C: hips under, chest hollow, rounded back. Arms reach forward and out from the middle. Either leg forward. We never finish a skill here.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'C plus one medium step — not as big as a lunge.',
-      'Both knees bent — that is the power for the kick and push.',
+      'C plus one medium step.',
+      'Both knees bent, that is the power for the kick and push.',
       'C-shape the upper body. Do not keep a straight-back open-shoulder lunge line.',
       'Reach forward and out from the middle, not from the top down.',
       'Pass-through only. We never finish a skill in this shape.',
     ],
     coachNotes:
-      'A mountain climber is a lunge and a C shape combined: take a C and step one medium step forward (not as big as a lunge), or take a lunge, bend the back knee, and C-shape the upper half. Two bent knees generate speed and power into a kick and push. It also trains reaching forward and out rather than taking the hands from the top down after a hurdle — from the middle and out forward is the goal for long cartwheels and round-offs. Good pass-through for entering handstands, cartwheels, round-offs, standing aerials, front aerials, and front handsprings. We never finish a skill in this position. Into a cartwheel, look ahead of you rather than too far down. Into a handstand, look at where the hands will go. Cartwheels can also start from a starting lunge: lunges keep the back leg straight, the back straight, and the shoulders open.',
+      'A mountain climber is a lunge and a C shape combined: take a C and step one medium step forward (not as big as a lunge), or take a lunge, bend the back knee, and C-shape the upper half. Two bent knees generate speed and power into a kick and push. It also trains reaching forward and out rather than taking the hands from the top down after a hurdle, from the middle and out forward is the goal for long cartwheels and round-offs. Good pass-through for entering handstands, cartwheels, round-offs, standing aerials, front aerials, and front handsprings. We never finish a skill in this position. Into a cartwheel, look ahead of you rather than too far down. Into a handstand, look at where the hands will go. Cartwheels can also start from a starting lunge: lunges keep the back leg straight, the back straight, and the shoulders open.',
     criteria: [
       {
         id: 'medium_step',
@@ -1015,8 +1015,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.04,
         falloff: 0.2,
         weight: 14,
-        feedbackLow: 'Take a medium step forward — C plus one step.',
-        feedbackHigh: 'Medium step — not as big as a lunge.',
+        feedbackLow: 'Take a medium step forward, C plus one step.',
+        feedbackHigh: 'Medium step.',
       },
       {
         id: 'front_knee',
@@ -1027,7 +1027,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 120,
         tolerance: 15,
         weight: 16,
-        feedbackLow: 'Bend the front knee — two bent knees for power.',
+        feedbackLow: 'Bend the front knee, two bent knees for power.',
         feedbackHigh: 'Keep a clear bend in the front knee.',
       },
       {
@@ -1040,8 +1040,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 22,
-        feedbackLow: 'Bend the back knee — two bent knees for the kick and push.',
-        feedbackHigh: 'Keep a clear bend in the back knee — this is not a lunge.',
+        feedbackLow: 'Bend the back knee, two bent knees for the kick and push.',
+        feedbackHigh: 'Keep a clear bend in the back knee, this is not a lunge.',
       },
       {
         id: 'upper_c',
@@ -1053,8 +1053,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 15,
         falloff: 45,
         weight: 22,
-        feedbackLow: 'C-shape the upper half — hips under, chest hollow.',
-        feedbackHigh: 'Keep the C — this is not a straight-back lunge.',
+        feedbackLow: 'C-shape the upper half, hips under, chest hollow.',
+        feedbackHigh: 'Keep the C, this is not a straight-back lunge.',
       },
       {
         id: 'arms_forward',
@@ -1067,8 +1067,8 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 16,
         needsView: 'side',
-        feedbackLow: 'Reach forward and out from the middle — not hanging down.',
-        feedbackHigh: 'From the middle out forward — not from the top down by the ears.',
+        feedbackLow: 'Reach forward and out from the middle.',
+        feedbackHigh: 'From the middle out forward.',
       },
       {
         id: 'ribs',
@@ -1080,8 +1080,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 35,
         weight: 18,
-        feedbackLow: 'Ribs in — hollow the chest into a C.',
-        feedbackHigh: 'Keep the C — ribs in, not a straight-back lunge.',
+        feedbackLow: 'Ribs in, hollow the chest into a C.',
+        feedbackHigh: 'Keep the C, ribs in, not a straight-back lunge.',
       },
       {
         id: 'elbows',
@@ -1107,19 +1107,19 @@ export const SHAPES: ShapeDef[] = [
     description:
       `Seated pike with zombie arms: toes pointed, straight knees, torso upright and rounded hollow, shoulders shrugged, arms covering the ears, eyes looking through the hands. ${HAND_FINISH}`,
     bodyPosition:
-      `SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright and rounded hollow — not a fold over the legs, not sitting tall with a flat back. Shoulders shrug so the arms cover the ears. Arms reach straight forward; eyes look through the hands. ${HAND_FINISH}`,
+      `SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright and rounded hollow, not sitting tall with a flat back. Shoulders shrug so the arms cover the ears. Arms reach straight forward; eyes look through the hands. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
-      'Sit in a pike — do not fold over the legs.',
+      'Sit in a pike, do not fold over the legs.',
       'Toes pointed. Straight knees. Legs glued.',
       'Torso upright and rounded hollow. Shoulders shrug.',
       'Arms covering the ears. Eyes looking through the hands.',
       HAND_FINISH,
     ],
     coachNotes:
-      'Falling backward out of a cartwheel step-in, round-off, or handspring into this pike can be useful for training handspring connections. We do pike (zombie arms) to hollow (arms down) to arch (supine) over and over as a snap-open drill for handsprings and whips. Falling from a standing zombie into this seated pike is a good beginner shaping drill for future tumbling. Standing zombie is a different shape — this is the floor pike with the same arm idea. Same hand finish as standing zombie: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
+      'Falling backward out of a cartwheel step-in, round-off, or handspring into this pike can be useful for training handspring connections. We do pike (zombie arms) to hollow (arms down) to arch (supine) over and over as a snap-open drill for handsprings and whips. Falling from a standing zombie into this seated pike is a good beginner shaping drill for future tumbling. Standing zombie is a different shape, this is the floor pike with the same arm idea. Same hand finish as standing zombie: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
     criteria: [
       {
         id: 'torso_upright_hollow',
@@ -1131,8 +1131,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 22,
-        feedbackLow: 'Sit up — torso upright and rounded hollow, not a fold over the legs.',
-        feedbackHigh: 'Stay in the pike — rounded hollow, not lying back yet.',
+        feedbackLow: 'Sit up, torso upright and rounded hollow, not a fold over the legs.',
+        feedbackHigh: 'Stay in the pike, rounded hollow, not lying back yet.',
       },
       {
         id: 'knees',
@@ -1178,8 +1178,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 15,
         falloff: 40,
         weight: 16,
-        feedbackLow: 'Reach the arms forward — zombie arms covering the ears.',
-        feedbackHigh: 'Arms covering the ears — not overhead.',
+        feedbackLow: 'Reach the arms forward, zombie arms covering the ears.',
+        feedbackHigh: 'Arms covering the ears.',
       },
       {
         id: 'elbows',
@@ -1214,8 +1214,8 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 8,
         needsView: 'side',
-        feedbackLow: 'Look through the hands — chin slightly in.',
-        feedbackHigh: 'Eyes through the hands — not a deep tuck.',
+        feedbackLow: 'Look through the hands, chin slightly in.',
+        feedbackHigh: 'Eyes through the hands.',
       },
     ],
   },
@@ -1230,18 +1230,18 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Seated pike with open shoulders: legs together, knees straight, toes pointed, torso upright, arms reaching to the ceiling covering the ears. Used in pike–tuck–hollow–arch, rocking back to candlestick, and teaching arms behind the ears on a back tuck.',
     bodyPosition:
-      'SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright — slightly rounded hollow, not arched. Arms straight up by the ears, shoulders open, fingers to the ceiling, palms facing each other. Head neutral, looking forward. This is not zombie arms (those reach forward).',
+      'SIDE or 3/4, sitting. Legs together, knees locked, toes pointed. Torso upright, slightly rounded hollow, not arched. Arms straight up by the ears, shoulders open, fingers to the ceiling, palms facing each other. Head neutral, looking forward. This is not zombie arms (those reach forward).',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
       'Sit tall in a pike. Legs glued, knees straight, toes pointed.',
-      'Arms up — cover the ears, shoulders open, reach to the ceiling.',
+      'Arms up, cover the ears, shoulders open, reach to the ceiling.',
       'Head neutral. Look forward, not up at the hands.',
       'Not zombie arms. Those reach forward; these reach up.',
     ],
     coachNotes:
-      'We use the open-shoulder pike when training sequences like pike–tuck–hollow–arch. Athletes also start here and rock back to a candlestick for candle reps — that becomes a good prerequisite for hollow body rockers. The open-shoulder pike into a tuck is really good for teaching arms behind the ears while pulling for a back tuck. Two stills: a close-up of the line, and a class line of the same shape.',
+      'We use the open-shoulder pike when training sequences like pike–tuck–hollow–arch. Athletes also start here and rock back to a candlestick for candle reps, that becomes a good prerequisite for hollow body rockers. The open-shoulder pike into a tuck is really good for teaching arms behind the ears while pulling for a back tuck. Two stills: a close-up of the line, and a class line of the same shape.',
     criteria: [
       {
         id: 'torso_upright',
@@ -1253,8 +1253,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 18,
-        feedbackLow: 'Sit up — torso upright in the pike.',
-        feedbackHigh: 'Stay sitting in the pike — do not rock back yet.',
+        feedbackLow: 'Sit up, torso upright in the pike.',
+        feedbackHigh: 'Stay sitting in the pike, do not rock back yet.',
       },
       {
         id: 'knees',
@@ -1299,7 +1299,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 22,
-        feedbackLow: 'Open the shoulders — arms up by the ears, not zombie arms.',
+        feedbackLow: 'Open the shoulders, arms up by the ears, not zombie arms.',
       },
       {
         id: 'arms_vertical',
@@ -1311,7 +1311,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 12,
         needsView: 'side',
-        feedbackHigh: 'Reach straight up — arms covering the ears.',
+        feedbackHigh: 'Reach straight up, arms covering the ears.',
       },
       {
         id: 'elbows',
@@ -1333,7 +1333,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.12,
         falloff: 0.22,
         weight: 10,
-        feedbackHigh: 'Cover the ears — biceps by the head.',
+        feedbackHigh: 'Cover the ears, biceps by the head.',
       },
     ],
   },
@@ -1348,15 +1348,15 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Seated tuck pulled in from an open-shoulder pike: knees bent, feet in, feet flexed, arms still reaching behind the ears, slightly rounded hollow back. Used in pike–tuck–hollow–arch, lemon squeezes (hollow ↔ tuck), and teaching the tucked candle / back tuck.',
     bodyPosition:
-      'SIDE or 3/4, sitting on the glutes. From an open-shoulder pike, bend the knees and pull the feet in. Feet flexed (toes to the shins), not pointed. Keep reaching the arms behind the ears — shoulders open, fingers to the ceiling. Slightly rounded hollow back. The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle.',
+      'SIDE or 3/4, sitting on the glutes. From an open-shoulder pike, bend the knees and pull the feet in. Feet flexed (toes to the shins), not pointed. Keep reaching the arms behind the ears, shoulders open, fingers to the ceiling. Slightly rounded hollow back. The torso usually rounds more while flipping a back tuck or rolling backward to a tucked candle.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
       'From an open-shoulder pike: bend the knees and pull the feet in.',
-      'Flex the feet — toes to the shins, not pointed.',
+      'Flex the feet, toes to the shins, not pointed.',
       'Keep reaching. Arms behind the ears, shoulders open.',
-      'Slightly rounded hollow back. The torso rounds more on a back tuck or a tucked candle — that rolled-back version is its own card.',
+      'Slightly rounded hollow back. The torso rounds more on a back tuck or a tucked candle, that rolled-back version is its own card.',
     ],
     coachNotes:
       'We do pike, tuck, hollow, arch as a sequence frequently. Lemon squeezes move from a hollow into this tuck repeatedly. Three stills: a close-up of the line, a flexed-feet view, and a class line of the same shape. This is not a tucked handstand.',
@@ -1371,8 +1371,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 16,
-        feedbackLow: 'Round the hollow a little — sit on the glutes, not a sit-up.',
-        feedbackHigh: 'Stay in the seated tuck — do not rock all the way to a candle yet.',
+        feedbackLow: 'Round the hollow a little, sit on the glutes, not a sit-up.',
+        feedbackHigh: 'Stay in the seated tuck, do not rock all the way to a candle yet.',
       },
       {
         id: 'knees',
@@ -1384,8 +1384,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 20,
-        feedbackLow: 'Pull the feet in — bend the knees from the pike.',
-        feedbackHigh: 'Keep the tuck — knees in, not a pike.',
+        feedbackLow: 'Pull the feet in, bend the knees from the pike.',
+        feedbackHigh: 'Keep the tuck, knees in, not a pike.',
       },
       {
         id: 'feet_together',
@@ -1408,7 +1408,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 10,
-        feedbackLow: 'Flex the feet — toes to the shins.',
+        feedbackLow: 'Flex the feet, toes to the shins.',
         feedbackHigh: 'Flex, do not point.',
       },
       {
@@ -1420,7 +1420,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 22,
-        feedbackLow: 'Keep reaching — arms behind the ears.',
+        feedbackLow: 'Keep reaching, arms behind the ears.',
       },
       {
         id: 'arms_vertical',
@@ -1432,7 +1432,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 12,
         needsView: 'side',
-        feedbackHigh: 'Reach straight up — arms covering the ears.',
+        feedbackHigh: 'Reach straight up, arms covering the ears.',
       },
       {
         id: 'elbows',
@@ -1454,7 +1454,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.12,
         falloff: 0.22,
         weight: 10,
-        feedbackHigh: 'Cover the ears — keep the arms behind them.',
+        feedbackHigh: 'Cover the ears, keep the arms behind them.',
       },
     ],
   },
@@ -1469,20 +1469,20 @@ export const SHAPES: ShapeDef[] = [
     id: 'puck',
     name: 'Puck',
     description:
-      'Somewhere between a pike and a tuck: hips folded and knees bent just enough to speed up rotation for both flipping and twisting. Tucking is best for pure flip speed but can make it harder to twist — the puck bends just enough to split the energy more equally between the two.',
+      'Somewhere between a pike and a tuck: hips folded and knees bent just enough to speed up rotation for both flipping and twisting. Tucking is best for pure flip speed but can make it harder to twist, the puck bends just enough to split the energy more equally between the two.',
     bodyPosition:
       'SIDE VIEW, in the air. Fold at the hips past a pike but do not pull all the way into a tuck; let the knees bend and the feet sit slightly behind. Chest stays more open than in a tuck. You see it on standing fulls, cartwheel fulls, and double-flipping skills that add twisting (full ins, full fulls, tucked millers).',
     category: 'transition',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
-      'Bend just enough — more than a pike, less than a tuck.',
+      'Bend just enough, more than a pike, less than a tuck.',
       'Let the knees bend; do not pull them all the way to the chest.',
       'Keep the chest open. A full tuck kills the twist.',
-      'Hooking the non-twist-side leg, like the still — most double-flipping skills do not hook like that.',
+      'Hooking the non-twist-side leg, like the still, most double-flipping skills do not hook like that.',
     ],
     coachNotes:
-      'Most people require the puck for standing fulls, and it is very commonly used for cartwheel fulls. Ideally avoided on anything out of a handspring or whip. Some athletes have even made a puck work in a killer (2 flips, 4 twists). You do not see it trained on the ground much — it is an air shape, so teach it from video and shaping work rather than floor holds.',
+      'Most people require the puck for standing fulls, and it is very commonly used for cartwheel fulls. Ideally avoided on anything out of a handspring or whip. Some athletes have even made a puck work in a killer (2 flips, 4 twists). You do not see it trained on the ground much, it is an air shape, so teach it from video and shaping work rather than floor holds.',
     criteria: [
       // Ranges estimated between the pike and tuck entries — verify against video.
       {
@@ -1495,8 +1495,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 14,
         falloff: 40,
         weight: 30,
-        feedbackLow: 'Fold more at the hips — past a pike.',
-        feedbackHigh: 'Do not tuck all the way — open the hips a little.',
+        feedbackLow: 'Fold more at the hips, past a pike.',
+        feedbackHigh: 'Do not tuck all the way, open the hips a little.',
       },
       {
         id: 'knees',
@@ -1508,8 +1508,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 14,
         falloff: 40,
         weight: 30,
-        feedbackLow: 'Let the knees bend — this is not a pike.',
-        feedbackHigh: 'Do not pull into a full tuck — keep the knees softer.',
+        feedbackLow: 'Let the knees bend, this is not a pike.',
+        feedbackHigh: 'Do not pull into a full tuck, keep the knees softer.',
       },
       {
         id: 'feet_together',
@@ -1540,7 +1540,7 @@ export const SHAPES: ShapeDef[] = [
     cameraView: 'side',
     tips: [
       'Only after a proper 1-minute hollow with arms down.',
-      'Same lower-back rule — no gap.',
+      'Same lower-back rule, no gap.',
       'Arms by the ears, not a sit-up.',
     ],
     coachNotes:
@@ -1555,7 +1555,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 22,
-        feedbackLow: 'Cover ears — open shoulders {delta}°.',
+        feedbackLow: 'Cover ears, open shoulders {delta}°.',
       },
       {
         id: 'hips',
@@ -1568,7 +1568,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 28,
         feedbackLow: 'Hollow more (posterior tilt).',
-        feedbackHigh: 'Reduce pike — lengthen hollow.',
+        feedbackHigh: 'Reduce pike, lengthen hollow.',
       },
       {
         id: 'ribs',
@@ -1580,7 +1580,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 14,
         falloff: 40,
         weight: 14,
-        feedbackLow: 'Ribs in — press the low back flat. Do not flare.',
+        feedbackLow: 'Ribs in, press the low back flat. Do not flare.',
         feedbackHigh: 'Keep the ribs in with the low back down.',
       },
       {
@@ -1627,7 +1627,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 10,
         feedbackLow: 'Lift the legs slightly off the floor.',
-        feedbackHigh: 'Lower the legs — keep the lower back pressed down.',
+        feedbackHigh: 'Lower the legs, keep the lower back pressed down.',
       },
       {
         id: 'upper_lift',
@@ -1640,7 +1640,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 8,
         feedbackLow: 'Curl the shoulders slightly off the floor.',
-        feedbackHigh: 'Lower the chest — small curl, not a sit-up.',
+        feedbackHigh: 'Lower the chest, small curl, not a sit-up.',
       },
       {
         id: 'toes',
@@ -1666,7 +1666,7 @@ export const SHAPES: ShapeDef[] = [
     id: 'hollow_arms_down',
     name: 'Hollow (arms down)',
     description:
-      'Hollow body hold with arms down: lower back compressed to the floor, arms by the sides, feet off the ground. Tumbling staple — round-off, back handspring, whip, layouts, fulls.',
+      'Hollow body hold with arms down: lower back compressed to the floor, arms by the sides, feet off the ground. Tumbling staple, round-off, back handspring, whip, layouts, fulls.',
     bodyPosition:
       'SIDE VIEW, on the back. Start in a zombie-arm pike and inch back until the lowest part of the lower back touches the ground. Flatten the low back, then let the feet inch off the ground. Arms stay down by the sides (reaching toward the knees). Shoulders and head just off the floor. Legs together, knees straight, toes pointed. If the lower back will not go down, bend the knees.',
     category: 'hold',
@@ -1695,7 +1695,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 45,
         weight: 20,
-        feedbackHigh: 'Keep arms down by your sides — not by the ears yet ({delta}° too high).',
+        feedbackHigh: 'Keep arms down by your sides.',
       },
       {
         // Lower-back compression proxy 1: hollow hip band
@@ -1709,8 +1709,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 22,
         falloff: 50,
         weight: 26,
-        feedbackLow: 'Hollow more — press the lower back into the floor.',
-        feedbackHigh: 'Reduce pike — lengthen the hollow.',
+        feedbackLow: 'Hollow more, press the lower back into the floor.',
+        feedbackHigh: 'Reduce pike, lengthen the hollow.',
       },
       {
         id: 'ribs',
@@ -1722,7 +1722,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 16,
         falloff: 40,
         weight: 14,
-        feedbackLow: 'Ribs in — press the low back flat. Do not flare.',
+        feedbackLow: 'Ribs in, press the low back flat. Do not flare.',
         feedbackHigh: 'Keep the ribs in with the low back down.',
       },
       {
@@ -1748,7 +1748,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 12,
         feedbackLow: 'Lift the legs slightly off the floor.',
-        feedbackHigh: 'Lower the legs — keep the lower back pressed down.',
+        feedbackHigh: 'Lower the legs, keep the lower back pressed down.',
       },
       {
         // Lower-back compression proxy 3: shoulders slightly off the floor.
@@ -1762,7 +1762,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 10,
         feedbackLow: 'Curl the shoulders slightly off the floor.',
-        feedbackHigh: 'Lower the chest — small curl, not a sit-up.',
+        feedbackHigh: 'Lower the chest, small curl, not a sit-up.',
       },
       {
         id: 'feet_together',
@@ -1799,12 +1799,12 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Supine tight arch: on the back, arms press the floor behind the ears, hips push up, knees stay straight. Ankles together and toes pointed are the usual miss.',
     bodyPosition:
-      'SIDE VIEW, on the back. Arms press against the floor behind the ears. Hips push up off the ground. Knees stay straight. Squeeze the ankles together and point the toes — that is the common miss. This is not Superman (stomach) and not a candlestick (weight on the shoulders).',
+      'SIDE VIEW, on the back. Arms press against the floor behind the ears. Hips push up off the ground. Knees stay straight. Squeeze the ankles together and point the toes, that is the common miss. This is not Superman (stomach) and not a candlestick (weight on the shoulders).',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
-      'On the back — this is a tight arch, not a Superman.',
+      'On the back, this is a tight arch, not a Superman.',
       'Arms press the floor behind the ears.',
       'Hips push up. Knees stay straight.',
       'Ankles together, toes pointed. That is what most people lose.',
@@ -1908,7 +1908,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 22,
-        feedbackLow: 'Open the shoulders — straight arms behind the ears ({delta}° more).',
+        feedbackLow: 'Open the shoulders, straight arms behind the ears ({delta}° more).',
       },
       {
         id: 'elbows',
@@ -1919,7 +1919,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 12,
-        feedbackLow: 'Straighten elbows — long arms behind the ears.',
+        feedbackLow: 'Straighten elbows, long arms behind the ears.',
       },
       {
         // Head lifted: shoulder→nose segment above the prone torso line.
@@ -1932,7 +1932,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 10,
         falloff: 40,
         weight: 14,
-        feedbackLow: 'Chin stays up — look slightly forward, not into the mat.',
+        feedbackLow: 'Chin stays up, look slightly forward, not into the mat.',
         feedbackHigh: 'Keep the chin up without cranking the neck.',
       },
       {
@@ -1956,7 +1956,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 8,
         weight: 16,
-        feedbackLow: 'Straighten knees {delta}° — keep them off the ground.',
+        feedbackLow: 'Straighten knees {delta}°, keep them off the ground.',
       },
       {
         id: 'feet_ankles_together',
@@ -1983,7 +1983,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Bent-knee rainbow bridge: feet flat and pointed straight, feet apart, hips up high. Spread the arch through every joint until the shoulders are open. Teaching shape for shoulder opening, bridge push-ups, back bends, hops, and rocks.',
     bodyPosition:
-      'SIDE VIEW. Feet flat, toes pointed straight ahead, feet apart. Knees bent. Hips up high. Hands on the floor, fingers toward the feet, arms straight, shoulders stacked over the wrists. Head hangs between the arms. Evenly distribute the arch through the shoulders, spine, and hips until there is a good open-shoulder range — not a long, straight-leg competition bridge.',
+      'SIDE VIEW. Feet flat, toes pointed straight ahead, feet apart. Knees bent. Hips up high. Hands on the floor, fingers toward the feet, arms straight, shoulders stacked over the wrists. Head hangs between the arms. Evenly distribute the arch through the shoulders, spine, and hips until there is a good open-shoulder range, straight-leg competition bridge.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -1991,11 +1991,11 @@ export const SHAPES: ShapeDef[] = [
       'Film from the side so the rainbow and the open shoulder are obvious.',
       'Feet flat, toes pointed straight, feet apart.',
       'Bend the knees. Hips up high.',
-      'Spread the arch through every joint — do not dump it all into the low back.',
+      'Spread the arch through every joint, do not dump it all into the low back.',
       'Push the shoulders open over the hands. This is the range we are after.',
     ],
     coachNotes:
-      'Rainbow bridge is how we open shoulders. Feet flat and pointed straight, feet apart, bent knees, hips up high. Evenly distribute the arch between all possible joints until the athlete has a good open-shoulder range. We do bridge push-ups from this style, teach back bends from this style, and do bridge hops and bridge rocks from this bridge. It is not uncommon to see handsprings in the approximation/acquisition phase hit a position similar to this during flight to hands — it tends to be easier to flip faster than a longer and straighter-leg bridge shape.',
+      'Rainbow bridge is how we open shoulders. Feet flat and pointed straight, feet apart, bent knees, hips up high. Evenly distribute the arch between all possible joints until the athlete has a good open-shoulder range. We do bridge push-ups from this style, teach back bends from this style, and do bridge hops and bridge rocks from this bridge. It is not uncommon to see handsprings in the approximation/acquisition phase hit a position similar to this during flight to hands, it tends to be easier to flip faster than a longer and straighter-leg bridge shape.',
     criteria: [
       {
         id: 'shoulders',
@@ -2006,7 +2006,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 28,
-        feedbackLow: 'Push the shoulders open over the hands — that is the range we are after.',
+        feedbackLow: 'Push the shoulders open over the hands, that is the range we are after.',
       },
       {
         id: 'elbows',
@@ -2017,7 +2017,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 12,
-        feedbackLow: 'Lock the arms — straight elbows, shoulders over the hands.',
+        feedbackLow: 'Lock the arms, straight elbows, shoulders over the hands.',
       },
       {
         id: 'arms_stacked',
@@ -2042,8 +2042,8 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 125,
         tolerance: 12,
         weight: 18,
-        feedbackLow: 'Spread the arch through the whole spine — do not break only at the low back.',
-        feedbackHigh: 'Hips up high — push the hips to the ceiling.',
+        feedbackLow: 'Spread the arch through the whole spine, do not break only at the low back.',
+        feedbackHigh: 'Hips up high, push the hips to the ceiling.',
       },
       {
         id: 'knees_bent',
@@ -2054,7 +2054,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 125,
         tolerance: 10,
         weight: 16,
-        feedbackLow: 'Keep the shins tall — this is not a squat.',
+        feedbackLow: 'Keep the shins tall, this is not a squat.',
         feedbackHigh: 'Bend the knees. Rainbow, not a long straight-leg bridge.',
       },
       {
@@ -2066,7 +2066,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.08,
         falloff: 0.16,
         weight: 10,
-        feedbackLow: 'Feet apart — not glued.',
+        feedbackLow: 'Feet apart.',
         feedbackHigh: 'Feet apart, not a straddle.',
       },
       {
@@ -2094,7 +2094,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Straight-leg long bridge: legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Work this after the shoulders open on a rainbow bridge. A slightly less arched version of this is the flight-to-hands shape in a back handspring.',
     bodyPosition:
-      'SIDE VIEW. Straight legs together. Fingers pointed toward the feet. Push through the toes with the heels flat on the mat. Arms in close by the ears, covering the ears. Neutral head, then chin to chest. Longer and straighter than a rainbow — not a tight bent-knee arch.',
+      'SIDE VIEW. Straight legs together. Fingers pointed toward the feet. Push through the toes with the heels flat on the mat. Arms in close by the ears, covering the ears. Neutral head, then chin to chest. Longer and straighter than a rainbow.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -2106,7 +2106,7 @@ export const SHAPES: ShapeDef[] = [
       'Arms in close by the ears. Chin to chest.',
     ],
     coachNotes:
-      'Athletes should only work long bridge if their shoulders already open on a rainbow bridge. Class talk-through: lie on your back and bridge up on 3. 1, 2, 3, bridge up. Can you get your feet together. Straight legs if you can. Pushing through your toes. Heels flat on the mat. Arms in close by the ears — snapshot — and go chin to chest and hold for 5, 4, 3, 2 — snapshot — come down, rock it out (tucked, hugging the knees). A position like this, very slightly less arched, should eventually happen mid back handspring during flight to hands.',
+      'Athletes should only work long bridge if their shoulders already open on a rainbow bridge. Class talk-through: lie on your back and bridge up on 3. 1, 2, 3, bridge up. Can you get your feet together. Straight legs if you can. Pushing through your toes. Heels flat on the mat. Arms in close by the ears, snapshot, and go chin to chest and hold for 5, 4, 3, 2, snapshot, come down, rock it out (tucked, hugging the knees). A position like this, very slightly less arched, should eventually happen mid back handspring during flight to hands.',
     criteria: [
       {
         id: 'shoulders',
@@ -2117,7 +2117,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 24,
-        feedbackLow: 'Arms in close by the ears — push the shoulders open.',
+        feedbackLow: 'Arms in close by the ears, push the shoulders open.',
       },
       {
         id: 'elbows',
@@ -2128,7 +2128,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 10,
-        feedbackLow: 'Lock the arms — fingers toward the feet.',
+        feedbackLow: 'Lock the arms, fingers toward the feet.',
       },
       {
         id: 'ears_covered',
@@ -2185,8 +2185,8 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 155,
         tolerance: 12,
         weight: 10,
-        feedbackLow: 'Lengthen the bridge — do not sit in a tight rainbow.',
-        feedbackHigh: 'Hips up — keep the long arch, do not sag.',
+        feedbackLow: 'Lengthen the bridge, do not sit in a tight rainbow.',
+        feedbackHigh: 'Hips up, keep the long arch, do not sag.',
       },
       {
         id: 'chin_to_chest',
@@ -2199,7 +2199,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 8,
         needsView: 'side',
-        feedbackHigh: 'Chin to chest — look toward the hands.',
+        feedbackHigh: 'Chin to chest, look toward the hands.',
       },
     ],
   },
@@ -2258,7 +2258,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 15,
         falloff: 40,
         weight: 20,
-        feedbackHigh: 'Even the legs — difference {delta}°.',
+        feedbackHigh: 'Even the legs, difference {delta}°.',
       },
     ],
   },
@@ -2270,9 +2270,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'glute_bridge',
     name: 'Glute bridge',
     description:
-      'Glute bridge: lying on the back, knees bent, feet flat — drive the hips up to a straight line from shoulders to knees. Squeeze the glutes at the top. Builds the hip extension strength tumbling takeoffs run on.',
+      'Glute bridge: lying on the back, knees bent, feet flat, drive the hips up to a straight line from shoulders to knees. Squeeze the glutes at the top. Builds the hip extension strength tumbling takeoffs run on.',
     bodyPosition:
-      'SIDE VIEW. Lying on the back, knees bent, feet flat on the floor hip-width apart. Arms resting by the sides. Drive the hips up until the body makes one straight line from shoulders to knees. Squeeze the glutes at the top — no arching the low back.',
+      'SIDE VIEW. Lying on the back, knees bent, feet flat on the floor hip-width apart. Arms resting by the sides. Drive the hips up until the body makes one straight line from shoulders to knees. Squeeze the glutes at the top, no arching the low back.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -2283,7 +2283,7 @@ export const SHAPES: ShapeDef[] = [
       'No arching the low back.',
     ],
     coachNotes:
-      'Hip extension strength for tumbling takeoffs. The top position should read as one straight line from shoulders to knees — hips sagging or ribs flaring means the glutes checked out.',
+      'Hip extension strength for tumbling takeoffs. The top position should read as one straight line from shoulders to knees, hips sagging or ribs flaring means the glutes checked out.',
     criteria: [
       {
         id: 'hips_up',
@@ -2294,7 +2294,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 15,
         weight: 40,
-        feedbackLow: 'Drive the hips higher — straight line from shoulders to knees.',
+        feedbackLow: 'Drive the hips higher, straight line from shoulders to knees.',
       },
       {
         id: 'knees_bent',
@@ -2305,8 +2305,8 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 110,
         tolerance: 15,
         weight: 30,
-        feedbackLow: 'Feet closer — knees bent, not straight legs.',
-        feedbackHigh: 'Feet a little farther out — open the knee angle.',
+        feedbackLow: 'Feet closer, knees bent, not straight legs.',
+        feedbackHigh: 'Feet a little farther out, open the knee angle.',
       },
       {
         id: 'knee_symmetry',
@@ -2318,7 +2318,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 15,
         falloff: 40,
         weight: 30,
-        feedbackHigh: 'Even the legs — difference {delta}°.',
+        feedbackHigh: 'Even the legs, difference {delta}°.',
       },
     ],
   },
@@ -2330,20 +2330,20 @@ export const SHAPES: ShapeDef[] = [
     id: 'single_leg_glute_bridge',
     name: 'Single leg glute bridge',
     description:
-      'Single leg glute bridge: same bridge on one foot, the other leg extended or lifted straight. Hips stay level — no dropping or rotating to the free side. Single-leg hip strength and pelvic control.',
+      'Single leg glute bridge: same bridge on one foot, the other leg extended or lifted straight. Hips stay level, no dropping or rotating to the free side. Single-leg hip strength and pelvic control.',
     bodyPosition:
-      'SIDE VIEW. Lying on the back, one knee bent with the foot flat, the other leg extended straight (or lifted toward the ceiling). Arms resting by the sides. Drive the hips up on the standing leg — keep the hips level, no tipping toward the free side. Squeeze the glute at the top.',
+      'SIDE VIEW. Lying on the back, one knee bent with the foot flat, the other leg extended straight (or lifted toward the ceiling). Arms resting by the sides. Drive the hips up on the standing leg, keep the hips level, no tipping toward the free side. Squeeze the glute at the top.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
       'Standing foot flat, knee bent.',
-      'Free leg straight — extended out or lifted up.',
+      'Free leg straight, extended out or lifted up.',
       'Hips level, no tipping to the free side.',
       'Squeeze the glute of the standing leg at the top.',
     ],
     coachNotes:
-      'Single-leg hip strength plus pelvic control — the hips staying level is the whole rep. Watch for the free-side hip dropping or the low back arching to fake the height.',
+      'Single-leg hip strength plus pelvic control, the hips staying level is the whole rep. Watch for the free-side hip dropping or the low back arching to fake the height.',
     criteria: [
       {
         id: 'hips_up',
@@ -2377,20 +2377,20 @@ export const SHAPES: ShapeDef[] = [
     id: 'bird_dog',
     name: 'Bird dog',
     description:
-      'Bird dog: on hands and knees, extend the opposite arm and leg to one long line while the back stays flat and the hips stay square. Core stability and cross-body control — no rotating open or sagging through the middle.',
+      'Bird dog: on hands and knees, extend the opposite arm and leg to one long line while the back stays flat and the hips stay square. Core stability and cross-body control, no rotating open or sagging through the middle.',
     bodyPosition:
-      'SIDE VIEW. Start on hands and knees — hands under shoulders, knees under hips. Extend one arm straight forward and the opposite leg straight back, both reaching long. Back stays flat, hips square to the floor, head neutral. Hold without tipping or sagging.',
+      'SIDE VIEW. Start on hands and knees, hands under shoulders, knees under hips. Extend one arm straight forward and the opposite leg straight back, both reaching long. Back stays flat, hips square to the floor, head neutral. Hold without tipping or sagging.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
       'Hands under shoulders, knees under hips to start.',
-      'Reach the arm and opposite leg long — one line.',
+      'Reach the arm and opposite leg long, one line.',
       'Back flat, hips square, no rotating open.',
       'Head neutral, eyes down.',
     ],
     coachNotes:
-      'Cross-body stability that carries into twisting and single-leg takeoffs. The tell is the hips — if they rotate open or the low back sags, the core checked out and the limbs are doing all the work.',
+      'Cross-body stability that carries into twisting and single-leg takeoffs. The tell is the hips, if they rotate open or the low back sags, the core checked out and the limbs are doing all the work.',
     criteria: [
       {
         id: 'back_flat',
@@ -2401,7 +2401,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 35,
-        feedbackLow: 'Flatten the back — hips in line with shoulders.',
+        feedbackLow: 'Flatten the back, hips in line with shoulders.',
       },
       {
         id: 'arm_extended',
@@ -2448,13 +2448,13 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Shoulder-stand candlestick: open hips, ribs in, straight vertical line from shoulders to pointed toes. Staple for tumbling and straight-arm handstand forward rolls.',
     bodyPosition:
-      'SIDE or 3/4. Weight on the shoulders and upper back. Hips OPEN and stacked over the shoulders. Ribs in — no banana. Knees straight, feet together, toes pointed to the ceiling. One straight vertical line. Arms can rest on the floor by the ears / reaching past the head.',
+      'SIDE or 3/4. Weight on the shoulders and upper back. Hips OPEN and stacked over the shoulders. Ribs in, no banana. Knees straight, feet together, toes pointed to the ceiling. One straight vertical line. Arms can rest on the floor by the ears / reaching past the head.',
     category: 'hold',
     qualityThreshold: 65,
     cameraView: 'side',
     tips: [
       'SIDE or 3/4 so the vertical line is obvious.',
-      'Open hips, ribs in — same stacked body as a good handstand, just on the shoulders.',
+      'Open hips, ribs in, same stacked body as a good handstand, just on the shoulders.',
       'Straight knees, pointed toes.',
     ],
     coachNotes:
@@ -2470,7 +2470,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 30,
         needsView: 'side',
-        feedbackHigh: 'Stack legs vertical — {delta}° off.',
+        feedbackHigh: 'Stack legs vertical, {delta}° off.',
       },
       {
         id: 'hips',
@@ -2481,8 +2481,8 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 24,
-        feedbackLow: 'Open the hips — ribs in, no pike.',
-        feedbackHigh: 'Ribs in — don’t arch.',
+        feedbackLow: 'Open the hips, ribs in, no pike.',
+        feedbackHigh: 'Ribs in, don’t arch.',
       },
       {
         id: 'knees',
@@ -2529,7 +2529,7 @@ export const SHAPES: ShapeDef[] = [
     id: 'tucked_candle',
     name: 'Tucked candle',
     description:
-      'Same tuck as the seated tuck, rolled back so the weight sits on the shoulders and arms — like a candlestick, but tucked. Used to teach forward and backward rolls and a lot of back-tuck drills.',
+      'Same tuck as the seated tuck, rolled back so the weight sits on the shoulders and arms, like a candlestick, but tucked. Used to teach forward and backward rolls and a lot of back-tuck drills.',
     bodyPosition:
       'SIDE or 3/4. Roll the tuck back until the weight is on the shoulders and arms, just like a candlestick. Arms reach behind the ears on the floor. Round the back. Hips stacked over the shoulders. Middle of the thighs in front of the eyes. Some space between the chin and the chest is fine. Commonly taught with the shins driving toward the wall so the heels do not slam to the butt; more bend in the knee speeds rotation on a tuck, so work both.',
     category: 'hold',
@@ -2540,10 +2540,10 @@ export const SHAPES: ShapeDef[] = [
       'Round back. Hips over.',
       'Middle of the thighs in front of the eyes.',
       'Space between chin and chest is okay.',
-      'Shins toward the wall keeps heels off the butt. Tighter knees when you want more rotation — work both.',
+      'Shins toward the wall keeps heels off the butt. Tighter knees when you want more rotation, work both.',
     ],
     coachNotes:
-      'The tuck shape, rolled back onto the shoulders. Super useful for teaching forward and backward rolls, and we use it on a lot of back-tuck drills. Verbal cues: arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Two stills — the side profile is the main one.',
+      'The tuck shape, rolled back onto the shoulders. Super useful for teaching forward and backward rolls, and we use it on a lot of back-tuck drills. Verbal cues: arms behind the ears, round back, hips over, middle of the thighs in front of the eyes. Two stills, the side profile is the main one.',
     criteria: [
       {
         id: 'hips_over',
@@ -2555,7 +2555,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 24,
         needsView: 'side',
-        feedbackHigh: 'Hips over — stack them over the shoulders ({delta}°).',
+        feedbackHigh: 'Hips over, stack them over the shoulders ({delta}°).',
       },
       {
         id: 'round_back',
@@ -2567,8 +2567,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 20,
-        feedbackLow: 'Round the back — this is a tuck, not an open candlestick.',
-        feedbackHigh: 'Keep the tuck — hips over, not sitting up.',
+        feedbackLow: 'Round the back, this is a tuck, not an open candlestick.',
+        feedbackHigh: 'Keep the tuck, hips over, not sitting up.',
       },
       {
         id: 'knees',
@@ -2580,8 +2580,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 16,
-        feedbackLow: 'Bend the knees — shins toward the wall, or tighter for more rotation.',
-        feedbackHigh: 'Keep a tuck — not a straight-leg candlestick.',
+        feedbackLow: 'Bend the knees, shins toward the wall, or tighter for more rotation.',
+        feedbackHigh: 'Keep a tuck.',
       },
       {
         id: 'thighs_to_eyes',
@@ -2592,7 +2592,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 0.16,
         falloff: 0.22,
         weight: 12,
-        feedbackHigh: 'Thighs in front of the eyes — pull them in.',
+        feedbackHigh: 'Thighs in front of the eyes, pull them in.',
       },
       {
         id: 'ears_covered',
@@ -2639,14 +2639,14 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Keep feet-together open-shoulders lines, then pull one knee up into passé. Open shoulders, arms by ears.',
     bodyPosition:
-      'Keep the FTOS upper body: arms to the ceiling, open shoulders, elbows straight. Stance leg stays straight. The other foot pulls up to the knee (passé). Hips square, torso tall. Either knee may lift — the app auto-detects the side.',
+      'Keep the FTOS upper body: arms to the ceiling, open shoulders, elbows straight. Stance leg stays straight. The other foot pulls up to the knee (passé). Hips square, torso tall. Either knee may lift, the app auto-detects the side.',
     category: 'static',
     qualityThreshold: 55,
     cameraView: 'any',
     stanceAware: true,
     tips: [
       'Match the reference: stance leg straight, passé foot at the knee, arms reaching to the ceiling.',
-      'Keep FTOS lines — open shoulders, arms by ears, elbows straight.',
+      'Keep FTOS lines, open shoulders, arms by ears, elbows straight.',
       'Hips square and torso tall; don’t lean into the passé hip.',
     ],
     coachNotes:
@@ -2695,7 +2695,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 32,
         falloff: 55,
         weight: 18,
-        feedbackLow: 'Open shoulders — arms by ears.',
+        feedbackLow: 'Open shoulders, arms by ears.',
       },
       {
         id: 'elbows',
@@ -2728,7 +2728,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 8,
-        feedbackHigh: 'Stand taller — torso {delta}° off vertical.',
+        feedbackHigh: 'Stand taller, torso {delta}° off vertical.',
       },
       {
         id: 'hips_square',
@@ -2740,7 +2740,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 18,
         falloff: 45,
         weight: 8,
-        feedbackHigh: 'Square the hips — left/right differ by {delta}°.',
+        feedbackHigh: 'Square the hips, left/right differ by {delta}°.',
       },
     ],
   },
@@ -2937,7 +2937,7 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'wall_handstand',
     name: 'Wall handstand',
-    description: 'Handstand at the wall — same body standards as freestanding, slightly more forgiving line.',
+    description: 'Handstand at the wall, same body standards as freestanding, slightly more forgiving line.',
     category: 'hold',
     qualityThreshold: 65,
     tips: [
@@ -3018,7 +3018,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 18,
         falloff: 45,
         weight: 15,
-        feedbackHigh: 'Tighten body line — {delta}° off vertical.',
+        feedbackHigh: 'Tighten body line, {delta}° off vertical.',
       },
     ],
   },
@@ -3033,13 +3033,13 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Tumbling C: squat with a hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring.',
     bodyPosition:
-      'SIDE VIEW. Feet together (or close), flat on the floor. Knees bent in a partial squat. Hips tucked under. Chest hollow, shoulders rounded forward so the back makes a clear C from shoulders to tailbone. Arms reach straight forward and slightly up, elbows locked. Wrists can flex so palms face away. Head follows the curve — look toward the hands. This is not a standing side-bend.',
+      'SIDE VIEW. Feet together (or close), flat on the floor. Knees bent in a partial squat. Hips tucked under. Chest hollow, shoulders rounded forward so the back makes a clear C from shoulders to tailbone. Arms reach straight forward and slightly up, elbows locked. Wrists can flex so palms face away. Head follows the curve, look toward the hands. This is not a standing side-bend.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
-      'SIDE VIEW — stand in profile so the C is obvious.',
-      'Hips under, chest hollow — round the back, do not arch.',
+      'SIDE VIEW, stand in profile so the C is obvious.',
+      'Hips under, chest hollow, round the back, do not arch.',
       'Arms reach forward (not by the ears). Elbows straight.',
       'This C plus one medium step forward is a mountain climber.',
     ],
@@ -3056,8 +3056,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 24,
-        feedbackLow: 'Bend the knees — this C sits in a squat, not standing tall.',
-        feedbackHigh: 'Come up a little — keep a squat, not a sit.',
+        feedbackLow: 'Bend the knees, this C sits in a squat, not standing tall.',
+        feedbackHigh: 'Come up a little, keep a squat, not a sit.',
       },
       {
         id: 'hollow_c',
@@ -3069,8 +3069,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         falloff: 40,
         weight: 28,
-        feedbackLow: 'Tuck the hips under and hollow the chest — make a C.',
-        feedbackHigh: 'Keep the C — hips under, chest hollow.',
+        feedbackLow: 'Tuck the hips under and hollow the chest, make a C.',
+        feedbackHigh: 'Keep the C, hips under, chest hollow.',
       },
       {
         id: 'ribs',
@@ -3082,7 +3082,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 10,
         falloff: 35,
         weight: 16,
-        feedbackLow: 'Ribs in — hollow the chest so the back makes a C.',
+        feedbackLow: 'Ribs in, hollow the chest so the back makes a C.',
         feedbackHigh: 'Keep the ribs in. Do not open into a straight back.',
       },
       {
@@ -3096,7 +3096,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 24,
         needsView: 'side',
-        feedbackLow: 'Lift the arms slightly — reach forward, not down.',
+        feedbackLow: 'Lift the arms slightly, reach forward, not down.',
         feedbackHigh: 'Reach forward, not up by the ears.',
       },
       {
@@ -3135,7 +3135,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'Standing hollow with half-closed shoulders. Straight knees. Butt in. Armpits in front of the toes. Landing for cartwheel step-ins, round-offs, and handsprings.',
     bodyPosition:
-      `SIDE VIEW, standing. Hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of the toes — that keeps the hollow if the hips want to push into an arch. Feet together. Arms reach forward; shrug so the arms cover the ears. Eyes forward/down toward where you came from. Same idea as candlestick and front support, standing upright. Not arms overhead — arms up only when blocking into a skill above a round-off handspring series. ${HAND_FINISH}`,
+      `SIDE VIEW, standing. Hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of the toes, that keeps the hollow if the hips want to push into an arch. Feet together. Arms reach forward; shrug so the arms cover the ears. Eyes forward/down toward where you came from. Same idea as candlestick and front support, standing upright. Not arms overhead, arms up only when blocking into a skill above a round-off handspring series. ${HAND_FINISH}`,
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -3143,13 +3143,13 @@ export const SHAPES: ShapeDef[] = [
       'Hollow body with half-closed shoulder.',
       'Straight knees.',
       'Butt in.',
-      'Armpits in front of toes — that keeps the hollow if they push the hips into an arch.',
+      'Armpits in front of toes, that keeps the hollow if they push the hips into an arch.',
       'Eyes forward/down toward where you came from.',
       HAND_FINISH,
       'SIDE VIEW, standing.',
     ],
     coachNotes:
-      'Verbal cues: hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of toes — use that if they are pushing the hips into an arch. Standing hollow with arms in front, shoulders shrugged so the arms cover the ears. Eyes look forward/down toward where they just came from — out of a cartwheel, round-off, handspring, or whip. Same idea as candlestick and front support, just standing upright. Helps get the chest up out of a round-off to a stand. Arms in front are where they can whip back to generate speed into a handspring or whip, and they speed rotation so the feet get in front — then we can keep momentum backwards with handspring connections. All round-offs and handsprings land here until the athlete is working skills above a round-off handspring series. Arms go up only when blocking into a higher skill. We train this shape on cartwheel step-ins before working round-offs. Usual cartwheels still finish in a landing lunge unless this landing is named. Same hand finish as the seated pike with zombie arms: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
+      'Verbal cues: hollow body with half-closed shoulder. Straight knees. Butt in. Armpits in front of toes, use that if they are pushing the hips into an arch. Standing hollow with arms in front, shoulders shrugged so the arms cover the ears. Eyes look forward/down toward where they just came from, out of a cartwheel, round-off, handspring, or whip. Same idea as candlestick and front support, just standing upright. Helps get the chest up out of a round-off to a stand. Arms in front are where they can whip back to generate speed into a handspring or whip, and they speed rotation so the feet get in front, then we can keep momentum backwards with handspring connections. All round-offs and handsprings land here until the athlete is working skills above a round-off handspring series. Arms go up only when blocking into a higher skill. We train this shape on cartwheel step-ins before working round-offs. Usual cartwheels still finish in a landing lunge unless this landing is named. Same hand finish as the seated pike with zombie arms: push through, wide fingers, thumbs slightly down, pinkies slightly up. Second still is the hands close-up.',
     criteria: [
       {
         // Hip–shoulder–elbow ~90° = half-closed (arms in front), not open ~170°.
@@ -3163,7 +3163,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 20,
         feedbackLow: 'Hollow body with half-closed shoulder.',
-        feedbackHigh: 'Hollow body with half-closed shoulder — not arms up.',
+        feedbackHigh: 'Hollow body with half-closed shoulder.',
       },
       {
         id: 'knees',
@@ -3186,7 +3186,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 8,
         falloff: 30,
         weight: 16,
-        feedbackLow: 'Hollow body — don’t pike.',
+        feedbackLow: 'Hollow body, don’t pike.',
         feedbackHigh: 'Butt in.',
       },
       {
@@ -3202,8 +3202,8 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.12,
         weight: 18,
         needsView: 'side',
-        feedbackLow: 'Armpits in front of toes — hollow, don’t push the hips into an arch.',
-        feedbackHigh: 'Stay standing hollow — don’t dive the chest.',
+        feedbackLow: 'Armpits in front of toes, hollow, don’t push the hips into an arch.',
+        feedbackHigh: 'Stay standing hollow, don’t dive the chest.',
       },
       {
         id: 'arms_forward',
@@ -3216,8 +3216,8 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 10,
         needsView: 'side',
-        feedbackLow: 'Reach the arms forward — not down by the hips.',
-        feedbackHigh: 'Keep arms in front — not up overhead.',
+        feedbackLow: 'Reach the arms forward.',
+        feedbackHigh: 'Keep arms in front.',
       },
       {
         id: 'ears_covered',
@@ -3241,7 +3241,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 6,
         needsView: 'side',
-        feedbackLow: 'Look forward/down toward where you came from — not chin up.',
+        feedbackLow: 'Look forward/down toward where you came from.',
         feedbackHigh: 'Eyes forward/down, not a full sit-up tuck.',
       },
       {
@@ -3287,7 +3287,7 @@ export const SHAPES: ShapeDef[] = [
       'Use this finish on zombie, seated pike, and every arm position.',
     ],
     coachNotes:
-      'This is the usual gymnastics hand finish. The seated pike with zombie arms has it. Standing zombie has it. All arm positions look nicer with it. Overlay the still on any arm drill — standing or lunge.',
+      'This is the usual gymnastics hand finish. The seated pike with zombie arms has it. Standing zombie has it. All arm positions look nicer with it. Overlay the still on any arm drill, standing or lunge.',
     criteria: [
       {
         id: 'push_through',
@@ -3299,8 +3299,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 18,
         falloff: 50,
         weight: 50,
-        feedbackLow: 'Push through — as if you just shoved an object.',
-        feedbackHigh: 'Keep the push — wrists extended, not floppy.',
+        feedbackLow: 'Push through, as if you just shoved an object.',
+        feedbackHigh: 'Keep the push, wrists extended, not floppy.',
       },
       {
         id: 'wide_fingers',
@@ -3313,7 +3313,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.12,
         weight: 30,
         feedbackLow: 'Spread the fingers wide.',
-        feedbackHigh: 'Keep them wide — not a tight blade.',
+        feedbackHigh: 'Keep them wide.',
       },
       {
         id: 'elbows',
@@ -3337,9 +3337,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'side_plank',
     name: 'Side plank',
     description:
-      'Forearm side plank for conditioning: pencil line, one foot stacked on the other, top hand on the hip or up. If the knees cannot stay straight, bend them and put weight on the bottom knee. Builds lateral core — QL, obliques, serratus. Useful for some twist drills.',
+      'Forearm side plank for conditioning: pencil line, one foot stacked on the other, top hand on the hip or up. If the knees cannot stay straight, bend them and put weight on the bottom knee. Builds lateral core, QL, obliques, serratus. Useful for some twist drills.',
     bodyPosition:
-      'SIDE VIEW. Forearm on the mat, elbow under the shoulder. Squeeze into the straightest line possible — be a pencil. One foot stacked on the other. Knees straight if you can; if not, bend them and load the bottom knee. Top hand on the top hip or reaching up. Head and neck in line with the spine. No dangling head, no ribs flaring, no closed hips. Squeeze and hold.',
+      'SIDE VIEW. Forearm on the mat, elbow under the shoulder. Squeeze into the straightest line possible, be a pencil. One foot stacked on the other. Knees straight if you can; if not, bend them and load the bottom knee. Top hand on the top hip or reaching up. Head and neck in line with the spine. No dangling head, no ribs flaring, no closed hips. Squeeze and hold.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -3350,10 +3350,10 @@ export const SHAPES: ShapeDef[] = [
       'One foot stacked on the other.',
       'If straight knees are too hard, bend them and put weight on the bottom knee.',
       'Top hand on the top hip, or up.',
-      'Head and neck in line — no dangling head. No ribs flaring. No closed hips.',
+      'Head and neck in line, no dangling head. No ribs flaring. No closed hips.',
     ],
     coachNotes:
-      'We use this for conditioning. It develops lateral core — quadratus lumborum, obliques, serratus anterior — and can be a useful shape for some twist drills. Two stills: left and right. Log both sides on homework. Auto homework target is 30s; work it toward a minute. Straight knees are the goal; a bent-knee version with weight on the bottom knee is fine while they build the line.',
+      'We use this for conditioning. It develops lateral core, quadratus lumborum, obliques, serratus anterior, and can be a useful shape for some twist drills. Two stills: left and right. Log both sides on homework. Auto homework target is 30s; work it toward a minute. Straight knees are the goal; a bent-knee version with weight on the bottom knee is fine while they build the line.',
     criteria: [
       {
         id: 'body_line',
@@ -3364,7 +3364,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 20,
         falloff: 40,
         weight: 28,
-        feedbackHigh: 'Squeeze into a pencil — hips up, no sag ({delta}°).',
+        feedbackHigh: 'Squeeze into a pencil, hips up, no sag ({delta}°).',
       },
       {
         id: 'support_elbow',
@@ -3376,8 +3376,8 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 14,
         falloff: 40,
         weight: 16,
-        feedbackLow: 'Bend the support elbow — forearm on the mat, elbow under the shoulder.',
-        feedbackHigh: 'Stay on the forearm — elbow under the shoulder, not a straight-arm plank.',
+        feedbackLow: 'Bend the support elbow, forearm on the mat, elbow under the shoulder.',
+        feedbackHigh: 'Stay on the forearm, elbow under the shoulder, not a straight-arm plank.',
       },
       {
         id: 'elbow_stacked',
@@ -3400,7 +3400,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 12,
         weight: 16,
-        feedbackLow: 'Open the hips — do not close toward the floor.',
+        feedbackLow: 'Open the hips, do not close toward the floor.',
       },
       {
         id: 'feet_stacked',
@@ -3424,7 +3424,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 50,
         weight: 8,
         feedbackLow:
-          'Straight knees if you can — or bend them and put weight on the bottom knee.',
+          'Straight knees if you can, or bend them and put weight on the bottom knee.',
       },
       {
         id: 'head_line',
@@ -3436,7 +3436,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 8,
         needsView: 'side',
-        feedbackHigh: 'Head and neck in line with the spine — no dangling head.',
+        feedbackHigh: 'Head and neck in line with the spine, no dangling head.',
       },
     ],
   },
@@ -3449,15 +3449,15 @@ export const SHAPES: ShapeDef[] = [
     id: 'front_plank',
     name: 'Front plank',
     description:
-      'DRAFT: Forearm front plank for conditioning — straight line from head to heels, core tight, no sagging or piking at the hips. Elbows under the shoulders.',
+      'DRAFT: Forearm front plank for conditioning, straight line from head to heels, core tight, no sagging or piking at the hips. Elbows under the shoulders.',
     bodyPosition:
-      'SIDE VIEW. Forearms on the mat, elbows under the shoulders. Straight line from head to heels — squeeze the glutes, brace the core. No sagging at the hips, no piking up. Head and neck in line with the spine.',
+      'SIDE VIEW. Forearms on the mat, elbows under the shoulders. Straight line from head to heels, squeeze the glutes, brace the core. No sagging at the hips, no piking up. Head and neck in line with the spine.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
     tips: [
       'Elbows under the shoulders.',
-      'Straight line head to heels — no sag, no pike.',
+      'Straight line head to heels, no sag, no pike.',
       'Squeeze the glutes and brace the core.',
       'Head and neck in line with the spine.',
     ],
@@ -3473,7 +3473,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 20,
         falloff: 40,
         weight: 60,
-        feedbackHigh: 'Straight line head to heels — no sag, no pike ({delta}°).',
+        feedbackHigh: 'Straight line head to heels, no sag, no pike ({delta}°).',
       },
     ],
   },
@@ -3488,7 +3488,7 @@ export const SHAPES: ShapeDef[] = [
     description:
       'DRAFT: Back flat against the wall, thighs parallel to the floor, knees over the ankles. Hold the seated position without using the hands.',
     bodyPosition:
-      'SIDE VIEW. Back flat against the wall, slide down until the thighs are parallel to the floor. Knees stacked over the ankles. Arms crossed at the chest or by the sides — no pushing on the thighs.',
+      'SIDE VIEW. Back flat against the wall, slide down until the thighs are parallel to the floor. Knees stacked over the ankles. Arms crossed at the chest or by the sides, no pushing on the thighs.',
     category: 'hold',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -3522,7 +3522,7 @@ export const SHAPES: ShapeDef[] = [
     name: 'Arms: low V (back)',
     description: 'Standing low V with the arms reaching slightly back.',
     bodyPosition:
-      `Feet together, tall stand. Arms reach down and slightly back in a low V — not covering the ears, not a T. Elbows straight. Chest stays lifted. ${HAND_FINISH}`,
+      `Feet together, tall stand. Arms reach down and slightly back in a low V, not a T. Elbows straight. Chest stays lifted. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -3550,7 +3550,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 40,
         feedbackLow: 'Drop the arms into a low V.',
-        feedbackHigh: 'Keep the V low — not up by the ears.',
+        feedbackHigh: 'Keep the V low.',
       },
       {
         id: 'torso',
@@ -3626,7 +3626,7 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'arms_open_shoulders',
     name: 'Arms: open shoulders',
-    description: 'Same overhead line as FTOS — arms covering ears, hands to the ceiling.',
+    description: 'Same overhead line as FTOS, arms covering ears, hands to the ceiling.',
     bodyPosition:
       `Arms by the ears, elbows straight, shoulders fully open, hands reaching to the ceiling. This is the same arm line used in FTOS, lunge, lever, and handstand. ${HAND_FINISH}`,
     category: 'static',
@@ -3643,7 +3643,7 @@ export const SHAPES: ShapeDef[] = [
         targetMax: 180,
         tolerance: 10,
         weight: 45,
-        feedbackLow: 'Open shoulders — arms by ears.',
+        feedbackLow: 'Open shoulders, arms by ears.',
       },
       {
         id: 'elbows',
@@ -3672,7 +3672,7 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'arms_t',
     name: 'Arms: T',
-    description: 'Arms straight out to the sides at shoulder height — a letter T.',
+    description: 'Arms straight out to the sides at shoulder height, a letter T.',
     bodyPosition:
       `Face the camera. Arms reach straight out to both sides at shoulder height, elbows locked, wrists in line with the shoulders. Chest lifted. This is a T, not a high V and not overhead. ${HAND_FINISH}`,
     category: 'static',
@@ -3750,9 +3750,9 @@ export const SHAPES: ShapeDef[] = [
   {
     id: 'arms_high_v_chest',
     name: 'Arms: high V, chest out',
-    description: 'High V arms with the chest open — not covering the ears yet.',
+    description: 'High V arms with the chest open.',
     bodyPosition:
-      `Arms lift into a high V (wider than covering the ears). Chest is proud / open. Elbows straight. Head stays up. This is not FTOS — the arms stay in a V. ${HAND_FINISH}`,
+      `Arms lift into a high V (wider than covering the ears). Chest is proud / open. Elbows straight. Head stays up. This is not FTOS, the arms stay in a V. ${HAND_FINISH}`,
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'front',
@@ -3769,7 +3769,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 40,
         weight: 40,
         feedbackLow: 'Lift arms into a high V.',
-        feedbackHigh: 'Keep a V — don’t cover the ears yet.',
+        feedbackHigh: 'Keep a V, don’t cover the ears yet.',
       },
       {
         id: 'elbows',
@@ -3791,7 +3791,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 18,
         falloff: 40,
         weight: 35,
-        feedbackHigh: 'Chest out — stand taller.',
+        feedbackHigh: 'Chest out, stand taller.',
       },
     ],
   },
@@ -3808,7 +3808,7 @@ export const SHAPES: ShapeDef[] = [
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'Side view. Line from the back foot through the shoulders. Arms in a low V slightly back. Shorts can fake a bent back knee — we do not gate on that joint.',
+      'Side view. Line from the back foot through the shoulders. Arms in a low V slightly back. Shorts can fake a bent back knee, we do not gate on that joint.',
       HAND_FINISH,
     ],
     criteria: [
@@ -3845,7 +3845,7 @@ export const SHAPES: ShapeDef[] = [
         falloff: 45,
         weight: 32,
         feedbackLow: 'Drop arms into a low V, slightly back.',
-        feedbackHigh: 'Keep the V low — not by the ears.',
+        feedbackHigh: 'Keep the V low.',
       },
       {
         id: 'elbows',
@@ -3926,7 +3926,7 @@ export const SHAPES: ShapeDef[] = [
     id: 'lunge_arms_open',
     name: 'Lunge · open shoulders',
     description:
-      'Same position as the landing lunge — landing-lunge legs, arms by the ears. Same still. We keep this name so it sits with the other lunge arm drills.',
+      'Same position as the landing lunge, landing-lunge legs, arms by the ears. Same still. We keep this name so it sits with the other lunge arm drills.',
     bodyPosition:
       `This is the landing lunge. Front knee bent, back leg straight, back HEEL FLAT, feet closer than a starting lunge. Arms covering the ears, shoulders open. Same picture as Landing lunge. ${HAND_FINISH}`,
     category: 'hold',
@@ -3934,7 +3934,7 @@ export const SHAPES: ShapeDef[] = [
     cameraView: 'side',
     stanceAware: true,
     tips: [
-      'This is the landing lunge — same photo, same body.',
+      'This is the landing lunge, same photo, same body.',
       'Open-shoulder arms. Back heel flat. Shorter than a starting lunge.',
       HAND_FINISH,
     ],
@@ -4061,7 +4061,7 @@ export const SHAPES: ShapeDef[] = [
     cameraView: 'any',
     stanceAware: true,
     tips: [
-      'High V, chest out — not arms by ears yet. Back heel flat. Shorter than a starting lunge.',
+      'High V, chest out. Back heel flat. Shorter than a starting lunge.',
       HAND_FINISH,
     ],
     criteria: [
@@ -4100,7 +4100,7 @@ export const SHAPES: ShapeDef[] = [
         tolerance: 12,
         weight: 34,
         feedbackLow: 'Lift arms into a high V.',
-        feedbackHigh: 'Keep a V — don’t cover the ears yet.',
+        feedbackHigh: 'Keep a V, don’t cover the ears yet.',
       },
       {
         id: 'elbows',

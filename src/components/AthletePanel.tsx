@@ -180,7 +180,7 @@ export function AthletePanel({
       flash(
         newRole !== profileRole(existing)
           ? `${existing.name} is already on this gym as ${roleLabel(existing)}. Use a different name to create a ${newRole} profile. That name was not overwritten.`
-          : `${existing.name} is already on this gym computer. Unlock that profile with its own passcode — Create does not make a second one.`,
+          : `${existing.name} is already on this gym computer. Unlock that profile with its own passcode, Create does not make a second one.`,
         5200,
       )
       return
@@ -258,7 +258,7 @@ export function AthletePanel({
     setNewDateOfBirth('')
     flash(
       role === 'coach' || role === 'gym_owner'
-        ? `${saved.name} is ready as ${roleLabel(saved)}. Unlock with that passcode to add Instagram URLs in Compare — those collections stay on this profile. Ryan’s gym library stays as he left it.`
+        ? `${saved.name} is ready as ${roleLabel(saved)}. Unlock with that passcode to add Instagram URLs in Compare, those collections stay on this profile. Ryan’s gym library stays as he left it.`
         : `${saved.name} is ready as ${roleLabel(saved)}. Use that 4-digit passcode on any link.`,
       role === 'coach' || role === 'gym_owner' ? 4200 : 2800,
     )
@@ -337,7 +337,7 @@ export function AthletePanel({
   const remove = (id: string) => {
     const target = athletes.find((a) => a.id === id)
     if (target && isRyanAthlete(target)) {
-      flash('Ryan stays on the roster — that profile is how IG shapes save into the app.', 3200)
+      flash('Ryan stays on the roster, that profile is how IG shapes save into the app.', 3200)
       return
     }
     const next = athletes.filter((a) => a.id !== id)
@@ -524,7 +524,7 @@ export function AthletePanel({
         {guests.filter((g) => !athletes.some((a) => a.name.toLowerCase() === displayPersonName(g.firstName, g.lastName).toLowerCase())).length > 0 && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-              Took the shape test — no profile yet
+              Took the shape test, no profile yet
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {guests
@@ -577,7 +577,7 @@ export function AthletePanel({
         {newRole === 'athlete' && (
           <label>
             <span className="text-[11px] text-[var(--muted)]">
-              Birthday — private, used for age-appropriate access and safety settings
+              Birthday, private, used for age-appropriate access and safety settings
             </span>
             <BirthdayQuickPick
               value={newDateOfBirth}
@@ -605,7 +605,7 @@ export function AthletePanel({
         />
         <input
           className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-          placeholder="shapelab @handle (optional — Instagram @ is used if blank)"
+          placeholder="shapelab @handle (optional, Instagram @ is used if blank)"
           value={newShapeHandle}
           onChange={(e) => setNewShapeHandle(e.target.value)}
           onKeyDown={(e) => {
@@ -654,7 +654,7 @@ export function AthletePanel({
           <div className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2">
             <p className="text-xs text-[var(--text)]">Do you ever have back pain?</p>
             <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-              If yes, Homework opens a back-care path — journal, glute bridges,
+              If yes, Homework opens a back-care path, journal, glute bridges,
               and back extensions you ease into.
             </p>
             <div className="mt-2 flex gap-2">
@@ -792,7 +792,7 @@ export function AthletePanel({
           {profileRole(active) === 'athlete' && (
             <label>
               <span className="text-[11px] text-[var(--muted)]">
-                {birthdayNeeded(active.dateOfBirth) ? 'Birthday needed — stays private' : 'Birthday (private)'}
+                {birthdayNeeded(active.dateOfBirth) ? 'Birthday needed, stays private' : 'Birthday (private)'}
               </span>
               <BirthdayQuickPick value={dateOfBirth} onChange={setDateOfBirth} />
             </label>
@@ -873,7 +873,7 @@ export function AthletePanel({
                       : 'border border-[var(--panel-border)]'
                   }`}
                 >
-                  Yes — show back care
+                  Yes, show back care
                 </button>
                 <button
                   type="button"
@@ -906,7 +906,7 @@ export function AthletePanel({
           />
           <input
             className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-            placeholder="shapelab @handle (optional — Instagram @ is used if blank)"
+            placeholder="shapelab @handle (optional, Instagram @ is used if blank)"
             value={shapeHandle}
             onChange={(e) => setShapeHandle(e.target.value)}
             onKeyDown={(e) => {

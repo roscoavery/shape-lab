@@ -29,12 +29,12 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
   'round-off': {
     who: 'Back Handspring Academy',
     url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
-    watchFor: 'Coach-approved round off education for athletes, parents, and coaches — the video behind the quotes below.',
+    watchFor: 'Coach-approved round off education for athletes, parents, and coaches, the video behind the quotes below.',
   },
   'ro-bhs': {
     who: 'Back Handspring Academy',
     url: 'https://youtu.be/EOyrf5QEoko?si=4-gVLIjPI0qPLm1i',
-    watchFor: 'Coach-approved round off back handspring education for athletes, parents, and coaches — the video behind the quotes below.',
+    watchFor: 'Coach-approved round off back handspring education for athletes, parents, and coaches, the video behind the quotes below.',
   },
   layout: {
     who: 'Coach Ryan Williams',
@@ -44,7 +44,7 @@ export const FEATURED_PROOF: Record<string, ProofVideo> = {
   full: {
     who: 'Coach Ryan Williams',
     url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
-    watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
+    watchFor: 'His layout analysis on spring floor, match this layout and the full process goes smooth.',
   },
   'front-15': {
     who: 'Coach Ryan Williams',
@@ -133,7 +133,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: '/videos/randi-front-25-reference-angle2.mp4',
-      watchFor: 'Front 2.5 (Randi) on tumble track — another angle.',
+      watchFor: 'Front 2.5 (Randi) on tumble track, another angle.',
     },
   ],
   skl_side_aerial: [
@@ -175,7 +175,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Building block',
       url: '/videos/rudi-back-double-full.mp4',
       watchFor:
-        'Rudi (front 1.5). Helps so much with air awareness on back double fulls — uses a pike set for a mix of cat and tilt twist.',
+        'Rudi (front 1.5). Helps so much with air awareness on back double fulls, uses a pike set for a mix of cat and tilt twist.',
     },
     {
       who: 'Elliot Helms (@cirque_coach_elliot)',
@@ -216,12 +216,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'back-25': [
     {
-      who: 'Darnell — Camp TumbleSmart',
+      who: 'Darnell, Camp TumbleSmart',
       url: '/videos/darnell-back-25-triple-full.mp4',
       watchFor: 'Back 2.5 through to triple full.',
     },
     {
-      who: 'Tracy California — Gymnastics Progressions',
+      who: 'Tracy California, Gymnastics Progressions',
       url: 'https://www.instagram.com/reel/DdmF9Abx9un/',
       watchFor: 'Back triple.',
     },
@@ -230,7 +230,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/kick-1-5-to-dub-ryan.mp4',
-      watchFor: 'Kick 1.5 through to double back — Camp TumbleSmart 2024.',
+      watchFor: 'Kick 1.5 through to double back, Camp TumbleSmart 2024.',
     },
   ],
   'kick-double': [
@@ -244,7 +244,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-standing-full.mp4',
-      watchFor: 'Standing full — emphasis on standing all the way up on the take off.',
+      watchFor: 'Standing full, emphasis on standing all the way up on the take off.',
     },
     {
       who: 'TumbleSmart athlete',
@@ -267,7 +267,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/back-roll-push-up-wedge.mp4',
       watchFor:
-        'Back roll to push up (front support) down a wedge with straight arms. Start in a c shape with bent knees, hands turned in, arms behind the ears, elbows locked. Prerequisite for back extension roll — starts the athlete on landing in a front support from a backwards skill before handspring shaping drills from a handstand.',
+        'Back roll to push up (front support) down a wedge with straight arms. Start in a c shape with bent knees, hands turned in, arms behind the ears, elbows locked. Prerequisite for back extension roll, starts the athlete on landing in a front support from a backwards skill before handspring shaping drills from a handstand.',
     },
   ],
   'backward-roll': [
@@ -275,14 +275,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/backward-roll-tucked-candle.mp4',
       watchFor:
-        'Tucked candle with pizza hands — roll back to hands to a tucked candle, press off hands to get back to feet like the end of a fwd roll. Do not go over on flat ground if you do not feel completely in control of this already.',
+        'Tucked candle with pizza hands, roll back to hands to a tucked candle, press off hands to get back to feet like the end of a fwd roll. Do not go over on flat ground if you do not feel completely in control of this already.',
     },
   ],
   'standing-bhs-series': [
     {
       who: 'Charlie',
       url: '/videos/charlie-standing-bhs-series.mp4',
-      watchFor: 'Standing 2 on tramp — noodle between the feet to focus on feet together.',
+      watchFor: 'Standing 2 on tramp, noodle between the feet to focus on feet together.',
     },
   ],
   'cart-full': [
@@ -297,12 +297,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Reference',
       url: '/videos/whip-15-spring.mp4',
       watchFor:
-        'Whip 1.5 on spring — keeping the back 1.5 relatively long since you carry forward momentum out of it. Back 1.5 lands blind so you cannot pike down on an under-rotated flip, which is why so many athletes skip the 1.5 and go straight to doubles. Helps to have the air awareness from a front full. Any time you step out of a skill like this, it has to over-rotate, especially if you do not travel much.',
+        'Whip 1.5 on spring, keeping the back 1.5 relatively long since you carry forward momentum out of it. Back 1.5 lands blind so you cannot pike down on an under-rotated flip, which is why so many athletes skip the 1.5 and go straight to doubles. Helps to have the air awareness from a front full. Any time you step out of a skill like this, it has to over-rotate, especially if you do not travel much.',
     },
   ],
   'back-quad': [
     {
-      who: 'Tumbling Dee — Camp TumbleSmart',
+      who: 'Tumbling Dee, Camp TumbleSmart',
       url: '/videos/dee-back-quad.mp4',
       watchFor: 'Back quad on tramp.',
     },
@@ -318,7 +318,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/DHL_hfEuRYi/',
-      watchFor: 'His whole take on the back tuck — the prerequisite standard for layouts.',
+      watchFor: 'His whole take on the back tuck, the prerequisite standard for layouts.',
     },
     {
       who: 'Drill',
@@ -334,19 +334,19 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/back-tuck-wedge-drill-assisted.mp4',
       watchFor:
-        'Back tuck wedge drill (1 of 2 — assisted pause). The athlete sets up and pulls a tuck shape, then rolls back down a wedge to a mad cat position. On this one Ryan helps the athlete stop in the tuck shape before rolling back. You can gradually have the athlete create more and more rotation before hitting the mat: they go from landing on their butt then rolling in the early stages, to landing on their low back, then eventually setting and landing on their back and shoulders to ease proper head position into the flip.',
+        'Back tuck wedge drill (1 of 2, assisted pause). The athlete sets up and pulls a tuck shape, then rolls back down a wedge to a mad cat position. On this one Ryan helps the athlete stop in the tuck shape before rolling back. You can gradually have the athlete create more and more rotation before hitting the mat: they go from landing on their butt then rolling in the early stages, to landing on their low back, then eventually setting and landing on their back and shoulders to ease proper head position into the flip.',
     },
     {
       who: 'Drill',
       url: '/videos/back-tuck-wedge-drill-solo.mp4',
       watchFor:
-        'Back tuck wedge drill (2 of 2 — solo, faster). Same drill — this time she does it faster by herself.',
+        'Back tuck wedge drill (2 of 2, solo, faster). Same drill, this time she does it faster by herself.',
     },
     {
       who: 'Drill',
       url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
       watchFor:
-        'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+        'Eyes forward open shoulders on a soft mat, pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
     {
       who: 'TumbleSmart athlete',
@@ -366,7 +366,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'TumbleSmart athlete',
       url: '/videos/ro-hs-tuck-tramp-deconstructed.mp4',
-      watchFor: 'Round off tuck on tramp — deconstructed spotting method: set, shape, flip.',
+      watchFor: 'Round off tuck on tramp, deconstructed spotting method: set, shape, flip.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -378,7 +378,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/barani-half-turn-front-full-progression.mp4',
-      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+      watchFor: 'Barani that lands and hits a half turn after landing, front full progression.',
     },
     {
       who: 'Elliot Helms (@cirque_coach_elliot)',
@@ -391,7 +391,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/barani-half-turn-front-full-progression.mp4',
-      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+      watchFor: 'Barani that lands and hits a half turn after landing, front full progression.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -403,7 +403,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/barani-half-turn-front-full-progression.mp4',
-      watchFor: 'Barani that lands and hits a half turn after landing — front full progression.',
+      watchFor: 'Barani that lands and hits a half turn after landing, front full progression.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -413,14 +413,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: '/videos/front-full-half-turn-rudi-progression.mp4',
-      watchFor: 'Front full that lands and hits a half turn after landing — front rudi progression.',
+      watchFor: 'Front full that lands and hits a half turn after landing, front rudi progression.',
     },
   ],
   'round-off': [
     {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',
-      watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',
+      watchFor: 'Cartwheel step-in, the round off prerequisite Ryan points every athlete to.',
     },
     {
       who: 'Elliot Helms (Cirque du Soleil)',
@@ -430,12 +430,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DX5usxfpoZ-/',
-      watchFor: 'Round off sweep through to hollow — arms carry, eyes down.',
+      watchFor: 'Round off sweep through to hollow, arms carry, eyes down.',
     },
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-cartwheel-stepin-zombie.mp4',
-      watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
+      watchFor: 'Cartwheel step-in to zombie, how he teaches it.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -445,12 +445,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DV6NNgJEWkV/',
-      watchFor: 'Round off reference — the finish shape Ryan teaches.',
+      watchFor: 'Round off reference, the finish shape Ryan teaches.',
     },
     {
       who: '@hangtimetnt',
       url: 'https://www.instagram.com/reel/DZncc7BxFWY/',
-      watchFor: 'Passe fall round off to zombie — the hangtime reference. The landing shape, not lightning bolt.',
+      watchFor: 'Passe fall round off to zombie, the hangtime reference. The landing shape, not lightning bolt.',
     },
     {
       who: 'Reference',
@@ -465,7 +465,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DIOjOH4TagD/',
-      watchFor: 'Round off deconstruction — the pieces inside the skill.',
+      watchFor: 'Round off deconstruction, the pieces inside the skill.',
     },
     {
       who: 'Reference',
@@ -480,12 +480,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Drill',
       url: '/videos/cartwheel-step-in-zombie.mp4',
-      watchFor: 'Cartwheel step in zombie — connections class at TumbleSmart.',
+      watchFor: 'Cartwheel step in zombie, connections class at TumbleSmart.',
     },
     {
       who: 'Drill',
       url: '/videos/round-off-zombie.mp4',
-      watchFor: 'Round off to zombie shape — connections class at TumbleSmart.',
+      watchFor: 'Round off to zombie shape, connections class at TumbleSmart.',
     },
   ],
   'ro-bhs': [
@@ -497,22 +497,22 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Drill',
       url: '/videos/ro-bhs-rebound-pike.mp4',
-      watchFor: 'Round off rebound backwards to pike/hollow shape — hitting feet in front angle.',
+      watchFor: 'Round off rebound backwards to pike/hollow shape, hitting feet in front angle.',
     },
     {
       who: 'Drill',
       url: '/videos/ro-bhs-hollow-fall.mp4',
-      watchFor: 'Round off closing arms down and falling to back in a hollow shape — carries momentum backwards out of the round off.',
+      watchFor: 'Round off closing arms down and falling to back in a hollow shape, carries momentum backwards out of the round off.',
     },
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DZNL4ZRGlyA/',
-      watchFor: 'Round off rebound to flat back — essential for a good handspring.',
+      watchFor: 'Round off rebound to flat back, essential for a good handspring.',
     },
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DXrVfNqk2B3/',
-      watchFor: 'Grab block and throw it back — the connection drill.',
+      watchFor: 'Grab block and throw it back, the connection drill.',
     },
     {
       who: 'Kyoko',
@@ -522,7 +522,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
-      watchFor: 'Handspring rebound punch tuck — the rebound recycles momentum.',
+      watchFor: 'Handspring rebound punch tuck, the rebound recycles momentum.',
     },
     {
       who: 'Reference',
@@ -545,7 +545,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DbpyloMstn8/',
-      watchFor: 'Round off series — what a strong series looks like.',
+      watchFor: 'Round off series, what a strong series looks like.',
     },
     {
       who: 'lifegymnastics',
@@ -561,7 +561,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
       watchFor:
-        'After an athlete gets a series, we start looking forward and finishing with open shoulder angle. Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+        'After an athlete gets a series, we start looking forward and finishing with open shoulder angle. Eyes forward open shoulders on a soft mat, pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
     {
       who: 'Drill',
@@ -574,37 +574,37 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/Dcmu9aWpQ2A/',
-      watchFor: 'Back layout reference — the hollow shape held in flight.',
+      watchFor: 'Back layout reference, the hollow shape held in flight.',
     },
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/DKZ21GGu4l_/',
-      watchFor: 'His layout reference on trampoline — the shape he points athletes to.',
+      watchFor: 'His layout reference on trampoline, the shape he points athletes to.',
     },
     {
       who: 'gymneotv',
       url: 'https://www.instagram.com/reel/DCpDQYuN4Ni/',
-      watchFor: 'Back layout reference — the stretched hollow in flight.',
+      watchFor: 'Back layout reference, the stretched hollow in flight.',
     },
     {
       who: 'Valeriy',
       url: 'https://www.instagram.com/reel/DaZrfVbojJb/',
-      watchFor: 'Front layout reference — same hollow shape, forward takeoff.',
+      watchFor: 'Front layout reference, same hollow shape, forward takeoff.',
     },
     {
       who: 'coachwithpatience',
       url: 'https://www.instagram.com/reel/DcmFoBNxPTd/',
-      watchFor: 'Round off handspring into layout — the connection that sets up the full.',
+      watchFor: 'Round off handspring into layout, the connection that sets up the full.',
     },
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DaiLLlAGi42/',
-      watchFor: 'Layout drill — building the shape before the skill.',
+      watchFor: 'Layout drill, building the shape before the skill.',
     },
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/Dba2VNTmvaX/',
-      watchFor: 'Rebound to candle — the layout drill that builds the shape.',
+      watchFor: 'Rebound to candle, the layout drill that builds the shape.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -615,7 +615,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Drill',
       url: '/videos/ryan-blocking-angle-drill-eyes-on-wall-soft-surface.mp4',
       watchFor:
-        'Eyes forward open shoulders on a soft mat — pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
+        'Eyes forward open shoulders on a soft mat, pause to evaluate the position of how they will hit the floor for a rebound into a blocking skill.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -636,89 +636,89 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   full: [
     {
-      who: 'Step 1 — Lay to belly',
+      who: 'Step 1, Lay to belly',
       url: '/videos/arm-drop-progression/step1-lay-to-belly.mp4',
-      watchFor: 'The first step. Layout to belly — learn the shape before any twist.',
+      watchFor: 'The first step. Layout to belly, learn the shape before any twist.',
     },
     {
-      who: 'Step 2 — Half to back',
+      who: 'Step 2, Half to back',
       url: '/videos/arm-drop-progression/step2-half-to-back.mp4',
       watchFor: 'Twist arm drops to shoulder level when upside down. Wait until about to land on the belly, then drop and squeeze. Twist arm drops, non-twist arm squeezes into the head.',
     },
     {
-      who: 'Step 3 — Full to belly',
+      who: 'Step 3, Full to belly',
       url: '/videos/arm-drop-progression/step3-full-to-belly-arm-drop.mp4',
       watchFor: 'Athlete drops one arm down and keeps the other squeezing into the ear. She opens the twist arm back up as she finishes to untilt herself.',
     },
     {
-      who: 'Step 4 — Sequential arm drop',
+      who: 'Step 4, Sequential arm drop',
       url: '/videos/arm-drop-progression/step4-sequential-arm-drop.mp4',
       watchFor: 'Both arms drop in sequence. The second arm drop gives the second half turn, then both arms open back up to untilt.',
     },
     {
-      who: 'Why it works — twisting physics',
+      who: 'Why it works, twisting physics',
       url: '/videos/arm-drop-progression/yeadon-twisting-simulation.mp4',
       watchFor: 'Computer simulation of the whole twisting process. The physics behind the arm drop.',
     },
     {
       who: 'Emory (athlete)',
       url: '/videos/arm-drop-progression/emory-full.mp4',
-      watchFor: 'Finished full — the end of the progression.',
+      watchFor: 'Finished full, the end of the progression.',
     },
     {
       who: 'Addy (athlete)',
       url: '/videos/arm-drop-progression/addy-full.mp4',
-      watchFor: 'Finished full — the end of the progression.',
+      watchFor: 'Finished full, the end of the progression.',
     },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/Cejgj-XvIGK/',
-      watchFor: 'Layout plus arm drop — the same late-twist process.',
+      watchFor: 'Layout plus arm drop, the same late-twist process.',
     },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DX-Djomu04L/',
-      watchFor: 'Athletes waiting to twist before 1 o’clock — late twist in action.',
+      watchFor: 'Athletes waiting to twist before 1 o’clock, late twist in action.',
     },
     {
       who: 'David Morris (Olympic medallist)',
       url: 'https://youtu.be/v4ar1ZmLps',
-      watchFor: 'How to do a GOOD backfull — the tutorial Ryan has taught from for years.',
+      watchFor: 'How to do a GOOD backfull, the tutorial Ryan has taught from for years.',
     },
     {
       who: 'FIG Academy (Hardy Fink, Fred Yeadon)',
       url: 'https://youtu.be/_fNX-5XGKog',
-      watchFor: 'Understanding twisting during saltos — the physics behind the arm drop.',
+      watchFor: 'Understanding twisting during saltos, the physics behind the arm drop.',
     },
     {
       who: 'Tumble Doc & Tumbling Dee',
       url: 'https://youtube.com/shorts/6Jf85Laetg0',
-      watchFor: 'Twist timing deep dive from Camp Tumble Smart — proper technique feeling unnatural even for advanced athletes.',
+      watchFor: 'Twist timing deep dive from Camp Tumble Smart, proper technique feeling unnatural even for advanced athletes.',
     },
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/DMgAlHrvRWw/',
-      watchFor: 'His layout analysis on spring floor — match this layout and the full process goes smooth.',
+      watchFor: 'His layout analysis on spring floor, match this layout and the full process goes smooth.',
     },
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/coachryanwilliams/reel/DKZ21GGu4l_/',
-      watchFor: 'The same layout analysis on trampoline track — match this layout and the full process goes smooth.',
+      watchFor: 'The same layout analysis on trampoline track, match this layout and the full process goes smooth.',
     },
     {
       who: 'Ari (athlete)',
       url: '/videos/ari-full-spring-floor.mp4',
-      watchFor: "Ari's full — the finished product of the arm-drop process.",
+      watchFor: "Ari's full, the finished product of the arm-drop process.",
     },
     {
       who: 'Taylor (athlete)',
       url: 'https://www.instagram.com/reel/DJ4nzBlPZgo/',
-      watchFor: "Taylor's full — the finished product of the arm-drop process.",
+      watchFor: "Taylor's full, the finished product of the arm-drop process.",
     },
     {
       who: 'Qynn (athlete)',
       url: 'https://www.instagram.com/reel/DKKowaRveYb/',
-      watchFor: "Qynn's full — the finished product of the arm-drop process.",
+      watchFor: "Qynn's full, the finished product of the arm-drop process.",
     },
     {
       who: 'Preslee (athlete)',
@@ -728,12 +728,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/C9m_0vDOooA/',
-      watchFor: 'Opposite-side spotting on Preslee — preserving the set through the twist.',
+      watchFor: 'Opposite-side spotting on Preslee, preserving the set through the twist.',
     },
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/C9aXPgMP7Lk/',
-      watchFor: 'Opposite-side spotting on Rylie — preserving the set through the twist.',
+      watchFor: 'Opposite-side spotting on Rylie, preserving the set through the twist.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -771,29 +771,29 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Kyoko',
       url: 'https://www.instagram.com/p/DbBLac8GjS6/',
-      watchFor: 'Hollow arch front support shape drill — basics that carry upward.',
+      watchFor: 'Hollow arch front support shape drill, basics that carry upward.',
     },
   ],
   'standing-bhs': [
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DYsu8CdB93m/',
-      watchFor: 'Long handspring reference — the full stretch of the skill.',
+      watchFor: 'Long handspring reference, the full stretch of the skill.',
     },
     {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
-      watchFor: 'Handspring rebound into punch tuck — the snap and lift.',
+      watchFor: 'Handspring rebound into punch tuck, the snap and lift.',
     },
     {
       who: 'Valeriy',
       url: 'https://www.instagram.com/reel/DYRkyrpoB-k/',
-      watchFor: 'Handspring shaping — the positions inside the skill.',
+      watchFor: 'Handspring shaping, the positions inside the skill.',
     },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DM97Ag4KC-_/',
-      watchFor: 'Handspring deconstruction — the pieces inside the skill.',
+      watchFor: 'Handspring deconstruction, the pieces inside the skill.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -805,18 +805,18 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Coach Ryan Williams',
       url: 'https://www.instagram.com/reel/DHL_hfEuRYi/',
-      watchFor: 'His tuck reference — the shape every tuck starts from.',
+      watchFor: 'His tuck reference, the shape every tuck starts from.',
     },
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-standing-tuck.mp4',
       watchFor:
-        'Fully open shoulder tight arch shape for the set to maximize height — requires more jump height and end range abdominal strength to still tuck quickly. Some coaches teach a slightly closed shoulder angle, staying more hollow while the hips set, to maximize speed into the tuck.',
+        'Fully open shoulder tight arch shape for the set to maximize height, requires more jump height and end range abdominal strength to still tuck quickly. Some coaches teach a slightly closed shoulder angle, staying more hollow while the hips set, to maximize speed into the tuck.',
     },
     {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DbM2xD2JTFG/',
-      watchFor: 'Rebound punch tuck — the tuck pulled out of a handspring snap.',
+      watchFor: 'Rebound punch tuck, the tuck pulled out of a handspring snap.',
     },
     {
       who: 'TumbleSmart athlete',
@@ -828,14 +828,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DcZBL5zkryD/',
-      watchFor: 'Layout step half turn — the half-twist shape inside a back half.',
+      watchFor: 'Layout step half turn, the half-twist shape inside a back half.',
     },
   ],
   'double-back': [
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DJHqG7xIrpQ/',
-      watchFor: 'Round off handspring prep for double flips — the setup work.',
+      watchFor: 'Round off handspring prep for double flips, the setup work.',
     },
     {
       who: 'Coach Ryan Williams',
@@ -845,37 +845,37 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
   ],
   'triple-full': [
     {
-      who: 'Porter — Camp TumbleSmart',
+      who: 'Porter, Camp TumbleSmart',
       url: '/videos/porter-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Porter — Camp TumbleSmart',
+      who: 'Porter, Camp TumbleSmart',
       url: '/videos/porter-arabian-triple-analysis.mp4',
       watchFor: 'Analysis: freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
     {
-      who: 'Ayden Gerlach — Camp TumbleSmart',
+      who: 'Ayden Gerlach, Camp TumbleSmart',
       url: '/videos/ayden-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Ayden Gerlach — Camp TumbleSmart',
+      who: 'Ayden Gerlach, Camp TumbleSmart',
       url: '/videos/ayden-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: later twist — squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: later twist, squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
     {
-      who: 'Asa Ware — Camp TumbleSmart',
+      who: 'Asa Ware, Camp TumbleSmart',
       url: '/videos/asa-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Asa Ware — Camp TumbleSmart',
+      who: 'Asa Ware, Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: twists right but round offs left, same pass, different way of doing it. Slow motion through the arabian and the triple.',
     },
     {
-      who: 'Darnell — Camp TumbleSmart',
+      who: 'Darnell, Camp TumbleSmart',
       url: '/videos/darnell-back-25-triple-full.mp4',
       watchFor: 'Back 2.5 through to triple full.',
     },
@@ -892,34 +892,34 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Taught more as a back half tucked using opposite side spot.',
     },
     {
-      who: 'Porter — Camp TumbleSmart',
+      who: 'Porter, Camp TumbleSmart',
       url: '/videos/porter-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Porter — Camp TumbleSmart',
+      who: 'Porter, Camp TumbleSmart',
       url: '/videos/porter-arabian-triple-analysis.mp4',
       watchFor: 'Analysis: freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
     {
-      who: 'Ayden Gerlach — Camp TumbleSmart',
+      who: 'Ayden Gerlach, Camp TumbleSmart',
       url: '/videos/ayden-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Ayden Gerlach — Camp TumbleSmart',
+      who: 'Ayden Gerlach, Camp TumbleSmart',
       url: '/videos/ayden-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: later twist — squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: later twist, squared to the wall out of the round off before the twist starts. Freeze frames on both rebounds, slow motion through the arabian and the triple.',
     },
     {
-      who: 'Asa Ware — Camp TumbleSmart',
+      who: 'Asa Ware, Camp TumbleSmart',
       url: '/videos/asa-arabian-triple.mp4',
       watchFor: 'Arabian through to triple.',
     },
     {
-      who: 'Asa Ware — Camp TumbleSmart',
+      who: 'Asa Ware, Camp TumbleSmart',
       url: '/videos/asa-arabian-triple-analysis.mp4',
-      watchFor: 'Analysis: twists right but round offs left — same pass, different way of doing it. Slow motion through the arabian and the triple.',
+      watchFor: 'Analysis: twists right but round offs left, same pass, different way of doing it. Slow motion through the arabian and the triple.',
     },
     {
       who: 'TumbleSmart athlete',
@@ -938,36 +938,36 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DalCqRAo8ig/',
-      watchFor: 'Back walkover to handstand step-out — the line through the skill.',
+      watchFor: 'Back walkover to handstand step-out, the line through the skill.',
     },
   ],
   'cartwheel-step-in': [
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-cartwheel-stepin-zombie.mp4',
-      watchFor: 'Cartwheel step-in to zombie — how he teaches it.',
+      watchFor: 'Cartwheel step-in to zombie, how he teaches it.',
     },
     {
       who: 'Elliot Helms (Cirque du Soleil)',
       url: 'https://www.instagram.com/reel/DdP7FbPRfrS/',
-      watchFor: 'Cartwheel step-in — the round off prerequisite Ryan points every athlete to.',
+      watchFor: 'Cartwheel step-in, the round off prerequisite Ryan points every athlete to.',
     },
   ],
   'cartwheel-handspring': [
     {
       who: 'Roman',
       url: 'https://www.instagram.com/reel/DblQlGDxaOU/',
-      watchFor: 'Cartwheel hand placement drill — where the hands go.',
+      watchFor: 'Cartwheel hand placement drill, where the hands go.',
     },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DJ_7qLMRLrq/',
-      watchFor: 'Cartwheel step-in through pike to arch — the shape path.',
+      watchFor: 'Cartwheel step-in through pike to arch, the shape path.',
     },
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DYSxclHPl1r/',
-      watchFor: 'Cartwheel drill — the lateral line.',
+      watchFor: 'Cartwheel drill, the lateral line.',
     },
   ],
   // Cue swaps
@@ -975,7 +975,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Elliot Helms',
       url: 'https://www.instagram.com/reel/DYF6T0NSSES/',
-      watchFor: 'Handspring close-arms rebound to hollow — arms down in front, eyes down.',
+      watchFor: 'Handspring close-arms rebound to hollow, arms down in front, eyes down.',
     },
     {
       who: 'Kyoko',
@@ -987,7 +987,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'Reference',
       url: 'https://www.instagram.com/reel/DZncc7BxFWY/',
-      watchFor: 'Passe round off to tight zombie — small rebound, right shapes.',
+      watchFor: 'Passe round off to tight zombie, small rebound, right shapes.',
     },
     {
       who: 'Reference',

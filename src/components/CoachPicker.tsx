@@ -64,7 +64,7 @@ export function CoachPicker({
             onChange={(e) => onShowOnProfile(e.target.checked)}
           />
           <span>
-            Show these coaches on my profile. Uncheck to keep that private —
+            Show these coaches on my profile. Uncheck to keep that private,
             they still see homework you log.
           </span>
         </label>

@@ -67,7 +67,7 @@ export function ClassExtraPicker({ extras, onChange, tone = 'class' }: Props) {
         }
       >
         Core drills stay Hollow, Superman, side plank, and wall handstand. Pin
-        anything else this class actually times or counts — hollow arms up,
+        anything else this class actually times or counts, hollow arms up,
         push-ups, or a name you type.
       </p>
 
@@ -179,7 +179,7 @@ export function ClassExtraPicker({ extras, onChange, tone = 'class' }: Props) {
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <input
           className={`min-w-0 flex-1 ${input}`}
-          placeholder="Custom — bear crawls, 10 push-ups…"
+          placeholder="Custom, bear crawls, 10 push-ups…"
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
         />

@@ -32,7 +32,7 @@ export const NUTRITION_FACT_CARDS: NutritionFactCard[] = [
     question: 'Does dairy help bones or recovery?',
     tags: ['dairy', 'milk', 'bones', 'calcium'],
     answer:
-      'Dairy is not required for bone health. Calcium and protein are available from other foods. If dairy bothers digestion or mucus, dropping it is a reasonable experiment — food is not a moral test.',
+      'Dairy is not required for bone health. Calcium and protein are available from other foods. If dairy bothers digestion or mucus, dropping it is a reasonable experiment, food is not a moral test.',
     sourceLabel: 'NutritionFacts.org · Dairy',
     sourceUrl: 'https://nutritionfacts.org/topics/dairy/',
   },
@@ -50,7 +50,7 @@ export const NUTRITION_FACT_CARDS: NutritionFactCard[] = [
     question: 'Can food help with aches and inflammation?',
     tags: ['inflammation', 'pain', 'recovery', 'diet'],
     answer:
-      'A pattern of vegetables, fruits, legumes, and spices like turmeric is the evidence-based anti-inflammatory pattern Greger covers — not a single “superfood.” Food does not replace a diagnosis when pain is new, severe, or lasting.',
+      'A pattern of vegetables, fruits, legumes, and spices like turmeric is the evidence-based anti-inflammatory pattern Greger covers.” Food does not replace a diagnosis when pain is new, severe, or lasting.',
     sourceLabel: 'NutritionFacts.org · Inflammation',
     sourceUrl: 'https://nutritionfacts.org/topics/inflammation/',
   },
@@ -68,7 +68,7 @@ export const NUTRITION_FACT_CARDS: NutritionFactCard[] = [
     question: 'Do they need sports drinks?',
     tags: ['water', 'hydration', 'electrolytes'],
     answer:
-      'For most class-length sessions, water is enough. Sports drinks are built for long, heavy sweat losses — not a 60-minute gym class. Fruit and a normal meal replace what a drink is selling.',
+      'For most class-length sessions, water is enough. Sports drinks are built for long, heavy sweat losses. Fruit and a normal meal replace what a drink is selling.',
     sourceLabel: 'NutritionFacts.org · Hydration',
     sourceUrl: 'https://nutritionfacts.org/topics/hydration/',
   },
@@ -77,7 +77,7 @@ export const NUTRITION_FACT_CARDS: NutritionFactCard[] = [
     question: 'What should they eat around practice?',
     tags: ['kids', 'snacks', 'practice', 'before class'],
     answer:
-      'A familiar meal they digest well beats a new “performance” snack. Fruit, oats, beans, and leftovers from dinner show up often in whole-food guidance. Watch what actually sits well in their stomach on class days — that belongs in the pain/recovery journal too.',
+      'A familiar meal they digest well beats a new “performance” snack. Fruit, oats, beans, and leftovers from dinner show up often in whole-food guidance. Watch what actually sits well in their stomach on class days, that belongs in the pain/recovery journal too.',
     sourceLabel: 'NutritionFacts.org · Children',
     sourceUrl: 'https://nutritionfacts.org/topics/children/',
   },

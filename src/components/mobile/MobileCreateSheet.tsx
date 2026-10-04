@@ -13,7 +13,7 @@ type Props = {
 
 const OPTIONS: { tab?: AppTab; title: string; hint: string; glyph: string; story?: boolean }[] = [
   { story: true, title: 'Story', hint: '24h highlight for the gym', glyph: '◯' },
-  { tab: 'wins', title: 'Win', hint: 'Little hit or first — Wins feed', glyph: '🙌' },
+  { tab: 'wins', title: 'Win', hint: 'Little hit or first, Wins feed', glyph: '🙌' },
   { tab: 'feed', title: 'Post', hint: 'Share on the main gym feed', glyph: '📣' },
   { tab: 'scroll', title: 'Pass / reel', hint: 'Reference clip or pass video', glyph: '▶' },
   { tab: 'homework', title: 'Homework log', hint: 'Log holds, reps, or drills', glyph: '✓' },

@@ -147,7 +147,7 @@ export function LessonPlanEditor({ plan, athleteName, onSaved, onStart, onCancel
       <h3 className="text-lg font-semibold">Lesson plan for {athleteName}</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Add holds, drills / exercises, skills to work, Compare clips, and talk-throughs.
-        Drag the grip to reorder. Save the plan, then start — those notes sit at the
+        Drag the grip to reorder. Save the plan, then start, those notes sit at the
         top of the live lesson.
       </p>
       <label className="mt-3 block text-xs uppercase tracking-wider text-[var(--muted)]">

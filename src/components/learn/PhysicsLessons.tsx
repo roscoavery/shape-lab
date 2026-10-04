@@ -90,9 +90,9 @@ export function PhysicsLessons({
       const saved = await pushLearnNotes(next)
       setOverlays(saved)
       setEditing(false)
-      setFlash('Saved into the app — every gym link has this text.')
+      setFlash('Saved into the app, every gym link has this text.')
     } catch {
-      setFlash('Could not save — keep the Shape Lab server running.')
+      setFlash('Could not save, keep the Shape Lab server running.')
     } finally {
       setBusy(false)
     }
@@ -154,7 +154,7 @@ export function PhysicsLessons({
               </label>
               <label className="block">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Notes — blank line between paragraphs
+                  Notes, blank line between paragraphs
                 </span>
                 <textarea
                   value={bodyText}

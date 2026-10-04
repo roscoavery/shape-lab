@@ -78,7 +78,7 @@ export function ShareReference({
     if (!url) return
     try {
       await navigator.clipboard.writeText(url)
-      setNote('Link copied — paste it in a text.')
+      setNote('Link copied, paste it in a text.')
     } catch {
       setNote('Could not copy. Long-press the link instead.')
     }
@@ -201,7 +201,7 @@ export function ShareReference({
                     </p>
                   ) : (
                     <p className="mt-0.5 text-[11px] text-[var(--warn)]">
-                      No public URL on this still — chalkboard and feed still work.
+                      No public URL on this still, chalkboard and feed still work.
                     </p>
                   )}
                 </div>

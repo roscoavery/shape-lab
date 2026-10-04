@@ -55,7 +55,7 @@ export function ParentWellnessDesk({ accountId }: Props) {
         <h2 className="mt-1 text-2xl font-semibold">Your notes</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Separate from My Athletes. Coaches who work with your child do not see this journal.
-          Use it to notice what makes pain worse and what actually helps recovery — food, rest,
+          Use it to notice what makes pain worse and what actually helps recovery, food, rest,
           a walk, skipping a drill.
         </p>
         <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">{WELLNESS_NOTICE}</p>
@@ -206,7 +206,7 @@ export function ParentWellnessDesk({ accountId }: Props) {
         <h3 className="font-semibold">Recovery journal</h3>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Pain and recovery are easier to understand when you write what made things worse and
-          what helped. Use this alongside the pain log — not instead of a doctor when something
+          what helped. Use this alongside the pain log, not instead of a doctor when something
           is new, severe, or lasting.
         </p>
         <textarea

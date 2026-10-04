@@ -145,6 +145,6 @@ export async function recordCollagePlayback(opts: RecordCollageOpts): Promise<Bl
   canvas.remove()
   const blob = await stopped
   if (opts.cancelled?.()) throw new Error('cancelled')
-  if (blob.size < 800) throw new Error('Export was empty — wait for the clips to load, then try again.')
+  if (blob.size < 800) throw new Error('Export was empty, wait for the clips to load, then try again.')
   return durableBlob(blob)
 }

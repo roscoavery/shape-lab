@@ -40,7 +40,7 @@ const DETAILS: DetailAsk[] = [
       { id: 'd', label: 'They used zombie arms' },
     ],
     answerId: 'a',
-    explain: 'The starting lunge is long and the back heel stays up. A flat heel means they already finished — too short, too soon.',
+    explain: 'The starting lunge is long and the back heel stays up. A flat heel means they already finished, too short, too soon.',
   },
   {
     shapeId: 'lunge_land',
@@ -58,7 +58,7 @@ const DETAILS: DetailAsk[] = [
     shapeId: 'mountain_climber',
     prompt: 'When is this shape allowed in tumbling?',
     choices: [
-      { id: 'a', label: 'Only as a pass-through — never as the finish they hold' },
+      { id: 'a', label: 'Only as a pass-through, never as the finish they hold' },
       { id: 'b', label: 'As the finish of every cartwheel' },
       { id: 'c', label: 'As the start of a back handspring' },
       { id: 'd', label: 'Whenever they want a rest' },
@@ -70,7 +70,7 @@ const DETAILS: DetailAsk[] = [
     shapeId: 'hollow_arms_down',
     prompt: 'If the low back peels off the floor here, the first fix is:',
     choices: [
-      { id: 'a', label: 'Posterior tilt — ribs down, belt buckle toward the nose' },
+      { id: 'a', label: 'Posterior tilt, ribs down, belt buckle toward the nose' },
       { id: 'b', label: 'Reach the arms higher' },
       { id: 'c', label: 'Lift the chin and look at the toes' },
       { id: 'd', label: 'Bend the knees into a tuck' },
@@ -94,7 +94,7 @@ const DETAILS: DetailAsk[] = [
     shapeId: 'superman',
     prompt: 'This hold is the opposite of a hollow. What job are the hips doing?',
     choices: [
-      { id: 'a', label: 'Stay long and lifted — not a tumbling C' },
+      { id: 'a', label: 'Stay long and lifted' },
       { id: 'b', label: 'Posterior tilt like a hollow' },
       { id: 'c', label: 'Stack over the shoulders' },
       { id: 'd', label: 'Finish a cartwheel' },
@@ -130,7 +130,7 @@ const DETAILS: DetailAsk[] = [
     shapeId: 'candlestick',
     prompt: 'This inversion is a stack, not a sit-up. What job keeps it a candle?',
     choices: [
-      { id: 'a', label: 'Hips over shoulders, legs long — hold the line' },
+      { id: 'a', label: 'Hips over shoulders, legs long, hold the line' },
       { id: 'b', label: 'Pull the knees in to rest' },
       { id: 'c', label: 'Roll the belly toward the floor' },
       { id: 'd', label: 'Turn it into a short split stance' },
@@ -235,19 +235,19 @@ function shuffle<T>(arr: T[]): T[] {
 
 function labelFor(id: string): string {
   const cues: Record<string, string> = {
-    lunge_start: 'The fall — longer, still traveling',
-    lunge_land: 'The finish — shorter, they stuck it',
+    lunge_start: 'The fall, longer, still traveling',
+    lunge_land: 'The finish, shorter, they stuck it',
     mountain_climber: 'Only a pass-through, never a hold',
-    hollow_arms_down: 'Short lever hollow — easier to keep the back down',
-    hollow_arms_up: 'Long lever hollow — same trunk, harder hold',
+    hollow_arms_down: 'Short lever hollow, easier to keep the back down',
+    hollow_arms_up: 'Long lever hollow, same trunk, harder hold',
     candlestick: 'Long inverted stack on the shoulders',
     tucked_candle: 'Same stack, legs shortened',
     seated_pike: 'Seated hollow with a closed pike',
     pike_open_shoulders: 'Seated pike reaching the chest open',
     handstand: 'Free stacked inversion',
-    wall_handstand: 'Inversion that uses a wall — banana is the usual miss',
-    arch: 'Prone C — hips lift, back bends',
-    superman: 'Prone long — hips stay long, not a tumbling arch',
+    wall_handstand: 'Inversion that uses a wall, banana is the usual miss',
+    arch: 'Prone C, hips lift, back bends',
+    superman: 'Prone long, hips stay long, not a tumbling arch',
     zombie: 'Standing hollow',
     stand_clean: 'Quiet stand, arms pinned',
     tuck: 'Closed tuck, rounded',
@@ -277,7 +277,7 @@ function lookalikeQuestion(
   return {
     id: `s2_id_${pick.id}_${index}`,
     lessonId: pick.id,
-    prompt: 'These shapes get mixed up. What job is this still doing — not just what it looks like?',
+    prompt: 'These shapes get mixed up. What job is this still doing?',
     photoUrl: pick.photo.dataUrl,
     stillId: pick.photo.id,
     choices: shuffle(options).map((id) => ({ id, label: labelFor(id) })),

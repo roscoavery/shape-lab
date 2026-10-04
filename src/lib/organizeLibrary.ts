@@ -120,7 +120,7 @@ export async function copyClipToCollection(
   if (!url) {
     if (!clip.sourceId) return { ok: false, reason: 'That clip has no URL to copy.' }
     const blob = await getBlob(clip.sourceId)
-    if (!blob) return { ok: false, reason: 'Could not copy that file — it is not stored in this app.' }
+    if (!blob) return { ok: false, reason: 'Could not copy that file, it is not stored in this app.' }
     await putBlob(item.id, blob)
   }
 

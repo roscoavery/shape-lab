@@ -414,8 +414,8 @@ export function LessonReviewList({
       hint={`${showing.length} showing · recaps fold after a day`}
     >
       <p className="text-sm text-[var(--muted)]">
-        Recaps from the last day stay here. Older lessons stay in Older recaps — go back as far as
-        you want. Remove hides a recap without deleting the notes — it asks first, and you can
+        Recaps from the last day stay here. Older lessons stay in Older recaps, go back as far as
+        you want. Remove hides a recap without deleting the notes, it asks first, and you can
         undo.
         {canEdit
           ? ' Open one to add athlete notes, coach-only notes, or homework.'

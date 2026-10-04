@@ -96,7 +96,7 @@ export function CarePanel({
               : 'sl-btn-watch sl-btn-inline'
           }`}
         >
-          {athlete?.injuryActive ? 'I am feeling better — clear the flag' : "I'm dealing with an injury"}
+          {athlete?.injuryActive ? 'I am feeling better, clear the flag' : "I'm dealing with an injury"}
         </button>
       </div>
 
@@ -359,13 +359,13 @@ export function CarePanel({
                 onClick={onStartSession}
                 className="sl-btn-mint mt-2 rounded-xl px-4 py-3 text-sm font-bold"
               >
-                Start a session — go to homework
+                Start a session, go to homework
               </button>
             )}
             {encourageSlowReps && (
               <p className="mt-3 rounded-lg border border-[var(--accent)]/35 bg-[#102820] px-3 py-2 text-sm text-[var(--text)]">
                 You have logged 2-minute back-extension holds on three days.
-                Try slow, controlled reps in a tiny range — only if it does not
+                Try slow, controlled reps in a tiny range, only if it does not
                 make the pain worse.
               </p>
             )}

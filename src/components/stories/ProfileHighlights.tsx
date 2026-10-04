@@ -206,7 +206,7 @@ export function HighlightFromStories({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={40}
           required={!existingTitle}
-          placeholder="Highlight name — Cartwheels, Whip…"
+          placeholder="Highlight name, Cartwheels, Whip…"
           className="mt-3 w-full rounded-lg border border-[var(--panel-border)] bg-black/40 px-3 py-2 text-sm"
         />
         <div className="mt-3 max-h-56 space-y-1 overflow-y-auto">

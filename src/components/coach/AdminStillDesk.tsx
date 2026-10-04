@@ -130,7 +130,7 @@ export function AdminStillDesk({ photos, onPhotosChange }: Props) {
         {flash && <p className="mt-2 text-sm text-[var(--accent)]">{flash}</p>}
         {selected && (
           <p className="mt-2 text-sm text-[var(--text)]">
-            Selected — tap a shape name below to put it there.
+            Selected, tap a shape name below to put it there.
           </p>
         )}
       </div>
@@ -288,7 +288,7 @@ function ShapeMatchRow({
             )}
           </span>
           <span className="text-xs text-[var(--muted)]">
-            {stills.length === 0 ? 'Empty — tap to place' : `${stills.length} still${stills.length === 1 ? '' : 's'}`}
+            {stills.length === 0 ? 'Empty, tap to place' : `${stills.length} still${stills.length === 1 ? '' : 's'}`}
           </span>
         </button>
         {stills.length > 0 && (

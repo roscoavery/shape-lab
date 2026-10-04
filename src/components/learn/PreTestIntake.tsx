@@ -68,7 +68,7 @@ export function PreTestIntake({
             </button>
           )}
         </div>
-        <p className="mt-2 text-sm text-[var(--muted)]">Pictures first — name what you see.</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">Pictures first, name what you see.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {queue.length > 0 && (
             <button

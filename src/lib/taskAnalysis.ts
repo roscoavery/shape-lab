@@ -17,7 +17,7 @@ export type LiveStepSample = {
 
 function mountainClimberBackCue(score: number): string {
   return score < 62
-    ? 'Keep a long line through the back — this is a lunge, not a mountain-climber C.'
+    ? 'Keep a long line through the back, this is a lunge, not a mountain-climber C.'
     : ''
 }
 
@@ -45,7 +45,7 @@ function openShoulderWritten(score: ScoreResult, shapeId: string): string | null
   const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
   if (!sh) return null
   if (sh.score >= 85) return `Open shoulders ${sh.score}/100 on the snapshot.`
-  return `Open shoulders ${sh.score}/100 on the snapshot — ${sh.feedback || 'arms by ears'}. That is the grade from your 3-second best open; it did not block moving on.`
+  return `Open shoulders ${sh.score}/100 on the snapshot, ${sh.feedback || 'arms by ears'}. That is the grade from your 3-second best open; it did not block moving on.`
 }
 
 /** Tasks 2 review: lead with the real miss (open shoulders on lunges), not a C-back slogan. */
@@ -55,13 +55,13 @@ export function writtenCues(score: ScoreResult, shapeId: string, limit = 3): str
       .filter((c) => !c.id.startsWith('_') && c.score < 88)
       .sort((a, b) => a.score - b.score)
       .map((c) => {
-        if (c.id === 'body_line') return c.feedback || 'Push tall through the ground — one long line.'
+        if (c.id === 'body_line') return c.feedback || 'Push tall through the ground, one long line.'
         if (c.id === 'hips') return c.feedback || 'Squeeze ribs in and squeeze butt in.'
-        if (c.id === 'head') return c.feedback || 'Cover the ears — look through the eyebrows at the hands.'
+        if (c.id === 'head') return c.feedback || 'Cover the ears, look through the eyebrows at the hands.'
         if (c.id === 'feet_together') return c.feedback || 'Legs tight together.'
         if (c.id === 'toes') return c.feedback || 'Point the toes.'
         if (c.id === 'knees') return c.feedback || 'Straight knees.'
-        if (c.id === 'shoulders') return c.feedback || 'Arms covering the ears — open shoulders.'
+        if (c.id === 'shoulders') return c.feedback || 'Arms covering the ears, open shoulders.'
         if (c.id === 'elbows') return c.feedback || 'Straight elbows.'
         return c.feedback || c.label
       })
@@ -81,7 +81,7 @@ export function writtenCues(score: ScoreResult, shapeId: string, limit = 3): str
     const sh = score.criteria.find((c) => isShoulderCriterionId(c.id))
     if (sh && sh.score < 85) {
       cues.push(
-        `Open shoulders ${sh.score}/100 — ${sh.feedback || 'arms by ears'}.`,
+        `Open shoulders ${sh.score}/100, ${sh.feedback || 'arms by ears'}.`,
       )
     }
   }
@@ -113,12 +113,12 @@ export function notesForStep(sample: LiveStepSample): string {
   const shape = getShape(sample.shapeId)
   const name = shape?.name ?? sample.shapeId
   const best = sample.best
-  const tag = sample.required ? '' : ' (practice — does not block moving on)'
+  const tag = sample.required ? '' : ' (practice, does not block moving on)'
 
   if (!best || best.overall <= 5) {
     return sample.required
       ? `${name}: we did not get a clear camera read. Check the side view and try this shape again.`
-      : `${name}${tag}: no clear hit this time. Kick up to the best line you can — ribs in, butt in, ears covered.`
+      : `${name}${tag}: no clear hit this time. Kick up to the best line you can, ribs in, butt in, ears covered.`
   }
 
   const cues = weakCues(best, sample.shapeId)
@@ -183,6 +183,6 @@ export function buildTaskReport(args: {
     taskName: args.taskName,
     createdAt: new Date().toISOString(),
     steps,
-    summary: `${args.taskName}. ${reqLine}${hsLine} Read the notes below — those are the written corrections from this run.`.trim(),
+    summary: `${args.taskName}. ${reqLine}${hsLine} Read the notes below, those are the written corrections from this run.`.trim(),
   }
 }

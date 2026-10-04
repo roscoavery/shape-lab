@@ -97,7 +97,7 @@ export function CoachShapeLibrary({ signedIn, athletes, onOpenNetwork }: Props) 
         </h2>
         {athleteView ? (
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Shapes and skill references from the coaches you follow — read-only,
+            Shapes and skill references from the coaches you follow, read-only,
             in their words.
           </p>
         ) : (
@@ -182,7 +182,7 @@ export function CoachShapeLibrary({ signedIn, athletes, onOpenNetwork }: Props) 
         <section className="rounded-xl border border-[var(--accent)]/35 bg-[var(--panel)] p-4">
           <h3 className="font-semibold">Gym shape library</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            These shapes are gym-wide — Learn, homework pickers, and lesson
+            These shapes are gym-wide, Learn, homework pickers, and lesson
             assignment all see them.
           </p>
           <div className="mt-3">
@@ -350,7 +350,7 @@ function ShapeList({
                   {s.progressions.map((p) => (
                     <li key={p.id}>
                       <strong>{p.title}</strong>
-                      {p.notes ? ` — ${p.notes}` : ''}
+                      {p.notes ? `, ${p.notes}` : ''}
                     </li>
                   ))}
                 </ol>
@@ -471,7 +471,7 @@ function SkillRefEditor({
     <section className="rounded-xl border border-[var(--accent)]/35 bg-[var(--panel)] p-4">
       <h3 className="font-semibold">Skill reference video</h3>
       <p className="mt-1 text-xs text-[var(--muted)]">
-        A tumbling pass, vault, or other skill — not just a static shape. Compare
+        A tumbling pass, vault, or other skill. Compare
         can play this next to the UG library.
       </p>
       <div className="mt-3 flex flex-col gap-2">
@@ -608,7 +608,7 @@ function ShapeEditor({
         <textarea
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           rows={2}
-          placeholder="What it looks like — body position"
+          placeholder="What it looks like, body position"
           value={draft.bodyPosition}
           onChange={(e) => setDraft({ ...draft, bodyPosition: e.target.value })}
         />

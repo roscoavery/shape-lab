@@ -182,7 +182,7 @@ export function ClipOrganizeMenu({
                 <div className="mt-3 flex max-h-64 flex-col gap-1 overflow-y-auto">
                   {collections.length === 0 ? (
                     <p className="text-xs text-[var(--muted)]">
-                      No collection yet — start one below.
+                      No collection yet, start one below.
                     </p>
                   ) : (
                     collections.map((col) => (

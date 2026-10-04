@@ -56,7 +56,7 @@ export function AwayLockScreen({ user, onUnlocked, onSignedOut }: Props) {
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Type the password for {user.email}. This browser still has a signed-in
-          cookie — locking only covers this screen. Use floor mode on the shared
+          cookie, locking only covers this screen. Use floor mode on the shared
           iPad.
         </p>
         <label className="mt-4 block">

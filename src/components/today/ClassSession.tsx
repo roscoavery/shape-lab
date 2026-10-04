@@ -153,7 +153,7 @@ export function ClassSession({
               <p className="mt-2 text-sm text-white/65">
                 Pick a class you teach. Other coaches’ hours stay on their
                 desks. Search Profiles when you need someone new on the floor.
-                Ending class asks whether to write Class nights — opening
+                Ending class asks whether to write Class nights, opening
                 Start and End alone does not log anyone.
               </p>
             </div>
@@ -413,7 +413,7 @@ function ClassRollCall({
         >
           Shape test
           <span className="mt-1 block text-sm font-medium text-white/65">
-            Pick your name — that is roll too
+            Pick your name, that is roll too
           </span>
         </button>
       </div>
@@ -502,7 +502,7 @@ function LiveClass({
           </span>
           <span className="mt-1 block text-xl font-black">Names test</span>
           <span className="mt-1 block text-sm font-medium text-white/65">
-            Every kid in this hour. Goes until you get them all right — hardest names first.
+            Every kid in this hour. Goes until you get them all right, hardest names first.
           </span>
         </button>
       )}
@@ -639,7 +639,7 @@ function LiveClass({
 
       <ChalkboardPanel viewer={coach} offeringId={offering?.id} />
 
-      {/* Class clock with arcade switches — clock, hold contest, or rep counter. */}
+      {/* Class clock with arcade switches, clock, hold contest, or rep counter. */}
       <div className="flex flex-col gap-2">
         <div className="flex rounded-full border border-white/10 bg-black/30 p-1">
           <button
@@ -698,7 +698,7 @@ function LiveClass({
           Class notes
         </p>
         <p className="mt-1 text-xs text-white/55">
-          For the hour — not one athlete. Shows on the class recap.
+          For the hour. Shows on the class recap.
         </p>
         {(meeting.notes ?? []).slice(0, 4).map((note) => (
           <p key={note.id} className="mt-2 rounded-lg bg-black/25 px-3 py-2 text-sm">
@@ -767,7 +767,7 @@ function QuickAddClass({
       </p>
       <input
         className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
-        placeholder="Class type — Connections, Elevate, Reps w/ Logan"
+        placeholder="Class type, Connections, Elevate, Reps w/ Logan"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
@@ -1068,7 +1068,7 @@ function ScheduleEditor({
       </div>
       <input
         className="h-14 rounded-2xl border border-white/10 bg-black/30 px-4 text-lg"
-        placeholder="Class type — Connections, Elevate, Reps w/ Logan"
+        placeholder="Class type, Connections, Elevate, Reps w/ Logan"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />

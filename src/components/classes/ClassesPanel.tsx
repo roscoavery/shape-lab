@@ -420,7 +420,7 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            placeholder="Collage name — e.g. Monday whip drills"
+            placeholder="Collage name, e.g. Monday whip drills"
             className="mt-2 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
           />
 
@@ -483,7 +483,7 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
                         ),
                       })
                     }}
-                    placeholder="Caption — e.g. 8 reps · snap the whip"
+                    placeholder="Caption, e.g. 8 reps · snap the whip"
                     className="mt-2 w-full rounded-md border border-[var(--panel-border)] bg-[#121820] px-2 py-1.5 text-sm"
                   />
                 </li>
@@ -492,7 +492,7 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
           )}
 
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Add a panel — you can add the same clip more than once
+            Add a panel, you can add the same clip more than once
           </p>
           <input
             value={filter}
@@ -883,7 +883,7 @@ function CollageList({
                   value={shareCaption}
                   onChange={(e) => onShareCaption(e.target.value)}
                   rows={2}
-                  placeholder="Note for other coaches — reps, station, cue"
+                  placeholder="Note for other coaches, reps, station, cue"
                   className="w-full rounded-md border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
                 />
                 <div className="flex flex-wrap gap-2">

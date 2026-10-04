@@ -119,7 +119,7 @@ export function ShapeGlossary({ referencePhotos, onReferencesChange }: Props) {
         <p className="mt-2 text-sm text-[var(--muted)]">
           Every still you sent is stored in the app (pathway, hollows, zombie, pike with zombie arms, Hands, candlestick, tucked candle, tight arch).
           Extra is for learn-only positions with a picture. Arm-position drills are in the
-          Arm positions test — they are not extra photo asks.
+          Arm positions test, they are not extra photo asks.
         </p>
         <p className="mt-2 text-sm">
           {missing.length === 0 ? (
@@ -379,7 +379,7 @@ function ExtraFolder({
           Learn-only stills (not scored in Tasks)
         </h4>
         <p className="mb-3 text-xs text-[var(--muted)]">
-          Positions you photographed that are not on the Tasks pathway — they stay in the
+          Positions you photographed that are not on the Tasks pathway, they stay in the
           library for learning. Attach a replacement still if you get a clearer shot.
         </p>
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -394,7 +394,7 @@ function ExtraFolder({
                     {otherSamePositionIds(s.id)
                       .map((id) => getShape(id)?.name ?? id)
                       .join(', ')}{' '}
-                    — shared still.
+                   , shared still.
                   </p>
                 )}
                 <p className="mt-1 line-clamp-2 text-xs text-[var(--muted)]">{s.description}</p>
@@ -502,7 +502,7 @@ function AddExtraForm({ onSaved }: { onSaved: () => void }) {
           value={bodyPosition}
           onChange={(e) => setBodyPosition(e.target.value)}
           rows={2}
-          placeholder="Body position — what the finished shape is"
+          placeholder="Body position, what the finished shape is"
           className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
         />
         <textarea

@@ -164,7 +164,7 @@ export function ChalkboardPanel({
     if (!coach) return null
     return (
       <section className="rounded-2xl border border-dashed border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
-        Add a class type (name and time) under Start class — then you can pin work on its chalkboard.
+        Add a class type (name and time) under Start class, then you can pin work on its chalkboard.
       </section>
     )
   }
@@ -222,7 +222,7 @@ export function ChalkboardPanel({
               {coach
                 ? coachEdit
                   ? 'Coach edit is on. Open a reel to add notes or text, then save and close.'
-                  : 'Athlete view. Scroll only — tap Coach edit if you need to add notes or text.'
+                  : 'Athlete view. Scroll only, tap Coach edit if you need to add notes or text.'
                 : 'Scroll the board. Every clip shows the full frame.'}
             </p>
           </div>
@@ -648,7 +648,7 @@ function ChalkboardBody({
         <p className="text-sm text-[var(--muted)]">
           {inSession
             ? 'Nothing on the board yet. Post a clip, still, drill, or collage from anywhere in the app.'
-            : 'Pin a reference from Compare, Learn, drills, or collages — for every class with this name, or only this hour.'}
+            : 'Pin a reference from Compare, Learn, drills, or collages, for every class with this name, or only this hour.'}
         </p>
       ) : (
         <ul className="grid gap-3 pb-4">

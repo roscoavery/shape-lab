@@ -31,7 +31,7 @@ export function coachAthleteMessageAllowed(params: {
     return {
       ok: false,
       reason:
-        'Coaches share a reference with an athlete — or give a high five, fist bump, or like. Direct messages stay off.',
+        'Coaches share a reference with an athlete, or give a high five, fist bump, or like. Direct messages stay off.',
     }
   }
   if (!isShareableReference(url)) {

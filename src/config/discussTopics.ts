@@ -48,7 +48,7 @@ export const DISCUSS_TOPICS: DiscussTopic[] = [
   {
     id: 'physics',
     name: 'Physics in the gym',
-    blurb: 'Inertia, angular momentum, moment of inertia — in tumbling words.',
+    blurb: 'Inertia, angular momentum, moment of inertia, in tumbling words.',
   },
   {
     id: 'other',

@@ -69,7 +69,7 @@ export function QuizWho({ athletes, preset, preferredIds = [], onReady, onExit }
       <h3 className="mt-1 text-2xl font-semibold text-[var(--text)]">Who is taking this?</h3>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
         First and last name, or pick a profile. If a class is open, names from
-        that class sit at the top — tapping one also marks roll.
+        that class sit at the top, tapping one also marks roll.
       </p>
 
       <div className="mt-4 flex gap-2">

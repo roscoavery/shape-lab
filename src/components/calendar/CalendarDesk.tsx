@@ -381,7 +381,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
       location: openEvent.location,
       notes: openEvent.notes,
     })
-    setMessage('Event copied — use Tools → Paste on another slot.')
+    setMessage('Event copied, use Tools → Paste on another slot.')
     setToolsOpen(false)
   }
 

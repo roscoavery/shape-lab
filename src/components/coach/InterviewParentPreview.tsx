@@ -31,7 +31,7 @@ export function InterviewParentPreview() {
       {loading && <p className="text-sm text-[var(--muted)]">Loading the latest answers…</p>}
       {!loading && !live && (
         <p className="rounded-lg bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200/80">
-          Could not reach the gym computer — showing the saved snapshot.
+          Could not reach the gym computer, showing the saved snapshot.
         </p>
       )}
 

@@ -354,7 +354,7 @@ export function ClassStopwatch({
       })
       reset()
       setFlash(
-        `Logged ${pinned.label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+        `Logged ${pinned.label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
       )
       return
     }
@@ -382,7 +382,7 @@ export function ClassStopwatch({
     })
     reset()
     setFlash(
-      `Logged ${holdName} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
+      `Logged ${holdName}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}. It shows on their homework as in class.`,
     )
   }
 
@@ -436,7 +436,7 @@ export function ClassStopwatch({
         meetingId: meeting?.id,
       })
       reset()
-      setFlash(`Logged ${label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
+      setFlash(`Logged ${label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
       return
     }
     const nReps = Number(reps)
@@ -525,7 +525,7 @@ export function ClassStopwatch({
         weightLb: weight,
       })
       reset()
-      setFlash(`Logged ${label} — ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
+      setFlash(`Logged ${label}, ${formatSeconds(secs)} for ${n} athlete${n === 1 ? '' : 's'}.`)
       return
     }
     const nReps = Number(reps)
@@ -1422,7 +1422,7 @@ export function ClassStopwatch({
               onChange={(e) => setBigWin(e.target.checked)}
               disabled={!postWins}
             />
-            Big win — also post to the gym feed
+            Big win, also post to the gym feed
           </label>
           <button
             type="button"

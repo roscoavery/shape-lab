@@ -735,7 +735,7 @@ function VideoWorkbenchInner({
               type="button"
               onClick={markA}
               className={abOn(pointA !== null)}
-              title="Loop start — set at the current time"
+              title="Loop start, set at the current time"
             >
               A{pointA !== null ? ` ${fmt(pointA)}` : ''}
             </button>
@@ -743,7 +743,7 @@ function VideoWorkbenchInner({
               type="button"
               onClick={markB}
               className={abOn(pointB !== null)}
-              title="Loop end — set at the current time"
+              title="Loop end, set at the current time"
             >
               B{pointB !== null ? ` ${fmt(pointB)}` : ''}
             </button>

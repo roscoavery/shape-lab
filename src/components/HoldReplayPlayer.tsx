@@ -91,7 +91,7 @@ export function HoldReplayPlayer({
 
   const quickSave = async () => {
     if (!blob) {
-      setFlash('Clip is still loading — wait a moment, then tap Save again.')
+      setFlash('Clip is still loading, wait a moment, then tap Save again.')
       window.setTimeout(() => setFlash(null), 4000)
       return
     }
@@ -112,10 +112,10 @@ export function HoldReplayPlayer({
       try {
         if (await shareFileOnly(cached, filename)) {
           setQuickState('idle')
-          setFlash('On the Photos sheet — pick Save Video. This recap stays here.')
+          setFlash('On the Photos sheet, pick Save Video. This recap stays here.')
         } else {
           setQuickState('ready')
-          setFlash('Could not open the share sheet — tap again to retry.')
+          setFlash('Could not open the share sheet, tap again to retry.')
         }
       } finally {
         onSaveBusy?.(false)
@@ -153,10 +153,10 @@ export function HoldReplayPlayer({
       // never navigates away.
       if (await shareFileOnly(out, filename)) {
         setQuickState('idle')
-        setFlash('On the Photos sheet — pick Save Video. This recap stays here.')
+        setFlash('On the Photos sheet, pick Save Video. This recap stays here.')
       } else {
         setQuickState('ready')
-        setFlash('Clip is ready — tap Save video again to open the share sheet.')
+        setFlash('Clip is ready, tap Save video again to open the share sheet.')
       }
     } catch {
       setQuickState('idle')
@@ -303,7 +303,7 @@ export function HoldReplayPlayer({
 
   const save = async (withOverlay: boolean) => {
     if (!blob) {
-      setFlash('Clip is still loading — wait a moment, then tap Save again.')
+      setFlash('Clip is still loading, wait a moment, then tap Save again.')
       window.setTimeout(() => setFlash(null), 4000)
       return
     }
@@ -335,7 +335,7 @@ export function HoldReplayPlayer({
       })
       setFlash(
         result === 'shared'
-          ? 'On the Photos sheet — pick Save Video. Come back here — this recap stays.'
+          ? 'On the Photos sheet, pick Save Video. Come back here, this recap stays.'
           : saveResultMessage(result),
       )
     } catch {
@@ -427,7 +427,7 @@ export function HoldReplayPlayer({
           {saving ? 'Writing clip…' : 'Save video without overlay'}
         </button>
         <p className={`w-full text-[11px] text-[var(--muted)] ${fill ? 'px-1' : ''}`}>
-          Save video trims to the hold and burns the overlay with your save settings — the recap stays open.
+          Save video trims to the hold and burns the overlay with your save settings, the recap stays open.
           Save video without overlay saves the same trimmed hold with no overlay drawn.
         </p>
         {athleteId && (

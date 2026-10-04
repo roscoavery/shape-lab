@@ -193,7 +193,7 @@ export function StillOverlayPicker({
               ? 'border-white/20 hover:border-white/50'
               : 'border-[var(--panel-border)] hover:border-[var(--accent-dim)]'
         }`}
-        title={still.label ? `${still.name} — ${still.label}` : still.name}
+        title={still.label ? `${still.name}, ${still.label}` : still.name}
       >
         <CroppedStill
           src={still.src}
@@ -310,7 +310,7 @@ export function StillOverlayPicker({
         <div className="pointer-events-auto mx-auto max-w-[90rem] rounded-2xl border border-white/20 bg-[#0b0f14]/92 p-3 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
-              Shape overlay — tap a still, then drag it anywhere
+              Shape overlay, tap a still, then drag it anywhere
             </p>
             <button
               type="button"

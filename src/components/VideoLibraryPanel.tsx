@@ -121,7 +121,7 @@ export function VideoLibraryPanel({
                 ? `${athleteName} · `
                 : ''}
             {!classId && folder === 'lesson'
-              ? 'Lesson folder — delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
+              ? 'Lesson folder, delay cam and Compare saves from a live lesson. If they hit a good pass, trim it and save it to your skill references.'
               : !classId
                 ? 'Saved into this profile. Grouped by date.'
                 : ''}

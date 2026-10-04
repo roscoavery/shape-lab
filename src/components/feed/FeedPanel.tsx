@@ -261,13 +261,13 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
           </h2>
           <InfoHint>
             {wins
-              ? 'Spam wins. Little hits and firsts — check big win only when it should also show on the gym feed.'
-              : 'Bigger gym posts — collages, videos, and wins marked as big.'}
+              ? 'Spam wins. Little hits and firsts, check big win only when it should also show on the gym feed.'
+              : 'Bigger gym posts, collages, videos, and wins marked as big.'}
           </InfoHint>
         </div>
         {wins && (
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-            Spam wins. Log the little hits — a first, a stuck landing, a hold that
+            Spam wins. Log the little hits, a first, a stuck landing, a hold that
             finally counted. Check big win only when it should also jump to the gym feed.
           </p>
         )}
@@ -414,7 +414,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                   checked={bigWin}
                   onChange={(e) => setBigWin(e.target.checked)}
                 />
-                Big win — also post to the gym feed
+                Big win, also post to the gym feed
               </label>
             )}
             {error && <p className="text-sm text-[var(--bad)]">{error}</p>}
@@ -433,7 +433,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
       {visiblePosts.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--panel-border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
           {wins
-            ? 'No wins yet. Spam the little hits — log a skill from Today → Class clock, or write one here.'
+            ? 'No wins yet. Spam the little hits, log a skill from Today → Class clock, or write one here.'
             : 'No posts yet. A thought, a first hit of the day, or a class collage from Classes can live here.'}
         </p>
       ) : (

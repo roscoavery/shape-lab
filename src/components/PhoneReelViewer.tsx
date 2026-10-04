@@ -113,7 +113,7 @@ const ReelSection = memo(function ReelSection({
       data-tour-active={on ? 'true' : undefined}
       className="relative h-full snap-start snap-always overflow-hidden bg-black"
     >
-      {/* The video fills the whole card, like IG — no caption bar shrinking it. */}
+      {/* The video fills the whole card, like IG, no caption bar shrinking it. */}
       <div id="tour-player-video" className="absolute inset-0">
         {near ? (
           <GymClipPlayer

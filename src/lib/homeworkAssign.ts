@@ -38,16 +38,16 @@ function defaultNotes(shapeId: string): string {
     return 'Feet flat, pointed straight, feet apart, bent knees, hips up high. Spread the arch until the shoulders are open. Push-ups, back bends, hops, and rocks from this bridge.'
   }
   if (shapeId === 'side_plank') {
-    return 'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other. Top hand on the hip or up. Head in line — no dangling head, no ribs flaring, no closed hips. Straight knees if you can; or bend them and put weight on the bottom knee. Both sides. Work toward a minute.'
+    return 'Be a pencil. Forearm on the mat, elbow under the shoulder, one foot stacked on the other. Top hand on the hip or up. Head in line, no dangling head, no ribs flaring, no closed hips. Straight knees if you can; or bend them and put weight on the bottom knee. Both sides. Work toward a minute.'
   }
   if (shapeId === 'long_bridge') {
     return 'Only after rainbow-bridge shoulders are open. Straight legs together, heels flat, pushing through the toes, arms in close by the ears, chin to chest. Come down and rock it out.'
   }
   if (shapeId === 'seated_pike') {
-    return 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Snap-open drill: pike → hollow arms down → arch (supine).'
+    return 'Toes pointed, straight knees, torso upright and rounded hollow, shoulders shrug, arms covering the ears, eyes through the hands. Hands push through, wide fingers, thumbs slightly down, pinkies slightly up. Snap-open drill: pike → hollow arms down → arch (supine).'
   }
   if (shapeId === 'zombie') {
-    return 'Standing hollow, arms in front, ears covered. Hands push through — wide fingers, thumbs slightly down, pinkies slightly up. Same finish as the seated pike with zombie arms.'
+    return 'Standing hollow, arms in front, ears covered. Hands push through, wide fingers, thumbs slightly down, pinkies slightly up. Same finish as the seated pike with zombie arms.'
   }
   return ''
 }

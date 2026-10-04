@@ -77,7 +77,7 @@ function TrackEditor({
       <div className="mt-3 space-y-2.5">
         <input
           className={inputCls}
-          placeholder="Track name — e.g. New tumbling coach"
+          placeholder="Track name, e.g. New tumbling coach"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -160,7 +160,7 @@ function TrackEditor({
                     const vids = key ? TECHNIQUE_EVIDENCE[key] : undefined
                     setItem(item.id, {
                       refId: key || undefined,
-                      label: key ? `${key} — ${vids?.[0]?.who ?? 'proof video'}` : '',
+                      label: key ? `${key}, ${vids?.[0]?.who ?? 'proof video'}` : '',
                       url: vids?.[0]?.url,
                     })
                   }}
@@ -168,7 +168,7 @@ function TrackEditor({
                   <option value="">Pick a proof video…</option>
                   {evidenceKeys.map((k) => (
                     <option key={k} value={k}>
-                      {k} — {TECHNIQUE_EVIDENCE[k][0]?.who ?? ''}
+                      {k}, {TECHNIQUE_EVIDENCE[k][0]?.who ?? ''}
                     </option>
                   ))}
                 </select>
@@ -176,7 +176,7 @@ function TrackEditor({
               {item.kind === 'task' && (
                 <input
                   className={`${inputCls} mt-2`}
-                  placeholder='Free-text task — e.g. "Shadow 3 classes with Levi"'
+                  placeholder='Free-text task, e.g. "Shadow 3 classes with Levi"'
                   value={item.label}
                   onChange={(e) => setItem(item.id, { label: e.target.value })}
                 />
@@ -404,7 +404,7 @@ export function OnboardingManager({ owner, athletes }: Props) {
 
       {tracks.length === 0 && !editing && (
         <p className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4 text-sm text-[var(--muted)]">
-          No tracks yet. Build one from the skill path, proof videos, and plain tasks — then assign it to a
+          No tracks yet. Build one from the skill path, proof videos, and plain tasks, then assign it to a
           coach and watch them work through it.
         </p>
       )}

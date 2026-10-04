@@ -20,9 +20,9 @@ const CONSENT_OPTIONS: { id: ConsentState; label: string }[] = [
 ]
 
 const VISIBILITY_OPTIONS: { id: ProfileVisibility; label: string }[] = [
-  { id: 'private', label: 'Private — coaches and family only' },
-  { id: 'gym', label: 'Gym — signed-in gym members' },
-  { id: 'public', label: 'Public — anyone who can open the gym feed' },
+  { id: 'private', label: 'Private, coaches and family only' },
+  { id: 'gym', label: 'Gym, signed-in gym members' },
+  { id: 'public', label: 'Public, anyone who can open the gym feed' },
 ]
 
 type Props = {

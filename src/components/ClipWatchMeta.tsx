@@ -114,7 +114,7 @@ export function ClipWatchMeta({ url, viewer }: Props) {
       <input
         value={tags}
         onChange={(e) => setTags(e.target.value)}
-        placeholder="Tags — handstand, round-off,…"
+        placeholder="Tags, handstand, round-off,…"
         className="h-10 w-full rounded-md border border-white/10 bg-[#0d1218] px-2 text-sm"
       />
       <button

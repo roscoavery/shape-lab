@@ -52,7 +52,7 @@ const SHOTS: Record<string, string> = {
   lunge_arms_low_v: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Low V arms slightly back.',
   lunge_arms_front: 'SIDE. Landing-lunge stance (heel FLAT, closer feet). Arms forward at middle height.',
   lunge_arms_open:
-    'Same photo as landing lunge. No extra shot — this is that position (heel FLAT, open shoulders, arms by ears).',
+    'Same photo as landing lunge. No extra shot, this is that position (heel FLAT, open shoulders, arms by ears).',
   lunge_arms_t: 'FACE the camera. Landing-lunge stance (heel FLAT, closer feet). Arms in a T.',
   lunge_arms_high_v: 'FRONT or 3/4. Landing-lunge stance (heel FLAT, closer feet). High V, chest out.',
   lever:
@@ -86,7 +86,7 @@ const SHOTS: Record<string, string> = {
   superman:
     'SIDE. Two athletes on the stomach. Chin up, straight arms behind the ears, open shoulders, straight knees off the mat, feet and ankles together.',
   rainbow_bridge:
-    'SIDE. Rainbow bridge — not a straight-leg competition bridge. Feet flat, toes pointed straight ahead, feet apart, knees bent, hips up high, shoulders open over the hands. Head hangs between the arms.',
+    'SIDE. Rainbow bridge. Feet flat, toes pointed straight ahead, feet apart, knees bent, hips up high, shoulders open over the hands. Head hangs between the arms.',
   long_bridge:
     'SIDE. Long bridge after rainbow shoulders are open. Straight legs together, heels flat, pushing through the toes, arms covering the ears, chin to chest. Fingers toward the feet.',
   side_plank:

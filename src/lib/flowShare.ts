@@ -59,7 +59,7 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
     const holds = report.holdAttempts ?? []
     const longest = holds.find((h) => h.highlighted) ?? holds[0]
     const lines = [
-      'shapelab — Handstand hold challenge',
+      'shapelab, Handstand hold challenge',
       `${who}${ig}`,
       report.sequenceName,
       new Date(report.createdAt).toLocaleString(),
@@ -69,8 +69,8 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
       '',
     ]
     for (const hold of holds) {
-      const mark = hold.highlighted ? ' — longest' : ''
-      lines.push(`Hold ${hold.index}${mark} — ${holdTimeLabel(hold.holdSeconds)}`)
+      const mark = hold.highlighted ? ', longest' : ''
+      lines.push(`Hold ${hold.index}${mark}, ${holdTimeLabel(hold.holdSeconds)}`)
       if (hold.highlighted) {
         if (hold.cues.length === 0) {
           lines.push('  Line looks in on this hold. Push tall, ears covered, ribs in, legs together.')
@@ -80,12 +80,12 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
       }
       lines.push('')
     }
-    lines.push('Snapshots map the replay playhead — they are not grades.')
+    lines.push('Snapshots map the replay playhead, they are not grades.')
     lines.push('Not a gate. These are notes for next time.')
     return lines.join('\n')
   }
   const lines = [
-    'shapelab — Tasks 2 analysis',
+    'shapelab, Tasks 2 analysis',
     `${who}${ig}`,
     report.sequenceName,
     new Date(report.createdAt).toLocaleString(),
@@ -95,7 +95,7 @@ export function analysisText(report: FlowRunReport, athlete?: Athlete | null): s
     '',
   ]
   for (const step of report.steps) {
-    lines.push(`${step.rep != null ? `Handstand ${step.rep}` : step.shapeName} — ${step.overall}/100`)
+    lines.push(`${step.rep != null ? `Handstand ${step.rep}` : step.shapeName}, ${step.overall}/100`)
     if (step.cues.length === 0) {
       lines.push('  Lines look in on this snapshot.')
     } else {

@@ -133,7 +133,7 @@ export function GoalPathView({ goal, onGoalChange, defaultOpen = false }: Props)
         <div className="border-t border-[var(--panel-border)] px-3 pb-3 pt-2">
           {!skill && (
             <p className="text-xs leading-relaxed text-[var(--muted)]">
-              This hope isn&apos;t linked to a guide yet — your coach can link it under Skill paths.
+              This hope isn&apos;t linked to a guide yet, your coach can link it under Skill paths.
             </p>
           )}
           {skill && items.length === 0 && customSteps.length === 0 && (

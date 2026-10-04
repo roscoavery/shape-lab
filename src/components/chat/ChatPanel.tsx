@@ -69,7 +69,7 @@ const SECTION_LABELS: Record<SkillCardSection, string> = {
 
 function linkLabel(link: ChatLink, title: string): string {
   if (link.kind === 'skill') {
-    const base = title.split(' — ')[0]
+    const base = title.split(', ')[0]
     return link.section ? `Open ${base} · ${SECTION_LABELS[link.section]}` : `Open ${base}`
   }
   if (link.kind === 'clip') return 'Open video'
@@ -98,8 +98,8 @@ const SUGGESTIONS: Record<SuggestionBucket, string[]> = {
 }
 
 const INTRO_COPY: Record<SuggestionBucket, string> = {
-  coach: 'Ask about technique, spotting, or drills — or tell me to add a drill to a skill path, like "add candlestick drill to my roundoff path".',
-  athlete: 'Ask about technique or drills — like "what drills help my back handspring?"',
+  coach: 'Ask about technique, spotting, or drills, or tell me to add a drill to a skill path, like "add candlestick drill to my roundoff path".',
+  athlete: 'Ask about technique or drills, like "what drills help my back handspring?"',
   parent: "Ask about your athlete's training, progress, or how to support them at home.",
 }
 

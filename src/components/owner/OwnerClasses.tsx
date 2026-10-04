@@ -82,7 +82,7 @@ export function OwnerClasses({ athletes, ownerId }: Props) {
         <div className="mt-3 space-y-2.5">
           <input
             className={inputCls}
-            placeholder="Class name — e.g. Advanced tumbling"
+            placeholder="Class name, e.g. Advanced tumbling"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -96,7 +96,7 @@ export function OwnerClasses({ athletes, ownerId }: Props) {
             </select>
             <input
               className={inputCls}
-              placeholder="Time — e.g. 5:00 PM"
+              placeholder="Time, e.g. 5:00 PM"
               value={time}
               onChange={(e) => setTime(e.target.value)}
             />
@@ -185,7 +185,7 @@ export function OwnerClasses({ athletes, ownerId }: Props) {
 
       {offerings.length === 0 && (
         <p className="rounded-2xl border border-[var(--panel-border)] bg-[#0d1614] p-4 text-sm text-[var(--muted)]">
-          No classes yet. Add one and assign coaches — it shows up on their Today view under "My classes".
+          No classes yet. Add one and assign coaches, it shows up on their Today view under "My classes".
         </p>
       )}
     </div>

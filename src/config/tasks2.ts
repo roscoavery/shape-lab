@@ -932,7 +932,7 @@ function coreHomeClass(): FlowBeat[] {
   beats.push(...holdCountThirty())
   beats.push({
     speak:
-      'That is home core. Work those holds up to a minute — side plank, Superman, and hollow.',
+      'That is home core. Work those holds up to a minute, side plank, Superman, and hollow.',
     pauseMs: 900,
     replayEnd: true,
   })
@@ -957,7 +957,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: 'LG LV HS LG (NON Cartwheel side)',
     nickname: 'LG LV HS LG',
     description:
-      'Same sequence on the non-cartwheel side. Open shoulders often get harder here — extra effort. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate.',
+      'Same sequence on the non-cartwheel side. Open shoulders often get harder here, extra effort. Side view. Stand clean before we start. After clean you get a fullscreen replay. Not a gate.',
     previewSpeak: 'This sequence is lunge, lever, handstand, lunge. Non cartwheel side.',
     setupSpeak: 'Side view. Stand clean. Stay clean until we start.',
     setupExtraSpeak:
@@ -1021,7 +1021,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     name: 'MC HS LG (Assisted)',
     nickname: 'MC HS LG',
     description:
-      'Spotted handstand. A coach, friend, or parent can catch the first straight leg, then pull the feet together. Mountain climber, handstand, landing lunge. Analysis is the handstand only — you are not graded on the lunge. Replay is mountain climber through landing lunge. Not a gate.',
+      'Spotted handstand. A coach, friend, or parent can catch the first straight leg, then pull the feet together. Mountain climber, handstand, landing lunge. Analysis is the handstand only, you are not graded on the lunge. Replay is mountain climber through landing lunge. Not a gate.',
     previewSpeak:
       'This is an assisted handstand sequence, allowing more focus on the details of the handstand.',
     setupSpeak:
@@ -1059,12 +1059,12 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     nickname: 'Hold challenge',
     mode: 'hs-hold',
     description:
-      'One-person hold-time challenge. Walking on the hands is allowed — try not to. The clock starts when you are in a handstand and stops when a foot hits the ground. As many tries as you want. The app trims each hold, highlights your longest, and writes form cues. Snapshots map the replay — they are not grades. Not a gate.',
+      'One-person hold-time challenge. Walking on the hands is allowed, try not to. The clock starts when you are in a handstand and stops when a foot hits the ground. As many tries as you want. The app trims each hold, highlights your longest, and writes form cues. Snapshots map the replay, they are not grades. Not a gate.',
     previewSpeak: 'Ready to challenge your handstand hold time?',
     setupSpeak:
       'Handstand walking is allowed, but try not to walk. Start clean. Hit a mountain climber and hit a handstand when you are ready, and hold for as long as you can.',
     setupExtraSpeak:
-      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+      'You get as many tries as you want. Tap Done when you are finished, I will trim each hold and keep your longest.',
     setupShapeId: 'handstand',
     holdShapeId: 'handstand',
     previewShapes: [
@@ -1080,12 +1080,12 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     mode: 'quality-hold',
     holdShapeId: 'lunge_start',
     description:
-      'Quality lunge hold. Pick starting lunge or landing lunge. The clock starts when the lunge is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
+      'Quality lunge hold. Pick starting lunge or landing lunge. The clock starts when the lunge is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay, they are not grades. Not a gate.',
     previewSpeak: 'Ready to hold a quality lunge? Pick starting or landing.',
     setupSpeak:
       'Start in a clean lunge. Front knee over the ankle, back leg long, hips square. Hold when you are ready.',
     setupExtraSpeak:
-      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+      'You get as many tries as you want. Tap Done when you are finished, I will trim each hold and keep your longest.',
     setupShapeId: 'lunge_start',
     previewShapes: [{ shapeId: 'lunge_start', label: 'LG' }],
     reviewShapeIds: ['lunge_start'],
@@ -1098,12 +1098,12 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
     mode: 'quality-hold',
     holdShapeId: 'lever',
     description:
-      'Quality lever hold. The clock starts when the lever is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay — they are not grades. Not a gate.',
+      'Quality lever hold. The clock starts when the lever is good enough to hold and stops when you come out. As many tries as you want. Snapshots map the replay, they are not grades. Not a gate.',
     previewSpeak: 'Ready to hold a quality lever?',
     setupSpeak:
       'Open to a lever. Shoulders over hands, hips stacked, legs tight. Hold when you are ready.',
     setupExtraSpeak:
-      'You get as many tries as you want. Tap Done when you are finished — I will trim each hold and keep your longest.',
+      'You get as many tries as you want. Tap Done when you are finished, I will trim each hold and keep your longest.',
     setupShapeId: 'lever',
     previewShapes: [{ shapeId: 'lever', label: 'LV' }],
     reviewShapeIds: ['lever'],
@@ -1134,7 +1134,7 @@ export const FLOW_SEQUENCES: FlowSequence[] = [
       'Pike, hollow, arch. Inch back to hollow, then snap open to the arch.',
     setupSpeak: 'Side view. Sit in a pike with zombie arms.',
     setupExtraSpeak:
-      'Inch back to hollow until the lower back is flat, bringing arms in close to the body. Then snap open to the arch — arms all the way back, hips up, straight knees, ankles together with pointed toes.',
+      'Inch back to hollow until the lower back is flat, bringing arms in close to the body. Then snap open to the arch, arms all the way back, hips up, straight knees, ankles together with pointed toes.',
     setupShapeId: 'seated_pike',
     previewShapes: [
       { shapeId: 'seated_pike', label: 'Pike' },

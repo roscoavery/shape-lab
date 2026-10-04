@@ -183,10 +183,10 @@ function bestHoldSeconds(logs: HomeworkLog[], side?: 'left' | 'right'): number {
 }
 
 function beatNote(seconds: number, last: number | null): string {
-  if (last == null) return ' — first logged hold for this drill'
-  if (seconds > last) return ` — beat last time (${formatSeconds(last)})`
-  if (seconds === last) return ' — matched last time'
-  return ` — last time was ${formatSeconds(last)}`
+  if (last == null) return ', first logged hold for this drill'
+  if (seconds > last) return `, beat last time (${formatSeconds(last)})`
+  if (seconds === last) return ', matched last time'
+  return `, last time was ${formatSeconds(last)}`
 }
 
 function TimeToBeatBanner({
@@ -199,7 +199,7 @@ function TimeToBeatBanner({
   if (seconds == null) {
     return (
       <p className="rounded-md bg-[#1a2218] px-2.5 py-2 text-xs text-[var(--muted)]">
-        First hold on this drill — this time becomes the mark to beat.
+        First hold on this drill, this time becomes the mark to beat.
       </p>
     )
   }
@@ -950,7 +950,7 @@ export function HomeworkPanel({
     if (!athleteId || !activeItem) return
     if (logLockRef.current) return
     if (hold.totalHoldSeconds < 0.5) {
-      showFlash('Nothing to log yet — hold the shape first.')
+      showFlash('Nothing to log yet, hold the shape first.')
       return
     }
     const isPlank = activeItem.shapeId === 'side_plank'
@@ -984,8 +984,8 @@ export function HomeworkPanel({
     )
     showFlash(
       suspendWrites
-        ? `Guest try — ${shapeName} ${formatSeconds(log.totalHoldSeconds)}, not logged`
-        : `Logged ${shapeName} — ${formatSeconds(log.totalHoldSeconds)}${beatNote(log.totalHoldSeconds, prior)}`,
+        ? `Guest try, ${shapeName} ${formatSeconds(log.totalHoldSeconds)}, not logged`
+        : `Logged ${shapeName}, ${formatSeconds(log.totalHoldSeconds)}${beatNote(log.totalHoldSeconds, prior)}`,
     )
   }
 
@@ -1067,14 +1067,14 @@ export function HomeworkPanel({
     const shapeName = homeworkTitle(item)
     showFlash(
       suspendWrites
-        ? `Guest try — ${shapeName} ${formatSeconds(secs)}, not logged`
-        : `Logged ${shapeName} — ${formatSeconds(secs)}${beatNote(secs, prior)}`,
+        ? `Guest try, ${shapeName} ${formatSeconds(secs)}, not logged`
+        : `Logged ${shapeName}, ${formatSeconds(secs)}${beatNote(secs, prior)}`,
     )
   }
 
   const changeStandard = (item: HomeworkItem, value: string | number) => {
     if (suspendWrites) {
-      showFlash('Guest try — nothing is saved.')
+      showFlash('Guest try, nothing is saved.')
       return
     }
     const v = Number(value)
@@ -1117,7 +1117,7 @@ export function HomeworkPanel({
       return
     }
     if (suspendWrites) {
-      showFlash('Guest try — nothing is saved.')
+      showFlash('Guest try, nothing is saved.')
       return
     }
     setItems(addHomeworkItem(item))
@@ -1156,7 +1156,7 @@ export function HomeworkPanel({
       createdAt: new Date().toISOString(),
     }
     if (suspendWrites) {
-      showFlash('Guest try — nothing is saved.')
+      showFlash('Guest try, nothing is saved.')
       return item
     }
     setItems(addHomeworkItem(item))
@@ -1254,8 +1254,8 @@ export function HomeworkPanel({
     const together = input.holdSeconds && input.reps ? ' in one log' : ''
     showFlash(
       suspendWrites
-        ? `Guest try — ${bits.join(' + ')}${together}, not logged`
-        : `Logged ${homeworkTitle(item)} — ${bits.join(' + ')}${together}`,
+        ? `Guest try, ${bits.join(' + ')}${together}, not logged`
+        : `Logged ${homeworkTitle(item)}, ${bits.join(' + ')}${together}`,
     )
   }
 
@@ -1306,13 +1306,13 @@ export function HomeworkPanel({
     if (!updated) return
     setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
     if (activeItemId === updated.id) onRequestShape(updated.shapeId)
-    showFlash('Leveled up — Hollow is now trained with arms up!')
+    showFlash('Leveled up, Hollow is now trained with arms up!')
   }
 
   const removeItem = (item: HomeworkItem) => {
     if (item.source === 'auto') return
     if (suspendWrites) {
-      showFlash('Guest try — nothing is saved.')
+      showFlash('Guest try, nothing is saved.')
       return
     }
     removeHomeworkItem(item.id)
@@ -1412,7 +1412,7 @@ export function HomeworkPanel({
           </span>
           <span className="mt-1 block text-xl font-bold tracking-tight">Pick a drill</span>
           <span className="mt-1 block text-sm text-[var(--muted)]">
-            {visibleItems.length} drill{visibleItems.length === 1 ? '' : 's'} — tap one to train full screen.
+            {visibleItems.length} drill{visibleItems.length === 1 ? '' : 's'}, tap one to train full screen.
           </span>
         </button>
         <button
@@ -1484,7 +1484,7 @@ export function HomeworkPanel({
         onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
         onRemove={(id) => {
           if (suspendWrites) {
-            showFlash('Guest try — nothing is saved.')
+            showFlash('Guest try, nothing is saved.')
             return
           }
           removeHomeworkLog(id)
@@ -1711,7 +1711,7 @@ export function HomeworkPanel({
               onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
               onRemove={(id) => {
                 if (suspendWrites) {
-                  showFlash('Guest try — nothing is saved.')
+                  showFlash('Guest try, nothing is saved.')
                   return
                 }
                 removeHomeworkLog(id)
@@ -1744,8 +1744,8 @@ export function HomeworkPanel({
               {currentShapeId === activeShape.id
                 ? sessionTiming
                   ? inShape
-                    ? 'In the shape — clock is running'
-                    : 'Camera on — clock starts when you hit the shape'
+                    ? 'In the shape, clock is running'
+                    : 'Camera on, clock starts when you hit the shape'
                   : cameraPromptCue('homework')
                 : 'Switching camera to this shape…'}
             </p>
@@ -1803,7 +1803,7 @@ export function HomeworkPanel({
               <span className="text-[var(--warn)]">voice unavailable</span>
             )}
             {!voiceEnabled && (
-              <span>Voice tips off — enable “Voice” in the camera bar</span>
+              <span>Voice tips off, enable “Voice” in the camera bar</span>
             )}
           </div>
           {activeItem.targetSeconds ? (
@@ -1944,7 +1944,7 @@ export function HomeworkPanel({
           title="Tap a drill to train full screen"
           onDone={() => setHwPage('home')}
         >
-      {/* Homework items — coach assignments first so the athlete sees them */}
+      {/* Homework items, coach assignments first so the athlete sees them */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           {showAssignedBanner ? (
@@ -2103,7 +2103,7 @@ export function HomeworkPanel({
                 onLogsChange={() => setLogs(loadHomeworkLogs(athleteId ?? undefined))}
                 onRemove={(id) => {
                   if (suspendWrites) {
-                    showFlash('Guest try — nothing is saved.')
+                    showFlash('Guest try, nothing is saved.')
                     return
                   }
                   removeHomeworkLog(id)
@@ -2140,7 +2140,7 @@ export function HomeworkPanel({
                     />
                   </div>
                   <p className="mb-1.5 text-[11px] text-[var(--muted)]">
-                    Manual entry — no form check, only total time. Use the
+                    Manual entry, no form check, only total time. Use the
                     camera when you can for proper-hold tracking.
                   </p>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -2223,7 +2223,7 @@ export function HomeworkPanel({
                     <>
                       <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
                         <span>
-                          Stage 1 of 2 — arms down · best proper hold{' '}
+                          Stage 1 of 2, arms down · best proper hold{' '}
                           <span className="text-[var(--text)]">
                             {formatSeconds(bestProper)}
                           </span>{' '}
@@ -2266,7 +2266,7 @@ export function HomeworkPanel({
                     </>
                   ) : (
                     <p className="text-[11px] text-[var(--good)]">
-                      ✓ Stage 2 of 2 — arms up (leveled up
+                      ✓ Stage 2 of 2, arms up (leveled up
                       {item.progressedAt
                         ? ` ${new Date(item.progressedAt).toLocaleDateString()}`
                         : ''}
@@ -2322,7 +2322,7 @@ export function HomeworkPanel({
                 onClick={() => setHwPage('add')}
                 className="w-full rounded-xl border border-dashed border-[var(--accent)]/40 bg-[#102820] px-3 py-3 text-left text-sm font-semibold text-[var(--accent)]"
               >
-                Want something else? Add homework — other exercises
+                Want something else? Add homework, other exercises
               </button>
             )}
             </Fragment>

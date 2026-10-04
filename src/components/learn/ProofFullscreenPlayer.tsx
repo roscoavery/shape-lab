@@ -344,7 +344,7 @@ function AdjustPanel({
             {draft.crop ? (
               <span className="text-xs text-emerald-300">Crop set ✓</span>
             ) : (
-              <span className="text-xs text-white/50">No crop — full frame shows</span>
+              <span className="text-xs text-white/50">No crop, full frame shows</span>
             )}
             {draft.crop && (
               <button

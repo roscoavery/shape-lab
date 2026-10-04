@@ -38,7 +38,7 @@ export function SkillPathPreview({ goals, coachView = false }: Props) {
             <h4 className="mt-1 text-base font-bold">{goal.label}</h4>
             {goal.surface ? (
               <p className="mt-0.5 text-xs text-[var(--muted)]">
-                This hope on {surfaceLabel(goal.surface)} — same skill, surface is the spec.
+                This hope on {surfaceLabel(goal.surface)}, same skill, surface is the spec.
               </p>
             ) : null}
             {skill?.note && (

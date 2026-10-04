@@ -235,7 +235,7 @@ export function LessonWorkspace({
         )}
         <p className="mt-1 text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
-          Leave the app if you need to — this lesson stays open until you End lesson.
+          Leave the app if you need to, this lesson stays open until you End lesson.
         </p>
         <div className="mt-3">
           <LessonTimesFields session={session} onChange={onSessionChange} />
@@ -267,7 +267,7 @@ export function LessonWorkspace({
           <h3 className="text-lg font-semibold">{plan.title}</h3>
           {plan.blocks.length === 0 ? (
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Clock extras only — {plan.extraExercises?.map((ex) => ex.label).join(', ')}
+              Clock extras only, {plan.extraExercises?.map((ex) => ex.label).join(', ')}
             </p>
           ) : (
             <ol className="mt-3 flex flex-col gap-2">
@@ -472,7 +472,7 @@ export function LessonWorkspace({
             Hold history & homework logs
           </summary>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            What {people.length > 1 ? 'these athletes have' : `${athleteName} has`} logged before —
+            What {people.length > 1 ? 'these athletes have' : `${athleteName} has`} logged before,
             last times and longest holds live here.
           </p>
           <div className="mt-2 space-y-4">
@@ -660,7 +660,7 @@ export function LessonWorkspace({
         <p className="text-sm text-[var(--muted)]">
           Pick who can see each note. Athlete notes show on their recap. Coach-only
           stays with you
-          {people.length > 1 ? ' — notes land on every athlete in this lesson' : ''}.
+          {people.length > 1 ? ', notes land on every athlete in this lesson' : ''}.
         </p>
         <div className="mt-3">
           <LessonNoteBar

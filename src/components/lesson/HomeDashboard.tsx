@@ -423,8 +423,8 @@ export function HomeDashboard({
             </p>
           ) : (
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Homework lives under Practice. Lessons your coach ran — notes, hold
-              times, and videos — show here.
+              Homework lives under Practice. Lessons your coach ran, notes, hold
+              times, and videos, show here.
             </p>
           )}
           {onOpenProfile && (
@@ -598,7 +598,7 @@ export function HomeDashboard({
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Start lesson is who you are with, one athlete or several. Start class is
             the hour you are teaching, so shape-test names and homework land on that
-            roster. Start school and Start camp open those lists — kids stay off the
+            roster. Start school and Start camp open those lists, kids stay off the
             gym desk. The chalkboard for a class opens on this page without taking
             it over.
           </p>
@@ -613,7 +613,7 @@ export function HomeDashboard({
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {liveClass.attendees.length} marked here tonight. End class asks
-              whether to write Class nights — it does not log the roster by itself.
+              whether to write Class nights, it does not log the roster by itself.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -641,7 +641,7 @@ export function HomeDashboard({
             <p className="mt-1 text-xl font-bold text-[var(--text)]">{liveLessonNames}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {liveLesson.holds.length} hold{liveLesson.holds.length === 1 ? '' : 's'} already
-              logged. Come back anytime — End lesson writes the recap.
+              logged. Come back anytime, End lesson writes the recap.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -1312,7 +1312,7 @@ export function HomeDashboard({
         viewer={signedIn}
         canEdit
         title="Recap of lessons"
-        emptyText="When you end a lesson, it lands here — athlete notes, coach-only notes, videos, and homework."
+        emptyText="When you end a lesson, it lands here, athlete notes, coach-only notes, videos, and homework."
         onChanged={() => setRefresh((n) => n + 1)}
         onAthletesChange={onAthletesChange}
         onViewProfile={onViewProfile}

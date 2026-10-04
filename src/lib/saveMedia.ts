@@ -242,7 +242,7 @@ export async function shareFileOnly(blob: Blob, filename: string): Promise<boole
 export function saveResultMessage(result: SaveVideoResult, kind: 'video' | 'pack' = 'video'): string {
   if (result === 'shared') {
     return isAppleMobile()
-      ? 'On the Photos sheet — pick Save Video. This recap stays open.'
+      ? 'On the Photos sheet, pick Save Video. This recap stays open.'
       : isAndroid()
         ? 'Save the video to Gallery. This recap stays open.'
         : 'Save the video to Photos or Files. This recap stays open.'

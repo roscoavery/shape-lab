@@ -107,7 +107,7 @@ export function SkillPathBuilder({
           </p>
           {unscopedEdit && (
             <p className="mt-1 rounded-lg border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-[11px] text-amber-100">
-              Editing the default system directly — changes affect everyone.
+              Editing the default system directly, changes affect everyone.
             </p>
           )}
         </div>
@@ -317,7 +317,7 @@ function SkillEditor({
 
       <Section
         title="Guide content"
-        hint="What the Learn card says. Edit the words directly — nothing here is generated."
+        hint="What the Learn card says. Edit the words directly, nothing here is generated."
       >
         <StringList
           label="Needs"
@@ -386,7 +386,7 @@ function SkillEditor({
       <ConditioningEditor editable={editable} />
       <PowerDownEditor editable={editable} coachId={coachId} />
 
-      <Section title="Where to work it" hint="Spot, tramp, dead mat — what the next coach should see.">
+      <Section title="Where to work it" hint="Spot, tramp, dead mat, what the next coach should see.">
         <StringList
           label="Places"
           items={editable.local?.workWhere ?? []}
@@ -683,7 +683,7 @@ function PowerDownEditor({
   return (
     <Section
       title="Power-down steps"
-      hint="Regressions of this skill, easiest first — the ladder back down."
+      hint="Regressions of this skill, easiest first, the ladder back down."
     >
       {steps.length === 0 && <p className="text-sm text-white/50">No steps on file yet.</p>}
       <ul className="space-y-1.5">
@@ -748,7 +748,7 @@ function ResetSection({ onReset }: { onReset: () => void }) {
   return (
     <Section
       title="Reset"
-      hint="Drop your local edits for this skill — aliases, track, guide words, and notes go back to the shared version. Prerequisites and conditioning stay."
+      hint="Drop your local edits for this skill, aliases, track, guide words, and notes go back to the shared version. Prerequisites and conditioning stay."
     >
       {!confirming ? (
         <button

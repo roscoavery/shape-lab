@@ -117,7 +117,7 @@ export function StillCropEditor({
       setDraft(null)
       setFlash(crop ? 'Display crop saved into the app.' : 'Full photo restored.')
     } catch {
-      setFlash('Could not save — keep the Shape Lab server running.')
+      setFlash('Could not save, keep the Shape Lab server running.')
     } finally {
       setBusy(false)
     }
@@ -220,7 +220,7 @@ export function StillCropEditor({
           {editing && (
             <p className="w-full text-[10px] leading-snug text-[var(--muted)]">
               Press one corner of what should stay on screen, drag to the opposite
-              corner. That clips the edges — the picture is not stretched.
+              corner. That clips the edges, the picture is not stretched.
             </p>
           )}
         </div>

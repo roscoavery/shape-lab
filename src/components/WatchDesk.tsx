@@ -86,7 +86,7 @@ export function WatchDesk({ user }: Props) {
           and feed / consent / stills from this browser carry a gym mark so
           another site cannot send them. A new sign-in on the same email ends
           the last one. Session ids stay on the server. Roster saves stay off
-          this list unless you turn them on — the gym writes that file often.
+          this list unless you turn them on, the gym writes that file often.
         </p>
       </section>
 

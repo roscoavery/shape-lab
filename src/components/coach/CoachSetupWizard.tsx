@@ -280,7 +280,7 @@ export function CoachSetupWizard({
       await navigator.clipboard.writeText(keySecret)
       setCopied(true)
     } catch {
-      setKeyError('Copy failed — long-press the key to copy it manually.')
+      setKeyError('Copy failed, long-press the key to copy it manually.')
     }
   }
 
@@ -331,7 +331,7 @@ export function CoachSetupWizard({
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4 py-2">
           {resumed && step === 0 && (
             <p className="rounded-xl border border-[#6ec8d6]/30 bg-[#6ec8d6]/10 px-3 py-2.5 text-xs text-white/80">
-              Picked up where you left off — nothing was lost.
+              Picked up where you left off, nothing was lost.
             </p>
           )}
           {smallScreen && step === 0 && (
@@ -347,7 +347,7 @@ export function CoachSetupWizard({
             <>
               <h2 className="text-xl font-bold">Name your coaching system</h2>
               <p className="text-sm text-white/60">
-                This is your own space — your skill cards, drills, and maps live here, separate from everyone
+                This is your own space, your skill cards, drills, and maps live here, separate from everyone
                 else's.
               </p>
               <label className="block">
@@ -387,7 +387,7 @@ export function CoachSetupWizard({
             <>
               <h2 className="text-xl font-bold">Pick your first skill</h2>
               <p className="text-sm text-white/60">
-                Start with one card. Adopting copies it into your system — your edits never change the original.
+                Start with one card. Adopting copies it into your system, your edits never change the original.
               </p>
               {!creatingSkill && (
                 <>
@@ -427,7 +427,7 @@ export function CoachSetupWizard({
                         </button>
                       ))}
                       {searchHits.length === 0 && (
-                        <p className="text-xs text-white/50">No matches — try another name, or create it below.</p>
+                        <p className="text-xs text-white/50">No matches, try another name, or create it below.</p>
                       )}
                     </div>
                   )}
@@ -526,7 +526,7 @@ export function CoachSetupWizard({
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-white/45">Nothing to add yet? Skip ahead — drills can wait.</p>
+              <p className="text-xs text-white/45">Nothing to add yet? Skip ahead, drills can wait.</p>
             </>
           )}
 
@@ -534,7 +534,7 @@ export function CoachSetupWizard({
             <>
               <h2 className="text-xl font-bold">Who can see your map?</h2>
               <p className="text-sm text-white/60">
-                You set this per map and per card. Start private — open it up whenever you're ready.
+                You set this per map and per card. Start private, open it up whenever you're ready.
               </p>
               <div className="flex flex-col gap-2">
                 {(Object.keys(VISIBILITY_LABELS) as SystemVisibility[]).map((v) => (
@@ -565,7 +565,7 @@ export function CoachSetupWizard({
               <h2 className="text-xl font-bold">Connect your Muse</h2>
               <p className="text-sm text-white/60">
                 Drop drill videos, references, and card info into your own Muse and it files them straight into
-                your map. Generate your coach key below — it's shown once, so save it somewhere safe.
+                your map. Generate your coach key below, it's shown once, so save it somewhere safe.
               </p>
               <div className="rounded-xl border border-white/10 bg-black/25 p-3">
                 <p className="text-xs font-semibold text-white/70">What this key can do</p>
@@ -586,7 +586,7 @@ export function CoachSetupWizard({
                 </>
               ) : (
                 <div className="flex flex-col gap-2 rounded-xl border border-emerald-300/30 bg-emerald-300/10 p-3">
-                  <p className="text-xs font-bold text-emerald-100">Your key (shown once — copy it now)</p>
+                  <p className="text-xs font-bold text-emerald-100">Your key (shown once, copy it now)</p>
                   <p className="break-all rounded-lg bg-black/40 p-2 font-mono text-xs text-white">{keySecret}</p>
                   <div className="flex gap-2">
                     <button
@@ -610,8 +610,8 @@ export function CoachSetupWizard({
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <p className="text-sm font-bold">Rather build inside the app?</p>
                 <p className="mt-1 text-xs text-white/60">
-                  Open Ask and tell it what to add — for example, "add candlestick drill to my roundoff
-                  path" — and it files the drill onto your card.
+                  Open Ask and tell it what to add, for example, "add candlestick drill to my roundoff
+                  path", and it files the drill onto your card.
                 </p>
                 <button
                   type="button"
@@ -653,7 +653,7 @@ export function CoachSetupWizard({
             onClick={finish}
             className="flex-1 rounded-xl bg-[#6ec8d6] px-4 py-3 text-sm font-black text-black"
           >
-            Finish — open my system
+            Finish, open my system
           </button>
         )}
       </footer>
