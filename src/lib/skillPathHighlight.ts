@@ -18,7 +18,10 @@ import {
   type ConditioningNeed,
 } from './skillPaths'
 import { getRegistrySkill } from './skillRegistry'
-import { keyHelperCombosFor } from '../config/skillKeyHelpers'
+import {
+  keyHelperCombosForTarget,
+  subscribeKeyHelpers,
+} from './keyHelperOverrides'
 
 /** Prerequisite needs for a skill, including rows keyed to consolidated ids. */
 export function needsForSkillConsolidated(skillId: string) {
@@ -112,7 +115,7 @@ export function buildPathHighlight(
   for (const d of required.values()) {
     if (d > maxDist) maxDist = d
   }
-  const combos = keyHelperCombosFor(target, (id) => !!getRegistrySkill(id))
+  const combos = keyHelperCombosForTarget(target, (id) => !!getRegistrySkill(id))
   const comboIdx =
     combos.length > 0 ? Math.min(Math.max(opts?.comboIdx ?? 0, 0), combos.length - 1) : 0
   return {
@@ -132,6 +135,7 @@ export function buildPathHighlight(
 export function usePathTick(): number {
   const [tick, setTick] = useState(0)
   useEffect(() => subscribeSkillPaths(() => setTick((t) => t + 1)), [])
+  useEffect(() => subscribeKeyHelpers(() => setTick((t) => t + 1)), [])
   return tick
 }
 

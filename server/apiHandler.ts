@@ -96,6 +96,7 @@ import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore.ts'
 import { readDeskMessagesFile, writeDeskMessagesFile } from './deskMessagesStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
+import { keyHelpersForClient, saveKeyHelperOverride } from './keyHelperStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
   addHighlight,
@@ -220,6 +221,7 @@ const API_PATHS = new Set([
   '/api/feed',
   '/api/feed-file',
   '/api/notices',
+  '/api/key-helpers',
   '/api/research',
   '/api/social',
   '/api/discuss',
@@ -1606,6 +1608,28 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET, POST, or PUT' })
+    return true
+  }
+  if (path === '/api/key-helpers') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, { kind: 'shape-lab-key-helpers', helpers: await keyHelpersForClient() })
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = (JSON.parse(await readRequestBody(req)) ?? {}) as {
+        target?: unknown
+        combos?: unknown
+        reset?: unknown
+      }
+      const saved = await saveKeyHelperOverride(body.target, body.combos, body.reset === true)
+      if (!saved) {
+        sendJson(res, 400, { error: 'Could not save those key helpers.' })
+        return true
+      }
+      sendJson(res, 200, { kind: 'shape-lab-key-helpers', helpers: saved })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
     return true
   }
   if (path === '/api/library') {

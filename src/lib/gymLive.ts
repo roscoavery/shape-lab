@@ -9,6 +9,7 @@ import { hydrateCoachContent } from './coachContentStore'
 import { hydrateCoachStills } from './coachStillStore'
 import { hydrateIgStills } from './igStillStore'
 import { hydrateLessons } from './lessonStore'
+import { hydrateKeyHelpers } from './keyHelperOverrides'
 import { listFeedPosts } from './feedPosts'
 import { loadNotices } from './notify'
 import {
@@ -35,6 +36,7 @@ export type GymRevisionStores = {
   stills: string
   igStills: string
   lessons: string
+  keyHelpers: string
 }
 
 let last: GymRevisionStores | null = null
@@ -125,6 +127,9 @@ export async function syncGymIfChanged(
     }
     if (!prev || (prev.lessons ?? '') !== (rev.lessons ?? '')) {
       jobs.push(hydrateLessons())
+    }
+    if (!prev || (prev.keyHelpers ?? '') !== (rev.keyHelpers ?? '')) {
+      jobs.push(hydrateKeyHelpers())
     }
     await Promise.allSettled(jobs)
     void flushLocalPhotos()

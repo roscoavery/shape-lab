@@ -138,11 +138,6 @@ export function AthleteHome({
         <AthleteFoundation athlete={athlete} />
       </CollapsibleSection>
       </div>
-      <div id="tour-athlete-bests">
-      <CollapsibleSection title="Gym bests">
-        <AthleteLeaderboards athlete={athlete} />
-      </CollapsibleSection>
-      </div>
       <button
         id="tour-athlete-shapes"
         type="button"
@@ -247,6 +242,11 @@ export function AthleteProgress({ athlete }: Props) {
           {tests.length === 0 && <li className="text-[var(--muted)]">No shape tests on file.</li>}
         </ul>
       </section>
+      <div id="tour-athlete-bests">
+      <CollapsibleSection title="Gym bests">
+        <AthleteLeaderboards athlete={athlete} />
+      </CollapsibleSection>
+      </div>
     </div>
   )
 }

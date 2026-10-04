@@ -27,7 +27,8 @@ import {
   type MapSearchResult,
   type PathHighlight,
 } from '../../lib/skillPathHighlight'
-import { isAthleteProfile } from '../../lib/profileRole'
+import { isAthleteProfile, isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { KeyHelperEditor } from './KeyHelperEditor'
 import type { Athlete, AthleteSkillGoal } from '../../types'
 
 /** Look + layout options for the skill map page. Persisted in localStorage. */
@@ -356,7 +357,7 @@ export function hlGlowStyle(
   } else if (role === 'helpful') {
     s.boxShadow = `0 0 0 1px rgba(${rgb},0.4), 0 0 9px 2px rgba(${rgb},0.16)`
   }
-  // Key helpers wiggle gently on top of their glow to draw the eye.
+  // Key helpers wiggle boldly on top of their glow to draw the eye.
   if (keyHelper && role !== 'dim') {
     s.animation = (s.animation ? s.animation + ', ' : '') + 'keyhelper-wiggle 1.7s ease-in-out infinite'
   }
@@ -1500,6 +1501,8 @@ function ViewControls({
   onPickCombo,
   directPath,
   onToggleDirectPath,
+  canEditKeyHelpers,
+  onEditKeyHelpers,
 }: {
   theme: MapTheme
   onTheme: (t: MapTheme) => void
@@ -1516,6 +1519,8 @@ function ViewControls({
   onPickCombo: (i: number) => void
   directPath: boolean
   onToggleDirectPath: (on: boolean) => void
+  canEditKeyHelpers: boolean
+  onEditKeyHelpers: () => void
 }) {
   const barBg =
     theme === 'paper'
@@ -1620,6 +1625,17 @@ function ViewControls({
             style={directPath ? undefined : { color: chipColor, borderColor: chipBorder }}
           >
             <span aria-hidden>{directPath ? '◉' : '◎'}</span> Direct path
+          </button>
+        )}
+        {hlTargetName && canEditKeyHelpers && (
+          <button
+            type="button"
+            onClick={onEditKeyHelpers}
+            title="Choose which skills wiggle for this shine target"
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-white/70 hover:text-white"
+            style={{ color: chipColor, borderColor: chipBorder }}
+          >
+            <span aria-hidden>✎</span> Key helpers
           </button>
         )}
       </div>
@@ -2316,6 +2332,8 @@ export function SkillMapView({
   const pathTick = usePathTick()
   const [hlTarget, setHlTarget] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [keyHelperEditorOpen, setKeyHelperEditorOpen] = useState(false)
+  const canEditKeyHelpers = isCoachProfile(viewer) || isGymAdmin(viewer)
   const [directPath, setDirectPath] = useState(loadDirectPath)
   const [comboIdx, setComboIdx] = useState(0)
   const hl = useMemo(
@@ -2395,6 +2413,8 @@ export function SkillMapView({
         onPickCombo={setComboIdx}
         directPath={directPath}
         onToggleDirectPath={pickDirectPath}
+        canEditKeyHelpers={canEditKeyHelpers}
+        onEditKeyHelpers={() => setKeyHelperEditorOpen(true)}
       />
       {searchOpen && (
         <SkillSearchOverlay
@@ -2403,6 +2423,15 @@ export function SkillMapView({
             pickHlTarget(id)
             setSearchOpen(false)
           }}
+          mapIds={mapIds}
+          labelOf={labelOf}
+        />
+      )}
+      {keyHelperEditorOpen && hlTarget && hlTargetName && (
+        <KeyHelperEditor
+          targetSkillId={hlTarget}
+          targetName={hlTargetName}
+          onClose={() => setKeyHelperEditorOpen(false)}
           mapIds={mapIds}
           labelOf={labelOf}
         />

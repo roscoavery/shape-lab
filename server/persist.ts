@@ -399,6 +399,7 @@ export type GymRevisionStores = {
   stills: string
   igStills: string
   lessons: string
+  keyHelpers: string
 }
 
 export type GymRevision = {
@@ -420,6 +421,7 @@ const FILE_TO_STORE: Record<string, keyof GymRevisionStores> = {
   'data/coach-stills.json': 'stills',
   'data/ig-stills.json': 'igStills',
   'data/lessons.json': 'lessons',
+  'data/skill-key-helpers.json': 'keyHelpers',
 }
 
 function emptyRevision(): GymRevision {
@@ -437,6 +439,7 @@ function emptyRevision(): GymRevision {
       stills: '',
       igStills: '',
       lessons: '',
+      keyHelpers: '',
     },
   }
 }

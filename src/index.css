@@ -97,19 +97,23 @@ button {
 }
 
 /*
- * Key-helper wiggle: a gentle side-to-side rock for the most adjacent
- * skills of a shine-light target. Composes with path-travel (which only
- * touches filter) — run both animations on the same tile.
+ * Key-helper wiggle: a bold side-to-side rock with a scale pulse for the
+ * most adjacent skills of a shine-light target. Built to read clearly on a
+ * phone across the gym. Composes with path-travel (which only touches
+ * filter) — run both animations on the same tile.
  */
 @keyframes keyhelper-wiggle {
   0%, 100% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(1);
   }
-  30% {
-    transform: rotate(1.8deg);
+  20% {
+    transform: rotate(7deg) scale(1.07);
+  }
+  45% {
+    transform: rotate(-6deg) scale(1.03);
   }
   70% {
-    transform: rotate(-1.8deg);
+    transform: rotate(4deg) scale(1.06);
   }
 }
 

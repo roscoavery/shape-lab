@@ -3,7 +3,7 @@
  *
  * For some skills, a small set of the most adjacent / most important helper
  * skills matters more than the whole prerequisite chain. Those tiles get a
- * subtle wiggle on top of their glow so they draw the eye, and the
+ * bold wiggle on top of their glow so they draw the eye, and the
  * "Direct path" toggle shows ONLY the target plus these helpers (assuming
  * everything below them is already had).
  *
@@ -11,6 +11,11 @@
  * (the `skl_*` ids in `src/config/unifiedSkillSeed.ts`). Each target maps to
  * one or more combos; each combo is a list of skill ids that together are
  * enough. When a target has several combos the map shows a picker.
+ *
+ * Note: this is now the fallback. Ryan edits key helpers in the app (the
+ * "Key helpers" button on the skill map's Shine row); those edits save to
+ * data/skill-key-helpers.json and override this list per target. See
+ * src/lib/keyHelperOverrides.ts.
  */
 export const SKILL_KEY_HELPERS: Record<string, string[][]> = {
   /** Back full: layout + half + front half are the big three. */
