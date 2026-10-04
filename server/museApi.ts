@@ -823,6 +823,26 @@ async function handleDrills(req: IncomingMessage, res: ServerResponse): Promise<
   return true
 }
 
+async function handleDrillDelete(req: IncomingMessage, res: ServerResponse, drillId: string): Promise<boolean> {
+  const verified = await authed(req, res, 'drills:write')
+  if (!verified) return true
+  const file = await readCoachContentFile()
+  const drills = (file.drills ?? []) as Array<Record<string, unknown>>
+  if (!drills.some((d) => d.id === drillId)) {
+    sendJson(res, 404, { error: 'Drill not found.' })
+    return true
+  }
+  // Tombstone, never hard-delete: writeCoachContentFile merges removedDrillIds
+  // monotonically, so the delete survives blob/disk syncs.
+  await writeCoachContentFile({
+    ...file,
+    removedDrillIds: [...new Set([...(file.removedDrillIds ?? []), drillId])],
+  })
+  await verified.touch()
+  sendJson(res, 200, { deleted: drillId })
+  return true
+}
+
 async function handleSkillMapsGet(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (req.method !== 'GET') {
     sendJson(res, 405, { error: 'Use GET' })
@@ -1137,6 +1157,8 @@ export async function handleMuseApi(  req: IncomingMessage,
   if (path === '/api/muse/homework-logs') return handleHomeworkLog(req, res)
   if (path === '/api/muse/stories') return handleStories(req, res)
   if (path === '/api/muse/drills') return handleDrills(req, res)
+  const drillDeleteMatch = /^\/api\/muse\/drills\/([^/]+)$/.exec(path)
+  if (drillDeleteMatch && req.method === 'DELETE') return handleDrillDelete(req, res, drillDeleteMatch[1])
   if (path === '/api/muse/skill-maps') {
     return req.method === 'GET' ? handleSkillMapsGet(req, res) : handleSkillMapsPost(req, res)
   }
