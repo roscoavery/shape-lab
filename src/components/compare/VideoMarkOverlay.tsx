@@ -586,9 +586,15 @@ export function VideoMarkOverlay({
       const end = pt ?? cropPts?.[1] ?? start
       setCropPts(null)
       if (start && end) {
-        const dataUrl = cropVideoFrame(videoRef.current, start, end, mirrorRef.current)
+        const video = videoRef.current
+        if (!video || !video.videoWidth || !video.videoHeight) {
+          setError('The video is still loading. Wait for it to start playing, then drag again.')
+          afterShot(true)
+          return
+        }
+        const dataUrl = cropVideoFrame(video, start, end, mirrorRef.current)
         if (!dataUrl) {
-          setError('Crop was too small, or this video cannot be captured. Pause a saved clip and try again.')
+          setError('That drag was too small to capture. Drag a bigger box around the shape and let go.')
           afterShot(true)
           return
         }
@@ -775,7 +781,7 @@ export function VideoMarkOverlay({
           tool && !pending && !surfaceDisabled ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
         style={{
-          touchAction: tool === 'crop' ? 'manipulation' : tool ? 'none' : 'pan-y',
+          touchAction: tool ? 'none' : 'pan-y',
           cursor: tool ? cursor : 'default',
           pointerEvents: pending || !tool || surfaceDisabled ? 'none' : 'auto',
         }}
