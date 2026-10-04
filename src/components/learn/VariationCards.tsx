@@ -21,7 +21,7 @@ export function VariationCards({
   arch: ShapeVariation[]
   hollow: ShapeVariation[]
   intro?: string
-  getStill: (shapeId: string) => VariationStill
+  getStill: (v: ShapeVariation) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
   return (
@@ -53,7 +53,7 @@ function VariationGroup({
 }: {
   title: string
   variations: ShapeVariation[]
-  getStill: (shapeId: string) => VariationStill
+  getStill: (v: ShapeVariation) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
   return (
@@ -84,10 +84,10 @@ function VariationCard({
 }: {
   v: ShapeVariation
   index: number
-  getStill: (shapeId: string) => VariationStill
+  getStill: (v: ShapeVariation) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
-  const still = v.shapeId ? getStill(v.shapeId) : null
+  const still = v.shapeId ? getStill(v) : null
   const name = v.shapeId && onOpenShape ? (
     <button
       type="button"

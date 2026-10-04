@@ -56,6 +56,9 @@ export interface ShapeVariation {
   detail?: string
   /** Shape-library id whose still illustrates this variation, when one exists. */
   shapeId?: string
+  /** Specific still id to use when the shape has more than one (e.g. the
+   * tucked hollow is the second still of hollow_arms_down). */
+  stillId?: string
 }
 
 /**
@@ -82,7 +85,7 @@ export const ARCH_HOLLOW_VARIATIONS: {
       shapeId: 'zombie',
       detail: 'Standing, which makes it the easiest hollow.',
     },
-    { name: 'Hollow tucked', shapeId: 'tuck_open_shoulders' },
+    { name: 'Hollow tucked', shapeId: 'hollow_arms_down', stillId: 'default_hollow_arms_down_1' },
     { name: 'Hollow bent knees' },
     { name: 'Curl up', shapeId: 'gym_curl_up' },
     { name: 'Mad cat', shapeId: 'gym_mad_cat' },

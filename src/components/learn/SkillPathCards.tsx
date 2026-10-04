@@ -1579,8 +1579,11 @@ function GuideTabContent({
             arch={skill.shapeVariations.arch}
             hollow={skill.shapeVariations.hollow}
             intro={skill.shapeVariations.intro}
-            getStill={(shapeId) => {
-              const photo = listCoachStills([], shapeId).find((s) => s.dataUrl)
+            getStill={(v) => {
+              const photos = listCoachStills([], v.shapeId!)
+              const photo = v.stillId
+                ? photos.find((s) => s.id === v.stillId) ?? photos.find((s) => s.dataUrl)
+                : photos.find((s) => s.dataUrl)
               return photo ? { url: photo.dataUrl, stillId: photo.id } : null
             }}
           />
