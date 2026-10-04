@@ -10,7 +10,7 @@ import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVide
 import { normalizeVideoUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
-import { shippedStillUrl, shippedFileCandidates } from '../../lib/shippedRefs'
+import { shippedStillUrl, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
 import { skillPhotosFor } from '../../config/skillPhotos'
 import {
   GUIDE_ORDER,
@@ -1468,7 +1468,10 @@ function GuideTabContent({
             arch={skill.shapeVariations.arch}
             hollow={skill.shapeVariations.hollow}
             intro={skill.shapeVariations.intro}
-            getStillUrl={shippedStillUrl}
+            getStill={(shapeId) => {
+              const photo = listCoachStills([], shapeId).find((s) => s.dataUrl)
+              return photo ? { url: photo.dataUrl, stillId: photo.id } : null
+            }}
           />
         </div>
       )}

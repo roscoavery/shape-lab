@@ -1340,10 +1340,14 @@ function ShapeLibrary({
           arch={ARCH_HOLLOW_VARIATIONS.arch}
           hollow={ARCH_HOLLOW_VARIATIONS.hollow}
           intro={ARCH_HOLLOW_VARIATIONS.intro}
-          getStillUrl={(shapeId) =>
-            listCoachStills(referencePhotos, shapeId).find((s) => s.dataUrl)?.dataUrl ??
-            shippedStillUrl(shapeId)
-          }
+          getStill={(shapeId) => {
+            const photo = listCoachStills(referencePhotos, shapeId).find(
+              (s) => s.dataUrl,
+            )
+            if (photo) return { url: photo.dataUrl, stillId: photo.id }
+            const url = shippedStillUrl(shapeId)
+            return url ? { url, stillId: `default_${shapeId}_0` } : null
+          }}
           onOpenShape={onOpen}
         />
       </div>

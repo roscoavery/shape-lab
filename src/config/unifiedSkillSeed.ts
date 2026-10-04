@@ -71,7 +71,7 @@ export const ARCH_HOLLOW_VARIATIONS: {
   intro: 'Arch variations seem important to understand.',
   arch: [
     { name: 'Tight arch', shapeId: 'arch' },
-    { name: 'Bridge', shapeId: 'bridge' },
+    { name: 'Bridge', shapeId: 'rainbow_bridge' },
     { name: 'Long bridge', shapeId: 'long_bridge' },
     { name: 'Arch handstand' },
     { name: 'Superman', shapeId: 'superman' },
@@ -84,9 +84,9 @@ export const ARCH_HOLLOW_VARIATIONS: {
     },
     { name: 'Hollow tucked', shapeId: 'tuck_open_shoulders' },
     { name: 'Hollow bent knees' },
-    { name: 'Curl up' },
-    { name: 'Mad cat' },
-    { name: 'Elbow plank' },
+    { name: 'Curl up', shapeId: 'gym_curl_up' },
+    { name: 'Mad cat', shapeId: 'gym_mad_cat' },
+    { name: 'Elbow plank', shapeId: 'front_plank' },
     { name: 'Front support', shapeId: 'front_plank' },
     { name: 'Hollow arms down', shapeId: 'hollow_arms_down' },
     {

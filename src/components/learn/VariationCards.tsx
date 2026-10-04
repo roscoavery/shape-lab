@@ -1,21 +1,27 @@
 import type { ShapeVariation } from '../../config/unifiedSkillSeed'
+import { CroppedStill } from '../CroppedStill'
+
+/** Still for a variation: URL plus the still id so the display crop applies. */
+export type VariationStill = { url: string; stillId: string | null } | null
 
 /**
  * Arch / hollow variation progression cards — easiest first, each with a
- * still from the shape library when one is mapped. Variations without a
- * mapped still show an explicit placeholder so the gap is visible.
+ * still from the shape library when one is mapped. The still renders through
+ * CroppedStill so Ryan's display crop frames it, same as the shape library.
+ * Variations without a mapped still show an explicit placeholder so the gap
+ * is visible.
  */
 export function VariationCards({
   arch,
   hollow,
   intro,
-  getStillUrl,
+  getStill,
   onOpenShape,
 }: {
   arch: ShapeVariation[]
   hollow: ShapeVariation[]
   intro?: string
-  getStillUrl: (shapeId: string) => string | null
+  getStill: (shapeId: string) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
   return (
@@ -25,13 +31,13 @@ export function VariationCards({
         <VariationGroup
           title="Arch, easiest first"
           variations={arch}
-          getStillUrl={getStillUrl}
+          getStill={getStill}
           onOpenShape={onOpenShape}
         />
         <VariationGroup
           title="Hollow, easiest first"
           variations={hollow}
-          getStillUrl={getStillUrl}
+          getStill={getStill}
           onOpenShape={onOpenShape}
         />
       </div>
@@ -42,12 +48,12 @@ export function VariationCards({
 function VariationGroup({
   title,
   variations,
-  getStillUrl,
+  getStill,
   onOpenShape,
 }: {
   title: string
   variations: ShapeVariation[]
-  getStillUrl: (shapeId: string) => string | null
+  getStill: (shapeId: string) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
   return (
@@ -61,7 +67,7 @@ function VariationGroup({
             key={v.name}
             v={v}
             index={i}
-            getStillUrl={getStillUrl}
+            getStill={getStill}
             onOpenShape={onOpenShape}
           />
         ))}
@@ -73,15 +79,15 @@ function VariationGroup({
 function VariationCard({
   v,
   index,
-  getStillUrl,
+  getStill,
   onOpenShape,
 }: {
   v: ShapeVariation
   index: number
-  getStillUrl: (shapeId: string) => string | null
+  getStill: (shapeId: string) => VariationStill
   onOpenShape?: (shapeId: string) => void
 }) {
-  const url = v.shapeId ? getStillUrl(v.shapeId) : null
+  const still = v.shapeId ? getStill(v.shapeId) : null
   const name = v.shapeId && onOpenShape ? (
     <button
       type="button"
@@ -97,11 +103,11 @@ function VariationCard({
   return (
     <li className="flex gap-3 rounded-xl border border-white/10 bg-black/20 p-2">
       <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#0d1218]">
-        {url ? (
-          <img
-            src={url}
+        {still ? (
+          <CroppedStill
+            src={still.url}
+            stillId={still.stillId}
             alt={`${v.name} reference`}
-            loading="lazy"
             className="h-full w-full object-cover"
           />
         ) : (
