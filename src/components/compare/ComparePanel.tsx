@@ -24,6 +24,7 @@ import { StillOverlayPicker } from '../StillOverlayPicker'
 import { FloatingStillOverlay } from '../FloatingStillOverlay'
 import { VideoLibraryPanel } from '../VideoLibraryPanel'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { useLinkedPlayheads } from './useLinkedPlayheads'
 import type { ReferencePhoto } from '../../types'
 import type { AthleteVideoSource } from '../../lib/athleteVideoStore'
 
@@ -79,6 +80,13 @@ export function ComparePanel({
   const [handoffSrc, setHandoffSrc] = useState<string | null>(null)
   const [handoffName, setHandoffName] = useState<string | null>(null)
   const [handoffItemId, setHandoffItemId] = useState<string | null>(null)
+  // Playhead link: ties the reference and athlete video playheads together.
+  const [linked, setLinked] = useState(false)
+  const [refVideo, setRefVideo] = useState<HTMLVideoElement | null>(null)
+  const [camVideo, setCamVideo] = useState<HTMLVideoElement | null>(null)
+  const onRefVideo = useCallback((v: HTMLVideoElement | null) => setRefVideo(v), [])
+  const onCamVideo = useCallback((v: HTMLVideoElement | null) => setCamVideo(v), [])
+  useLinkedPlayheads(refVideo, camVideo, linked)
 
   const enterReplay = (next: CompareSplit, afterGo: CompareFocus = 'split') => {
     setLibraryOpen(false)
@@ -288,6 +296,7 @@ export function ComparePanel({
                   handoffSrc={handoffSrc}
                   handoffName={handoffName}
                   handoffItemId={handoffItemId}
+                  onVideoElement={onRefVideo}
                 />
               </ComparePipSlot>
               {splitScreen ? (
@@ -296,6 +305,8 @@ export function ComparePanel({
                   value={split === 'tb' ? tbRatio : lrRatio}
                   onChange={split === 'tb' ? setTbRatio : setLrRatio}
                   onClose={exitReplay}
+                  linked={linked}
+                  onToggleLink={() => setLinked((on) => !on)}
                 />
               ) : null}
               <ComparePipSlot
@@ -327,6 +338,7 @@ export function ComparePanel({
                   skillLabel={skillLabel}
                   classId={classId}
                   className={className}
+                  onVideoElement={onCamVideo}
                   onPlayAsReference={(_src, name, itemId) => {
                     setHandoffSrc(null)
                     setHandoffName(name)

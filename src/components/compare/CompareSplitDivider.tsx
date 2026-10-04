@@ -14,6 +14,9 @@ type Props = {
   max?: number
   /** Leave fullscreen without sitting on the Clip HUD. */
   onClose?: () => void
+  /** Playhead link state for the Compare link button. */
+  linked?: boolean
+  onToggleLink?: () => void
 }
 
 export function CompareSplitDivider({
@@ -23,6 +26,8 @@ export function CompareSplitDivider({
   min = 0.22,
   max = 0.78,
   onClose,
+  linked = false,
+  onToggleLink,
 }: Props) {
   const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
     null,
@@ -94,6 +99,27 @@ export function CompareSplitDivider({
           }
         >
           ×
+        </button>
+      ) : null}
+      {onToggleLink ? (
+        <button
+          type="button"
+          aria-label={linked ? 'Unlink playheads' : 'Link playheads'}
+          aria-pressed={linked}
+          title={linked ? 'Unlink playheads' : 'Link playheads: scrub and play move both videos'}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onToggleLink}
+          className={
+            vertical
+              ? `absolute left-2 top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  linked ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+              : `absolute left-1/2 top-2 z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  linked ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+          }
+        >
+          <span aria-hidden className={linked ? '' : 'opacity-40 grayscale'}>🔗</span>
         </button>
       ) : null}
     </div>

@@ -88,6 +88,9 @@ type Props = {
   onSaveToDrill?: () => void
   onSaveToCollection?: () => void
   onError?: () => void
+  /** Called with the underlying <video> element when it mounts/changes.
+   * Used by Compare to link playheads across panes. */
+  onVideoElement?: (video: HTMLVideoElement | null) => void
 }
 
 function fmt(t: number): string {
@@ -146,8 +149,15 @@ function VideoWorkbenchInner({
   onSaveToCollection,
   onError,
   playWhenVisible = false,
+  onVideoElement,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  // Report the underlying <video> element so parents (Compare link) can
+  // drive it directly. Re-runs when the inner remounts on src change.
+  useEffect(() => {
+    onVideoElement?.(videoRef.current)
+    return () => onVideoElement?.(null)
+  }, [onVideoElement])
   const fixingDurationRef = useRef(false)
   const clipLoops = useClipLoopsOptional()
   const favorites = useFavoritesOptional()

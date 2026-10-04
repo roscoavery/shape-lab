@@ -106,6 +106,8 @@ type Props = {
   handoffSrc?: string | null
   handoffName?: string | null
   handoffItemId?: string | null
+  /** Called with the underlying <video> element (Compare playhead link). */
+  onVideoElement?: (video: HTMLVideoElement | null) => void
 }
 
 export function ReferencePane({
@@ -116,6 +118,7 @@ export function ReferencePane({
   handoffSrc = null,
   handoffName = null,
   handoffItemId = null,
+  onVideoElement,
 }: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
@@ -1240,6 +1243,7 @@ export function ReferencePane({
           bare={pip}
           compact={Boolean(viewer)}
           markup={!pip}
+          onVideoElement={onVideoElement}
         />
       ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
@@ -1265,6 +1269,7 @@ export function ReferencePane({
           compact={Boolean(viewer)}
           quiet={Boolean(viewer)}
           markup={!pip}
+          onVideoElement={onVideoElement}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1278,6 +1283,7 @@ export function ReferencePane({
           bare={pip}
           compact={Boolean(viewer)}
           markup={!pip}
+          onVideoElement={onVideoElement}
         />
       ) : (
         <div

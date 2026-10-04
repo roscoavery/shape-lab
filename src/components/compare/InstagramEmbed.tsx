@@ -208,6 +208,8 @@ type Props = {
    * third-party embeds from blowing up inline layouts (notably on iPad).
    */
   posterFirst?: boolean
+  /** Called with the underlying <video> element (Compare playhead link). */
+  onVideoElement?: (video: HTMLVideoElement | null) => void
 }
 
 export function InstagramEmbed({
@@ -238,6 +240,7 @@ export function InstagramEmbed({
   savedUrl,
   playWhenVisible = false,
   posterFirst = false,
+  onVideoElement,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -770,6 +773,7 @@ export function InstagramEmbed({
         onToggleChrome={onToggleChrome}
         tapTogglesChrome={tapTogglesChrome}
         pictureChrome={carouselChrome}
+        onVideoElement={onVideoElement}
         onError={() => {
           skipHostedRef.current = true
           forgetInstagramManifest(url)

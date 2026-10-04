@@ -73,6 +73,8 @@ type CameraPaneProps = {
   classId?: string | null
   className?: string | null
   onPlayAsReference?: (src: string | null, name: string, itemId?: string) => void
+  /** Called with the replay <video> element (Compare playhead link). */
+  onVideoElement?: (video: HTMLVideoElement | null) => void
 }
 
 export function CameraPane({
@@ -85,6 +87,7 @@ export function CameraPane({
   classId = null,
   className = null,
   onPlayAsReference,
+  onVideoElement,
 }: CameraPaneProps) {
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -148,6 +151,7 @@ export function CameraPane({
   const [camZoom, setCamZoom] = useState(1)
   const [delayHudOpen, setDelayHudOpen] = useState(true)
   const [livePeek, setLivePeek] = useState(false)
+  const [clipPickerOpen, setClipPickerOpen] = useState(false)
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
@@ -1241,6 +1245,17 @@ export function CameraPane({
               fullscreen ? 'h-full flex-1' : 'min-h-[16rem] h-[min(60vh,32rem)] rounded-lg'
             }`}
           >
+            {fullscreen && (
+              <button
+                type="button"
+                onClick={() => setClipPickerOpen(true)}
+                className="absolute right-2 top-2 z-[40] rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+                aria-label="Swap the replay clip"
+                title="Swap the replay clip"
+              >
+                🎞 Swap clip
+              </button>
+            )}
             <VideoWorkbench
               src={clipSrc}
               mirror={mirror}
@@ -1268,6 +1283,7 @@ export function CameraPane({
               onUseAsReference={() => void sendReplay('reference')}
               onSaveToDrill={() => void sendReplay('drill')}
               onSaveToCollection={() => void sendReplay('collection')}
+              onVideoElement={onVideoElement}
             />
           </div>
         ) : (
@@ -1372,6 +1388,79 @@ export function CameraPane({
             {mode === 'replay' ? 'Replay' : mode === 'live' ? 'Live' : 'Delay'}
           </span>
         </>
+      )}
+      {clipPickerOpen && (
+        <div
+          className="fixed inset-0 z-[300] flex items-end justify-center bg-black/70 sm:items-center"
+          onClick={() => setClipPickerOpen(false)}
+          role="dialog"
+          aria-label="Pick a replay clip"
+        >
+          <div
+            className="max-h-[70dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-[#141a22] p-4 sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-bold text-white">Replay clip</h3>
+              <button
+                type="button"
+                onClick={() => setClipPickerOpen(false)}
+                className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                Done
+              </button>
+            </div>
+            <p className="mb-3 text-xs text-white/60">
+              Swap the bottom pane to any saved clip. Pick nothing to keep the live replay.
+            </p>
+            {running && (
+              <button
+                type="button"
+                onClick={() => {
+                  setClipPickerOpen(false)
+                  setClipSrc(null)
+                  setActiveClipId(null)
+                  setReplayTailSec(null)
+                  void openBufferReplay()
+                }}
+                className="mb-2 flex w-full items-center gap-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2.5 text-left text-sm font-semibold text-white"
+              >
+                <span aria-hidden>📹</span>
+                <span>Live replay — last {delaySec}s of buffer</span>
+              </button>
+            )}
+            {clips.length === 0 ? (
+              <p className="rounded-xl bg-white/5 px-3 py-4 text-center text-sm text-white/50">
+                No saved clips yet. Record an attempt and it shows up here.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {clips.map((clip) => (
+                  <li key={clip.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClipPickerOpen(false)
+                        void openClip(clip)
+                      }}
+                      className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm ${
+                        activeClipId === clip.id
+                          ? 'bg-[var(--accent)]/20 font-semibold text-white'
+                          : 'bg-white/5 text-white/80 hover:bg-white/10'
+                      }`}
+                    >
+                      <span aria-hidden>🎞</span>
+                      <span className="min-w-0 flex-1 truncate">{clip.name}</span>
+                      <span className="shrink-0 text-xs text-white/50">
+                        {clip.durationSec != null ? `${clip.durationSec}s` : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
     </section>
   )
