@@ -4,6 +4,8 @@ import { useEffect } from 'react'
  * Ties two video playheads together (Compare tool link button).
  *
  * When linked:
+ * - Engaging the link pulls the later playhead back to the earlier one, so
+ *   both videos start the linked session from the same moment.
  * - Scrubbing one video moves the other by the same delta in seconds
  *   (not the same percentage — clips have different durations). Deltas are
  *   clamped at each video's duration.
@@ -27,6 +29,38 @@ export function useLinkedPlayheads(
       window.setTimeout(() => {
         syncing = false
       }, 120)
+    }
+
+    /** Clamp a target time into a video's known duration. */
+    const clampTime = (v: HTMLVideoElement, t: number) => {
+      const dur = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 0
+      return dur > 0 ? Math.max(0, Math.min(dur, t)) : t
+    }
+
+    // On engage, pull the later playhead back to the earlier one so both
+    // videos start the linked session from the same moment.
+    const startA = a.currentTime
+    const startB = b.currentTime
+    if (
+      Number.isFinite(startA) &&
+      Number.isFinite(startB) &&
+      Math.abs(startA - startB) > 0.05
+    ) {
+      syncing = true
+      try {
+        if (startA > startB) {
+          const target = clampTime(a, startB)
+          a.currentTime = target
+          lastA = target
+        } else {
+          const target = clampTime(b, startA)
+          b.currentTime = target
+          lastB = target
+        }
+      } catch {
+        /* not seekable right now */
+      }
+      releaseSoon()
     }
 
     /** Scrub on `from` moves `to` by the same seconds delta. */

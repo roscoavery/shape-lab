@@ -21,6 +21,7 @@ import {
   getBlob,
   getClips,
   getCollections,
+  isSocialVideoItem,
   putBlob,
   putCollection,
   MAX_CLIPS,
@@ -39,6 +40,8 @@ import {
   startRecorder,
 } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
+import { InstagramEmbed } from './InstagramEmbed'
+import { postedByFromUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { CompareSplitBar } from './CompareSplitBar'
 import { flipFocus, hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
 import { DelayCamHud, LiveBufferStart } from './DelayCamHud'
@@ -62,6 +65,14 @@ const DELAY_MIN = 6
 const DELAY_MAX = 20
 /** Extra seconds of MSE buffer kept behind the playhead before trimming. */
 const TRIM_MARGIN = 8
+
+const KIND_LABEL: Record<RefItem['kind'], string> = {
+  file: 'File',
+  url: 'URL',
+  instagram: 'IG',
+  tiktok: 'TT',
+  facebook: 'FB',
+}
 
 type CameraPaneProps = {
   athleteId?: string | null
@@ -152,6 +163,18 @@ export function CameraPane({
   const [delayHudOpen, setDelayHudOpen] = useState(true)
   const [livePeek, setLivePeek] = useState(false)
   const [clipPickerOpen, setClipPickerOpen] = useState(false)
+  const [refCollections, setRefCollections] = useState<RefCollection[]>([])
+  /** Reference-library item loaded into the replay slot (null for camera clips). */
+  const [replayRefItem, setReplayRefItem] = useState<RefItem | null>(null)
+
+  // A picked reference item with a social or YouTube URL renders in its own
+  // player; file and direct-URL items resolve to clipSrc like camera clips.
+  const replaySocialItem =
+    replayRefItem?.url && (isSocialVideoItem(replayRefItem) || youtubeEmbedSrc(replayRefItem.url))
+      ? replayRefItem
+      : null
+  const replayVideoSrc = replaySocialItem ? null : clipSrc
+  const hasReplayContent = Boolean(replayVideoSrc) || Boolean(replaySocialItem)
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
@@ -187,10 +210,10 @@ export function CameraPane({
   }, [mode])
 
   useEffect(() => {
-    const on = mode === 'replay' && Boolean(clipSrc)
+    const on = mode === 'replay' && hasReplayContent
     setAthleteReplay(on)
     return () => setAthleteReplay(false)
-  }, [mode, clipSrc, setAthleteReplay])
+  }, [mode, hasReplayContent, setAthleteReplay])
 
   // Replay last can sit full-screen or in the corner, same as the delay feed.
   // Do not force the athlete pane full — Swap must reach the reference still.
@@ -309,6 +332,12 @@ export function CameraPane({
   useEffect(() => {
     void getClips().then(setClips).catch(() => {})
   }, [])
+
+  // Fresh collection list each time the swap picker opens.
+  useEffect(() => {
+    if (!clipPickerOpen) return
+    void getCollections().then(setRefCollections).catch(() => {})
+  }, [clipPickerOpen])
 
   // -------------------------------------------------------------------------
   // Delay cam engine (plays the shared recorder N seconds behind live)
@@ -632,6 +661,7 @@ export function CameraPane({
   }
 
   const openClip = async (clip: RecordedClip) => {
+    setReplayRefItem(null)
     const blob = await getBlob(clip.id)
     if (!blob) {
       setError('Clip data not found.')
@@ -644,6 +674,43 @@ export function CameraPane({
     setClipSrc(url)
     setActiveClipId(clip.id)
     setReplayTailSec(null)
+    setMode('replay')
+  }
+
+  /** Load a reference-library video into the replay slot (bottom pane). */
+  const openReferenceItem = async (item: RefItem) => {
+    setError(null)
+    setActiveClipId(null)
+    setReplayRefItem(item)
+    setReplayTailSec(null)
+    replayWindowRef.current = null
+    if (item.url && (isSocialVideoItem(item) || youtubeEmbedSrc(item.url))) {
+      replayBlobRef.current = null
+      setClipSrc(null)
+    } else if (item.kind === 'file' || !item.url) {
+      const blob = await getBlob(item.id)
+      if (!blob) {
+        setError('Stored video not found, it may have been cleared by the browser.')
+        setReplayRefItem(null)
+        return
+      }
+      replayBlobRef.current = blob
+      if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
+      const url = URL.createObjectURL(blob)
+      clipUrlRef.current = url
+      setClipSrc(url)
+    } else {
+      const blob = await getBlob(item.id)
+      replayBlobRef.current = blob
+      if (blob) {
+        if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
+        const url = URL.createObjectURL(blob)
+        clipUrlRef.current = url
+        setClipSrc(url)
+      } else {
+        setClipSrc(item.url ?? null)
+      }
+    }
     setMode('replay')
   }
 
@@ -1237,9 +1304,9 @@ export function CameraPane({
         {mode !== 'replay' && !fullscreen && <DraggableStillOverlay />}
       </div>
 
-      {/* Replay of the last N seconds (or a saved attempt) */}
+      {/* Replay of the last N seconds, a saved attempt, or a reference video */}
       {mode === 'replay' &&
-        (clipSrc ? (
+        (hasReplayContent ? (
           <div
             className={`relative flex min-h-0 flex-col overflow-hidden ${
               fullscreen ? 'h-full flex-1' : 'min-h-[16rem] h-[min(60vh,32rem)] rounded-lg'
@@ -1256,8 +1323,39 @@ export function CameraPane({
                 🎞 Swap clip
               </button>
             )}
+            {replaySocialItem ? (
+              isSocialVideoItem(replaySocialItem) ? (
+                <InstagramEmbed
+                  url={replaySocialItem.url!}
+                  itemId={replaySocialItem.id}
+                  savedUrl={replaySocialItem.savedUrl}
+                  postedBy={replaySocialItem.postedBy || postedByFromUrl(replaySocialItem.url!)}
+                  fill
+                  markup
+                  onVideoElement={onVideoElement}
+                />
+              ) : (
+                <div className="relative h-full w-full bg-black">
+                  <iframe
+                    title={replaySocialItem.name}
+                    src={youtubeEmbedSrc(replaySocialItem.url!) ?? undefined}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="h-full w-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMode(running ? 'delay' : 'live')}
+                    className="absolute left-2 top-2 z-[40] rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+                    aria-label="Back to camera"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              )
+            ) : (
             <VideoWorkbench
-              src={clipSrc}
+              src={replayVideoSrc!}
               mirror={mirror}
               autoPlay
               tailSeconds={replayTailSec ?? undefined}
@@ -1285,6 +1383,7 @@ export function CameraPane({
               onSaveToCollection={() => void sendReplay('collection')}
               onVideoElement={onVideoElement}
             />
+            )}
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
@@ -1411,7 +1510,7 @@ export function CameraPane({
               </button>
             </div>
             <p className="mb-3 text-xs text-white/60">
-              Swap the bottom pane to any saved clip. Pick nothing to keep the live replay.
+              Swap the bottom pane to any saved clip or reference video. Pick nothing to keep the live replay.
             </p>
             {running && (
               <button
@@ -1420,6 +1519,7 @@ export function CameraPane({
                   setClipPickerOpen(false)
                   setClipSrc(null)
                   setActiveClipId(null)
+                  setReplayRefItem(null)
                   setReplayTailSec(null)
                   void openBufferReplay()
                 }}
@@ -1459,6 +1559,52 @@ export function CameraPane({
                 ))}
               </ul>
             )}
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Reference library
+              </h4>
+              {refCollections.every((c) => c.items.length === 0) ? (
+                <p className="rounded-xl bg-white/5 px-3 py-3 text-center text-sm text-white/50">
+                  No reference videos saved yet.
+                </p>
+              ) : (
+                refCollections
+                  .filter((c) => c.items.length > 0)
+                  .map((col) => (
+                    <div key={col.id} className="mb-3">
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                        {col.name}
+                      </p>
+                      <ul className="flex flex-col gap-1.5">
+                        {col.items.map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClipPickerOpen(false)
+                                void openReferenceItem(item)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10"
+                            >
+                              <span className="shrink-0 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                                {KIND_LABEL[item.kind]}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate">{item.name}</span>
+                                {(item.postedBy || (item.url && postedByFromUrl(item.url))) && (
+                                  <span className="block truncate text-[10px] text-white/45">
+                                    @{item.postedBy || postedByFromUrl(item.url!)}
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </div>
       )}
