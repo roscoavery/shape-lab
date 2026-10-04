@@ -160,7 +160,7 @@ export function VideoMarkOverlay({
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const shapes = learnLibraryShapes()
-  const [tool, setTool] = useState<MarkTool | null>(swipeSafe ? null : 'line')
+  const [tool, setTool] = useState<MarkTool | null>(null)
   const [marks, setMarks] = useState<Mark[]>([])
   const [linePts, setLinePts] = useState<Pt[]>([])
   const [selectedDot, setSelectedDot] = useState<number | null>(null)
@@ -704,7 +704,8 @@ export function VideoMarkOverlay({
   }
 
   const pickTool = (id: MarkTool) => {
-    if (swipeSafe && tool === id) {
+    // Tapping the active tool deselects it, returning the pane to scrub mode.
+    if (tool === id) {
       setTool(null)
       setCursor('default')
       setArrowPts([])

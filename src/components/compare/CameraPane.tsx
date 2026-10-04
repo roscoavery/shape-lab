@@ -138,6 +138,7 @@ export function CameraPane({
   const viewCaptureStopRef = useRef<(() => void) | null>(null)
 
   const clipUrlRef = useRef<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement | null>(null)
 
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -673,6 +674,19 @@ export function CameraPane({
     clipUrlRef.current = url
     setClipSrc(url)
     setActiveClipId(clip.id)
+    setReplayTailSec(null)
+    setMode('replay')
+  }
+
+  /** Load a video picked from the device photo library into the replay slot. */
+  const openPhotoLibraryVideo = (file: File) => {
+    setReplayRefItem(null)
+    replayBlobRef.current = file
+    if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
+    const url = URL.createObjectURL(file)
+    clipUrlRef.current = url
+    setClipSrc(url)
+    setActiveClipId(null)
     setReplayTailSec(null)
     setMode('replay')
   }
@@ -1604,6 +1618,33 @@ export function CameraPane({
                     </div>
                   ))
               )}
+            </div>
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Photo library
+              </h4>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10"
+              >
+                <span aria-hidden>🖼</span>
+                <span className="min-w-0 flex-1 truncate">Pick a video from this device</span>
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setClipPickerOpen(false)
+                    openPhotoLibraryVideo(file)
+                  }
+                  e.target.value = ''
+                }}
+              />
             </div>
           </div>
         </div>

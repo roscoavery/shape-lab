@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { FavoriteStar } from '../FavoriteStar'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
-import { PhoneReelViewer } from '../PhoneReelViewer'
+import { PhoneReelViewer, type PhoneReelClip } from '../PhoneReelViewer'
 import { HudCircle, IconFullscreen } from '../compare/CompareHud'
 import { ShareReference } from '../share/ShareReference'
 import { clipShareDraft } from '../../lib/shareReference'
@@ -122,6 +122,8 @@ function useCardAttachments(refreshKey: number): Record<string, string[]> {
 type Props = {
   athlete?: Athlete | null
   athletes?: Athlete[]
+  /** When set, the fullscreen reel viewer offers "Compare" to open the clip in the compare tool. */
+  onCompareWithReference?: (clip: PhoneReelClip) => void
 }
 
 type FeedArticleProps = {
@@ -262,7 +264,7 @@ const FeedArticle = memo(function FeedArticle({
   )
 })
 
-export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
+export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithReference }: Props) {
   const { clips, loading, rememberHandle } = useGymLibrary()
   const favorites = useFavorites()
   const [active, setActive] = useState(0)
@@ -648,6 +650,7 @@ export function ReferenceFeed({ athlete = null, athletes = [] }: Props) {
           onCopied={setFlash}
           onAddToSkillCard={editor.profileId ? handleAddToCard : undefined}
           onLinkToSpottingCard={isAdmin ? handleLinkSpotting : undefined}
+          onCompareWithReference={onCompareWithReference}
         />
       ) : null}
       {addToCardClip && (

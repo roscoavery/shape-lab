@@ -26,6 +26,7 @@ import { ShapeGlossary } from './ShapeGlossary'
 import { ShapeQuiz } from './ShapeQuiz'
 import { HitFolder } from './HitFolder'
 import { ReferenceFeed } from './learn/ReferenceFeed'
+import type { PhoneReelClip } from './PhoneReelViewer'
 import { SkillPathCards } from './learn/SkillPathCards'
 import { getRegistrySkill, getRegistrySkillByGuideId } from '../lib/skillRegistry'
 import { ProgressionLevels } from './learn/ProgressionLevels'
@@ -126,6 +127,8 @@ type Props = {
   /** Videos tab only needs the reference scroll. */
   surface?: 'learn' | 'videos'
   onOpenTour?: (steps: TourStep[]) => void
+  /** When set, the reference scroll reel viewer offers "Compare" to open the clip in the compare tool. */
+  onCompareWithReference?: (clip: PhoneReelClip) => void
 }
 
 type ShapeFilter = 'all' | 'pathway' | 'other'
@@ -153,6 +156,7 @@ export function EducationPanel({
   onOpenSkillPaths,
   surface = 'learn',
   onOpenTour,
+  onCompareWithReference,
 }: Props) {
   const [view, setView] = useState<EduView>({ kind: surface === 'videos' ? 'scroll' : 'home' })
   const [query, setQuery] = useState('')
@@ -612,7 +616,7 @@ export function EducationPanel({
 
       {view.kind === 'scroll' && (
         <div id="tour-scroll-feed">
-          <ReferenceFeed athlete={signedIn} athletes={athletes} />
+          <ReferenceFeed athlete={signedIn} athletes={athletes} onCompareWithReference={onCompareWithReference} />
         </div>
       )}
 

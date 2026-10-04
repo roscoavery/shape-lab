@@ -10,6 +10,7 @@ import { GymClipPlayer } from './GymClipPlayer'
 import { FavoriteStar } from './FavoriteStar'
 import { ClipOrganizeMenu } from './library/ClipOrganizeMenu'
 import { ShareReference } from './share/ShareReference'
+import { HudCircle, IconSplit } from './compare/CompareHud'
 import { clipShareDraft } from '../lib/shareReference'
 import { useFavorites } from '../lib/favorites'
 import { kindFromUrl, type RefItemKind } from '../lib/clipStore'
@@ -43,6 +44,8 @@ type Props = {
   onAddToSkillCard?: (clip: PhoneReelClip) => void
   /** When set, the share sheet on each reel offers "Link to spotting card". */
   onLinkToSpottingCard?: (clip: PhoneReelClip) => void
+  /** When set, the action rail offers "Compare", opening this clip in the compare tool. */
+  onCompareWithReference?: (clip: PhoneReelClip) => void
 }
 
 type ReelSectionProps = {
@@ -62,6 +65,7 @@ type ReelSectionProps = {
   onCopied: (message: string) => void
   onAddToSkillCard?: (clip: PhoneReelClip) => void
   onLinkToSpottingCard?: (clip: PhoneReelClip) => void
+  onCompareWithReference?: (clip: PhoneReelClip) => void
 }
 
 /**
@@ -87,6 +91,7 @@ const ReelSection = memo(function ReelSection({
   onCopied,
   onAddToSkillCard,
   onLinkToSpottingCard,
+  onCompareWithReference,
 }: ReelSectionProps) {
   const editor = useMemo(
     () => ({ gymEditor, personalEditor, profileId }),
@@ -207,6 +212,15 @@ const ReelSection = memo(function ReelSection({
               label={favOn ? `Unfavorite ${clip.name}` : `Favorite ${clip.name}`}
               className="rounded-full bg-white/12 px-2 py-1 text-xl"
             />
+            {onCompareWithReference ? (
+              <HudCircle
+                label="Compare"
+                onClick={() => onCompareWithReference(clipForCard)}
+                size="sm"
+              >
+                <IconSplit />
+              </HudCircle>
+            ) : null}
           </div>
         </>
       ) : null}
@@ -224,6 +238,7 @@ export function PhoneReelViewer({
   onCopied,
   onAddToSkillCard,
   onLinkToSpottingCard,
+  onCompareWithReference,
 }: Props) {
   const favorites = useFavorites()
   const { rememberHandle } = useGymLibrary()
@@ -364,6 +379,7 @@ export function PhoneReelViewer({
               onCopied={handleCopied}
               onAddToSkillCard={onAddToSkillCard}
               onLinkToSpottingCard={onLinkToSpottingCard}
+              onCompareWithReference={onCompareWithReference}
             />
           ))}
         </div>

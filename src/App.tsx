@@ -33,6 +33,7 @@ import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
+import type { PhoneReelClip } from './components/PhoneReelViewer'
 import { CoachInterviewPanel } from './components/coach/CoachInterviewPanel'
 import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
@@ -281,6 +282,12 @@ export default function App() {
   })
   const [compareOpened, setCompareOpened] = useState(() => loadTab() === 'compare')
   const [compareFullTick, setCompareFullTick] = useState(0)
+  /** Reference clip handed in from the reference scroll reel viewer ("Compare" button). */
+  const [compareIncomingRef, setCompareIncomingRef] = useState<{
+    src: string | null
+    name: string
+    itemId?: string
+  } | null>(null)
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
@@ -855,7 +862,15 @@ export default function App() {
     if (id === 'compare') setCompareOpened(true)
   }
 
-  const openCompareWithReference = () => {
+  const openCompareWithReference = (payload?: {
+    src: string | null
+    name: string
+    itemId?: string
+  }) => {
+    // A payload hands a reference clip in from outside the tab (reference
+    // scroll reel viewer); no payload means a plain open, which clears any
+    // stale incoming clip.
+    setCompareIncomingRef(payload ?? null)
     goTab('compare')
     setCompareFullTick((tick) => tick + 1)
   }
@@ -1915,6 +1930,13 @@ export default function App() {
             setStationOpen(true)
           }}
           onOpenTour={() => openTour(LEARN_TOUR)}
+          onCompareWithReference={(clip: PhoneReelClip) =>
+            openCompareWithReference({
+              src: clip.url,
+              name: clip.name || 'Reference',
+              itemId: clip.id,
+            })
+          }
         />
       )}
 
@@ -1930,6 +1952,13 @@ export default function App() {
           intent="scroll"
           surface="videos"
           onOpenTour={() => openTour(SCROLL_TOUR)}
+          onCompareWithReference={(clip: PhoneReelClip) =>
+            openCompareWithReference({
+              src: clip.url,
+              name: clip.name || 'Reference',
+              itemId: clip.id,
+            })
+          }
         />
       )}
 
@@ -1976,6 +2005,7 @@ export default function App() {
               gymEditor={ryanEdit}
               personalEditor={personalCompare}
               enterFullscreenTick={compareFullTick}
+              incomingReference={compareIncomingRef}
               videoSource={liveLesson ? 'lesson' : undefined}
               lessonId={liveLesson?.id ?? null}
               skillId={liveLesson ? shape.id : null}

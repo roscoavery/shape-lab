@@ -45,6 +45,11 @@ type Props = {
   lessonBar?: ReactNode
   /** Reference handoff may request fullscreen without touching camera ownership. */
   enterFullscreenTick?: number
+  /**
+   * Incoming reference from outside (e.g. the reference scroll reel viewer).
+   * When it changes, the payload is loaded into the reference pane handoff.
+   */
+  incomingReference?: { src: string | null; name: string; itemId?: string } | null
 }
 
 export function ComparePanel({
@@ -62,6 +67,7 @@ export function ComparePanel({
   className = null,
   lessonBar = null,
   enterFullscreenTick = 0,
+  incomingReference = null,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -118,6 +124,19 @@ export function ComparePanel({
     // enterReplay is stable enough for this tick
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enterFullscreenTick])
+
+  // Incoming reference from outside the tab (reference scroll "Compare"
+  // button). Applied once per payload into the internal handoff state, which
+  // ReferencePane's own handoff effect then loads on top.
+  const incomingConsumedRef = useRef<typeof incomingReference>(null)
+  useEffect(() => {
+    if (!incomingReference) return
+    if (incomingConsumedRef.current === incomingReference) return
+    incomingConsumedRef.current = incomingReference
+    setHandoffSrc(incomingReference.src)
+    setHandoffName(incomingReference.name)
+    setHandoffItemId(incomingReference.itemId ?? null)
+  }, [incomingReference])
 
   useEffect(() => {
     if (!fullscreen) return

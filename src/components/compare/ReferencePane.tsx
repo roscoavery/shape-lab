@@ -12,6 +12,7 @@ import {
   deleteBlob,
   deleteCollection,
   getBlob,
+  getClips,
   getCollections,
   isSameReferenceUrl,
   isSocialVideoItem,
@@ -24,6 +25,7 @@ import {
   putBlob,
   putCollection,
   reorderItems,
+  type RecordedClip,
   type RefCollection,
   type RefItem,
 } from '../../lib/clipStore'
@@ -152,6 +154,8 @@ export function ReferencePane({
   const [clipHudOpen, setClipHudOpen] = useState(false)
   const [clipHudAll, setClipHudAll] = useState(false)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
+  const [savedClips, setSavedClips] = useState<RecordedClip[]>([])
+  const hudPhotoInputRef = useRef<HTMLInputElement | null>(null)
   const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
@@ -307,6 +311,46 @@ export function ReferencePane({
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
   }, [refreshCachedIds, persist, gymEditor, personalEditor, profileId])
+
+  useEffect(() => {
+    if (!clipHudOpen) return
+    void getClips()
+      .then(setSavedClips)
+      .catch(() => setSavedClips([]))
+  }, [clipHudOpen])
+
+  /** Play a saved recorded clip in the top pane. */
+  const playSavedClip = async (clip: RecordedClip) => {
+    try {
+      const blob = await getBlob(clip.id)
+      if (!blob) {
+        setError('Clip data not found.')
+        return
+      }
+      revokeSrc()
+      const url = URL.createObjectURL(blob)
+      objectUrlRef.current = url
+      setActiveItemId(null)
+      setWatchItem(null)
+      setItemSrc(url)
+      setClipHudOpen(false)
+      setNotice(`Reference: ${clip.name}`)
+    } catch {
+      setError('Could not load that clip.')
+    }
+  }
+
+  /** Play a video picked from the device photo library in the top pane. */
+  const playPhotoFile = (file: File) => {
+    revokeSrc()
+    const url = URL.createObjectURL(file)
+    objectUrlRef.current = url
+    setActiveItemId(null)
+    setWatchItem(null)
+    setItemSrc(url)
+    setClipHudOpen(false)
+    setNotice(`Reference: ${file.name}`)
+  }
 
   useEffect(() => {
     const onChange = () => {
@@ -1387,6 +1431,58 @@ export function ReferencePane({
               })}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            <div className="mb-3 border-b border-white/10 pb-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Saved clips
+              </h4>
+              {savedClips.length === 0 ? (
+                <p className="rounded-xl bg-white/5 px-3 py-3 text-center text-sm text-white/50">
+                  No saved clips yet. Record an attempt and it shows up here.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {savedClips.map((clip) => (
+                    <li key={clip.id}>
+                      <button
+                        type="button"
+                        onClick={() => void playSavedClip(clip)}
+                        className="flex w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10"
+                      >
+                        <span aria-hidden>🎞</span>
+                        <span className="min-w-0 flex-1 truncate">{clip.name}</span>
+                        <span className="shrink-0 text-xs text-white/50">
+                          {clip.durationSec != null ? `${clip.durationSec}s` : ''}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="mb-3 border-b border-white/10 pb-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Photo library
+              </h4>
+              <button
+                type="button"
+                onClick={() => hudPhotoInputRef.current?.click()}
+                className="flex w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10"
+              >
+                <span aria-hidden>🖼</span>
+                <span className="min-w-0 flex-1 truncate">Pick a video from this device</span>
+              </button>
+              <input
+                ref={hudPhotoInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) playPhotoFile(file)
+                  e.target.value = ''
+                }}
+              />
+            </div>
             {hudGroups.length === 0 ? (
               <p className="py-6 text-center text-sm text-white/55">
                 {q ? 'No clips match that search.' : 'No clips in this collection yet.'}
