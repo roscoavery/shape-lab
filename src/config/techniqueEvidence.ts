@@ -106,13 +106,7 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Nice stunt style handstand forward roll. Bent arms.',
     },
   ],
-  'skl_360_dive_roll': [
-    {
-      who: '@spartanizman',
-      url: 'https://gym.shapelab.win/videos/spartanizman-360-dive-roll.mp4',
-      watchFor: 'How to do a 360 in a roll. Full tutorial.',
-    },
-  ],
+  'skl_360_dive_roll': [],
   'front-aerial': [
     {
       who: 'Reference',
