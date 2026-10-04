@@ -807,11 +807,11 @@ export function ProofStrip({
                 const local = isLocalVideo(v.url)
                 return (
                   <div key={v.url} className="w-48 shrink-0">
-                    <div className="aspect-[9/16] overflow-hidden rounded-xl bg-black">
+                    <div className="relative aspect-square overflow-hidden rounded-xl bg-black">
                       {local ? (
                         <InlineVideo url={v.url} loopA={null} loopB={null} />
                       ) : (
-                        <InstagramEmbed url={v.url} compact bare quiet playWhenVisible />
+                        <InstagramEmbed url={v.url} compact bare quiet playWhenVisible fit="contain" fill />
                       )}
                     </div>
                     <div className="mt-1 truncate text-xs font-bold">{v.who}</div>
