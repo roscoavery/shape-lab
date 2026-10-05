@@ -4,7 +4,7 @@
  *
  * This device stays signed in as the last unlocked profile until they
  * tap Switch profile. Switching to a different passcode profile still
- * asks for that code — a shared link cannot open gym admin by tapping
+ * asks for that code — a shared link cannot open shapelab admin by tapping
  * a name.
  */
 
