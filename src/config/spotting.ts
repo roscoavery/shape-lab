@@ -357,12 +357,10 @@ export const SPOTTING_RULES: string[] = [
 
 /** Touch and comfort — Ryan's words. */
 export const SPOTTING_TOUCH_ETHICS: string[] = [
-  "As spotters, we should always avoid touching athletes in private areas when possible. Safety over everything, but always look for intentional ways to avoid spots that could be uncomfortable for the athlete because of where the coach puts their hands. That is basic human decency and a form of respect for the athlete's comfort.",
-  "Some spotting methods may require contact with the buttocks area and sometimes the inner thigh. As coaches, we just have to do what we have to do to help the athlete with the skill they are doing, but not touch athletes' butts when we can avoid it.",
-  'There are some methods where it can really help to teach the right technique, but we just have to be mindful. Spotting the butt and ribs can help a ton with the shape change section of the second half of a back handspring and can be extremely useful for athlete progress.',
-  "Sometimes when spotting back handsprings, a coach's hand may accidentally get under an athlete's waistband. It is good to openly apologize to the athlete and communicate that you didn't mean to do that, so it doesn't create any weirdness or uncertainty.",
-  "Sometimes an athlete stops when they're supposed to connect a round off handspring and you accidentally touch their butt out of the round off. That's usually an obvious accident and can usually be ignored unless the coach feels obligated to apologize or communicate the accident.",
-  "Athletes may not like being spotted on skills, and the coach may have to find ways of working a skill with minimal to no spotting, only using spotting where it is absolutely required.",
+  "As spotters, our hands stay off athletes' private areas. Full stop. When you choose a spotting method, pick one that keeps your hands clear. The only thing that overrides comfort is safety: protecting the head and neck comes first, always. Even then, be deliberate about where your hands go.",
+  'Some of the most useful spots involve contact near the hips or ribs, like guiding the shape change in the second half of a back handspring. Spotting decisions are often made in the moment, so do your best to communicate how you will spot when possible. If the method assists under the butt, keep the hand under the sacrum at the lowest. Going under with the arms instead of the hands usually feels better for both the athlete and the coach.',
+  "Accidents happen. A hand can end up under a waistband mid-spot, or make contact coming out of a round off. When it does, say so plainly: apologize, say you did not mean to, and move on. A short, honest acknowledgment keeps trust. Pretending it did not happen is what creates weirdness.",
+  'Read the athlete. If they freeze, pull away, or say they do not want to be spotted, believe them. Some skills are hard to teach without spotting, and the back handspring is one of the biggest ones. When spotting is necessary, say so, and build trust in steps: start with a trust fall, then ease into letting the coach hold their weight.',
 ]
 
 export function getSpottingMethod(id: string): SpottingMethod | undefined {
