@@ -90,6 +90,10 @@ export function ComparePanel({
   const [linked, setLinked] = useState(false)
   const [refVideo, setRefVideo] = useState<HTMLVideoElement | null>(null)
   const [camVideo, setCamVideo] = useState<HTMLVideoElement | null>(null)
+  // Two-clips mode: hide the live camera, compare two clips top and bottom.
+  const [twoClips, setTwoClips] = useState(false)
+  // Bumps to auto-open the bottom pane clip picker (start-screen View clip).
+  const [pickerTick, setPickerTick] = useState(0)
   const onRefVideo = useCallback((v: HTMLVideoElement | null) => setRefVideo(v), [])
   const onCamVideo = useCallback((v: HTMLVideoElement | null) => setCamVideo(v), [])
   useLinkedPlayheads(refVideo, camVideo, linked)
@@ -101,6 +105,7 @@ export function ComparePanel({
     setChromeOpen(false)
     setReplayStart(true)
     setReplayAfterGo(afterGo)
+    setTwoClips(false)
     setFullscreen(true)
   }
 
@@ -117,6 +122,19 @@ export function ComparePanel({
     setChromeOpen(false)
     setReplayStart(false)
     setFullscreen(false)
+    setTwoClips(false)
+  }
+
+  // Start screen: jump straight to two clips, no camera setup.
+  const enterTwoClips = () => {
+    setLibraryOpen(false)
+    setSplit('tb')
+    setFocus('split')
+    setChromeOpen(false)
+    setReplayStart(false)
+    setTwoClips(true)
+    setFullscreen(true)
+    setPickerTick((t) => t + 1)
   }
 
   useEffect(() => {
@@ -262,6 +280,21 @@ export function ComparePanel({
               </button>
               <button
                 type="button"
+                onClick={enterTwoClips}
+                className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#a78bfa] via-[#7c5cf0] to-[#3d2a86] px-5 py-6 text-center shadow-[0_16px_40px_rgba(124,92,240,0.32)] sm:py-8"
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+                  Videos · Compare
+                </span>
+                <span className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  View clip
+                </span>
+                <span className="mt-2 max-w-lg text-sm font-medium text-white/80">
+                  Two clips, top and bottom, no camera. Pick any video for each side.
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={openLibrary}
                 className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#6ee7f0] via-[#22b8c9] to-[#0d4f5c] px-5 py-6 text-center shadow-[0_16px_40px_rgba(34,184,201,0.28)] sm:py-8"
               >
@@ -326,6 +359,8 @@ export function ComparePanel({
                   onClose={exitReplay}
                   linked={linked}
                   onToggleLink={() => setLinked((on) => !on)}
+                  twoClips={twoClips}
+                  onToggleTwoClips={() => setTwoClips((on) => !on)}
                 />
               ) : null}
               <ComparePipSlot
@@ -358,6 +393,8 @@ export function ComparePanel({
                   classId={classId}
                   className={className}
                   onVideoElement={onCamVideo}
+                  clipsOnly={twoClips}
+                  openPickerTick={pickerTick}
                   onPlayAsReference={(_src, name, itemId) => {
                     setHandoffSrc(null)
                     setHandoffName(name)

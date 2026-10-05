@@ -86,6 +86,13 @@ type CameraPaneProps = {
   onPlayAsReference?: (src: string | null, name: string, itemId?: string) => void
   /** Called with the replay <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /**
+   * Clips-only mode: hide the live camera UI entirely, show just the replay
+   * clip player (or a pick-a-clip prompt). Used for two-clip compare.
+   */
+  clipsOnly?: boolean
+  /** Bumps to auto-open the clip picker (start-screen View clip entry). */
+  openPickerTick?: number
 }
 
 export function CameraPane({
@@ -99,6 +106,8 @@ export function CameraPane({
   className = null,
   onPlayAsReference,
   onVideoElement,
+  clipsOnly = false,
+  openPickerTick = 0,
 }: CameraPaneProps) {
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -165,6 +174,15 @@ export function CameraPane({
   const [livePeek, setLivePeek] = useState(false)
   const [clipPickerOpen, setClipPickerOpen] = useState(false)
   const [refCollections, setRefCollections] = useState<RefCollection[]>([])
+  // Start-screen "View clip" entry: auto-open the picker when the tick bumps.
+  useEffect(() => {
+    if (openPickerTick > 0) setClipPickerOpen(true)
+  }, [openPickerTick])
+  // Two-clip mode has no camera: stop the stream when entering it.
+  const stopCameraRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (clipsOnly && running) stopCameraRef.current()
+  }, [clipsOnly, running])
   /** Reference-library item loaded into the replay slot (null for camera clips). */
   const [replayRefItem, setReplayRefItem] = useState<RefItem | null>(null)
 
@@ -496,6 +514,11 @@ export function CameraPane({
     setRunning(false)
     setMode((m) => (m === 'replay' ? m : 'live'))
   }, [stopDelay, stopRecording, stopRolling])
+
+  // Keep the ref fresh so the clipsOnly effect can stop the camera.
+  useEffect(() => {
+    stopCameraRef.current = stopCamera
+  }, [stopCamera])
 
   useEffect(
     () => () => {
@@ -1154,10 +1177,12 @@ export function CameraPane({
       </div>
       )}
 
-      {!fullscreen && cameraChrome}
-      {rail && camRail && mode === 'replay' ? createPortal(cameraChrome, camRail) : null}
+      {!fullscreen && !clipsOnly && cameraChrome}
+      {rail && camRail && mode === 'replay' && !clipsOnly ? createPortal(cameraChrome, camRail) : null}
 
-      {/* Video area, live video stays mounted (even during replay) so the stream keeps running */}
+      {/* Video area, live video stays mounted (even during replay) so the stream keeps running.
+          Hidden entirely in clips-only (two-clip compare) mode. */}
+      {!clipsOnly && (
       <div
         className={
           mode === 'replay' && clipSrc
@@ -1317,9 +1342,11 @@ export function CameraPane({
         )}
         {mode !== 'replay' && !fullscreen && <DraggableStillOverlay />}
       </div>
+      )}
 
-      {/* Replay of the last N seconds, a saved attempt, or a reference video */}
-      {mode === 'replay' &&
+      {/* Replay of the last N seconds, a saved attempt, or a reference video.
+          In clips-only mode this is the whole pane: no camera, just the clip. */}
+      {(mode === 'replay' || clipsOnly) &&
         (hasReplayContent ? (
           <div
             className={`relative flex min-h-0 flex-col overflow-hidden ${
@@ -1357,6 +1384,7 @@ export function CameraPane({
                     allowFullScreen
                     className="h-full w-full"
                   />
+                  {!clipsOnly && (
                   <button
                     type="button"
                     onClick={() => setMode(running ? 'delay' : 'live')}
@@ -1365,6 +1393,7 @@ export function CameraPane({
                   >
                     ← Back
                   </button>
+                  )}
                 </div>
               )
             ) : (
@@ -1385,7 +1414,7 @@ export function CameraPane({
               onWindowChange={(start, end) => {
                 replayWindowRef.current = { start, end }
               }}
-              onBack={() => setMode(running ? 'delay' : 'live')}
+              onBack={clipsOnly ? undefined : () => setMode(running ? 'delay' : 'live')}
               onSavePhotos={downloadReplay}
               onSaveInApp={saveReplayToApp}
               onMinimize={() => setFocus(flipFocus(focus))}
@@ -1400,10 +1429,25 @@ export function CameraPane({
             )}
           </div>
         ) : (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
-            {clips.length
-              ? 'Pick a saved clip below, or start the camera and tap Replay last Ns'
-              : 'Start the camera, wait a couple of seconds, then tap Replay last Ns'}
+          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[var(--panel-border)] text-sm text-[var(--muted)]">
+            {clipsOnly ? (
+              <>
+                <span>No clip loaded yet</span>
+                <button
+                  type="button"
+                  onClick={() => setClipPickerOpen(true)}
+                  className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-bold text-[var(--on-accent)]"
+                >
+                  🎞 Pick a video
+                </button>
+              </>
+            ) : (
+              <span>
+                {clips.length
+                  ? 'Pick a saved clip below, or start the camera and tap Replay last Ns'
+                  : 'Start the camera, wait a couple of seconds, then tap Replay last Ns'}
+              </span>
+            )}
           </div>
         ))}
 

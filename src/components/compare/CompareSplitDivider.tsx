@@ -17,6 +17,9 @@ type Props = {
   /** Playhead link state for the Compare link button. */
   linked?: boolean
   onToggleLink?: () => void
+  /** Two-clips mode: camera hidden, two clips compared. */
+  twoClips?: boolean
+  onToggleTwoClips?: () => void
 }
 
 export function CompareSplitDivider({
@@ -28,6 +31,8 @@ export function CompareSplitDivider({
   onClose,
   linked = false,
   onToggleLink,
+  twoClips = false,
+  onToggleTwoClips,
 }: Props) {
   const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
     null,
@@ -120,6 +125,29 @@ export function CompareSplitDivider({
           }
         >
           <span aria-hidden className={linked ? '' : 'opacity-40 grayscale'}>🔗</span>
+        </button>
+      ) : null}
+      {onToggleTwoClips ? (
+        <button
+          type="button"
+          aria-label={twoClips ? 'Show camera' : 'Two clips: hide camera'}
+          aria-pressed={twoClips}
+          title={twoClips ? 'Show camera' : 'Two clips: hide the camera, compare two clips'}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onToggleTwoClips}
+          className={
+            vertical
+              ? `absolute left-[3.75rem] top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  twoClips ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+              : `absolute left-1/2 top-[3.75rem] z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  twoClips ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+          }
+        >
+          <span aria-hidden className={twoClips ? '' : 'opacity-40 grayscale'}>
+            {twoClips ? '📷' : '🎬'}
+          </span>
         </button>
       ) : null}
     </div>
