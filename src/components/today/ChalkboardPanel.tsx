@@ -401,6 +401,8 @@ function ChalkboardBody({
   const compact = size === 'compact'
   const [reelId, setReelId] = useState<string | null>(null)
   const [skillQuery, setSkillQuery] = useState('')
+  const [pinDrillsOpen, setPinDrillsOpen] = useState(false)
+  const [pinSkillCardOpen, setPinSkillCardOpen] = useState(false)
   const skillHits = useMemo(() => {
     const q = skillQuery.trim()
     if (q) return searchSkills(q, 8).map((hit) => hit.skill)
@@ -594,9 +596,30 @@ function ChalkboardBody({
           </div>
           {drills.length > 0 && !athleteMode && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                Pin a drill list for this class
-              </p>
+              <button
+                type="button"
+                onClick={() => setPinDrillsOpen((v) => !v)}
+                aria-expanded={pinDrillsOpen}
+                className="flex w-full items-center justify-between py-1 text-left"
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Pin a drill list for this class
+                </span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={`h-4 w-4 text-[var(--muted)] transition-transform ${pinDrillsOpen ? '' : '-rotate-90'}`}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              {pinDrillsOpen && (
+              <>
               <ul className="mt-1 max-h-36 space-y-1 overflow-y-auto">
                 {drills.map((d) => {
                   const on = drillPick.includes(d.id)
@@ -650,12 +673,35 @@ function ChalkboardBody({
               >
                 Pin selected drills
               </button>
+              </>
+              )}
             </div>
           )}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Pin a skill card
-            </p>
+            <button
+              type="button"
+              onClick={() => setPinSkillCardOpen((v) => !v)}
+              aria-expanded={pinSkillCardOpen}
+              className="flex w-full items-center justify-between py-1 text-left"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Pin a skill card
+              </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className={`h-4 w-4 text-[var(--muted)] transition-transform ${pinSkillCardOpen ? '' : '-rotate-90'}`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {pinSkillCardOpen && (
+            <>
             <input
               value={skillQuery}
               onChange={(e) => setSkillQuery(e.target.value)}
@@ -711,6 +757,8 @@ function ChalkboardBody({
                 </li>
               )}
             </ul>
+            </>
+            )}
           </div>
         </div>
       )}
