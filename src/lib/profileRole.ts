@@ -41,28 +41,28 @@ export function canGiveHi5(viewer: Athlete | null | undefined): boolean {
 }
 
 /** Ryan only — gym Compare library, shape copy, still crops, gym collages. */
-export function isGymAdmin(athlete: Athlete | null | undefined): boolean {
+export function isShapelabAdmin(athlete: Athlete | null | undefined): boolean {
   if (athlete?.role === 'athlete' || athlete?.role === 'parent') return false
   return isRyanAthlete(athlete)
 }
 
 /** Ryan or a gym owner — can fix names and phones on other profiles. */
 export function canAdminEditRoster(athlete: Athlete | null | undefined): boolean {
-  return isGymAdmin(athlete) || profileRole(athlete) === 'gym_owner'
+  return isShapelabAdmin(athlete) || profileRole(athlete) === 'gym_owner'
 }
 
-/** Owner or gym admin. Signed-out visitors cannot edit anyone. */
+/** Owner or shapelab admin. Signed-out visitors cannot edit anyone. */
 export function canEditAthleteProfile(
   viewer: Athlete | null | undefined,
   athlete: Athlete | null | undefined,
 ): boolean {
   if (!viewer || !athlete) return false
-  if (isGymAdmin(viewer)) return true
+  if (isShapelabAdmin(viewer)) return true
   return viewer.id === athlete.id
 }
 
 export function roleLabel(athlete: Athlete | null | undefined): string {
-  if (isGymAdmin(athlete)) return 'Gym admin'
+  if (isShapelabAdmin(athlete)) return 'Shapelab admin'
   const found = PROFILE_KINDS.find((k) => k.id === profileRole(athlete))
   return found?.label ?? 'Athlete'
 }
