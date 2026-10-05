@@ -41,6 +41,8 @@ import {
 } from '../../lib/saveMedia'
 import { VideoWorkbench } from './VideoWorkbench'
 import { InstagramEmbed } from './InstagramEmbed'
+import { SkillCardVideoBrowser } from './SkillCardVideoBrowser'
+import type { SkillCardVideoList } from '../../lib/skillCardVideos'
 import { postedByFromUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { CompareSplitBar } from './CompareSplitBar'
 import { flipFocus, hudAvoidPipRightClass, pipPane, useCompareLayout } from './compareLayout'
@@ -237,6 +239,12 @@ export function CameraPane({
   }, [clipsOnly, running])
   /** Reference-library item loaded into the replay slot (null for camera clips). */
   const [replayRefItem, setReplayRefItem] = useState<RefItem | null>(null)
+  /**
+   * Skill card whose videos are loaded in the replay slot (null otherwise).
+   * Carries the card's video list so swipe navigation steps through it.
+   */
+  const [replaySkillCard, setReplaySkillCard] =
+    useState<SkillCardVideoList | null>(null)
 
   // A picked reference item with a social or YouTube URL renders in its own
   // player; file and direct-URL items resolve to clipSrc like camera clips.
@@ -766,6 +774,7 @@ export function CameraPane({
 
   const openClip = async (clip: RecordedClip) => {
     setReplayRefItem(null)
+    setReplaySkillCard(null)
     const blob = await getBlob(clip.id)
     if (!blob) {
       setError('Clip data not found.')
@@ -784,6 +793,7 @@ export function CameraPane({
   /** Load a video picked from the device photo library into the replay slot. */
   const openPhotoLibraryVideo = (file: File) => {
     setReplayRefItem(null)
+    setReplaySkillCard(null)
     replayBlobRef.current = file
     if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current)
     const url = URL.createObjectURL(file)
@@ -798,6 +808,7 @@ export function CameraPane({
   const openReferenceItem = async (item: RefItem) => {
     setError(null)
     setActiveClipId(null)
+    setReplaySkillCard(null)
     setReplayRefItem(item)
     setReplayTailSec(null)
     replayWindowRef.current = null
@@ -832,10 +843,17 @@ export function CameraPane({
     setMode('replay')
   }
 
+  /** Load a skill card video into the replay slot (bottom pane). */
+  const openSkillCardVideo = async (card: SkillCardVideoList, item: RefItem) => {
+    await openReferenceItem(item)
+    setReplaySkillCard({ skillId: card.skillId, name: card.name, evidenceKey: card.evidenceKey, items: card.items })
+  }
+
   /**
    * Quick vertical swipe on the bottom replay video: step to the next
    * (swipe up) or previous (swipe down) clip in the list the current clip
-   * came from (saved clips or the reference library). Stops at the ends.
+   * came from (saved clips, the reference library, or a skill card).
+   * Stops at the ends.
    * Live buffer replays and photo-library one-offs have no list, so
    * swiping does nothing. Each pane steps independently.
    */
@@ -851,6 +869,15 @@ export function CameraPane({
         void openClip(next)
         return
       }
+      if (replaySkillCard && replayRefItem) {
+        const idx = replaySkillCard.items.findIndex((i) => i.id === replayRefItem.id)
+        if (idx >= 0) {
+          const next = replaySkillCard.items[idx + delta]
+          if (!next) return
+          void openSkillCardVideo(replaySkillCard, next)
+          return
+        }
+      }
       if (replayRefItem) {
         const flat = refCollections.flatMap((col) => col.items)
         const idx = flat.findIndex((i) => i.id === replayRefItem.id)
@@ -860,7 +887,7 @@ export function CameraPane({
         void openReferenceItem(next)
       }
     },
-    [mode, activeClipId, clips, replayRefItem, refCollections],
+    [mode, activeClipId, clips, replaySkillCard, replayRefItem, refCollections],
   )
 
   const openBufferReplay = async () => {
@@ -870,6 +897,8 @@ export function CameraPane({
     }
     if (replayBuilding) return
     setError(null)
+    setReplayRefItem(null)
+    setReplaySkillCard(null)
     setReplayBuilding(true)
     const capturedFor = (performance.now() - rollingStartRef.current) / 1000
     try {
@@ -1889,6 +1918,18 @@ export function CameraPane({
                     </div>
                   ))
               )}
+            </div>
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Skill cards
+              </h4>
+              <SkillCardVideoBrowser
+                activeItemId={replayRefItem?.id ?? null}
+                onPick={(item, card) => {
+                  closeClipPicker()
+                  void openSkillCardVideo(card, item)
+                }}
+              />
             </div>
             <div className="mt-4 border-t border-white/10 pt-3">
               <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">

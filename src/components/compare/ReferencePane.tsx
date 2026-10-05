@@ -62,6 +62,8 @@ import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { SHAPES } from '../../config/shapes'
 import { InstagramEmbed } from './InstagramEmbed'
+import { SkillCardVideoBrowser } from './SkillCardVideoBrowser'
+import type { SkillCardVideoList } from '../../lib/skillCardVideos'
 import { prefetchNeighborClips } from '../../lib/igCache'
 import { VideoWorkbench } from './VideoWorkbench'
 import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
@@ -157,6 +159,11 @@ export function ReferencePane({
   const [savedClips, setSavedClips] = useState<RecordedClip[]>([])
   /** Which saved clip is playing up top (null when a library item is). */
   const [activeSavedClipId, setActiveSavedClipId] = useState<string | null>(null)
+  /**
+   * Skill card whose videos are playing up top (null otherwise).
+   * Carries the card's video list so swipe navigation steps through it.
+   */
+  const [activeSkillCard, setActiveSkillCard] = useState<SkillCardVideoList | null>(null)
   const hudPhotoInputRef = useRef<HTMLInputElement | null>(null)
   const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
   const [reelOpen, setReelOpen] = useState(false)
@@ -337,6 +344,7 @@ export function ReferencePane({
       objectUrlRef.current = url
       setActiveItemId(null)
       setActiveSavedClipId(clip.id)
+      setActiveSkillCard(null)
       setWatchItem(null)
       setItemSrc(url)
       setClipHudOpen(false)
@@ -353,6 +361,7 @@ export function ReferencePane({
     objectUrlRef.current = url
     setActiveItemId(null)
     setActiveSavedClipId(null)
+    setActiveSkillCard(null)
     setWatchItem(null)
     setItemSrc(url)
     setClipHudOpen(false)
@@ -404,6 +413,7 @@ export function ReferencePane({
     revokeSrc()
     setNotice(handoffName ? `Reference: ${handoffName}` : 'Playing the replay as the reference.')
     setError(null)
+    setActiveSkillCard(null)
     if (handoffItemId) {
       setActiveItemId(handoffItemId)
       setActiveSavedClipId(null)
@@ -430,6 +440,7 @@ export function ReferencePane({
   const selectItem = async (item: RefItem, collection?: RefCollection) => {
     setError(null)
     revokeSrc()
+    setActiveSkillCard(null)
     if (collection && collection.id !== activeCollectionId) {
       setActiveCollectionId(collection.id)
     }
@@ -467,6 +478,13 @@ export function ReferencePane({
       const idx = list.findIndex((row) => row.id === item.id)
       prefetchNeighborClips(list, Math.max(0, idx), 2)
     }
+  }
+
+  /** Load a skill card video up top. selectItem clears the card tracking, so re-set it after. */
+  const selectSkillCardVideo = async (card: SkillCardVideoList, item: RefItem) => {
+    setClipHudOpen(false)
+    await selectItem(item)
+    setActiveSkillCard({ skillId: card.skillId, name: card.name, evidenceKey: card.evidenceKey, items: card.items })
   }
 
   const updateCollection = async (next: RefCollection) => {
@@ -966,7 +984,8 @@ export function ReferencePane({
 
   /**
    * Quick vertical swipe on the top video: step to the next (swipe up) or
-   * previous (swipe down) clip in the list the current clip came from.
+   * previous (swipe down) clip in the list the current clip came from
+   * (saved clips, the reference library, or a skill card).
    * Stops at the ends like the reference scroll. Photo-library one-offs
    * and handoffs without an item id have no list, so swiping does nothing.
    */
@@ -981,6 +1000,14 @@ export function ReferencePane({
         void playSavedClip(next)
         return
       }
+      if (activeSkillCard) {
+        const idx = activeSkillCard.items.findIndex((i) => i.id === activeItemId)
+        if (idx < 0) return
+        const next = activeSkillCard.items[idx + delta]
+        if (!next) return
+        void selectSkillCardVideo(activeSkillCard, next)
+        return
+      }
       if (!activeItemId) return
       const flat: { item: RefItem; col: RefCollection }[] = []
       for (const { col, items } of hudGroups) {
@@ -992,7 +1019,7 @@ export function ReferencePane({
       if (!next) return
       void selectItem(next.item, next.col)
     },
-    [activeSavedClipId, savedClips, activeItemId, hudGroups],
+    [activeSavedClipId, savedClips, activeSkillCard, activeItemId, hudGroups],
   )
   const watchList = desk === 'browse' ? currentHits : (activeCollection?.items ?? [])
   const reelItems = watchList.flatMap((item) =>
@@ -1558,6 +1585,15 @@ export function ReferencePane({
                   if (file) playPhotoFile(file)
                   e.target.value = ''
                 }}
+              />
+            </div>
+            <div className="mb-3 border-b border-white/10 pb-3">
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                Skill cards
+              </h4>
+              <SkillCardVideoBrowser
+                activeItemId={activeItemId}
+                onPick={(item, card) => void selectSkillCardVideo(card, item)}
               />
             </div>
             {hudGroups.length === 0 ? (
