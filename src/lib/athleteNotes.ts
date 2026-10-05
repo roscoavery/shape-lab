@@ -1,5 +1,5 @@
 import type { Athlete, AthleteCoachNote } from '../types'
-import { isGymAdmin, isCoachProfile } from './profileRole'
+import { isShapelabAdmin, isCoachProfile } from './profileRole'
 import { canSeePrivateCoaching } from './coachLink'
 import { createId } from './storage'
 import { noteVisibleToAthlete, type NoteAudience } from './noteAudience'
@@ -11,7 +11,7 @@ export function visibleCoachNotes(
   const all = athlete.coachNotes ?? []
   if (!viewer) return []
   const newest = all.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-  if (isGymAdmin(viewer) || (isCoachProfile(viewer) && canSeePrivateCoaching(viewer, athlete))) {
+  if (isShapelabAdmin(viewer) || (isCoachProfile(viewer) && canSeePrivateCoaching(viewer, athlete))) {
     return newest
   }
   if (isCoachProfile(viewer)) return newest.filter((n) => n.authorId === viewer.id)
@@ -52,7 +52,7 @@ export function groupNotesByAuthor(notes: AthleteCoachNote[]): {
 
 export function canEditCoachNote(viewer: Athlete | null, note: AthleteCoachNote): boolean {
   if (!viewer || !canWriteCoachNotes(viewer)) return false
-  return isGymAdmin(viewer) || note.authorId === viewer.id
+  return isShapelabAdmin(viewer) || note.authorId === viewer.id
 }
 
 export function updateCoachNote(
@@ -116,7 +116,7 @@ export function applyCoachNoteRemove(
 }
 
 export function canWriteCoachNotes(viewer: Athlete | null): boolean {
-  return Boolean(viewer && (isCoachProfile(viewer) || isGymAdmin(viewer)))
+  return Boolean(viewer && (isCoachProfile(viewer) || isShapelabAdmin(viewer)))
 }
 
 export function addCoachNotesToAthletes(
