@@ -155,6 +155,8 @@ export function ReferencePane({
   const [clipHudAll, setClipHudAll] = useState(false)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [savedClips, setSavedClips] = useState<RecordedClip[]>([])
+  /** Which saved clip is playing up top (null when a library item is). */
+  const [activeSavedClipId, setActiveSavedClipId] = useState<string | null>(null)
   const hudPhotoInputRef = useRef<HTMLInputElement | null>(null)
   const [desk, setDesk] = useState<'watch' | 'browse' | 'add' | 'keep'>('watch')
   const [reelOpen, setReelOpen] = useState(false)
@@ -331,6 +333,7 @@ export function ReferencePane({
       const url = URL.createObjectURL(blob)
       objectUrlRef.current = url
       setActiveItemId(null)
+      setActiveSavedClipId(clip.id)
       setWatchItem(null)
       setItemSrc(url)
       setClipHudOpen(false)
@@ -346,6 +349,7 @@ export function ReferencePane({
     const url = URL.createObjectURL(file)
     objectUrlRef.current = url
     setActiveItemId(null)
+    setActiveSavedClipId(null)
     setWatchItem(null)
     setItemSrc(url)
     setClipHudOpen(false)
@@ -393,6 +397,7 @@ export function ReferencePane({
     setError(null)
     if (handoffItemId) {
       setActiveItemId(handoffItemId)
+      setActiveSavedClipId(null)
       void getBlob(handoffItemId).then((blob) => {
         if (cancelled) return
         if (blob) {
@@ -405,6 +410,7 @@ export function ReferencePane({
       })
     } else if (handoffSrc) {
       setActiveItemId(null)
+      setActiveSavedClipId(null)
       setItemSrc(handoffSrc)
     }
     return () => {
@@ -419,6 +425,7 @@ export function ReferencePane({
       setActiveCollectionId(collection.id)
     }
     setActiveItemId(item.id)
+    setActiveSavedClipId(null)
     setWatchItem(item)
     if (!fullscreen && desk !== 'watch' && desk !== 'browse') setDesk('watch')
     if (isSocialVideoItem(item) || youtubeEmbedSrc(item.url ?? '')) {
@@ -947,6 +954,37 @@ export function ReferencePane({
       }))
       .filter((row) => row.items.length > 0)
   }, [allCollections, activeCollection, clipHudAll, q])
+
+  /**
+   * Quick vertical swipe on the top video: step to the next (swipe up) or
+   * previous (swipe down) clip in the list the current clip came from.
+   * Stops at the ends like the reference scroll. Photo-library one-offs
+   * and handoffs without an item id have no list, so swiping does nothing.
+   */
+  const stepTopClip = useCallback(
+    (direction: 'next' | 'prev') => {
+      const delta = direction === 'next' ? 1 : -1
+      if (activeSavedClipId) {
+        const idx = savedClips.findIndex((c) => c.id === activeSavedClipId)
+        if (idx < 0) return
+        const next = savedClips[idx + delta]
+        if (!next) return
+        void playSavedClip(next)
+        return
+      }
+      if (!activeItemId) return
+      const flat: { item: RefItem; col: RefCollection }[] = []
+      for (const { col, items } of hudGroups) {
+        for (const item of items) flat.push({ item, col })
+      }
+      const idx = flat.findIndex(({ item }) => item.id === activeItemId)
+      if (idx < 0) return
+      const next = flat[idx + delta]
+      if (!next) return
+      void selectItem(next.item, next.col)
+    },
+    [activeSavedClipId, savedClips, activeItemId, hudGroups],
+  )
   const watchList = desk === 'browse' ? currentHits : (activeCollection?.items ?? [])
   const reelItems = watchList.flatMap((item) =>
     item.url
@@ -1264,6 +1302,10 @@ export function ReferencePane({
       </>
     ) : null
 
+  /** Swipe navigation for the compare split (not the library viewer, which
+   * has its own reel scrolling). */
+  const topSwipeNav = viewer ? undefined : stepTopClip
+
   const renderPlayer = (fill: boolean) => (
     <div
       className={
@@ -1302,6 +1344,7 @@ export function ReferencePane({
           compact={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onSwipeVertical={topSwipeNav}
         />
       ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
@@ -1328,6 +1371,7 @@ export function ReferencePane({
           quiet={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onSwipeVertical={topSwipeNav}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1342,6 +1386,7 @@ export function ReferencePane({
           compact={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onSwipeVertical={topSwipeNav}
         />
       ) : (
         <div

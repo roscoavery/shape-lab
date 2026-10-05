@@ -210,6 +210,9 @@ type Props = {
   posterFirst?: boolean
   /** Called with the underlying <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /** Quick vertical swipe on the video: 'next' for swipe up, 'prev' for
+   * swipe down. Passed through to the inner player. */
+  onSwipeVertical?: (direction: 'next' | 'prev') => void
 }
 
 export function InstagramEmbed({
@@ -241,6 +244,7 @@ export function InstagramEmbed({
   playWhenVisible = false,
   posterFirst = false,
   onVideoElement,
+  onSwipeVertical,
 }: Props) {
   const platform = socialPlatform(url)
   const onCachedRef = useRef(onCached)
@@ -774,6 +778,7 @@ export function InstagramEmbed({
         tapTogglesChrome={tapTogglesChrome}
         pictureChrome={carouselChrome}
         onVideoElement={onVideoElement}
+        onSwipeVertical={onSwipeVertical}
         onError={() => {
           skipHostedRef.current = true
           forgetInstagramManifest(url)

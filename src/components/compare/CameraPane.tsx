@@ -821,6 +821,37 @@ export function CameraPane({
     setMode('replay')
   }
 
+  /**
+   * Quick vertical swipe on the bottom replay video: step to the next
+   * (swipe up) or previous (swipe down) clip in the list the current clip
+   * came from (saved clips or the reference library). Stops at the ends.
+   * Live buffer replays and photo-library one-offs have no list, so
+   * swiping does nothing. Each pane steps independently.
+   */
+  const stepBottomClip = useCallback(
+    (direction: 'next' | 'prev') => {
+      if (mode !== 'replay') return
+      const delta = direction === 'next' ? 1 : -1
+      if (activeClipId) {
+        const idx = clips.findIndex((c) => c.id === activeClipId)
+        if (idx < 0) return
+        const next = clips[idx + delta]
+        if (!next) return
+        void openClip(next)
+        return
+      }
+      if (replayRefItem) {
+        const flat = refCollections.flatMap((col) => col.items)
+        const idx = flat.findIndex((i) => i.id === replayRefItem.id)
+        if (idx < 0) return
+        const next = flat[idx + delta]
+        if (!next) return
+        void openReferenceItem(next)
+      }
+    },
+    [mode, activeClipId, clips, replayRefItem, refCollections],
+  )
+
   const openBufferReplay = async () => {
     if (!running) {
       setMode('replay')
@@ -1445,6 +1476,7 @@ export function CameraPane({
                   markup
                   hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
+                  onSwipeVertical={stepBottomClip}
                 />
               ) : (
                 <div className="relative h-full w-full bg-black">
@@ -1497,6 +1529,7 @@ export function CameraPane({
               onSaveToCollection={() => void sendReplay('collection')}
               hudCorner={camHudCorner}
               onVideoElement={onVideoElement}
+              onSwipeVertical={stepBottomClip}
             />
             )}
           </div>

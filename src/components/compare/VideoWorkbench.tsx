@@ -91,6 +91,11 @@ type Props = {
   /** Called with the underlying <video> element when it mounts/changes.
    * Used by Compare to link playheads across panes. */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /** Quick vertical swipe on the video: 'next' for swipe up, 'prev' for
+   * swipe down. Fires only when the hold never engaged (under 400ms), the
+   * swipe is mostly vertical, and it started on the video itself. Used by
+   * the Compare panes to step through the clip list. */
+  onSwipeVertical?: (direction: 'next' | 'prev') => void
 }
 
 function fmt(t: number): string {
@@ -150,6 +155,7 @@ function VideoWorkbenchInner({
   onError,
   playWhenVisible = false,
   onVideoElement,
+  onSwipeVertical,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // Report the underlying <video> element so parents (Compare link) can
@@ -216,9 +222,13 @@ function VideoWorkbenchInner({
     scrubAnchorX: number
     scrubAnchorT: number
     pointerId: number
+    /** True when the pointer went down on the video element itself. */
+    onVideo: boolean
   } | null>(null)
 
   const HOLD_MS = 400
+  /** Minimum vertical travel (px) for a swipe to count as clip navigation. */
+  const SWIPE_MIN_DY = 48
 
   const onGestureDown = useCallback(
     (e: PointerEvent) => {
@@ -240,6 +250,7 @@ function VideoWorkbenchInner({
         scrubAnchorX: e.clientX,
         scrubAnchorT: v ? v.currentTime : 0,
         pointerId: e.pointerId,
+        onVideo: target?.closest('video') != null,
       }
       gestureRef.current = g
       // Hold threshold: pause the video and enter scrub mode.
@@ -319,6 +330,19 @@ function VideoWorkbenchInner({
         tapStartRef.current = null
         return
       }
+      // Quick vertical swipe on the video: step to the next/previous clip.
+      // Only when the hold never engaged (under HOLD_MS), the swipe is
+      // mostly vertical, and it started on the video itself. A hold-then-
+      // drag is a scrub, a slow drag is nothing, a tap toggles chrome.
+      if (onSwipeVertical && g && g.onVideo && Date.now() - g.t < HOLD_MS) {
+        const dx = e.clientX - g.x
+        const dy = e.clientY - g.y
+        if (Math.abs(dy) >= SWIPE_MIN_DY && Math.abs(dy) > Math.abs(dx) * 1.5) {
+          tapStartRef.current = null
+          onSwipeVertical(dy < 0 ? 'next' : 'prev')
+          return
+        }
+      }
       // Single tap: show/hide controls only.
       if (
         tapTogglesChrome &&
@@ -332,7 +356,7 @@ function VideoWorkbenchInner({
       }
       tapStartRef.current = null
     },
-    [tapTogglesChrome, toggleChrome],
+    [tapTogglesChrome, toggleChrome, onSwipeVertical],
   )
 
   // pointercancel = the browser hijacked the gesture (finger still down).

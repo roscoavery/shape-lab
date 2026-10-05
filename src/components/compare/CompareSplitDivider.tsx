@@ -2,9 +2,15 @@
  * Drag handle between Compare panes. Does not scale the videos —
  * each pane stays object-contain; this only changes how much of the
  * window each view is given.
+ *
+ * Top/bottom: drag the bar all the way to either edge for a full-size
+ * pane. A fast flick up or down on the bar snaps it to the top or
+ * bottom with a scroll-like ease (bottom video full size on flick up,
+ * top video full size on flick down). Tapping the bar while it sits at
+ * an extreme restores the previous split.
  */
 
-import { useRef, type PointerEvent } from 'react'
+import { useEffect, useRef, type PointerEvent } from 'react'
 
 type Props = {
   axis: 'x' | 'y'
@@ -22,34 +28,108 @@ type Props = {
   onToggleTwoClips?: () => void
 }
 
+// A release faster than this (px per ms) counts as a flick, not a drag.
+const FLICK_VELOCITY = 0.5
+// Window (ms) over which flick velocity is measured.
+const FLICK_WINDOW = 120
+// Movement under this (px) within this time (ms) counts as a tap.
+const TAP_SLOP = 10
+const TAP_TIME = 350
+// Ease duration for the flick snap, in ms.
+const FLICK_DURATION = 320
+
 export function CompareSplitDivider({
   axis,
   value,
   onChange,
-  min = 0.22,
-  max = 0.78,
+  min,
+  max,
   onClose,
   linked = false,
   onToggleLink,
   twoClips = false,
   onToggleTwoClips,
 }: Props) {
-  const drag = useRef<{ pointerId: number; start: number; orig: number; size: number } | null>(
-    null,
-  )
+  const vertical = axis === 'y'
+  // Top/bottom gets the full travel range so either video can go full
+  // size; left/right keeps the old limits.
+  const lo = min ?? (vertical ? 0 : 0.22)
+  const hi = max ?? (vertical ? 1 : 0.78)
+
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const drag = useRef<{
+    pointerId: number
+    start: number
+    orig: number
+    size: number
+    downTime: number
+    history: { pos: number; t: number }[]
+  } | null>(null)
+  const animFrame = useRef<number | null>(null)
+  const animating = useRef(false)
+  const restoreRatio = useRef(0.5)
+
+  // Remember the last settled non-extreme ratio so a tap at an extreme
+  // can bring the split back. Flick animation intermediates are excluded.
+  if (!animating.current && value > 0.02 && value < 0.98) {
+    restoreRatio.current = value
+  }
+
+  useEffect(() => {
+    return () => {
+      if (animFrame.current != null) cancelAnimationFrame(animFrame.current)
+    }
+  }, [])
+
+  const cancelAnim = () => {
+    if (animFrame.current != null) {
+      cancelAnimationFrame(animFrame.current)
+      animFrame.current = null
+    }
+    animating.current = false
+  }
+
+  // Scroll-like snap: fast start, gentle landing.
+  const animateTo = (target: number) => {
+    cancelAnim()
+    const from = valueRef.current
+    if (from === target) return
+    const start = performance.now()
+    animating.current = true
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / FLICK_DURATION)
+      const eased = 1 - Math.pow(1 - t, 3)
+      onChange(from + (target - from) * eased)
+      if (t < 1) {
+        animFrame.current = requestAnimationFrame(step)
+      } else {
+        animFrame.current = null
+        animating.current = false
+      }
+    }
+    animFrame.current = requestAnimationFrame(step)
+  }
+
+  const posOf = (e: PointerEvent<HTMLDivElement>) => (vertical ? e.clientY : e.clientX)
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     const parent = e.currentTarget.parentElement
     if (!parent) return
     e.preventDefault()
     e.stopPropagation()
+    cancelAnim()
     const rect = parent.getBoundingClientRect()
     e.currentTarget.setPointerCapture(e.pointerId)
+    const pos = posOf(e)
+    const now = performance.now()
     drag.current = {
       pointerId: e.pointerId,
-      start: axis === 'y' ? e.clientY : e.clientX,
-      orig: value,
-      size: axis === 'y' ? rect.height : rect.width,
+      start: pos,
+      orig: valueRef.current,
+      size: vertical ? rect.height : rect.width,
+      downTime: now,
+      history: [{ pos, t: now }],
     }
   }
 
@@ -57,16 +137,57 @@ export function CompareSplitDivider({
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId || d.size < 8) return
     e.preventDefault()
-    const now = axis === 'y' ? e.clientY : e.clientX
-    const delta = (now - d.start) / d.size
-    onChange(Math.min(max, Math.max(min, d.orig + delta)))
+    const pos = posOf(e)
+    const now = performance.now()
+    d.history.push({ pos, t: now })
+    while (d.history.length > 2 && now - d.history[0].t > FLICK_WINDOW) d.history.shift()
+    const delta = (pos - d.start) / d.size
+    onChange(Math.min(hi, Math.max(lo, d.orig + delta)))
+  }
+
+  const onPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d || d.pointerId !== e.pointerId) return
+    drag.current = null
+    cancelAnim()
   }
 
   const end = (e: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId === e.pointerId) drag.current = null
-  }
+    const d = drag.current
+    if (!d || d.pointerId !== e.pointerId) return
+    drag.current = null
+    const pos = posOf(e)
+    const now = performance.now()
+    const moved = Math.abs(pos - d.start)
 
-  const vertical = axis === 'y'
+    // Tap without a real drag: at an extreme, restore the previous split.
+    if (moved < TAP_SLOP && now - d.downTime < TAP_TIME) {
+      const v = valueRef.current
+      if (vertical && (v <= lo + 0.001 || v >= hi - 0.001)) {
+        onChange(Math.min(hi, Math.max(lo, restoreRatio.current)))
+      }
+      return
+    }
+
+    // Flick: top/bottom axis only, only when fast. The bar snaps all the
+    // way to the edge in the flick direction.
+    if (vertical) {
+      const first = d.history[0]
+      const hdt = now - first.t
+      if (hdt > 0) {
+        const velocity = (pos - first.pos) / hdt // px per ms, negative is up
+        if (velocity < -FLICK_VELOCITY) {
+          animateTo(lo) // fling up: bar to the top, bottom video full size
+          return
+        }
+        if (velocity > FLICK_VELOCITY) {
+          animateTo(hi) // fling down: bar to the bottom, top video full size
+          return
+        }
+      }
+    }
+    // Otherwise the drag already left the bar where it was dropped.
+  }
 
   return (
     <div
@@ -77,7 +198,7 @@ export function CompareSplitDivider({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={end}
-      onPointerCancel={end}
+      onPointerCancel={onPointerCancel}
       className={
         vertical
           ? 'relative z-[30] flex h-14 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-[#0b0f14]'
