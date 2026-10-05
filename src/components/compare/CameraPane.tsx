@@ -138,6 +138,10 @@ export function CameraPane({
   const { fullscreen, camRail, focus, setFocus, setAthleteReplay, pipCorner, setReplayStart, replayAfterGo } =
     useCompareLayout()
 
+  // Fullscreen replay tap-to-toggle chrome (like the reference scroll): tap the
+  // video to hide all chrome, tap again to bring it back. Reset on content change.
+  const [replayChromeOpen, setReplayChromeOpen] = useState(true)
+
   // One MediaRecorder while the camera is on. Its complete file (header +
   // clusters) is what Replay plays. Slicing timeslices by time drops the
   // WebM header and will not play — we never do that.
@@ -242,6 +246,12 @@ export function CameraPane({
       : null
   const replayVideoSrc = replaySocialItem ? null : clipSrc
   const hasReplayContent = Boolean(replayVideoSrc) || Boolean(replaySocialItem)
+
+  // Reopen chrome when the replay content changes so a hidden-chrome state
+  // never carries over to a new clip.
+  useEffect(() => {
+    setReplayChromeOpen(true)
+  }, [replayVideoSrc, replaySocialItem?.id])
 
   // Share sheet for the bottom pane: offer "Add to skill card" for reference
   // items with a real URL (social/file/URL items from the library picker).
@@ -1477,6 +1487,9 @@ export function CameraPane({
                   hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
                   onSwipeVertical={stepBottomClip}
+                  tapTogglesChrome={fullscreen}
+                  chromeOpen={fullscreen ? replayChromeOpen : undefined}
+                  onToggleChrome={fullscreen ? () => setReplayChromeOpen((v) => !v) : undefined}
                 />
               ) : (
                 <div className="relative h-full w-full bg-black">
@@ -1530,6 +1543,9 @@ export function CameraPane({
               hudCorner={camHudCorner}
               onVideoElement={onVideoElement}
               onSwipeVertical={stepBottomClip}
+              tapTogglesChrome={fullscreen}
+              chromeOpen={fullscreen ? replayChromeOpen : undefined}
+              onToggleChrome={fullscreen ? () => setReplayChromeOpen((v) => !v) : undefined}
             />
             )}
           </div>

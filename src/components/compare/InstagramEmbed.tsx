@@ -810,11 +810,11 @@ export function InstagramEmbed({
         }}
       >
         {player}
-        {platform === 'instagram' && (
+        {platform === 'instagram' && !(tapTogglesChrome && chromeOpen === false) && (
           <IgOpenButton
             url={url}
             className={`absolute top-2 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 ${
-              hudCorner ? 'right-[4.25rem]' : 'right-2'
+              hudCorner || !tapTogglesChrome ? 'right-[4.25rem]' : 'right-2'
             }`}
           />
         )}

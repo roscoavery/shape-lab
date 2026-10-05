@@ -162,6 +162,9 @@ export function ReferencePane({
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
   const { fullscreen, refRail, focus, setFocus } = useCompareLayout()
+  // Fullscreen tap-to-toggle chrome (like the reference scroll): tap the video
+  // to hide all chrome, tap again to bring it back. Reset to open on clip change.
+  const [fsChromeOpen, setFsChromeOpen] = useState(true)
   const objectUrlRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -381,6 +384,12 @@ export function ReferencePane({
       prefetchNeighborClips(clips, idx >= 0 ? idx : 0, 4)
     }
   }, [collections, activeItemId])
+
+  // Reopen chrome when the clip changes so a hidden-chrome state never
+  // carries over to a new video.
+  useEffect(() => {
+    setFsChromeOpen(true)
+  }, [activeItemId])
 
   const revokeSrc = () => {
     if (objectUrlRef.current) {
@@ -1345,6 +1354,9 @@ export function ReferencePane({
           markup={!pip}
           onVideoElement={onVideoElement}
           onSwipeVertical={topSwipeNav}
+          tapTogglesChrome={fill && !viewer}
+          chromeOpen={fill && !viewer ? fsChromeOpen : undefined}
+          onToggleChrome={fill && !viewer ? () => setFsChromeOpen((v) => !v) : undefined}
         />
       ) : activeItem && isSocialVideoItem(activeItem) ? (
         <InstagramEmbed
@@ -1372,6 +1384,9 @@ export function ReferencePane({
           markup={!pip}
           onVideoElement={onVideoElement}
           onSwipeVertical={topSwipeNav}
+          tapTogglesChrome={fill && !viewer}
+          chromeOpen={fill && !viewer ? fsChromeOpen : undefined}
+          onToggleChrome={fill && !viewer ? () => setFsChromeOpen((v) => !v) : undefined}
         />
       ) : itemSrc ? (
         <VideoWorkbench
@@ -1387,6 +1402,9 @@ export function ReferencePane({
           markup={!pip}
           onVideoElement={onVideoElement}
           onSwipeVertical={topSwipeNav}
+          tapTogglesChrome={fill && !viewer}
+          chromeOpen={fill && !viewer ? fsChromeOpen : undefined}
+          onToggleChrome={fill && !viewer ? () => setFsChromeOpen((v) => !v) : undefined}
         />
       ) : (
         <div
