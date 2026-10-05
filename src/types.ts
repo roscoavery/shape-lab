@@ -224,7 +224,7 @@ export type Athlete = {
   /** SHA-256 of athleteId + passcode. Required to open the profile on any link. */
   passcodeHash?: string
   /**
-   * Who this profile is. Ryan is always gym admin (treated as coach).
+   * Who this profile is. Ryan is always shapelab admin (treated as coach).
    * Gym owners and coaches can keep their own Compare collections.
    */
   role?: 'gym_owner' | 'coach' | 'athlete' | 'parent'
