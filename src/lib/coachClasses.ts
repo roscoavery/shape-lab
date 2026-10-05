@@ -7,7 +7,7 @@ import type { Athlete, ClassExtraExercise, LessonNote } from '../types'
 import { normalizeClassExtras } from './classExercises'
 import { createId, loadAthletes } from './storage'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
-import { isGymAdmin } from './profileRole'
+import { isShapelabAdmin } from './profileRole'
 import { RYAN_PROFILE_ID } from './ryanProfile'
 import { gymWriteFetch, isStopWriteStatus } from './gymWritePace'
 
@@ -37,6 +37,8 @@ export type Weekday = (typeof WEEKDAYS)[number]
 export type CoachClassOffering = {
   id: string
   coachId: string
+  /** Which gym's class this is. Defaults to the coach's home gym. */
+  gymName?: string
   /** Coaches listed on this class. coachId stays the creator. */
   coachIds?: string[]
   /** Coach running the hour — shown first. */
@@ -490,12 +492,12 @@ export function loadOfferings(_coachId?: string | null): CoachClassOffering[] {
     .sort(compareOfferingsByWhen)
 }
 
-/** Classes this coach teaches. Gym admin still sees the whole gym list. */
+/** Classes this coach teaches. Shapelab admin still sees the whole gym list. */
 export function loadOfferingsForCoach(coachId: string | null | undefined): CoachClassOffering[] {
   const all = loadOfferings()
   if (!coachId) return all
   const viewer = loadAthletes().find((a) => a.id === coachId) ?? null
-  if (isGymAdmin(viewer)) return all
+  if (isShapelabAdmin(viewer)) return all
   return all.filter((o) => offeringCoachIds(o).includes(coachId))
 }
 
@@ -542,6 +544,7 @@ export function saveOffering(input: {
   time: string
   rosterIds?: string[]
   extraExercises?: ClassExtraExercise[]
+  gymName?: string
 }): CoachClassOffering {
   const file = read()
   const existing = input.id ? file.offerings.find((o) => o.id === input.id) : undefined
@@ -569,6 +572,7 @@ export function saveOffering(input: {
     name: input.name.trim(),
     weekday: input.weekday,
     time: input.time.trim(),
+    gymName: input.gymName ?? existing?.gymName,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     rosterIds: input.rosterIds ?? existing?.rosterIds ?? [],
