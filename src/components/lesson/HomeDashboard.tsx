@@ -566,7 +566,7 @@ export function HomeDashboard({
   }
 
   return (
-    <div className="mx-auto grid min-w-0 max-w-3xl gap-4">
+    <div className="mx-auto grid min-w-0 max-w-3xl grid-cols-[minmax(0,1fr)] gap-4">
       <CollapsibleSection
         title="Calendar"
         hint="Month, week, or day · collapsed until you need it"
@@ -580,7 +580,7 @@ export function HomeDashboard({
         />
         </div>
       </CollapsibleSection>
-      <section id="tour-today-start" className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+      <section id="tour-today-start" className="min-w-0 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
@@ -698,7 +698,7 @@ export function HomeDashboard({
           />
         )}
         {!(activeGroup && groupView === 'athlete') && (
-        <div className={`mt-3 grid gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
+        <div className={`mt-3 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2 ${onStartClass && !liveClass ? 'sm:grid-cols-2' : ''}`}>
           {onStartClass && !liveClass && (
             <button
               type="button"
@@ -759,7 +759,7 @@ export function HomeDashboard({
           </button>
         )}
         {!activeGroup && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="mt-2 grid min-w-0 grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => startTrainingKind('school')}
@@ -791,7 +791,7 @@ export function HomeDashboard({
         </div>
         )}
         {onOpenNamesTest && !activeGroup && !liveClass && !liveLesson && (
-          <div className="mt-3">
+          <div className="mt-3 min-w-0">
             <NamesTestGlow
               onClick={() => onOpenNamesTest()}
               hint="Every athlete on that list. The test keeps going until you get them all right, and leads with the names you miss most."
@@ -800,7 +800,7 @@ export function HomeDashboard({
           </div>
         )}
         {onShortcut && (liveClass || liveLesson || Boolean(activeGroup)) && (
-          <div className="mt-3">
+          <div className="mt-3 min-w-0">
             <NamesTestGlow
               title="New athlete / shape test"
               hint="Someone new walked in, or you need pictures before names. Open the shape test from here."
@@ -810,7 +810,7 @@ export function HomeDashboard({
           </div>
         )}
         {activeGroup && (
-          <div className="mt-3 rounded-2xl border border-[#6ec8d6]/50 bg-[#102028] px-4 py-3">
+          <div className="mt-3 min-w-0 rounded-2xl border border-[#6ec8d6]/50 bg-[#102028] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6ec8d6]">
               {eventKindLabel(activeGroup.kind)} is open
             </p>

@@ -74,7 +74,7 @@ export function AthleteHome({
     )
   }
   return (
-    <div className="mx-auto grid max-w-3xl gap-4">
+    <div className="mx-auto grid min-w-0 max-w-3xl grid-cols-[minmax(0,1fr)] gap-4">
       {showNudge && (
         <section className="rounded-xl border border-sky-300/40 bg-sky-300/10 p-5">
           <div className="flex items-start justify-between gap-3">
@@ -201,7 +201,7 @@ export function AthleteProgress({ athlete }: Props) {
   const tests = athlete?.shapeTests ?? []
   if (!athlete) return null
   return (
-    <div className="mx-auto grid max-w-3xl gap-4">
+    <div className="mx-auto grid min-w-0 max-w-3xl grid-cols-[minmax(0,1fr)] gap-4">
       <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">Progress</p>
         <h2 className="mt-1 text-2xl font-semibold">{athlete.name}</h2>

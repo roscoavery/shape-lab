@@ -1292,8 +1292,10 @@ export default function App() {
         />
       )}
       {tab === 'today' && deskRole === 'athlete' && (
-        <div className="flex min-w-0 flex-col gap-4 px-5 pt-8 md:pt-4">
-          <TourOfferButton onTakeTour={() => openTour(ATHLETE_HOME_TOUR)} label="✨ Tour this page" />
+        <div className="flex min-w-0 flex-col gap-4 pt-8 md:pt-4">
+          <div className="px-5">
+            <TourOfferButton onTakeTour={() => openTour(ATHLETE_HOME_TOUR)} label="✨ Tour this page" />
+          </div>
         <AthleteHome
           athlete={previewProfile}
           onPractice={() => goTab('homework')}
@@ -1316,8 +1318,10 @@ export default function App() {
         </div>
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="flex min-w-0 flex-col gap-4 px-5 pt-8 md:pt-4">
-          <TourOfferButton onTakeTour={() => openTour(TODAY_COACH_TOUR)} label="✨ Tour this page" />
+        <div className="flex min-w-0 flex-col gap-4 pt-8 md:pt-4">
+          <div className="px-5">
+            <TourOfferButton onTakeTour={() => openTour(TODAY_COACH_TOUR)} label="✨ Tour this page" />
+          </div>
           {activeProfile && isCoachProfile(activeProfile) && (
             <div id="tour-today-banners">
             <CoachReminderBanners
@@ -1328,7 +1332,7 @@ export default function App() {
             />
             </div>
           )}
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">
             {liveLesson && !liveLesson.endedAt && liveLessonAthletes.length > 0 ? (
               <div className="grid gap-4">
