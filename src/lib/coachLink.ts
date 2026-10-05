@@ -4,7 +4,7 @@
  */
 
 import type { Athlete, HomeworkItem, HomeworkLog, LessonSession } from '../types'
-import { isCoachProfile, isGymAdmin, profileRole } from './profileRole'
+import { isCoachProfile, isShapelabAdmin, profileRole } from './profileRole'
 import { parentSeesAthlete } from './parentLink'
 import { attendeeCountsOnProfile, classLabel, loadMeetings, loadOfferings } from './coachClasses'
 import { namesMatch } from './classStation'
@@ -115,20 +115,20 @@ export function canViewAthleteProfile(
   if (isProfilePublic(athlete)) return true
   if (!viewer) return false
   if (viewer.id === athlete.id) return true
-  if (isGymAdmin(viewer)) return true
+  if (isShapelabAdmin(viewer)) return true
   if (parentSeesAthlete(viewer, athlete.id)) return true
   if (isCoachProfile(viewer) && coachWorkedWithAthlete(viewer.id, athlete)) return true
   return false
 }
 
-/** Owner, parent of, listed coach, or gym admin. */
+/** Owner, parent of, listed coach, or shapelab admin. */
 export function canSeePrivateCoaching(
   viewer: Athlete | null | undefined,
   athlete: Athlete | null | undefined,
 ): boolean {
   if (!viewer || !athlete) return false
   if (viewer.id === athlete.id) return true
-  if (isGymAdmin(viewer)) return true
+  if (isShapelabAdmin(viewer)) return true
   if (parentSeesAthlete(viewer, athlete.id)) return true
   if (isCoachProfile(viewer) && coachWorkedWithAthlete(viewer.id, athlete)) return true
   return false
@@ -237,7 +237,7 @@ export function notifyCoachesOfHomeworkLog(log: HomeworkLog) {
   if (log.loggedFrom === 'class' || log.loggedFrom === 'lesson') return
   const coachIds = new Set(worksWithCoachIds(who))
   for (const row of roster) {
-    if (isGymAdmin(row)) coachIds.add(row.id)
+    if (isShapelabAdmin(row)) coachIds.add(row.id)
   }
   for (const coachId of coachIds) {
     if (coachId === log.athleteId) continue
