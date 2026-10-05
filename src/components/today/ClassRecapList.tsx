@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Athlete, AthleteCoachNote } from '../../types'
-import { isGymAdmin } from '../../lib/profileRole'
+import { isShapelabAdmin } from '../../lib/profileRole'
 import {
   addCoachNotesToAthletes,
   applyCoachNoteRemove,
@@ -58,7 +58,7 @@ export function ClassRecapList({
   const meetings = loadMeetings()
     .filter((m) => m.endedAt)
     .filter((m) => {
-      if (!viewer || isGymAdmin(viewer)) return true
+      if (!viewer || isShapelabAdmin(viewer)) return true
       return loadOfferingsForCoach(viewer.id).some((o) => o.id === m.offeringId)
     })
     .slice(0, 16)

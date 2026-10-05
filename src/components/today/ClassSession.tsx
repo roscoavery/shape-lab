@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { isCoachProfile, profileRole } from '../../lib/profileRole'
 import { linkAthleteToCoach } from '../../lib/coachLink'
+import { associateAthletesWithGym, homeGym } from '../../lib/gymScope'
 import {
   WEEKDAYS,
   addClassNote,
@@ -167,6 +168,7 @@ export function ClassSession({
             coachId={coach.id}
             offerings={offerings}
             athletes={athletes}
+            onAthletesChange={onAthletesChange}
             onBack={() => {
               refresh()
               setScreen('pick')
@@ -340,6 +342,7 @@ function ClassRollCall({
   const presentCoaches = resolvePresentCoaches(meeting, athletes)
   const presentCoachIds = new Set(presentCoaches.map((a) => a.id))
   const kids = athletes.filter((a) => profileRole(a) === 'athlete' || !a.role)
+  const coachGym = homeGym(athletes.find((a) => a.id === coachId) ?? null)
   const q = query.trim().toLowerCase()
   const matches = kids.filter((a) => !q || a.name.toLowerCase().includes(q))
   const coachMatches = coaches.filter((a) => !q || a.name.toLowerCase().includes(q))
@@ -355,7 +358,14 @@ function ClassRollCall({
       source: rosterIds.has(a.id) ? 'roster' : 'manual',
       logged: false,
     })
-    onAthletesChange?.(linkAthleteToCoach(a.id, coachId))
+    // Being marked present associates the athlete with the gym.
+    onAthletesChange?.(
+      associateAthletesWithGym(
+        linkAthleteToCoach(a.id, coachId),
+        [a.id],
+        offering?.gymName ?? coachGym,
+      ),
+    )
     onChanged()
   }
 
@@ -1158,12 +1168,14 @@ function ScheduleEditor({
   coachId,
   offerings,
   athletes,
+  onAthletesChange,
   onBack,
   onChanged,
 }: {
   coachId: string
   offerings: CoachClassOffering[]
   athletes: Athlete[]
+  onAthletesChange: (next: Athlete[]) => void
   onBack: () => void
   onChanged: () => void
 }) {
@@ -1299,6 +1311,11 @@ function ScheduleEditor({
                   selected={o.rosterIds}
                   onChange={(next) => {
                     setOfferingRoster(o.id, next)
+                    // Joining a class roster associates the athlete with the gym.
+                    const coachGym = homeGym(athletes.find((a) => a.id === coachId) ?? null)
+                    onAthletesChange(
+                      associateAthletesWithGym(athletes, next, o.gymName ?? coachGym),
+                    )
                     onChanged()
                   }}
                 />

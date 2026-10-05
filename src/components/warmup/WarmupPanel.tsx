@@ -14,7 +14,7 @@ import {
 import { compressImageFile } from '../../lib/mediaCompress'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { createId } from '../../lib/storage'
-import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import type { Athlete, WarmupGuide, WarmupStep } from '../../types'
 import { FramedPhoto } from '../coach/FramedPhoto'
 
@@ -139,7 +139,7 @@ export function WarmupPanel({ signedIn }: Props) {
           {ordered.map((w) => {
             const star = isWarmupStarred(signedIn.id, w.id)
             const mine = w.coachId === signedIn.id
-            const canDelete = mine || isGymAdmin(signedIn)
+            const canDelete = mine || isShapelabAdmin(signedIn)
             return (
               <li
                 key={w.id}

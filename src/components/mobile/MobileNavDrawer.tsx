@@ -13,6 +13,7 @@ import {
 } from '../../lib/appNav'
 import { IgMenuIcon } from './IgNavIcons'
 import { MobilePortal } from './MobilePortal'
+import { AccountSwitchButton } from '../AccountSwitchButton'
 
 type Props = {
   tab: AppTab
@@ -147,6 +148,7 @@ export function MobileNavDrawer({
             </div>
 
             <div className="space-y-2 border-t border-white/10 px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <AccountSwitchButton user={authUser} />
               <button
                 type="button"
                 className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm"

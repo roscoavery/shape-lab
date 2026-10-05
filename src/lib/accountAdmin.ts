@@ -7,6 +7,8 @@ export type PublicAccount = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
+  gymId?: string
+  linkedAccountIds?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -31,6 +33,8 @@ export async function createGymAccount(input: {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
+  gymId?: string
+  linkedAccountIds?: string[]
   sendEmail?: boolean
 }): Promise<{ account: AuthSessionUser; inviteUrl?: string; mailed?: boolean }> {
   const res = await fetch('/api/auth/accounts', {
@@ -73,6 +77,8 @@ export async function patchGymAccount(input: {
   role?: SessionRole
   rosterProfileId?: string | null
   linkedAthleteIds?: string[]
+  gymId?: string | null
+  linkedAccountIds?: string[]
 }): Promise<PublicAccount> {
   const res = await fetch('/api/auth/accounts', {
     ...authWriteInit(JSON.stringify(input)),
@@ -108,4 +114,65 @@ export async function adminResetPassword(accountId: string, newPassword: string)
     method: 'POST',
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not reset that password.'))
+}
+
+const DEVICE_KEY = 'shape-lab.device-id.v1'
+
+/** Stable per-browser id so a linked-account switch only asks for the password once per device. */
+export function deviceId(): string {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY)
+    if (!id) {
+      id =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+      localStorage.setItem(DEVICE_KEY, id)
+    }
+    return id
+  } catch {
+    return ''
+  }
+}
+
+export type SwitchResult =
+  | { ok: true; user: AuthSessionUser }
+  | { ok: false; needPassword: true; message: string }
+  | { ok: false; needPassword: false; message: string }
+
+/**
+ * Switch to a linked account (same person, two logins). Returns
+ * needPassword when this device has not proven the target password yet.
+ */
+export async function switchAccount(
+  accountId: string,
+  password?: string,
+): Promise<SwitchResult> {
+  const res = await fetch('/api/auth/switch', {
+    ...authWriteInit(JSON.stringify({ accountId, password, deviceId: deviceId() })),
+    method: 'POST',
+  })
+  const data = (await res.json().catch(() => ({}))) as {
+    user?: AuthSessionUser
+    error?: string
+    needPassword?: boolean
+    csrf?: string
+    mailEnabled?: boolean
+  }
+  rememberCsrf(data)
+  if (res.ok && data.user) return { ok: true, user: data.user }
+  return {
+    ok: false,
+    needPassword: data.needPassword === true || res.status === 401,
+    message: data.error || 'Could not switch accounts.',
+  }
+}
+
+/** Shapelab admin only: link or unlink two accounts owned by the same person. */
+export async function linkGymAccounts(aId: string, bId: string, unlink = false): Promise<void> {
+  const res = await fetch('/api/auth/link', {
+    ...authWriteInit(JSON.stringify({ aId, bId, unlink })),
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(await readError(res, 'Could not link those accounts.'))
 }

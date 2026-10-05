@@ -13,7 +13,7 @@ import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
-import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { itemMatchesQuery } from '../../lib/clipStore'
 import type { Athlete } from '../../types'
 import { prefetchNeighborClips } from '../../lib/igCache'
@@ -301,8 +301,8 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
 
   const editor = useMemo(
     () => ({
-      gymEditor: isGymAdmin(athlete),
-      personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
+      gymEditor: isShapelabAdmin(athlete),
+      personalEditor: isCoachProfile(athlete) && !isShapelabAdmin(athlete),
       profileId: athlete?.id ?? null,
     }),
     [athlete],

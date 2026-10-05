@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { canViewAthleteProfile } from '../../lib/coachLink'
-import { isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin, profileRole, roleLabel } from '../../lib/profileRole'
 import {
   attachPlanToLiveLesson,
   emptyPlan,
@@ -145,7 +145,7 @@ export function HomeDashboard({
   gymAdmin: gymAdminProp,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
-  const gymAdmin = gymAdminProp ?? isGymAdmin(signedIn)
+  const gymAdmin = gymAdminProp ?? isShapelabAdmin(signedIn)
   const [withIds, setWithIds] = useState<string[]>([])
   const [editing, setEditing] = useState<LessonPlan | null>(null)
   const [refresh, setRefresh] = useState(0)

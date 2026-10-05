@@ -69,7 +69,7 @@ export function ProfileFieldsEditor({
       {adminEdit && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">Name and phone</h3>
-          <p className="text-xs text-[var(--muted)]">Gym admin can fix the name and phone on this profile.</p>
+          <p className="text-xs text-[var(--muted)]">Shapelab admin can fix the name and phone on this profile.</p>
           <div className="grid grid-cols-2 gap-2">
             <input
               className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"

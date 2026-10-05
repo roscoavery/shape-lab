@@ -18,12 +18,12 @@ import {
   type Weekday,
 } from '../../lib/coachClasses'
 
-type Props = { athletes: Athlete[]; ownerId: string }
+type Props = { athletes: Athlete[]; ownerId: string; gymName?: string }
 
 const inputCls =
   'w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]'
 
-export function OwnerClasses({ athletes, ownerId }: Props) {
+export function OwnerClasses({ athletes, ownerId, gymName }: Props) {
   const [offerings, setOfferings] = useState<CoachClassOffering[]>([])
   const [name, setName] = useState('')
   const [weekday, setWeekday] = useState<Weekday>('Monday')
@@ -68,6 +68,7 @@ export function OwnerClasses({ athletes, ownerId }: Props) {
       name: name.trim(),
       weekday,
       time: time.trim(),
+      gymName: gymName || undefined,
     })
     reset()
   }

@@ -291,6 +291,24 @@ export function IgMobileShell({
             </button>
           ))}
         </div>
+        {/* Full menu (spotting, classes, settings…) on tablet and desktop too. */}
+        <div className="mt-auto flex justify-center pt-4 xl:justify-start xl:px-3">
+          <MobileNavDrawer
+            tab={tab}
+            role={navRole ?? authUser.role}
+            ryan={ryan}
+            kiosk={kiosk}
+            admin={admin}
+            deskPreview={deskPreview}
+            authUser={authUser}
+            sectionPillsVisible={sectionPillsVisible}
+            onSectionPillsVisibleChange={setSectionPillsVisible}
+            onGo={go}
+            onDeskPreview={onDeskPreview}
+            onSignOut={onSignOut}
+            isOwner={isOwner}
+          />
+        </div>
       </nav>
     </div>
   )
