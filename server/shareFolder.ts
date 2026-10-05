@@ -20,7 +20,7 @@ import {
   videosForClient,
   type DiskAthleteVideo,
 } from './athleteVideoDisk.ts'
-import { readBin } from './persist.ts'
+import { r2Enabled, signedR2PlaybackUrl, fetchVideoBytes } from './videoStorage.ts'
 import { readRosterFile } from './rosterStore.ts'
 
 export type ShareFolderVideo = {
@@ -131,6 +131,18 @@ export async function handleShareFolderFile(
     sendJson(res, 404, { error: 'Video not found' })
     return true
   }
+  const cloudKey = (video as DiskAthleteVideo & { cloudKey?: string }).cloudKey
+  if (r2Enabled() && cloudKey) {
+    const signed = signedR2PlaybackUrl(video, 604800)
+    if (signed) {
+      res.writeHead(302, {
+        Location: signed,
+        'Cache-Control': 'private, max-age=0',
+      })
+      res.end()
+      return true
+    }
+  }
   if (!(await sendAthleteVideoFile(video.id, res))) {
     sendJson(res, 404, { error: 'Video not found' })
   }
@@ -211,15 +223,7 @@ export async function handleShareFolderZip(
   let index = 0
 
   for (const v of videos) {
-    let data: Buffer | null = await readBin(`data/athlete-video-blobs/${v.file}`)
-    if (!data && v.publicUrl) {
-      try {
-        const r = await fetch(v.publicUrl)
-        if (r.ok) data = Buffer.from(await r.arrayBuffer())
-      } catch {
-        data = null
-      }
-    }
+    const data: Buffer | null = await fetchVideoBytes(v)
     if (!data || data.length === 0) continue
     const fname = Buffer.from(sanitizeName(v.name, index, extForMime(v.mime)), 'utf8')
     const crc = crc32(data)

@@ -68,6 +68,35 @@ export async function listClassVideos(classId: string): Promise<AthleteVideo[]> 
   }
 }
 
+type R2UploadGrant = { uploadUrl: string; key: string }
+
+/**
+ * When R2 is configured the server hands back a presigned PUT URL for the
+ * video. Returns null when R2 is not configured (501) or the request fails,
+ * and the caller falls through to the existing Blob flow.
+ */
+async function r2UploadGrant(
+  id: string,
+  athleteId: string,
+  mime: string,
+): Promise<R2UploadGrant | null> {
+  try {
+    const res = await markedFetch('/api/r2-upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: JSON.stringify({ id, athleteId, mime }),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { uploadUrl?: unknown; key?: unknown }
+    if (typeof data.uploadUrl !== 'string' || typeof data.key !== 'string') return null
+    return { uploadUrl: data.uploadUrl, key: data.key }
+  } catch {
+    return null
+  }
+}
+
 export async function uploadAthleteVideo(opts: {
   athleteId: string
   blob: Blob
@@ -82,6 +111,47 @@ export async function uploadAthleteVideo(opts: {
 }): Promise<AthleteVideo> {
   const id = createId('vid')
   const mime = opts.blob.type || 'video/webm'
+  // R2 first: a 200 returns a presigned PUT URL and the video is saved with
+  // cloudKey instead of a blob url. A 501 (R2 not configured) or any failure
+  // falls through to the existing flow below. A failed PUT throws so the
+  // upload is never sent twice.
+  const r2 = await r2UploadGrant(id, opts.athleteId, mime)
+  if (r2) {
+    const putRes = await fetch(r2.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': mime },
+      body: opts.blob,
+    })
+    if (!putRes.ok) {
+      throw new Error('Could not upload that video. Stay on this URL and try again.')
+    }
+    const res = await markedFetch('/api/athlete-videos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        id,
+        athleteId: opts.athleteId,
+        name: opts.name,
+        source: opts.source,
+        mime,
+        cloudKey: r2.key,
+        sizeBytes: opts.blob.size,
+        durationSec: opts.durationSec ?? null,
+        lessonId: opts.lessonId ?? undefined,
+        skillId: opts.skillId ?? undefined,
+        skillLabel: opts.skillLabel ?? undefined,
+        classId: opts.classId ?? undefined,
+        className: opts.className ?? undefined,
+      }),
+    })
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string }
+      throw new Error(err.error || 'Could not save that video into the library.')
+    }
+    return (await res.json()) as AthleteVideo
+  }
   const uploaded = await uploadGymMedia(athleteVideoBlobPath(id, mime), opts.blob, mime)
   if ('url' in uploaded) {
     const res = await markedFetch('/api/athlete-videos', {

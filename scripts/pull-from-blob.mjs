@@ -42,9 +42,21 @@ async function streamToBuffer(stream) {
 }
 
 await applyDotEnv()
+// GYM_PULL_MEDIA=1 fetches media binaries too. By default pulls are metadata-only:
+// video and other media bytes can be gigabytes, and coaches stream video from the
+// R2 bucket instead of the Mac, so the bytes are not needed locally.
+const PULL_MEDIA = process.env.GYM_PULL_MEDIA === '1'
+const MEDIA_PREFIXES = [
+  'data/athlete-video-blobs/',
+  'data/feed-blobs/',
+  'data/library-blobs/',
+  'data/coach-blobs/',
+]
+const isMediaBinary = (pathname) =>
+  !PULL_MEDIA && MEDIA_PREFIXES.some((p) => pathname.startsWith(p))
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim()
 if (!token) {
-  console.log('No BLOB_READ_WRITE_TOKEN — pulling from the live gym URL instead.')
+  console.log('No BLOB_READ_WRITE_TOKEN, pulling from the live gym URL instead.')
   const { spawn } = await import('node:child_process')
   const child = spawn(process.execPath, [join(ROOT, 'scripts', 'pull-from-live.mjs')], {
     cwd: ROOT,
@@ -91,6 +103,7 @@ async function downloadUrl(url, dest) {
 let cursor
 let files = 0
 let bytes = 0
+let skippedMedia = 0
 do {
   const page = await list({
     token,
@@ -101,6 +114,10 @@ do {
   for (const blob of page.blobs ?? []) {
     const pathname = blob.pathname
     if (!pathname || pathname.includes('..')) continue
+    if (isMediaBinary(pathname)) {
+      skippedMedia += 1
+      continue
+    }
     const size = await downloadOne(pathname)
     if (size > 0) {
       files += 1
@@ -171,6 +188,9 @@ if (existsSync(indexPath)) {
 
 console.log('')
 console.log(`Pulled ${files} gym files (${Math.round(bytes / 1024)} KB) into ${join(ROOT, 'data')}.`)
+if (!PULL_MEDIA && skippedMedia > 0) {
+  console.log(`Skipped ${skippedMedia} media binaries (set GYM_PULL_MEDIA=1 to fetch them).`)
+}
 console.log('Next: npm run gym')
 console.log('Keep this computer on. After phones use the home URL, pause the Vercel project.')
 }

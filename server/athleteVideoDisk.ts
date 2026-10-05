@@ -15,6 +15,12 @@ import {
   writeJson,
 } from './persist.ts'
 
+import {
+  deleteCloudVideo,
+  r2Enabled,
+  storeVideoBufferInCloud,
+} from './videoStorage.ts'
+
 const META = 'data/athlete-videos.json'
 const blobRel = (file: string) => `data/athlete-video-blobs/${file}`
 const MAX_PER_ATHLETE = 40
@@ -43,6 +49,12 @@ export type DiskAthleteVideo = {
   file: string
   /** Public Blob URL — phones play this instead of streaming through the function. */
   publicUrl?: string
+  /**
+   * R2 object key for cloud-stored bytes. Server-side only, never sent to
+   * clients; playback goes through /api/athlete-video-file, which 302s to a
+   * short-lived presigned URL.
+   */
+  cloudKey?: string
   lessonId?: string
   skillId?: string
   skillLabel?: string
@@ -88,7 +100,7 @@ function safeId(id: string): string | null {
   return s
 }
 
-function extForMime(mime: string): string {
+export function extForMime(mime: string): string {
   if (mime.includes('mp4')) return '.mp4'
   if (mime.includes('webm')) return '.webm'
   return '.webm'
@@ -149,11 +161,17 @@ async function rememberVideo(video: DiskAthleteVideo): Promise<DiskAthleteVideo>
   const mine = others.filter((v) => v.athleteId === video.athleteId)
   const rest = others.filter((v) => v.athleteId !== video.athleteId)
   const kept = [video, ...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const keptVideos = [...kept.slice(0, MAX_PER_ATHLETE), ...rest]
   const pruned = kept.slice(MAX_PER_ATHLETE)
   for (const drop of pruned) {
     await removeFile(blobRel(drop.file))
+    // filed copies share the source's cloudKey, so only delete the cloud
+    // object when no kept row still references it.
+    if (drop.cloudKey && !keptVideos.some((v) => v.cloudKey === drop.cloudKey)) {
+      await deleteCloudVideo(drop.cloudKey)
+    }
   }
-  await writeMeta({ ...meta, videos: [...kept.slice(0, MAX_PER_ATHLETE), ...rest] })
+  await writeMeta({ ...meta, videos: keptVideos })
   return video
 }
 
@@ -201,7 +219,20 @@ export async function addAthleteVideoFromBody(params: {
     : 'compare-replay'
   const mime = params.mime.includes('mp4') ? 'video/mp4' : 'video/webm'
   const file = `${id}${extForMime(mime)}`
-  await writeBin(blobRel(file), params.buf, mime)
+  // Cloud-first when R2 is configured: bytes go to the coach's bucket and
+  // the row carries the object key, skipping the disk write. If the upload
+  // throws, fall back to disk so the video is never lost (no cloudKey then).
+  let cloudKey: string | undefined
+  if (r2Enabled()) {
+    try {
+      cloudKey = (await storeVideoBufferInCloud(file, params.buf, mime)) ?? undefined
+    } catch {
+      cloudKey = undefined
+    }
+  }
+  if (!cloudKey) {
+    await writeBin(blobRel(file), params.buf, mime)
+  }
   const video: DiskAthleteVideo = {
     id,
     athleteId,
@@ -215,6 +246,7 @@ export async function addAthleteVideoFromBody(params: {
     sizeBytes: params.buf.length,
     mime,
     file,
+    ...(cloudKey ? { cloudKey } : {}),
     ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
     ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
     ...(params.skillLabel?.trim()
@@ -237,6 +269,8 @@ export async function addAthleteVideoFromUrl(params: {
   durationSec?: number | null
   mime: string
   url: string
+  /** R2 object key when the client uploaded bytes straight to the bucket. */
+  cloudKey?: string
   sizeBytes?: number
   lessonId?: string
   skillId?: string
@@ -246,8 +280,14 @@ export async function addAthleteVideoFromUrl(params: {
 }): Promise<DiskAthleteVideo | null> {
   const id = safeId(params.id)
   const athleteId = safeId(params.athleteId)
-  const url = params.url.trim()
-  if (!id || !athleteId || !url || !isDirectHttpUrl(url)) return null
+  const url = (params.url ?? '').trim()
+  const cloudKey = typeof params.cloudKey === 'string' ? params.cloudKey.trim() : ''
+  const cloudKeyOk =
+    cloudKey.length > 0 &&
+    cloudKey.length <= 200 &&
+    /^[A-Za-z0-9_.\-/]+$/.test(cloudKey)
+  // A row needs either a reachable http(s) URL or a safe R2 object key.
+  if (!id || !athleteId || (!cloudKeyOk && !isDirectHttpUrl(url))) return null
   const source = SOURCES.has(params.source as AthleteVideoSource)
     ? (params.source as AthleteVideoSource)
     : 'compare-replay'
@@ -266,7 +306,8 @@ export async function addAthleteVideoFromUrl(params: {
     sizeBytes: params.sizeBytes && params.sizeBytes > 0 ? params.sizeBytes : 0,
     mime,
     file,
-    publicUrl: url,
+    ...(isDirectHttpUrl(url) ? { publicUrl: url } : {}),
+    ...(cloudKeyOk ? { cloudKey } : {}),
     ...(safeId(params.lessonId ?? '') ? { lessonId: safeId(params.lessonId ?? '')! } : {}),
     ...(safeId(params.skillId ?? '') ? { skillId: safeId(params.skillId ?? '')! } : {}),
     ...(params.skillLabel?.trim()
@@ -288,7 +329,13 @@ export async function deleteAthleteVideo(id: string, athleteId?: string): Promis
   if (!found) return false
   if (athleteId && found.athleteId !== athleteId) return false
   await removeFile(blobRel(found.file))
-  await writeMeta({ ...meta, videos: meta.videos.filter((v) => v.id !== sid) })
+  const remaining = meta.videos.filter((v) => v.id !== sid)
+  // Copies made by fileClassVideosToAthletes share the source's cloudKey, so
+  // only delete the cloud object when no other row still references it.
+  if (found.cloudKey && !remaining.some((v) => v.cloudKey === found.cloudKey)) {
+    await deleteCloudVideo(found.cloudKey)
+  }
+  await writeMeta({ ...meta, videos: remaining })
   return true
 }
 

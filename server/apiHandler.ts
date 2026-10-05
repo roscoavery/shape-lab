@@ -79,6 +79,7 @@ import {
   addAthleteVideoFromUrl,
   athleteVideoClientUrl,
   deleteAthleteVideo,
+  extForMime,
   fileClassVideosToAthletes,
   findAthleteVideo,
   getFolderToken,
@@ -87,6 +88,13 @@ import {
   sendAthleteVideoFile,
   videosForClient,
 } from './athleteVideoDisk.ts'
+import {
+  cloudKeyForFile,
+  r2Config,
+  r2Enabled,
+  signedR2PlaybackUrl,
+} from './videoStorage.ts'
+import { presignR2PutUrl } from './r2Client.ts'
 import { readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { readCoachSystemsFile, writeCoachSystemsFile } from './coachSystemStore.ts'
@@ -222,6 +230,7 @@ const API_PATHS = new Set([
   '/api/still-crops',
   '/api/athlete-videos',
   '/api/athlete-video-file',
+  '/api/r2-upload-url',
   '/api/clip-loops',
   '/api/video-adjustments',
   '/api/favorites',
@@ -1129,6 +1138,45 @@ export async function handleShapeLabApi(
     sendJson(res, 405, { error: 'Use GET or PUT' })
     return true
   }
+  if (path === '/api/r2-upload-url') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { id?: string; athleteId?: string; mime?: string } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not make that upload link.' })
+      return true
+    }
+    // Mirrors safeId in athleteVideoDisk.ts: short, path-safe identifiers only.
+    const safeUploadId = (v: string | undefined): string | null => {
+      const s = (v ?? '').trim()
+      if (!s || s.length > 80) return null
+      if (!/^[a-zA-Z0-9_-]+$/.test(s)) return null
+      return s
+    }
+    const id = safeUploadId(body.id)
+    const athleteId = safeUploadId(body.athleteId)
+    const mime = (body.mime ?? '').trim()
+    if (!id || !athleteId || !mime.includes('video')) {
+      sendJson(res, 400, { error: 'Could not make that upload link.' })
+      return true
+    }
+    if (await denyUnlessAthleteAccess(res, viewer, athleteId, true)) return true
+    if (!r2Enabled()) {
+      // The client treats 501 as "fall back to the Blob upload flow".
+      sendJson(res, 501, { error: 'Cloud upload is not configured on this gym server.' })
+      return true
+    }
+    const file = `${id}${extForMime(mime)}`
+    const key = cloudKeyForFile(file)
+    const uploadUrl = presignR2PutUrl(r2Config()!, key, 900)
+    sendJson(res, 200, { uploadUrl, key, expiresIn: 900 })
+    return true
+  }
   if (path === '/api/athlete-videos') {
     if (req.method === 'GET') {
       const athleteId = url.searchParams.get('athleteId') ?? ''
@@ -1149,6 +1197,7 @@ export async function handleShapeLabApi(
         visible.push({
           ...video,
           publicUrl: undefined,
+          cloudKey: undefined,
           url: athleteVideoClientUrl(video),
         })
       }
@@ -1167,6 +1216,7 @@ export async function handleShapeLabApi(
           durationSec?: number | null
           mime?: string
           url?: string
+          cloudKey?: string
           sizeBytes?: number
           lessonId?: string
           skillId?: string
@@ -1192,6 +1242,7 @@ export async function handleShapeLabApi(
           durationSec: body.durationSec,
           mime: body.mime ?? url.searchParams.get('mime') ?? 'video/webm',
           url: body.url ?? '',
+          cloudKey: body.cloudKey,
           sizeBytes: body.sizeBytes,
           lessonId: body.lessonId,
           skillId: body.skillId,
@@ -1203,7 +1254,7 @@ export async function handleShapeLabApi(
           sendJson(res, 400, { error: 'Could not save that video.' })
           return true
         }
-        sendJson(res, 200, { ...saved, url: athleteVideoClientUrl(saved) })
+        sendJson(res, 200, { ...saved, url: athleteVideoClientUrl(saved), cloudKey: undefined })
         return true
       }
       const buf = await readRequestBuffer(req)
@@ -1233,6 +1284,7 @@ export async function handleShapeLabApi(
       sendJson(res, 200, {
         ...saved,
         url: athleteVideoClientUrl(saved),
+        cloudKey: undefined,
       })
       return true
     }
@@ -1273,7 +1325,7 @@ export async function handleShapeLabApi(
         sendJson(res, 400, { error: 'Could not rename that video.' })
         return true
       }
-      sendJson(res, 200, { ...renamed, url: athleteVideoClientUrl(renamed) })
+      sendJson(res, 200, { ...renamed, url: athleteVideoClientUrl(renamed), cloudKey: undefined })
       return true
     }
     sendJson(res, 405, { error: 'Use GET, POST, PATCH, or DELETE' })
@@ -1341,6 +1393,16 @@ export async function handleShapeLabApi(
     }
     if (await denyUnlessAthleteAccess(res, viewer, found.athleteId, false)) return true
     await writeAudit('media.view', viewer, { athleteId: found.athleteId, detail: id })
+    // Cloud-stored rows stream straight from the bucket edge: 302 to a
+    // short-lived presigned URL so the server never proxies video bytes.
+    if (r2Enabled() && found.cloudKey) {
+      const playback = signedR2PlaybackUrl(found, 900)
+      if (playback) {
+        res.writeHead(302, { Location: playback, 'Cache-Control': 'private, max-age=0' })
+        res.end()
+        return true
+      }
+    }
     if (!(await sendAthleteVideoFile(id, res))) {
       sendJson(res, 404, { error: 'Video file not found' })
     }
