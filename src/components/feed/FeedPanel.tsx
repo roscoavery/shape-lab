@@ -34,7 +34,7 @@ import {
   saveCollage,
   type Collage,
 } from '../../lib/collages'
-import { canGiveHi5, isAthleteProfile, isCoachProfile, isGymAdmin, profileRole, roleLabel } from '../../lib/profileRole'
+import { canGiveHi5, isAthleteProfile, isCoachProfile, isShapelabAdmin, profileRole, roleLabel } from '../../lib/profileRole'
 import { givenName } from '../../lib/classStation'
 import { publicFeedName } from '../../lib/publicName'
 import { childAthletes } from '../../lib/parentLink'
@@ -74,7 +74,7 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
   const [tagQuery, setTagQuery] = useState('')
   const wins = channel === 'wins'
   const coach = isCoachProfile(athlete)
-  const gymAdmin = isGymAdmin(athlete)
+  const gymAdmin = isShapelabAdmin(athlete)
   const ryan = findRyan(athletes)
   const { nameForUrl } = useGymLibrary()
   const viewProfile = useViewProfile()
@@ -599,11 +599,11 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
           }}
           canEdit={false}
           editor={{
-            gymEditor: isGymAdmin(athlete),
-            personalEditor: isCoachProfile(athlete) && !isGymAdmin(athlete),
+            gymEditor: isShapelabAdmin(athlete),
+            personalEditor: isCoachProfile(athlete) && !isShapelabAdmin(athlete),
             profileId: athlete?.id ?? null,
           }}
-          gymAdmin={isGymAdmin(athlete)}
+          gymAdmin={isShapelabAdmin(athlete)}
         />
       )}
     </div>

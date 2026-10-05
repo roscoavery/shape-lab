@@ -24,7 +24,7 @@ import { publishCollagePost } from '../../lib/feedPosts'
 import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
 import { isSameReferenceUrl, kindFromUrl } from '../../lib/clipStore'
 import { postedByFromUrl } from '../../lib/socialUrls'
-import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { useFavorites } from '../../lib/favorites'
 import { FavoriteStar } from '../FavoriteStar'
 import { GymClipPlayer } from '../GymClipPlayer'
@@ -83,7 +83,7 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
   const [sharing, setSharing] = useState(false)
   const editorRef = useRef<HTMLElement | null>(null)
   const canEdit = Boolean(athlete)
-  const gymAdmin = isGymAdmin(athlete)
+  const gymAdmin = isShapelabAdmin(athlete)
 
   useEffect(() => {
     const slots = playing?.slots ?? draft?.slots ?? []

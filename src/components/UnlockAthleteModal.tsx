@@ -56,7 +56,7 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 shadow-2xl">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-          {admin ? 'Unlock gym admin' : 'Unlock profile'}
+          {admin ? 'Unlock shapelab admin' : 'Unlock profile'}
         </p>
         <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">
           <AthleteName athlete={athlete} size="md" />
@@ -68,7 +68,7 @@ export function UnlockAthleteModal({ athlete, onCancel, onUnlocked }: Props) {
         </p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           {admin
-            ? 'Gym admin on this device uses the signed-in account. A leftover profile PIN only unlocks this name locally, it cannot open the private roster by itself.'
+            ? 'Shapelab admin on this device uses the signed-in account. A leftover profile PIN only unlocks this name locally, it cannot open the private roster by itself.'
             : 'Enter the 4-digit passcode set when this profile was created. That loads homework, hold times, Compare, and the video library on this device. Only one profile stays unlocked at a time.'}
         </p>
         <label className="mt-4 block">

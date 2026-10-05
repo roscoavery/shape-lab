@@ -21,7 +21,7 @@ import {
   subscribeCoachClasses,
 } from '../lib/coachClasses'
 import { splitPersonName } from '../lib/classStation'
-import { isGymAdmin } from '../lib/profileRole'
+import { isShapelabAdmin } from '../lib/profileRole'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
 import { canReactToHomeworkLog, isLogToday } from '../lib/homeworkLogView'
 
@@ -48,7 +48,7 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
   }, [])
 
   const own = viewer?.id === athlete.id
-  const admin = isGymAdmin(viewer)
+  const admin = isShapelabAdmin(viewer)
   const canEditNights = own || admin
   const addable = (() => {
     if (!admin) return []

@@ -99,7 +99,7 @@ type CameraPaneProps = {
   clipsOnly?: boolean
   /** Bumps to auto-open the clip picker (start-screen View clip entry). */
   openPickerTick?: number
-  /** Gym admin can file clips onto skill cards from the share sheet. */
+  /** Shapelab admin can file clips onto skill cards from the share sheet. */
   gymEditor?: boolean
   /** Coach profile id for the add-to-card modal. */
   profileId?: string | null

@@ -110,7 +110,7 @@ export function AdminStillDesk({ photos, onPhotosChange }: Props) {
     <section className="space-y-4">
       <div className="rounded-xl border border-[var(--accent)]/40 bg-[var(--panel)] p-4">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--accent)]">
-          Gym admin
+          Shapelab admin
         </p>
         <h2 className="mt-1 text-2xl font-black text-[var(--text)]">Match stills</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">

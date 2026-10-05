@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useGymLibrary } from '../lib/gymLibrary'
 import { saveClipMeta } from '../lib/clipMeta'
-import { isCoachProfile, isGymAdmin } from '../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../lib/profileRole'
 import { useClipLoopsOptional } from '../lib/clipLoops'
 import { ShareReference } from './share/ShareReference'
 import { clipShareDraft } from '../lib/shareReference'
@@ -40,7 +40,7 @@ export function ClipWatchMeta({ url, viewer }: Props) {
   const who = viewer ?? ctx.viewer
   const { clipForUrl, nameForUrl, refresh } = useGymLibrary()
   const clip = clipForUrl(url)
-  const gymAdmin = isGymAdmin(who)
+  const gymAdmin = isShapelabAdmin(who)
   const coach = isCoachProfile(who)
   const loops = useClipLoopsOptional()
   const loop = loops?.getActive(url) ?? null

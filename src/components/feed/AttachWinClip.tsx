@@ -5,7 +5,7 @@ import {
   type FeedPost,
 } from '../../lib/feedPosts'
 import { videoFileAccept } from '../../lib/saveMedia'
-import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { IconMark } from '../ui/IconAction'
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 }
 
 export function AttachWinClip({ post, viewer, onAttached, onError, className }: Props) {
-  const admin = isGymAdmin(viewer)
+  const admin = isShapelabAdmin(viewer)
   const coach = isCoachProfile(viewer)
   if (!canAttachFeedVideo(post, viewer?.id, { admin, coach })) return null
   return (

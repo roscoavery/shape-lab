@@ -66,7 +66,7 @@ export function WatchDesk({ user }: Props) {
       <div className="mx-auto max-w-3xl rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
         <h2 className="text-xl font-semibold text-[var(--text)]">Watch</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          Only gym admin can open this log. Ask them if you need to know who
+          Only shapelab admin can open this log. Ask them if you need to know who
           used a sign-in link or who is still signed in.
         </p>
       </div>

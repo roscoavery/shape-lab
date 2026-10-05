@@ -18,7 +18,7 @@ import { AddGymShapeForm } from '../AddGymShapeForm'
 import { compressImageFile } from '../../lib/mediaCompress'
 import { videoFileAccept } from '../../lib/saveMedia'
 import { createId } from '../../lib/storage'
-import { isCoachProfile, isGymAdmin } from '../../lib/profileRole'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { loadSocial, type SocialFile } from '../../lib/social'
 import type { Athlete, CoachShape, CoachShapeMedia, CoachSkillRef } from '../../types'
 import { FramedPhoto } from './FramedPhoto'
@@ -51,7 +51,7 @@ export function CoachShapeLibrary({ signedIn, athletes, onOpenNetwork }: Props) 
   const [err, setErr] = useState<string | null>(null)
   const [social, setSocial] = useState<SocialFile | null>(null)
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
-  const admin = Boolean(signedIn && isGymAdmin(signedIn))
+  const admin = Boolean(signedIn && isShapelabAdmin(signedIn))
   const athleteView = Boolean(signedIn && !coach)
 
   useEffect(() => subscribeCoachContent(() => setTick((n) => n + 1)), [])
@@ -106,7 +106,7 @@ export function CoachShapeLibrary({ signedIn, athletes, onOpenNetwork }: Props) 
             it appears in Learn and in homework assignment for everyone. Private
             shapes stay on your coach card. Skill videos show up in Compare next
             to the UG clips
-            {admin ? '. As gym admin, you can also view every coach’s private work' : ''}.
+            {admin ? '. As shapelab admin, you can also view every coach’s private work' : ''}.
           </p>
         )}
         {coach && signedIn && (

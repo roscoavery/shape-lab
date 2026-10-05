@@ -142,7 +142,7 @@ export function ConsentDesk({ user }: Props) {
         </div>
         {admin ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Gym admin. Tagged teaching stills and instructional consent live under More → Stills.
+            Shapelab admin. Tagged teaching stills and instructional consent live under More → Stills.
           </p>
         ) : user.role === 'parent' ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
@@ -173,7 +173,7 @@ export function ConsentDesk({ user }: Props) {
       ) : rows.length === 0 ? (
         <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-sm text-[var(--muted)]">
           No athletes you can set consent for on this login. If you are a
-          parent, ask gym admin to link this account to your child on More →
+          parent, ask shapelab admin to link this account to your child on More →
           Accounts.
         </section>
       ) : (
