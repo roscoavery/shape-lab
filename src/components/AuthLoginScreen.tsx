@@ -35,7 +35,7 @@ function clearInviteFromUrl() {
 export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('Gym admin')
+  const [displayName, setDisplayName] = useState('Shapelab admin')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [inviteToken, setInviteToken] = useState('')
@@ -100,7 +100,7 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
       <p className="text-xs uppercase tracking-wider text-[var(--muted)]">shapelab</p>
       <h1 className="mt-2 text-2xl font-semibold text-[var(--text)]">
         {mode === 'bootstrap'
-          ? 'Create the gym admin account'
+          ? 'Create the shapelab admin account'
           : mode === 'invite'
             ? 'Choose your password'
             : mode === 'register'
@@ -124,7 +124,7 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={mode === 'register' ? 'Your name' : 'Gym admin'}
+            placeholder={mode === 'register' ? 'Your name' : 'Shapelab admin'}
             className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
           />
         </label>

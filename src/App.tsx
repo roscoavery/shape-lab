@@ -219,7 +219,7 @@ import { hydrateCoachStills, mergeCoachExtras, subscribeCoachStills } from './li
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
-import { isCoachProfile, isGymAdmin, profileRole } from './lib/profileRole'
+import { isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
 import { childAthletes } from './lib/parentLink'
 import { resolveAthleteViewAthlete } from './lib/familyView'
 import { coachShareLabel } from './lib/coachShare'
@@ -254,10 +254,11 @@ import type {
   ShapeDef,
 } from './types'
 import { OwnerDashboard } from './components/owner/OwnerDashboard'
+import { listGyms, type Gym } from './lib/gyms'
 
 /**
  * Effective gym-owner view: the active profile's role is gym_owner, or a
- * gym admin is previewing the gym-owner desk. Gates the Owner tab.
+ * shapelab admin is previewing the gym-owner desk. Gates the Owner tab.
  */
 function isOwnerView(activeProfile: Athlete | null, deskPreview: DeskPreview): boolean {
   if (activeProfile && deskPreview === 'gymOwner') return true
@@ -372,6 +373,7 @@ export default function App() {
   const [authUser, setAuthUser] = useState<AuthSessionUser | null>(null)
   const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
   const [authBootstrap, setAuthBootstrap] = useState(false)
+  const [ownerGym, setOwnerGym] = useState<Gym | null>(null)
   const [deskPreview, setDeskPreview] = useState<DeskPreview>(() => loadDeskPreview())
   const chooseDeskPreview = (next: DeskPreview) => {
     saveDeskPreview(next)
@@ -426,6 +428,25 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  // Gym owners see their own gym. Loads once per login.
+  useEffect(() => {
+    if (authUser?.role !== 'gymOwner') {
+      setOwnerGym(null)
+      return
+    }
+    let cancelled = false
+    void listGyms()
+      .then((gyms) => {
+        if (!cancelled) setOwnerGym(gyms[0] ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setOwnerGym(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [authUser?.accountId, authUser?.role])
 
   useEffect(() => {
     if (authStatus !== 'in') return
@@ -1135,7 +1156,7 @@ export default function App() {
   const showLogForPicker =
     (activeProfile != null && isCoachProfile(activeProfile)) || sessionIsAdmin(authUser)
   const personalCompare =
-    Boolean(activeProfile) && isCoachProfile(activeProfile) && !isGymAdmin(activeProfile)
+    Boolean(activeProfile) && isCoachProfile(activeProfile) && !isShapelabAdmin(activeProfile)
 
   if (authStatus === 'loading') {
     return <GymBootScreen phase="loading" persist={gymPersist} />
@@ -1395,7 +1416,7 @@ export default function App() {
               <HomeDashboard
                 athletes={athletes}
                 signedIn={previewProfile}
-                gymAdmin={deskPreview === 'home' && isGymAdmin(activeProfile)}
+                gymAdmin={deskPreview === 'home' && isShapelabAdmin(activeProfile)}
                 onUnlock={(id) => requestSelectAthlete(id)}
                 onStartLesson={startLesson}
                 onOpenLesson={(session) => {
@@ -2238,8 +2259,14 @@ export default function App() {
         />
       )}
 
-      {tab === 'owner' && ownerView && activeProfile && (
-        <OwnerDashboard owner={activeProfile} athletes={athletes} />
+      {tab === 'owner' && ownerView && activeProfile && authUser && (
+        <OwnerDashboard
+          owner={activeProfile}
+          athletes={athletes}
+          user={authUser}
+          gym={ownerGym}
+          onAthletesChange={setAthleteRoster}
+        />
       )}
 
       {tab === 'consent' && !floorKiosk && <ConsentDesk user={authUser} />}
@@ -2277,7 +2304,7 @@ export default function App() {
               Coaches tag athletes, athletes tag their coach. Unlock a profile to post.
               Fellow coaches and gym owners create a profile on Profiles (gym owner, coach,
               athlete, or parent), keep their own Compare collections, and use Classes, Feed,
-              Network, and Research. Ryan stays gym admin —
+              Network, and Research. Ryan stays shapelab admin —
               only that profile edits the shared Compare library, shape descriptions,
               and picture sizes. The first <strong className="text-[var(--text)]">Tasks</strong>{' '}
               tab and <strong className="text-[var(--text)]">Coach</strong> stay hidden unless

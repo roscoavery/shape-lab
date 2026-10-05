@@ -142,6 +142,7 @@ async function coachMayTouchAthlete(
         displayName: creator.displayName,
         rosterProfileId: creator.rosterProfileId,
         linkedAthleteIds: [],
+        linkedAccountIds: [],
       },
       athlete as RosterAthlete,
     )

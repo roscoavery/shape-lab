@@ -15,6 +15,16 @@ export type Account = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
+  /** Gym this gymOwner account belongs to. */
+  gymId?: string
+  /** Other accounts this person owns (e.g. Levi's coach account linked to his gymOwner account). */
+  linkedAccountIds?: string[]
+  /**
+   * Device trust for linked-account switching. Maps linked account id ->
+   * list of device ids that already proved the linked account's password
+   * once, so the toggle does not nag on every switch.
+   */
+  linkTrust?: Record<string, string[]>
   /** How many browsers may stay signed in at once. Default 4. */
   maxDevices?: number
   createdAt: string
@@ -40,6 +50,8 @@ export type AuthUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  gymId?: string
+  linkedAccountIds: string[]
   maxDevices?: number
   kiosk?: boolean
 }

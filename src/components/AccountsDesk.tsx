@@ -24,6 +24,8 @@ import { DeskPreviewPicker } from './DeskPreviewPicker'
 import { DeskMessagesEditor } from './DeskMessagesEditor'
 import { MuseConnection } from './owner/MuseConnection'
 import { type DeskPreview } from '../lib/deskPreview'
+import { listGyms, createGym, type Gym } from '../lib/gyms'
+import { linkGymAccounts } from '../lib/accountAdmin'
 
 const ROLES: { id: SessionRole; label: string }[] = [
   { id: 'admin', label: 'Admin' },
@@ -59,6 +61,11 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
   const [parentChildIds, setParentChildIds] = useState<string[]>([])
   const [mailEnabled, setMailEnabled] = useState(false)
   const [emailNewLogin, setEmailNewLogin] = useState(false)
+  const [gyms, setGyms] = useState<Gym[]>([])
+  const [gymId, setGymId] = useState('')
+  const [newGymName, setNewGymName] = useState('')
+  const [alsoCoach, setAlsoCoach] = useState(false)
+  const [coachEmail, setCoachEmail] = useState('')
 
   const sortedAthletes = useMemo(
     () => [...athletes].sort((a, b) => a.name.localeCompare(b.name)),
@@ -69,6 +76,13 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
     if (!admin) return
     const rows = await listGymAccounts()
     setAccounts(rows)
+    if (user.role === 'admin') {
+      try {
+        setGyms(await listGyms())
+      } catch {
+        // Gyms stay empty; the picker just will not show.
+      }
+    }
   }
 
   useEffect(() => {
@@ -355,6 +369,65 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
                 ))}
               </select>
             </label>
+            {role === 'gymOwner' && user.role === 'admin' && (
+              <>
+                <label className="sm:col-span-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    Gym
+                  </span>
+                  <select
+                    value={gymId}
+                    onChange={(e) => setGymId(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                  >
+                    <option value="">No gym yet</option>
+                    {gyms.map((gym) => (
+                      <option key={gym.id} value={gym.id}>
+                        {gym.name}
+                      </option>
+                    ))}
+                    <option value="__new">New gym…</option>
+                  </select>
+                </label>
+                {gymId === '__new' && (
+                  <label className="sm:col-span-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      New gym name
+                    </span>
+                    <input
+                      value={newGymName}
+                      onChange={(e) => setNewGymName(e.target.value)}
+                      placeholder="Tumble Smart Athletics"
+                      className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                    />
+                  </label>
+                )}
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                    <input
+                      type="checkbox"
+                      checked={alsoCoach}
+                      onChange={(e) => setAlsoCoach(e.target.checked)}
+                      className="h-4 w-4 accent-[var(--accent)]"
+                    />
+                    This person is also a coach
+                  </label>
+                  {alsoCoach && (
+                    <input
+                      type="email"
+                      value={coachEmail}
+                      onChange={(e) => setCoachEmail(e.target.value)}
+                      placeholder="Their coach login email"
+                      className="mt-2 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                    />
+                  )}
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Links the two logins so they can toggle between gym owner and coach views.
+                    Switching still asks for the other login's password the first time on each device.
+                  </p>
+                </div>
+              </>
+            )}
             {role === 'parent' && (
               <div className="sm:col-span-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -398,21 +471,59 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
             disabled={busy}
             onClick={() => {
               setBusy(true)
-              void createGymAccount({
-                email,
-                password: createPassword || undefined,
-                role,
-                displayName: displayName || email,
-                rosterProfileId: rosterProfileId || undefined,
-                linkedAthleteIds: parentChildIds.length ? parentChildIds : undefined,
-                sendEmail: mailEnabled && emailNewLogin && !createPassword,
-              })
+              const run = async () => {
+                let resolvedGymId: string | undefined
+                if (role === 'gymOwner' && user.role === 'admin') {
+                  if (gymId === '__new') {
+                    const gym = await createGym(newGymName.trim() || 'New gym')
+                    setGyms((prev) => [...prev, gym])
+                    resolvedGymId = gym.id
+                  } else if (gymId) {
+                    resolvedGymId = gymId
+                  }
+                }
+                const result = await createGymAccount({
+                  email,
+                  password: createPassword || undefined,
+                  role,
+                  displayName: displayName || email,
+                  rosterProfileId: rosterProfileId || undefined,
+                  linkedAthleteIds: parentChildIds.length ? parentChildIds : undefined,
+                  gymId: resolvedGymId,
+                  sendEmail: mailEnabled && emailNewLogin && !createPassword,
+                })
+                if (role === 'gymOwner' && alsoCoach && coachEmail.trim()) {
+                  const coach = accounts.find(
+                    (row) => row.email.toLowerCase() === coachEmail.trim().toLowerCase(),
+                  )
+                  if (coach) {
+                    await linkGymAccounts(result.account.accountId, coach.id)
+                    if (resolvedGymId && user.role === 'admin') {
+                      const { patchGym } = await import('../lib/gyms')
+                      await patchGym({ id: resolvedGymId, ownerAccountId: result.account.accountId })
+                    }
+                  } else {
+                    flash(
+                      'Login created, but no coach login matched that email, so the accounts were not linked.',
+                    )
+                  }
+                } else if (role === 'gymOwner' && resolvedGymId && user.role === 'admin') {
+                  const { patchGym } = await import('../lib/gyms')
+                  await patchGym({ id: resolvedGymId, ownerAccountId: result.account.accountId })
+                }
+                return result
+              }
+              void run()
                 .then(async (result) => {
                   setEmail('')
                   setCreatePassword('')
                   setDisplayName('')
                   setRosterProfileId('')
                   setParentChildIds([])
+                  setGymId('')
+                  setNewGymName('')
+                  setAlsoCoach(false)
+                  setCoachEmail('')
                   if (result.inviteUrl) {
                     try {
                       await navigator.clipboard.writeText(result.inviteUrl)
@@ -452,6 +563,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
                   key={account.id}
                   account={account}
                   athletes={sortedAthletes}
+                  gyms={gyms}
                   busy={busy}
                   mailEnabled={mailEnabled}
                   onError={setError}
@@ -479,6 +591,7 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
 function AccountRow({
   account,
   athletes,
+  gyms,
   busy,
   mailEnabled,
   onError,
@@ -487,6 +600,7 @@ function AccountRow({
 }: {
   account: PublicAccount
   athletes: Athlete[]
+  gyms: Gym[]
   busy: boolean
   mailEnabled: boolean
   onError: (message: string) => void
@@ -497,6 +611,7 @@ function AccountRow({
   const [childIds, setChildIds] = useState<string[]>(account.linkedAthleteIds ?? [])
   const [resetPassword, setResetPassword] = useState('')
   const linked = athletes.find((row) => row.id === account.rosterProfileId)
+  const gymName = gyms.find((row) => row.id === account.gymId)?.name
 
   return (
     <li className="rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-3">
@@ -505,6 +620,14 @@ function AccountRow({
         {account.email} · {account.role}
         {linked ? ` · ${linked.name}` : ''}
       </p>
+      {(gymName || (account.linkedAccountIds ?? []).length > 0) && (
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          {gymName ? `Gym: ${gymName}` : ''}
+          {(account.linkedAccountIds ?? []).length > 0
+            ? `${gymName ? ' · ' : ''}Linked logins: ${account.linkedAccountIds!.length}`
+            : ''}
+        </p>
+      )}
       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
         <select
           value={profileId}

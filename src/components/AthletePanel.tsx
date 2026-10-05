@@ -7,7 +7,7 @@ import {
   PROFILE_KINDS,
   canEditAthleteProfile,
   isCoachProfile,
-  isGymAdmin,
+  isShapelabAdmin,
   profileRole,
   roleHint,
   roleLabel,
@@ -52,7 +52,7 @@ type Props = {
   allowDelete?: boolean
   /** Hide the new-profile form (parents and athletes use linking, not create). */
   allowCreate?: boolean
-  /** Gym admin sees every profile. Everyone else only sees their own. */
+  /** Shapelab admin sees every profile. Everyone else only sees their own. */
   canSeeAllProfiles?: boolean
   onViewProfile?: (id: string) => void
   viewer?: Athlete | null
@@ -117,9 +117,9 @@ export function AthletePanel({
   const active = athletes.find((a) => a.id === activeId) ?? null
   const canEditActive = canEditAthleteProfile(viewer, active)
   const canCreateProfiles =
-    allowCreate && (!viewer || isCoachProfile(viewer) || isGymAdmin(viewer))
+    allowCreate && (!viewer || isCoachProfile(viewer) || isShapelabAdmin(viewer))
   const listed = (() => {
-    if (canSeeAllProfiles || isGymAdmin(viewer)) return athletes
+    if (canSeeAllProfiles || isShapelabAdmin(viewer)) return athletes
     if (viewer && profileRole(viewer) === 'parent') {
       const ids = new Set([viewer.id, ...linkedAthleteIds(viewer)])
       return athletes.filter((a) => ids.has(a.id))
@@ -275,12 +275,12 @@ export function AthletePanel({
         ? withLinkedAthletes(active, linkedIds, athletes)
         : active
     const patchedName =
-      canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner'
+      canSeeAllProfiles || isShapelabAdmin(viewer) || profileRole(viewer) === 'gym_owner'
         ? displayPersonName(firstName, lastName) || next.name
         : next.name
     const patched = {
       ...next,
-      ...(canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner'
+      ...(canSeeAllProfiles || isShapelabAdmin(viewer) || profileRole(viewer) === 'gym_owner'
         ? {
             firstName: firstName.trim() || next.firstName,
             lastName: lastName.trim() || next.lastName,
@@ -752,7 +752,7 @@ export function AthletePanel({
               No snapshot on this profile yet. Add one on Today → My profile.
             </p>
           )}
-          {(canSeeAllProfiles || isGymAdmin(viewer) || profileRole(viewer) === 'gym_owner') && (
+          {(canSeeAllProfiles || isShapelabAdmin(viewer) || profileRole(viewer) === 'gym_owner') && (
             <div className="grid grid-cols-2 gap-2">
               <input
                 className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"

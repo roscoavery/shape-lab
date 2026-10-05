@@ -204,6 +204,11 @@ const API_PATHS = new Set([
   '/api/auth/sessions',
   '/api/auth/devices',
   '/api/auth/unlock',
+  '/api/auth/switch',
+  '/api/auth/link',
+  '/api/auth/linked',
+  '/api/auth/verify',
+  '/api/gyms',
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
@@ -365,6 +370,84 @@ export async function handleShapeLabApi(
   const gate = await gateApiRequest(req, res, path)
   if (gate.handled) return true
   const viewer = gate.user
+
+  // Gyms. Shapelab admin manages them; a gym owner sees their own gym.
+  if (path === '/api/gyms') {
+    const { listGyms, createGym, updateGym, gymForAccount } = await import('./gymStore.ts')
+    const shapelabAdmin = viewer.role === 'admin'
+    if (req.method === 'GET') {
+      if (shapelabAdmin) {
+        sendJson(res, 200, { gyms: await listGyms() })
+      } else if (viewer.role === 'gymOwner') {
+        const own = await gymForAccount(viewer.accountId, viewer.gymId)
+        sendJson(res, 200, { gyms: own ? [own] : [] })
+      } else {
+        sendJson(res, 403, { error: 'Only gym owners can view gyms.' })
+      }
+      return true
+    }
+    if (req.method === 'POST') {
+      if (!shapelabAdmin) {
+        sendJson(res, 403, { error: 'Only the Shapelab admin can create gyms.' })
+        return true
+      }
+      let body: { name?: string } = {}
+      try {
+        body = JSON.parse(await readRequestBodyLimited(req)) as typeof body
+      } catch {
+        sendJson(res, 400, { error: 'Could not read that request.' })
+        return true
+      }
+      try {
+        const gym = await createGym({ name: body.name || '', createdByAccountId: viewer.accountId })
+        sendJson(res, 200, { gym })
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not create that gym.' })
+      }
+      return true
+    }
+    if (req.method === 'PATCH') {
+      let body: { id?: string; name?: string; ownerAccountId?: string | null } = {}
+      try {
+        body = JSON.parse(await readRequestBodyLimited(req)) as typeof body
+      } catch {
+        sendJson(res, 400, { error: 'Could not read that request.' })
+        return true
+      }
+      if (!body.id) {
+        sendJson(res, 400, { error: 'Which gym?' })
+        return true
+      }
+      const own =
+        viewer.role === 'gymOwner'
+          ? await gymForAccount(viewer.accountId, viewer.gymId)
+          : null
+      const isOwn = own?.id === body.id
+      if (!shapelabAdmin && !isOwn) {
+        sendJson(res, 403, { error: 'You can only edit your own gym.' })
+        return true
+      }
+      // Only the Shapelab admin hands ownership to someone else.
+      const patch: { name?: string; ownerAccountId?: string | null } = {}
+      if (body.name !== undefined) patch.name = body.name
+      if (body.ownerAccountId !== undefined && shapelabAdmin) {
+        patch.ownerAccountId = body.ownerAccountId
+      }
+      try {
+        const gym = await updateGym(body.id, patch)
+        if (!gym) {
+          sendJson(res, 404, { error: 'That gym is gone.' })
+          return true
+        }
+        sendJson(res, 200, { gym })
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : 'Could not update that gym.' })
+      }
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, or PATCH' })
+    return true
+  }
 
   if (path === '/api/ig-stills') {
     if (req.method === 'GET') {

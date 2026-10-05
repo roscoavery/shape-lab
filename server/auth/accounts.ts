@@ -49,6 +49,21 @@ function asAccount(raw: unknown): Account | null {
     linkedAthleteIds: Array.isArray(row.linkedAthleteIds)
       ? row.linkedAthleteIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
       : undefined,
+    gymId: typeof row.gymId === 'string' && row.gymId ? row.gymId : undefined,
+    linkedAccountIds: Array.isArray(row.linkedAccountIds)
+      ? row.linkedAccountIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
+      : undefined,
+    linkTrust:
+      row.linkTrust && typeof row.linkTrust === 'object'
+        ? Object.fromEntries(
+            Object.entries(row.linkTrust as Record<string, unknown>)
+              .filter(([k, v]) => typeof k === 'string' && Array.isArray(v))
+              .map(([k, v]) => [
+                k,
+                (v as unknown[]).filter((d): d is string => typeof d === 'string' && Boolean(d)),
+              ]),
+          )
+        : undefined,
     maxDevices: clampMaxDevices(row.maxDevices),
     createdAt: typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString(),
     updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : new Date().toISOString(),
@@ -119,6 +134,8 @@ export function publicUserFromAccount(account: Account): AuthUser {
     displayName: account.displayName,
     rosterProfileId: account.rosterProfileId,
     linkedAthleteIds: account.linkedAthleteIds ?? [],
+    gymId: account.gymId,
+    linkedAccountIds: account.linkedAccountIds ?? [],
     maxDevices: clampMaxDevices(account.maxDevices),
   }
 }
@@ -166,6 +183,8 @@ export async function createAccount(input: {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds?: string[]
+  gymId?: string
+  linkedAccountIds?: string[]
 }): Promise<AuthUser> {
   const email = normalizeEmail(input.email)
   if (!email || !email.includes('@')) {
@@ -190,6 +209,8 @@ export async function createAccount(input: {
     displayName: input.displayName.trim() || email,
     rosterProfileId: input.rosterProfileId,
     linkedAthleteIds: input.linkedAthleteIds,
+    gymId: input.gymId,
+    linkedAccountIds: input.linkedAccountIds,
     maxDevices: DEFAULT_MAX_DEVICES,
     createdAt: now,
     updatedAt: now,
@@ -258,6 +279,8 @@ export async function updateAccount(
     role?: AccountRole
     rosterProfileId?: string | null
     linkedAthleteIds?: string[]
+    gymId?: string | null
+    linkedAccountIds?: string[]
     maxDevices?: number
   },
 ): Promise<Omit<Account, 'passwordHash'>> {
@@ -278,6 +301,14 @@ export async function updateAccount(
           : current.rosterProfileId,
     linkedAthleteIds:
       patch.linkedAthleteIds !== undefined ? patch.linkedAthleteIds : current.linkedAthleteIds,
+    gymId:
+      patch.gymId === null
+        ? undefined
+        : patch.gymId !== undefined
+          ? patch.gymId
+          : current.gymId,
+    linkedAccountIds:
+      patch.linkedAccountIds !== undefined ? patch.linkedAccountIds : current.linkedAccountIds,
     maxDevices:
       patch.maxDevices !== undefined ? clampMaxDevices(patch.maxDevices) : current.maxDevices,
     updatedAt: new Date().toISOString(),
@@ -287,4 +318,83 @@ export async function updateAccount(
   await writeFile(next)
   const { passwordHash: _hash, ...safe } = nextRow
   return safe
+}
+
+/**
+ * Link two accounts owned by the same person (e.g. Levi's gymOwner and
+ * coach accounts) so the app can offer a toggle between them. The link is
+ * bidirectional. Switching still needs the target account's password until
+ * the device is trusted (see trustLinkDevice).
+ */
+export async function linkAccounts(aId: string, bId: string): Promise<void> {
+  if (aId === bId) throw new Error('An account cannot link to itself.')
+  const file = await readFile()
+  const a = file.accounts.find((row) => row.id === aId)
+  const b = file.accounts.find((row) => row.id === bId)
+  if (!a || !b) throw new Error('One of those accounts is gone.')
+  const next = file.accounts.map((row) => {
+    if (row.id === aId) {
+      const set = new Set(row.linkedAccountIds ?? [])
+      set.add(bId)
+      return { ...row, linkedAccountIds: [...set], updatedAt: new Date().toISOString() }
+    }
+    if (row.id === bId) {
+      const set = new Set(row.linkedAccountIds ?? [])
+      set.add(aId)
+      return { ...row, linkedAccountIds: [...set], updatedAt: new Date().toISOString() }
+    }
+    return row
+  })
+  await writeFile(next)
+}
+
+export async function unlinkAccounts(aId: string, bId: string): Promise<void> {
+  const file = await readFile()
+  const next = file.accounts.map((row) => {
+    if (row.id === aId || row.id === bId) {
+      const other = row.id === aId ? bId : aId
+      const trust = { ...(row.linkTrust ?? {}) }
+      delete trust[other]
+      return {
+        ...row,
+        linkedAccountIds: (row.linkedAccountIds ?? []).filter((id) => id !== other),
+        linkTrust: trust,
+        updatedAt: new Date().toISOString(),
+      }
+    }
+    return row
+  })
+  await writeFile(next)
+}
+
+/** Has this device already proven the target account's password for this link? */
+export async function linkDeviceTrusted(
+  fromId: string,
+  toId: string,
+  deviceId: string,
+): Promise<boolean> {
+  if (!deviceId) return false
+  const from = await findAccountById(fromId)
+  if (!from) return false
+  if (!(from.linkedAccountIds ?? []).includes(toId)) return false
+  return (from.linkTrust?.[toId] ?? []).includes(deviceId)
+}
+
+/** Remember that this device proved the target account's password. */
+export async function trustLinkDevice(
+  fromId: string,
+  toId: string,
+  deviceId: string,
+): Promise<void> {
+  if (!deviceId) return
+  const file = await readFile()
+  const next = file.accounts.map((row) => {
+    if (row.id !== fromId) return row
+    const trust = { ...(row.linkTrust ?? {}) }
+    const set = new Set(trust[toId] ?? [])
+    set.add(deviceId)
+    trust[toId] = [...set].slice(-12)
+    return { ...row, linkTrust: trust, updatedAt: new Date().toISOString() }
+  })
+  await writeFile(next)
 }

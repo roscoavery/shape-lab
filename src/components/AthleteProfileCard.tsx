@@ -17,7 +17,7 @@ import {
   isCoachProfile,
   canAdminEditRoster,
   canEditAthleteProfile,
-  isGymAdmin,
+  isShapelabAdmin,
   profileRole,
   roleLabel,
 } from '../lib/profileRole'
@@ -94,7 +94,7 @@ type Props = {
   onAddNote?: (text: string, audience?: NoteAudience) => void
   onAddWin?: (text: string, big: boolean) => void
   onAthleteChange?: (next: Athlete) => void
-  /** Gym admin only — delete this profile after an are-you-sure. */
+  /** Shapelab admin only — delete this profile after an are-you-sure. */
   onDeleteProfile?: (id: string) => void
   /** Opens a guided tour of this profile surface. */
   onOpenTour?: () => void
@@ -129,7 +129,7 @@ export function AthleteProfileCard({
   const [confirm, setConfirm] = useState<string | null>(null)
   const [askDelete, setAskDelete] = useState(false)
   const adminDelete =
-    Boolean(onDeleteProfile) && isGymAdmin(viewer) && !isRyanAthlete(athlete)
+    Boolean(onDeleteProfile) && isShapelabAdmin(viewer) && !isRyanAthlete(athlete)
   const facts = profileFactLines(athlete)
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
@@ -400,7 +400,7 @@ export function AthleteProfileCard({
       )}
       {(athlete.birthdayNeeded || birthdayNeeded(athlete.dateOfBirth)) &&
         isAthleteProfile(athlete) &&
-        (isCoachProfile(viewer) || isGymAdmin(viewer) || profileRole(viewer) === 'parent') && (
+        (isCoachProfile(viewer) || isShapelabAdmin(viewer) || profileRole(viewer) === 'parent') && (
         <p className="rounded-xl border border-[#6ec8d6]/40 bg-[#6ec8d6]/10 px-3 py-2 text-sm">
           Birthday needed. It stays private and is used for age-appropriate access and safety settings.
         </p>
@@ -1029,14 +1029,14 @@ function PostsGrid({
           .filter((a): a is Athlete => Boolean(a))
         return (
           <li key={p.id} className="relative overflow-hidden rounded-2xl bg-black/30">
-            {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
+            {canRemoveFeedPost(p, viewer?.id, isShapelabAdmin(viewer)) && (
               <IconAction
                 kind="remove"
                 label="Remove"
                 className="absolute right-2 top-2 z-10 bg-black/70"
                 onClick={() => {
                   if (!viewer) return
-                  void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
+                  void removeFeedPost(p.id, viewer.id, isShapelabAdmin(viewer)).then((ok) => {
                     if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                   })
                 }}
@@ -1166,13 +1166,13 @@ function PassesGrid({
               {(p.reposts ?? []).includes(viewer.id) ? 'Yours' : '+'}
             </span>
           )}
-          {canRemoveFeedPost(p, viewer?.id, isGymAdmin(viewer)) && (
+          {canRemoveFeedPost(p, viewer?.id, isShapelabAdmin(viewer)) && (
             <span
               role="presentation"
               onClick={(e) => {
                 e.stopPropagation()
                 if (!viewer) return
-                void removeFeedPost(p.id, viewer.id, isGymAdmin(viewer)).then((ok) => {
+                void removeFeedPost(p.id, viewer.id, isShapelabAdmin(viewer)).then((ok) => {
                   if (ok) onChange((prev) => prev.filter((row) => row.id !== p.id))
                 })
               }}
