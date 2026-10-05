@@ -58,7 +58,7 @@ import {
   requestUserCamera,
   cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
-import { IconSwap } from './CompareHud'
+import { HudCircle, IconFlip, IconSwap } from './CompareHud'
 import { IosDelayUnwind } from '../IosDelayUnwind'
 import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 import { ShareReference } from '../share/ShareReference'
@@ -1504,6 +1504,13 @@ export function CameraPane({
               >
                 <IconSwap />
               </button>
+            )}
+            {!replaySocialItem && (
+              <div className="pointer-events-auto absolute left-3 top-16 z-[40] flex flex-col items-center gap-3">
+                <HudCircle label="Flip" active={mirror} onClick={() => setMirror((m) => !m)}>
+                  <IconFlip />
+                </HudCircle>
+              </div>
             )}
             {replaySocialItem ? (
               isSocialVideoItem(replaySocialItem) ? (

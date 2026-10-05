@@ -75,7 +75,7 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
 import { LIBRARY_CHANGED_EVENT } from '../../lib/libraryEvents'
-import { HudCircle, IconClips, IconPip, IconSwap, CompareControlsButton } from './CompareHud'
+import { HudCircle, IconClips, IconFlip, IconPip, IconSwap, CompareControlsButton } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -132,6 +132,7 @@ export function ReferencePane({
   const [newCollectionName, setNewCollectionName] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [keywordInput, setKeywordInput] = useState('')
+  const [topFlipped, setTopFlipped] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1421,6 +1422,15 @@ export function ReferencePane({
    * has its own reel scrolling). */
   const topSwipeNav = viewer ? undefined : stepTopClip
 
+  /** Flip is only offered for direct video files; YouTube iframes and
+   * Instagram embeds cannot be mirrored. */
+  const topCanFlip = Boolean(
+    (activeItem?.savedUrl && isGymHostedClipUrl(activeItem.savedUrl)) ||
+      (itemSrc &&
+        !(activeItem && youtubeEmbedSrc(activeItem.url ?? '')) &&
+        !(activeItem && isSocialVideoItem(activeItem))),
+  )
+
   const renderPlayer = (fill: boolean) => (
     <div
       className={
@@ -1449,6 +1459,7 @@ export function ReferencePane({
       ) : activeItem?.savedUrl && isGymHostedClipUrl(activeItem.savedUrl) ? (
         <VideoWorkbench
           src={activeItem.savedUrl}
+          mirror={topFlipped}
           allowAbLoop
           fill={fill}
           persistUrl={activeItem.url}
@@ -1497,6 +1508,7 @@ export function ReferencePane({
       ) : itemSrc ? (
         <VideoWorkbench
           src={itemSrc}
+          mirror={topFlipped}
           allowAbLoop
           fill={fill}
           persistUrl={activeItem?.url}
@@ -1537,6 +1549,13 @@ export function ReferencePane({
               <CompareControlsButton />
             </div>
           ) : null}
+        </div>
+      )}
+      {topCanFlip && (
+        <div className="pointer-events-auto absolute left-3 top-16 z-[35] flex flex-col items-center gap-3">
+          <HudCircle label="Flip" active={topFlipped} onClick={() => setTopFlipped((f) => !f)}>
+            <IconFlip />
+          </HudCircle>
         </div>
       )}
       {pip && (
