@@ -801,6 +801,7 @@ export function CameraPane({
     setReplayRefItem(item)
     setReplayTailSec(null)
     replayWindowRef.current = null
+    setMode('replay')
     if (item.url && (isSocialVideoItem(item) || youtubeEmbedSrc(item.url))) {
       replayBlobRef.current = null
       setClipSrc(null)
