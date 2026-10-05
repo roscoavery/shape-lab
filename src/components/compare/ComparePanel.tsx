@@ -92,6 +92,9 @@ export function ComparePanel({
   const [camVideo, setCamVideo] = useState<HTMLVideoElement | null>(null)
   // Two-clips mode: hide the live camera, compare two clips top and bottom.
   const [twoClips, setTwoClips] = useState(false)
+  // True when two-clips was entered from the start-screen "View clip" button:
+  // the camera was never started, so the divider's camera toggle is pointless.
+  const [viewClipEntry, setViewClipEntry] = useState(false)
   // Bumps to auto-open the bottom pane clip picker (start-screen View clip).
   const [pickerTick, setPickerTick] = useState(0)
   const onRefVideo = useCallback((v: HTMLVideoElement | null) => setRefVideo(v), [])
@@ -106,6 +109,7 @@ export function ComparePanel({
     setReplayStart(true)
     setReplayAfterGo(afterGo)
     setTwoClips(false)
+    setViewClipEntry(false)
     setFullscreen(true)
   }
 
@@ -123,6 +127,7 @@ export function ComparePanel({
     setReplayStart(false)
     setFullscreen(false)
     setTwoClips(false)
+    setViewClipEntry(false)
   }
 
   // Start screen: jump straight to two clips, no camera setup.
@@ -133,6 +138,7 @@ export function ComparePanel({
     setChromeOpen(false)
     setReplayStart(false)
     setTwoClips(true)
+    setViewClipEntry(true)
     setFullscreen(true)
     setPickerTick((t) => t + 1)
   }
@@ -360,7 +366,7 @@ export function ComparePanel({
                   linked={linked}
                   onToggleLink={() => setLinked((on) => !on)}
                   twoClips={twoClips}
-                  onToggleTwoClips={() => setTwoClips((on) => !on)}
+                  onToggleTwoClips={viewClipEntry ? undefined : () => setTwoClips((on) => !on)}
                 />
               ) : null}
               <ComparePipSlot

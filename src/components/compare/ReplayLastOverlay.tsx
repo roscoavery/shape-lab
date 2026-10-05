@@ -225,6 +225,14 @@ function ReplayFilmstrip({
   )
 }
 
+function IconClearLoop() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
 function Tile({
   active,
   onClick,
@@ -251,6 +259,42 @@ function Tile({
   )
 }
 
+/**
+ * A/B loop point tile. When the point is set the tile fills gold and shows
+ * the set timestamp, so it is obvious the point exists and where it sits.
+ */
+function AbTile({
+  point,
+  value,
+  onClick,
+}: {
+  point: 'A' | 'B'
+  value: number | null
+  onClick: () => void
+}) {
+  const set = value !== null
+  return (
+    <button
+      type="button"
+      aria-label={set ? `Loop ${point}, set at ${value!.toFixed(1)} seconds. Tap to move it.` : `Set loop ${point} at the current time`}
+      aria-pressed={set}
+      onClick={onClick}
+      title={set ? `Loop ${point} at ${value!.toFixed(1)}s` : `Set loop ${point} here`}
+      className={`flex h-10 w-12 shrink-0 flex-col items-center justify-center rounded-md ${
+        set ? 'text-black' : 'bg-white/12 text-white'
+      }`}
+      style={set ? { background: GOLD } : undefined}
+    >
+      <span className="text-[13px] font-bold leading-none">{point}</span>
+      {set && (
+        <span className="mt-0.5 text-[9px] font-semibold tabular-nums leading-none opacity-80">
+          {value!.toFixed(1)}s
+        </span>
+      )}
+    </button>
+  )
+}
+
 type Props = {
   src: string
   duration: number
@@ -267,6 +311,7 @@ type Props = {
   onTogglePlay: () => void
   onMarkA: () => void
   onMarkB: () => void
+  onClearAb?: () => void
   onSpeed: (s: number) => void
   onBack: () => void
   onSave: () => void
@@ -297,6 +342,7 @@ export function ReplayLastOverlay({
   onTogglePlay,
   onMarkA,
   onMarkB,
+  onClearAb,
   onSpeed,
   onBack,
   onSave,
@@ -484,12 +530,19 @@ export function ReplayLastOverlay({
             <button type="button" onClick={() => step(1)} aria-label="Next frame" className="text-white">
               <IconSkipFwd />
             </button>
-            <Tile active={pointA !== null} onClick={onMarkA} label="Mark A">
-              A
-            </Tile>
-            <Tile active={pointB !== null} onClick={onMarkB} label="Mark B">
-              B
-            </Tile>
+            <AbTile point="A" value={pointA} onClick={onMarkA} />
+            <AbTile point="B" value={pointB} onClick={onMarkB} />
+            {(pointA !== null || pointB !== null) && onClearAb && (
+              <button
+                type="button"
+                onClick={onClearAb}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white/12 text-white/80"
+                aria-label="Clear the A and B loop points"
+                title="Clear A and B"
+              >
+                <IconClearLoop />
+              </button>
+            )}
             <Tile active={speed === 0.25} onClick={() => onSpeed(speed === 0.25 ? 1 : 0.25)} label="Slow motion 0.25x">
               .25
             </Tile>

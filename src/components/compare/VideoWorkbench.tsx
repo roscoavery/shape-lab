@@ -1022,6 +1022,7 @@ function VideoWorkbenchInner({
             onTogglePlay={togglePlay}
             onMarkA={markA}
             onMarkB={markB}
+            onClearAb={clearAb}
             onSpeed={setSpeed}
             onBack={onBack}
             onSave={onSavePhotos}
