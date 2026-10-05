@@ -86,7 +86,9 @@ export function GymClipPlayer({
   const hosted = gymClip?.savedUrl && isGymHostedClipUrl(gymClip.savedUrl) ? gymClip.savedUrl : null
   const social = socialPlatform(url)
   const showShare = shareChrome ?? (fill && !bare)
-  const share = showShare ? (
+  // Tap-to-hide chrome (reels-style): the Share circle is chrome too.
+  const shareVisible = showShare && !(tapTogglesChrome && chromeOpen === false)
+  const share = shareVisible ? (
     <div className="pointer-events-auto absolute right-2 bottom-[5.75rem] z-30 sm:bottom-24">
       <ShareReference
         variant="story"

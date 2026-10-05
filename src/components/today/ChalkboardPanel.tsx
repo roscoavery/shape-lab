@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
@@ -1243,6 +1243,9 @@ function ReelTheater({
   const startIndex = Math.max(0, items.findIndex((item) => item.id === startId))
   const [index, setIndex] = useState(startIndex)
   const [coachEdit, setCoachEdit] = useState(false)
+  // Tap the video to hide/show all chrome, reels-style. Starts open.
+  const [chromeOpen, setChromeOpen] = useState(true)
+  const toggleChrome = useCallback(() => setChromeOpen((c) => !c), [])
 
   useEffect(() => {
     const node = scrollerRef.current?.querySelector(`[data-reel="${items[index]?.id ?? startId}"]`)
@@ -1255,6 +1258,7 @@ function ReelTheater({
 
   return createPortal(
     <div className="sl-overlay-screen flex flex-col bg-[#07110e] text-white">
+      {chromeOpen && (
       <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <p className="min-w-0 truncate text-sm font-semibold">
           {items[index]?.title ?? 'Reel'} · {index + 1}/{items.length}
@@ -1296,6 +1300,7 @@ function ReelTheater({
           </button>
         </div>
       </header>
+      )}
       <div
         ref={scrollerRef}
         className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-contain"
@@ -1321,6 +1326,9 @@ function ReelTheater({
             coach={coach}
             allowEdit={coach && coachEdit}
             active={i === index}
+            chromeOpen={chromeOpen}
+            onToggleChrome={toggleChrome}
+            tapTogglesChrome
           />
         ))}
       </div>
@@ -1334,11 +1342,17 @@ function ReelSlide({
   coach,
   allowEdit,
   active,
+  chromeOpen,
+  onToggleChrome,
+  tapTogglesChrome,
 }: {
   item: ChalkboardItem
   coach: boolean
   allowEdit: boolean
   active: boolean
+  chromeOpen: boolean
+  onToggleChrome: () => void
+  tapTogglesChrome?: boolean
 }) {
   const { clipForUrl } = useGymLibrary()
   const gymClip = item.url ? clipForUrl(item.url) : undefined
@@ -1428,7 +1442,9 @@ function ReelSlide({
             quiet
             markupSwipeSafe
             active={active}
-            startChromeOpen={false}
+            chromeOpen={chromeOpen || editing}
+            onToggleChrome={onToggleChrome}
+            tapTogglesChrome={tapTogglesChrome && !editing}
           />
           <OverlayLayer
             overlays={overlays}
